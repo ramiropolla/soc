@@ -188,7 +188,7 @@ enum Mode decode_bitstream(int16_t *amr_prms, uint8_t *buf, enum RXFrameType
 
     for(i=1; i<mode_bits[mode]; i++) {
       if(*buf & 0x80)
-        amr_prms[*mask] = (short)(amr_prms[*mask] + mask[1]);
+        amr_prms[*mask] = (int16_t)(amr_prms[*mask] + mask[1]);
       mask += 2;
       if(i%8)
         *buf <<= 1;
