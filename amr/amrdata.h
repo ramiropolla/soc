@@ -89,7 +89,7 @@ static const uint8_t toc_byte[16]= {0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34, 0x
                                     0x44, 0x4C, 0x54, 0x5C, 0x64, 0x6C, 0x74, 0x7C};
 
 // Subjective importance of the speech encoded bits
-static int16_t order_MODE_475[] = {
+static const int16_t order_MODE_475[] = {
    0,  0x80,  0,  0x40,  0,  0x20,  0,  0x10,  0,  0x8,  0,  0x4,   0,  0x2,   0,  0x1,   1,  0x80,  1,  0x40,
    1,  0x20,  1,  0x10,  1,  0x8,   1,  0x4,   1,  0x2,  1,  0x1,   3,  0x80,  3,  0x40,  3,  0x20,  3,  0x10,
    3,  0x8,   3,  0x4,   7,  0x8,   7,  0x4,  10,  0x8, 10,  0x4,  14,  0x8,  14,  0x4,   6,  0x1,   6,  0x2,
@@ -102,7 +102,7 @@ static int16_t order_MODE_475[] = {
   15,  0x1,   4,  0x40,  8,  0x40, 11,  0x40, 15,  0x40
 };
 
-static int16_t order_MODE_515[] = {
+static const int16_t order_MODE_515[] = {
   0, 0x1,
   0, 0x2,
   0, 0x4,
@@ -208,7 +208,7 @@ static int16_t order_MODE_515[] = {
   16, 0x8
 };
 
-static int16_t order_MODE_59[] = {
+static const int16_t order_MODE_59[] = {
   0, 0x80,
   0, 0x40,
   0, 0x8,
@@ -329,7 +329,7 @@ static int16_t order_MODE_59[] = {
   16, 0x20
 };
 
-static int16_t order_MODE_67[] = {
+static const int16_t order_MODE_67[] = {
   0, 0x80,
   0, 0x40,
   0, 0x8,
@@ -466,7 +466,7 @@ static int16_t order_MODE_67[] = {
   16, 0x100
 };
 
-static int16_t order_MODE_74[] = {
+static const int16_t order_MODE_74[] = {
   0, 0x80,
   0, 0x40,
   0, 0x20,
@@ -617,7 +617,7 @@ static int16_t order_MODE_74[] = {
   16, 0x40
 };
 
-static int16_t order_MODE_795[] = {
+static const int16_t order_MODE_795[] = {
   0, 0x1,
   0, 0x2,
   0, 0x4,
@@ -938,7 +938,7 @@ static int16_t order_MODE_795[] = {
   19, 0x200
 };
 
-static int16_t order_MODE_102[] = {
+static const int16_t order_MODE_102[] = {
   0, 0x1,
   0, 0x2,
   0, 0x4,
@@ -1145,7 +1145,7 @@ static int16_t order_MODE_102[] = {
   9, 0x2
 };
 
-static int16_t order_MODE_122[] = {
+static const int16_t order_MODE_122[] = {
   0, 0x40,
   0, 0x20,
   0, 0x10,
@@ -1392,7 +1392,7 @@ static int16_t order_MODE_122[] = {
   44, 0x1
 };
 
-static int16_t order_MODE_DTX[] = {
+static const int16_t order_MODE_DTX[] = {
   0, 0x4,
   0, 0x2,
   0, 0x1,
