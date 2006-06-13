@@ -77,8 +77,9 @@ enum RXFrameType {
 #define PRMS_MODE_122 57
 #define PRMS_MODE_DTX 5
 
-enum Mode decode_bitstream(int16_t *param, uint8_t *stream, enum RXFrameType
-    *frame_type, enum Mode *speech_mode, int16_t *q_bit);
+enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *buf,
+                           enum RXFrameType *frame_type, enum Mode *speech_mode,
+                           int16_t *q_bit);
 
 /**************************** tables *****************************/
 
