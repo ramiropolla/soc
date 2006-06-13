@@ -137,9 +137,6 @@ enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *bu
     case MODE_DTX:
       mask = order_MODE_DTX;
       *frame_type = RX_SID_FIRST; // get SID type bit
-      if(get_bits1(&p->gb)) // use the update if there is one
-        *frame_type = RX_SID_UPDATE;
-      *speech_mode = get_bits(&p->gb, 3); // speech mode indicator
       break;
     case 15:
       *frame_type = RX_NO_DATA;
@@ -197,6 +194,12 @@ enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *bu
     }
   }
 
+  if(mode == MODE_DTX) {
+    skip_bits(&p->gb, 4); // skip to the next byte
+    if(get_bits1(&p->gb)) // use the update if there is one
+      *frame_type = RX_SID_UPDATE;
+    *speech_mode = get_bits(&p->gb, 3); // speech mode indicator
+  }
 
   return mode;
 }
