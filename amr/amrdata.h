@@ -24,8 +24,6 @@
  */
 
 
-#include <inttypes.h>
-
 // definition of modes for decoder
 #define NO_DATA 15
 enum Mode {
@@ -78,9 +76,8 @@ enum RXFrameType {
 #define PRMS_MODE_122 57
 #define PRMS_MODE_DTX 5
 
-enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *buf,
-                           enum RXFrameType *frame_type, enum Mode *speech_mode,
-                           int16_t *q_bit);
+enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *buf, int buf_size,
+                           enum RXFrameType *frame_type, enum Mode *speech_mode, int16_t *q_bit);
 
 /**************************** tables *****************************/
 

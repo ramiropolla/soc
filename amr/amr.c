@@ -24,9 +24,13 @@
  */
 
 
-#include "amrdata.h"
+#include <math.h>
+#include <stddef.h>
+#include <stdio.h>
+
 #include "avcodec.h"
 #include "bitstream.h"
+#include "amrdata.h"
 
 // #define DEBUG_BITSTREAM
 
@@ -77,7 +81,7 @@ static int amr_nb_decode_frame(AVCodecContext *avctx,
 #endif // DEBUG_BITSTREAM
 
     // decode the bitstream to amr parameters
-    mode = decode_bitstream(avctx, &amr_prms, buf, &frame_type, &speech_mode, &q_bit);
+    mode = decode_bitstream(avctx, &amr_prms, buf, buf_size, &frame_type, &speech_mode, &q_bit);
 
     /* To make it easy the stream can only be 16 bits mono, so let's convert it to that */
     for (i=0 ; i<buf_size; i++)
@@ -115,9 +119,8 @@ static int amr_nb_decode_close(AVCodecContext *avctx) {
  * @return Returns the frame mode
  */
 
-enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *buf,
-                           enum RXFrameType *frame_type, enum Mode *speech_mode,
-                           int16_t *q_bit) {
+enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *buf, int buf_size,
+                           enum RXFrameType *frame_type, enum Mode *speech_mode, int16_t *q_bit) {
 
     AMRContext *p = avctx->priv_data;
     enum Mode mode;
@@ -179,7 +182,7 @@ enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *bu
 
     if((*frame_type != RX_NO_DATA) && (*frame_type != RX_SPEECH_BAD)) {
         for(i=1; i<mode_bits[mode]; i++) {
-            amr_prms[*mask] += get_bits1(&gb) * mask[1];
+            amr_prms[*mask] += get_bits1(&p->gb) * mask[1];
             mask += 2;
         }
     }
