@@ -138,7 +138,7 @@ enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *bu
       mask = order_MODE_DTX;
       *frame_type = RX_SID_FIRST; // get SID type bit
       break;
-    case 15:
+    case NO_DATA:
       *frame_type = RX_NO_DATA;
       break;
     case MODE_475:
@@ -178,16 +178,7 @@ enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *bu
       break;
   }
 
-  if( (mode == MODE_DTX) ||
-       (mode == MODE_475) ||
-       (mode == MODE_515) ||
-       (mode == MODE_59)  ||
-       (mode == MODE_67)  ||
-       (mode == MODE_74)  ||
-       (mode == MODE_795) ||
-       (mode == MODE_102) ||
-       (mode == MODE_122) ) {
-
+  if((*frame_type != RX_NO_DATA) && (*frame_type != RX_SPEECH_BAD)) {
     for(i=1; i<mode_bits[mode]; i++) {
       amr_prms[*mask] += get_bits1(&gb) * mask[1];
       mask += 2;

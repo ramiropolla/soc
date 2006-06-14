@@ -27,6 +27,7 @@
 #include <inttypes.h>
 
 // definition of modes for decoder
+#define NO_DATA 15
 enum Mode {
   MODE_475 = 0,
   MODE_515,
