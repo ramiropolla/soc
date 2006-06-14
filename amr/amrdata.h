@@ -29,42 +29,42 @@
 // definition of modes for decoder
 #define NO_DATA 15
 enum Mode {
-  MODE_475 = 0,
-  MODE_515,
-  MODE_59,
-  MODE_67,
-  MODE_74,
-  MODE_795,
-  MODE_102,
-  MODE_122,
-  MODE_DTX,   // silent frame (maybe call this MODE_SID?)
-  N_MODES     // number of modes
+    MODE_475 = 0,
+    MODE_515,
+    MODE_59,
+    MODE_67,
+    MODE_74,
+    MODE_795,
+    MODE_102,
+    MODE_122,
+    MODE_DTX,   // silent frame (maybe call this MODE_SID?)
+    N_MODES     // number of modes
 };
 
 // number of bits for each mode
 static const uint8_t mode_bits[N_MODES] = {
-  96,  // MODE_475
-  104, // MODE_515
-  119, // MODE_59
-  135, // MODE_67
-  149, // MODE_74
-  160, // MODE_795
-  205, // MODE_102
-  245, // MODE_122
-  36   // MODE_DTX
+    96,  // MODE_475
+    104, // MODE_515
+    119, // MODE_59
+    135, // MODE_67
+    149, // MODE_74
+    160, // MODE_795
+    205, // MODE_102
+    245, // MODE_122
+    36   // MODE_DTX
 };
 
 // declaration of received frame types
 enum RXFrameType {
-  RX_SPEECH_GOOD = 0,
-  RX_SPEECH_DEGRADED,
-  RX_ONSET,
-  RX_SPEECH_BAD,
-  RX_SID_FIRST,
-  RX_SID_UPDATE,
-  RX_SID_BAD,
-  RX_NO_DATA,
-  RX_N_FRAMETYPES     // number of frame types
+    RX_SPEECH_GOOD = 0,
+    RX_SPEECH_DEGRADED,
+    RX_ONSET,
+    RX_SPEECH_BAD,
+    RX_SID_FIRST,
+    RX_SID_UPDATE,
+    RX_SID_BAD,
+    RX_NO_DATA,
+    RX_N_FRAMETYPES     // number of frame types
 };
 
 // number of parameters
