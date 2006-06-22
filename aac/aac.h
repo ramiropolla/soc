@@ -23,6 +23,9 @@
 #define INTENSITY_HCB 15
 #define ESC_FLAG 16
 
+//tns
+#define TNS_MAX_ORDER 20
+
 typedef struct {
     int max_sfb;
     int window_sequence;
@@ -31,15 +34,21 @@ typedef struct {
     int num_window_groups;
     uint8_t grouping;
     uint8_t group_len[8];
+	// calculated
+	const uint16_t *swb_offset;
+	int num_swb;
+	int num_windows;
+	int tns_max_bands;
 } ics_struct;
 
 typedef struct {
 	int present;
 	int n_filt[8];
 	int length[8][4];
-	int order[8][4];
 	int direction[8][4];
-	int coef[8][4][32];
+	int order[8][4];
+	float *tmp2_map;
+	int coef[8][4][TNS_MAX_ORDER];
 } tns_struct;
 
 typedef struct {
@@ -48,15 +57,17 @@ typedef struct {
 } ms_struct;
 
 typedef struct {
+	// objects
     AVCodecContext * avccontext;
     GetBitContext gb;
     VLC mainvlc;
+	VLC books[11];
+
+	// stream param
     int sampling_index;
     int channels;
-    VLC books[11];
-    int * vq[11];
-	const uint16_t *swb_offset_1024;
-	const uint16_t *swb_offset_128;
+
+	// decoder param
     ics_struct ics[2];
 	tns_struct tns[2];
     float coeffs[2][1024];
@@ -64,8 +75,19 @@ typedef struct {
     float saved[2][1024];
     float ret[1024]; // final output, also abused for mdct tmp
     int is_saved;
+
+	//cashes
+	const uint16_t *swb_offset_1024;
+	const uint16_t *swb_offset_128;
+	int num_swb_1024;
+	int num_swb_128;
+	int tns_max_bands_1024;
+	int tns_max_bands_128;
+
+	// tables
     MDCTContext mdct;
     MDCTContext mdct_small;
+	int * vq[11];
 } aac_context_t;
 
 // scalefactor bands
@@ -148,6 +170,10 @@ static const uint16_t *swb_offset_1024[] = {
 	swb_offset_1024_16, swb_offset_1024_16, swb_offset_1024_8
 };
 
+static const uint8_t num_swb_1024[] = {
+	41, 41, 47, 49, 49, 51, 47, 47, 43, 43, 43, 40
+};
+
 static const uint16_t *swb_offset_128[] = {
 	swb_offset_128_96, swb_offset_128_96, swb_offset_128_64,
 	swb_offset_128_48, swb_offset_128_48, swb_offset_128_48,
@@ -155,6 +181,59 @@ static const uint16_t *swb_offset_128[] = {
 	swb_offset_128_16, swb_offset_128_16, swb_offset_128_8
 };
 
+static const uint8_t num_swb_128[] = {
+	12, 12, 12, 14, 14, 14, 15, 15, 15, 15, 15, 15
+};
+
+// TNS tables
+static const uint8_t tns_max_bands_1024[] = {
+	31, 31, 34, 40, 42, 51, 46, 46, 42, 42, 42, 39
+};
+
+static const uint8_t tns_max_bands_128[] = {
+	9, 9, 10, 14, 14, 14, 14, 14, 14, 14, 14, 14
+};
+
+static float tns_tmp2_map_1_3[TNS_MAX_ORDER] = {
+	0.00000000,	0.43388373, -0.64278758, -0.34202015,
+	0.97492790, 0.78183150, -0.64278758, -0.34202015,
+	-0.43388373, -0.78183150, -0.64278758, -0.34202015,
+	-0.78183150, -0.43388373, -0.64278758, -0.34202015,
+	0.78183150, 0.97492790, -0.64278758, -0.34202015
+};
+
+static float tns_tmp2_map_0_3[TNS_MAX_ORDER] = {
+	0.00000000, 0.43388373, 0.78183150, 0.97492790,
+	-0.98480773, -0.86602539, -0.64278758, -0.34202015,
+	-0.43388373, -0.78183150, -0.97492790, -0.97492790,
+	-0.98480773, -0.86602539, -0.64278758, -0.34202015,
+	0.78183150, 0.97492790, 0.97492790, 0.78183150
+};
+
+static float tns_tmp2_map_1_4[TNS_MAX_ORDER] = {
+	0.00000000, 0.20791170, 0.40673664, 0.58778524,
+	-0.67369562, -0.52643216, -0.36124167, -0.18374951,
+	0.99452192, 0.95105648, 0.86602539, 0.74314481,
+	-0.67369562, -0.52643216, -0.36124167, -0.18374951,
+	-0.20791176, -0.40673670, -0.58778530, -0.74314487
+};
+
+static float tns_tmp2_map_0_4[TNS_MAX_ORDER] = {
+	0.00000000, 0.20791170, 0.40673664, 0.58778524,
+	0.74314481, 0.86602539, 0.95105654, 0.99452192,
+	-0.99573416, -0.96182561, -0.89516330, -0.79801720,
+	-0.67369562, -0.52643216, -0.36124167, -0.18374951,
+	-0.20791176, -0.40673670, -0.58778530, -0.74314487
+};
+
+static float *tns_tmp2_map[4] = {
+	tns_tmp2_map_0_3,
+	tns_tmp2_map_0_4,
+	tns_tmp2_map_1_3,
+	tns_tmp2_map_1_4
+};
+
+// Huffman tables
 static const unsigned int aac_scalefactor_huffman_table[][2] = {
     /* codeword, code length */
     { 0x3FFE8, 18 },
@@ -2947,4 +3026,3 @@ static const float sine_short_128[] = {
     0.9998305817958234,
     0.99998117528260111
 };
-

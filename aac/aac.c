@@ -50,6 +50,7 @@ static int channel_pair_element(aac_context_t * ac, GetBitContext * gb);
 
 // Tools predefines
 static void ms_tool(aac_context_t * ac, ms_struct * ms);
+static void tns_tool(aac_context_t * ac, const ics_struct * ics, const tns_struct * tns, float * coef);
 static void window(aac_context_t * ac, ics_struct * ics, float * in, float * out, float * saved);
 
 
@@ -134,10 +135,15 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         }
     }
 
+	// general init
 	memset(ac->saved, 0, sizeof(ac->saved));
 
 	ac->swb_offset_1024 = swb_offset_1024[ac->sampling_index];
+	ac->num_swb_1024 = num_swb_1024[ac->sampling_index];
+	ac->tns_max_bands_1024 = tns_max_bands_1024[ac->sampling_index];
 	ac->swb_offset_128 = swb_offset_128[ac->sampling_index];
+	ac->num_swb_128 = num_swb_128[ac->sampling_index];
+	ac->tns_max_bands_128 = tns_max_bands_128[ac->sampling_index];
 
     init_vlc(&ac->mainvlc, 7, sizeof(aac_scalefactor_huffman_table)/sizeof(aac_scalefactor_huffman_table[0]),
              &aac_scalefactor_huffman_table[0][1], sizeof(aac_scalefactor_huffman_table[0]), sizeof(aac_scalefactor_huffman_table[0][1]),
@@ -151,31 +157,39 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 }
 
 // Parsers implementation
-static void ics_info(aac_context_t * ac, GetBitContext * gb, ics_struct * out) {
+static void ics_info(aac_context_t * ac, GetBitContext * gb, ics_struct * ics) {
     int reserved;
     reserved = get_bits(gb, 1);
     assert(reserved == 0);
-    out->window_sequence = get_bits(gb, 2);
-    out->window_shape = get_bits(gb, 1);
-    out->num_window_groups = 1;
-    out->group_len[0] = 1;
-    if (out->window_sequence == EIGHT_SHORT_SEQUENCE) {
+    ics->window_sequence = get_bits(gb, 2);
+    ics->window_shape = get_bits(gb, 1);
+    ics->num_window_groups = 1;
+    ics->group_len[0] = 1;
+    if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
         int i;
-        out->max_sfb = get_bits(gb, 4);
-        out->grouping = get_bits(gb, 7);
+        ics->max_sfb = get_bits(gb, 4);
+        ics->grouping = get_bits(gb, 7);
         for (i = 0; i < 7; i++) {
-            if (out->grouping & (1<<(6-i))) {
-                out->group_len[out->num_window_groups-1]++;
+            if (ics->grouping & (1<<(6-i))) {
+                ics->group_len[ics->num_window_groups-1]++;
             } else {
-                out->num_window_groups++;
-                out->group_len[out->num_window_groups-1] = 1;
+                ics->num_window_groups++;
+                ics->group_len[ics->num_window_groups-1] = 1;
             }
         }
-        //av_log(ac->avccontext, AV_LOG_INFO, " %d groups for %d\n", out->num_window_groups, out->grouping);
+		ics->swb_offset = ac->swb_offset_128;
+		ics->num_swb = ac->num_swb_128;
+		ics->num_windows = 8;
+		ics->tns_max_bands = ac->tns_max_bands_128;
+        //av_log(ac->avccontext, AV_LOG_INFO, " %d groups for %d\n", ics->num_window_groups, ics->grouping);
     } else {
-        out->max_sfb = get_bits(gb, 6);
-        out->predictor = get_bits(gb, 1);
-        assert(out->predictor == 0);
+        ics->max_sfb = get_bits(gb, 6);
+        ics->predictor = get_bits(gb, 1);
+        assert(ics->predictor == 0);
+		ics->swb_offset = ac->swb_offset_1024;
+		ics->num_swb = ac->num_swb_1024;
+		ics->num_windows = 1;
+		ics->tns_max_bands = ac->tns_max_bands_1024;
     }
 }
 
@@ -290,11 +304,11 @@ static void pulse_data(aac_context_t * ac, GetBitContext * gb) {
 }
 
 static void tns_data(aac_context_t * ac, GetBitContext * gb, const ics_struct * ics, tns_struct * tns) {
-	const int num_windows = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 8 : 1;
-	int w, filt, i, coef_len, coef_res = 0;
+	int w, filt, i, coef_len, coef_res = 0, coef_compress;
+	int order;
 	if (tns->present = get_bits(gb, 1)) { // tns data
 		av_log(ac->avccontext, AV_LOG_INFO, " tns ignored\n");
-		for (w = 0; w < num_windows; w++) {
+		for (w = 0; w < ics->num_windows; w++) {
 			tns->n_filt[w] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 1 : 2);
 			if (tns->n_filt[w])
 				coef_res = get_bits(gb, 1) + 3;
@@ -302,8 +316,10 @@ static void tns_data(aac_context_t * ac, GetBitContext * gb, const ics_struct * 
 				tns->length[w][filt] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 4 : 6);
 				if (tns->order[w][filt] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5)) {
 					tns->direction[w][filt] = get_bits(gb, 1);
-					assert(coef_res > 0);
-					coef_len = coef_res - get_bits(gb, 1);
+					assert(coef_res == 3 || coef_res == 4);
+					coef_compress = get_bits(gb, 1);
+					coef_len = coef_res - coef_compress;
+					tns->tmp2_map = tns_tmp2_map[(coef_compress << 1) + (coef_res - 3)];
 					for (i = 0; i < tns->order[w][filt]; i++)
 						tns->coef[w][filt][i] = get_bits(gb, coef_len);
 				}
@@ -340,7 +356,7 @@ static int ms_data(aac_context_t * ac, GetBitContext * gb, ms_struct * ms) {
 static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], const float sf[8][64], float * out) {
 	static const int unsigned_cb[] = { 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
 	int i, k, g;
-	const uint16_t * offsets = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? ac->swb_offset_128 : ac->swb_offset_1024;
+	const uint16_t * offsets = ics->swb_offset;
 
 	for (g = 0; g < ics->num_window_groups; g++) {
 		int total = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 128 : 1024;
@@ -461,7 +477,7 @@ static int channel_pair_element(aac_context_t * ac, GetBitContext * gb) {
 static void ms_tool(aac_context_t * ac, ms_struct * ms) {
 	if (ms->present) {
 		int g, i, k, start = 0, gp;
-		const uint16_t * offsets = (ac->ics[0].window_sequence == EIGHT_SHORT_SEQUENCE) ? ac->swb_offset_128 : ac->swb_offset_1024;
+		const uint16_t * offsets = ac->ics[0].swb_offset;
 		for (g = 0; g < ac->ics[0].num_window_groups; g++) {
 			//av_log(ac->avccontext, AV_LOG_INFO, " masking[%d]: ", g);
 			for (gp = start; gp < start + ac->ics[0].group_len[g]; gp++) {
@@ -479,6 +495,63 @@ static void ms_tool(aac_context_t * ac, ms_struct * ms) {
 		}
 	}
 }
+
+static void tns_tool(aac_context_t * ac, const ics_struct * ics, const tns_struct * tns, float * coef) {
+	const int mmm = (ics->tns_max_bands > ics->max_sfb) ? ics->max_sfb : ics->tns_max_bands;
+	int w, filt, m, i, ib;
+	int bottom, top, order, start, end, size, inc;
+	float tmp;
+	float lpc[TNS_MAX_ORDER + 1], b[2 * TNS_MAX_ORDER];
+	for (w = 0; w < ics->num_windows; w++) {
+		bottom = ics->num_swb;
+		for (filt = 0; filt < tns->n_filt[w]; filt++) {
+			top = bottom;
+			bottom = top - tns->length[w][filt];
+			if (bottom < 0)
+				bottom = 0;
+			order = tns->order[w][filt];
+			if (order > TNS_MAX_ORDER)
+				order = TNS_MAX_ORDER;
+			if (order == 0)
+				continue;
+
+			// tns_decode_coef
+			lpc[0] = 1;
+			for (m = 1; m <= order; m++) {
+				lpc[m] = tns->tmp2_map[tns->coef[w][filt][m - 1]];
+				for (i = 1; i < m; i++)
+					b[i] = lpc[i] + lpc[m] * lpc[m-i];
+				for (i = 1; i < m; i++)
+					lpc[i] = b[i];
+			}
+
+			start = ics->swb_offset[(bottom > mmm) ? mmm : bottom];
+			end = ics->swb_offset[(top > mmm) ? mmm : top];
+			if ((size = end - start) <= 0)
+				continue;
+			if (tns->direction[w][filt]) {
+				inc = -1; start = end - 1;
+			} else {
+				inc = 1;
+			}
+
+			// ar filter
+			memset(b, 0, sizeof(b));
+			ib = 0;
+			for (m = 0; m < size; m++) {
+				tmp = coef[start];
+				for (i = 0; i < order; i++)
+					tmp -= b[ib + i] * lpc[i + 1];
+				if (--ib < 0)
+					ib = order - 1;
+				b[ib] = b[ib + order] = coef[start];
+				coef[start] = tmp;
+				start += inc;
+			}
+		}
+	}
+}
+
 //#define kbd_long_1024 sine_long_1024
 //#define kbd_short_128 sine_short_128
 
@@ -570,6 +643,9 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     }
 	//av_log(avccontext, AV_LOG_INFO, " %d %d %d\n", get_bits_count(gb), buf_size*8 - get_bits_count(gb), id);
 	// Processing
+	tns_tool(ac, &ac->ics[0], &ac->tns[0], ac->coeffs[0]);
+	tns_tool(ac, &ac->ics[1], &ac->tns[1], ac->coeffs[1]);
+
     for (id = 0; id < 2; id++) {
         int i;
         window(ac, &ac->ics[id], ac->coeffs[id], ac->ret, ac->saved[id]);
