@@ -1,4 +1,17 @@
-#pragma warning( disable : 4305 )
+
+// Audio Object Types
+enum {
+    AOT_NULL = 0x0,
+    AOT_AAC_MAIN,
+    AOT_AAC_LC,
+    AOT_AAC_SSR,
+    AOT_AAC_LTP,
+    AOT_SBR,
+    AOT_AAC_SCALABLE,
+    AOT_TWINVQ,
+    AOT_CELP,
+    AOT_HVXC
+};
 
 // IDs for raw_data_block
 enum {
@@ -69,9 +82,16 @@ typedef struct {
     VLC mainvlc;
     VLC books[11];
 
-    // stream param
+    // main config
+    int audioObjectType;
+    int ext_audioObjectType;
+    int sbr_present;
     int sampling_index;
+    int ext_sampling_index;
+    int sample_rate;
+    int ext_sample_rate;
     int channels;
+    int frame_length;
 
     // decoder param
     ics_struct ics[2];
@@ -99,6 +119,9 @@ typedef struct {
     MDCTContext mdct;
     MDCTContext mdct_small;
     int * vq[11];
+
+    // statistics
+    int num_frame;
 } aac_context_t;
 
 // scalefactor bands

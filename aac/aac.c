@@ -109,6 +109,105 @@ static void sine_window_init(float *window, int n) {
 }
 
 // General functions
+static int GASpecificConfig(aac_context_t * ac, GetBitContext * gb) {
+    int ext = 0;
+    ac->frame_length = get_bits(gb, 1);
+    if (get_bits(gb, 1))
+        get_bits(gb, 14);
+    ext = get_bits(gb, 1);
+    assert(ac->frame_length == 0);
+    assert(ext == 0);
+    assert(ac->channels != 0); //FIX: program_config_element
+    if (ext) {
+        switch (ac->audioObjectType) {
+            case 22:
+                get_bits(gb, 5);
+                get_bits(gb, 11);
+                break;
+            case 17:
+            case 19:
+            case 20:
+            case 23:
+                get_bits(gb, 3);
+                break;
+        }
+        if (get_bits(gb, 1)) ;
+    }
+    return 0;
+}
+
+static inline int GetAudioObjectType(GetBitContext * gb) {
+    int result = get_bits(gb, 5);
+    if (result == 31)
+        result = 32 + get_bits(gb, 6);
+}
+
+static inline int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
+    static const int sampling_table[] = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
+    *index= get_bits(gb, 4);
+    if (*index == 0xf) {
+        *index = -1;
+        *rate = get_bits(gb, 24);
+    } else if (*index <= 12) {
+        *rate = sampling_table[*index];
+    } else {
+        return 1;
+    }
+    return 0;
+}
+
+static int AudioSpecificConfig(aac_context_t * ac, void *data, int data_size) {
+    GetBitContext * gb = &ac->gb;
+
+    init_get_bits(gb, data, data_size * 8);
+
+    ac->audioObjectType = GetAudioObjectType(gb);
+    assert(ac->audioObjectType == AOT_AAC_LC);
+    if (GetSampleRate(gb, &ac->sampling_index, &ac->sample_rate)) return 1;
+    ac->channels = get_bits(gb, 4);
+    assert(ac->channels == 2);
+
+    ac->sbr_present = 0;
+    if (ac->audioObjectType == AOT_SBR) {
+        ac->ext_audioObjectType = ac->audioObjectType;
+        ac->sbr_present = 1;
+        if (GetSampleRate(gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return 1;
+        ac->audioObjectType = GetAudioObjectType(gb);
+    } else {
+        ac->ext_audioObjectType = 0;
+    }
+
+    switch (ac->audioObjectType) {
+        case AOT_AAC_MAIN:
+        case AOT_AAC_LC:
+        case AOT_AAC_SSR:
+        case AOT_AAC_LTP:
+        case AOT_AAC_SCALABLE:
+        case AOT_TWINVQ:
+            if (GASpecificConfig(ac, gb))
+                return 1;
+            break;
+        case AOT_SBR:
+            return 1;
+        case AOT_CELP:
+        case AOT_HVXC:
+            assert(0);
+            break;
+    };
+    if ((ac->ext_audioObjectType != 5) && (8 * data_size - get_bits_count(gb) >= 16)) {
+        if (get_bits(gb, 11) == 0x2b7) { // syncExtensionType
+            ac->ext_audioObjectType = GetAudioObjectType(gb);
+            if (ac->ext_audioObjectType == AOT_SBR) {
+                ac->sbr_present = get_bits(gb, 1);
+                if (ac->sbr_present) {
+                    if (GetSampleRate(gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 static int aac_decode_init(AVCodecContext * avccontext) {
     static const struct {
         const uint16_t (*a)[2];
@@ -126,25 +225,16 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         { codebook10, sizeof codebook10 },
         { codebook11, sizeof codebook11 },
     };
-    int sampling_table[] = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
     aac_context_t * ac = avccontext->priv_data;
-    GetBitContext * gb = &ac->gb;
     int i;
 
     ac->avccontext = avccontext;
     ac->is_saved = 0;
-    init_get_bits(gb, avccontext->extradata, avccontext->extradata_size * 8);
 
-    i = get_bits(gb, 5); // type
-    assert(i == 2);
-    ac->sampling_index = get_bits(gb, 4);
-    assert(ac->sampling_index < 12);
-    avccontext->channels = get_bits(gb, 4);
-    assert(avccontext->channels == 2);
-    i = get_bits(gb, 3); // other nonsense
-    assert(i == 0);
-
-    avccontext->sample_rate = sampling_table[ac->sampling_index];
+    if (AudioSpecificConfig(ac, avccontext->extradata, avccontext->extradata_size))
+        return 1;
+    avccontext->channels = ac->channels;
+    avccontext->sample_rate = ac->sample_rate;
 
     for (i = 0; i < 11; i++) {
         static const int mod_cb[11] = { 3, 3, 3, 3, 9, 9, 8, 8, 13, 13, 17 };
@@ -185,6 +275,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 
     // general init
     memset(ac->saved, 0, sizeof(ac->saved));
+    ac->num_frame = -1;
 
     ac->swb_offset_1024 = swb_offset_1024[ac->sampling_index];
     ac->num_swb_1024 = num_swb_1024[ac->sampling_index];
@@ -350,9 +441,7 @@ static void pulse_data(aac_context_t * ac, GetBitContext * gb) {
 
 static void tns_data(aac_context_t * ac, GetBitContext * gb, const ics_struct * ics, tns_struct * tns) {
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
-    int order;
-    if (tns->present = get_bits(gb, 1)) { // tns data
-        av_log(ac->avccontext, AV_LOG_INFO, " tns ignored\n");
+    if (tns->present = get_bits(gb, 1)) {
         for (w = 0; w < ics->num_windows; w++) {
             tns->n_filt[w] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 1 : 2);
             if (tns->n_filt[w])
@@ -547,6 +636,8 @@ static void tns_tool(aac_context_t * ac, const ics_struct * ics, const tns_struc
     int bottom, top, order, start, end, size, inc;
     float tmp;
     float lpc[TNS_MAX_ORDER + 1], b[2 * TNS_MAX_ORDER];
+    if (!tns->present) return;
+    //av_log(ac->avccontext, AV_LOG_INFO, "%d ", ac->num_frame);
     for (w = 0; w < ics->num_windows; w++) {
         bottom = ics->num_swb;
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
@@ -603,7 +694,6 @@ static void window(aac_context_t * ac, ics_struct * ics, float * in, float * out
     const float * lwindow = (ics->window_shape) ? ac->kbd_long_1024 : ac->sine_long_1024;
     const float * swindow = (ics->window_shape) ? ac->kbd_short_128 : ac->sine_long_1024;
     float * buf = ac->buf_mdct;
-
     if (ics->window_sequence != EIGHT_SHORT_SEQUENCE) {
         int i;
         ff_imdct_calc(&ac->mdct, buf, in, out); // out can be abused for now as a temp buffer
@@ -651,6 +741,10 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     aac_context_t * ac = avccontext->priv_data;
     GetBitContext * gb = &ac->gb;
     int id;
+
+    //ac->num_frame++;
+    //if (ac->num_frame == 7)
+    //    __asm int 3;
 
     init_get_bits(gb, buf, buf_size*8);
 
