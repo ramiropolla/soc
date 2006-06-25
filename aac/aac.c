@@ -273,9 +273,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     kbd_window_init(6, ac->kbd_short_128, 256, 50);
     sine_window_init(ac->sine_long_1024, 2048);
     sine_window_init(ac->sine_short_128, 256);
-    ac->pow2sf_tab[0] = 1. / (1<<25);
-    for (i = 1; i < 64; i++)
-        ac->pow2sf_tab[i] = 2. * ac->pow2sf_tab[i - 1];
+    for (i = 0; i < 256; i++)
+        ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./32768.;
     // general init
     memset(ac->saved, 0, sizeof(ac->saved));
     ac->num_frame = -1;
@@ -393,18 +392,12 @@ static void scale_factor_data(aac_context_t * ac, GetBitContext * gb, int global
     int g, i;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
-            static const float pow2_table[] = {
-                1.0 /1024./32768.,
-                1.1892071150027210667174999705605 /1024./32768., /* 2^0.25 */
-                1.4142135623730950488016887242097 /1024./32768., /* 2^0.5 */
-                1.6817928305074290860622509524664 /1024./32768./* 2^0.75 */
-            };
             if ((cb[g][i] == ZERO_HCB) || (cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
                 sf[g][i] = 0.;
             } else {
                 global_gain += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
                 assert(!(global_gain & (~255)));
-                sf[g][i] = ac->pow2sf_tab[global_gain >> 2] * pow2_table[global_gain & 3];
+                sf[g][i] = ac->pow2sf_tab[global_gain];
             }
         }
     }
