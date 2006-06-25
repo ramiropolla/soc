@@ -275,6 +275,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     sine_window_init(ac->sine_short_128, 256);
     for (i = 0; i < 256; i++)
         ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./32768.;
+    for (i = 0; i < sizeof(ac->ivquant_tab)/sizeof(ac->ivquant_tab[0]); i++)
+        ac->ivquant_tab[i] = pow(i, 4./3);
     // general init
     memset(ac->saved, 0, sizeof(ac->saved));
     ac->num_frame = -1;
@@ -339,32 +341,14 @@ static void ics_info(aac_context_t * ac, GetBitContext * gb, ics_struct * ics) {
     }
 }
 
-static inline float ivquant(int abs_a) {
-    static const float tab[21] = {
-        0,
-        1,
-        2.5198420997897464,
-        4.3267487109222245,
-        6.3496042078727974,
-        8.5498797333834844,
-        10.902723556992836,
-        13.390518279406722,
-        16.000000000000000, // =)
-        18.720754407467133,
-        21.544346900318832,
-        24.463780996262464,
-        27.47314182127996,
-        30.567350940369842,
-        33.741991698453212,
-        36.993181114957046,
-        40.317473596635935,
-        43.711787041189993,
-        47.173345095760126,
-        50.699631325716943,
-        54.288352331898118,
-    };
-    if (abs_a <= 20) return tab[abs_a];
-    else             return pow(abs_a, 4./3);
+static inline float ivquant(aac_context_t * ac, int a) {
+    static const float sign[2] = { -1., 1. };
+    int tmp = (a>>31);
+    int abs_a = (a^tmp)-tmp;
+    if (abs_a < sizeof(ac->ivquant_tab)/sizeof(ac->ivquant_tab[0]))
+        return sign[tmp+1] * ac->ivquant_tab[abs_a];
+    else
+        return sign[tmp+1] * pow(abs_a, 4./3);
 }
 
 static void section_data(aac_context_t * ac, GetBitContext * gb, ics_struct * ics, int cb[][64]) {
@@ -510,7 +494,7 @@ static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_stru
                         }
                     }
                     for (j = 0; j < dim; j++)
-                        out[group*128+j+k] = sign[j] * ivquant(ptr[j]) * sf[g][i];
+                        out[group*128+j+k] = ivquant(ac, sign[j] * ptr[j]) * sf[g][i];
                     //for (j = 0; j < dim; j++) av_log(ac->avccontext, AV_LOG_INFO, " %4d: %5d %10.3lf => %10.3lf\n", j+k, ptr[j]*sign[j], sf[g][i]*1024*32768, out[group*128+j+k]*1024*32768);
                 }
                 //av_log(ac->avccontext, AV_LOG_INFO, " checking escape %d[%d] %d\n", ptr[j], j, index);

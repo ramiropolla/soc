@@ -117,6 +117,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, sine_long_1024[1024]);
     DECLARE_ALIGNED_16(float, sine_short_128[128]);
     DECLARE_ALIGNED_16(float, pow2sf_tab[256]);
+    DECLARE_ALIGNED_16(float, ivquant_tab[256]);
 
     MDCTContext mdct;
     MDCTContext mdct_small;
