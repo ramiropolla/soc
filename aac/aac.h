@@ -49,6 +49,7 @@ typedef struct {
     int max_sfb;
     int window_sequence;
     int window_shape;
+    int window_shape_prev;
     int predictor;
     int num_window_groups;
     uint8_t grouping;
@@ -111,10 +112,11 @@ typedef struct {
     int tns_max_bands_128;
 
     // tables
-    float kbd_long_1024[2048];
-    float kbd_short_128[256];
-    float sine_long_1024[1024];
-    float sine_short_128[128];
+    DECLARE_ALIGNED_16(float, kbd_long_1024[1024]);
+    DECLARE_ALIGNED_16(float, kbd_short_128[128]);
+    DECLARE_ALIGNED_16(float, sine_long_1024[1024]);
+    DECLARE_ALIGNED_16(float, sine_short_128[128]);
+    DECLARE_ALIGNED_16(float, pow2sf_tab[64]);
 
     MDCTContext mdct;
     MDCTContext mdct_small;

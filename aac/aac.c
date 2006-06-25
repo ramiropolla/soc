@@ -94,7 +94,7 @@ static void kbd_window_init(int alpha, float *window, int n, int iter) {
     }
     for(k=0; k<n2; k++) {
         window[k] = sqrt(window[k] / (window[n2-1]+1));
-        window[n-1-k] = window[k];
+        //window[n-1-k] = window[k];
     }
 }
 
@@ -102,9 +102,9 @@ static void kbd_window_init(int alpha, float *window, int n, int iter) {
 * Generate a sine Window.
 */
 static void sine_window_init(float *window, int n) {
-    const float alpha = M_PI / (2.0 * n);
+    const float alpha = M_PI / n;
     int i;
-    for(i = 0; i < n; i++)
+    for(i = 0; i < n/2; i++)
         window[i] = sin((i + 0.5) * alpha);
 }
 
@@ -140,6 +140,7 @@ static inline int GetAudioObjectType(GetBitContext * gb) {
     int result = get_bits(gb, 5);
     if (result == 31)
         result = 32 + get_bits(gb, 6);
+    return result;
 }
 
 static inline int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
@@ -270,12 +271,16 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     // windows init
     kbd_window_init(4, ac->kbd_long_1024, 2048, 50);
     kbd_window_init(6, ac->kbd_short_128, 256, 50);
-    sine_window_init(ac->sine_long_1024, 1024);
-    sine_window_init(ac->sine_short_128, 128);
-
+    sine_window_init(ac->sine_long_1024, 2048);
+    sine_window_init(ac->sine_short_128, 256);
+    ac->pow2sf_tab[0] = 1. / (1<<25);
+    for (i = 1; i < 64; i++)
+        ac->pow2sf_tab[i] = 2. * ac->pow2sf_tab[i - 1];
     // general init
     memset(ac->saved, 0, sizeof(ac->saved));
     ac->num_frame = -1;
+    ac->ics[0].window_shape = -1;
+    ac->ics[1].window_shape = -1;
 
     ac->swb_offset_1024 = swb_offset_1024[ac->sampling_index];
     ac->num_swb_1024 = num_swb_1024[ac->sampling_index];
@@ -301,7 +306,10 @@ static void ics_info(aac_context_t * ac, GetBitContext * gb, ics_struct * ics) {
     reserved = get_bits(gb, 1);
     assert(reserved == 0);
     ics->window_sequence = get_bits(gb, 2);
+    ics->window_shape_prev = ics->window_shape;
     ics->window_shape = get_bits(gb, 1);
+    if (ics->window_shape_prev == -1)
+        ics->window_shape_prev = ics->window_shape;
     ics->num_window_groups = 1;
     ics->group_len[0] = 1;
     if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
@@ -385,41 +393,18 @@ static void scale_factor_data(aac_context_t * ac, GetBitContext * gb, int global
     int g, i;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
-            static const float pow2sf_tab[] = {
-                2.9802322387695313E-008, 5.9604644775390625E-008, 1.1920928955078125E-007,
-                2.384185791015625E-007, 4.76837158203125E-007, 9.5367431640625E-007,
-                1.9073486328125E-006, 3.814697265625E-006, 7.62939453125E-006,
-                1.52587890625E-005, 3.0517578125E-005, 6.103515625E-005,
-                0.0001220703125, 0.000244140625, 0.00048828125,
-                0.0009765625, 0.001953125, 0.00390625,
-                0.0078125, 0.015625, 0.03125,
-                0.0625, 0.125, 0.25,
-                0.5, 1.0, 2.0,
-                4.0, 8.0, 16.0, 32.0,
-                64.0, 128.0, 256.0,
-                512.0, 1024.0, 2048.0,
-                4096.0, 8192.0, 16384.0,
-                32768.0, 65536.0, 131072.0,
-                262144.0, 524288.0, 1048576.0,
-                2097152.0, 4194304.0, 8388608.0,
-                16777216.0, 33554432.0, 67108864.0,
-                134217728.0, 268435456.0, 536870912.0,
-                1073741824.0, 2147483648.0, 4294967296.0,
-                8589934592.0, 17179869184.0, 34359738368.0,
-                68719476736.0, 137438953472.0, 274877906944.0
-            };
             static const float pow2_table[] = {
-                1.0,
-                1.1892071150027210667174999705605, /* 2^0.25 */
-                1.4142135623730950488016887242097, /* 2^0.5 */
-                1.6817928305074290860622509524664 /* 2^0.75 */
+                1.0 /1024./32768.,
+                1.1892071150027210667174999705605 /1024./32768., /* 2^0.25 */
+                1.4142135623730950488016887242097 /1024./32768., /* 2^0.5 */
+                1.6817928305074290860622509524664 /1024./32768./* 2^0.75 */
             };
             if ((cb[g][i] == ZERO_HCB) || (cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
                 sf[g][i] = 0.;
             } else {
                 global_gain += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
                 assert(!(global_gain & (~255)));
-                sf[g][i] = pow2sf_tab[global_gain >> 2] * pow2_table[global_gain & 3]/1024./32768.;
+                sf[g][i] = ac->pow2sf_tab[global_gain >> 2] * pow2_table[global_gain & 3];
             }
         }
     }
@@ -491,7 +476,6 @@ static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_stru
     static const int unsigned_cb[] = { 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
-
     for (g = 0; g < ics->num_window_groups; g++) {
         int total = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 128 : 1024;
         memset(out + g*total + offsets[ics->max_sfb], 0, sizeof(float)*(total - offsets[ics->max_sfb]));
@@ -583,14 +567,16 @@ static int single_channel_element(aac_context_t * ac, GetBitContext * gb) {
 static int channel_pair_element(aac_context_t * ac, GetBitContext * gb) {
     int common_window;
     ms_struct ms = {0};
-    int id;
+    int id, i;
 
     id = get_bits(gb, 4); // element instance tag
     assert(id == 0);
     common_window = get_bits(gb, 1);
     if (common_window) {
         ics_info(ac, gb, &ac->ics[0]);
+        i = ac->ics[1].window_shape_prev;
         ac->ics[1] = ac->ics[0];
+        ac->ics[1].window_shape_prev = i;
         ms_data(ac, gb, &ms);
     } else {
         ms.present = 0;
@@ -692,25 +678,28 @@ static void tns_tool(aac_context_t * ac, const ics_struct * ics, const tns_struc
 
 static void window(aac_context_t * ac, ics_struct * ics, float * in, float * out, float * saved) {
     const float * lwindow = (ics->window_shape) ? ac->kbd_long_1024 : ac->sine_long_1024;
-    const float * swindow = (ics->window_shape) ? ac->kbd_short_128 : ac->sine_long_1024;
+    const float * swindow = (ics->window_shape) ? ac->kbd_short_128 : ac->sine_short_128;
+    const float * lwindow_prev = (ics->window_shape_prev) ? ac->kbd_long_1024 : ac->sine_long_1024;
+    const float * swindow_prev = (ics->window_shape_prev) ? ac->kbd_short_128 : ac->sine_short_128;
     float * buf = ac->buf_mdct;
     if (ics->window_sequence != EIGHT_SHORT_SEQUENCE) {
         int i;
         ff_imdct_calc(&ac->mdct, buf, in, out); // out can be abused for now as a temp buffer
         if (ac->is_saved) {
             if (ics->window_sequence != LONG_STOP_SEQUENCE) {
-                for (i = 0; i < 1024; i++)        out[i] = saved[i] + buf[i] * lwindow[i           ] + BIAS;
+                for (i = 0; i < 1024; i++)     out[i] = saved[i] + buf[i] * lwindow_prev[i           ] + BIAS;
             } else {
-                for (i = 0; i < 512-64; i++)      out[i] = saved[i] +                                  BIAS;
-                for (i = 512-64; i < 512+64; i++) out[i] = saved[i] + buf[i] * swindow[i - (512-64)] + BIAS;
-                for (i = 512+64; i < 1024; i++)   out[i] =            buf[i]                         + BIAS;
+                for (i = 0; i < 448; i++)      out[i] = saved[i] +                                  BIAS;
+                for (i = 448; i < 576; i++)    out[i] = saved[i] + buf[i] * swindow_prev[i - 448] + BIAS;
+                for (i = 576; i < 1024; i++)   out[i] =            buf[i]                         + BIAS;
             }
         }
         if (ics->window_sequence != LONG_START_SEQUENCE) {
-            for (i = 0; i < 1024; i++)        saved[i] = buf[i+1024] * lwindow[1023-i];
+            for (i = 0; i < 1024; i++)     saved[i] = buf[i+1024] * lwindow[1023-i];
         } else {
-            for (i = 0; i < 512-64; i++)      saved[i] = buf[i+1024];
-            for (i = 512-64; i < 512+64; i++) saved[i] = buf[i+1024] * swindow[127-(i - (512-64))];
+            for (i = 0; i < 448; i++)      saved[i] = buf[i+1024];
+            for (i = 448; i < 576; i++)    saved[i] = buf[i+1024] * swindow[127 - (i - 448)];
+            //for (i = 576; i < 1024; i++)   saved[i] = 0.0;
         }
     } else {
         float * ptr[8];
@@ -719,10 +708,15 @@ static void window(aac_context_t * ac, ics_struct * ics, float * in, float * out
             int k;
             ptr[i] = buf + i*256;
             ff_imdct_calc(&ac->mdct_small, ptr[i], in + i*128, out);
-            for (k = 0; k < 128; k++)   ptr[i][k] *= swindow[k] * 8.;
-            for (k = 128; k < 256; k++) ptr[i][k] *= swindow[255-k] * 8.;
+            if (i == 0) {
+                for (k = 0; k < 128; k++)   ptr[i][k] *= swindow_prev[k] * 8.;
+                for (k = 128; k < 256; k++) ptr[i][k] *= swindow[255 - k] * 8.;
+            } else {
+                for (k = 0; k < 128; k++)   ptr[i][k] *= swindow[k] * 8.;
+                for (k = 128; k < 256; k++)   ptr[i][k] *= swindow[255 - k] * 8.;
+            }
         }
-        for (i = 0; i < 512-64; i++) out[i] = saved[i]                           + BIAS;
+        for (i = 0; i < 448; i++)    out[i] = saved[i]                           + BIAS;
         for (; i < 576; i++)         out[i] = saved[i]         + ptr[0][i - 448] + BIAS;
         for (; i < 704; i++)         out[i] = ptr[0][i - 448]  + ptr[1][i - 576] + BIAS;
         for (; i < 832; i++)         out[i] = ptr[1][i - 576]  + ptr[2][i - 704] + BIAS;
@@ -734,6 +728,7 @@ static void window(aac_context_t * ac, ics_struct * ics, float * in, float * out
         for (; i < 1344; i++) saved[i-1024] = ptr[5][i - 1088] + ptr[6][i - 1216];
         for (; i < 1472; i++) saved[i-1024] = ptr[6][i - 1216] + ptr[7][i - 1344];
         for (; i < 1600; i++) saved[i-1024] = ptr[7][i - 1344]; // memcpy?
+        for (; i < 2048; i++) saved[i-1024] = 0.0;
     }
 }
 
@@ -742,8 +737,8 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     GetBitContext * gb = &ac->gb;
     int id;
 
-    //ac->num_frame++;
-    //if (ac->num_frame == 7)
+    ac->num_frame++;
+    //if (ac->num_frame == 40)
     //    __asm int 3;
 
     init_get_bits(gb, buf, buf_size*8);
