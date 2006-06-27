@@ -109,6 +109,78 @@ static void sine_window_init(float *window, int n) {
 }
 
 // General functions
+static int program_config_element(aac_context_t * ac, GetBitContext * gb) {
+    program_config_struct * pcs = &ac->pcs;
+    int id, object_type, i;
+    assert(ac->channels == 0);
+    pcs->present = 1;
+    id = get_bits(gb, 4);
+    object_type = get_bits(gb, 2);
+
+    ac->sampling_index = get_bits(gb, 4);
+    assert(ac->sampling_index <= 12);
+    ac->sample_rate = sampling_table[ac->sampling_index];
+    pcs->num_front = get_bits(gb, 4);
+    pcs->num_side = get_bits(gb, 4);
+    pcs->num_back = get_bits(gb, 4);
+    pcs->num_lfe = get_bits(gb, 2);
+    pcs->num_assoc_data = get_bits(gb, 3);
+    pcs->num_cc = get_bits(gb, 4);
+
+    // TODO : is it valid construction for all compiler?! hm...
+    pcs->mono_mixdown = get_bits(gb, 1) ? get_bits(gb, 4) : -1;
+    pcs->stereo_mixdown = get_bits(gb, 1) ? get_bits(gb, 4) : -1;
+    if (get_bits(gb, 1)) {
+        pcs->matrix_mixdown = get_bits(gb, 2);
+        pcs->pseudo_surround = get_bits(gb, 1);
+    } else {
+        pcs->matrix_mixdown = -1;
+        pcs->pseudo_surround = 0;
+    }
+
+    pcs->front_cpe = 0;
+    ac->channels += pcs->num_front;
+    for (i = 0; i < pcs->num_front; i++) {
+        if (get_bits(gb, 1)) {
+            pcs->front_cpe |= (1 << i);
+            ac->channels++;
+        }
+        pcs->front_tag[i] = get_bits(gb, 4);
+    }
+    pcs->side_cpe = 0;
+    ac->channels += pcs->num_side;
+    for (i = 0; i < pcs->num_side; i++) {
+        if (get_bits(gb, 1)) {
+            pcs->side_cpe |= (1 << i);
+            ac->channels++;
+        }
+        pcs->side_tag[i] = get_bits(gb, 4);
+    }
+    pcs->back_cpe = 0;
+    ac->channels += pcs->num_back;
+    for (i = 0; i < pcs->num_back; i++) {
+        if (get_bits(gb, 1)) {
+            pcs->back_cpe |= (1 << i);
+            ac->channels++;
+        }
+        pcs->back_tag[i] = get_bits(gb, 4);
+    }
+    ac->channels += pcs->num_lfe;
+    for (i = 0; i < pcs->num_lfe; i++)
+        pcs->lfe_tag[i] = get_bits(gb, 4);
+    // not a real audio channel
+    for (i = 0; i < pcs->num_assoc_data; i++)
+        pcs->assoc_data_tag[i] = get_bits(gb, 4);
+    pcs->cc_ind_sw = 0;
+    for (i = 0; i < pcs->num_cc; i++) {
+        pcs->cc_ind_sw|= (get_bits(gb, 1) << i);
+        pcs->cc_tag[i] = get_bits(gb, 4);
+    }
+    align_get_bits(gb);
+    skip_bits(gb, 8 * get_bits(gb, 8));
+    return 0;
+}
+
 static int GASpecificConfig(aac_context_t * ac, GetBitContext * gb) {
     int ext = 0;
     ac->frame_length = get_bits(gb, 1);
@@ -117,7 +189,8 @@ static int GASpecificConfig(aac_context_t * ac, GetBitContext * gb) {
     ext = get_bits(gb, 1);
     assert(ac->frame_length == 0);
     assert(ext == 0);
-    assert(ac->channels != 0); //FIX: program_config_element
+    if (ac->channels == 0)
+        program_config_element(ac, gb);
     if (ext) {
         switch (ac->audioObjectType) {
             case 22:
@@ -144,15 +217,13 @@ static inline int GetAudioObjectType(GetBitContext * gb) {
 }
 
 static inline int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
-    static const int sampling_table[] = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
     *index= get_bits(gb, 4);
     if (*index == 0xf) {
         *index = -1;
         *rate = get_bits(gb, 24);
-    } else if (*index <= 12) {
-        *rate = sampling_table[*index];
     } else {
-        return 1;
+        assert(*index <= 12);
+        *rate = sampling_table[*index];
     }
     return 0;
 }
@@ -162,11 +233,12 @@ static int AudioSpecificConfig(aac_context_t * ac, void *data, int data_size) {
 
     init_get_bits(gb, data, data_size * 8);
 
+    ac->pcs.present = 0;
     ac->audioObjectType = GetAudioObjectType(gb);
     assert(ac->audioObjectType == AOT_AAC_LC);
     if (GetSampleRate(gb, &ac->sampling_index, &ac->sample_rate)) return 1;
     ac->channels = get_bits(gb, 4);
-    assert(ac->channels == 2);
+    //assert(ac->channels == 2);
 
     ac->sbr_present = 0;
     if (ac->audioObjectType == AOT_SBR) {
@@ -273,6 +345,9 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     kbd_window_init(6, ac->kbd_short_128, 256, 50);
     sine_window_init(ac->sine_long_1024, 2048);
     sine_window_init(ac->sine_short_128, 256);
+    // 1024  - compensate wrong imdct method
+    // 32768 - values in AAC build for ready float->int 16 bit audio, using
+    // BIAS method instead needs values -1<x<1
     for (i = 0; i < 256; i++)
         ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./32768.;
     for (i = 0; i < sizeof(ac->ivquant_tab)/sizeof(ac->ivquant_tab[0]); i++)
@@ -302,6 +377,20 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 }
 
 // Parsers implementation
+static int data_stream_element(aac_context_t * ac, GetBitContext * gb) {
+    int id, byte_align;
+    int count;
+    id = get_bits(gb, 4);
+    byte_align = get_bits(gb, 1);
+    count = get_bits(gb, 8);
+    if (count == 255)
+        count += get_bits(gb, 8);
+    if (byte_align)
+        align_get_bits(gb);
+    skip_bits(gb, 8 * count);
+    return 0;
+}
+
 static void ics_info(aac_context_t * ac, GetBitContext * gb, ics_struct * ics) {
     int reserved;
     reserved = get_bits(gb, 1);
@@ -713,22 +802,26 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     aac_context_t * ac = avccontext->priv_data;
     GetBitContext * gb = &ac->gb;
     int id;
+    int num_decoded = 0;
 
     ac->num_frame++;
     //if (ac->num_frame == 40)
     //    __asm int 3;
 
     init_get_bits(gb, buf, buf_size*8);
+    //av_log(avccontext, AV_LOG_INFO, "%d ", buf_size);
 
     // parse
     while ((id = get_bits(gb, 3)) != 7) {
         switch (id) {
             case ID_SCE: {
-                single_channel_element(ac, gb);
+                if (!single_channel_element(ac, gb))
+                    num_decoded = 1;
                 break;
             }
             case ID_CPE: {
-                channel_pair_element(ac, gb);
+                if (!channel_pair_element(ac, gb))
+                    num_decoded = 2;
                 break;
             }
             case ID_FIL: {
@@ -737,39 +830,49 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
                 skip_bits(gb, 8*cnt);
                 break;
             }
+            case ID_PCE: {
+                program_config_element(ac, gb);
+                break;
+            }
+            case ID_DSE: {
+                data_stream_element(ac, gb);
+                break;
+            }
             case ID_CCE:
             case ID_LFE:
-            case ID_DSE:
-            case ID_PCE:
                 assert(0);
                 break;
             default:
                 assert(0 && 0);
                 break;
         }
-        break;
+        // TODO: commonolize
+        if (num_decoded > 0)
+            break;
     }
+
     //av_log(avccontext, AV_LOG_INFO, " %d %d %d\n", get_bits_count(gb), buf_size*8 - get_bits_count(gb), id);
     // Processing
-    tns_tool(ac, &ac->ics[0], &ac->tns[0], ac->coeffs[0]);
-    tns_tool(ac, &ac->ics[1], &ac->tns[1], ac->coeffs[1]);
-
-    for (id = 0; id < 2; id++) {
-        int i;
-        window(ac, &ac->ics[id], ac->coeffs[id], ac->ret, ac->saved[id]);
-        if (ac->is_saved)
-            for (i = 0; i < 1024; i++) {
-                int32_t tmp = ((int32_t*)ac->ret)[i];
-                if (tmp & 0xf0000) {
-                    if (tmp > 0x43c0ffff) tmp = 0xFFFF;
-                    else                  tmp = 0;
+    if (num_decoded > 0) {
+        for (id = 0; id < num_decoded; id++) {
+            int i;
+            tns_tool(ac, &ac->ics[id], &ac->tns[id], ac->coeffs[id]);
+            window(ac, &ac->ics[id], ac->coeffs[id], ac->ret, ac->saved[id]);
+            if (ac->is_saved)
+                for (i = 0; i < 1024; i++) {
+                    int32_t tmp = ((int32_t*)ac->ret)[i];
+                    if (tmp & 0xf0000) {
+                        if (tmp > 0x43c0ffff) tmp = 0xFFFF;
+                        else                  tmp = 0;
+                    }
+                    ((uint16_t(*)[2])data)[i][id] = tmp - 0x8000;
                 }
-                ((uint16_t(*)[2])data)[i][id] = tmp - 0x8000;
         }
+        *data_size = ac->is_saved ? 4096 : 0;
+        ac->is_saved = 1;
+    } else {
+        *data_size = 0;
     }
-    *data_size = ac->is_saved ? 4096 : 0;
-    ac->is_saved = 1;
-
     return buf_size;
 }
 

@@ -46,6 +46,37 @@ enum {
 #define TNS_MAX_ORDER 20
 
 typedef struct {
+    int present;
+
+    int num_front;
+    int front_cpe;
+    int front_tag[16];
+
+    int num_side;
+    int side_cpe;
+    int side_tag[16];
+
+    int num_back;
+    int back_cpe;
+    int back_tag[16];
+
+    int num_lfe;
+    int lfe_tag[4];
+
+    int num_assoc_data;
+    int assoc_data_tag[8];
+
+    int num_cc;
+    int cc_ind_sw;
+    int cc_tag[16];
+
+    int mono_mixdown;
+    int stereo_mixdown;
+    int matrix_mixdown;
+    int pseudo_surround;
+} program_config_struct;
+
+typedef struct {
     int max_sfb;
     int window_sequence;
     int window_shape;
@@ -95,6 +126,7 @@ typedef struct {
     int frame_length;
 
     // decoder param
+    program_config_struct pcs;
     ics_struct ics[2];
     tns_struct tns[2];
     DECLARE_ALIGNED_16(float, coeffs[2][1024]);
@@ -126,6 +158,9 @@ typedef struct {
     // statistics
     int num_frame;
 } aac_context_t;
+
+// sampling table
+static const int sampling_table[] = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
 // scalefactor bands
 static const uint16_t swb_offset_1024_96[] = {
