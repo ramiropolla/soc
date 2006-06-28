@@ -589,16 +589,16 @@ static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_stru
 }
 
 static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int common_window, int scale_flag, int id) {
+    typedef float sf_type[8][64];
     int global_gain;
     int cb[8][64];   // codebooks
-    float sf[8][64]; // scale factors
-    int icoef[1024]; // spectral data
-    tns_struct tns;
-    pulse_struct pulse;
+    //sf = ac->sf[id]; // scale factors
+    int * icoeffs = ac->icoeffs[id];
+    tns_struct * tns = &ac->tns[id];
+    pulse_struct * pulse = &ac->pulse[id];
     ics_struct * ics = &ac->ics[id];
-    float * out = ac->coeffs[id];
 
-    memset(sf, 0, sizeof(sf));
+    //memset(sf, 0, sizeof(sf));
 
     global_gain = get_bits(gb, 8);
 
@@ -608,23 +608,18 @@ static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int
 
     //av_log(ac->avccontext, AV_LOG_INFO, " global_gain: %d, groups: %d\n", global_gain, ics->window_sequence);
     section_data(ac, gb, ics, cb);
-    scale_factor_data(ac, gb, global_gain, ics, cb, sf);
+    scale_factor_data(ac, gb, global_gain, ics, cb, ac->sf[id]);
 
     if (!scale_flag) {
-        if (pulse.present = get_bits1(gb))
-            pulse_data(ac, gb, &pulse);
-        if (tns.present = get_bits1(gb))
-            tns_data(ac, gb, ics, &tns);
+        if (pulse->present = get_bits1(gb))
+            pulse_data(ac, gb, pulse);
+        if (tns->present = get_bits1(gb))
+            tns_data(ac, gb, ics, tns);
         if (get_bits1(gb))
             if (gain_control_data(ac, gb)) return 1;
     }
 
-    spectral_data(ac, gb, ics, cb, sf, icoef);
-
-    // individual channel processing
-    pulse_tool(ac, ics, &pulse, icoef);
-    quant_to_spec_tool(ac, ics, icoef, sf, out);
-    tns_tool(ac, ics, &tns, out);
+    spectral_data(ac, gb, ics, cb, ac->sf[id], icoeffs);
     return 0;
 }
 
@@ -894,6 +889,9 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     if (num_decoded > 0) {
         for (id = 0; id < num_decoded; id++) {
             int i;
+            pulse_tool(ac, ac->ics + id, ac->pulse + id, ac->icoeffs[id]);
+            quant_to_spec_tool(ac, ac->ics + id, ac->icoeffs[id], ac->sf[id], ac->coeffs[id]);
+            tns_tool(ac, ac->ics + id, ac->tns + id, ac->coeffs[id]);
             window(ac, &ac->ics[id], ac->coeffs[id], ac->ret, ac->saved[id]);
             if (ac->is_saved) {
                 if (num_decoded == 1) {

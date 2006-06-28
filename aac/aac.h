@@ -136,6 +136,10 @@ typedef struct {
     // decoder param
     program_config_struct pcs;
     ics_struct ics[2];
+    tns_struct tns[2];
+    pulse_struct pulse[2];
+    int icoeffs[2][1024];
+    float sf[2][8][64];
     DECLARE_ALIGNED_16(float, coeffs[2][1024]);
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
     DECLARE_ALIGNED_16(float, saved[2][1024]);
