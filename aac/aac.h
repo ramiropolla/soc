@@ -108,6 +108,14 @@ typedef struct {
 } ms_struct;
 
 typedef struct {
+    int present;
+    int num_pulse;
+    int start;
+    int offset[4];
+    int amp[4];
+} pulse_struct;
+
+typedef struct {
     // objects
     AVCodecContext * avccontext;
     GetBitContext gb;
@@ -128,7 +136,6 @@ typedef struct {
     // decoder param
     program_config_struct pcs;
     ics_struct ics[2];
-    tns_struct tns[2];
     DECLARE_ALIGNED_16(float, coeffs[2][1024]);
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
     DECLARE_ALIGNED_16(float, saved[2][1024]);
