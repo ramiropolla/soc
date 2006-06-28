@@ -40,18 +40,18 @@
 // Parsing predefines
 static void ics_info(aac_context_t * ac, GetBitContext * gb, ics_struct * out);
 static void section_data(aac_context_t * ac, GetBitContext * gb, ics_struct * ics, int cb[][64]);
-static void scale_factor_data(aac_context_t * ac, GetBitContext * gb, int global_gain, const ics_struct * ics, const int cb[][64], float sf[8][64]);
+static void scale_factor_data(aac_context_t * ac, GetBitContext * gb, int global_gain, const ics_struct * ics, const int cb[][64], float sf[][64]);
 static void pulse_data(aac_context_t * ac, GetBitContext * gb, pulse_struct * pulse);
 static void tns_data(aac_context_t * ac, GetBitContext * gb, const ics_struct * ics, tns_struct * tns);
 static int gain_control_data(aac_context_t * ac, GetBitContext * gb);
 static int ms_data(aac_context_t * ac, GetBitContext * gb, ms_struct * ms);
-static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], const float sf[8][64], int * icoef);
+static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], const float sf[][64], int * icoef);
 static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int common_window, int scale_flag, int id);
 static int single_channel_element(aac_context_t * ac, GetBitContext * gb);
 static int channel_pair_element(aac_context_t * ac, GetBitContext * gb);
 
 // Tools predefines
-static void quant_to_spec_tool(aac_context_t * ac, const ics_struct * ics, const int * icoef, const float sf[8][64], float * coef);
+static void quant_to_spec_tool(aac_context_t * ac, const ics_struct * ics, const int * icoef, const float sf[][64], float * coef);
 static void ms_tool(aac_context_t * ac, ms_struct * ms);
 static void pulse_tool(aac_context_t * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef);
 static void tns_tool(aac_context_t * ac, const ics_struct * ics, const tns_struct * tns, float * coef);
@@ -463,7 +463,7 @@ static void section_data(aac_context_t * ac, GetBitContext * gb, ics_struct * ic
     }
 }
 
-static void scale_factor_data(aac_context_t * ac, GetBitContext * gb, int global_gain, const ics_struct * ics, const int cb[][64], float sf[8][64]) {
+static void scale_factor_data(aac_context_t * ac, GetBitContext * gb, int global_gain, const ics_struct * ics, const int cb[][64], float sf[][64]) {
     int g, i;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
@@ -531,7 +531,7 @@ static int ms_data(aac_context_t * ac, GetBitContext * gb, ms_struct * ms) {
     return 0;
 }
 
-static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], const float sf[8][64], int * icoef) {
+static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], const float sf[][64], int * icoef) {
     static const int unsigned_cb[] = { 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
@@ -589,14 +589,13 @@ static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_stru
 }
 
 static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int common_window, int scale_flag, int id) {
-    typedef float sf_type[8][64];
     int global_gain;
     int cb[8][64];   // codebooks
-    //sf = ac->sf[id]; // scale factors
-    int * icoeffs = ac->icoeffs[id];
+    int icoeffs[1024];
+    pulse_struct pulse;
     tns_struct * tns = &ac->tns[id];
-    pulse_struct * pulse = &ac->pulse[id];
     ics_struct * ics = &ac->ics[id];
+    float * out = ac->coeffs[id];
 
     //memset(sf, 0, sizeof(sf));
 
@@ -611,8 +610,8 @@ static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int
     scale_factor_data(ac, gb, global_gain, ics, cb, ac->sf[id]);
 
     if (!scale_flag) {
-        if (pulse->present = get_bits1(gb))
-            pulse_data(ac, gb, pulse);
+        if (pulse.present = get_bits1(gb))
+            pulse_data(ac, gb, &pulse);
         if (tns->present = get_bits1(gb))
             tns_data(ac, gb, ics, tns);
         if (get_bits1(gb))
@@ -620,6 +619,8 @@ static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int
     }
 
     spectral_data(ac, gb, ics, cb, ac->sf[id], icoeffs);
+    pulse_tool(ac, ics, &pulse, icoeffs);
+    quant_to_spec_tool(ac, ics, icoeffs, ac->sf[id], out);
     return 0;
 }
 
@@ -659,7 +660,7 @@ static int channel_pair_element(aac_context_t * ac, GetBitContext * gb) {
 }
 
 // Tools implementation
-static void quant_to_spec_tool(aac_context_t * ac, const ics_struct * ics, const int * icoef, const float sf[8][64], float * coef) {
+static void quant_to_spec_tool(aac_context_t * ac, const ics_struct * ics, const int * icoef, const float sf[][64], float * coef) {
     const uint16_t * offsets = ics->swb_offset;
     int g, i, group, k;
     for (g = 0; g < ics->num_window_groups; g++) {
@@ -704,6 +705,7 @@ static void ms_tool(aac_context_t * ac, ms_struct * ms) {
 static void pulse_tool(aac_context_t * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef) {
     int i, off;
     if (pulse->present) {
+        assert(ics->window_sequence != EIGHT_SHORT_SEQUENCE);
         off = ics->swb_offset[pulse->start];
         for (i = 0; i <= pulse->num_pulse; i++) {
             off += pulse->offset[i];
@@ -889,8 +891,6 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     if (num_decoded > 0) {
         for (id = 0; id < num_decoded; id++) {
             int i;
-            pulse_tool(ac, ac->ics + id, ac->pulse + id, ac->icoeffs[id]);
-            quant_to_spec_tool(ac, ac->ics + id, ac->icoeffs[id], ac->sf[id], ac->coeffs[id]);
             tns_tool(ac, ac->ics + id, ac->tns + id, ac->coeffs[id]);
             window(ac, &ac->ics[id], ac->coeffs[id], ac->ret, ac->saved[id]);
             if (ac->is_saved) {
