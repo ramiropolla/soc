@@ -134,9 +134,12 @@ typedef struct {
     int frame_length;
 
     // decoder param
+    int intensity_present;
     program_config_struct pcs;
+    ms_struct ms;
     ics_struct ics[2];
     tns_struct tns[2];
+    int cb[2][8][64];   // codebooks
     float sf[2][8][64];
     DECLARE_ALIGNED_16(float, coeffs[2][1024]);
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
@@ -158,6 +161,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, sine_long_1024[1024]);
     DECLARE_ALIGNED_16(float, sine_short_128[128]);
     DECLARE_ALIGNED_16(float, pow2sf_tab[256]);
+    DECLARE_ALIGNED_16(float, intensity_tab[256]);
     DECLARE_ALIGNED_16(float, ivquant_tab[256]);
 
     MDCTContext mdct;

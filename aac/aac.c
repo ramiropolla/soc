@@ -52,8 +52,9 @@ static int channel_pair_element(aac_context_t * ac, GetBitContext * gb);
 
 // Tools predefines
 static void quant_to_spec_tool(aac_context_t * ac, const ics_struct * ics, const int * icoef, const float sf[][64], float * coef);
-static void ms_tool(aac_context_t * ac, ms_struct * ms);
 static void pulse_tool(aac_context_t * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef);
+static void ms_tool(aac_context_t * ac, ms_struct * ms);
+static void intensity_tool(aac_context_t * ac);
 static void tns_tool(aac_context_t * ac, const ics_struct * ics, const tns_struct * tns, float * coef);
 static void window(aac_context_t * ac, ics_struct * ics, float * in, float * out, float * saved);
 
@@ -352,6 +353,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     // BIAS method instead needs values -1<x<1
     for (i = 0; i < 256; i++)
         ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./32768.;
+    for (i = 0; i < 256; i++)
+        ac->intensity_tab[i] = pow(0.5, (i - 100) / 4.);
     for (i = 0; i < sizeof(ac->ivquant_tab)/sizeof(ac->ivquant_tab[0]); i++)
         ac->ivquant_tab[i] = pow(i, 4./3);
     // general init
@@ -451,7 +454,7 @@ static void section_data(aac_context_t * ac, GetBitContext * gb, ics_struct * ic
             int sect_len = 0;
             int sect_len_incr = 1;
             int sect_cb = get_bits(gb, 4);
-            assert(sect_cb < 12);
+            assert(sect_cb < 12 || sect_cb == INTENSITY_HCB || sect_cb == INTENSITY_HCB2);// || sect_cb == NOISE_HCB);
             while ((sect_len_incr = get_bits(gb, bits)) == (1 << bits)-1)
                 sect_len += sect_len_incr;
             sect_len += sect_len_incr;
@@ -465,10 +468,27 @@ static void section_data(aac_context_t * ac, GetBitContext * gb, ics_struct * ic
 
 static void scale_factor_data(aac_context_t * ac, GetBitContext * gb, int global_gain, const ics_struct * ics, const int cb[][64], float sf[][64]) {
     int g, i;
+    int intensity = 100;
+    int noise = global_gain - 90;
+    int noise_flag = 1;
+    ac->intensity_present = 0;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
-            if ((cb[g][i] == ZERO_HCB) || (cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
+            if (cb[g][i] == ZERO_HCB) {
                 sf[g][i] = 0.;
+            } else if ((cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
+                ac->intensity_present = 1;
+                intensity += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
+                assert(!(intensity & (~255)));
+                sf[g][i] = ac->intensity_tab[intensity];
+            } else if (cb[g][i] == NOISE_HCB) {
+                if (noise_flag) {
+                    noise_flag = 0;
+                    noise += get_bits(gb, 9);
+                } else {
+                    noise += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
+                }
+                sf[g][i] = noise;
             } else {
                 global_gain += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
                 assert(!(global_gain & (~255)));
@@ -544,8 +564,10 @@ static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_stru
             const int cur_cb = cb[g][i];
             const int dim = (cur_cb >= FIRST_PAIR_HCB) ? 2 : 4;
             int group;
-            if ((cur_cb == ZERO_HCB) || (cur_cb == NOISE_HCB) ||
-                (cur_cb == INTENSITY_HCB2) || (cur_cb == INTENSITY_HCB)) {
+            if ((cur_cb == NOISE_HCB) || (cur_cb == INTENSITY_HCB2) || (cur_cb == INTENSITY_HCB)) {
+                continue;
+            }
+            if (cur_cb == ZERO_HCB) {
                 int j;
                 for (j = 0; j < ics->group_len[g]; j++) {
                     memset(icoef + j * 128 + offsets[i], 0, (offsets[i+1] - offsets[i])*sizeof(int));
@@ -590,7 +612,6 @@ static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_stru
 
 static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int common_window, int scale_flag, int id) {
     int global_gain;
-    int cb[8][64];   // codebooks
     int icoeffs[1024];
     pulse_struct pulse;
     tns_struct * tns = &ac->tns[id];
@@ -606,8 +627,8 @@ static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int
     }
 
     //av_log(ac->avccontext, AV_LOG_INFO, " global_gain: %d, groups: %d\n", global_gain, ics->window_sequence);
-    section_data(ac, gb, ics, cb);
-    scale_factor_data(ac, gb, global_gain, ics, cb, ac->sf[id]);
+    section_data(ac, gb, ics, ac->cb[id]);
+    scale_factor_data(ac, gb, global_gain, ics, ac->cb[id], ac->sf[id]);
 
     if (!scale_flag) {
         if (pulse.present = get_bits1(gb))
@@ -618,7 +639,7 @@ static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int
             if (gain_control_data(ac, gb)) return 1;
     }
 
-    spectral_data(ac, gb, ics, cb, ac->sf[id], icoeffs);
+    spectral_data(ac, gb, ics, ac->cb[id], ac->sf[id], icoeffs);
     pulse_tool(ac, ics, &pulse, icoeffs);
     quant_to_spec_tool(ac, ics, icoeffs, ac->sf[id], out);
     return 0;
@@ -632,7 +653,6 @@ static int single_channel_element(aac_context_t * ac, GetBitContext * gb) {
 
 static int channel_pair_element(aac_context_t * ac, GetBitContext * gb) {
     int common_window;
-    ms_struct ms = {0};
     int id, i;
 
     id = get_bits(gb, 4); // element instance tag
@@ -643,9 +663,9 @@ static int channel_pair_element(aac_context_t * ac, GetBitContext * gb) {
         i = ac->ics[1].window_shape_prev;
         ac->ics[1] = ac->ics[0];
         ac->ics[1].window_shape_prev = i;
-        ms_data(ac, gb, &ms);
+        ms_data(ac, gb, &ac->ms);
     } else {
-        ms.present = 0;
+        ac->ms.present = 0;
     }
     if (individual_channel_stream(ac, gb, common_window, 0, 0))
         return 1;
@@ -654,8 +674,9 @@ static int channel_pair_element(aac_context_t * ac, GetBitContext * gb) {
 
     // M/S tool
     if (common_window) {
-        ms_tool(ac, &ms);
+        ms_tool(ac, &ac->ms);
     }
+    intensity_tool(ac);
     return 0;
 }
 
@@ -680,28 +701,6 @@ static void quant_to_spec_tool(aac_context_t * ac, const ics_struct * ics, const
     }
 }
 
-static void ms_tool(aac_context_t * ac, ms_struct * ms) {
-    if (ms->present) {
-        int g, i, k, start = 0, gp;
-        const uint16_t * offsets = ac->ics[0].swb_offset;
-        for (g = 0; g < ac->ics[0].num_window_groups; g++) {
-            //av_log(ac->avccontext, AV_LOG_INFO, " masking[%d]: ", g);
-            for (gp = start; gp < start + ac->ics[0].group_len[g]; gp++) {
-                for (i = 0; i < ac->ics[0].max_sfb; i++)
-                    if (ms->mask[g][i]) {
-                        for (k = offsets[i] + gp*128; k < offsets[i+1] + gp*128; k++) {
-                            float tmp = ac->coeffs[0][k] - ac->coeffs[1][k];
-                            ac->coeffs[0][k] += ac->coeffs[1][k];
-                            ac->coeffs[1][k] = tmp;
-                        }
-                    }
-            }
-            start += ac->ics[0].group_len[g];
-            //av_log(ac->avccontext, AV_LOG_INFO, "\n");
-        }
-    }
-}
-
 static void pulse_tool(aac_context_t * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef) {
     int i, off;
     if (pulse->present) {
@@ -713,6 +712,54 @@ static void pulse_tool(aac_context_t * ac, const ics_struct * ics, const pulse_s
                 icoef[off] += pulse->amp[i];
             else
                 icoef[off] -= pulse->amp[i];
+        }
+    }
+}
+
+static void ms_tool(aac_context_t * ac, ms_struct * ms) {
+    if (ms->present) {
+        int g, i, k, start = 0, gp;
+        const uint16_t * offsets = ac->ics[0].swb_offset;
+        for (g = 0; g < ac->ics[0].num_window_groups; g++) {
+            //av_log(ac->avccontext, AV_LOG_INFO, " masking[%d]: ", g);
+            for (gp = start; gp < start + ac->ics[0].group_len[g]; gp++) {
+                for (i = 0; i < ac->ics[0].max_sfb; i++) {
+                    if (ms->mask[g][i]) {
+                        for (k = offsets[i] + gp*128; k < offsets[i+1] + gp*128; k++) {
+                            float tmp = ac->coeffs[0][k] - ac->coeffs[1][k];
+                            ac->coeffs[0][k] += ac->coeffs[1][k];
+                            ac->coeffs[1][k] = tmp;
+                        }
+                    }
+                }
+            }
+            start += ac->ics[0].group_len[g];
+            //av_log(ac->avccontext, AV_LOG_INFO, "\n");
+        }
+    }
+}
+
+static void intensity_tool(aac_context_t * ac) {
+    if (ac->intensity_present) {
+        const uint16_t * offsets = ac->ics[1].swb_offset;
+        int g, gp, i, k, start = 0;
+        int c;
+        float scale;
+        for (g = 0; g < ac->ics[1].num_window_groups; g++) {
+            for (gp = start; gp < start + ac->ics[1].group_len[g]; gp++) {
+                for (i = 0; i < ac->ics[1].max_sfb; i++) {
+                    if ((ac->cb[1][g][i] == INTENSITY_HCB) || (ac->cb[1][g][i] == INTENSITY_HCB2)) {
+                        c = (-1 + 2 * (ac->cb[1][g][i] - 14));
+                        if (ac->ms.present)
+                            c *= (1 - 2 * ac->ms.mask[g][i]);
+                        scale = c * ac->sf[1][g][i];
+                        for (k = offsets[i] + gp*128; k < offsets[i+1] + gp*128; k++) {
+                            ac->coeffs[1][k] = scale * ac->coeffs[0][k];
+                        }
+                    }
+                }
+            }
+            start += ac->ics[1].group_len[g];
         }
     }
 }
