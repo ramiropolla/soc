@@ -45,6 +45,18 @@ enum {
 //tns
 #define TNS_MAX_ORDER 20
 
+// dithering
+#define N 624
+#define M 397
+#define MATRIX_A    0x9908b0df
+#define UPPER_MASK  0x80000000
+#define LOWER_MASK  0x7fffffff
+
+typedef struct {
+    uint32_t mt[N];
+    int      mti;
+} dither_state;
+
 typedef struct {
     int present;
 
@@ -77,6 +89,9 @@ typedef struct {
 } program_config_struct;
 
 typedef struct {
+    int intensity_present;
+    int noise_present;
+
     int max_sfb;
     int window_sequence;
     int window_shape;
@@ -116,11 +131,24 @@ typedef struct {
 } pulse_struct;
 
 typedef struct {
+    int ind_sw;
+    int num_coupled;
+    int is_cpe[9];
+    int tag_select[9];
+    int l[9];
+    int r[9];
+    int domain;
+    float gain;
+    int common_gain[18];
+} coupling_struct;
+
+typedef struct {
     // objects
     AVCodecContext * avccontext;
     GetBitContext gb;
     VLC mainvlc;
     VLC books[11];
+    dither_state dither;
 
     // main config
     int audioObjectType;
@@ -134,11 +162,11 @@ typedef struct {
     int frame_length;
 
     // decoder param
-    int intensity_present;
     program_config_struct pcs;
     ms_struct ms;
     ics_struct ics[2];
     tns_struct tns[2];
+    coupling_struct coup;
     int cb[2][8][64];   // codebooks
     float sf[2][8][64];
     DECLARE_ALIGNED_16(float, coeffs[2][1024]);
