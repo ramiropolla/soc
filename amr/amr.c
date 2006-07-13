@@ -69,13 +69,14 @@ static int amr_nb_decode_init(AVCodecContext *avctx) {
 static int amr_nb_decode_frame(AVCodecContext *avctx,
         void *data, int *data_size, uint8_t *buf, int buf_size) {
 
-    AMRContext *p = avctx->priv_data;
-    int16_t *outbuffer = data; // FIXME check possible output data type(s)
-    int i;
-    int16_t amr_prms, q_bit;
+    AMRContext *p = avctx->priv_data;        // pointer to private data
+    int16_t *outbuffer = data;               // pointer to the output data buffer
+    int i;                                   // counter
+    int16_t amr_prms, q_bit;                 // FIXME rename q_bit when I know what it means
 
-    enum RXFrameType frame_type;
-    enum Mode mode, speech_mode;
+    enum RXFrameType frame_type;             // current frame type
+    enum Mode frame_mode;                    // current frame mode
+    enum Mode speech_mode = MODE_475;        // ???
 
 #ifdef DEBUG_BITSTREAM
     init_get_bits(&p->gb, buf, buf_size*8);
