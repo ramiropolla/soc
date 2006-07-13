@@ -39,6 +39,13 @@ typedef struct AMRContext {
     GetBitContext                        gb;
     float*                    sample_buffer;
 
+    int                   prev_frame_homing; // previous frame was a homing frame ? 1 : 0
+    enum RXFrameType        prev_frame_type; // frame type of previous frame
+    enum Mode               prev_frame_mode; // mode of previous frame
+
+    struct AMRDecoderState {                 // struct to hold current decoder state
+    }; AMRDecoderState
+
 } AMRContext;
 
 
@@ -195,6 +202,21 @@ enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *bu
     }
 
     return mode;
+}
+
+/**
+ * Reset the AMR frame parameters
+ *
+ * @param avctx             pointer to the AVCodecContext for AMR
+ */
+
+void decode_reset(AVCodecContext *avctx) {
+    AMRContext *p = avctx->priv_data;
+
+    p->prev_frame_homing = 1;
+    p->prev_frame_type = RX_SPEECH_GOOD;
+    p->prev_frame_mode = MODE_475;
+    // FIXME reset AMRDecoderState too!
 }
 
 AVCodec amr_nb_decoder =

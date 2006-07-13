@@ -79,6 +79,8 @@ enum RXFrameType {
 enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *buf, int buf_size,
                            enum RXFrameType *frame_type, enum Mode *speech_mode, int16_t *q_bit);
 
+void decode_reset(AVCodecContext *avctx);
+
 /**************************** tables *****************************/
 
 static const uint8_t block_size[16]= { 13, 14, 16, 18, 20, 21, 27, 32,
