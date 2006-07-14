@@ -24,6 +24,9 @@
  */
 
 
+// general definitions
+#define AMR_BLOCK_SIZE 160
+
 // definition of modes for decoder
 #define NO_DATA 15
 enum Mode {
@@ -76,8 +79,7 @@ enum RXFrameType {
 #define PRMS_MODE_122 57
 #define PRMS_MODE_DTX 5
 
-enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *buf, int buf_size,
-                           enum RXFrameType *frame_type, enum Mode *speech_mode, int16_t *q_bit);
+enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode, int16_t *q_bit);
 
 void decode_reset(AVCodecContext *avctx);
 
@@ -1430,6 +1432,9 @@ static const int16_t order_MODE_DTX[] = {
   4, 0x2,
   4, 0x1
 };
+
+// encoder homing frame pattern
+#define EHF_MASK 0x0008
 
 // Homing frames for the decoder
 static const int16_t dhf_MODE_475[PRMS_MODE_475] = {

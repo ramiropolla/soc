@@ -37,14 +37,21 @@
 typedef struct AMRContext {
 
     GetBitContext                        gb;
-    float*                    sample_buffer;
+    float                    *sample_buffer;
+
+    int16_t                       *amr_prms; // pointer to the decoded amr parameters (lsf coefficients, codebook indices, etc)
+    int                 bad_frame_indicator;
 
     int                   prev_frame_homing; // previous frame was a homing frame ? 1 : 0
     enum RXFrameType        prev_frame_type; // frame type of previous frame
     enum Mode               prev_frame_mode; // mode of previous frame
 
-    struct AMRDecoderState {                 // struct to hold current decoder state
-    }; AMRDecoderState
+    int                    cur_frame_homing; // current frame homing ? 1 : 0
+    enum RXFrameType         cur_frame_type; // current frame type
+    enum Mode                cur_frame_mode; // current frame mode
+
+//    struct AMRDecoderState {                 // struct to hold current decoder state
+//    }; AMRDecoderState
 
 } AMRContext;
 
@@ -53,9 +60,10 @@ static int amr_nb_decode_init(AVCodecContext *avctx) {
 
     AMRContext *p = avctx->priv_data;
 
-    /* We also need to allocate a sample buffer */
-    p->sample_buffer = av_mallocz(sizeof(float)*1024);  // here we used av_mallocz instead of av_malloc
-                                                        // av_mallocz memsets the whole buffer to 0
+    // allocate and zero the sample buffer
+    p->sample_buffer = av_mallocz(sizeof(float)*1024);
+    // allocate and zero the amr parameters
+    p->amr_prms = av_mallocz(sizeof(int16_t)*PRMS_MODE_122);
 
     /* Check if the allocation was successful */
     if(p->sample_buffer == NULL)
@@ -72,11 +80,10 @@ static int amr_nb_decode_frame(AVCodecContext *avctx,
     AMRContext *p = avctx->priv_data;        // pointer to private data
     int16_t *outbuffer = data;               // pointer to the output data buffer
     int i;                                   // counter
-    int16_t amr_prms, q_bit;                 // FIXME rename q_bit when I know what it means
-
-    enum RXFrameType frame_type;             // current frame type
-    enum Mode frame_mode;                    // current frame mode
+    int16_t q_bit;                           // FIXME rename q_bit when I know what it means
     enum Mode speech_mode = MODE_475;        // ???
+    const int16_t *homing_frame;             // pointer to the homing frame
+    int16_t homing_frame_size;               // homing frame size
 
 #ifdef DEBUG_BITSTREAM
     init_get_bits(&p->gb, buf, buf_size*8);
@@ -89,7 +96,135 @@ static int amr_nb_decode_frame(AVCodecContext *avctx,
 #endif // DEBUG_BITSTREAM
 
     // decode the bitstream to amr parameters
-    mode = decode_bitstream(avctx, &amr_prms, buf, buf_size, &frame_type, &speech_mode, &q_bit);
+    p->cur_frame_mode = decode_bitstream(avctx, buf, buf_size, &speech_mode, &q_bit);
+
+    // set the bad frame indicator depending on q_bit
+    if(!p->bad_frame_indicator) p->bad_frame_indicator = !q_bit;
+
+    // guess the mode from the previous frame if no data or bad data
+    if(p->cur_frame_type == RX_SPEECH_BAD) {
+        if(p->prev_frame_type > RX_SPEECH_BAD) {
+            p->cur_frame_type = RX_SID_BAD;
+            p->cur_frame_mode = MODE_DTX;
+        }else {
+            p->cur_frame_mode = p->prev_frame_mode;
+        }
+    }else if(p->cur_frame_type == RX_NO_DATA) {
+        p->cur_frame_mode = p->prev_frame_mode;
+    }
+
+    if(p->bad_frame_indicator) {
+        if(p->cur_frame_mode < MODE_DTX) {
+            p->cur_frame_type = RX_SPEECH_BAD;
+        }else if(p->cur_frame_mode != NO_DATA) {
+            p->cur_frame_type = RX_SID_BAD;
+        }
+    }
+
+    if(p->prev_frame_homing) {
+        switch(p->cur_frame_mode) {
+            case MODE_475:
+                homing_frame = dhf_MODE_475;
+                homing_frame_size = 7;
+            break;
+            case MODE_515:
+                homing_frame = dhf_MODE_515;
+                homing_frame_size = 7;
+            break;
+            case MODE_59:
+                homing_frame = dhf_MODE_59;
+                homing_frame_size = 7;
+            break;
+            case MODE_67:
+                homing_frame = dhf_MODE_67;
+                homing_frame_size = 7;
+            break;
+            case MODE_74:
+                homing_frame = dhf_MODE_74;
+                homing_frame_size = 7;
+            break;
+            case MODE_795:
+                homing_frame = dhf_MODE_795;
+                homing_frame_size = 8;
+            break;
+            case MODE_102:
+                homing_frame = dhf_MODE_102;
+                homing_frame_size = 12;
+            break;
+            case MODE_122:
+                homing_frame = dhf_MODE_122;
+                homing_frame_size = 18;
+            break;
+            default:
+                homing_frame = NULL;
+                homing_frame_size = 0;
+            break;
+        }
+        for(i=0; i<homing_frame_size; i++) {
+            // check if the frame is homing
+            if(p->cur_frame_homing = p->amr_prms[i] ^ homing_frame[i]) break;
+        }
+    }
+
+    if(!p->cur_frame_homing && p->prev_frame_homing) {
+        for(i=0; i<AMR_BLOCK_SIZE; i++) {
+            p->sample_buffer[i] = EHF_MASK;
+        }
+    }else {
+        // decode frame (ref funcn): Speech_Decode_Frame( p, p->cur_frame_mode, p->amr_prms, p->cur_frame_type, p->sample_buffer )
+    }
+
+    if(!p->prev_frame_homing) {
+        switch(p->cur_frame_mode) {
+            case MODE_475:
+                homing_frame = dhf_MODE_475;
+                homing_frame_size = PRMS_MODE_475;
+            break;
+            case MODE_515:
+                homing_frame = dhf_MODE_515;
+                homing_frame_size = PRMS_MODE_515;
+            break;
+            case MODE_59:
+                homing_frame = dhf_MODE_59;
+                homing_frame_size = PRMS_MODE_59;
+            break;
+            case MODE_67:
+                homing_frame = dhf_MODE_67;
+                homing_frame_size = PRMS_MODE_67;
+            break;
+            case MODE_74:
+                homing_frame = dhf_MODE_74;
+                homing_frame_size = PRMS_MODE_74;
+            break;
+            case MODE_795:
+                homing_frame = dhf_MODE_795;
+                homing_frame_size = PRMS_MODE_795;
+            break;
+            case MODE_102:
+                homing_frame = dhf_MODE_102;
+                homing_frame_size = PRMS_MODE_102;
+            break;
+            case MODE_122:
+                homing_frame = dhf_MODE_122;
+                homing_frame_size = PRMS_MODE_122;
+            break;
+            default:
+                homing_frame = NULL;
+                homing_frame_size = 0;
+            break;
+        }
+        for(i=0; i<homing_frame_size; i++) {
+            // check if the frame is homing
+            if(p->cur_frame_homing = p->amr_prms[i] ^ homing_frame[i]) break;
+        }
+    }
+
+    if(p->cur_frame_homing) {
+        decode_reset(avctx);
+    }
+    p->prev_frame_homing = !p->cur_frame_homing;
+    p->prev_frame_type   = p->cur_frame_type;
+    p->prev_frame_mode   = p->cur_frame_mode;
 
     /* To make it easy the stream can only be 16 bits mono, so let's convert it to that */
     for (i=0 ; i<buf_size; i++)
@@ -107,8 +242,9 @@ static int amr_nb_decode_close(AVCodecContext *avctx) {
 
     AMRContext *p = avctx->priv_data;
 
-    /* Free allocated memory buffer */
+    /* Free allocated memory */
     av_free(p->sample_buffer);
+    av_free(p->amr_prms);
 
     /* Return 0 if everything is ok, -1 if not */
     return 0;
@@ -117,9 +253,7 @@ static int amr_nb_decode_close(AVCodecContext *avctx) {
 /**
  * Decode the bitstream into the AMR parameters and discover the frame mode
  *
- * @param amr_prms          pointer to the AMR parameters
  * @param buf               pointer to the input buffer
- * @param frame_type        pointer to the frame type
  * @param speech_mode       pointer to the speech mode
  * @param q_bit             pointer to q_bit which is used to decide if the frame
  *                          is good or bad
@@ -127,8 +261,7 @@ static int amr_nb_decode_close(AVCodecContext *avctx) {
  * @return Returns the frame mode
  */
 
-enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *buf, int buf_size,
-                           enum RXFrameType *frame_type, enum Mode *speech_mode, int16_t *q_bit) {
+enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode, int16_t *q_bit) {
 
     AMRContext *p = avctx->priv_data;
     enum Mode mode;
@@ -137,7 +270,6 @@ enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *bu
 
     // initialise get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
-    memset(amr_prms, 0, PRMS_MODE_122 << 1);
     skip_bits1(&p->gb);
     mode = get_bits(&p->gb ,4);
     *q_bit = get_bits1(&p->gb); // FIXME rename q_bit to something more meaningful when i understand what it is
@@ -146,51 +278,51 @@ enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *bu
     switch(mode) {
         case MODE_DTX:
             mask = order_MODE_DTX;
-            *frame_type = RX_SID_FIRST; // get SID type bit
+            p->cur_frame_type = RX_SID_FIRST; // get SID type bit
         break;
         case NO_DATA:
-            *frame_type = RX_NO_DATA;
+            p->cur_frame_type = RX_NO_DATA;
         break;
         case MODE_475:
             mask = order_MODE_475;
-            *frame_type = RX_SPEECH_GOOD;
+            p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_515:
             mask = order_MODE_515;
-            *frame_type = RX_SPEECH_GOOD;
+            p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_59:
             mask = order_MODE_59;
-            *frame_type = RX_SPEECH_GOOD;
+            p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_67:
             mask = order_MODE_67;
-            *frame_type = RX_SPEECH_GOOD;
+            p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_74:
             mask = order_MODE_74;
-            *frame_type = RX_SPEECH_GOOD;
+            p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_795:
             mask = order_MODE_795;
-            *frame_type = RX_SPEECH_GOOD;
+            p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_102:
             mask = order_MODE_102;
-            *frame_type = RX_SPEECH_GOOD;
+            p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_122:
             mask = order_MODE_122;
-            *frame_type = RX_SPEECH_GOOD;
+            p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         default:
-            *frame_type = RX_SPEECH_BAD;
+            p->cur_frame_type = RX_SPEECH_BAD;
         break;
     }
 
-    if((*frame_type != RX_NO_DATA) && (*frame_type != RX_SPEECH_BAD)) {
+    if((p->cur_frame_type != RX_NO_DATA) && (p->cur_frame_type != RX_SPEECH_BAD)) {
         for(i=1; i<mode_bits[mode]; i++) {
-            amr_prms[*mask] += get_bits1(&p->gb) * mask[1];
+            p->amr_prms[*mask] += get_bits1(&p->gb) * mask[1];
             mask += 2;
         }
     }
@@ -198,7 +330,7 @@ enum Mode decode_bitstream(AVCodecContext *avctx, int16_t *amr_prms, uint8_t *bu
     if(mode == MODE_DTX) {
         skip_bits(&p->gb, 4); // skip to the next byte
         if(get_bits1(&p->gb)) // use the update if there is one
-            *frame_type = RX_SID_UPDATE;
+            p->cur_frame_type = RX_SID_UPDATE;
         *speech_mode = get_bits(&p->gb, 3); // speech mode indicator
     }
 
