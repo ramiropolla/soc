@@ -102,7 +102,7 @@ static const int16_t l15_q_tab[15] = { /* 15-level quantization table */
 	(10 << 15) / 15, (12 << 15) / 15, (14 << 15) / 15
 };
 
-static const uint8_t qntztab[16] = { 0, 5, 7, 3, 7, 4, 5, 6, 7, 8, 9, 10, 12, 12, 14, 16 };
+static const uint8_t qntztab[16] = { 0, 5, 7, 3, 7, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16 };
 
 static const float window[256] = {
         0.00014, 0.00024, 0.00037, 0.00051, 0.00067, 0.00086, 0.00107, 0.00130,
