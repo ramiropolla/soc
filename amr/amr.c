@@ -320,9 +320,10 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
         break;
     }
 
+    // reorder the bitstream to match the bit allocation in the specification
     if((p->cur_frame_type != RX_NO_DATA) && (p->cur_frame_type != RX_SPEECH_BAD)) {
         for(i=0; i<mode_bits[mode]; i++) {
-            p->amr_prms[ order[i].array_element ] += get_bits1(&p->gb) * order[i].bit_mask;
+            p->amr_prms[ order[i].array_element ] += get_bits1(&p->gb) * (1<< order[i].bit_mask);
         }
     }
 
