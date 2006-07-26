@@ -266,7 +266,7 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
     AMRContext *p = avctx->priv_data;
     enum Mode mode;
     int i;
-    int16_t *mask;
+    AMROrder *order;
 
     // initialise get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
@@ -277,42 +277,42 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
 
     switch(mode) {
         case MODE_DTX:
-            mask = order_MODE_DTX;
+            order = order_MODE_DTX;
             p->cur_frame_type = RX_SID_FIRST; // get SID type bit
         break;
         case NO_DATA:
             p->cur_frame_type = RX_NO_DATA;
         break;
         case MODE_475:
-            mask = order_MODE_475;
+            order = order_MODE_475;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_515:
-            mask = order_MODE_515;
+            order = order_MODE_515;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_59:
-            mask = order_MODE_59;
+            order = order_MODE_59;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_67:
-            mask = order_MODE_67;
+            order = order_MODE_67;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_74:
-            mask = order_MODE_74;
+            order = order_MODE_74;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_795:
-            mask = order_MODE_795;
+            order = order_MODE_795;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_102:
-            mask = order_MODE_102;
+            order = order_MODE_102;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_122:
-            mask = order_MODE_122;
+            order = order_MODE_122;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         default:
@@ -321,9 +321,8 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
     }
 
     if((p->cur_frame_type != RX_NO_DATA) && (p->cur_frame_type != RX_SPEECH_BAD)) {
-        for(i=1; i<mode_bits[mode]; i++) {
-            p->amr_prms[*mask] += get_bits1(&p->gb) * mask[1];
-            mask += 2;
+        for(i=0; i<mode_bits[mode]; i++) {
+            p->amr_prms[ order[i].array_element ] += get_bits1(&p->gb) * order[i].bit_mask;
         }
     }
 
