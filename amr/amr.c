@@ -46,6 +46,12 @@ typedef struct AMRContext {
     enum RXFrameType        prev_frame_type; // frame type of previous frame
     enum Mode               prev_frame_mode; // mode of previous frame
 
+    int16_t                    *prev_lsf_dq; // previous dequantised lsfs
+    int16_t                *prev_residual_q; // previous quantised residual
+
+    int16_t                         *lsp1_q; // vector of quantised lsps
+    int16_t                         *lsp2_q; // vector of quantised lsps
+
     int                    cur_frame_homing; // current frame homing ? 1 : 0
     enum RXFrameType         cur_frame_type; // current frame type
     enum Mode                cur_frame_mode; // current frame mode
@@ -59,6 +65,20 @@ typedef struct AMRContext {
 static int amr_nb_decode_init(AVCodecContext *avctx) {
 
     AMRContext *p = avctx->priv_data;
+
+    // variables needed for cos table generation
+    int i, temp;
+    double pi_step = M_PI/64.0;
+
+    // generate the cos table
+    for(i=0; i<65; i++) {
+        // avoid (int16_t)32768 -> -32768
+        if( (temp = lrint( 32768.0*cos(pi_step*(double)i) )) > 32767 ) {
+            cos_table[i] = 32767;
+        }else {
+            cos_table[i] = (int16_t)temp;
+        }
+    }
 
     // allocate and zero the sample buffer
     p->sample_buffer = av_mallocz(sizeof(float)*1024);
@@ -162,7 +182,7 @@ static int amr_nb_decode_frame(AVCodecContext *avctx,
         }
         for(i=0; i<homing_frame_size; i++) {
             // check if the frame is homing
-            if(p->cur_frame_homing = p->amr_prms[i] ^ homing_frame[i]) break;
+            if( (p->cur_frame_homing = p->amr_prms[i] ^ homing_frame[i]) ) break;
         }
     }
 
@@ -215,7 +235,7 @@ static int amr_nb_decode_frame(AVCodecContext *avctx,
         }
         for(i=0; i<homing_frame_size; i++) {
             // check if the frame is homing
-            if(p->cur_frame_homing = p->amr_prms[i] ^ homing_frame[i]) break;
+            if( (p->cur_frame_homing = p->amr_prms[i] ^ homing_frame[i]) ) break;
         }
     }
 
@@ -228,7 +248,7 @@ static int amr_nb_decode_frame(AVCodecContext *avctx,
 
     /* To make it easy the stream can only be 16 bits mono, so let's convert it to that */
     for (i=0 ; i<buf_size; i++)
-        outbuffer[i] = (int16_t)p->sample_buffer[i]; // FIXME check possible output data type(s)
+        outbuffer[i] = (int16_t)p->sample_buffer[i];
 
     /* Report how many samples we got */
     *data_size = buf_size;
@@ -250,6 +270,7 @@ static int amr_nb_decode_close(AVCodecContext *avctx) {
     return 0;
 }
 
+
 /**
  * Decode the bitstream into the AMR parameters and discover the frame mode
  *
@@ -266,7 +287,7 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
     AMRContext *p = avctx->priv_data;
     enum Mode mode;
     int i;
-    AMROrder *order;
+    const AMROrder *order;
 
     // initialise get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
@@ -336,6 +357,204 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
 
     return mode;
 }
+
+
+/**
+ * Convert a set of 3 lsf quantisation indices into lsp parameters
+ *
+ * @param avctx             pointer to the AVCodecContext for AMR
+ */
+
+static void decode_lsf2lsp_3(AVCodecContext *avctx) {
+
+    AMRContext *p = avctx->priv_data;
+
+    int16_t lsf1_r[LP_FILTER_ORDER]; // vector of residual lsfs
+    int16_t lsf1_q[LP_FILTER_ORDER]; // vector of quantised lsfs
+    const int16_t (*lsf_3_temp1)[3], (*lsf_3_temp3)[4]; // temp ptrs for switching tables depending on mode
+    int16_t index_temp; // temp lsf index
+    int i; // counter
+
+    // if the current frame is bad estimate the past quantised residual based on the past lsf shifted slightly towards the mean
+    if(p->bad_frame_indicator) {
+        for(i=0; i<LP_FILTER_ORDER; i++) {
+            lsf1_q[i] = ( (p->prev_lsf_dq[i]*ALPHA)>>15 ) + ( (lsf_3_mean[i]*ONE_ALPHA)>>15 );
+        }
+        if(p->cur_frame_mode != MODE_DTX) {
+            for(i=0; i<LP_FILTER_ORDER; i++) {
+                p->prev_residual_q[i] = lsf1_q[i] - lsf_3_mean[i] - ( (p->prev_residual_q[i] * pred_fac[i])>>15 );
+             }
+        }else {
+            for(i=0; i<LP_FILTER_ORDER; i++) {
+                p->prev_residual_q[i] = lsf1_q[i] - lsf_3_mean[i] - p->prev_residual_q[i];
+            }
+        }
+    }else {
+        if((p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515)) {
+            lsf_3_temp1 = lsf_3_1;
+            lsf_3_temp3 = lsf_3_MODE_515;
+        }else if(p->cur_frame_mode == MODE_795) {
+            lsf_3_temp1 = lsf_3_MODE_795;
+            lsf_3_temp3 = lsf_3_3;
+        }else {
+            lsf_3_temp1 = lsf_3_1;
+            lsf_3_temp3 = lsf_3_3;
+        }
+
+        lsf1_r[0] = lsf_3_temp1[ p->amr_prms[0] ][0];
+        lsf1_r[1] = lsf_3_temp1[ p->amr_prms[0] ][1];
+        lsf1_r[2] = lsf_3_temp1[ p->amr_prms[0] ][2];
+
+        index_temp = p->amr_prms[1];
+        // MODE_475, MODE_515 only use every second entry - NOTE : not quite sure what they mean and the spec doesn't mention this
+        if((p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515)) {
+            index_temp = index_temp << 1;
+        }
+        lsf1_r[3] = lsf_3_2[index_temp][0];
+        lsf1_r[4] = lsf_3_2[index_temp][1];
+        lsf1_r[5] = lsf_3_2[index_temp][2];
+
+        lsf1_r[6] = lsf_3_temp3[ p->amr_prms[2] ][0];
+        lsf1_r[7] = lsf_3_temp3[ p->amr_prms[2] ][1];
+        lsf1_r[8] = lsf_3_temp3[ p->amr_prms[2] ][2];
+        lsf1_r[9] = lsf_3_temp3[ p->amr_prms[2] ][3];
+
+        /* Compute quantized LSFs and update the past quantized residual */
+        if(p->cur_frame_mode != MODE_DTX) {
+            for(i=0; i<LP_FILTER_ORDER; i++) {
+                lsf1_q[i] = lsf1_r[i] + lsf_3_mean[i] + ( (p->prev_residual_q[i]*pred_fac[i])>>15 );
+            }
+            memcpy( p->prev_residual_q, lsf1_r, LP_FILTER_ORDER <<2 );
+        }else {
+            for(i=0; i<LP_FILTER_ORDER; i++) {
+                lsf1_q[i] = lsf1_r[i] + lsf_3_mean[i] + p->prev_residual_q[i];
+            }
+            memcpy(p->prev_residual_q, lsf1_r, LP_FILTER_ORDER<<2);
+        }
+    }
+
+    /* verification that LSFs has minimum distance of LSF_GAP Hz */
+    reorder_lsf(lsf1_q, LSF_GAP);
+    memcpy(p->prev_lsf_dq, lsf1_q, LP_FILTER_ORDER<<2);
+
+    /*  convert LSFs to the cosine domain */
+    lsf2lsp(lsf1_q, p->lsp1_q);
+}
+
+
+/**
+ * Convert a set of 5 lsf quantisation indices into lsp parameters
+ *
+ * @param avctx             pointer to the AVCodecContext for AMR
+ */
+
+static void decode_lsf2lsp_5(AVCodecContext *avctx) {
+
+    AMRContext *p = avctx->priv_data;
+
+    int16_t lsf1_r[LP_FILTER_ORDER], lsf2_r[LP_FILTER_ORDER]; // vectors of residual lsfs
+    int16_t lsf1_q[LP_FILTER_ORDER], lsf2_q[LP_FILTER_ORDER]; // vectors of quantised lsfs
+    int16_t temp;
+    int16_t i, sign; // counter and sign of 3rd lsf table
+
+    // if the current frame is bad estimate the past quantised residual based on the past lsf shifted slightly towards the mean
+    if(p->bad_frame_indicator) {
+        for(i=0; i<LP_FILTER_ORDER; i++) {
+            lsf1_q[i] = ( (p->prev_lsf_dq[i]*ALPHA_122)>>15 ) + ( (lsf_5_mean[i]*ONE_ALPHA_122)>>15 );
+        }
+        memcpy(lsf2_q, lsf1_q, LP_FILTER_ORDER<<1);
+        for(i=0; i<LP_FILTER_ORDER; i++) {
+            p->prev_residual_q[i] = lsf2_q[i] - lsf_5_mean[i] - ( (p->prev_residual_q[i]*LSP_PRED_FAC_MODE_122)>>15 );
+        }
+    }else {
+        /* decode prediction residuals from 5 received indices */
+        lsf1_r[0] = lsf_5_1[ p->amr_prms[0] ][0];
+        lsf1_r[1] = lsf_5_1[ p->amr_prms[0] ][1];
+        lsf2_r[0] = lsf_5_1[ p->amr_prms[0] ][2];
+        lsf2_r[1] = lsf_5_1[ p->amr_prms[0] ][3];
+
+        lsf1_r[2] = lsf_5_2[ p->amr_prms[1] ][0];
+        lsf1_r[3] = lsf_5_2[ p->amr_prms[1] ][1];
+        lsf2_r[2] = lsf_5_2[ p->amr_prms[1] ][2];
+        lsf2_r[3] = lsf_5_2[ p->amr_prms[1] ][3];
+
+        sign = (p->amr_prms[2] & 1) ? -1 : 1;
+        // I don't know why p->amr_prms[2]>>1 but that's how it is in the ref source
+        lsf1_r[4] = lsf_5_3[ p->amr_prms[2]>>1 ][0]*sign;
+        lsf1_r[5] = lsf_5_3[ p->amr_prms[2]>>1 ][1]*sign;
+        lsf2_r[4] = lsf_5_3[ p->amr_prms[2]>>1 ][2]*sign;
+        lsf2_r[5] = lsf_5_3[ p->amr_prms[2]>>1 ][3]*sign;
+
+        lsf1_r[6] = lsf_5_4[ p->amr_prms[3] ][0];
+        lsf1_r[7] = lsf_5_4[ p->amr_prms[3] ][1];
+        lsf2_r[6] = lsf_5_4[ p->amr_prms[3] ][2];
+        lsf2_r[7] = lsf_5_4[ p->amr_prms[3] ][3];
+
+        lsf1_r[8] = lsf_5_5[ p->amr_prms[4] ][0];
+        lsf1_r[9] = lsf_5_5[ p->amr_prms[4] ][1];
+        lsf2_r[8] = lsf_5_5[ p->amr_prms[4] ][2];
+        lsf2_r[9] = lsf_5_5[ p->amr_prms[4] ][3];
+
+        /* Compute quantized LSFs and update the past quantized residual */
+        for(i=0; i<LP_FILTER_ORDER; i++) {
+            temp = lsf_5_mean[i] + ( (p->prev_residual_q[i]*LSP_PRED_FAC_MODE_122)>>15 );
+            lsf1_q[i] = lsf1_r[i] + temp;
+            lsf2_q[i] = lsf2_r[i] + temp;
+            p->prev_residual_q[i] = lsf2_r[i];
+        }
+    }
+
+    /* verification that LSFs have minimum distance of LSF_GAP Hz */
+    reorder_lsf(lsf1_q, LSF_GAP);
+    reorder_lsf(lsf2_q, LSF_GAP);
+    memcpy(p->prev_lsf_dq, lsf2_q, LP_FILTER_ORDER<<2);
+
+    /*  convert LSFs to the cosine domain */
+    lsf2lsp(lsf1_q, p->lsp1_q);
+    lsf2lsp(lsf2_q, p->lsp2_q);
+}
+
+
+/**
+ * DESCRIPTION FROM REF SOURCE:
+ * Make sure that the LSFs are properly ordered and to keep a certain minimum
+ * distance between adjacent LSFs.
+ *
+ * @param lsf               a vector of lsfs (range: 0<=val<=0.5)
+ * @param min_dist          minimum required separation of lsfs
+ */
+
+static void reorder_lsf(int16_t *lsf, int16_t min_dist) {
+    int i;
+    int16_t lsf_min;
+
+    for(i=0; i<LP_FILTER_ORDER; i++) {
+        if(lsf[i] < lsf_min) {
+            lsf[i] = lsf_min;
+        }
+        lsf_min = lsf[i] + min_dist;
+    }
+}
+
+
+/**
+ * Convert a vector of lsfs into the corresponding, cosine domain lsps
+ *
+ * @param lsf               a vector of lsfs
+ * @param lsp               a vector of lsps
+ */
+
+static void lsf2lsp(int16_t *lsf, int16_t *lsp) {
+    int i;
+    int16_t index, offset;
+
+    for(i=0; i<LP_FILTER_ORDER; i++) {
+        index = lsf[i] >> 8;      // bits 8 to 15 of lsf[i]
+        offset = lsf[i] & 0x00ff; // bits 0 to  7 of lsf[i]
+        lsp[i] = cos_table[index] + ( (( cos_table[index+1]-cos_table[index] )*offset)>>8 );
+    }
+}
+
 
 /**
  * Reset the AMR frame parameters
