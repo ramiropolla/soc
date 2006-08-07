@@ -390,6 +390,7 @@ static void decode_lsf2lsp_3(AVCodecContext *avctx) {
             }
         }
     }else {
+        // assign lsf tables according to mode
         if((p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515)) {
             lsf_3_temp1 = lsf_3_1;
             lsf_3_temp3 = lsf_3_MODE_515;
@@ -401,6 +402,7 @@ static void decode_lsf2lsp_3(AVCodecContext *avctx) {
             lsf_3_temp3 = lsf_3_3;
         }
 
+        // decode lsf residuals from lsf tables using the indices from the bitstream
         lsf1_r[0] = lsf_3_temp1[ p->amr_prms[0] ][0];
         lsf1_r[1] = lsf_3_temp1[ p->amr_prms[0] ][1];
         lsf1_r[2] = lsf_3_temp1[ p->amr_prms[0] ][2];

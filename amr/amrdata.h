@@ -89,11 +89,16 @@ typedef struct AMROrder {
 #define LSF_GAP                  205  /* Minimum distance between LSF after quantization; 50 Hz = 205 */
 #define LSP_PRED_FAC_MODE_122  21299  /* MR122 LSP prediction factor (0.65 Q15) */
 
+
 // dunno what these are for
 #define ALPHA         29491 // FIXME why alpha?
+
 #define ONE_ALPHA      3277 // FIXME why alpha?
+
 #define ALPHA_122     31128 // FIXME why alpha?
+
 #define ONE_ALPHA_122  1639 // FIXME why alpha?
+
 
 int16_t cos_table[65]; // cosine table used to convert lsfs to lsps
 
@@ -353,19 +358,32 @@ static const int16_t bitno_MODE_DTX[PRMS_MODE_DTX] = {
 };
 
 static const uint16_t lsf_3_mean[10] = {
+
      1546,  2272,  3778,  5488,  6972,
+
      8382, 10047, 11229, 12766, 13714
+
 };
+
+
 
 static const uint16_t lsf_5_mean[10] = {
+
      1384,  2077,  3420,  5108,  6742,
      8122,  9863, 11092, 12714, 13701
+
 };
 
+
+
 static const uint16_t pred_fac[10] = {
+
      9556, 10769, 12571, 13292, 14381,
+
     11651, 10588,  9767,  8593,  6484
+
 };
+
 
 
 // vector quantised lsf tables
