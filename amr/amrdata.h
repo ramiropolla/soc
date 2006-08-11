@@ -89,14 +89,10 @@ typedef struct AMROrder {
 #define LSF_GAP                  205  /* Minimum distance between LSF after quantization; 50 Hz = 205 */
 #define LSP_PRED_FAC_MODE_122  21299  /* MR122 LSP prediction factor (0.65 Q15) */
 
-
 // dunno what these are for
 #define ALPHA         29491 // FIXME why alpha?
-
 #define ONE_ALPHA      3277 // FIXME why alpha?
-
 #define ALPHA_122     31128 // FIXME why alpha?
-
 #define ONE_ALPHA_122  1639 // FIXME why alpha?
 
 
@@ -123,9 +119,8 @@ static const uint8_t toc_byte[16]= {0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34, 0x
                                     0x44, 0x4C, 0x54, 0x5C, 0x64, 0x6C, 0x74, 0x7C};
 
 // The following order* tables are used to reorder the bitstream into the bit allocation
-// format as in the specification. The comment given in the reference source was
-// "Subjective importance of the speech encoded bits". I assume this is the reason such
-// bitpacking is undertaken.
+// format as in the specification. The bits are grouped into three classes of importance.
+// See the specification, for more information.
 
 static const AMROrder order_MODE_475[95] = {
 { 0, 7}, { 0, 6}, { 0, 5}, { 0, 4}, { 0, 3}, { 0, 2}, { 0, 1}, { 0, 0}, { 1, 7}, { 1, 6}, { 1, 5}, { 1, 4}, { 1, 3}, { 1, 2}, { 1, 1}, { 1, 0},
@@ -287,7 +282,6 @@ static const int16_t dhf_MODE_122[PRMS_MODE_122] = {
   0x0003,0x0006,0x0001,0x0007,0x0006,0x0005,0x0000
 };
 
-
 // parameter sizes (# of bits), one table per mode
 static const int16_t bitno_MODE_475[PRMS_MODE_475] = {
   8, 8, 7,    /* LSP VQ          */
@@ -358,33 +352,19 @@ static const int16_t bitno_MODE_DTX[PRMS_MODE_DTX] = {
 };
 
 static const uint16_t lsf_3_mean[10] = {
-
      1546,  2272,  3778,  5488,  6972,
-
      8382, 10047, 11229, 12766, 13714
-
 };
-
-
 
 static const uint16_t lsf_5_mean[10] = {
-
      1384,  2077,  3420,  5108,  6742,
      8122,  9863, 11092, 12714, 13701
-
 };
-
-
 
 static const uint16_t pred_fac[10] = {
-
      9556, 10769, 12571, 13292, 14381,
-
     11651, 10588,  9767,  8593,  6484
-
 };
-
-
 
 // vector quantised lsf tables
 static const int16_t lsf_3_MODE_515[128][4] = {
