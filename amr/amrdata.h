@@ -104,7 +104,7 @@ int16_t cos_table[65]; // cosine table used to convert lsfs to lsps
 
 /**************************** functions *****************************/
 
-enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode, int16_t *q_bit);
+enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode);
 
 static void decode_lsf2lsp_3(AVCodecContext *avctx);
 static void decode_lsf2lsp_5(AVCodecContext *avctx);

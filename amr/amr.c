@@ -100,7 +100,6 @@ static int amr_nb_decode_frame(AVCodecContext *avctx,
     AMRContext *p = avctx->priv_data;        // pointer to private data
     int16_t *outbuffer = data;               // pointer to the output data buffer
     int i;                                   // counter
-    int16_t q_bit;                           // FIXME rename q_bit when I know what it means
     enum Mode speech_mode = MODE_475;        // ???
     const int16_t *homing_frame;             // pointer to the homing frame
     int16_t homing_frame_size;               // homing frame size
@@ -116,10 +115,7 @@ static int amr_nb_decode_frame(AVCodecContext *avctx,
 #endif // DEBUG_BITSTREAM
 
     // decode the bitstream to amr parameters
-    p->cur_frame_mode = decode_bitstream(avctx, buf, buf_size, &speech_mode, &q_bit);
-
-    // set the bad frame indicator depending on q_bit
-    if(!p->bad_frame_indicator) p->bad_frame_indicator = !q_bit;
+    p->cur_frame_mode = decode_bitstream(avctx, buf, buf_size, &speech_mode);
 
     // guess the mode from the previous frame if no data or bad data
     if(p->cur_frame_type == RX_SPEECH_BAD) {
@@ -275,14 +271,13 @@ static int amr_nb_decode_close(AVCodecContext *avctx) {
  * Decode the bitstream into the AMR parameters and discover the frame mode
  *
  * @param buf               pointer to the input buffer
+ * @param buf_size          size of the input buffer
  * @param speech_mode       pointer to the speech mode
- * @param q_bit             pointer to q_bit which is used to decide if the frame
- *                          is good or bad
  *
  * @return Returns the frame mode
  */
 
-enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode, int16_t *q_bit) {
+enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode) {
 
     AMRContext *p = avctx->priv_data;
     enum Mode mode;
@@ -292,8 +287,10 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
     // initialise get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
     skip_bits1(&p->gb);
+    // set the mode
     mode = get_bits(&p->gb ,4);
-    *q_bit = get_bits1(&p->gb); // FIXME rename q_bit to something more meaningful when i understand what it is
+    // set the bad frame indicator based on the quality bit
+    p->bad_frame_indicator = !get_bits1(&p->gb);
     skip_bits(&p->gb, 2);
 
     switch(mode) {
