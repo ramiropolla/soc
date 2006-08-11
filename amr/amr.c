@@ -556,6 +556,41 @@ static void lsf2lsp(int16_t *lsf, int16_t *lsp) {
 
 
 /**
+ * Find the polynomial F1(z) or F2(z) from the lsps
+ *
+ * The ref source description of how to find the polynomials was as follows:
+ *    Find the polynomial F1(z) or F2(z) from the LSPs.
+ *
+ *    F1(z) = product ( 1 - 2 lsp[i] z^-1 + z^-2 )
+ *             i=0,2,4,6,8
+ *    F2(z) = product   ( 1 - 2 lsp[i] z^-1 + z^-2 )
+ *             i=1,3,5,7,9
+ *
+ * @param lsp               vector of lsps
+ * @param f                 pointer to the polynomial F1(z) or F2(z)
+ *
+ * @return void
+ */
+
+static void lsp2poly(int *lsp, int *f) {
+    int b;
+    int i, j;
+
+    f[0] = 1<<24;
+    b = -(lsp[0]<<10);
+    f[1] = b;
+    for(i=2; i<6; i++) {
+        b = lsp[2*i-2]<<1;
+        f[i] = (f[i-2]<<1) - (( (f[i-1]>>16)*lsp[2*i-2] + ( ((f[i-1] & 0xFFFE)*lsp[2*i-2]) >>16) )<<2);
+        for(j=i-1; j>1; j--) {
+            f[j] += f[j-2] - (( (f[j-1]>>16)*lsp[2*i-2] + ( ((f[j-1] & 0xFFFE)*lsp[2*i-2]) >>16) )<<2);
+        }
+        f[1] -= lsp[2*i-2]<<10;
+    }
+}
+
+
+/**
  * Reset the AMR frame parameters
  *
  * @param avctx             pointer to the AVCodecContext for AMR

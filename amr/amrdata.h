@@ -95,7 +95,6 @@ typedef struct AMROrder {
 #define ALPHA_122     31128 // FIXME why alpha?
 #define ONE_ALPHA_122  1639 // FIXME why alpha?
 
-
 int16_t cos_table[65]; // cosine table used to convert lsfs to lsps
 
 /**************************** functions *****************************/
@@ -107,6 +106,8 @@ static void decode_lsf2lsp_5(AVCodecContext *avctx);
 
 static void reorder_lsf(int16_t *lsf, int16_t min_dist);
 static void lsf2lsp(int16_t *lsf, int16_t *lsp);
+
+static void lsp2poly(int *lsp, int *f);
 
 void decode_reset(AVCodecContext *avctx);
 
