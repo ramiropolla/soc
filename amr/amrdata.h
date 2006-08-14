@@ -104,8 +104,8 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
 static void decode_lsf2lsp_3(AVCodecContext *avctx);
 static void decode_lsf2lsp_5(AVCodecContext *avctx);
 
-static void reorder_lsf(int16_t *lsf, int16_t min_dist);
-static void lsf2lsp(int16_t *lsf, int16_t *lsp);
+static void reorder_lsf(int *lsf, int min_dist);
+static void lsf2lsp(int *lsf, int *lsp);
 
 static void lsp2poly(int *lsp, int *f);
 

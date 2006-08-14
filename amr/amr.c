@@ -46,11 +46,11 @@ typedef struct AMRContext {
     enum RXFrameType        prev_frame_type; // frame type of previous frame
     enum Mode               prev_frame_mode; // mode of previous frame
 
-    int16_t                    *prev_lsf_dq; // previous dequantised lsfs
-    int16_t                *prev_residual_q; // previous quantised residual
+    int                        *prev_lsf_dq; // previous dequantised lsfs
+    int                    *prev_residual_q; // previous quantised residual
 
-    int16_t                         *lsp1_q; // vector of quantised lsps
-    int16_t                         *lsp2_q; // vector of quantised lsps
+    int                             *lsp1_q; // vector of quantised lsps
+    int                             *lsp2_q; // vector of quantised lsps
 
     int                    cur_frame_homing; // current frame homing ? 1 : 0
     enum RXFrameType         cur_frame_type; // current frame type
@@ -102,7 +102,7 @@ static int amr_nb_decode_frame(AVCodecContext *avctx,
     int i;                                   // counter
     enum Mode speech_mode = MODE_475;        // ???
     const int16_t *homing_frame;             // pointer to the homing frame
-    int16_t homing_frame_size;               // homing frame size
+    int homing_frame_size;                   // homing frame size
 
 #ifdef DEBUG_BITSTREAM
     init_get_bits(&p->gb, buf, buf_size*8);
@@ -366,10 +366,10 @@ static void decode_lsf2lsp_3(AVCodecContext *avctx) {
 
     AMRContext *p = avctx->priv_data;
 
-    int16_t lsf1_r[LP_FILTER_ORDER]; // vector of residual lsfs
-    int16_t lsf1_q[LP_FILTER_ORDER]; // vector of quantised lsfs
-    const int16_t (*lsf_3_temp1)[3], (*lsf_3_temp3)[4]; // temp ptrs for switching tables depending on mode
-    int16_t index_temp; // temp lsf index
+    int lsf1_r[LP_FILTER_ORDER]; // vector of residual lsfs
+    int lsf1_q[LP_FILTER_ORDER]; // vector of quantised lsfs
+    const int (*lsf_3_temp1)[3], (*lsf_3_temp3)[4]; // temp ptrs for switching tables depending on mode
+    int index_temp; // temp lsf index
     int i; // counter
 
     // if the current frame is bad estimate the past quantised residual based on the past lsf shifted slightly towards the mean
@@ -451,10 +451,10 @@ static void decode_lsf2lsp_5(AVCodecContext *avctx) {
 
     AMRContext *p = avctx->priv_data;
 
-    int16_t lsf1_r[LP_FILTER_ORDER], lsf2_r[LP_FILTER_ORDER]; // vectors of residual lsfs
-    int16_t lsf1_q[LP_FILTER_ORDER], lsf2_q[LP_FILTER_ORDER]; // vectors of quantised lsfs
-    int16_t temp;
-    int16_t i, sign; // counter and sign of 3rd lsf table
+    int lsf1_r[LP_FILTER_ORDER], lsf2_r[LP_FILTER_ORDER]; // vectors of residual lsfs
+    int lsf1_q[LP_FILTER_ORDER], lsf2_q[LP_FILTER_ORDER]; // vectors of quantised lsfs
+    int temp;
+    int i, sign; // counter and sign of 3rd lsf table
 
     // if the current frame is bad estimate the past quantised residual based on the past lsf shifted slightly towards the mean
     if(p->bad_frame_indicator) {
@@ -523,9 +523,9 @@ static void decode_lsf2lsp_5(AVCodecContext *avctx) {
  * @param min_dist          minimum required separation of lsfs
  */
 
-static void reorder_lsf(int16_t *lsf, int16_t min_dist) {
+static void reorder_lsf(int *lsf, int min_dist) {
     int i;
-    int16_t lsf_min;
+    int lsf_min;
 
     for(i=0; i<LP_FILTER_ORDER; i++) {
         if(lsf[i] < lsf_min) {
@@ -543,9 +543,9 @@ static void reorder_lsf(int16_t *lsf, int16_t min_dist) {
  * @param lsp               a vector of lsps
  */
 
-static void lsf2lsp(int16_t *lsf, int16_t *lsp) {
+static void lsf2lsp(int *lsf, int *lsp) {
     int i;
-    int16_t index, offset;
+    int index, offset;
 
     for(i=0; i<LP_FILTER_ORDER; i++) {
         index = lsf[i] >> 8;      // bits 8 to 15 of lsf[i]
