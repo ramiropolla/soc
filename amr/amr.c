@@ -591,6 +591,143 @@ static void lsp2poly(int *lsp, int *f) {
 
 
 /**
+ * Convert a vector of lsps to lpc coefficients for a 10th order filter
+ *
+ * @param lsp                 vector of lsps
+ * @param a                   vector of lpcs
+ *
+ * @return void
+ */
+
+static void lsp2lpc(int *lsp, int *Az) {
+    int f1[6], f2[6];
+    int temp, i, j;
+
+    // find F1(z) and F2(z) from the lsps
+    lsp2poly(&lsp[0], f1);
+    lsp2poly(&lsp[1], f2);
+
+    // multiply F1(z) by 1+z^{-1} and F2(z) by 1-z^{-1} to obtain F1'(z) and F2'(z)
+    for(i=5; i>0; i--) {
+        f1[i] += f1[i-1];
+        f2[i] -= f2[i-1];
+    }
+
+    // A(z) = ( F1'(z) + F2'(z) )/2
+    // note f1 and f2 are actually f1' and f2'
+    // Az[i] = 0.5*f1[i]    + 0.5*f2[i]       for i = 1,...,5
+    //         0.5*f1[11-i] - 0.5*f2[11-i]    for i = 6,...,10
+    Az[0] = 0x1000;
+    for(i=1; i<6; i++) {
+        temp = f1[i] + f2[i];
+        Az[i] = (int16_t)(temp>>13);  // ref source: emulate fixed point bug
+        if(( temp & 0x1000 )) {
+            Az[i]++;
+        }
+        temp = f1[11-i] - f2[11-i];
+        Az[11-i] = (int16_t)(temp>>13);  // ref source: emulate fixed point bug
+        if(( temp & 0x1000 )) {
+            Az[11-i]++;
+        }
+    }
+}
+
+
+/**
+ * Interpolate lsps for subframes 1 and 3 and convert them to lpc coefficients
+ *
+ * @param lsp_old               vector of lsps from q4 of the previous frame
+ * @param lsp_mid               vector of lsps from q2 of the current frame
+ * @param lsp_new               vector of lsps from q4 of the current frame
+ * @param Az                    vector of lpc coefficients
+ *
+ * @return void
+ */
+
+static void lpc_interp_13(int *lsp_old, int *lsp_mid, int *lsp_new, int *Az) {
+    int lsp[LP_FILTER_ORDER];
+    int i;
+
+    // subframe 1: interpolate lsp vector
+    // q1(n) = 0.5q4(n-1) + 0.5q2(n)
+    for(i=0; i<LP_FILTER_ORDER; i++) {
+        lsp[i] = (lsp_mid[i]>>1) + (lsp_old[i]>>1);
+    }
+    // subframe 1: convert the lsps to lpc coefficients
+    lsp2lpc(lsp, Az);
+    // increment the Az pointer
+    Az += LP_FILTER_ORDER + 1;
+
+    // subframe 2: convert the lsps to lpc coefficients
+    lsp2lpc(lsp_mid, Az);
+    // increment the Az pointer
+    Az += LP_FILTER_ORDER + 1;
+
+    // subframe 3: interpolate lsp vector
+    // q3(n) = 0.5q2(n) + 0.5q4(n)
+    for(i=0; i<LP_FILTER_ORDER; i++) {
+        lsp[i] = (lsp_mid[i]>>1) + (lsp_new[i]>>1);
+    }
+    // subframe 3: convert the lsps to lpc coefficients
+    lsp2lpc(lsp, Az);
+    // increment the Az pointer
+    Az += LP_FILTER_ORDER + 1;
+
+    // subframe 4: convert the lsps to lpc coefficients
+    lsp2lpc(lsp, Az);
+}
+
+
+/**
+ * Interpolate lsps for subframes 1, 2 and 3 and convert them to lpc coefficients
+ *
+ * @param lsp_old               vector of lsps from q4 of the previous frame
+ * @param lsp_new               vector of lsps from q4 of the current frame
+ * @param Az                    vector of lpc coefficients
+ *
+ * @return void
+ */
+
+static void lpc_interp_123(int *lsp_old, int *lsp_new, int *Az) {
+    int lsp[LP_FILTER_ORDER];
+    int i;
+
+    // subframe 1: interpolate lsp vector
+    // q1(n) = 0.75q4(n-1) + 0.25q4(n)
+    for(i=0; i<LP_FILTER_ORDER; i++) {
+        lsp[i] = (lsp_new[i] - lsp_old[i])>>2 + lsp_old[i];
+    }
+    // subframe 1: convert the lsps to lpc coefficients
+    lsp2lpc(lsp, Az);
+    // increment the Az pointer
+    Az += LP_FILTER_ORDER + 1;
+
+    // subframe 2: interpolate lsp vector
+    // q2(n) = 0.5q4(n-1) + 0.5q4(n)
+    for(i=0; i<LP_FILTER_ORDER; i++) {
+        lsp[i] = (lsp_old[i]>>1) + (lsp_new[i]>>1);
+    }
+    // subframe 2: convert the lsps to lpc coefficients
+    lsp2lpc(lsp, Az);
+    // increment the Az pointer
+    Az += LP_FILTER_ORDER + 1;
+
+    // subframe 3: interpolate lsp vector
+    // q3(n) = 0.25q4(n-1) + 0.75q4(n)
+    for(i=0; i<LP_FILTER_ORDER; i++) {
+        lsp[i] = (lsp_old[i]>>2) + ( lsp_new[i] - (lsp_new[i]>>2) );
+    }
+    // subframe 3: convert the lsps to lpc coefficients
+    lsp2lpc(lsp, Az);
+    // increment the Az pointer
+    Az += LP_FILTER_ORDER + 1;
+
+    // subframe 4: convert the lsps to lpc coefficients
+    lsp2lpc(lsp_new, Az);
+}
+
+
+/**
  * Reset the AMR frame parameters
  *
  * @param avctx             pointer to the AVCodecContext for AMR
