@@ -601,7 +601,7 @@ static void lsp2poly(int *lsp, int *f) {
 
 static void lsp2lpc(int *lsp, int *Az) {
     int f1[6], f2[6];
-    int temp, i, j;
+    int temp, i;
 
     // find F1(z) and F2(z) from the lsps
     lsp2poly(&lsp[0], f1);
@@ -695,7 +695,7 @@ static void lpc_interp_123(int *lsp_old, int *lsp_new, int *Az) {
     // subframe 1: interpolate lsp vector
     // q1(n) = 0.75q4(n-1) + 0.25q4(n)
     for(i=0; i<LP_FILTER_ORDER; i++) {
-        lsp[i] = (lsp_new[i] - lsp_old[i])>>2 + lsp_old[i];
+        lsp[i] = ((lsp_new[i] - lsp_old[i])>>2) + lsp_old[i];
     }
     // subframe 1: convert the lsps to lpc coefficients
     lsp2lpc(lsp, Az);
