@@ -1,0 +1,16 @@
+TODO (for narrow band decoder)
+====
+
+- lsf to lsp conversion for 3 and 5 index cases
+    - check what needs to be reset
+- lsp to lpc
+    - check the rounding sensitivity of lpc in amr
+- glue all the lsf->lpc stuff together and add necessary decisions and resets
+
+- adaptive (pitch) codes
+- gain codes
+- innovative (code) codes
+- construct excitation
+- synthesis filter
+- post filter
+- check for FIXMEs and fix them
