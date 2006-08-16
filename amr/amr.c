@@ -573,14 +573,11 @@ static void lsf2lsp(int *lsf, int *lsp) {
  */
 
 static void lsp2poly(int *lsp, int *f) {
-    int b;
     int i, j;
 
     f[0] = 1<<24;
-    b = -(lsp[0]<<10);
-    f[1] = b;
+    f[1] = -(lsp[0]<<10);
     for(i=2; i<6; i++) {
-        b = lsp[2*i-2]<<1;
         f[i] = (f[i-2]<<1) - (( (f[i-1]>>16)*lsp[2*i-2] + ( ((f[i-1] & 0xFFFE)*lsp[2*i-2]) >>16) )<<2);
         for(j=i-1; j>1; j--) {
             f[j] += f[j-2] - (( (f[j-1]>>16)*lsp[2*i-2] + ( ((f[j-1] & 0xFFFE)*lsp[2*i-2]) >>16) )<<2);
@@ -588,6 +585,19 @@ static void lsp2poly(int *lsp, int *f) {
         f[1] -= lsp[2*i-2]<<10;
     }
 }
+/* FIXME - check rounding sensitivity of F1(z) and F2(z) as the code below is faster but rounds differently
+static void lsp2poly(int *lsp, int *f) {
+    int i, j;
+    f[0] = 1<<24;
+    f[1] = -lsp[0]<<10;
+    for(i=2; i<6; i++) {
+        f[i] = f[i-2];
+        for(j=i; j>1; j--)
+            f[j] +=  f[j-2] - ((lsp[2*i-2] * (int64_t)f[j-1] + (1<<13))>>14);
+        f[1] -= lsp[2*i-2]<<10;
+    }
+}
+*/
 
 
 /**
