@@ -109,9 +109,9 @@ static void reorder_lsf(int *lsf, int min_dist);
 static void lsf2lsp(int *lsf, int *lsp);
 
 static void lsp2poly(int *lsp, int *f);
-static void lsp2lpc(int *lsp, int *Az);
-static void lpc_interp_13(int *lsp_old, int *lsp_mid, int *lsp_new, int *Az);
-static void lpc_interp_123(int *lsp_old, int *lsp_new, int *Az);
+static void lsp2lpc(int *lsp, int *lpc_coeffs);
+static void lpc_interp_13(AVCodecContext *avctx, int **lpc_coeffs);
+static void lpc_interp_123(AVCodecContext *avctx, int **lpc_coeffs);
 
 void decode_reset(AVCodecContext *avctx);
 
