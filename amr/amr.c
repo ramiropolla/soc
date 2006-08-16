@@ -636,12 +636,12 @@ static void lsp2lpc(int *lsp, int *lpc_coeffs) {
     for(i=1; i<6; i++) {
         temp = f1[i] + f2[i];
         lpc_coeffs[i] = (int16_t)(temp>>13);  // ref source: emulate fixed point bug
-        if(( temp & 0x1000 )) {
+        if(temp & 0x1000) {
             lpc_coeffs[i]++;
         }
         temp = f1[11-i] - f2[11-i];
         lpc_coeffs[11-i] = (int16_t)(temp>>13);  // ref source: emulate fixed point bug
-        if(( temp & 0x1000 )) {
+        if(temp & 0x1000) {
             lpc_coeffs[11-i]++;
         }
     }
