@@ -73,12 +73,7 @@ static int16_t l15_quantizers[15];
 
 static const uint8_t qntztab[16] = { 0, 5, 7, 3, 7, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16 };
 
-static float x_cos1[128];
-static float x_sin1[128];
-static float x_cos2[64];
-static float x_sin2[64];
-
-static double window[256];
+static float window[256];
 
 /* Adjustmens in dB gain */
 #define LEVEL_MINUS_3DB         0.7071067811865476
