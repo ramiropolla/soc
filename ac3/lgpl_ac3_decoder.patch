@@ -1,0 +1,42 @@
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c	(revision 6022)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -460,6 +460,12 @@
+     register_avcodec(&ac3_decoder);
+ #endif //CONFIG_AC3_DECODER
+ #endif
++#ifndef CONFIG_AC3
++    #ifdef CONFIG_LGPL_AC3_DECODER
++    register_avcodec(&lgpl_ac3_decoder);
++    #endif //CONFIG_LGPL_AC3_DECODER
++#endif //CONFIG_AC3
++    
+ #ifdef CONFIG_DTS
+ #ifdef CONFIG_DTS_DECODER
+     register_avcodec(&dts_decoder);
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(revision 6022)
++++ libavcodec/Makefile	(working copy)
+@@ -227,6 +227,8 @@
+                                           liba52/crc.o          \
+                                           liba52/resample.o
+ 
++OBJS-$(CONFIG_LGPL_AC3_DECODER)        += ac3_decoder.o
++
+ # currently using libdts for dts decoding
+ OBJS-$(CONFIG_DTS)                     += dtsdec.o
+ 
+Index: libavcodec/avcodec.h
+===================================================================
+--- libavcodec/avcodec.h	(revision 6022)
++++ libavcodec/avcodec.h	(working copy)
+@@ -2257,6 +2257,7 @@
+ extern AVCodec kmvc_decoder;
+ extern AVCodec flashsv_decoder;
+ extern AVCodec cavs_decoder;
++extern AVCodec lgpl_ac3_decoder;
+ 
+ /* pcm codecs */
+ #define PCM_CODEC(id, name) \
