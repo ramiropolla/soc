@@ -1,4 +1,7 @@
 
+#define MAX_CHANNELS 64
+#define MAX_TAGID 16
+
 // Audio Object Types
 enum {
     AOT_NULL = 0x0,
@@ -60,27 +63,29 @@ typedef struct {
 typedef struct {
     int present;
 
+    int num_channels;
+
     int num_front;
     int front_cpe;
-    int front_tag[16];
+    int front_tag[MAX_TAGID];
 
     int num_side;
     int side_cpe;
-    int side_tag[16];
+    int side_tag[MAX_TAGID];
 
     int num_back;
     int back_cpe;
-    int back_tag[16];
+    int back_tag[MAX_TAGID];
 
     int num_lfe;
-    int lfe_tag[4];
+    int lfe_tag[MAX_TAGID];
 
     int num_assoc_data;
-    int assoc_data_tag[8];
+    int assoc_data_tag[MAX_TAGID];
 
     int num_cc;
     int cc_ind_sw;
-    int cc_tag[16];
+    int cc_tag[MAX_TAGID];
 
     int mono_mixdown;
     int stereo_mixdown;
@@ -132,15 +137,39 @@ typedef struct {
 
 typedef struct {
     int ind_sw;
+    int domain;
+
     int num_coupled;
     int is_cpe[9];
     int tag_select[9];
     int l[9];
     int r[9];
-    int domain;
-    float gain;
-    int common_gain[18];
+
+    float gain[18][8][64];
 } coupling_struct;
+
+// individual channel element
+typedef struct {
+    int global_gain;
+    ics_struct ics;
+    tns_struct tns;
+    int cb[8][64];   // codebooks
+    float sf[8][64];
+    DECLARE_ALIGNED_16(float, coeffs[1024]);
+    DECLARE_ALIGNED_16(float, saved[1024]);
+    DECLARE_ALIGNED_16(float, ret[1024]);
+} sce_struct;
+
+// channel element
+typedef struct {
+    ms_struct ms;
+    sce_struct *ch[2];
+} cpe_struct;
+
+typedef struct {
+    coupling_struct coup;
+    sce_struct *ch;
+} cc_struct;
 
 typedef struct {
     // objects
@@ -163,16 +192,12 @@ typedef struct {
 
     // decoder param
     program_config_struct pcs;
-    ms_struct ms;
-    ics_struct ics[2];
-    tns_struct tns[2];
-    coupling_struct coup;
-    int cb[2][8][64];   // codebooks
-    float sf[2][8][64];
-    DECLARE_ALIGNED_16(float, coeffs[2][1024]);
+    sce_struct * che_sce[MAX_TAGID];
+    cpe_struct * che_cpe[MAX_TAGID];
+    sce_struct * che_lfe[MAX_TAGID];
+    cc_struct * che_cc[MAX_TAGID];
+
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
-    DECLARE_ALIGNED_16(float, saved[2][1024]);
-    DECLARE_ALIGNED_16(float, ret[1024]); // final output, also abused for mdct tmp
     int is_saved;
 
     //cashes
