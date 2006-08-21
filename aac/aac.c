@@ -1348,12 +1348,7 @@ static int output_samples(AVCodecContext * avccontext, void * data, int * data_s
         *data_size = 0;
         return 0;
     }
-    if (*data_size >= size) {
-        *data_size = size;
-    } else {
-        *data_size = 0;
-        return 1;
-    }
+    *data_size = size;
     if ((ochannels == 1) && ((ichannels == 2) || (ichannels == 1) || (pcs->mono_mixdown))) {
         int tag = pcs->mono_mixdown ? pcs->mono_mixdown - 1 : 0;
         if (ichannels == 2) {
@@ -1561,10 +1556,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     }
 
     spec_to_sample(ac);
-
-    if (output_samples(avccontext, data, data_size))
-        return 0;
-
+    output_samples(avccontext, data, data_size);
     return buf_size;
 }
 
