@@ -101,6 +101,8 @@ int16_t cos_table[65]; // cosine table used to convert lsfs to lsps
 #define PITCH_LAG_MIN             20
 #define PITCH_LAG_MIN_MODE_122    18
 
+#define TRACKS_MODE_102  4 // number of tracks for MODE_102
+
 /**************************** functions *****************************/
 
 enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode);
@@ -121,6 +123,15 @@ static void lpc_interp_123(AVCodecContext *avctx, int **lpc_coeffs);
 static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac);
 static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac);
 static void decode_pitch_vector(AVCodecContext *avctx, int *excitation);
+
+/** fixed codebook **/
+static void fixed2position(int16_t *fixed_index, int *position_index);
+static void decode_2_pulses_9bits(AVCodecContext *avctx, int sign, int fixed_index, int *fixed_code);
+static void decode_2_pulses_11bits(int sign, int fixed_index, int *fixed_code);
+static void decode_3_pulses_14bits(int sign, int fixed_index, int *fixed_code);
+static void decode_4_pulses_17bits(int sign, int fixed_index, int *fixed_code);
+static void decode_8_pulses_31bits(int16_t *fixed_index, int *fixed_code);
+static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code);
 
 void decode_reset(AVCodecContext *avctx);
 
@@ -1131,6 +1142,7 @@ static const int16_t lsf_5_5[64][4] = {
 {  334,  475, 1095,  821}, {  864,  524,  843,  497}, {  714,  711,  788,  750}, { 1076,  714, 1204,  753}
 };
 
+// interpolation filter for adaptive (pitch) codebook routines
 static const int inter6[61] = {
 29443, 28346, 25207, 20449, 14701,  8693,  3143, -1352,
 -4402, -5865, -5850, -4673, -2783,  -672,  1211,  2536,
@@ -1141,5 +1153,11 @@ static const int inter6[61] = {
  -120,  -163,  -165,  -132,   -79,   -19,    34,    73,
    91,    89,    70,    38,     0
 };
+
+// track start positions for fixed codebook routines
+static const uint8_t track_position[16] = { 0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 1, 4, 1, 4 };
+
+// gray decoding table for fixed codebook routines
+static const uint8_t dgray[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
 
 /**************************** end of tables *****************************/
