@@ -97,6 +97,10 @@ typedef struct AMROrder {
 
 int16_t cos_table[65]; // cosine table used to convert lsfs to lsps
 
+#define PITCH_LAG_MAX            143
+#define PITCH_LAG_MIN             20
+#define PITCH_LAG_MIN_MODE_122    18
+
 /**************************** functions *****************************/
 
 enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode);
@@ -112,6 +116,11 @@ static void lsp2poly(int *lsp, int *f);
 static void lsp2lpc(int *lsp, int *lpc_coeffs);
 static void lpc_interp_13(AVCodecContext *avctx, int **lpc_coeffs);
 static void lpc_interp_123(AVCodecContext *avctx, int **lpc_coeffs);
+
+/** adaptive codebook **/
+static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac);
+static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac);
+static void decode_pitch_vector(AVCodecContext *avctx, int *excitation);
 
 void decode_reset(AVCodecContext *avctx);
 
@@ -1120,6 +1129,17 @@ static const int16_t lsf_5_5[64][4] = {
 { -642, -350, -260,  172}, { -438, -324,  264,  648}, { -964,   -4,-1121,    7}, { -134,  134,-1133, -306},
 {  143,   96, -420, -497}, {-1221, -350,-1527, -685}, { -161,   72,  873,  691}, {  732,  283,  921,  353},
 {  334,  475, 1095,  821}, {  864,  524,  843,  497}, {  714,  711,  788,  750}, { 1076,  714, 1204,  753}
+};
+
+static const int inter6[61] = {
+29443, 28346, 25207, 20449, 14701,  8693,  3143, -1352,
+-4402, -5865, -5850, -4673, -2783,  -672,  1211,  2536,
+ 3130,  2991,  2259,  1170,     0, -1001, -1652, -1868,
+-1666, -1147,  -464,   218,   756,  1060,  1099,   904,
+  550,   135,  -245,  -514,  -634,  -602,  -451,  -231,
+    0,   191,   308,   340,   296,   198,    78,   -36,
+ -120,  -163,  -165,  -132,   -79,   -19,    34,    73,
+   91,    89,    70,    38,     0
 };
 
 /**************************** end of tables *****************************/

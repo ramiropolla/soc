@@ -61,6 +61,14 @@ typedef struct AMRContext {
     int       cur_lsp_sub2[LP_FILTER_ORDER]; // vector of lsps from subframe 2 of the current frame
     int       cur_lsp_sub4[LP_FILTER_ORDER]; // vector of lsps from subframe 4 of the current frame
 
+    int                        cur_subframe; // subframe number (1-4)
+    int                    search_range_min; // minimum of search range
+    int                    search_range_max; // maximum of search range
+    int                  prev_pitch_lag_int; // integer pitch lag from previous subframe (used in 2nd and 4th subframes)
+    int                   cur_pitch_lag_int; // integer part of pitch lag from current subframe
+    int                  cur_pitch_lag_frac; // fractional part of pitch lag from current subframe
+    int                         *excitation; // excitation buffer
+
 //    struct AMRDecoderState {                 // struct to hold current decoder state
 //    }; AMRDecoderState
 
@@ -726,6 +734,167 @@ static void lpc_interp_123(AVCodecContext *avctx, int **lpc_coeffs) {
 
     // subframe 4: convert the lsps to lpc coefficients
     lsp2lpc(p->cur_lsp_sub4, lpc_coeffs[3]);
+}
+
+
+/**
+ * Decode the adaptive codebook index to the integer and fractional pitch lags for one subframe
+ * at 1/3 resolution
+ *
+ * Description from ref source:
+ *    The fractional lag in 1st and 3rd subframes is encoded with 8 bits
+ *    while that in 2nd and 4th subframes is relatively encoded with 4, 5
+ *    and 6 bits depending on the mode.
+ *
+ * @param avctx              pointer to AVCodecContext
+ * @param pitch_index        received adaptive codebook (pitch) index
+ * @param pitch_lag_int      pointer to integer part of the subframe pitch lag
+ * @param pitch_lag_frac     pointer to fractional part of the subframe pitch lag
+ *
+ * @return void
+ */
+
+static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac) {
+    AMRContext *p = avctx->priv_data;
+    int tmp_lag;
+
+    // FIXME - find out where these constants come from and add appropriate comments
+    // such that people reading the code can understand why these particular values
+    // are used
+
+    // subframe 1 or 3
+    if((p->cur_subframe == 1) || (p->cur_subframe == 3)) {
+        if(pitch_index < 197) {
+            *pitch_lag_int = (( (pitch_index + 2)*10923 )>>15) + 19;
+            *pitch_lag_frac = pitch_index - *pitch_lag_int*3 + 58;
+        }else {
+            *pitch_lag_int = pitch_index - 112;
+            *pitch_lag_frac = 0;
+        }
+    // subframe 2 or 4
+    }else {
+        if( (p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515) ||
+            (p->cur_frame_mode == MODE_59)  || (p->cur_frame_mode == MODE_67) ) {
+
+            // decoding with 4 bit resolution
+            tmp_lag = p->prev_pitch_lag_int;
+            if( (tmp_lag - p->search_range_min) > 5 )
+                tmp_lag = p->search_range_min + 5;
+            if( (p->search_range_max - tmp_lag) > 4 )
+                tmp_lag = p->search_range_max - 4;
+
+            if(pitch_index < 4) {
+                *pitch_lag_int = pitch_index + tmp_lag - 5;
+                *pitch_lag_frac = 0;
+            }else {
+                if(pitch_index < 12) {
+                    *pitch_lag_int = ( ((pitch_index - 5)*10923)>>15 ) + tmp_lag - 1;
+                    *pitch_lag_frac = pitch_index - *pitch_lag_int*3 - 9;
+                }else {
+                    *pitch_lag_int = pitch_index + tmp_lag - 11;
+                    *pitch_lag_frac = 0;
+                }
+            }
+        }else {
+            // decoding with 5 or 6 bit resolution
+            *pitch_lag_int = ( ((pitch_index + 2)*10923 )>>15) - 1 + p->search_range_min;
+            *pitch_lag_frac = pitch_index - *pitch_lag_int*3 - 2;
+        }
+    }
+}
+
+
+/**
+ * Decode the adaptive codebook index to the integer and fractional pitch lag for one subframe
+ * at 1/6 resolution
+ *
+ * Description from ref source:
+ *    The fractional lag in 1st and 3rd subframes is encoded with 9 bits
+ *    while that in 2nd and 4th subframes is relatively encoded with 6 bits.
+ *    Note that in relative encoding only 61 values are used. If the
+ *    decoder receives 61, 62, or 63 as the relative pitch index, it means
+ *    that a transmission error occurred. In this case, the pitch lag from
+ *    previous subframe (actually from previous frame) is used.
+ *
+ * @param avctx              pointer to AVCodecContext
+ * @param pitch_index        received adaptive codebook (pitch) index
+ * @param pitch_lag_int      pointer to integer part of the subframe pitch lag
+ * @param pitch_lag_frac     pointer to fractional part of the subframe pitch lag
+ *
+ * @return void
+ */
+
+static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac) {
+    AMRContext *p = avctx->priv_data;
+
+    // FIXME - find out where these constants come from and add appropriate comments
+    // such that people reading the code can understand why these particular values
+    // are used
+
+    // subframe 1 or 3
+    if((p->cur_subframe == 1) || (p->cur_subframe == 3)) {
+        if(pitch_index < 463){
+            *pitch_lag_int = (pitch_index + 5)/6 + 17;
+            *pitch_lag_frac = pitch_index - *pitch_lag_int*6 + 105;
+        }else {
+            *pitch_lag_int = pitch_index - 368;
+            *pitch_lag_frac = 0;
+        }
+    // subframe 2 or 4
+    }else {
+        // find the search range
+        p->search_range_min = *pitch_lag_int - 5; // FIXME - set pitch_lag_int = 0 before each frame
+        if(p->search_range_min < PITCH_LAG_MIN_MODE_122) {
+            p->search_range_min = PITCH_LAG_MIN_MODE_122;
+        }
+        p->search_range_max = p->search_range_min + 9;
+        if(p->search_range_max > PITCH_LAG_MAX) {
+            p->search_range_max = PITCH_LAG_MAX;
+            p->search_range_min = p->search_range_max - 9;
+        }
+        // calculate the pitch lag
+        *pitch_lag_int = (pitch_index + 5) + p->search_range_min - 1;
+        *pitch_lag_frac = -2;
+    }
+}
+
+
+/**
+ * Find the adaptive codebook (pitch) vector from interpolating the past excitation at the
+ * decoded pitch lag with corresponding resolution of 1/3 or 1/6
+ *
+ * See the specification for details of the underlying mathematics and the used
+ * FIR filter
+ *
+ * @param avctx              pointer to AVCodecContext
+ * @param excitation         pointer to the excitation buffer
+ *
+ * @return void
+ */
+
+static void decode_pitch_vector(AVCodecContext *avctx, int *excitation) {
+    AMRContext *p = avctx->priv_data;
+    int i, j, temp;
+    int *excitation_temp;
+
+    excitation_temp = &excitation[-p->cur_pitch_lag_int];
+    p->cur_pitch_lag_frac *= -1;
+    if(p->cur_frame_mode != MODE_122) {
+        p->cur_pitch_lag_frac <<= 1;
+    }
+    if(p->cur_pitch_lag_frac < 0) {
+        p->cur_pitch_lag_frac += 6;
+        excitation_temp--;
+    }
+    for(i=0; i<40; i++) {
+        // reset temp
+        temp = 0;
+        for(j=0; j<10; j++) {
+            temp += excitation_temp[-j  ] * inter6[    j*6 + p->cur_pitch_lag_frac];
+            temp += excitation_temp[ j+1] * inter6[(j+1)*6 - p->cur_pitch_lag_frac];
+        }
+        excitation[i] = (temp + 0x4000)>>15;
+    }
 }
 
 
