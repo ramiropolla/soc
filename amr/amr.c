@@ -30,6 +30,7 @@
 
 #include "avcodec.h"
 #include "bitstream.h"
+#include "../libavutil/common.h"
 #include "amrdata.h"
 
 // #define DEBUG_BITSTREAM
@@ -763,10 +764,13 @@ static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index, int *pitc
     // are used
 
     // subframe 1 or 3
-    if((p->cur_subframe == 1) || (p->cur_subframe == 3)) {
+    if(p->cur_subframe & 1) {
         if(pitch_index < 197) {
             *pitch_lag_int = (( (pitch_index + 2)*10923 )>>15) + 19;
             *pitch_lag_frac = pitch_index - *pitch_lag_int*3 + 58;
+            // For the sake of deciphering where this comes from, the above code probably means:
+            // *pitch_lag_int  = (pitch_index + 2)/3 + 19;
+            // *pitch_lag_frac = (pitch_index + 2)%3 + 56;
         }else {
             *pitch_lag_int = pitch_index - 112;
             *pitch_lag_frac = 0;
@@ -777,11 +781,7 @@ static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index, int *pitc
             (p->cur_frame_mode == MODE_59)  || (p->cur_frame_mode == MODE_67) ) {
 
             // decoding with 4 bit resolution
-            tmp_lag = p->prev_pitch_lag_int;
-            if( (tmp_lag - p->search_range_min) > 5 )
-                tmp_lag = p->search_range_min + 5;
-            if( (p->search_range_max - tmp_lag) > 4 )
-                tmp_lag = p->search_range_max - 4;
+            tmp_lag= clip(p->prev_pitch_lag_int, p->search_range_max-4, p->search_range_min+5);
 
             if(pitch_index < 4) {
                 *pitch_lag_int = pitch_index + tmp_lag - 5;
@@ -890,11 +890,34 @@ static void decode_pitch_vector(AVCodecContext *avctx, int *excitation) {
         // reset temp
         temp = 0;
         for(j=0; j<10; j++) {
-            temp += excitation_temp[-j  ] * inter6[    j*6 + p->cur_pitch_lag_frac];
-            temp += excitation_temp[ j+1] * inter6[(j+1)*6 - p->cur_pitch_lag_frac];
+            temp += excitation_temp[i-j  ] * inter6[ j   *6 + p->cur_pitch_lag_frac];
+            temp += excitation_temp[i+j+1] * inter6[(j+1)*6 - p->cur_pitch_lag_frac];
         }
         excitation[i] = (temp + 0x4000)>>15;
     }
+}
+
+
+/**
+ * Reconstruct the algebraic codebook vector
+ *
+ * @param fixed_code           algebraic codebook vector
+ * @param pulse_position       vector of pulse positions
+ * @param sign                 signs of the pulses
+ * @param nr_pulses            number of pulses
+ *
+ * @return void
+ */
+
+static void reconstruct_fixed_code(int *fixed_code, int *pulse_position, int sign, int nr_pulses) {
+    int i;
+
+    // reset the code
+    memset(fixed_code, 0, 160);
+
+    // assign the pulse values (+/-1) to their appropriate positions
+    for(i=0; i<nr_pulses; i++)
+        fixed_code[pulse_position[i]] = ((sign >> i) & 1) ? 8191 : -8192;
 }
 
 
@@ -911,10 +934,9 @@ static void fixed2position(int16_t *fixed_index, int *position_index) {
     int MSBs, LSBs, MSBs0_24, divMSB;
 
     // indices from track 1 (7+3 bits)
-    MSBs = fixed_index[0] >> 3;
+    MSBs= FFMIN(fixed_index[0] >> 3, 124);
     // LSBs = fixed_index[0]%8;
     LSBs = fixed_index[0] & 0x7;
-    if(MSBs > 124) MSBs = 124;
     // position_index[0] = ((MSBs-25*(MSBs/25))%5)*2 + (LSBs-4*(LSBs/4))%2;
     // position_index[4] = ((MSBs-25*(MSBs/25))/5)*2 + (LSBs-4*(LSBs/4))/2;
     // position_index[1] = (MSBs/25)*2 + LSBs/4;
@@ -924,10 +946,9 @@ static void fixed2position(int16_t *fixed_index, int *position_index) {
     position_index[1] = (divMSB<<1) + (LSBs>>2);
 
     // indices from track 2 (7+3 bits)
-    MSBs = fixed_index[1] >> 3;
+    MSBs= FFMIN(fixed_index[1] >> 3, 124);
     // LSBs = fixed_index[1]%8;
     LSBs = fixed_index[1] & 0x7;
-    if(MSBs > 124) MSBs = 124;
     // position_index[2] = ((MSBs-25*(MSBs/25))%5)*2 + (LSBs-4*(LSBs/4))%2;
     // position_index[6] = ((MSBs-25*(MSBs/25))/5)*2 + (LSBs-4*(LSBs/4))/2;
     // position_index[5] = (MSBs/25)*2 + LSBs/4;
@@ -976,12 +997,8 @@ static void decode_2_pulses_9bits(AVCodecContext *avctx, int sign, int fixed_ind
     // find the position of the second pulse
     pulse_position[1] = ((fixed_index >> 3) & 7)*5 + track_position[ (pulse_subset<<3) + (p->cur_subframe<<1) + 1 ];
 
-    // reset the code
-    memset(fixed_code, 0, 160);
-
-    // assign the pulse values (+/-1) to their appropriate positions
-    fixed_code[pulse_position[0]] = ( sign       & 1) ? 8191 : -8192;
-    fixed_code[pulse_position[1]] = ((sign >> 1) & 1) ? 8191 : -8192;
+    // reconstruct the fixed code
+    reconstruct_fixed_code(fixed_code, pulse_position, sign, 2);
 }
 
 
@@ -1013,12 +1030,8 @@ static void decode_2_pulses_11bits(int sign, int fixed_index, int *fixed_code) {
         pulse_position[1] = ((fixed_index >> 6) & 7)*5 + pulse_subset;
     }
 
-    // reset the code
-    memset(fixed_code, 0, 160);
-
-    // assign the pulse values (+/-1) to their appropriate positions
-    fixed_code[pulse_position[0]] = ( sign       & 1) ? 8191 : -8192;
-    fixed_code[pulse_position[1]] = ((sign >> 1) & 1) ? 8191 : -8192;
+    // reconstruct the fixed code
+    reconstruct_fixed_code(fixed_code, pulse_position, sign, 2);
 }
 
 
@@ -1048,13 +1061,8 @@ static void decode_3_pulses_14bits(int sign, int fixed_index, int *fixed_code) {
     // find the position of the third pulse
     pulse_position[2] = ((fixed_index >> 8) & 7)*5 + pulse_subset*2 + 2;
 
-    // reset the code
-    memset(fixed_code, 0, 160);
-
-    // assign the pulse values (+/-1) to their appropriate positions
-    fixed_code[pulse_position[0]] = ( sign       & 1) ? 8191 : -8192;
-    fixed_code[pulse_position[1]] = ((sign >> 1) & 1) ? 8191 : -8192;
-    fixed_code[pulse_position[2]] = ((sign >> 2) & 1) ? 8191 : -8192;
+    // reconstruct the fixed code
+    reconstruct_fixed_code(fixed_code, pulse_position, sign, 3);
 }
 
 
@@ -1084,14 +1092,8 @@ static void decode_4_pulses_17bits(int sign, int fixed_index, int *fixed_code) {
     // find the position of the fourth pulse
     pulse_position[3] = dgray[(fixed_index >> 10) & 7] + pulse_subset + 3;
 
-    // reset the code
-    memset(fixed_code, 0, 160);
-
-    // assign the pulse values (+/-1) to their appropriate positions
-    fixed_code[pulse_position[0]] = ( sign       & 1) ? 8191 : -8192;
-    fixed_code[pulse_position[1]] = ((sign >> 1) & 1) ? 8191 : -8192;
-    fixed_code[pulse_position[2]] = ((sign >> 2) & 1) ? 8191 : -8192;
-    fixed_code[pulse_position[3]] = ((sign >> 3) & 1) ? 8191 : -8192;
+    // reconstruct the fixed code
+    reconstruct_fixed_code(fixed_code, pulse_position, sign, 4);
 }
 
 
@@ -1123,7 +1125,7 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, int *fixed_code) {
         // assign the ith pulse (+/-1) to its appropriate position
         fixed_code[pos1] = sign;
         // find the sign of the i+4th pulse (relative to the sign of the ith pulse)
-        if(pos2 < pos1) sign = -( sign );
+        if(pos2 < pos1) sign = -sign;
         // assign the i+4th pulse (+/-1) to its appropriate position
         fixed_code[pos2] += sign;
     }
@@ -1150,7 +1152,7 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code) {
         // find the position of the ith pulse
         pos1 = dgray[fixed_index[i  ] & 7]*5 + i;
         // find the sign of the ith pulse
-        sign = !((fixed_index[i] >> 3) & 1) ? 4096 : -4096;
+        sign = (fixed_index[i] & 8) ? -4096 : 4096; // +/-1 : 4096 is used here in the ref source
         // find the position of the i+5th pulse
         pos2 = dgray[fixed_index[i+5] & 7]*5 + i;
         // assign the ith pulse (+/-1) to its appropriate position

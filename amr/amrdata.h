@@ -125,6 +125,7 @@ static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitc
 static void decode_pitch_vector(AVCodecContext *avctx, int *excitation);
 
 /** fixed codebook **/
+static void reconstruct_fixed_code(int *fixed_code, int *pulse_position, int sign, int nr_pulses);
 static void fixed2position(int16_t *fixed_index, int *position_index);
 static void decode_2_pulses_9bits(AVCodecContext *avctx, int sign, int fixed_index, int *fixed_code);
 static void decode_2_pulses_11bits(int sign, int fixed_index, int *fixed_code);
@@ -1143,7 +1144,7 @@ static const int16_t lsf_5_5[64][4] = {
 };
 
 // interpolation filter for adaptive (pitch) codebook routines
-static const int inter6[61] = {
+static const int16_t inter6[61] = {
 29443, 28346, 25207, 20449, 14701,  8693,  3143, -1352,
 -4402, -5865, -5850, -4673, -2783,  -672,  1211,  2536,
  3130,  2991,  2259,  1170,     0, -1001, -1652, -1868,
