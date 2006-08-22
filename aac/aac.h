@@ -62,6 +62,7 @@ typedef struct {
 
 typedef struct {
     int present;
+    int generated;
 
     int num_channels;
 
@@ -92,6 +93,27 @@ typedef struct {
     int matrix_mixdown;
     int pseudo_surround;
 } program_config_struct;
+
+enum {
+    MIXMODE_DEFAULT = 0,
+    MIXMODE_1TO1,
+    MIXMODE_2TO1,
+    MIXMODE_1TO2,
+    MIXMODE_2TO2,
+    MIXMODE_MATRIX1,
+    MIXMODE_MATRIX2,
+    MIXMODE_UNKNOWN
+};
+
+typedef struct {
+    int mode;
+    int c_tag;
+    int lr_tag;
+    int sur_tag;
+    float sce_gain[MAX_TAGID];
+    float cpe_gain[MAX_TAGID][2];
+    float lfe_gain[MAX_TAGID];
+} mix_config_struct;
 
 typedef struct {
     int intensity_present;
@@ -151,6 +173,7 @@ typedef struct {
 // individual channel element
 typedef struct {
     int global_gain;
+    float mixing_gain;
     ics_struct ics;
     tns_struct tns;
     int cb[8][64];   // codebooks
@@ -163,12 +186,12 @@ typedef struct {
 // channel element
 typedef struct {
     ms_struct ms;
-    sce_struct *ch[2];
+    sce_struct ch[2];
 } cpe_struct;
 
 typedef struct {
     coupling_struct coup;
-    sce_struct *ch;
+    sce_struct ch;
 } cc_struct;
 
 typedef struct {
@@ -192,6 +215,7 @@ typedef struct {
 
     // decoder param
     program_config_struct pcs;
+    mix_config_struct mix;
     sce_struct * che_sce[MAX_TAGID];
     cpe_struct * che_cpe[MAX_TAGID];
     sce_struct * che_lfe[MAX_TAGID];
@@ -219,6 +243,7 @@ typedef struct {
 
     MDCTContext mdct;
     MDCTContext mdct_small;
+    DSPContext dsp;
     int * vq[11];
 
     // statistics
