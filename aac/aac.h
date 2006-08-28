@@ -13,7 +13,23 @@ enum {
     AOT_AAC_SCALABLE,
     AOT_TWINVQ,
     AOT_CELP,
-    AOT_HVXC
+    AOT_HVXC,
+    AOT_TTSI = 12,
+    AOT_MAINSYNTH,
+    AOT_WAVESYNTH,
+    AOT_MIDI,
+    AOT_SAFX,
+    AOT_ER_AAC_LC,
+    AOT_ER_AAC_LTP = 19,
+    AOT_ER_AAC_SCALABLE,
+    AOT_ER_TWINVQ,
+    AOT_ER_BSAC,
+    AOT_ER_AAC_LD,
+    AOT_ER_CELP,
+    AOT_ER_HVXC,
+    AOT_ER_HILN,
+    AOT_ER_PARAM,
+    AOT_SSC
 };
 
 // IDs for raw_data_block
@@ -47,6 +63,9 @@ enum {
 
 //tns
 #define TNS_MAX_ORDER 20
+
+//ltp
+#define MAX_LTP_LONG_SFB 40
 
 // dithering
 #define N 624
@@ -116,6 +135,13 @@ typedef struct {
 } mix_config_struct;
 
 typedef struct {
+    int present;
+    int lag;
+    float coef;
+    int used[MAX_LTP_LONG_SFB];
+} ltp_struct;
+
+typedef struct {
     int intensity_present;
     int noise_present;
 
@@ -127,6 +153,9 @@ typedef struct {
     int num_window_groups;
     uint8_t grouping;
     uint8_t group_len[8];
+    // ltp
+    ltp_struct ltp;
+    ltp_struct ltp2;
     // calculated
     const uint16_t *swb_offset;
     int num_swb;
@@ -181,10 +210,12 @@ typedef struct {
     DECLARE_ALIGNED_16(float, coeffs[1024]);
     DECLARE_ALIGNED_16(float, saved[1024]);
     DECLARE_ALIGNED_16(float, ret[1024]);
+    int16_t *ltp_state;
 } sce_struct;
 
 // channel element
 typedef struct {
+    int common_window;
     ms_struct ms;
     sce_struct ch[2];
 } cpe_struct;
@@ -243,6 +274,7 @@ typedef struct {
 
     MDCTContext mdct;
     MDCTContext mdct_small;
+    MDCTContext *mdct_ltp;
     DSPContext dsp;
     int * vq[11];
 
@@ -346,6 +378,11 @@ static const uint16_t *swb_offset_128[] = {
 
 static const uint8_t num_swb_128[] = {
     12, 12, 12, 14, 14, 14, 15, 15, 15, 15, 15, 15
+};
+
+// LTP coef table
+static const float ltp_coef[] = {
+    0.570829, 0.696616, 0.813004, 0.911304, 0.984900, 1.067894, 1.194601, 1.369533
 };
 
 // TNS tables
