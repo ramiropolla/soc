@@ -44,6 +44,16 @@ enum {
     ID_END
 };
 
+// IDs for extension_payload
+enum {
+    EXT_FILL = 0x0,
+    EXT_FILL_DATA,
+    EXT_DATA_ELEMENT,
+    EXT_DYNAMIC_RANGE = 0xb,
+    EXT_SBR_DATA = 0xd,
+    EXT_SBR_DATA_CRC = 0xe
+};
+
 // window sequences
 enum {
     ONLY_LONG_SEQUENCE = 0,
@@ -187,6 +197,14 @@ typedef struct {
 } pulse_struct;
 
 typedef struct {
+    int max_band;
+    int adjust_num[4][8];
+    int alev[4][8][8];
+    int aloc[4][8][8];
+    float buf[4][24];
+} ssr_struct;
+
+typedef struct {
     int ind_sw;
     int domain;
 
@@ -211,6 +229,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, saved[1024]);
     DECLARE_ALIGNED_16(float, ret[1024]);
     int16_t *ltp_state;
+    ssr_struct *ssr;
 } sce_struct;
 
 // channel element
@@ -224,6 +243,12 @@ typedef struct {
     coupling_struct coup;
     sce_struct ch;
 } cc_struct;
+
+typedef struct {
+    float q[4][4];
+    float t0[4][12];
+    float t1[4][12];
+} ssr_context;
 
 typedef struct {
     // objects
@@ -277,6 +302,7 @@ typedef struct {
     MDCTContext *mdct_ltp;
     DSPContext dsp;
     int * vq[11];
+    ssr_context * ssrctx;
 
     // statistics
     int num_frame;
@@ -431,6 +457,58 @@ static float *tns_tmp2_map[4] = {
     tns_tmp2_map_0_4,
     tns_tmp2_map_1_3,
     tns_tmp2_map_1_4
+};
+
+// SSR table
+static float ssr_q_table[] = {
+    9.7655291007575512E-05,
+    1.3809589379038567E-04,
+    9.8400749256623534E-05,
+    -8.6671544782335723E-05,
+    -4.6217998911921346E-04,
+    -1.0211814095158174E-03,
+    -1.6772149340010668E-03,
+    -2.2533338951411081E-03,
+    -2.4987888343213967E-03,
+    -2.1390815966761882E-03,
+    -9.5595397454597772E-04,
+    1.1172111530118943E-03,
+    3.9091309127348584E-03,
+    6.9635703420118673E-03,
+    9.5595442159478339E-03,
+    1.0815766540021360E-02,
+    9.8770514991715300E-03,
+    6.1562567291327357E-03,
+    -4.1793946063629710E-04,
+    -9.2128743097707640E-03,
+    -1.8830775873369020E-02,
+    -2.7226498457701823E-02,
+    -3.2022840857588906E-02,
+    -3.0996332527754609E-02,
+    -2.2656858741499447E-02,
+    -6.8031113858963354E-03,
+    1.5085400948280744E-02,
+    3.9750993388272739E-02,
+    6.2445363629436743E-02,
+    7.7622327748721326E-02,
+    7.9968338496132926E-02,
+    6.5615493068475583E-02,
+    3.3313658300882690E-02,
+    -1.4691563058190206E-02,
+    -7.2307890475334147E-02,
+    -1.2993222541703875E-01,
+    -1.7551641029040532E-01,
+    -1.9626543957670528E-01,
+    -1.8073330670215029E-01,
+    -1.2097653136035738E-01,
+    -1.4377370758549035E-02,
+    1.3522730742860303E-01,
+    3.1737852699301633E-01,
+    5.1590021798482233E-01,
+    7.1080020379761377E-01,
+    8.8090632488444798E-01,
+    1.0068321641150089E+00,
+    1.0737914947736096E+00
 };
 
 // Huffman tables
