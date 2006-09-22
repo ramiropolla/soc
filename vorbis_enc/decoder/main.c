@@ -2,6 +2,7 @@
 #include <linux/soundcard.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <inttypes.h>
 #include <stdlib.h>
@@ -24,8 +25,7 @@ int main(int argc, char * argv []) {
 	int err = 0;
 	int i = 0;
 
-	if ((err = nut_read_next_packet(nut, &pd))) return err;
-	if ((err = nut_read_headers(nut, &pd, &s))) return err;
+	if ((err = nut_read_headers(nut, &s))) return err;
 
 	{
 	uint8_t buf[s->codec_specific_len+7];
@@ -48,7 +48,6 @@ int main(int argc, char * argv []) {
 		int len = pd.len;
 		uint8_t buf[len+7];
 		uint16_t out[2048*2];
-		if (pd.type != e_frame) { nut_skip_packet(nut, &pd.len); continue; }
 		nut_read_frame(nut, &pd.len, buf);
 		memset(buf+len, 0, 7);
 
