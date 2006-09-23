@@ -222,7 +222,7 @@ static inline int get_bits(bit_packer_t * bp, int bits, uint32_t * res) {
 	int pos = bp->index;
 	bp->index += bits;
 	if (bp->index > bp->total) return 1;
-	if (!bits) return 0;
+	if (!bits) { if (res) *res = 0; return 0; }
 	if (res) *res = (bswap_64(*(uint64_t*)(bp->buf + (pos >> 3))) >> (pos & 7)) & ((1ULL << bits) - 1); // >> (64-bits)
 	//fprintf(stderr, "%3d %2d 0x%016llX\n", *res, bits, bswap_64(*(uint64_t*)(bp->buf + (pos >> 3))));}
 	return 0;
