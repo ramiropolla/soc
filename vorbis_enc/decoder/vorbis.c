@@ -283,6 +283,7 @@ static int read_codebook_header(vorbis_context_t * vc, codebook_t * cb, bit_pack
 		for (i = 0; i < cb->nentries; i++) cb->entries[i].real_num = i;
 		i = 0;
 		GET_B(bp, 5, len);
+		len++;
 		while (i < cb->nentries) {
 			int j;
 			int num;
