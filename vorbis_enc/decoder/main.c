@@ -18,7 +18,7 @@ void vorbis_uninit(vorbis_context_t * vc);
 int main(int argc, char * argv []) {
 	nut_packet_t pd;
 	FILE * file = argv[1] ? fopen(argv[1], "r") : stdin;
-	nut_demuxer_opts_t dopts = { { file, NULL, NULL, NULL }, 1 };
+	nut_demuxer_opts_t dopts = { { file, NULL, NULL, NULL }, { NULL }, 1 };
 	nut_context_t * nut = nut_demuxer_init(&dopts);
 	vorbis_context_t * vc = vorbis_init();
 	nut_stream_header_t * s = NULL;
