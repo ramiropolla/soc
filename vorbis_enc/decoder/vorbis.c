@@ -486,7 +486,7 @@ static inline int get_book(bit_packer_t * bp, codebook_t * cb, int * res) {
 	int j = 0;
 	static int miss, hit;
 
-	if (bp->left >= SMALL_BITS) {
+	if (bp->total - bp->index >= SMALL_BITS) {
 		peek_bits(bp, SMALL_BITS, &tmp);
 		tmp = cb->small_table[tmp & (SMALL_SIZE-1)];
 		if (tmp & 0x80000000U) {
@@ -503,9 +503,11 @@ static inline int get_book(bit_packer_t * bp, codebook_t * cb, int * res) {
 	tmp = 0;
 
 	for (i = 1; i <= cb->max_len; i++) {
-		if (--bp->left < 0) return 1;
-		tmp |= ((*bp->buf_ptr >> bp->pos) & 1) << (i - 1);
-		if (++bp->pos == 8) { bp->buf_ptr++; bp->pos = 0; }
+		uint32_t a;
+		if (get_bits(bp, 1, &a)) return 1;
+		//if (--bp->left < 0) return 1;
+		tmp |= a << (i - 1);
+		//if (++bp->pos == 8) { bp->buf_ptr++; bp->pos = 0; }
 
 		for (; j < cb->nentries && cb->entries[j].len == i; j++) {
 			if (cb->entries[j].codeword != tmp) continue;
@@ -758,6 +760,7 @@ static int read_floor1_header(vorbis_context_t * vc, floor_context_t * fcc, bit_
 		if (fc->classes[i].subclass) {
 			GET_B(bp, 8, fc->classes[i].masterbook);
 			ERROR(fc->classes[i].masterbook >= vc->ncodebooks, 11);
+			debug_msg("masterbook[%d] %d\n", i, fc->classes[i].masterbook);
 		}
 
 		books = (1 << fc->classes[i].subclass);
@@ -766,6 +769,7 @@ static int read_floor1_header(vorbis_context_t * vc, floor_context_t * fcc, bit_
 			GET_B(bp, 8, fc->classes[i].books[j]);
 			fc->classes[i].books[j]--;
 			ERROR(fc->classes[i].books[j] >= vc->ncodebooks, 11);
+			debug_msg("classbook[%d][%d] %d\n", i, j, fc->classes[i].books[j]);
 		}
 	}
 	GET_B(bp, 2, fc->multiplier);
