@@ -12,9 +12,9 @@
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
 #define ABS(a) ((a) > 0 ? (a) : -(a))
 
-#define debug_msg(...) fprintf(stderr, __VA_ARGS__)
+//#define debug_msg(...) fprintf(stderr, __VA_ARGS__)
 //#define SLOW_DEBUG(...) __VA_ARGS__
-//#define debug_msg(...) ((void)0)
+#define debug_msg(...) ((void)0)
 #define SLOW_DEBUG(...) /* nothing */
 #define DEBUG_RATE 44100
 
@@ -433,7 +433,7 @@ static int read_codebook_header(vorbis_context_t * vc, codebook_t * cb, bit_pack
 			}
 		}
 	}
-#if 1
+#if 0
 	debug_msg("codebook %d %p\n", cb - vc->codebooks, cb);
 	for (i = 0; i < cb->nentries; i++) {
 		cb_entry_t * e = &cb->entries[i];
@@ -573,7 +573,6 @@ static inline int get_book(bit_packer_t * bp, codebook_t * cb, int * res) {
 #define GET_VECTOR(bp, i, x) do{ \
 	float * d = vc->codebooks[i].dimentions; \
 	CHECK(get_book(bp, &vc->codebooks[i], &_num)); \
-	if (i == 24) { debug_msg("entry %d %d 0x%08X\n", _num, vc->codebooks[i].entries[_num].len, vc->codebooks[i].entries[_num].codeword); } \
 	(x) = &d[_num * vc->codebooks[i].ndimentions]; \
 }while(0)
 
@@ -1032,7 +1031,6 @@ static int residue_decode(vorbis_context_t * vc, residue_context_t * rc, bit_pac
 					for (i = classwords; i--; ) {
 						cs[p + i] = k % rc->classifications;
 						k /= rc->classifications;
-						if (cs[p + i] != 9) debug_msg("%d %d\n", p+i, cs[p+i]);
 					}
 				}
 				for (i = 0; i < classwords && p < partitions; i++, p++) {
