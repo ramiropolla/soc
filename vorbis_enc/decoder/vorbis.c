@@ -12,9 +12,9 @@
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
 #define ABS(a) ((a) > 0 ? (a) : -(a))
 
-//#define debug_msg(...) fprintf(stderr, __VA_ARGS__)
+#define debug_msg(...) fprintf(stderr, __VA_ARGS__)
 //#define SLOW_DEBUG(...) __VA_ARGS__
-#define debug_msg(...) ((void)0)
+//#define debug_msg(...) ((void)0)
 #define SLOW_DEBUG(...) /* nothing */
 #define DEBUG_RATE 44100
 
@@ -411,6 +411,11 @@ static int read_codebook_header(vorbis_context_t * vc, codebook_t * cb, bit_pack
 		GET_B(bp, 1, seq_p);
 		for (i = 0; i < vals; i++) GET_B(bp, bits, multilicands[i]);
 
+		debug_msg("codebook %d lookup %d seq_p %d\n", cb - vc->codebooks, cb->lookup, seq_p);
+		debug_msg("min %lf delta %lf\n", min, delta);
+		for (i = 0; i < vals; i++) debug_msg("%d, ", multilicands[i]);
+		debug_msg("\n");
+
 		for (i = 0; i < cb->nentries; i++) {
 			cb_entry_t * e = &cb->entries[i];
 			float last = 0;
@@ -428,7 +433,7 @@ static int read_codebook_header(vorbis_context_t * vc, codebook_t * cb, bit_pack
 			}
 		}
 	}
-#if 0
+#if 1
 	debug_msg("codebook %d %p\n", cb - vc->codebooks, cb);
 	for (i = 0; i < cb->nentries; i++) {
 		cb_entry_t * e = &cb->entries[i];
@@ -568,6 +573,7 @@ static inline int get_book(bit_packer_t * bp, codebook_t * cb, int * res) {
 #define GET_VECTOR(bp, i, x) do{ \
 	float * d = vc->codebooks[i].dimentions; \
 	CHECK(get_book(bp, &vc->codebooks[i], &_num)); \
+	if (i == 24) { debug_msg("entry %d %d 0x%08X\n", _num, vc->codebooks[i].entries[_num].len, vc->codebooks[i].entries[_num].codeword); } \
 	(x) = &d[_num * vc->codebooks[i].ndimentions]; \
 }while(0)
 
@@ -747,6 +753,7 @@ static int read_floor1_header(vorbis_context_t * vc, floor_context_t * fcc, bit_
 	for (i = 0; i < fc->partitions; i++) {
 		GET_B(bp, 4, fc->partition_to_class[i]);
 		tmp = MAX(tmp, fc->partition_to_class[i]);
+		debug_msg("[%d] partition-class %d\n", i, fc->partition_to_class[i]);
 	}
 	fc->nclasses = tmp + 1;
 	fc->classes = malloc(sizeof(floor1_class_t) * fc->nclasses);
@@ -756,6 +763,7 @@ static int read_floor1_header(vorbis_context_t * vc, floor_context_t * fcc, bit_
 		int j, books;
 		GET_B(bp, 3, fc->classes[i].dim);
 		fc->classes[i].dim++;
+		debug_msg("[%d] dim %d\n", i, fc->classes[i].dim);
 		GET_B(bp, 2, fc->classes[i].subclass);
 		if (fc->classes[i].subclass) {
 			GET_B(bp, 8, fc->classes[i].masterbook);
@@ -775,6 +783,7 @@ static int read_floor1_header(vorbis_context_t * vc, floor_context_t * fcc, bit_
 	GET_B(bp, 2, fc->multiplier);
 	fc->multiplier++;
 	GET_B(bp, 4, fc->rangebits);
+	debug_msg("multiplier %d, rangebits %d\n", fc->multiplier, fc->rangebits);
 
 	fc->values = 2;
 	for (i = 0; i < fc->partitions; i++)
@@ -789,6 +798,7 @@ static int read_floor1_header(vorbis_context_t * vc, floor_context_t * fcc, bit_
 	for (i = 2; i < fc->values; i++) {
 		int j;
 		GET_B(bp, fc->rangebits, fc->list[i].x);
+		debug_msg("[%d] X %d\n", i, fc->list[i].x);
 		fc->list[i].low = 0;
 		fc->list[i].high = 1;
 		fc->list[i].sort = i;
@@ -948,6 +958,8 @@ static int read_residue_header(vorbis_context_t * vc, residue_context_t * rc, bi
 	GET_B(bp, 8, rc->classbook);
 	ERROR(rc->classbook >= vc->ncodebooks, 13);
 
+	debug_msg("begin %d end %d size %d classifs %d classbook %d\n", rc->begin, rc->end, rc->partition_size, rc->classifications, rc->classbook);
+
 	{
 	int cascade[rc->classifications];
 	rc->books = malloc(sizeof(int[8]) * rc->classifications);
@@ -964,6 +976,7 @@ static int read_residue_header(vorbis_context_t * vc, residue_context_t * rc, bi
 	fast = rc->type == 2 && !(rc->begin & 1);
 	for (i = 0; i < rc->classifications; i++) {
 		int bit;
+		debug_msg("[%d] { ", i);
 		for (bit = 0; bit < 8; bit++) {
 			if (cascade[i] & (1 << bit)) {
 				GET_B(bp, 8, rc->books[i][bit]);
@@ -972,7 +985,9 @@ static int read_residue_header(vorbis_context_t * vc, residue_context_t * rc, bi
 			} else {
 				rc->books[i][bit] = -1;
 			}
+			debug_msg("%d, ", rc->books[i][bit]);
 		}
+		debug_msg("}\n");
 	}
 	}
 	if (fast) rc->type = 3;
@@ -1017,6 +1032,7 @@ static int residue_decode(vorbis_context_t * vc, residue_context_t * rc, bit_pac
 					for (i = classwords; i--; ) {
 						cs[p + i] = k % rc->classifications;
 						k /= rc->classifications;
+						if (cs[p + i] != 9) debug_msg("%d %d\n", p+i, cs[p+i]);
 					}
 				}
 				for (i = 0; i < classwords && p < partitions; i++, p++) {
@@ -1154,6 +1170,8 @@ int vorbis_read_headers(vorbis_context_t * vc, uint8_t * buf, int len) {
 		vc->win0 = vwin[vc->blocksize0 - 6];
 		vc->win1 = vwin[vc->blocksize1 - 6];
 	}
+
+	debug_msg("==== blocksize 0: %d 1: %d\n", vc->blocksize0, vc->blocksize1);
 
 	vc->blocksize0 = 1 << vc->blocksize0;
 	vc->blocksize1 = 1 << vc->blocksize1;
