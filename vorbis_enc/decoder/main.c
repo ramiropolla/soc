@@ -25,7 +25,7 @@ int main(int argc, char * argv []) {
 	int err = 0;
 	int i = 0;
 
-	if ((err = nut_read_headers(nut, &s))) return err;
+	if ((err = nut_read_headers(nut, &s, NULL))) return err;
 
 	{
 	uint8_t buf[s->codec_specific_len+7];
