@@ -33,7 +33,7 @@
 #include "../libavutil/common.h"
 #include "amrdata.h"
 
-// #define DEBUG_BITSTREAM
+// #define DEBUG_BITSTREAM // FIXME - remove
 
 typedef struct AMRContext {
 
@@ -118,6 +118,7 @@ static int amr_nb_decode_frame(AVCodecContext *avctx,
     const int16_t *homing_frame;             // pointer to the homing frame
     int homing_frame_size;                   // homing frame size
 
+// FIXME - remove
 #ifdef DEBUG_BITSTREAM
     init_get_bits(&p->gb, buf, buf_size*8);
     av_log(NULL, AV_LOG_ERROR, "\n\n\nBits from one frame (%d):\n", buf_size*8);
