@@ -103,6 +103,18 @@ int16_t cos_table[65]; // cosine table used to convert lsfs to lsps
 
 #define TRACKS_MODE_102  4 // number of tracks for MODE_102
 
+// FIXME - not quite sure how i'm going to implement this yet and some other variables may be moved around later
+typedef struct AMRDecoderState {
+    // Bad frame
+    int state;
+    int prev_frame_bad;         // previous frame bad ? 1 : 0
+
+    // Pitch
+    int prev_pitch_gains[5];    // previous five pitch gains
+    int prev_pitch_gain;        // previous pitch gain (limited to 1.0)
+    int prev_good_pitch_gain;   // previous good pitch gain
+} AMRDecoderState;
+
 /**************************** functions *****************************/
 
 enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode);
@@ -133,6 +145,15 @@ static void decode_3_pulses_14bits(int sign, int fixed_index, int *fixed_code);
 static void decode_4_pulses_17bits(int sign, int fixed_index, int *fixed_code);
 static void decode_8_pulses_31bits(int16_t *fixed_index, int *fixed_code);
 static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code);
+
+/** general **/
+int qsort_compare(const int *a, const int *b);
+static int median(int *values, int n);
+
+/** pitch gains **/
+static int find_pitch_gain(AMRDecoderState *state_ptr);
+static int decode_pitch_gain(enum Mode mode, int index);
+static void pitch_gain_update(AMRDecoderState *state_ptr, int bad_frame_indicator, int *pitch_gain);
 
 void decode_reset(AVCodecContext *avctx);
 
@@ -1160,5 +1181,38 @@ static const uint8_t track_position[16] = { 0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 
 
 // gray decoding table for fixed codebook routines
 static const uint8_t dgray[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
+
+// pitch gain tables
+// attenuation factors for the adaptive codebook gain
+static const uint16_t pitch_gain_attenuation[7] = {
+    32767,
+    32112,
+    32112,
+    26214,
+    9830,
+    6553,
+    6553
+};
+
+// quantisation table for the adaptive codebook gain (MODE_795, MODE_122)
+#define N_PITCH_QUANTS 16
+static const uint16_t pitch_gain_quant[N_PITCH_QUANTS] = {
+   0,
+   3277,
+   6556,
+   8192,
+   9830,
+   11469,
+   12288,
+   13107,
+   13926,
+   14746,
+   15565,
+   16384,
+   17203,
+   18022,
+   18842,
+   19661
+};
 
 /**************************** end of tables *****************************/

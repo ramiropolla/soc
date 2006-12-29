@@ -71,8 +71,7 @@ typedef struct AMRContext {
     int                  cur_pitch_lag_frac; // fractional part of pitch lag from current subframe
     int                         *excitation; // excitation buffer
 
-//    struct AMRDecoderState {                 // struct to hold current decoder state
-//    }; AMRDecoderState
+    AMRDecoderState                  *state; // current decoder state
 
 } AMRContext;
 
@@ -99,9 +98,17 @@ static int amr_nb_decode_init(AVCodecContext *avctx) {
     p->sample_buffer = av_mallocz(sizeof(float)*1024);
     // allocate and zero the amr parameters
     p->amr_prms = av_mallocz(sizeof(int16_t)*PRMS_MODE_122);
+    // allocate and zero the decoder state
+    p->state = av_mallocz(sizeof(AMRDecoderState));
 
     /* Check if the allocation was successful */
     if(p->sample_buffer == NULL)
+        return -1;
+    // Check amr_prms allocation
+    if(p->amr_prms == NULL)
+        return -1;
+    // Check state allocation
+    if(p->state == NULL)
         return -1;
 
     /* return 0 for a successful init, -1 for failure */
@@ -277,6 +284,7 @@ static int amr_nb_decode_close(AVCodecContext *avctx) {
     /* Free allocated memory */
     av_free(p->sample_buffer);
     av_free(p->amr_prms);
+    av_free(p->state);
 
     /* Return 0 if everything is ok, -1 if not */
     return 0;
@@ -1164,6 +1172,127 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code) {
         // assign the i+5th pulse (+/-1) to its appropriate position
         fixed_code[pos2] += sign;
     }
+}
+
+
+// general functions FIXME - useful enough to put into libavutil?
+
+/*
+ * Comparison function for use with qsort
+ *
+ * @param a             First value for comparison
+ * @param b             Second value for comparison
+ * @return a-b : the result of the comparison
+ */
+
+int qsort_compare(const int *a, const int *b) {
+    return (int)(*a - *b);
+}
+
+/*
+ * Find the median some values
+ *
+ * @param values        pointer to the values of which to find the median
+ * @param n             number of values
+ * @return Returns the median value
+ */
+
+static int median(int *values, int n) {
+    int temp[9]; // largest n used for median calculation is 9
+    int i;
+
+    for(i=0; i<n; i++) {
+        temp[i] = values[i];
+    }
+
+//  is memcpy better here instead of the above loop?
+//  memcpy(values, temp, n*sizeof(int));
+
+    qsort(temp, n, sizeof(int), qsort_compare);
+
+    return(temp[ n>>1 ]);
+}
+
+
+// gain functions
+
+/*
+ * Calculate the pitch gain from previous values
+ *
+ * @param state_ptr             pointer to the current state
+ * @return Returns the pitch gain
+ */
+
+static int find_pitch_gain(AMRDecoderState *state_ptr) {
+    int temp_median;
+
+    // find the median of the previous five pitch gains
+    temp_median = median(state_ptr->prev_pitch_gains, 5);
+
+    // clip the median pitch gain to the previous pitch gain
+    if(temp_median > state_ptr->prev_pitch_gain) {
+        temp_median = state_ptr->prev_pitch_gain;
+    }
+    return ( (temp_median*pitch_gain_attenuation[ state_ptr->state ])>>15 );
+}
+
+
+/*
+ * Decode the pitch gain using the received index
+ *
+ * @param mode              current mode
+ * @param index             quantisation index
+ * @return Returns the pitch gain
+ */
+
+static int decode_pitch_gain(enum Mode mode, int index) {
+    int gain;
+
+    if(mode == MODE_122) {
+        // zero the two least significant bits
+        // gain = ( pitch_gain_quant[index]>>2 )<<2;
+        gain = pitch_gain_quant[index] & 0xFFFC;
+    }else {
+        gain = pitch_gain_quant[index];
+    }
+    return gain;
+}
+
+
+/*
+ * Update the pitch gain and limit pitch_gain if the previous frame was bad
+ *
+ * @param state_ptr             pointer to the current state
+ * @param bad_frame_indicator   bad frame indicator
+ * @param pitch_gain            pointer to the pitch gain
+ */
+
+static void pitch_gain_update(AMRDecoderState *state_ptr, int bad_frame_indicator,
+        int *pitch_gain) {
+    if(bad_frame_indicator == 0) {
+        if(state_ptr->prev_frame_bad != 0) {
+            // if the previous frame was bad, limit the current pitch gain to
+            // the previous good pitch gain
+            if(*pitch_gain > state_ptr->prev_good_pitch_gain) {
+                *pitch_gain = state_ptr->prev_good_pitch_gain;
+            }
+        }
+        // if the current frame is good, update the previous good pitch gain
+        state_ptr->prev_good_pitch_gain = *pitch_gain;
+    }
+    state_ptr->prev_pitch_gain = *pitch_gain;
+
+    // clip the previous pitch gain to 1.0
+    if(state_ptr->prev_pitch_gain > 16384) {
+        state_ptr->prev_pitch_gain = 16384;
+    }
+
+    // update the array of the previous five pitch gains
+    state_ptr->prev_pitch_gains[0] = state_ptr->prev_pitch_gains[1];
+    state_ptr->prev_pitch_gains[1] = state_ptr->prev_pitch_gains[2];
+    state_ptr->prev_pitch_gains[2] = state_ptr->prev_pitch_gains[3];
+    state_ptr->prev_pitch_gains[3] = state_ptr->prev_pitch_gains[4];
+    state_ptr->prev_pitch_gains[4] = state_ptr->prev_pitch_gain;
 }
 
 
