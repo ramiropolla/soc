@@ -27,6 +27,7 @@
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "avcodec.h"
 #include "bitstream.h"
@@ -41,7 +42,7 @@ typedef struct AMRContext {
     float                    *sample_buffer;
 
     int16_t                       *amr_prms; // pointer to the decoded amr parameters (lsf coefficients, codebook indices, etc)
-    int                 bad_frame_indicator;
+    int                 bad_frame_indicator; // bad frame ? 1 : 0
 
     int                   prev_frame_homing; // previous frame was a homing frame ? 1 : 0
     enum RXFrameType        prev_frame_type; // frame type of previous frame
@@ -493,7 +494,7 @@ static void decode_lsf2lsp_5(AVCodecContext *avctx) {
         lsf2_r[3] = lsf_5_2[ p->amr_prms[1] ][3];
 
         sign = (p->amr_prms[2] & 1) ? -1 : 1;
-        // I don't know why p->amr_prms[2]>>1 but that's how it is in the ref source
+        // lsb of p->amr_prms[2] is the sign bit so p->amr_prms[2]>>1
         lsf1_r[4] = lsf_5_3[ p->amr_prms[2]>>1 ][0]*sign;
         lsf1_r[5] = lsf_5_3[ p->amr_prms[2]>>1 ][1]*sign;
         lsf2_r[4] = lsf_5_3[ p->amr_prms[2]>>1 ][2]*sign;
