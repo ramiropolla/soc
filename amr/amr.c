@@ -1177,7 +1177,7 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code) {
 
 // general functions FIXME - useful enough to put into libavutil?
 
-/*
+/**
  * Comparison function for use with qsort
  *
  * @param a             First value for comparison
@@ -1189,8 +1189,8 @@ int qsort_compare(const int *a, const int *b) {
     return (int)(*a - *b);
 }
 
-/*
- * Find the median some values
+/**
+ * Find the median of some values
  *
  * @param values        pointer to the values of which to find the median
  * @param n             number of values
@@ -1216,7 +1216,7 @@ static int median(int *values, int n) {
 
 // gain functions
 
-/*
+/**
  * Calculate the pitch gain from previous values
  *
  * @param state_ptr             pointer to the current state
@@ -1237,7 +1237,7 @@ static int find_pitch_gain(AMRDecoderState *state_ptr) {
 }
 
 
-/*
+/**
  * Decode the pitch gain using the received index
  *
  * @param mode              current mode
@@ -1259,7 +1259,7 @@ static int decode_pitch_gain(enum Mode mode, int index) {
 }
 
 
-/*
+/**
  * Update the pitch gain and limit pitch_gain if the previous frame was bad
  *
  * @param state_ptr             pointer to the current state
