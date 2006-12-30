@@ -1,5 +1,5 @@
 /*
- * AMR audio codec
+ * AMR narrowband audio decoder
  * Copyright (c) 2006 Robert Swain
  *
  * This library is free software; you can redistribute it and/or
@@ -19,8 +19,8 @@
 
 
 /**
- * @file amrdata.h
- * AMR codec data.
+ * @file ffamr_nb.h
+ * AMR narrowband data and definitions
  */
 
 
