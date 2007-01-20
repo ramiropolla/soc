@@ -2012,7 +2012,7 @@ static int aac_decode_close(AVCodecContext * avccontext) {
             av_free(ac->che_cc[i]->ch.ssr);
             // ltp never used in cc
             av_free(ac->che_cc[i]);
-        }
+        } 
     }
 
     for (i = 0; i < 11; i++) {
