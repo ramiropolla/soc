@@ -278,6 +278,7 @@ typedef struct {
     cc_struct * che_cc[MAX_TAGID];
 
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
+    DECLARE_ALIGNED_16(float, revers[1024]);
     int is_saved;
 
     //cashes

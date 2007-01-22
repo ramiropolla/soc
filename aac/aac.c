@@ -1412,6 +1412,7 @@ static void window_trans(aac_context_t * ac, sce_struct * sce) {
     float * in = sce->coeffs;
     float * out = sce->ret;
     float * saved = sce->saved;
+    float *revers = ac->revers;
     const float * lwindow = (ics->window_shape) ? ac->kbd_long_1024 : ac->sine_long_1024;
     const float * swindow = (ics->window_shape) ? ac->kbd_short_128 : ac->sine_short_128;
     const float * lwindow_prev = (ics->window_shape_prev) ? ac->kbd_long_1024 : ac->sine_long_1024;
@@ -1440,7 +1441,6 @@ static void window_trans(aac_context_t * ac, sce_struct * sce) {
         }
     } else {
         int i;
-        float revers[1024];
         for (i = 0; i < 2048; i += 256) {
             ff_imdct_calc(&ac->mdct_small, buf + i, in + i / 2, out);
             ac->dsp.vector_fmul_reverse(revers + i/2, buf + i + 128, swindow, 128);
