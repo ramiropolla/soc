@@ -30,6 +30,7 @@
 #include "dsputil.h"
 
 #include "aac.h"
+#include "aactab.h"
 
 #ifndef V_DEBUG
 #define AV_DEBUG(...)
@@ -1441,8 +1442,9 @@ static void window_trans(aac_context_t * ac, sce_struct * sce) {
     } else {
         int i;
         DECLARE_ALIGNED_16(float, revers[1024]);
+
         for (i = 0; i < 2048; i += 256) {
-            ff_imdct_calc(&ac->mdct_small, buf + i, in + i / 2, out);
+            ff_imdct_calc(&ac->mdct_small, buf + i, in + i/2, out);
             ac->dsp.vector_fmul_reverse(revers + i/2, buf + i + 128, swindow, 128);
         }
         for (i = 0; i < 448; i++)   out[i] = saved[i] + BIAS;
@@ -1461,7 +1463,7 @@ static void window_trans(aac_context_t * ac, sce_struct * sce) {
         ac->dsp.vector_fmul_add_add(saved + 320, buf + 6*128, swindow, revers + 6*128, 0, 128, 1);
         memcpy(                     saved + 448, revers + 7*128, 128 * sizeof(float));
         //for (i = 576; i < 1024; i++) saved[i] = 0.0;
-    }
+    } 
 }
 
 static void window_ssr_tool(aac_context_t * ac, sce_struct * sce, float * in, float * out) {
