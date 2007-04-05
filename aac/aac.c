@@ -1463,7 +1463,7 @@ static void window_trans(aac_context_t * ac, sce_struct * sce) {
         ac->dsp.vector_fmul_add_add(saved + 320, buf + 6*128, swindow, revers + 6*128, 0, 128, 1);
         memcpy(                     saved + 448, revers + 7*128, 128 * sizeof(float));
         //for (i = 576; i < 1024; i++) saved[i] = 0.0;
-    } 
+    }
 }
 
 static void window_ssr_tool(aac_context_t * ac, sce_struct * sce, float * in, float * out) {
@@ -2014,7 +2014,7 @@ static int aac_decode_close(AVCodecContext * avccontext) {
             av_free(ac->che_cc[i]->ch.ssr);
             // ltp never used in cc
             av_free(ac->che_cc[i]);
-        } 
+        }
     }
 
     for (i = 0; i < 11; i++) {
