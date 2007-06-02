@@ -1709,7 +1709,7 @@ static int output_coefs(AVCodecContext * avccontext) {
     return 0;
 }
 
-static int output_samples(AVCodecContext * avccontext, void * data, int * data_size) {
+static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
     aac_context_t * ac = avccontext->priv_data;
     program_config_struct * pcs = &ac->pcs;
     mix_config_struct * mix = &ac->mix;
@@ -1729,20 +1729,20 @@ static int output_samples(AVCodecContext * avccontext, void * data, int * data_s
             break;
         case MIXMODE_1TO1:
             for (i = 0; i < 1024; i++)
-                ((uint16_t *)data)[i] = F2U16(ac->che_sce[mix->c_tag]->ret[i]);
+                data[i] = F2U16(ac->che_sce[mix->c_tag]->ret[i]);
             break;
         case MIXMODE_2TO1:
             for (i = 0; i < 1024; i++)
-                ((uint16_t *)data)[i] = F2U16(ac->che_cpe[0]->ch[mix->lr_tag].ret[i] + ac->che_cpe[mix->lr_tag]->ch[1].ret[i] - BIAS);
+                data[i] = F2U16(ac->che_cpe[0]->ch[mix->lr_tag].ret[i] + ac->che_cpe[mix->lr_tag]->ch[1].ret[i] - BIAS);
             break;
         case MIXMODE_1TO2:
             for (i = 0; i < 1024; i++)
-                ((uint16_t(*)[2])data)[i][0] = ((uint16_t(*)[2])data)[i][1] = F2U16(ac->che_sce[mix->c_tag]->ret[i]);
+                data[i*2] = data[i*2+1] = F2U16(ac->che_sce[mix->c_tag]->ret[i]);
             break;
         case MIXMODE_2TO2:
             for (i = 0; i < 1024; i++) {
-                ((uint16_t(*)[2])data)[i][0] = F2U16(ac->che_cpe[mix->lr_tag]->ch[0].ret[i]);
-                ((uint16_t(*)[2])data)[i][1] = F2U16(ac->che_cpe[mix->lr_tag]->ch[1].ret[i]);
+                data[i*2]   = F2U16(ac->che_cpe[mix->lr_tag]->ch[0].ret[i]);
+                data[i*2+1] = F2U16(ac->che_cpe[mix->lr_tag]->ch[1].ret[i]);
             }
             break;
         case MIXMODE_MATRIX1:
@@ -1770,7 +1770,7 @@ static int output_samples(AVCodecContext * avccontext, void * data, int * data_s
                         out[i] += ch_sur->ch[0].ret[i] + ch_sur->ch[1].ret[i];
                 }
                 for (i = 0; i < 1024; i++)
-                    ((uint16_t *)data)[i] = F2U16(out[i] - cBIAS);
+                    data[i] = F2U16(out[i] - cBIAS);
             }
             break;
         case MIXMODE_MATRIX2:
@@ -1811,8 +1811,8 @@ static int output_samples(AVCodecContext * avccontext, void * data, int * data_s
                     }
                 }
                 for (i = 0; i < 1024; i++) {
-                    ((uint16_t(*)[2])data)[i][0] = F2U16(out[i][0] - lBIAS);
-                    ((uint16_t(*)[2])data)[i][1] = F2U16(out[i][1] - rBIAS);
+                    data[i*2]   = F2U16(out[i][0] - lBIAS);
+                    data[i*2+1] = F2U16(out[i][1] - rBIAS);
                 }
             }
             break;
@@ -1867,10 +1867,10 @@ static int output_samples(AVCodecContext * avccontext, void * data, int * data_s
         for (i = 0; i < ochannels; i++) {
             if (i < ichannels) {
                 for (j = 0; j < 1024; j++)
-                    ((uint16_t *)data)[j * ochannels + i] = F2U16(order[i][j]);
+                    data[j * ochannels + i] = F2U16(order[i][j]);
             } else {
                 for (j = 0; j < 1024; j++)
-                    ((uint16_t *)data)[j * ochannels + i] = 0;
+                    data[j * ochannels + i] = 0;
             }
         }
     }
