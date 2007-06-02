@@ -968,7 +968,7 @@ static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int
     float * out = sce->coeffs;
 
     //memset(sf, 0, sizeof(sf));
-
+    memset(&pulse, 0, sizeof(pulse));
     sce->global_gain = get_bits(gb, 8);
 
     if (!common_window && !scale_flag) {
