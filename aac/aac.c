@@ -688,11 +688,11 @@ static void ics_info(aac_context_t * ac, GetBitContext * gb, int common_window, 
             if (ac->audioObjectType == AOT_AAC_MAIN) {
                 assert(0);
             } else {
-                if (ics->ltp.present = get_bits(gb, 1)) {
+                if ((ics->ltp.present = get_bits(gb, 1))) {
                     ltp_data(ac, gb, ics->max_sfb, &ics->ltp);
                 }
                 if (common_window) {
-                    if (ics->ltp2.present = get_bits(gb, 1)) {
+                    if ((ics->ltp2.present = get_bits(gb, 1))) {
                         ltp_data(ac, gb, ics->max_sfb, &ics->ltp2);
                     }
                 }
@@ -788,7 +788,7 @@ static void tns_data(aac_context_t * ac, GetBitContext * gb, const ics_struct * 
             coef_res = get_bits1(gb) + 3;
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
             tns->length[w][filt] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 4 : 6);
-            if (tns->order[w][filt] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5)) {
+            if ((tns->order[w][filt] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5))) {
                 tns->direction[w][filt] = get_bits1(gb);
                 assert(coef_res == 3 || coef_res == 4);
                 coef_compress = get_bits1(gb);
@@ -980,9 +980,9 @@ static int individual_channel_stream(aac_context_t * ac, GetBitContext * gb, int
     scale_factor_data(ac, gb, sce->mixing_gain, sce->global_gain, ics, sce->cb, sce->sf);
 
     if (!scale_flag) {
-        if (pulse.present = get_bits1(gb))
+        if ((pulse.present = get_bits1(gb)))
             pulse_data(ac, gb, &pulse);
-        if (tns->present = get_bits1(gb))
+        if ((tns->present = get_bits1(gb)))
             tns_data(ac, gb, ics, tns);
         if (get_bits1(gb))
             if (gain_control_data(ac, gb, sce)) return 1;
