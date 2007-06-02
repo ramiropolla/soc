@@ -2032,10 +2032,10 @@ static int aac_decode_close(AVCodecContext * avccontext) {
     return 0 ;
 }
 
-AVCodec native_aac_decoder = {
-    "native_aac",
+AVCodec aac_decoder = {
+    "aac",
     CODEC_TYPE_AUDIO,
-    CODEC_ID_NATIVE_AAC,
+    CODEC_ID_AAC,
     sizeof(aac_context_t),
     aac_decode_init,
     NULL,
