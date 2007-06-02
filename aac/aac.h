@@ -77,18 +77,6 @@ enum {
 //ltp
 #define MAX_LTP_LONG_SFB 40
 
-// dithering
-#define N 624
-#define M 397
-#define MATRIX_A    0x9908b0df
-#define UPPER_MASK  0x80000000
-#define LOWER_MASK  0x7fffffff
-
-typedef struct {
-    uint32_t mt[N];
-    int      mti;
-} dither_state;
-
 typedef struct {
     int present;
     int generated;
@@ -256,7 +244,6 @@ typedef struct {
     GetBitContext gb;
     VLC mainvlc;
     VLC books[11];
-    dither_state dither;
 
     // main config
     int audioObjectType;
@@ -303,6 +290,7 @@ typedef struct {
     DSPContext dsp;
     int * vq[11];
     ssr_context * ssrctx;
+    AVRandomState random_state;
 
     // statistics
     int num_frame;

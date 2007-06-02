@@ -28,6 +28,7 @@
 #include "avcodec.h"
 #include "bitstream.h"
 #include "dsputil.h"
+#include "random.h"
 
 #include "aac.h"
 #include "aactab.h"
@@ -162,55 +163,6 @@ static void ssr_context_init(ssr_context * ctx) {
         }
     }
 }
-
-/* BEGIN Mersenne Twister Code. */
-static void dither_seed(dither_state *state, uint32_t seed) {
-    if (seed == 0)
-        seed = 0x1f2e3d4c;
-
-    state->mt[0] = seed;
-    for (state->mti = 1; state->mti < N; state->mti++)
-        state->mt[state->mti] = ((69069 * state->mt[state->mti - 1]) + 1);
-}
-
-static uint32_t dither_uint32(dither_state *state) {
-    uint32_t y;
-    static const uint32_t mag01[2] = { 0x00, MATRIX_A };
-    int kk;
-
-    if (state->mti >= N) {
-        for (kk = 0; kk < N - M; kk++) {
-            y = (state->mt[kk] & UPPER_MASK) | (state->mt[kk + 1] & LOWER_MASK);
-            state->mt[kk] = state->mt[kk + M] ^ (y >> 1) ^ mag01[y & 0x01];
-        }
-        for (;kk < N - 1; kk++) {
-            y = (state->mt[kk] & UPPER_MASK) | (state->mt[kk + 1] & LOWER_MASK);
-            state->mt[kk] = state->mt[kk + (M - N)] ^ (y >> 1) ^ mag01[y & 0x01];
-        }
-        y = (state->mt[N - 1] & UPPER_MASK) | (state->mt[0] & LOWER_MASK);
-        state->mt[N - 1] = state->mt[M - 1] ^ (y >> 1) ^ mag01[y & 0x01];
-
-        state->mti = 0;
-    }
-
-    y = state->mt[state->mti++];
-    y ^= (y >> 11);
-    y ^= ((y << 7) & 0x9d2c5680);
-    y ^= ((y << 15) & 0xefc60000);
-    y ^= (y >> 18);
-
-    return y;
-}
-
-static inline int16_t dither_int16(dither_state *state) {
-    return ((dither_uint32(state) << 16) >> 16);
-}
-
-//static inline int32_t dither_int32(dither_state *state) {
-//    return (int32_t)dither_uint32(state);
-//}
-
-/* END Mersenne Twister */
 
 // General functions
 #define TAG_MASK 0x00f
@@ -561,8 +513,9 @@ static int aac_decode_init(AVCodecContext * avccontext) {
             }
         }
     }
-    // dither init
-    dither_seed(&ac->dither, 0);
+
+    /* Initialize RNG dither */
+    av_init_random(0x1f2e3d4c, &ac->random_state);
 
     // 1024  - compensate wrong imdct method
     // 32768 - values in AAC build for ready float->int 16 bit audio, using
@@ -866,7 +819,7 @@ static void spectral_data(aac_context_t * ac, GetBitContext * gb, const ics_stru
             if (cur_cb == NOISE_HCB) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++)
-                        icoef[group*128+k] = dither_int16(&ac->dither);
+                        icoef[group*128+k] = av_random(&ac->random_state) & 0x0000FFFF;
                 }
                 continue;
             }
