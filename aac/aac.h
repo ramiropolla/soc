@@ -294,5 +294,5 @@ typedef struct {
 
     // statistics
     int num_frame;
-} aac_context_t;
+} AACContext;
 
