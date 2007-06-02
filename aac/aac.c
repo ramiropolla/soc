@@ -79,7 +79,7 @@ static inline int16_t LTP_ROUND(float x) {
 }
 
 static inline uint16_t F2U16(float x) {
-    int32_t tmp = ((int32_t*)&x)[0];
+    int32_t tmp = av_flt2int(x);
     if (tmp & 0xf0000) {
         if (tmp > 0x43c0ffff) tmp = 0xFFFF;
         else                  tmp = 0;
