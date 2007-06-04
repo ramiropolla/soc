@@ -984,7 +984,7 @@ static void fixed2position(int16_t *fixed_index, int *position_index) {
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct 
+ * Decode the algebraic codebook index to pulse positions and signs and construct
  * the algebraic codebook vector for MODE_475 and MODE_515
  *
  * @param avctx                pointer to AVCodecContext
@@ -1013,7 +1013,7 @@ static void decode_2_pulses_9bits(AVCodecContext *avctx, int sign, int fixed_ind
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct 
+ * Decode the algebraic codebook index to pulse positions and signs and construct
  * the algebraic codebook vector for MODE_59
  *
  * @param sign                 signs of the two pulses
@@ -1026,7 +1026,7 @@ static void decode_2_pulses_9bits(AVCodecContext *avctx, int sign, int fixed_ind
 static void decode_2_pulses_11bits(int sign, int fixed_index, int *fixed_code) {
     int pulse_position[2];
     int pulse_subset;
-    
+
     // find the subset of pulses used for the first pulse
     pulse_subset = fixed_index & 1;
     // find the position of the first pulse
@@ -1046,7 +1046,7 @@ static void decode_2_pulses_11bits(int sign, int fixed_index, int *fixed_code) {
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct 
+ * Decode the algebraic codebook index to pulse positions and signs and construct
  * the algebraic codebook vector for MODE_67
  *
  * @param sign                 signs of the three pulses
@@ -1077,7 +1077,7 @@ static void decode_3_pulses_14bits(int sign, int fixed_index, int *fixed_code) {
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct 
+ * Decode the algebraic codebook index to pulse positions and signs and construct
  * the algebraic codebook vector for MODE_74 and MODE_795
  *
  * @param sign                 signs of the four pulses
@@ -1108,7 +1108,7 @@ static void decode_4_pulses_17bits(int sign, int fixed_index, int *fixed_code) {
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct 
+ * Decode the algebraic codebook index to pulse positions and signs and construct
  * the algebraic codebook vector for MODE_102
  *
  * @param fixed_index          positions of the eight pulses
@@ -1143,7 +1143,7 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, int *fixed_code) {
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct 
+ * Decode the algebraic codebook index to pulse positions and signs and construct
  * the algebraic codebook vector for MODE_122
  *
  * @param fixed_index          positions of the ten pulses
