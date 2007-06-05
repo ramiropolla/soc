@@ -322,6 +322,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, pow2sf_tab[256]);
     DECLARE_ALIGNED_16(float, intensity_tab[256]);
     DECLARE_ALIGNED_16(float, ivquant_tab[256]);
+    DECLARE_ALIGNED_16(float, revers[1024]);
 
     MDCTContext mdct;
     MDCTContext mdct_small;
@@ -1639,27 +1640,26 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
         }
     } else {
         int i;
-        DECLARE_ALIGNED_16(float, revers[1024]);
 
         for (i = 0; i < 2048; i += 256) {
             ff_imdct_calc(&ac->mdct_small, buf + i, in + i/2, out);
-            ac->dsp.vector_fmul_reverse(revers + i/2, buf + i + 128, swindow, 128);
+            ac->dsp.vector_fmul_reverse(ac->revers + i/2, buf + i + 128, swindow, 128);
         }
         for (i = 0; i < 448; i++)   out[i] = saved[i] + BIAS;
         out += 448; saved += 448;
         ac->dsp.vector_fmul_add_add(out + 0*128, buf + 0*128, swindow_prev, saved, BIAS, 128, 1);
-        vector_fmul_add_add_add(ac, out + 1*128, buf + 2*128, swindow, saved + 1*128, revers + 0*128, BIAS, 128);
-        vector_fmul_add_add_add(ac, out + 2*128, buf + 4*128, swindow, saved + 2*128, revers + 1*128, BIAS, 128);
-        vector_fmul_add_add_add(ac, out + 3*128, buf + 6*128, swindow, saved + 3*128, revers + 2*128, BIAS, 128);
-        vector_fmul_add_add_add(ac, out + 4*128, buf + 8*128, swindow, saved + 4*128, revers + 3*128, BIAS, 64);
+        vector_fmul_add_add_add(ac, out + 1*128, buf + 2*128, swindow, saved + 1*128, ac->revers + 0*128, BIAS, 128);
+        vector_fmul_add_add_add(ac, out + 2*128, buf + 4*128, swindow, saved + 2*128, ac->revers + 1*128, BIAS, 128);
+        vector_fmul_add_add_add(ac, out + 3*128, buf + 6*128, swindow, saved + 3*128, ac->revers + 2*128, BIAS, 128);
+        vector_fmul_add_add_add(ac, out + 4*128, buf + 8*128, swindow, saved + 4*128, ac->revers + 3*128, BIAS, 64);
         //for (i = -448; i < 1024 - 448; i++)
         //    out[i] = BIAS;
         buf += 1024;
-        ac->dsp.vector_fmul_add_add(saved,       buf + 64, swindow, revers + 3*128+64,  0, 64, 1);
-        ac->dsp.vector_fmul_add_add(saved + 64,  buf + 2*128, swindow, revers + 4*128, 0, 128, 1);
-        ac->dsp.vector_fmul_add_add(saved + 192, buf + 4*128, swindow, revers + 5*128, 0, 128, 1);
-        ac->dsp.vector_fmul_add_add(saved + 320, buf + 6*128, swindow, revers + 6*128, 0, 128, 1);
-        memcpy(                     saved + 448, revers + 7*128, 128 * sizeof(float));
+        ac->dsp.vector_fmul_add_add(saved,       buf + 64, swindow, ac->revers + 3*128+64,  0, 64, 1);
+        ac->dsp.vector_fmul_add_add(saved + 64,  buf + 2*128, swindow, ac->revers + 4*128, 0, 128, 1);
+        ac->dsp.vector_fmul_add_add(saved + 192, buf + 4*128, swindow, ac->revers + 5*128, 0, 128, 1);
+        ac->dsp.vector_fmul_add_add(saved + 320, buf + 6*128, swindow, ac->revers + 6*128, 0, 128, 1);
+        memcpy(                     saved + 448, ac->revers + 7*128, 128 * sizeof(float));
         //for (i = 576; i < 1024; i++) saved[i] = 0.0;
     }
 }
