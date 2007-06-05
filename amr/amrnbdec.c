@@ -33,7 +33,6 @@
 
 #include "avcodec.h"
 #include "bitstream.h"
-#include "../libavutil/common.h"
 #include "amrdata.h"
 
 // #define DEBUG_BITSTREAM // FIXME - remove
