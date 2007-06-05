@@ -1189,12 +1189,7 @@ static int median(int *values, int n) {
     int temp[9]; // largest n used for median calculation is 9
     int i;
 
-    for(i=0; i<n; i++) {
-        temp[i] = values[i];
-    }
-
-//  is memcpy better here instead of the above loop?
-//  memcpy(values, temp, n*sizeof(int));
+    memcpy(values, temp, n*sizeof(int));
 
     qsort(temp, n, sizeof(int), qsort_compare);
 
