@@ -1,6 +1,6 @@
 /*
- * AMR narrowband audio decoder
- * Copyright (c) 2006 Robert Swain
+ * AMR narrowband decoder
+ * Copyright (c) 2006-2007 Robert Swain
  *
  * This file is part of FFmpeg.
  *
@@ -21,8 +21,8 @@
 
 
 /**
- * @file ffamr_nb.c
- * AMR narrowband codec
+ * @file amrnbdec.c
+ * AMR narrowband decoder
  */
 
 
@@ -34,7 +34,7 @@
 #include "avcodec.h"
 #include "bitstream.h"
 #include "../libavutil/common.h"
-#include "ffamr_nb.h"
+#include "amrdata.h"
 
 // #define DEBUG_BITSTREAM // FIXME - remove
 
@@ -78,7 +78,7 @@ typedef struct AMRContext {
 } AMRContext;
 
 
-static int ffamr_nb_decode_init(AVCodecContext *avctx) {
+static int amrnb_decode_init(AVCodecContext *avctx) {
 
     AMRContext *p = avctx->priv_data;
 
@@ -118,7 +118,7 @@ static int ffamr_nb_decode_init(AVCodecContext *avctx) {
 }
 
 
-static int ffamr_nb_decode_frame(AVCodecContext *avctx,
+static int amrnb_decode_frame(AVCodecContext *avctx,
         void *data, int *data_size, uint8_t *buf, int buf_size) {
 
     AMRContext *p = avctx->priv_data;        // pointer to private data
@@ -279,7 +279,7 @@ static int ffamr_nb_decode_frame(AVCodecContext *avctx,
 }
 
 
-static int ffamr_nb_decode_close(AVCodecContext *avctx) {
+static int amrnb_decode_close(AVCodecContext *avctx) {
 
     AMRContext *p = avctx->priv_data;
 
@@ -1313,13 +1313,13 @@ void decode_reset(AVCodecContext *avctx) {
     // FIXME reset AMRDecoderState too!
 }
 
-AVCodec ffamr_nb_decoder =
+AVCodec amrnb_decoder =
 {
-    .name = "ffamr_nb",
+    .name = "amrnb",
     .type = CODEC_TYPE_AUDIO,
     .id = CODEC_ID_AMR_NB,
     .priv_data_size = sizeof(AMRContext),
-    .init = ffamr_nb_decode_init,
-    .close = ffamr_nb_decode_close,
-    .decode = ffamr_nb_decode_frame,
+    .init = amrnb_decode_init,
+    .close = amrnb_decode_close,
+    .decode = amrnb_decode_frame,
 };
