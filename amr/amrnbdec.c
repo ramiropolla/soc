@@ -35,8 +35,6 @@
 #include "bitstream.h"
 #include "amrdata.h"
 
-// #define DEBUG_BITSTREAM // FIXME - remove
-
 typedef struct AMRContext {
 
     GetBitContext                        gb;
@@ -126,17 +124,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
     enum Mode speech_mode = MODE_475;        // ???
     const int16_t *homing_frame;             // pointer to the homing frame
     int homing_frame_size;                   // homing frame size
-
-// FIXME - remove
-#ifdef DEBUG_BITSTREAM
-    init_get_bits(&p->gb, buf, buf_size*8);
-    av_log(NULL, AV_LOG_ERROR, "\n\n\nBits from one frame (%d):\n", buf_size*8);
-    for(i=0; i<buf_size*8; i++) {
-        av_log(NULL, AV_LOG_ERROR, "%d",get_bits1(&p->gb));
-    }
-    av_log(NULL, AV_LOG_ERROR, "\n\n\n");
-    return -1;
-#endif // DEBUG_BITSTREAM
 
     // decode the bitstream to amr parameters
     p->cur_frame_mode = decode_bitstream(avctx, buf, buf_size, &speech_mode);
