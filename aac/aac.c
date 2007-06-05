@@ -3,9 +3,9 @@
  * AAC decoder
  * @author Oded Shimon  ( ods15 ods15 dyndns org )
  * @author Maxim Gavrilov ( maxim.gavrilov gmail com )
-
+ *
  * Kaiser-Bessel Derived Window by Justin Ruggles
-
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -1436,7 +1436,7 @@ static int lfe_channel_struct(AACContext * ac, GetBitContext * gb) {
 
 static int sbr_extension_data(AACContext * ac, GetBitContext * gb, int crc, int cnt) {
     // TODO : sbr_extension implementation
-    av_log(ac->avccontext, AV_LOG_INFO, "aac: SBR dont yet supported\n");
+    av_log(ac->avccontext, AV_LOG_DEBUG, "aac: SBR dont yet supported\n");
     skip_bits(gb, 8*cnt - 4);
     return cnt;
 }
