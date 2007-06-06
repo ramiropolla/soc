@@ -1,0 +1,36 @@
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(revision 9221)
++++ libavcodec/Makefile	(working copy)
+@@ -38,6 +38,7 @@
+ OBJS-$(CONFIG_AASC_DECODER)            += aasc.o
+ OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
+ OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
++OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbdec.o
+ OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o
+ OBJS-$(CONFIG_ASV1_ENCODER)            += asv1.o
+ OBJS-$(CONFIG_ASV2_DECODER)            += asv1.o
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c	(revision 9221)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -167,6 +167,7 @@
+     REGISTER_DECODER(MPEG4AAC, mpeg4aac);
+     REGISTER_ENCODER(AC3, ac3);
+     REGISTER_DECODER(ALAC, alac);
++    REGISTER_DECODER(AMRNB, amrnb);
+     REGISTER_DECODER(ATRAC3, atrac3);
+     REGISTER_DECODER(COOK, cook);
+     REGISTER_DECODER(DCA, dca);
+Index: libavcodec/avcodec.h
+===================================================================
+--- libavcodec/avcodec.h	(revision 9221)
++++ libavcodec/avcodec.h	(working copy)
+@@ -2242,6 +2242,7 @@
+ 
+ extern AVCodec aasc_decoder;
+ extern AVCodec alac_decoder;
++extern AVCodec amrnb_decoder;
+ extern AVCodec asv1_decoder;
+ extern AVCodec asv2_decoder;
+ extern AVCodec atrac3_decoder;
