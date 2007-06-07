@@ -115,48 +115,6 @@ typedef struct AMRDecoderState {
     int prev_good_pitch_gain;   // previous good pitch gain
 } AMRDecoderState;
 
-/**************************** functions *****************************/
-
-enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode);
-
-/** lsp to lpc conversion **/
-static void decode_lsf2lsp_3(AVCodecContext *avctx);
-static void decode_lsf2lsp_5(AVCodecContext *avctx);
-
-static void reorder_lsf(int *lsf, int min_dist);
-static void lsf2lsp(int *lsf, int *lsp);
-
-static void lsp2poly(int *lsp, int *f);
-static void lsp2lpc(int *lsp, int *lpc_coeffs);
-static void lpc_interp_13(AVCodecContext *avctx, int **lpc_coeffs);
-static void lpc_interp_123(AVCodecContext *avctx, int **lpc_coeffs);
-
-/** adaptive codebook **/
-static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac);
-static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac);
-static void decode_pitch_vector(AVCodecContext *avctx, int *excitation);
-
-/** fixed codebook **/
-static void reconstruct_fixed_code(int *fixed_code, int *pulse_position, int sign, int nr_pulses);
-static void fixed2position(int16_t *fixed_index, int *position_index);
-static void decode_2_pulses_9bits(AVCodecContext *avctx, int sign, int fixed_index, int *fixed_code);
-static void decode_2_pulses_11bits(int sign, int fixed_index, int *fixed_code);
-static void decode_3_pulses_14bits(int sign, int fixed_index, int *fixed_code);
-static void decode_4_pulses_17bits(int sign, int fixed_index, int *fixed_code);
-static void decode_8_pulses_31bits(int16_t *fixed_index, int *fixed_code);
-static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code);
-
-/** general **/
-int qsort_compare(const int *a, const int *b);
-static int median(int *values, int n);
-
-/** pitch gains **/
-static int find_pitch_gain(AMRDecoderState *state_ptr);
-static int decode_pitch_gain(enum Mode mode, int index);
-static void pitch_gain_update(AMRDecoderState *state_ptr, int bad_frame_indicator, int *pitch_gain);
-
-void decode_reset(AVCodecContext *avctx);
-
 /**************************** tables *****************************/
 
 static const uint8_t block_size[16]= { 13, 14, 16, 18, 20, 21, 27, 32,

@@ -115,170 +115,6 @@ static int amrnb_decode_init(AVCodecContext *avctx) {
 }
 
 
-static int amrnb_decode_frame(AVCodecContext *avctx,
-        void *data, int *data_size, uint8_t *buf, int buf_size) {
-
-    AMRContext *p = avctx->priv_data;        // pointer to private data
-    int16_t *outbuffer = data;               // pointer to the output data buffer
-    int i;                                   // counter
-    enum Mode speech_mode = MODE_475;        // ???
-    const int16_t *homing_frame;             // pointer to the homing frame
-    int homing_frame_size;                   // homing frame size
-
-    // decode the bitstream to amr parameters
-    p->cur_frame_mode = decode_bitstream(avctx, buf, buf_size, &speech_mode);
-
-    // guess the mode from the previous frame if no data or bad data
-    if(p->cur_frame_type == RX_SPEECH_BAD) {
-        if(p->prev_frame_type > RX_SPEECH_BAD) {
-            p->cur_frame_type = RX_SID_BAD;
-            p->cur_frame_mode = MODE_DTX;
-        }else {
-            p->cur_frame_mode = p->prev_frame_mode;
-        }
-    }else if(p->cur_frame_type == RX_NO_DATA) {
-        p->cur_frame_mode = p->prev_frame_mode;
-    }
-
-    if(p->bad_frame_indicator) {
-        if(p->cur_frame_mode < MODE_DTX) {
-            p->cur_frame_type = RX_SPEECH_BAD;
-        }else if(p->cur_frame_mode != NO_DATA) {
-            p->cur_frame_type = RX_SID_BAD;
-        }
-    }
-
-    if(p->prev_frame_homing) {
-        switch(p->cur_frame_mode) {
-            case MODE_475:
-                homing_frame = dhf_MODE_475;
-                homing_frame_size = 7;
-            break;
-            case MODE_515:
-                homing_frame = dhf_MODE_515;
-                homing_frame_size = 7;
-            break;
-            case MODE_59:
-                homing_frame = dhf_MODE_59;
-                homing_frame_size = 7;
-            break;
-            case MODE_67:
-                homing_frame = dhf_MODE_67;
-                homing_frame_size = 7;
-            break;
-            case MODE_74:
-                homing_frame = dhf_MODE_74;
-                homing_frame_size = 7;
-            break;
-            case MODE_795:
-                homing_frame = dhf_MODE_795;
-                homing_frame_size = 8;
-            break;
-            case MODE_102:
-                homing_frame = dhf_MODE_102;
-                homing_frame_size = 12;
-            break;
-            case MODE_122:
-                homing_frame = dhf_MODE_122;
-                homing_frame_size = 18;
-            break;
-            default:
-                homing_frame = NULL;
-                homing_frame_size = 0;
-            break;
-        }
-        for(i=0; i<homing_frame_size; i++) {
-            // check if the frame is homing
-            if( (p->cur_frame_homing = p->amr_prms[i] ^ homing_frame[i]) ) break;
-        }
-    }
-
-    if(!p->cur_frame_homing && p->prev_frame_homing) {
-        for(i=0; i<AMR_BLOCK_SIZE; i++) {
-            p->sample_buffer[i] = EHF_MASK;
-        }
-    }else {
-        // decode frame (ref funcn): Speech_Decode_Frame( p, p->cur_frame_mode, p->amr_prms, p->cur_frame_type, p->sample_buffer )
-    }
-
-    if(!p->prev_frame_homing) {
-        switch(p->cur_frame_mode) {
-            case MODE_475:
-                homing_frame = dhf_MODE_475;
-                homing_frame_size = PRMS_MODE_475;
-            break;
-            case MODE_515:
-                homing_frame = dhf_MODE_515;
-                homing_frame_size = PRMS_MODE_515;
-            break;
-            case MODE_59:
-                homing_frame = dhf_MODE_59;
-                homing_frame_size = PRMS_MODE_59;
-            break;
-            case MODE_67:
-                homing_frame = dhf_MODE_67;
-                homing_frame_size = PRMS_MODE_67;
-            break;
-            case MODE_74:
-                homing_frame = dhf_MODE_74;
-                homing_frame_size = PRMS_MODE_74;
-            break;
-            case MODE_795:
-                homing_frame = dhf_MODE_795;
-                homing_frame_size = PRMS_MODE_795;
-            break;
-            case MODE_102:
-                homing_frame = dhf_MODE_102;
-                homing_frame_size = PRMS_MODE_102;
-            break;
-            case MODE_122:
-                homing_frame = dhf_MODE_122;
-                homing_frame_size = PRMS_MODE_122;
-            break;
-            default:
-                homing_frame = NULL;
-                homing_frame_size = 0;
-            break;
-        }
-        for(i=0; i<homing_frame_size; i++) {
-            // check if the frame is homing
-            if( (p->cur_frame_homing = p->amr_prms[i] ^ homing_frame[i]) ) break;
-        }
-    }
-
-    if(p->cur_frame_homing) {
-        decode_reset(avctx);
-    }
-    p->prev_frame_homing = !p->cur_frame_homing;
-    p->prev_frame_type   = p->cur_frame_type;
-    p->prev_frame_mode   = p->cur_frame_mode;
-
-    /* To make it easy the stream can only be 16 bits mono, so let's convert it to that */
-    for (i=0 ; i<buf_size; i++)
-        outbuffer[i] = (int16_t)p->sample_buffer[i];
-
-    /* Report how many samples we got */
-    *data_size = buf_size;
-
-    /* Return the amount of bytes consumed if everything was ok */
-    return *data_size*sizeof(int16_t);
-}
-
-
-static int amrnb_decode_close(AVCodecContext *avctx) {
-
-    AMRContext *p = avctx->priv_data;
-
-    /* Free allocated memory */
-    av_free(p->sample_buffer);
-    av_free(p->amr_prms);
-    av_free(p->state);
-
-    /* Return 0 if everything is ok, -1 if not */
-    return 0;
-}
-
-
 /**
  * Decode the bitstream into the AMR parameters and discover the frame mode
  *
@@ -365,6 +201,47 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
     }
 
     return mode;
+}
+
+
+/**
+ * DESCRIPTION FROM REF SOURCE:
+ * Make sure that the LSFs are properly ordered and to keep a certain minimum
+ * distance between adjacent LSFs.
+ *
+ * @param lsf               a vector of lsfs (range: 0<=val<=0.5)
+ * @param min_dist          minimum required separation of lsfs
+ */
+
+static void reorder_lsf(int *lsf, int min_dist) {
+    int i;
+    int lsf_min;
+
+    for(i=0; i<LP_FILTER_ORDER; i++) {
+        if(lsf[i] < lsf_min) {
+            lsf[i] = lsf_min;
+        }
+        lsf_min = lsf[i] + min_dist;
+    }
+}
+
+
+/**
+ * Convert a vector of lsfs into the corresponding, cosine domain lsps
+ *
+ * @param lsf               a vector of lsfs
+ * @param lsp               a vector of lsps
+ */
+
+static void lsf2lsp(int *lsf, int *lsp) {
+    int i;
+    int index, offset;
+
+    for(i=0; i<LP_FILTER_ORDER; i++) {
+        index = lsf[i] >> 8;      // bits 8 to 15 of lsf[i]
+        offset = lsf[i] & 0x00ff; // bits 0 to  7 of lsf[i]
+        lsp[i] = cos_table[index] + ( (( cos_table[index+1]-cos_table[index] )*offset)>>8 );
+    }
 }
 
 
@@ -523,47 +400,6 @@ static void decode_lsf2lsp_5(AVCodecContext *avctx) {
     /*  convert LSFs to the cosine domain */
     lsf2lsp(lsf1_q, p->lsp1_q);
     lsf2lsp(lsf2_q, p->lsp2_q);
-}
-
-
-/**
- * DESCRIPTION FROM REF SOURCE:
- * Make sure that the LSFs are properly ordered and to keep a certain minimum
- * distance between adjacent LSFs.
- *
- * @param lsf               a vector of lsfs (range: 0<=val<=0.5)
- * @param min_dist          minimum required separation of lsfs
- */
-
-static void reorder_lsf(int *lsf, int min_dist) {
-    int i;
-    int lsf_min;
-
-    for(i=0; i<LP_FILTER_ORDER; i++) {
-        if(lsf[i] < lsf_min) {
-            lsf[i] = lsf_min;
-        }
-        lsf_min = lsf[i] + min_dist;
-    }
-}
-
-
-/**
- * Convert a vector of lsfs into the corresponding, cosine domain lsps
- *
- * @param lsf               a vector of lsfs
- * @param lsp               a vector of lsps
- */
-
-static void lsf2lsp(int *lsf, int *lsp) {
-    int i;
-    int index, offset;
-
-    for(i=0; i<LP_FILTER_ORDER; i++) {
-        index = lsf[i] >> 8;      // bits 8 to 15 of lsf[i]
-        offset = lsf[i] & 0x00ff; // bits 0 to  7 of lsf[i]
-        lsp[i] = cos_table[index] + ( (( cos_table[index+1]-cos_table[index] )*offset)>>8 );
-    }
 }
 
 
@@ -1293,6 +1129,171 @@ void decode_reset(AVCodecContext *avctx) {
     p->prev_frame_mode = MODE_475;
     // FIXME reset AMRDecoderState too!
 }
+
+
+static int amrnb_decode_frame(AVCodecContext *avctx,
+        void *data, int *data_size, uint8_t *buf, int buf_size) {
+
+    AMRContext *p = avctx->priv_data;        // pointer to private data
+    int16_t *outbuffer = data;               // pointer to the output data buffer
+    int i;                                   // counter
+    enum Mode speech_mode = MODE_475;        // ???
+    const int16_t *homing_frame;             // pointer to the homing frame
+    int homing_frame_size;                   // homing frame size
+
+    // decode the bitstream to amr parameters
+    p->cur_frame_mode = decode_bitstream(avctx, buf, buf_size, &speech_mode);
+
+    // guess the mode from the previous frame if no data or bad data
+    if(p->cur_frame_type == RX_SPEECH_BAD) {
+        if(p->prev_frame_type > RX_SPEECH_BAD) {
+            p->cur_frame_type = RX_SID_BAD;
+            p->cur_frame_mode = MODE_DTX;
+        }else {
+            p->cur_frame_mode = p->prev_frame_mode;
+        }
+    }else if(p->cur_frame_type == RX_NO_DATA) {
+        p->cur_frame_mode = p->prev_frame_mode;
+    }
+
+    if(p->bad_frame_indicator) {
+        if(p->cur_frame_mode < MODE_DTX) {
+            p->cur_frame_type = RX_SPEECH_BAD;
+        }else if(p->cur_frame_mode != NO_DATA) {
+            p->cur_frame_type = RX_SID_BAD;
+        }
+    }
+
+    if(p->prev_frame_homing) {
+        switch(p->cur_frame_mode) {
+            case MODE_475:
+                homing_frame = dhf_MODE_475;
+                homing_frame_size = 7;
+            break;
+            case MODE_515:
+                homing_frame = dhf_MODE_515;
+                homing_frame_size = 7;
+            break;
+            case MODE_59:
+                homing_frame = dhf_MODE_59;
+                homing_frame_size = 7;
+            break;
+            case MODE_67:
+                homing_frame = dhf_MODE_67;
+                homing_frame_size = 7;
+            break;
+            case MODE_74:
+                homing_frame = dhf_MODE_74;
+                homing_frame_size = 7;
+            break;
+            case MODE_795:
+                homing_frame = dhf_MODE_795;
+                homing_frame_size = 8;
+            break;
+            case MODE_102:
+                homing_frame = dhf_MODE_102;
+                homing_frame_size = 12;
+            break;
+            case MODE_122:
+                homing_frame = dhf_MODE_122;
+                homing_frame_size = 18;
+            break;
+            default:
+                homing_frame = NULL;
+                homing_frame_size = 0;
+            break;
+        }
+        for(i=0; i<homing_frame_size; i++) {
+            // check if the frame is homing
+            if( (p->cur_frame_homing = p->amr_prms[i] ^ homing_frame[i]) ) break;
+        }
+    }
+
+    if(!p->cur_frame_homing && p->prev_frame_homing) {
+        for(i=0; i<AMR_BLOCK_SIZE; i++) {
+            p->sample_buffer[i] = EHF_MASK;
+        }
+    }else {
+        // decode frame (ref funcn): Speech_Decode_Frame( p, p->cur_frame_mode, p->amr_prms, p->cur_frame_type, p->sample_buffer )
+    }
+
+    if(!p->prev_frame_homing) {
+        switch(p->cur_frame_mode) {
+            case MODE_475:
+                homing_frame = dhf_MODE_475;
+                homing_frame_size = PRMS_MODE_475;
+            break;
+            case MODE_515:
+                homing_frame = dhf_MODE_515;
+                homing_frame_size = PRMS_MODE_515;
+            break;
+            case MODE_59:
+                homing_frame = dhf_MODE_59;
+                homing_frame_size = PRMS_MODE_59;
+            break;
+            case MODE_67:
+                homing_frame = dhf_MODE_67;
+                homing_frame_size = PRMS_MODE_67;
+            break;
+            case MODE_74:
+                homing_frame = dhf_MODE_74;
+                homing_frame_size = PRMS_MODE_74;
+            break;
+            case MODE_795:
+                homing_frame = dhf_MODE_795;
+                homing_frame_size = PRMS_MODE_795;
+            break;
+            case MODE_102:
+                homing_frame = dhf_MODE_102;
+                homing_frame_size = PRMS_MODE_102;
+            break;
+            case MODE_122:
+                homing_frame = dhf_MODE_122;
+                homing_frame_size = PRMS_MODE_122;
+            break;
+            default:
+                homing_frame = NULL;
+                homing_frame_size = 0;
+            break;
+        }
+        for(i=0; i<homing_frame_size; i++) {
+            // check if the frame is homing
+            if( (p->cur_frame_homing = p->amr_prms[i] ^ homing_frame[i]) ) break;
+        }
+    }
+
+    if(p->cur_frame_homing) {
+        decode_reset(avctx);
+    }
+    p->prev_frame_homing = !p->cur_frame_homing;
+    p->prev_frame_type   = p->cur_frame_type;
+    p->prev_frame_mode   = p->cur_frame_mode;
+
+    /* To make it easy the stream can only be 16 bits mono, so let's convert it to that */
+    for (i=0 ; i<buf_size; i++)
+        outbuffer[i] = (int16_t)p->sample_buffer[i];
+
+    /* Report how many samples we got */
+    *data_size = buf_size;
+
+    /* Return the amount of bytes consumed if everything was ok */
+    return *data_size*sizeof(int16_t);
+}
+
+
+static int amrnb_decode_close(AVCodecContext *avctx) {
+
+    AMRContext *p = avctx->priv_data;
+
+    /* Free allocated memory */
+    av_free(p->sample_buffer);
+    av_free(p->amr_prms);
+    av_free(p->state);
+
+    /* Return 0 if everything is ok, -1 if not */
+    return 0;
+}
+
 
 AVCodec amrnb_decoder =
 {
