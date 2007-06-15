@@ -2,7 +2,7 @@ Index: libavformat/Makefile
 ===================================================================
 --- libavformat/Makefile	(revision 9314)
 +++ libavformat/Makefile	(working copy)
-@@ -84,11 +84,11 @@
+@@ -84,14 +84,14 @@
  OBJS-$(CONFIG_MP3_MUXER)                 += mp3.o
  OBJS-$(CONFIG_MP4_MUXER)                 += movenc.o riff.o isom.o
  OBJS-$(CONFIG_MPC_DEMUXER)               += mpc.o
@@ -18,7 +18,11 @@ Index: libavformat/Makefile
 +OBJS-$(CONFIG_MPEG2SVCD_MUXER)           += mpegenc.o
  OBJS-$(CONFIG_MPEG1VIDEO_MUXER)          += raw.o
  OBJS-$(CONFIG_MPEG2VIDEO_MUXER)          += raw.o
- OBJS-$(CONFIG_MPEGPS_DEMUXER)            += mpeg.o
+-OBJS-$(CONFIG_MPEGPS_DEMUXER)            += mpeg.o
++OBJS-$(CONFIG_MPEGPS_DEMUXER)            += mpegdec.o
+ OBJS-$(CONFIG_MPEGTS_DEMUXER)            += mpegts.o
+ OBJS-$(CONFIG_MPEGTS_MUXER)              += mpegtsenc.o
+ OBJS-$(CONFIG_MPEGVIDEO_DEMUXER)         += raw.o
 Index: libavformat/mpeg.c
 ===================================================================
 --- libavformat/mpeg.c	(revision 9314)
