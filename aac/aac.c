@@ -345,7 +345,7 @@ typedef struct {
 
     //bias values
     int add_bias;
-    int exp_bias;
+    int scale_bias;
 
     // statistics
     int num_frame;
@@ -834,15 +834,13 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 
     if(ac->dsp.float_to_int16 == ff_float_to_int16_c) {
         ac->add_bias = 385;
-        ac->exp_bias = 0;
-        for (i = 0; i < 256; i++)
-            ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./32768.;
+        ac->scale_bias = 32768;
     } else {
         ac->add_bias = 0;
-        ac->exp_bias = 15<<23;
-        for (i = 0; i < 256; i++)
-            ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024.;
+        ac->scale_bias = 1;
     }
+    for (i = 0; i < 256; i++)
+        ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./ac->scale_bias;
 
 
     // general init
@@ -915,7 +913,7 @@ static void ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, ltp_struc
         assert(0);
     } else {
         ltp->lag = get_bits(gb, 11);
-        ltp->coef = ltp_coef[get_bits(gb, 3)] * (-2./32768./1024.); // wrong mdct method
+        ltp->coef = ltp_coef[get_bits(gb, 3)] * (-2./ac->scale_bias/1024.); // wrong mdct method
         for (sfb = 0; sfb < FFMIN(max_sfb, MAX_LTP_LONG_SFB); sfb++)
             ltp->used[sfb] = get_bits1(gb);
     }
@@ -1031,7 +1029,7 @@ static void scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gai
                 } else {
                     noise += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
                 }
-                sf[g][i] = pow(2.0, 0.25 * noise)/1024./32768.;
+                sf[g][i] = pow(2.0, 0.25 * noise)/1024./ac->scale_bias;
             } else {
                 global_gain += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
                 assert(!(global_gain & (~255)));
