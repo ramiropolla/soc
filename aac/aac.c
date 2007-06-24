@@ -224,6 +224,21 @@ typedef struct {
     int mask[8][64];
 } ms_struct;
 
+// dynamic range compression
+typedef struct {
+    int pce_instance_tag;
+    int drc_tag_reserved_bits;
+    int dyn_rng_sgn[17];
+    int dyn_rng_ctl[17];
+    int exclude_mask[MAX_CHANNELS];
+    int additional_excluded_chns[MAX_CHANNELS];
+    int drc_band_incr;
+    int drc_interpolation_scheme;
+    int drc_band_top[17];
+    int prog_ref_level;
+    int prog_ref_level_reserved_bits;
+} drc_struct;
+
 typedef struct {
     int present;
     int num_pulse;
@@ -311,6 +326,7 @@ typedef struct {
     cpe_struct * che_cpe[MAX_TAGID];
     sce_struct * che_lfe[MAX_TAGID];
     cc_struct * che_cc[MAX_TAGID];
+    drc_struct * che_drc;
 
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
     int is_saved;
@@ -1461,6 +1477,79 @@ static int sbr_extension_data(AACContext * ac, GetBitContext * gb, int crc, int 
     return cnt;
 }
 
+
+static int excluded_channels(AACContext * ac, GetBitContext * gb) {
+    int i;
+    int n = 0;
+    int num_excl_chan = 7;
+
+    for (i = 0; i < 7; i++)
+         ac->che_drc->exclude_mask[i] = get_bits1(gb);
+    n++;
+
+    while (get_bits1(gb)) {
+        ac->che_drc->additional_excluded_chns[n-1]=1;
+        for (i = num_excl_chan; i < num_excl_chan+7; i++)
+            ac->che_drc->exclude_mask[i] = get_bits1(gb);
+        n++;
+        num_excl_chan += 7;
+    }
+    return n;
+}
+
+
+
+static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
+    int n = 1;
+    int drc_num_bands = 1;
+    int i;
+
+    if (ac->che_drc == NULL)
+        ac->che_drc = av_mallocz(sizeof(drc_struct));
+
+    /* pce_tag_present? */
+    if(get_bits1(gb)) {
+        ac->che_drc->pce_instance_tag = get_bits(gb, 4);
+        ac->che_drc->drc_tag_reserved_bits = get_bits(gb, 4);
+        n++;
+    }
+
+    /* excluded_chns_present? */
+    if(get_bits1(gb)) {
+        n += excluded_channels(ac, gb);
+    }
+
+    /* drc_bands_present? */
+    if (get_bits1(gb)) {
+        ac->che_drc->drc_band_incr = get_bits(gb, 4);
+        ac->che_drc->drc_interpolation_scheme = get_bits(gb, 4);
+        n++;
+        drc_num_bands += ac->che_drc->drc_band_incr;
+        for (i = 0; i < drc_num_bands; i++) {
+            ac->che_drc->drc_band_top[i] = get_bits(gb, 8);
+            n++;
+        }
+    }
+
+    /* prog_ref_level_present? */
+    if (get_bits1(gb)) {
+        ac->che_drc->prog_ref_level = get_bits(gb, 7);
+        ac->che_drc->prog_ref_level_reserved_bits = get_bits1(gb);
+        n++;
+    }
+
+    for (i = 0; i < drc_num_bands; i++) {
+        ac->che_drc->dyn_rng_sgn[i] = get_bits1(gb);
+        ac->che_drc->dyn_rng_ctl[i] = get_bits(gb, 7);
+        n++;
+    }
+
+    return n;
+}
+
+/** Parse extension data (incomplete)
+ *
+ */
 static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
     int i = 0;
     int res = cnt;
@@ -1470,10 +1559,12 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
         case EXT_SBR_DATA:
             res = sbr_extension_data(ac, gb, i, cnt);
             break;
+        case EXT_DYNAMIC_RANGE:
+            res = dynamic_range_info(ac, gb, cnt);
+            break;
         case EXT_FILL:
         case EXT_FILL_DATA:
         case EXT_DATA_ELEMENT:
-        case EXT_DYNAMIC_RANGE:
         default:
             skip_bits(gb, 8*cnt - 4);
             break;
@@ -2169,7 +2260,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         output_coefs(avccontext);
     }
     // parse
-    while ((id = get_bits(gb, 3)) != 7) {
+    while ((id = get_bits(gb, 3)) != ID_END) {
         switch (id) {
             case ID_SCE: {
                          if (!single_channel_struct(ac, gb))
