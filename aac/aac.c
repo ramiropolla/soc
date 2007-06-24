@@ -325,6 +325,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, intensity_tab[256]);
     DECLARE_ALIGNED_16(float, ivquant_tab[256]);
     DECLARE_ALIGNED_16(float, revers[1024]);
+    DECLARE_ALIGNED_16(float, interleaved_output[2048]);
 
     MDCTContext mdct;
     MDCTContext mdct_small;
@@ -333,6 +334,10 @@ typedef struct {
     int * vq[11];
     ssr_context * ssrctx;
     AVRandomState random_state;
+
+    //bias values
+    int add_bias;
+    int exp_bias;
 
     // statistics
     int num_frame;
@@ -820,11 +825,23 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     // 32768 - values in AAC build for ready float->int 16 bit audio, using
     // BIAS method instead needs values -1<x<1
     for (i = 0; i < 256; i++)
-        ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./32768.;
-    for (i = 0; i < 256; i++)
         ac->intensity_tab[i] = pow(0.5, (i - 100) / 4.);
     for (i = 0; i < sizeof(ac->ivquant_tab)/sizeof(ac->ivquant_tab[0]); i++)
         ac->ivquant_tab[i] = pow(i, 4./3);
+
+    if(ac->dsp.float_to_int16 == ff_float_to_int16_c) {
+        ac->add_bias = 385;
+        ac->exp_bias = 0;
+        for (i = 0; i < 256; i++)
+            ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./32768.;
+    } else {
+        ac->add_bias = 0;
+        ac->exp_bias = 15<<23;
+        for (i = 0; i < 256; i++)
+            ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024.;
+    }
+
+
     // general init
     memset(ac->che_sce, 0, sizeof(ac->che_sce));
     memset(ac->che_cpe, 0, sizeof(ac->che_cpe));
@@ -1538,8 +1555,6 @@ static void tns_trans(AACContext * ac, sce_struct * sce) {
     tns_filter_tool(ac, 1, sce, sce->coeffs);
 }
 
-#define BIAS 385
-
 static void window_ltp_tool(AACContext * ac, sce_struct * sce, float * in, float * out) {
     ics_struct * ics = &sce->ics;
     const float * lwindow = (ics->window_shape) ? ac->kbd_long_1024 : ac->sine_long_1024;
@@ -1602,7 +1617,7 @@ static void ltp_update_trans(AACContext * ac, sce_struct * sce) {
     if (ac->is_saved) {
         for (i = 0; i < 1024; i++) {
             sce->ltp_state[i] = sce->ltp_state[i + 1024];
-            sce->ltp_state[i + 1024] = LTP_ROUND(sce->ret[i] - BIAS);
+            sce->ltp_state[i + 1024] = LTP_ROUND(sce->ret[i] - ac->add_bias);
             sce->ltp_state[i + 2 * 1024] = LTP_ROUND(sce->saved[i]);
             //sce->ltp_state[i + 3 * 1024] = 0;
         }
@@ -1624,12 +1639,12 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
         ff_imdct_calc(&ac->mdct, buf, in, out); // out can be abused for now as a temp buffer
         if (ac->is_saved) {
             if (ics->window_sequence != LONG_STOP_SEQUENCE) {
-                ac->dsp.vector_fmul_add_add(out, buf, lwindow_prev, saved, BIAS, 1024, 1);
+                ac->dsp.vector_fmul_add_add(out, buf, lwindow_prev, saved, ac->add_bias, 1024, 1);
             } else {
-                for (i = 0; i < 448; i++) out[i] = saved[i] + BIAS;
+                for (i = 0; i < 448; i++) out[i] = saved[i] + ac->add_bias;
                 for (i = 448; i < 576; i++) buf[i] *= 0.125; // normalize
-                ac->dsp.vector_fmul_add_add(out + 448, buf + 448, swindow_prev, saved + 448, BIAS, 128, 1);
-                for (i = 576; i < 1024; i++)   out[i] = buf[i] + BIAS;
+                ac->dsp.vector_fmul_add_add(out + 448, buf + 448, swindow_prev, saved + 448, ac->add_bias, 128, 1);
+                for (i = 576; i < 1024; i++)   out[i] = buf[i] + ac->add_bias;
             }
         }
         if (ics->window_sequence != LONG_START_SEQUENCE) {
@@ -1647,15 +1662,15 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
             ff_imdct_calc(&ac->mdct_small, buf + i, in + i/2, out);
             ac->dsp.vector_fmul_reverse(ac->revers + i/2, buf + i + 128, swindow, 128);
         }
-        for (i = 0; i < 448; i++)   out[i] = saved[i] + BIAS;
+        for (i = 0; i < 448; i++)   out[i] = saved[i] + ac->add_bias;
         out += 448; saved += 448;
-        ac->dsp.vector_fmul_add_add(out + 0*128, buf + 0*128, swindow_prev, saved, BIAS, 128, 1);
-        vector_fmul_add_add_add(ac, out + 1*128, buf + 2*128, swindow, saved + 1*128, ac->revers + 0*128, BIAS, 128);
-        vector_fmul_add_add_add(ac, out + 2*128, buf + 4*128, swindow, saved + 2*128, ac->revers + 1*128, BIAS, 128);
-        vector_fmul_add_add_add(ac, out + 3*128, buf + 6*128, swindow, saved + 3*128, ac->revers + 2*128, BIAS, 128);
-        vector_fmul_add_add_add(ac, out + 4*128, buf + 8*128, swindow, saved + 4*128, ac->revers + 3*128, BIAS, 64);
+        ac->dsp.vector_fmul_add_add(out + 0*128, buf + 0*128, swindow_prev, saved, ac->add_bias, 128, 1);
+        vector_fmul_add_add_add(ac, out + 1*128, buf + 2*128, swindow, saved + 1*128, ac->revers + 0*128, ac->add_bias, 128);
+        vector_fmul_add_add_add(ac, out + 2*128, buf + 4*128, swindow, saved + 2*128, ac->revers + 1*128, ac->add_bias, 128);
+        vector_fmul_add_add_add(ac, out + 3*128, buf + 6*128, swindow, saved + 3*128, ac->revers + 2*128, ac->add_bias, 128);
+        vector_fmul_add_add_add(ac, out + 4*128, buf + 8*128, swindow, saved + 4*128, ac->revers + 3*128, ac->add_bias, 64);
         //for (i = -448; i < 1024 - 448; i++)
-        //    out[i] = BIAS;
+        //    out[i] = ac->add_bias;
         buf += 1024;
         ac->dsp.vector_fmul_add_add(saved,       buf + 64, swindow, ac->revers + 3*128+64,  0, 64, 1);
         ac->dsp.vector_fmul_add_add(saved + 64,  buf + 2*128, swindow, ac->revers + 4*128, 0, 128, 1);
@@ -1749,11 +1764,11 @@ static void ssr_ipqf_tool(AACContext * ac, sce_struct * sce, float * preret) {
             x = 0.0;
             for (j = 0; j < 12; j++)
                 x += ctx->t0[b][j] * ssr->buf[b][23-2*j] + ctx->t1[b][j] * ssr->buf[b+2][22-2*j];
-            sce->ret[4*i + b] = x + BIAS;
+            sce->ret[4*i + b] = x + ac->add_bias;
             x = 0.0;
             for (j = 0; j < 12; j++)
                 x += ctx->t0[3-b][j] * ssr->buf[b][23-2*j] - ctx->t1[3-b][j] * ssr->buf[b+2][22-2*j];
-            sce->ret[4*i + 3-b] = x + BIAS;
+            sce->ret[4*i + 3-b] = x + ac->add_bias;
         }
     }
 }
@@ -1802,7 +1817,7 @@ static void coupling_independent_trans(AACContext * ac, cc_struct * cc, sce_stru
     int i;
     float gain = cc->coup.gain[index][0][0] * sce->mixing_gain;
     for (i = 0; i < 1024; i++)
-        sce->ret[i] += gain * (cc->ch.ret[i] - BIAS);
+        sce->ret[i] += gain * (cc->ch.ret[i] - ac->add_bias);
 }
 
 static void transform_coupling_tool(AACContext * ac, cc_struct * cc,
@@ -1984,7 +1999,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
             break;
         case MIXMODE_2TO1:
             for (i = 0; i < 1024; i++)
-                data[i] = F2U16(ac->che_cpe[0]->ch[mix->lr_tag].ret[i] + ac->che_cpe[mix->lr_tag]->ch[1].ret[i] - BIAS);
+                data[i] = F2U16(ac->che_cpe[0]->ch[mix->lr_tag].ret[i] + ac->che_cpe[mix->lr_tag]->ch[1].ret[i] - ac->add_bias);
             break;
         case MIXMODE_1TO2:
             for (i = 0; i < 1024; i++)
@@ -1992,8 +2007,10 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
             break;
         case MIXMODE_2TO2:
             for (i = 0; i < 1024; i++) {
-                data[i*2]   = F2U16(ac->che_cpe[mix->lr_tag]->ch[0].ret[i]);
-                data[i*2+1] = F2U16(ac->che_cpe[mix->lr_tag]->ch[1].ret[i]);
+                //data[i*2]   = F2U16(ac->che_cpe[mix->lr_tag]->ch[0].ret[i]);
+                //data[i*2+1] = F2U16(ac->che_cpe[mix->lr_tag]->ch[1].ret[i]);
+                ac->interleaved_output[i*2]    = ac->che_cpe[mix->lr_tag]->ch[0].ret[i] - ac->add_bias;
+                ac->interleaved_output[i*2+1]  = ac->che_cpe[mix->lr_tag]->ch[1].ret[i] - ac->add_bias;
             }
             break;
         case MIXMODE_MATRIX1:
@@ -2001,22 +2018,22 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
                 cpe_struct *ch_lr = ac->che_cpe[mix->lr_tag];
                 sce_struct *ch_c = ac->che_sce[mix->c_tag];
                 cpe_struct *ch_sur = ac->che_cpe[mix->sur_tag];
-                float cBIAS = -BIAS;
+                float cBIAS = - ac->add_bias;
                 float out[1024];
                 if (ch_c) {
-                    cBIAS += BIAS;
+                    cBIAS += ac->add_bias;
                     for (i = 0; i < 1024; i++)
                         out[i] = ch_c->ret[i];
                 } else {
                     memset(out, 0, sizeof(out));
                 }
                 if (ch_lr) {
-                    cBIAS += 2 * BIAS;
+                    cBIAS += 2 * ac->add_bias;
                     for (i = 0; i < 1024; i++)
                         out[i] += ch_lr->ch[0].ret[i] + ch_lr->ch[1].ret[i];
                 }
                 if (ch_sur) {
-                    cBIAS += 2 * BIAS;
+                    cBIAS += 2 * ac->add_bias;
                     for (i = 0; i < 1024; i++)
                         out[i] += ch_sur->ch[0].ret[i] + ch_sur->ch[1].ret[i];
                 }
@@ -2029,10 +2046,10 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
                 cpe_struct *ch_lr = ac->che_cpe[mix->lr_tag];
                 sce_struct *ch_c = ac->che_sce[mix->c_tag];
                 cpe_struct *ch_sur = ac->che_cpe[mix->sur_tag];
-                float lBIAS = -BIAS, rBIAS = -BIAS;
+                float lBIAS = -ac->add_bias, rBIAS = -ac->add_bias;
                 float out[1024][2];
                 if (ch_c) {
-                    lBIAS += BIAS; rBIAS += BIAS;
+                    lBIAS += ac->add_bias; rBIAS += ac->add_bias;
                     for (i = 0; i < 1024; i++) {
                         out[i][0] = out[i][1] = ch_c->ret[i];
                     }
@@ -2040,7 +2057,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
                     memset(out, 0, sizeof(out));
                 }
                 if (ch_lr) {
-                    lBIAS += BIAS; rBIAS += BIAS;
+                    lBIAS += ac->add_bias; rBIAS += ac->add_bias;
                     for (i = 0; i < 1024; i++) {
                         out[i][0] += ch_lr->ch[0].ret[i];
                         out[i][1] += ch_lr->ch[1].ret[i];
@@ -2048,13 +2065,13 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
                 }
                 if (ch_sur) {
                     if (pcs->pseudo_surround) {
-                        lBIAS -= 2 * BIAS; rBIAS += 2 * BIAS;
+                        lBIAS -= 2 * ac->add_bias; rBIAS += 2 * ac->add_bias;
                         for (i = 0; i < 1024; i++) {
                             out[i][0] -= (ch_sur->ch[0].ret[i] + ch_sur->ch[1].ret[i]);
                             out[i][1] += (ch_sur->ch[1].ret[i] + ch_sur->ch[0].ret[i]);
                         }
                     } else {
-                        lBIAS += BIAS; rBIAS += BIAS;
+                        lBIAS += ac->add_bias; rBIAS += ac->add_bias;
                         for (i = 0; i < 1024; i++) {
                             out[i][0] += ch_sur->ch[0].ret[i];
                             out[i][1] += ch_sur->ch[1].ret[i];
@@ -2185,6 +2202,8 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
 
     spec_to_sample(ac);
     output_samples(avccontext, data, data_size);
+    ac->dsp.float_to_int16(data, ac->interleaved_output, 2048);
+
     return buf_size;
 }
 
