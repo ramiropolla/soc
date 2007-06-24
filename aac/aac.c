@@ -326,6 +326,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, ivquant_tab[256]);
     DECLARE_ALIGNED_16(float, revers[1024]);
     float* interleaved_output;
+    float* iop;
 
     MDCTContext mdct;
     MDCTContext mdct_small;
@@ -383,14 +384,6 @@ static inline int16_t LTP_ROUND(float x) {
     return lrintf(32768 * x);
 }
 
-static inline uint16_t F2U16(float x) {
-    int32_t tmp = av_flt2int(x);
-    if (tmp & 0xf0000) {
-        if (tmp > 0x43c0ffff) tmp = 0xFFFF;
-        else                  tmp = 0;
-    }
-    return (uint16_t)(tmp - 0x8000);
-}
 
 // aux
 /**
@@ -1987,26 +1980,30 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
     int size = ochannels * 1024 * sizeof(uint16_t);
     int i;
 
+    /* set a default float2int16 buffer */
+    ac->iop = ac->interleaved_output;
+
     if (!ac->is_saved) {
         ac->is_saved = 1;
         *data_size = 0;
         return 0;
     }
     *data_size = size;
+
+    /* the matrixmix modes are probably broken and they shouldn't be here anyway */
     switch (mix->mode) {
         case MIXMODE_DEFAULT:
             break;
         case MIXMODE_1TO1:
-            for (i = 0; i < 1024; i++)
-                data[i] = F2U16(ac->che_sce[mix->c_tag]->ret[i]);
+            ac->iop = ac->che_sce[mix->c_tag]->ret;
             break;
         case MIXMODE_2TO1:
             for (i = 0; i < 1024; i++)
-                data[i] = F2U16(ac->che_cpe[0]->ch[mix->lr_tag].ret[i] + ac->che_cpe[mix->lr_tag]->ch[1].ret[i] - ac->add_bias);
+                ac->interleaved_output[i] = ac->che_cpe[0]->ch[mix->lr_tag].ret[i] + ac->che_cpe[mix->lr_tag]->ch[1].ret[i];
             break;
         case MIXMODE_1TO2:
             for (i = 0; i < 1024; i++)
-                data[i*2] = data[i*2+1] = F2U16(ac->che_sce[mix->c_tag]->ret[i]);
+                ac->interleaved_output[i*2] = ac->interleaved_output[i*2+1] = ac->che_sce[mix->c_tag]->ret[i];
             break;
         case MIXMODE_2TO2:
             for (i = 0; i < 1024; i++) {
@@ -2039,7 +2036,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
                         out[i] += ch_sur->ch[0].ret[i] + ch_sur->ch[1].ret[i];
                 }
                 for (i = 0; i < 1024; i++)
-                    data[i] = F2U16(out[i] - cBIAS);
+                    ac->interleaved_output[i] = out[i] - cBIAS;
             }
             break;
         case MIXMODE_MATRIX2:
@@ -2080,8 +2077,8 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
                     }
                 }
                 for (i = 0; i < 1024; i++) {
-                    data[i*2]   = F2U16(out[i][0] - lBIAS);
-                    data[i*2+1] = F2U16(out[i][1] - rBIAS);
+                    ac->interleaved_output[i*2]   = out[i][0] - lBIAS;
+                    ac->interleaved_output[i*2+1] = out[i][1] - rBIAS;
                 }
             }
             break;
@@ -2136,16 +2133,16 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
         for (i = 0; i < ochannels; i++) {
             if (i < ichannels) {
                 for (j = 0; j < 1024; j++)
-                    data[j * ochannels + i] = F2U16(order[i][j]);
+                    ac->interleaved_output[j * ochannels + i] = order[i][j];
             } else {
                 for (j = 0; j < 1024; j++)
-                    data[j * ochannels + i] = 0;
+                    ac->interleaved_output[j * ochannels + i] = 0.0;
             }
         }
     }
 
     /* Convert from float to int16 */
-    ac->dsp.float_to_int16(data, ac->interleaved_output, 1024*ochannels);
+    ac->dsp.float_to_int16(data, ac->iop, 1024*ochannels);
 
     return 0;
 }
