@@ -325,7 +325,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, intensity_tab[256]);
     DECLARE_ALIGNED_16(float, ivquant_tab[256]);
     DECLARE_ALIGNED_16(float, revers[1024]);
-    DECLARE_ALIGNED_16(float, interleaved_output[2048]);
+    float* interleaved_output;
 
     MDCTContext mdct;
     MDCTContext mdct_small;
@@ -786,6 +786,9 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         avccontext->channels = ac->channels;
     }
     avccontext->sample_rate = ac->sample_rate;
+
+    /* Allocate aligned reorder buffer */
+    ac->interleaved_output = av_malloc(ac->channels * 1024 * sizeof(float));
 
     for (i = 0; i < 11; i++) {
         static const int mod_cb[11] = { 3, 3, 3, 3, 9, 9, 8, 8, 13, 13, 17 };
@@ -2007,10 +2010,8 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
             break;
         case MIXMODE_2TO2:
             for (i = 0; i < 1024; i++) {
-                //data[i*2]   = F2U16(ac->che_cpe[mix->lr_tag]->ch[0].ret[i]);
-                //data[i*2+1] = F2U16(ac->che_cpe[mix->lr_tag]->ch[1].ret[i]);
-                ac->interleaved_output[i*2]    = ac->che_cpe[mix->lr_tag]->ch[0].ret[i] - ac->add_bias;
-                ac->interleaved_output[i*2+1]  = ac->che_cpe[mix->lr_tag]->ch[1].ret[i] - ac->add_bias;
+                ac->interleaved_output[i*2]    = ac->che_cpe[mix->lr_tag]->ch[0].ret[i];
+                ac->interleaved_output[i*2+1]  = ac->che_cpe[mix->lr_tag]->ch[1].ret[i];
             }
             break;
         case MIXMODE_MATRIX1:
@@ -2142,6 +2143,10 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
             }
         }
     }
+
+    /* Convert from float to int16 */
+    ac->dsp.float_to_int16(data, ac->interleaved_output, 1024*ochannels);
+
     return 0;
 }
 
@@ -2202,7 +2207,6 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
 
     spec_to_sample(ac);
     output_samples(avccontext, data, data_size);
-    ac->dsp.float_to_int16(data, ac->interleaved_output, 2048);
 
     return buf_size;
 }
@@ -2248,6 +2252,7 @@ static int aac_decode_close(AVCodecContext * avccontext) {
         ff_mdct_end(ac->mdct_ltp);
         av_free(ac->mdct_ltp);
     }
+    av_free(ac->interleaved_output);
     return 0 ;
 }
 
