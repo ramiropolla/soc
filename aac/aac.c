@@ -24,6 +24,13 @@
  *
  */
 
+/** TODO
+ *  To reduce the memory required, reorder the ret buffer so all buffers are after eachother.
+ *  And then try to do the interleaving inplace.
+ *
+ *  Fix the audible distortion.
+ */
+
 #define V_DEBUG
 
 #include "avcodec.h"
