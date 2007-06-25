@@ -1,0 +1,36 @@
+Index: Makefile
+===================================================================
+--- Makefile	(wersja 9417)
++++ Makefile	(kopia robocza)
+@@ -93,6 +93,7 @@
+ OBJS-$(CONFIG_INDEO3_DECODER)          += indeo3.o
+ OBJS-$(CONFIG_INTERPLAY_VIDEO_DECODER) += interplayvideo.o
+ OBJS-$(CONFIG_INTERPLAY_DPCM_DECODER)  += dpcm.o
++OBJS-$(CONFIG_JPEG2000_ENCODER)        += j2kenc.o
+ OBJS-$(CONFIG_JPEGLS_DECODER)          += jpeglsdec.o jpegls.o mjpegdec.o mjpeg.o golomb.o
+ OBJS-$(CONFIG_JPEGLS_ENCODER)          += jpeglsenc.o jpegls.o golomb.o
+ OBJS-$(CONFIG_KMVC_DECODER)            += kmvc.o
+Index: allcodecs.c
+===================================================================
+--- allcodecs.c	(wersja 9417)
++++ allcodecs.c	(kopia robocza)
+@@ -92,6 +92,7 @@
+     REGISTER_DECODER(INDEO3, indeo3);
+     REGISTER_DECODER(INTERPLAY_VIDEO, interplay_video);
+     REGISTER_ENCDEC (JPEGLS, jpegls);
++    REGISTER_ENCODER(JPEG2000, jpeg2000);
+     REGISTER_DECODER(KMVC, kmvc);
+     REGISTER_ENCODER(LIBX264, libx264);
+     REGISTER_ENCODER(LIBXVID, libxvid);
+Index: allcodecs.h
+===================================================================
+--- allcodecs.h	(wersja 9417)
++++ allcodecs.h	(kopia robocza)
+@@ -40,6 +40,7 @@
+ extern AVCodec h264_encoder;
+ extern AVCodec huffyuv_encoder;
+ extern AVCodec jpegls_encoder;
++extern AVCodec jpeg2000_encoder;
+ extern AVCodec ljpeg_encoder;
+ extern AVCodec mdec_encoder;
+ extern AVCodec mjpeg_encoder;
