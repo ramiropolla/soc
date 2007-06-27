@@ -1,5 +1,5 @@
 /*
- * copyright (c) 2007 Xiaohui Sun <sunxiaohui@dsp.ac.cn>
+ * Copyright (c) 2000, 2001, 2002 Fabrice Bellard.
  *
  * This file is part of FFmpeg.
  *
@@ -39,16 +39,14 @@ typedef struct PacketDesc {
 } PacketDesc;
 
 typedef struct {
+    int is_ps;  /*< whether it is a Program Stream */
     int packet_number;
 } PESContext;
 
 typedef struct {
-    uint8_t id;
     AVFifoBuffer fifo;
-    int max_buffer_size; /* in bytes */
+    int max_buffer_size; /*< in bytes */
     int buffer_index;
-    uint8_t lpcm_header[3];
-    int lpcm_align;
     PacketDesc *predecode_packet;
     PacketDesc *premux_packet;
     PacketDesc **next_packet;
@@ -77,14 +75,14 @@ static const int lpcm_freq_tab[4] = { 48000, 96000, 44100, 32000 };
  * @param[in] ctx the AVFormatContext which contains streams
  * @return  On error a negative value is returned, on success zero.
  */
-int pes_mux_init(AVFormatContext *ctx);
+int ff_pes_mux_init(AVFormatContext *ctx);
 
 /*
  * Finalization of PES mux.
  * @param [in] ctx the AVFormatContext which contains streams.
  * @return  NULL
  */
-void pes_mux_end(AVFormatContext *ctx);
+void ff_pes_mux_end(AVFormatContext *ctx);
 
 /*
  * Write packet into PES fifo.
@@ -92,7 +90,7 @@ void pes_mux_end(AVFormatContext *ctx);
  * @param [in] pkt  the packet to write.
  * @return  NULL
  */
-void pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
+void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
 
 /*
  * Find the most fit stream to be muxed.
@@ -102,13 +100,21 @@ void pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
  * @param[out] best_i       the best fit stream index
  * @return  On error a negative or zero value is returned, on success 1 is returned
  */
-int pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t scr, int* best_i);
+int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t scr, int* best_i);
+
+/*
+ * Get how many frames is muxed.
+ * @param[in] ctx    the AVFormatContext
+ * @param[in] stream the PES stream
+ * @param[in] len    PES packet size
+ * @return  the frame number to be muxed
+ */
+int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
 
 /*
  * Mux streams into a PES packet.
  * @param [in]      ctx            the AVFormatContext which contains streams
  * @param [in]      stream_index   the stream index to write
- * @param [in,out]  q              the stream to write
  * @param [in]      pts            packet presentation time stamp
  * @param [in]      dts            packet decoding time stamp
  * @param [in]      id             stream id
@@ -120,17 +126,18 @@ int pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_
  * @param [in]      trailer_size   the trailer size of the packet
  * @return   bytes wirtten to PES stream.
  */
-int pes_mux_write(AVFormatContext *ctx, int stream_index, uint8_t* q,
+int ff_pes_mux_write(AVFormatContext *ctx, int stream_index,
           int64_t pts,int64_t dts, int  id, int startcode,
+          uint8_t* pes_content, int pes_content_len,
           int header_len, int packet_size, int payload_size, int stuffing_size, int tailer_size);
 
 /*
  * Remove decoded packets of each stream.
  * @param[in] ctx  the AVFormatContext
  * @param[in] scr  System Clock Reference of PES stream.
- * @return  NULL
+ * @return  On error a negative or zero value is returned, on success 1 is returned
  */
-void pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
+int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
 
 
 #endif/* PES_H */
