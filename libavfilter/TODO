@@ -1,0 +1,37 @@
+FRAMEWORK:
+- colorspace negotiation
+- auto-inserting needed filters (colorspace conversion, buffer, etc)
+- parameter passing
+- pass pts, and whatever info is needed to reorder decode ordered frames
+- other useful image flags?  interlace?  top/bottom field first?
+- rework init sequence
+- ease reuse of same memory for multiple slices
+
+- proper vout filter support, with a display() callback?
+- support for running different filters in different threads?
+
+FILTERS:
+- make existing filters support more useful colorspaces (YUV)
+- colorspace conversion
+- scaling (combine with conversion like mplayer?)
+- (de)slicify
+- decode order -> display order
+- fifo buffer to buffer previous frames needed for next filter context
+- spatial context providing filter
+- picture-in-picture to test multiple inputs
+- splitter, feeding a single input to multiple filters to test multiple outputs
+- decimate to test non 1:1 input:output ratios
+- naive temporal blur to test buffering of previous frames
+- naive spatial blur to test spatial context
+- decoder/encoder wrapper
+
+- port vhook filters
+
+PROGRAMS:
+- make ffplay & ffmpeg support filters
+
+DOCUMENTATION:
+- more & better doxy comments
+- filter writing tutorial
+- filter using tutorial
+
