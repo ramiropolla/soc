@@ -84,7 +84,7 @@ static void end_frame(AVFilterLink *link)
 static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
 {
     AVFilterContext *ctx = link->dst;
-    AVFilterPic *pic = link->cur_pic->pic;
+    AVFilterPicRef *pic = link->cur_pic;
     CropContext *crop = ctx->priv;
 
     uint8_t *src[4];

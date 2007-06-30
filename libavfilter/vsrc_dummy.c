@@ -54,7 +54,7 @@ static void request_frame(AVFilterLink *link)
             *cur ++ = GREEN;
             *cur ++ = RED;
         }
-        row += pic->pic->linesize[0];
+        row += pic->linesize[0];
     }
 
     avfilter_draw_slice(link, pic->data, 0, pic->h);

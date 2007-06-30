@@ -79,7 +79,7 @@ static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
 
     for(i = 0; i < h; i ++) {
         memcpy(dst, src, copysize);
-        src += picref->pic->linesize[0];
+        src += picref->linesize[0];
         dst += sdl->surface->pitch;
     }
 
