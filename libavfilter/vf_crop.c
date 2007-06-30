@@ -64,7 +64,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 
     ref2->w = crop->w;
     ref2->h = crop->h;
-    ref2->data[0] += crop->y * ref2->pic->linesize[0];
+    ref2->data[0] += crop->y * ref2->linesize[0];
     ref2->data[0] += 3 * crop->x;
 
     av_log(link->dst, AV_LOG_INFO, "start_frame()\n");
