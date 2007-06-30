@@ -639,139 +639,6 @@ static void dwt_encode53(J2kEncoderContext *s, J2kComponent *comp)
     av_free(ppu);
 }
 
-/* arithmetic entropy coder routines: */
-static void aec_initenc(J2kAec *aec, uint8_t *bp)
-{
-    bzero(aec->contexts, 19*sizeof(J2kAecContext));
-    aec->contexts[J2K_T1_CTX_UNI].state = 46;
-    aec->contexts[J2K_T1_CTX_RL].state = 3;
-    aec->contexts[0].state = 4;
-    aec->curctx = aec->contexts;
-
-    aec->a = 0x8000;
-    aec->c = 0;
-    aec->bp = bp-1;
-    aec->bpstart = bp;
-    if (*aec->bp == 0xff)
-        aec->ct = 13;
-    else
-        aec->ct = 12;
-}
-
-static void aec_byteout_l(J2kAec *aec)
-{
-    aec->bp++;
-    *aec->bp = aec->c >> 19;
-    aec->c &= 0x7ffff;
-    aec->ct = 8;
-}
-
-static void aec_byteout_r(J2kAec *aec)
-{
-    aec->bp++;
-    *aec->bp = aec->c >> 20;
-    aec->c &= 0xfffff;
-    aec->ct = 7;
-}
-
-static void aec_byteout(J2kAec *aec)
-{
-    if (*aec->bp == 0xff){
-        aec_byteout_r(aec);
-    }
-    else
-    {
-        if ((aec->c & 0x8000000) == 0){
-            aec_byteout_l(aec);
-        }
-        else{
-            (*aec->bp)++;
-            if (*aec->bp == 0xff){
-                aec->c &= 0x7ffffff;
-                aec_byteout_r(aec);
-            }
-            else{
-                aec_byteout_l(aec);
-            }
-        }
-    }
-}
-
-static void aec_renorme(J2kAec *aec)
-{
-    do{
-        aec->a = aec->a << 1;
-        aec->c = aec->c << 1;
-        aec->ct--;
-        if (!aec->ct)
-            aec_byteout(aec);
-    }
-    while ((aec->a & 0x8000) == 0);
-}
-
-static void aec_codelps(J2kAec *aec)
-{
-    int qe = aec_cx_states[aec->curctx->state].qe;
-    aec->a -= qe;
-    if (aec->a < qe)
-        aec->c += qe;
-    else
-        aec->a = qe;
-    if (aec_cx_states[aec->curctx->state].sw)
-        aec->curctx->mps = 1 - aec->curctx->mps;
-    aec->curctx->state = aec_cx_states[aec->curctx->state].nlps;
-    aec_renorme(aec);
-}
-
-static void aec_codemps(J2kAec *aec)
-{
-    int qe = aec_cx_states[aec->curctx->state].qe;
-    aec->a -= qe;
-    if ((aec->a & 0x8000) == 0){
-        if (aec->a < qe)
-            aec->a = qe;
-        else
-            aec->c += qe;
-        aec->curctx->state = aec_cx_states[aec->curctx->state].nmps;
-        aec_renorme(aec);
-    }
-    else
-        aec->c += qe;
-}
-
-/* code bit d with context cx */
-static void aec_encode(J2kAec *aec, int cx, int d)
-{
-    aec->curctx = aec->contexts + cx;
-    if (aec->curctx->mps == d){
-        aec_codemps(aec);
-    }
-    else{
-        aec_codelps(aec);
-    }
-}
-
-static void aec_setbits(J2kAec *aec)
-{
-    int tmp = aec->c + aec->a;
-    aec->c |= 0xffff;
-    if (aec->c >= tmp)
-        aec->c -= 0x8000;
-}
-
-/* flush the encoder [returns number of bytes encoded] */
-static int aec_flush(J2kAec *aec)
-{
-    aec_setbits(aec);
-    aec->c = aec->c << aec->ct;
-    aec_byteout(aec);
-    aec->c = aec->c << aec->ct;
-    aec_byteout(aec);
-    if (*aec->bp != 0xff)
-        aec->bp++;
-    return aec->bp - aec->bpstart;
-}
-
 /* tier-1 routines */
 static int getnbctxno(int flag, int bandno)
 {
@@ -927,11 +794,11 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int mask, in
                 for (rlen = 0; rlen < 4; rlen++)
                     if (abs(t1->data[i+rlen][j]) & mask)
                         break;
-                aec_encode(&t1->aec, J2K_T1_CTX_RL, rlen != 4);
+                aec_encode(&t1->aec, AEC_CX_RL, rlen != 4);
                 if (rlen == 4)
                     continue;
-                aec_encode(&t1->aec, J2K_T1_CTX_UNI, rlen >> 1);
-                aec_encode(&t1->aec, J2K_T1_CTX_UNI, rlen & 1);
+                aec_encode(&t1->aec, AEC_CX_UNI, rlen >> 1);
+                aec_encode(&t1->aec, AEC_CX_UNI, rlen & 1);
                 for (k = i + rlen; k < i + 4; k++){
                     if (!(t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS))){
                         int ctxno = getnbctxno(t1->flags[k+1][j+1], bandno);
