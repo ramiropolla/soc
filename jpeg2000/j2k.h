@@ -26,8 +26,8 @@
  * @author Kamil Nowosad
  */
 
-#ifndef _J2K_H_
-#define _J2K_H_
+#ifndef J2K_H
+#define J2K_H
 
 #include "aec.h"
 

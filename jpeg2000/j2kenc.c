@@ -1032,7 +1032,7 @@ static void encode_tile(J2kEncoderContext *s, int tileno)
     av_log(s->avctx, AV_LOG_DEBUG, "after tier2\n");
 }
 
-void free(J2kEncoderContext *s)
+void cleanup(J2kEncoderContext *s)
 {
     int tileno, compno, reslevelno, bandno;
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
@@ -1063,6 +1063,7 @@ static int encode_frame(AVCodecContext *avctx,
     int tileno;
     J2kEncoderContext *s = avctx->priv_data;
 
+    s->avctx = avctx;
     av_log(s->avctx, AV_LOG_DEBUG, "start\n");
     s->picture = data;
 
@@ -1113,7 +1114,7 @@ static int encode_frame(AVCodecContext *avctx,
     }
     put_marker(s, J2K_EOC);
 
-    free(s);
+    cleanup(s);
     av_log(s->avctx, AV_LOG_DEBUG, "end\n");
     return s->buf - s->buf_start;
 }
