@@ -108,16 +108,16 @@ typedef struct {
     AecContext *curctx;
 } AecState;
 
-void aec_initenc(AecState *aec, uint8_t *bp);
+void ff_aec_initenc(AecState *aec, uint8_t *bp);
 
 /**
  * code bit d with context cx
  * */
-void aec_encode(AecState *aec, int cx, int d);
+void ff_aec_encode(AecState *aec, int cx, int d);
 
 /**
  * flush the encoder [returns number of bytes encoded]
  * */
-int aec_flush(AecState *aec);
+int ff_aec_flush(AecState *aec);
 
 #endif

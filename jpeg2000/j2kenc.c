@@ -753,11 +753,11 @@ static void encode_sigpass(J2kT1Context *t1, int width, int height, int mask, in
                 if (!(t1->flags[k+1][j+1] & J2K_T1_SIG) && (t1->flags[k+1][j+1] & J2K_T1_SIG_NB)){
                     int ctxno = getnbctxno(t1->flags[k+1][j+1], bandno),
                         bit = abs(t1->data[k][j]) & mask ? 1 : 0;
-                    aec_encode(&t1->aec, ctxno, bit);
+                    ff_aec_encode(&t1->aec, ctxno, bit);
                     if (bit){
                         int xorbit;
                         int ctxno = getsgnctxno(t1->flags[k+1][j+1], &xorbit);
-                        aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0 ? 1:0) ^ xorbit);
+                        ff_aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0 ? 1:0) ^ xorbit);
                         set_significant(t1, j, k);
                     }
                     t1->flags[k+1][j+1] |= J2K_T1_VIS;
@@ -773,7 +773,7 @@ static void encode_refpass(J2kT1Context *t1, int width, int height, int mask)
             for (k = i; k < height && k < i+4; k++)
                 if ((t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS)) == J2K_T1_SIG){
                     int ctxno = getrefctxno(t1->flags[k+1][j+1]);
-                    aec_encode(&t1->aec, ctxno, abs(t1->data[k][j]) & mask ? 1:0);
+                    ff_aec_encode(&t1->aec, ctxno, abs(t1->data[k][j]) & mask ? 1:0);
                     t1->flags[k+1][j+1] |= J2K_T1_REF;
                 }
 }
@@ -794,20 +794,20 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int mask, in
                 for (rlen = 0; rlen < 4; rlen++)
                     if (abs(t1->data[i+rlen][j]) & mask)
                         break;
-                aec_encode(&t1->aec, AEC_CX_RL, rlen != 4);
+                ff_aec_encode(&t1->aec, AEC_CX_RL, rlen != 4);
                 if (rlen == 4)
                     continue;
-                aec_encode(&t1->aec, AEC_CX_UNI, rlen >> 1);
-                aec_encode(&t1->aec, AEC_CX_UNI, rlen & 1);
+                ff_aec_encode(&t1->aec, AEC_CX_UNI, rlen >> 1);
+                ff_aec_encode(&t1->aec, AEC_CX_UNI, rlen & 1);
                 for (k = i + rlen; k < i + 4; k++){
                     if (!(t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS))){
                         int ctxno = getnbctxno(t1->flags[k+1][j+1], bandno);
                         if (k > i + rlen)
-                            aec_encode(&t1->aec, ctxno, abs(t1->data[k][j]) & mask ? 1:0);
+                            ff_aec_encode(&t1->aec, ctxno, abs(t1->data[k][j]) & mask ? 1:0);
                         if (abs(t1->data[k][j]) & mask){ // newly significant
                             int xorbit;
                             int ctxno = getsgnctxno(t1->flags[k+1][j+1], &xorbit);
-                            aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0 ? 1:0) ^ xorbit);
+                            ff_aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0 ? 1:0) ^ xorbit);
                             set_significant(t1, j, k);
                         }
                     }
@@ -818,11 +818,11 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int mask, in
                 for (k = i; k < i + 4 && k < height; k++){
                     if (!(t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS))){
                         int ctxno = getnbctxno(t1->flags[k+1][j+1], bandno);
-                        aec_encode(&t1->aec, ctxno, abs(t1->data[k][j]) & mask ? 1:0);
+                        ff_aec_encode(&t1->aec, ctxno, abs(t1->data[k][j]) & mask ? 1:0);
                         if (abs(t1->data[k][j]) & mask){ // newly significant
                             int xorbit;
                             int ctxno = getsgnctxno(t1->flags[k+1][j+1], &xorbit);
-                            aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0 ? 1:0) ^ xorbit);
+                            ff_aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0 ? 1:0) ^ xorbit);
                             set_significant(t1, j, k);
                         }
                     }
@@ -855,7 +855,7 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, i
         mask = 1 << (nonzerobits - 1);
     }
 
-    aec_initenc(&t1->aec, cblk->data);
+    ff_aec_initenc(&t1->aec, cblk->data);
 
     cblk->zerobits = s->expn + s->nguardbits - 1 - nonzerobits;
 
@@ -876,7 +876,7 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, i
     cblk->npassess = passno;
 
     // TODO: optional flush on each pass
-    cblk->length = aec_flush(&t1->aec);
+    cblk->length = ff_aec_flush(&t1->aec);
 }
 
 /* tier-2 routines: */

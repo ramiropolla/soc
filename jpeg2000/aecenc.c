@@ -68,7 +68,7 @@ static void setbits(AecState *aec)
         aec->c -= 0x8000;
 }
 
-void aec_initenc(AecState *aec, uint8_t *bp)
+void ff_aec_initenc(AecState *aec, uint8_t *bp)
 {
     bzero(aec->contexts, 19*sizeof(AecContext));
     aec->contexts[AEC_CX_UNI].state = 46;
@@ -83,7 +83,7 @@ void aec_initenc(AecState *aec, uint8_t *bp)
     aec->ct = 12 + (*aec->bp == 0xff);
 }
 
-void aec_encode(AecState *aec, int cx, int d)
+void ff_aec_encode(AecState *aec, int cx, int d)
 {
     int qe;
 
@@ -113,7 +113,7 @@ void aec_encode(AecState *aec, int cx, int d)
     }
 }
 
-int aec_flush(AecState *aec)
+int ff_aec_flush(AecState *aec)
 {
     setbits(aec);
     aec->c = aec->c << aec->ct;
