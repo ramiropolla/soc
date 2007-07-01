@@ -38,10 +38,10 @@
 #define AEC_CX_RL  18
 
 typedef struct {
-        unsigned int qe;
-        unsigned int nmps;
-        unsigned int nlps;
-        unsigned int sw;
+        uint16_t qe;
+        uint8_t  nmps;
+        uint8_t  nlps;
+        uint8_t  sw;
 } AecCxState;
 
 const static AecCxState cx_states[47] = {
