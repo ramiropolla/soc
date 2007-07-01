@@ -265,26 +265,33 @@ static int rv40_decode_cbp(GetBitContext *gb, RV40VLC *vlc, int table)
     return cbp;
 }
 
-#define DECODE_COEFF(dst, dstidx, coef, esc, gb, vlc) \
-    if(coef){ \
-        if(coef == esc){ \
-            coef = get_vlc2(gb, vlc.table, 9, 2); \
-            if(coef > 23){ \
-                coef -= 23; \
-                coef = 22 + ((1 << coef) | get_bits(gb, coef)); \
-            } \
-            coef += esc; \
-        } \
-        if(get_bits1(gb)) \
-            coef = -coef; \
-        dst[dstidx] = coef; \
+/**
+ * Get one coefficient value from bistream and store it
+ */
+static inline void decode_coeff(DCTELEM *dst, int coef, int esc, GetBitContext *gb, VLC* vlc)
+{
+    if(coef){
+        if(coef == esc){
+            coef = get_vlc2(gb, vlc->table, 9, 2);
+            if(coef > 23){
+                coef -= 23;
+                coef = 22 + ((1 << coef) | get_bits(gb, coef));
+            }
+            coef += esc;
+        }
+        if(get_bits1(gb))
+            coef = -coef;
+        *dst = coef;
     }
+}
 
-#define DECODE_2x2_BLOCK(dst, dstoff, stride, coeffs, gb, vlc) \
-    DECODE_COEFF(dst, dstoff+0       , coeffs[0], 3, gb, vlc); \
-    DECODE_COEFF(dst, dstoff+1       , coeffs[1], 2, gb, vlc); \
-    DECODE_COEFF(dst, dstoff+0+stride, coeffs[2], 2, gb, vlc); \
-    DECODE_COEFF(dst, dstoff+1+stride, coeffs[3], 2, gb, vlc); \
+static inline void decode_subblock(DCTELEM *dst, int coeffs[4], GetBitContext *gb, VLC *vlc)
+{
+    decode_coeff(dst  , coeffs[0], 3, gb, vlc);
+    decode_coeff(dst+1, coeffs[1], 2, gb, vlc);
+    decode_coeff(dst+8, coeffs[2], 2, gb, vlc);
+    decode_coeff(dst+9, coeffs[3], 2, gb, vlc);
+}
 
 /**
  * Decode coefficients for 4x4 block
@@ -311,7 +318,7 @@ static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *r
     coeffs[1] = modulo_three_table[code][1];
     coeffs[2] = modulo_three_table[code][2];
     coeffs[3] = modulo_three_table[code][3];
-    DECODE_2x2_BLOCK(dst, 0, 8, coeffs, gb, rvlc->coefficient);
+    decode_subblock(dst, coeffs, gb, &rvlc->coefficient);
 
     if(pattern & 4){
         code = get_vlc2(gb, rvlc->second_pattern[sc].table, 9, 2);
@@ -319,7 +326,7 @@ static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *r
         coeffs[1] = modulo_three_table[code][1];
         coeffs[2] = modulo_three_table[code][2];
         coeffs[3] = modulo_three_table[code][3];
-        DECODE_2x2_BLOCK(dst,     2, 8, coeffs, gb, rvlc->coefficient);
+        decode_subblock(dst + 2, coeffs, gb, &rvlc->coefficient);
     }
     if(pattern & 2){
         code = get_vlc2(gb, rvlc->second_pattern[sc].table, 9, 2);
@@ -327,7 +334,7 @@ static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *r
         coeffs[1] = modulo_three_table[code][1];
         coeffs[2] = modulo_three_table[code][2];
         coeffs[3] = modulo_three_table[code][3];
-        DECODE_2x2_BLOCK(dst, 8*2+0, 8, coeffs, gb, rvlc->coefficient);
+        decode_subblock(dst + 8*2, coeffs, gb, &rvlc->coefficient);
     }
     if(pattern & 1){
         code = get_vlc2(gb, rvlc->third_pattern[sc].table, 9, 2);
@@ -335,7 +342,7 @@ static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *r
         coeffs[1] = modulo_three_table[code][1];
         coeffs[2] = modulo_three_table[code][2];
         coeffs[3] = modulo_three_table[code][3];
-        DECODE_2x2_BLOCK(dst, 8*2+2, 8, coeffs, gb, rvlc->coefficient);
+        decode_subblock(dst + 8*2+2, coeffs, gb, &rvlc->coefficient);
     }
 }
 
@@ -348,31 +355,34 @@ static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *r
  */
 
 /**
- * Get encoded picture size - usually this is called from rv40_parse_slice_header
+ * Get stored dimension from bitstream
  *
  * If the width/height is the standard one then it's coded as 3-bit index.
  * Otherwise it is coded as escaped 8-bit portions.
  */
+static inline int get_dimension(GetBitContext *gb, const int *dim1, const int *dim2)
+{
+    int val, t;
+
+    val = dim1[get_bits(gb, 3)];
+    if(!val && dim2)
+        val = dim2[(val | get_bits1(gb)) & 3];
+    if(!val){
+        do{
+            t = get_bits(gb, 8);
+            val += t << 2;
+        }while(t == 0xFF);
+    }
+    return val;
+}
+
+/**
+ * Get encoded picture size - usually this is called from rv40_parse_slice_header
+ */
 static void rv40_parse_picture_size(GetBitContext *gb, int *w, int *h)
 {
-    int t;
-
-    *w = rv40_standard_widths[get_bits(gb, 3)];
-    if(!*w){
-        do{
-            t = get_bits(gb, 8);
-            *w += t << 2;
-        }while(t == 0xFF);
-    }
-    *h = rv40_standard_heights[get_bits(gb, 3)];
-    if(!*h)
-        *h = rv40_standard_heights2[(*h | get_bits1(gb)) & 3];
-    if(!*h){
-        do{
-            t = get_bits(gb, 8);
-            *h += t << 2;
-        }while(t == 0xFF);
-    }
+    *w = get_dimension(gb, rv40_standard_widths, NULL);
+    *h = get_dimension(gb, rv40_standard_heights, rv40_standard_heights2);
 }
 
 static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb)
