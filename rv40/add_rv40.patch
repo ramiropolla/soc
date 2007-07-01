@@ -1,0 +1,24 @@
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile
++++ libavcodec/Makefile
+@@ -143,6 +143,7 @@
+ OBJS-$(CONFIG_RV10_ENCODER)            += rv10.o
+ OBJS-$(CONFIG_RV20_DECODER)            += rv10.o
+ OBJS-$(CONFIG_RV20_ENCODER)            += rv10.o
++OBJS-$(CONFIG_RV40_DECODER)            += rv40.o
+ OBJS-$(CONFIG_SGI_DECODER)             += sgidec.o
+ OBJS-$(CONFIG_SGI_ENCODER)             += sgienc.o rle.o
+ OBJS-$(CONFIG_SHORTEN_DECODER)         += shorten.o golomb.o
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c
++++ libavcodec/allcodecs.c
+@@ -128,6 +128,7 @@
+     REGISTER_DECODER(RPZA, rpza);
+     REGISTER_ENCDEC (RV10, rv10);
+     REGISTER_ENCDEC (RV20, rv20);
++    REGISTER_DECODER(RV40, rv40);
+     REGISTER_ENCDEC (SGI, sgi);
+     REGISTER_DECODER(SMACKER, smacker);
+     REGISTER_DECODER(SMC, smc);
