@@ -412,7 +412,7 @@ static int init_tiles(J2kEncoderContext *s)
 {
     // only one tile
     // only rgb24 supported now
-    int y, x, tno, compno, i;
+    int y, x, tno, compno, reslevelno, bandno, i;
 
     s->numXtiles = ceildiv(s->Xsiz, s->XTsiz);
     s->numYtiles = ceildiv(s->Ysiz, s->YTsiz);
@@ -430,7 +430,6 @@ static int init_tiles(J2kEncoderContext *s)
             return -1;
         for (compno = 0; compno < s->ncomponents; compno++){
             J2kComponent *comp = tile->comp + compno;
-            int reslevelno;
 
             comp->x0 = p * s->XTsiz;
             comp->x1 = FFMIN((p+1)*s->XTsiz, s->Xsiz);
@@ -444,7 +443,6 @@ static int init_tiles(J2kEncoderContext *s)
             if (comp->reslevel == NULL)
                 return -1;
             for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
-                int bandno;
                 int n = s->nreslevels - reslevelno;
                 J2kResLevel *reslevel = comp->reslevel + reslevelno;
 
@@ -553,7 +551,6 @@ static int init_tiles(J2kEncoderContext *s)
         for (y = tile->comp[0].y0; y < tile->comp[0].y1; y++){
             uint8_t *ptr = line;
             for (x = tile->comp[0].x0; x < tile->comp[0].x1; x++, i++){
-                int compno;
                 for (compno = 0; compno < s->ncomponents; compno++){
                     tile->comp[compno].data[i] = *ptr++  - (1 << 7);
                 }
@@ -563,9 +560,8 @@ static int init_tiles(J2kEncoderContext *s)
     }
     // calculate band bps and exponents
     for (compno = 0; compno < s->ncomponents; compno++){
-        int reslevelno;
         for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
-            int bandno, nbands;
+            int nbands;
             nbands = reslevelno ? 3 : 1;
             for (bandno = 0; bandno < nbands; bandno++){
                 int expn;
