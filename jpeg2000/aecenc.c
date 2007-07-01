@@ -36,12 +36,11 @@ retry:
         *aec->bp = aec->c >> 20;
         aec->c &= 0xfffff;
         aec->ct = 7;
-    }
-    else if ((aec->c & 0x8000000)){
+    } else if ((aec->c & 0x8000000)){
         (*aec->bp)++;
         aec->c &= 0x7ffffff;
         goto retry;
-    }else{
+    } else{
         aec->bp++;
         *aec->bp = aec->c >> 19;
         aec->c &= 0x7ffff;
@@ -56,8 +55,7 @@ static void renorme(AecState *aec)
         aec->c += aec->c;
         if (!--aec->ct)
             byteout(aec);
-    }
-    while (!(aec->a & 0x8000));
+    } while (!(aec->a & 0x8000));
 }
 
 static void setbits(AecState *aec)
@@ -98,11 +96,9 @@ void ff_aec_encode(AecState *aec, int cx, int d)
                 aec->c += qe;
             aec->curctx->state = cx_states[aec->curctx->state].nmps;
             renorme(aec);
-        }
-        else
+        } else
             aec->c += qe;
-    }
-    else{
+    } else{
         if (aec->a < qe)
             aec->c += qe;
         else
