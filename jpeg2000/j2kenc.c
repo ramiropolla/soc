@@ -36,7 +36,7 @@
 typedef struct {
     int length;
     int npassess;
-    int zerobits;
+    int nonzerobits;
     int zero;
     uint8_t data[8192];
 } J2kCblk; // code block
@@ -81,14 +81,15 @@ typedef struct {
     AVFrame *picture;
 
     int Xsiz, Ysiz; // image width and height
-    unsigned int bpp;
+    uint8_t cbps[4]; // numbps in components
+    uint8_t bbps[4][32][3]; // numbps in bands
+    uint8_t expn[4][32][3]; // quantization exponents
     int ncomponents;
     int ppx, ppy; // exponent of the precinct size [global]
     int xcb, ycb; // exponent of the code block size
     int XTsiz, YTsiz; // tile size
     int numXtiles, numYtiles;
 
-    int expn;
     int nguardbits;
 
 //    int *samples[3];
@@ -375,7 +376,7 @@ static void put_cod(J2kEncoderContext *s)
     bytestream_put_byte(&s->buf, 1); // transformation
 }
 
-static void put_qcd(J2kEncoderContext *s)
+static void put_qcd(J2kEncoderContext *s, int compno)
 {
     int reslevelno;
     put_marker(s, J2K_QCD);
@@ -384,7 +385,7 @@ static void put_qcd(J2kEncoderContext *s)
     for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
         int bandno, nbands = reslevelno == 0 ? 1:3;
         for (bandno = 0; bandno < nbands; bandno++)
-            bytestream_put_byte(&s->buf, s->expn << 3);
+            bytestream_put_byte(&s->buf, s->expn[compno][reslevelno][bandno] << 3);
     }
 }
 
@@ -411,7 +412,7 @@ static int init_tiles(J2kEncoderContext *s)
 {
     // only one tile
     // only rgb24 supported now
-    int y, x, tno, i;
+    int y, x, tno, compno, i;
 
     s->numXtiles = ceildiv(s->Xsiz, s->XTsiz);
     s->numYtiles = ceildiv(s->Ysiz, s->YTsiz);
@@ -423,7 +424,6 @@ static int init_tiles(J2kEncoderContext *s)
         J2kTile *tile = s->tile + tno;
         int p = tno % s->numXtiles;
         int q = tno / s->numXtiles;
-        int compno;
 
         tile->comp = av_malloc(s->ncomponents * sizeof(J2kComponent));
         if (tile->comp == NULL)
@@ -559,6 +559,21 @@ static int init_tiles(J2kEncoderContext *s)
                 }
             }
             line += s->picture->linesize[0];
+        }
+    }
+    // calculate band bps and exponents
+    for (compno = 0; compno < s->ncomponents; compno++){
+        int reslevelno;
+        for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
+            int bandno, nbands;
+            nbands = reslevelno ? 3 : 1;
+            for (bandno = 0; bandno < nbands; bandno++){
+                int expn;
+
+                expn = ((bandno&2)>>1) + (reslevelno>0) + s->cbps[compno];
+                s->bbps[compno][reslevelno][bandno] = expn + s->nguardbits - 1;
+                s->expn[compno][reslevelno][bandno] = expn;
+            }
         }
     }
     return 0;
@@ -834,7 +849,7 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int mask, in
 
 static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, int width, int height, int bandno)
 {
-    int pass_t = 2, passno, i, j, mask, max=0, nonzerobits;
+    int pass_t = 2, passno, i, j, mask, max=0;
 
     for (i = 0; i < height+2; i++)
         bzero(t1->flags[i], (width+2)*sizeof(int));
@@ -847,17 +862,15 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, i
     if (max == 0){
         // XXX: both should be 0, but something goes wrong, when set so
         // - to be corrected
-        nonzerobits = 1;
+        cblk->nonzerobits = 1;
         mask = 1;
     }
     else{
-        nonzerobits = av_log2(max) + 1;
-        mask = 1 << (nonzerobits - 1);
+        cblk->nonzerobits = av_log2(max) + 1;
+        mask = 1 << (cblk->nonzerobits - 1);
     }
 
     ff_aec_initenc(&t1->aec, cblk->data);
-
-    cblk->zerobits = s->expn + s->nguardbits - 1 - nonzerobits;
 
     for (passno = 0; mask != 0; passno++){
         switch(pass_t){
@@ -896,7 +909,7 @@ static void putnumpassess(J2kEncoderContext *s, int n)
 }
 
 
-static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno)
+static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno, int compno, int rlevelno)
 {
     int bandno;
 
@@ -923,7 +936,7 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno)
             for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++, pos++){
                 cblkincl[pos].val = 0;
                 tag_tree_update(cblkincl + pos);
-                zerobits[pos].val = band->cblk[yi * cblknw + xi].zerobits;
+                zerobits[pos].val = s->bbps[compno][rlevelno][bandno] - band->cblk[yi * cblknw + xi].nonzerobits;
                 tag_tree_update(zerobits + pos);
             }
         }
@@ -1025,7 +1038,7 @@ static void encode_tile(J2kEncoderContext *s, int tileno)
             int precno;
             J2kResLevel *reslevel = s->tile[tileno].comp[compno].reslevel + reslevelno;
             for (precno = 0; precno < reslevel->nprecw * reslevel->nprech; precno++){
-                encode_packet(s, reslevel, precno);
+                encode_packet(s, reslevel, precno, compno, reslevelno);
             }
         }
     }
@@ -1060,7 +1073,7 @@ static int encode_frame(AVCodecContext *avctx,
                         uint8_t *buf, int buf_size,
                         void *data)
 {
-    int tileno;
+    int tileno, i;
     J2kEncoderContext *s = avctx->priv_data;
 
     s->avctx = avctx;
@@ -1081,29 +1094,26 @@ static int encode_frame(AVCodecContext *avctx,
     s->Xsiz = avctx->width;
     s->Ysiz = avctx->height;
 
+    s->nguardbits = 1;
 
     // TODO: other pixel formats
     if (avctx->pix_fmt == PIX_FMT_RGB24){
         s->ncomponents = 3;
-        s->bpp = 24;
-
-        // XXX: to beverified (after adding quantization)
-        // (now it just works, but i'm not sure why ;-) )
-        s->nguardbits = 1;
-        s->expn = 8;
+        for (i = 0; i < 3; i++)
+            s->cbps[i] = 8;
     }
     else{
         av_log(avctx, AV_LOG_ERROR, "only rgb24 supported\n");
     }
 
-    put_soc(s);
-    put_siz(s);
-    put_cod(s);
-    put_qcd(s);
-
     av_log(s->avctx, AV_LOG_DEBUG, "init\n");
     init_tiles(s);
     av_log(s->avctx, AV_LOG_DEBUG, "after init\n");
+
+    put_soc(s);
+    put_siz(s);
+    put_cod(s);
+    put_qcd(s, 0);
 
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         uint8_t *psotptr;
