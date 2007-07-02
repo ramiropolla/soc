@@ -30,7 +30,7 @@ typedef struct
     SDL_Surface *surface;
 } SDLContext;
 
-static int init(AVFilterContext *ctx)
+static int init(AVFilterContext *ctx, const char *args)
 {
     SDLContext *sdl = ctx->priv;
 

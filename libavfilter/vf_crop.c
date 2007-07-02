@@ -29,7 +29,7 @@ typedef struct
     int x, y, w, h;
 } CropContext;
 
-static int init(AVFilterContext *ctx)
+static int init(AVFilterContext *ctx, const char *args)
 {
     CropContext *crop = ctx->priv;
 
@@ -38,10 +38,14 @@ static int init(AVFilterContext *ctx)
         return -1;
     }
 
-    crop->x = 20;
-    crop->y = 15;
-    crop->w = 467;
-    crop->h = 45;
+    /* default parameters */
+    crop->x = 0;
+    crop->y = 0;
+    crop->w = 640;
+    crop->h = 480;
+
+    if(args)
+        sscanf(args, "%d:%d:%d:%d", &crop->x, &crop->y, &crop->w, &crop->h);
 
     return 0;
 }
