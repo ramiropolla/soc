@@ -278,7 +278,7 @@ static J2kTgtNode *tag_tree_init(int w, int h)
 }
 
 /* code the value stored in node */
-static void tag_tree_code(J2kEncoderContext *s, J2kTgtNode *node)
+static void tag_tree_code(J2kEncoderContext *s, J2kTgtNode *node, int threshold)
 {
     J2kTgtNode *stack[30];
     int sp = 1, curval = 0;
@@ -295,6 +295,10 @@ static void tag_tree_code(J2kEncoderContext *s, J2kTgtNode *node)
         node = node->parent;
     }
     while(--sp >= 0){
+        if (stack[sp]->val >= threshold){
+            put_bits(s, 0, threshold - curval);
+            break;
+        }
         put_bits(s, 0, stack[sp]->val - curval);
         put_bits(s, 1, 1);
         curval = stack[sp]->val;
@@ -581,6 +585,8 @@ static void sd_1d(int *p, int i0, int i1, int ileft, int iright)
 #define PSE (i0 + FFMIN((i-i0+2*(i1-i0-1))%(2*(i1-i0-1)), 2*(i1-i0-1)-(i-i0+2*(i1-i0-1))%(2*(i1-i0-1))))
     int i;
 
+    if (i1 == i0 + 1)
+        return;
     for (i = i0 - ileft; i < i0; i++){
         p[i] = p[PSE];
     }
@@ -856,10 +862,8 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, i
     }
 
     if (max == 0){
-        // XXX: both should be 0, but something goes wrong, when set so
-        // - to be corrected
-        cblk->nonzerobits = 1;
-        mask = 1;
+        cblk->nonzerobits = 0;
+        mask = 0;
     }
     else{
         cblk->nonzerobits = av_log2(max) + 1;
@@ -907,7 +911,7 @@ static void putnumpassess(J2kEncoderContext *s, int n)
 
 static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno, int compno, int rlevelno)
 {
-    int bandno;
+    int bandno, empty = 1;
 
     // init bitstream
     *s->buf = 0;
@@ -916,7 +920,20 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
     // header
 
     // is the packet empty?
-    put_bits(s, 1, 1); // 1 - there are not any empty packets
+    for (bandno = 0; bandno < rlevel->nbands; bandno++){
+        if (rlevel->band[bandno].x0 < rlevel->band[bandno].x1
+        &&  rlevel->band[bandno].y0 < rlevel->band[bandno].y1){
+            empty = 0;
+            break;
+        }
+    }
+    if (empty){
+        put_bits(s, 0, 1);
+        j2k_flush(s);
+        return;
+    }
+
+    put_bits(s, 1, 1);
     for (bandno = 0; bandno < rlevel->nbands; bandno++){
         J2kBand *band = rlevel->band + bandno;
         J2kTgtNode *cblkincl, *zerobits;
@@ -930,7 +947,7 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
 
         for (pos=0, yi = band->prec[precno].yi0; yi < band->prec[precno].yi1; yi++){
             for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++, pos++){
-                cblkincl[pos].val = 0;
+                cblkincl[pos].val = band->cblk[yi * cblknw + xi].npassess == 0 ? 1:0;
                 tag_tree_update(cblkincl + pos);
                 zerobits[pos].val = s->bbps[compno][rlevelno][bandno] - band->cblk[yi * cblknw + xi].nonzerobits;
                 tag_tree_update(zerobits + pos);
@@ -943,9 +960,11 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
                 J2kCblk *cblk = band->cblk + yi * cblknw + xi;
 
                 // inclusion information
-                tag_tree_code(s, cblkincl + pos);
+                tag_tree_code(s, cblkincl + pos, 1);
+                if (!cblk->npassess)
+                    continue;
                 // zerobits information
-                tag_tree_code(s, zerobits + pos);
+                tag_tree_code(s, zerobits + pos, 100);
                 // number of passess
                 putnumpassess(s, cblk->npassess);
 
@@ -973,7 +992,8 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
             int xi;
             for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++){
                 J2kCblk *cblk = band->cblk + yi * cblknw + xi;
-                bytestream_put_buffer(&s->buf, cblk->data, cblk->length);
+                if (cblk->npassess)
+                    bytestream_put_buffer(&s->buf, cblk->data, cblk->length);
             }
         }
     }
@@ -999,6 +1019,9 @@ static void encode_tile(J2kEncoderContext *s, int tileno)
                 yy0 = bandno == 0 ? 0 : comp->reslevel[reslevelno-1].y1 - comp->reslevel[reslevelno-1].y0;
                 y0 = yy0;
                 yy1 = FFMIN(ceildiv(band->y0 + 1, band->cblkh) * band->cblkh, band->y1) - band->y0 + yy0;
+
+                if (band->x0 == band->x1 || band->y0 == band->y1)
+                    continue;
 
                 for (cblky = 0; cblky < band->cblkny; cblky++){
                     if (reslevelno == 0 || bandno == 1)
