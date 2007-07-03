@@ -128,7 +128,9 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         default:
             q->frame->type = RATE_UNKNOWN;
             q->frame->bits = 0;
+            /*
             printf("UNKNOWN PACKET RATE\n");
+            */
             break;
     }
 
