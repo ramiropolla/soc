@@ -1,0 +1,48 @@
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(revision 9314)
++++ libavcodec/Makefile	(working copy)
+@@ -147,6 +147,7 @@
+ OBJS-$(CONFIG_SHORTEN_DECODER)         += shorten.o golomb.o
+ OBJS-$(CONFIG_SMACKAUD_DECODER)        += smacker.o
+ OBJS-$(CONFIG_SMACKER_DECODER)         += smacker.o
++OBJS-$(CONFIG_QCELP_DECODER)           += qcelpdec.o
+ OBJS-$(CONFIG_SMC_DECODER)             += smc.o
+ OBJS-$(CONFIG_SNOW_DECODER)            += snow.o
+ OBJS-$(CONFIG_SNOW_ENCODER)            += snow.o
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c	(revision 9314)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -196,6 +196,7 @@
+     REGISTER_DECODER(RA_288, ra_288);
+     REGISTER_DECODER(SHORTEN, shorten);
+     REGISTER_DECODER(SMACKAUD, smackaud);
++    REGISTER_DECODER(QCELP, qcelp);
+     REGISTER_ENCDEC (SONIC, sonic);
+     REGISTER_ENCODER(SONIC_LS, sonic_ls);
+     REGISTER_DECODER(TRUESPEECH, truespeech);
+Index: libavcodec/allcodecs.h
+===================================================================
+--- libavcodec/allcodecs.h	(revision 9314)
++++ libavcodec/allcodecs.h	(working copy)
+@@ -161,6 +161,7 @@
+ extern AVCodec shorten_decoder;
+ extern AVCodec smackaud_decoder;
+ extern AVCodec smacker_decoder;
++extern AVCodec qcelp_decoder;
+ extern AVCodec smc_decoder;
+ extern AVCodec snow_decoder;
+ extern AVCodec sol_dpcm_decoder;
+Index: libavformat/mov.c
+===================================================================
+--- libavformat/mov.c	(revision 9314)
++++ libavformat/mov.c	(working copy)
+@@ -832,6 +832,7 @@
+         st->codec->sample_rate= 16000;
+         st->codec->channels= 1; /* really needed */
+         break;
++    case CODEC_ID_QCELP:
+     case CODEC_ID_AMR_NB:
+         st->codec->sample_rate= 8000;
+         st->codec->channels= 1; /* really needed */

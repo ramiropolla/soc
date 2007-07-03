@@ -1,0 +1,36 @@
+This notes are abstracts from the standard that might
+be usesfull in understanding whats going on.
+
+
+How stuff works
+---------------
+
+The input speech is sampled at 8kHz. This speech is broken
+down into 20ms speech codec frames, each consisting of 160
+samples. The format synthesis (LPC) filter coefficients are
+updated once per frame, regardless of the data rate selected.
+The number of bits used to encode the LPC parameters is a
+function of the selected rate (1, 1/2, 1/4, 1/8).
+
+
+Parameters codes transmited for each rate packet (Page 25)
+------------------------------------------------
+
+LSPi     |  Line Spectral Pair frequency i.
+LSPVi    |  Line Spectral Pair frequencies grouped into five R2 vectors.
+PLAGi    |  Pitch Lag for the ith pitch subframe.
+PFRACi   |  Fractional Pitch Lag for the ith pitch subframe.
+PGAINi   |  Pitch Gain for the ith pitch subframe.
+CBINDEXi |  Codebook Index for the ith codebook subframe.
+CBGAINi  |  Unsigned Codebook Gain for the ith codebook subframe.
+CBSEED   |  Random Seed for Rate 1/8 packets.
+CBSIGNi  |  Sign of the Codebook Gain for the ith codebook subframe.
+
+
+Bits for each rate packet (Page 26)
+-------------------------
+
+Rate 1   | 264 + 2 Reserved
+Rate 1/2 | 124
+Rate 1/4 | 52  + 2 Reserved
+Rate 1/8 | 16  + 4 Reserved
