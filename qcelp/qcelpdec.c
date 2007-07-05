@@ -76,7 +76,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            int *data_size, uint8_t *buf, int buf_size)
 {
     QCELPContext *q    = avctx->priv_data;
-    QCELPBitmap *order = NULL;
+    const QCELPBitmap *order = NULL;
     int16_t  *outbuffer = data;
     int8_t   samples;
     int      n;
@@ -96,26 +96,22 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         case 34:
             q->frame->rate = RATE_FULL;
             q->frame->bits = qcelp_bits_per_rate[RATE_FULL];
-            order =
-            (QCELPBitmap*)(QCELP_REFERENCE_FRAME + QCELP_FULLPKT_REFERENCE_POS);
+            order = QCELP_REFERENCE_FRAME + QCELP_FULLPKT_REFERENCE_POS;
             break;
         case 16:
             q->frame->rate = RATE_HALF;
             q->frame->bits = qcelp_bits_per_rate[RATE_HALF];
-            order =
-            (QCELPBitmap*)(QCELP_REFERENCE_FRAME + QCELP_HALFPKT_REFERENCE_POS);
+            order = QCELP_REFERENCE_FRAME + QCELP_HALFPKT_REFERENCE_POS;
             break;
         case 7:
             q->frame->rate = RATE_QUARTER;
             q->frame->bits = qcelp_bits_per_rate[RATE_QUARTER];
-            order =
-            (QCELPBitmap*)(QCELP_REFERENCE_FRAME + QCELP_4THRPKT_REFERENCE_POS);
+            order = QCELP_REFERENCE_FRAME + QCELP_4THRPKT_REFERENCE_POS;
             break;
         case 3:
             q->frame->rate = RATE_OCTAVE;
             q->frame->bits = qcelp_bits_per_rate[RATE_OCTAVE];
-            order =
-            (QCELPBitmap*)(QCELP_REFERENCE_FRAME + QCELP_8THRPKT_REFERENCE_POS);
+            order = QCELP_REFERENCE_FRAME + QCELP_8THRPKT_REFERENCE_POS;
             break;
         case 0: /* FIXME */
             q->frame->rate = BLANK;
