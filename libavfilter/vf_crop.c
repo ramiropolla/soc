@@ -27,22 +27,18 @@
 typedef struct
 {
     int x, y, w, h;
+    int cx, cy, cw, ch;
 } CropContext;
 
 static int init(AVFilterContext *ctx, const char *args)
 {
     CropContext *crop = ctx->priv;
 
-    if(ctx->inputs[0]->format != PIX_FMT_RGB24) {
-        av_log(ctx, AV_LOG_FATAL, "unsupported input format\n");
-        return -1;
-    }
-
     /* default parameters */
     crop->x = 0;
     crop->y = 0;
-    crop->w = 640;
-    crop->h = 480;
+    crop->w = -1;
+    crop->h = -1;
 
     if(args)
         sscanf(args, "%d:%d:%d:%d", &crop->x, &crop->y, &crop->w, &crop->h);
@@ -50,13 +46,37 @@ static int init(AVFilterContext *ctx, const char *args)
     return 0;
 }
 
-static int set_video_props(AVFilterLink *link)
+static int *query_in_formats(AVFilterLink *link)
+{
+    return avfilter_make_format_list(1, PIX_FMT_RGB24);
+}
+
+static int *query_out_formats(AVFilterLink *link)
+{
+    return avfilter_make_format_list(1, link->src->inputs[0]->format);
+}
+
+static int config_input(AVFilterLink *link)
+{
+    CropContext *crop = link->dst->priv;
+
+    crop->cx = FFMIN(crop->x, link->w - 1);
+    crop->cy = FFMIN(crop->y, link->h - 1);
+    crop->cw = FFMIN(crop->w, link->w - crop->cx);
+    crop->ch = FFMIN(crop->h, link->h - crop->cy);
+
+    if(crop->cw <= 0) crop->cw = link->w - crop->cx;
+    if(crop->ch <= 0) crop->ch = link->h - crop->cy;
+
+    return 0;
+}
+
+static int config_output(AVFilterLink *link)
 {
     CropContext *crop = link->src->priv;
 
-    link->w = crop->w;
-    link->h = crop->h;
-    link->format = link->src->inputs[0]->format;
+    link->w = crop->cw;
+    link->h = crop->ch;
 
     return 0;
 }
@@ -66,10 +86,10 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     CropContext *crop = link->dst->priv;
     AVFilterPicRef *ref2 = avfilter_ref_pic(picref);
 
-    ref2->w = crop->w;
-    ref2->h = crop->h;
-    ref2->data[0] += crop->y * ref2->linesize[0];
-    ref2->data[0] += 3 * crop->x;
+    ref2->w = crop->cw;
+    ref2->h = crop->ch;
+    ref2->data[0] += crop->cy * ref2->linesize[0];
+    ref2->data[0] += crop->cx * 3;
 
     av_log(link->dst, AV_LOG_INFO, "start_frame()\n");
     avfilter_default_start_frame(link, picref);
@@ -97,20 +117,20 @@ static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
 
     av_log(link->dst, AV_LOG_INFO, "draw_slice()\n");
 
-    if(y >= crop->y + crop->h || y + h <= crop->y) return;
+    if(y >= crop->cy + crop->ch || y + h <= crop->cy) return;
 
     memcpy(src, data, sizeof(uint8_t *) * 4);
 
-    if(top < crop->y) {
-        height -=  crop->y - top;
-        src[0] += (crop->y - top) * pic->linesize[0];
-        top     =  crop->y;
+    if(top < crop->cy) {
+        height -=  crop->cy - top;
+        src[0] += (crop->cy - top) * pic->linesize[0];
+        top     =  crop->cy;
     }
-    if(top + height > crop->y + crop->h)
-        height = crop->y + crop->h - top;
-    src[0] += 3 * crop->x;
+    if(top + height > crop->cy + crop->ch)
+        height = crop->cy + crop->ch - top;
+    src[0] += 3 * crop->cx;
 
-    avfilter_draw_slice(ctx->outputs[0], src, top - crop->y, height);
+    avfilter_draw_slice(ctx->outputs[0], src, top - crop->cy, height);
 }
 
 /* XXX: maybe make the default implementation do this? */
@@ -131,12 +151,15 @@ AVFilter vf_crop =
                                     .type            = AV_PAD_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
-                                    .end_frame       = end_frame, },
+                                    .end_frame       = end_frame,
+                                    .query_formats   = query_in_formats,
+                                    .config_props    = config_input, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
                                     .request_frame   = request_frame,
-                                    .set_video_props = set_video_props},
+                                    .query_formats   = query_out_formats,
+                                    .config_props    = config_output, },
                                   { .name = NULL}},
 };
 

@@ -34,22 +34,30 @@ static int init(AVFilterContext *ctx, const char *args)
 {
     SDLContext *sdl = ctx->priv;
 
-    if(ctx->inputs[0]->format != PIX_FMT_RGB24) {
-        av_log(ctx, AV_LOG_FATAL, "unsupported input format\n");
-        return -1;
-    }
-
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE)) {
         av_log(ctx, AV_LOG_FATAL, "unable to initialize SDL: %s\n",
                SDL_GetError());
         return -1;
     }
 
-    sdl->surface = SDL_SetVideoMode(ctx->inputs[0]->w,
-                                    ctx->inputs[0]->h,
-                                    24, SDL_HWSURFACE | SDL_DOUBLEBUF);
-
     return 0;
+}
+
+static int *query_formats(AVFilterLink *link)
+{
+    return avfilter_make_format_list(1, PIX_FMT_RGB24);
+}
+
+static int config_props(AVFilterLink *link)
+{
+    SDLContext *sdl = link->dst->priv;
+
+    /* SDL docs claim that calling this a second time to resize the
+     * surface will automatically free the old surface for us */
+    sdl->surface = SDL_SetVideoMode(link->w, link->h, 24,
+                                    SDL_HWSURFACE | SDL_DOUBLEBUF);
+
+    return !sdl->surface;
 }
 
 static void uninit(AVFilterContext *ctx)
@@ -117,7 +125,9 @@ AVFilter vo_sdl =
                                     .type        = AV_PAD_VIDEO,
                                     .start_frame = start_frame,
                                     .end_frame   = end_frame,
-                                    .draw_slice  = draw_slice, },
+                                    .draw_slice  = draw_slice,
+                                    .query_formats = query_formats,
+                                    .config_props  = config_props, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name = NULL}},
 };

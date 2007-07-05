@@ -27,11 +27,15 @@
 #define GREEN   0x60
 #define BLUE    0xC0
 
-static int set_video_props(AVFilterLink *link)
+static int *query_formats(AVFilterLink *link)
+{
+    return avfilter_make_format_list(1, PIX_FMT_RGB24);
+}
+
+static int config_props(AVFilterLink *link)
 {
     link->w = 640;
     link->h = 480;
-    link->format = PIX_FMT_RGB24;
 
     return 0;
 }
@@ -73,7 +77,8 @@ AVFilter vsrc_dummy =
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
                                     .request_frame   = request_frame,
-                                    .set_video_props = set_video_props, },
+                                    .query_formats   = query_formats,
+                                    .config_props    = config_props, },
                                   { .name = NULL}},
 };
 

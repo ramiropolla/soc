@@ -36,11 +36,12 @@ int main()
     crop = avfilter_create_by_name("crop");
     out  = avfilter_create_by_name("sdl");
 
-    avfilter_link(src,  0, crop, 0);
-    avfilter_link(crop, 0, out,  0);
     avfilter_init_filter(src,  NULL);
     avfilter_init_filter(crop, "20:40:320:240");
     avfilter_init_filter(out,  NULL);
+
+    avfilter_link(src,  0, crop, 0);
+    avfilter_link(crop, 0, out,  0);
 
     for(i = 0; i < 10; i ++) {
         sdl_display(out);
