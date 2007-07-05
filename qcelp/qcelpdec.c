@@ -1,5 +1,5 @@
 /*
- * QCELP Decoder
+ * QCELP decoder
  * Copyright (c) 2007 Reynaldo H. Verdejo Pinochet
  *
  * This file is part of FFmpeg.
@@ -21,16 +21,12 @@
 
 /**
  * @file qcelpdec.c
- * QCELP decoder.
+ * QCELP decoder
  */
 
-/* First we include some default includes */
 #include <math.h>
 #include <stddef.h>
-#include <stdio.h>
 
-/* The following includes have the bitstream reader, various dsp functions and the various defaults */
-#define ALT_BITSTREAM_READER
 #include "avcodec.h"
 #include "bitstream.h"
 #include "dsputil.h"
@@ -38,6 +34,13 @@
 #include "qcelp.h"
 
 #define DEBUG 1
+
+typedef struct
+{
+    qcelp_packet_rate rate;
+    uint8_t data[76];       /* data from a _parsed_ frame */
+    uint8_t bits;
+} QCELPFrame;
 
 typedef struct {
     GetBitContext gb;
@@ -68,65 +71,58 @@ static int qcelp_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
-static int qcelp_parse_pkt_full(uint8_t *buf, QCELPFrame *frame)
-{
-    return 0;
-}
 
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            int *data_size, uint8_t *buf, int buf_size)
 {
-    QCELPContext *q = avctx->priv_data;
-    int16_t *outbuffer = data;
-    int8_t samples;
-    int8_t bitcount;
-    int16_t first16 = 0; /* needed for rate 1/8 particularities */
-
-    QCELPBitmap *order;
-
-    order = NULL;
+    QCELPContext *q    = avctx->priv_data;
+    QCELPBitmap *order = NULL;
+    int16_t  *outbuffer = data;
+    int8_t   samples;
+    int      n;
+    uint16_t first16 = 0; /* needed for rate 1/8 peculiarities */
+    int      is_ifq = 0;
 
     init_get_bits(&q->gb, buf, buf_size*8);
 
     /*
-     * FIXME this comment should actually make some sence ..
-     *
-     * Here we try to identify each frame's rate by its byte size,
-     * then, after setting a few utility vars we point 'order'
-     * to start at the location of the rate's reference _slice_
-     * inside the big REFERECE_FRAME array. We then proceed with
-     * the bit reordering that will leave a full raw frame's data
-     * ordered in our 'universal frame'
+     * figure out frame's rate by its size, set up a few utility vars
+     * and point 'order' to the rate's reference _slice_ inside the
+     * big REFERENCE_FRAME array.
      */
 
     switch(buf_size)
     {
         case 34:
-            q->frame->type = RATE_FULL;
-            q->frame->bits = qcelp_bits_per_type[RATE_FULL];
-            order = QCELP_REFERENCE_FRAME + QCELP_FULLPKT_REFERENCE_POS;
+            q->frame->rate = RATE_FULL;
+            q->frame->bits = qcelp_bits_per_rate[RATE_FULL];
+            order =
+            (QCELPBitmap*)(QCELP_REFERENCE_FRAME + QCELP_FULLPKT_REFERENCE_POS);
             break;
         case 16:
-            q->frame->type = RATE_HALF;
-            q->frame->bits = qcelp_bits_per_type[RATE_HALF];
-            order = QCELP_REFERENCE_FRAME + QCELP_HALFPKT_REFERENCE_POS;
+            q->frame->rate = RATE_HALF;
+            q->frame->bits = qcelp_bits_per_rate[RATE_HALF];
+            order =
+            (QCELPBitmap*)(QCELP_REFERENCE_FRAME + QCELP_HALFPKT_REFERENCE_POS);
             break;
         case 7:
-            q->frame->type = RATE_QUARTER;
-            q->frame->bits = qcelp_bits_per_type[RATE_QUARTER];
-            order = QCELP_REFERENCE_FRAME + QCELP_4THRPKT_REFERENCE_POS;
+            q->frame->rate = RATE_QUARTER;
+            q->frame->bits = qcelp_bits_per_rate[RATE_QUARTER];
+            order =
+            (QCELPBitmap*)(QCELP_REFERENCE_FRAME + QCELP_4THRPKT_REFERENCE_POS);
             break;
         case 3:
-            q->frame->type = RATE_OCTAVE;
-            q->frame->bits = qcelp_bits_per_type[RATE_OCTAVE];
-            order = QCELP_REFERENCE_FRAME + QCELP_8THRPKT_REFERENCE_POS;
+            q->frame->rate = RATE_OCTAVE;
+            q->frame->bits = qcelp_bits_per_rate[RATE_OCTAVE];
+            order =
+            (QCELPBitmap*)(QCELP_REFERENCE_FRAME + QCELP_8THRPKT_REFERENCE_POS);
             break;
         case 0: /* FIXME */
-            q->frame->type = BLANK;
+            q->frame->rate = BLANK;
             q->frame->bits = 0;
             break;
         default:
-            q->frame->type = RATE_UNKNOWN;
+            q->frame->rate = RATE_UNKNOWN;
             q->frame->bits = 0;
             /*
             printf("UNKNOWN PACKET RATE\n");
@@ -138,81 +134,39 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      * reordering loop
      */
 
-    bitcount=0;
-    while(bitcount < q->frame->bits)
+    for(n=0; n < q->frame->bits; n++)
     {
-        /*
-         * order[bitcount]->index holds the placement of this
-         * input stream bit in the universal frame.
-         *
-         * order[bitcount]->pos holds the bit pos inside this value
-         * byte.
-         *
-         */
+        q->frame->data[ order[n].index ] |=
+        get_bits1(&q->gb)<<order[n].bitpos;
 
-        q->frame->data[ order[bitcount].index ] |=
-        get_bits1(&q->gb)>>(order[bitcount].bitpos);
-
-        /*
-         * viral sample! :D
-         *
-         * just needed for rate 1/8 packets
-         *
-         */
-
-        if(bitcount<16)
+        if(n<16)
         {
-            first16 |= q->frame->data[ order[bitcount].index ]>>bitcount
+            first16 |= q->frame->data[ order[n].index ]>>n;
         }
 
-        bitcount++;
     }
 
     /* DONE REORDERING */
 
-    /*
-     * check for erasures/blanks on rates 1, 1/4 and 1/8
-     *
-     */
+    /* check for erasures/blanks on rates 1, 1/4 and 1/8 */
 
-    if(q->frame->type != RATE_HALF)
+    if(q->frame->rate != RATE_HALF && !q->frame->data[QCELP_RSRVD_POS])
+        is_ifq=1;
+
+    if(q->frame->rate == RATE_OCTAVE && first16==0xFFFF)
+        is_ifq=1;
+
+    /* check for badly received packets */
+
+    if(q->frame->rate != RATE_OCTAVE)
     {
-        if(!q->frame->data[QCELP_RSRVD_POS])
+        /* check for outbound LSP freqs and codebook gain params */
+        if(q->frame->rate != RATE_QUARTER)
         {
-            /*
-             * flag aproach: set flag for ifq/blank/incorrect
-             * decoding
-             */
+               /* magic here */
         }
-    }
-
-    /* particularities for rate 1/8 */
-    if(q->frame->type == RATE_OCTAVE)
-    {
-        if(first16==0xFFFF)
-        {
-            /*
-             * flag aproach: set flag for ifq/blank/incorrect
-             * decoding
-             */
-        }
-    }
-
-    /*
-     * check for badly received packets
-     * for rate 1, 1/2 and 1/4
-     */
-
-    if(q->frame->type != RATE_OCTAVE)
-    {
-        /*
-         * flag aproach: set flag for ifq/blank/incorrect
-         * decoding
-         */
 
     }
-
-
 
      /*
       * decode loop
@@ -220,18 +174,16 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
       */
 
 
-
-
     return 1;
 }
 
 AVCodec qcelp_decoder =
 {
-    .name = "qcelp",
-    .type = CODEC_TYPE_AUDIO,
-    .id = CODEC_ID_QCELP,
-    .priv_data_size = sizeof(QCELPContext),
-    .init = qcelp_decode_init,
-    .close = qcelp_decode_close,
+    .name   = "qcelp",
+    .type   = CODEC_TYPE_AUDIO,
+    .id     = CODEC_ID_QCELP,
+    .init   = qcelp_decode_init,
+    .close  = qcelp_decode_close,
     .decode = qcelp_decode_frame,
+    .priv_data_size = sizeof(QCELPContext),
 };

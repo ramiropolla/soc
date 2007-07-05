@@ -1,5 +1,5 @@
-This notes are abstracts from the standard that might
-be usesfull in understanding whats going on.
+These notes are abstracts from the standard that might
+be useful in understanding what's going on.
 
 
 How stuff works
@@ -13,7 +13,7 @@ The number of bits used to encode the LPC parameters is a
 function of the selected rate (1, 1/2, 1/4, 1/8).
 
 
-Parameters codes transmited for each rate packet (Page 25)
+Parameter codes transmitted for each rate packet (Page 25)
 ------------------------------------------------
 
 LSPi     |  Line Spectral Pair frequency i.

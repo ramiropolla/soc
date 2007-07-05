@@ -1,5 +1,5 @@
 /*
- * QCELP Decoder
+ * QCELP decoder
  * Copyright (c) 2007 Reynaldo H. Verdejo Pinochet
  *
  * This file is part of FFmpeg.
@@ -21,7 +21,7 @@
 
 /**
  * @file qcelp.h
- * QCELP decoder.
+ * QCELP decoder
  */
 
 typedef enum
@@ -30,20 +30,20 @@ typedef enum
     RATE_HALF   = 1,
     RATE_QUARTER= 2,
     RATE_OCTAVE = 3,
-    I_F_Q,        /* insuficient frame quality */
+    I_F_Q,          /*!< insufficient frame quality */
     BLANK,
     RATE_UNKNOWN
-} qcelp_packet_type;
+} qcelp_packet_rate;
 
-static uint16_t qcelp_bits_per_type[]={266,124,54,20};
+static const uint16_t qcelp_bits_per_rate[]={266,124,54,20};
 
 typedef struct {
-    uint8_t index;  /* index into the reference frame */
-    uint8_t bitpos; /* bit position in the value's byte */
+    uint8_t index;  /*!< index into the reference frame */
+    uint8_t bitpos; /*!< bit position in the value's byte */
 } QCELPBitmap;
 
 
-/*
+/**
  * WARNING
  *
  * YOU WONT SEE ANY mention of a REFERENCE nor an UNIVERSAL frame
@@ -51,18 +51,37 @@ typedef struct {
  * reordering needed to unify the decoding process _inside_ this
  * code, nothing more.
  *
- */
-
-/*
- * REFERENCE FRAME
  *
- * This are the reference frame slices. Each touple will be mapped to a
- * QCELPBitmap showing the location of each bit in the input * with
- * respect to a transmision code in the 'universal frame'.
+ * UNIVERSAL FRAME
+ * ---------------
+ *
+ * Format of QCELPFrame.data
+ *
+ *     QCELP_X0_POS
+ *           |
+ * CBSIGNs   0     1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+ * CBGAINs  16    17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+ * CINDEXs  32    33 34 35 36 37 38 39 40 41 43 43 44 45 46 47
+ * PLAGs    48    49 50 51
+ * PFRACs   52    53 54 55
+ * PGAINs   56    57 58 59
+ * LSPVs    60    61 62 63 64
+ * RSVD     65
+ * LSP      66    67 68 69 70 71 72 73 74 75
+ * CBSEED   76
+ *
+ *
+ * REFERENCE FRAME
+ * ---------------
+ *
+ *
+ * What follows are the reference frame slices. Each tuple will be mapped
+ * to a QCELPBitmap showing the location of each bit in the input with respect
+ * to a transmission code in the 'universal frame'.
  *
  * FIXME
- * it would be really nice if someone reviewed this numbers :)
- *------------------------------------------------------------------*/
+ * it would be really nice if someone reviewed these numbers :)
+ *---------------------------------------------------------------------------*/
 
 #define QCELP_RATE_FULL_BITMAP \
 {15,0},{47,0},{47,1},{47,2},{47,3},{47,4},{47,5},{47,6},\
@@ -133,10 +152,9 @@ typedef struct {
 {65,3},{65,2},{65,1},{65,0}
 
 
-/*
+/**
  * Position of the bitmapping data for each pkt type in
  * the big REFERENCE FRAME array
- *
  */
 
 #define QCELP_FULLPKT_REFERENCE_POS 0
@@ -144,48 +162,13 @@ typedef struct {
 #define QCELP_4THRPKT_REFERENCE_POS 390
 #define QCELP_8THRPKT_REFERENCE_POS 444
 
-/*
- * Reference frame, finally :-)
- *
- */
+static const QCELPBitmap QCELP_REFERENCE_FRAME[]={QCELP_RATE_FULL_BITMAP,
+                                                  QCELP_RATE_HALF_BITMAP,
+                                                  QCELP_RATE_4THR_BITMAP,
+                                                  QCELP_RATE_8THR_BITMAP};
 
-static QCELPBitmap QCELP_REFERENCE_FRAME[]={QCELP_RATE_FULL_BITMAP,
-                                            QCELP_RATE_HALF_BITMAP,
-                                            QCELP_RATE_4THR_BITMAP,
-                                            QCELP_RATE_8THR_BITMAP};
-
-/*
- * UNIVERSAL FRAME
- *
- *
- * Oce frame is parsed all data gets stored in QCELPFrame.data acording
- * to this structure:
- *
- *     QCELP_X0_POS
- *           |
- * CBSIGNs   0     1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
- * CBGAINs  16    17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
- * CINDEXs  32    33 34 35 36 37 38 39 40 41 43 43 44 45 46 47
- * PLAGs    48    49 50 51
- * PFRACs   52    53 54 55
- * PGAINs   56    57 58 59
- * LSPVs    60    61 62 63 64
- * RSVD     65
- * LSP      66    67 68 69 70 71 72 73 74 75
- * CBSEED   76
- *
- *-------------------------------------------------------------------------*/
-
-typedef struct
-{
-    qcelp_packet_type type;
-    uint8_t data[76];       /* holds all data from a frame (_once_ parsed) */
-    uint8_t bits;
-} QCELPFrame;
-
-/*
- * Position of the transmision codes inside the universal frame.
- *
+/**
+ * Position of the transmission codes inside the universal frame.
  */
 
 #define QCELP_CBSIGN0_POS 0
@@ -195,13 +178,16 @@ typedef struct
 #define QCELP_PFRAC0_POS  52
 #define QCELP_PGAIN0_POS  56
 #define QCELP_LSPV0_POS   60
-#define QCELP_RSRVD_POS   65    /* on all but rate 1/2 packets */
-#define QCELP_LSP0_POS    66    /* only in rate 1/8 packets    */
-#define QCELP_CBSEED_POS  76    /* only in rate 1/8 packets    */
+#define QCELP_RSRVD_POS   65    /*!< on all but rate 1/2 packets */
+#define QCELP_LSP0_POS    66    /*!< only in rate 1/8 packets    */
+#define QCELP_CBSEED_POS  76    /*!< only in rate 1/8 packets    */
 
-/* rest its currently unused */
+/* rest is currently unused */
 
-static float qcelp_fullrate_ccodebook[]=
+static const int   qcelp_cumulative_gainloss[]={0,1,2,6};
+static const float qcelp_cumulative_pitchsaturation[]={0.9,0.6,0.3,0.0};
+
+static const float qcelp_fullrate_ccodebook[]=
 {
     0.10,-0.65,-0.59, 0.12, 1.10, 0.34,-1.34, 1.57,
     1.04,-0.84,-0.34,-1.15, 0.23,-1.01, 0.03, 0.45,
@@ -221,7 +207,7 @@ static float qcelp_fullrate_ccodebook[]=
    -1.84,-1.97, 0.52,-0.03, 0.78,-1.89, 0.08,-0.65
 };
 
-static float qcelp_halfrate_ccodebook[]=
+static const float qcelp_halfrate_ccodebook[]=
 {
     0.0, -2.0,  0.0, -1.5,  0.0,  0.0,  0.0,  0.0,
     0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
