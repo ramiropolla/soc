@@ -38,7 +38,7 @@
 typedef struct
 {
     qcelp_packet_rate rate;
-    uint8_t data[76];       /* data from a _parsed_ frame */
+    uint8_t data[76];       /*!< data from a _parsed_ frame */
     uint8_t bits;
 } QCELPFrame;
 
@@ -80,12 +80,12 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     int16_t  *outbuffer = data;
     int8_t   samples;
     int      n;
-    uint16_t first16 = 0; /* needed for rate 1/8 peculiarities */
+    uint16_t first16 = 0; /*!< needed for rate 1/8 peculiarities */
     int      is_ifq = 0;
 
     init_get_bits(&q->gb, buf, buf_size*8);
 
-    /*
+    /**
      * figure out frame's rate by its size, set up a few utility vars
      * and point 'order' to the rate's reference _slice_ inside the
      * big REFERENCE_FRAME array.
@@ -126,7 +126,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             break;
     }
 
-    /*
+    /**
      * reordering loop
      */
 
@@ -144,7 +144,9 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     /* DONE REORDERING */
 
-    /* check for erasures/blanks on rates 1, 1/4 and 1/8 */
+    /**
+     * check for erasures/blanks on rates 1, 1/4 and 1/8
+     */
 
     if(q->frame->rate != RATE_HALF && !q->frame->data[QCELP_RSRVD_POS])
         is_ifq=1;
