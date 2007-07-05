@@ -31,7 +31,7 @@
 #include "bitstream.h"
 #include "dsputil.h"
 
-#include "qcelp.h"
+#include "qcelpdata.h"
 
 #define DEBUG 1
 

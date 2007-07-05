@@ -20,7 +20,7 @@
  */
 
 /**
- * @file qcelp.h
+ * @file qcelpdata.h
  * QCELP decoder
  */
 
