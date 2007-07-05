@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000-2002 Fabrice Bellard.
+ * Copyright (c) 2000-2002 Fabrice Bellard
  *
  * This file is part of FFmpeg.
  *
@@ -20,7 +20,7 @@
 
 /**
  * @file mpeg_pes.h
- * PES packetizer api header.
+ * MPEG PES packetizer api header.
  */
 
 #ifndef AVFORMAT_MPEG_PES_H
@@ -86,21 +86,21 @@ typedef struct {
 
 
 /**
- * Initialization of PES mux.
+ * Initialization of PES muxer.
  * @param[in] ctx the AVFormatContext which contains streams
  * @return  On error a negative value is returned, on success zero.
  */
-int ff_pes_mux_init(AVFormatContext *ctx);
+int ff_pes_muxer_init(AVFormatContext *ctx);
 
 /**
  * Finalization of PES mux.
  * @param [in] ctx the AVFormatContext which contains streams.
  * @return  NULL
  */
-void ff_pes_mux_end(AVFormatContext *ctx);
+void ff_pes_muxer_end(AVFormatContext *ctx);
 
 /**
- * Write packet into PES fifo.
+ * Write packet into PES FIFO.
  * @param [in] ctx  the AVFormatContext which contains streams.
  * @param [in] pkt  the packet to write.
  * @return  NULL
@@ -108,17 +108,17 @@ void ff_pes_mux_end(AVFormatContext *ctx);
 void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
 
 /**
- * Find the most fit stream to be muxed.
+ * Find which stream is most appropriate be muxed.
  * @param[in] ctx   the AVFormatContext
- * @param[in] packet_size  the packet size of PES stream
- * @param[in] flush   whether we flush after every single subtitle packet for subtitle
- * @param[out] best_i       the best fit stream index
- * @return  On error a negative or zero value is returned, on success 1 is returned
+ * @param[in] packet_size  PES stream packet size
+ * @param[in] flush  whether flush after every single subtitle packet. For subtitle, a single PES packet must be generated
+ * @param[out] best_i      stream index in AVFormatContext that should be muxed
+ * @return  On error a negative or zero value is returned, on success 1 is returned.
  */
 int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t scr, int* best_i);
 
 /**
- * Get how many frames is muxed.
+ * Get total frames that have been muxed.
  * @param[in] ctx    the AVFormatContext
  * @param[in] stream the PES stream
  * @param[in] len    PES packet size
@@ -130,17 +130,17 @@ int get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
  * Mux streams into a PES packet.
  * @param [in]      ctx            the AVFormatContext which contains streams
  * @param [in]      stream_index   the stream index to write
- * @param [in]      pts            packet presentation time stamp
- * @param [in]      dts            packet decoding time stamp
- * @param [in]      id             stream id
+ * @param [in]      pts            packet presentation timestamp
+ * @param [in]      dts            packet decoding timestamp
+ * @param [in]      id             stream ID
  * @param [in]      start_code     PES packet start code
  * @param [in]      header_len     PES header size
- * @param [in]      packet_size    the total packet size
- * @param [in]      payload_size   the payload size of the packet
- * @param [in]      stuffing_size  the stuffing size of the packet
- * @return   bytes wirtten to PES stream.
+ * @param [in]      packet_size    total packet size
+ * @param [in]      payload_size   packet payload size
+ * @param [in]      stuffing_size  packet stuffing size
+ * @return   bytes written to PES stream.
  */
-int ff_pes_mux_write(AVFormatContext *ctx, int stream_index,
+int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
           int64_t pts,int64_t dts, int  id, int startcode,
           uint8_t* pes_content, int pes_content_len,
           int header_len, int packet_size, int payload_size, int stuffing_size);
@@ -148,8 +148,8 @@ int ff_pes_mux_write(AVFormatContext *ctx, int stream_index,
 /**
  * Remove decoded packets of each stream.
  * @param[in] ctx  the AVFormatContext
- * @param[in] scr  System Clock Reference of PES stream.
- * @return  On error a negative or zero value is returned, on success 1 is returned
+ * @param[in] scr  System Clock Reference of PES stream
+ * @return  On error a negative or zero value is returned, on success 1 is returned.
  */
 int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
 

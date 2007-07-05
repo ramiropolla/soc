@@ -6,8 +6,8 @@ Index: mpeg_pes_enc.c
  /*
 - * MPEG1/2 muxer
 - * Copyright (c) 2000, 2001, 2002 Fabrice Bellard.
-+ * PES muxer.
-+ * Copyright (c) 2000-2002 Fabrice Bellard.
++ * MPEG PES muxer
++ * Copyright (c) 2000-2002 Fabrice Bellard
   *
   * This file is part of FFmpeg.
   *
@@ -77,7 +77,7 @@ Index: mpeg_pes_enc.c
 -
 -static int put_pack_header(AVFormatContext *ctx,
 -                           uint8_t *buf, int64_t timestamp)
-+int ff_pes_mux_init(AVFormatContext *ctx)
++int ff_pes_muxer_init(AVFormatContext *ctx)
  {
 -    MpegMuxContext *s = ctx->priv_data;
 -    PutBitContext pb;
@@ -627,7 +627,7 @@ Index: mpeg_pes_enc.c
 -/* flush the packet on stream stream_index */
 -static int flush_packet(AVFormatContext *ctx, int stream_index,
 -                         int64_t pts, int64_t dts, int64_t scr, int trailer_size)
-+int ff_pes_mux_write(AVFormatContext *ctx, int stream_index,
++int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
 +    int64_t pts,int64_t dts, int  id, int startcode,
 +    uint8_t* pes_content, int pes_content_len,
 +    int header_len, int packet_size, int payload_size, int stuffing_size)
@@ -1195,7 +1195,7 @@ Index: mpeg_pes_enc.c
  
 -static int mpeg_mux_end(AVFormatContext *ctx)
 +
-+void ff_pes_mux_end(AVFormatContext *ctx)
++void ff_pes_muxer_end(AVFormatContext *ctx)
  {
 -//    MpegMuxContext *s = ctx->priv_data;
 -    StreamInfo *stream;
@@ -1301,7 +1301,7 @@ Index: mpeg_pes_enc.c
 -#endif
 Index: Makefile
 ===================================================================
---- Makefile	(revision 9465)
+--- Makefile	(revision 9473)
 +++ Makefile	(working copy)
 @@ -84,13 +84,13 @@
  OBJS-$(CONFIG_MP3_MUXER)                 += mp3.o
@@ -1324,7 +1324,7 @@ Index: Makefile
  OBJS-$(CONFIG_MPEGTS_MUXER)              += mpegtsenc.o
 Index: mpeg.c
 ===================================================================
---- mpeg.c	(revision 9465)
+--- mpeg.c	(revision 9473)
 +++ mpeg.c	(working copy)
 @@ -21,6 +21,7 @@
  
@@ -1345,7 +1345,7 @@ Index: mpeg.c
      /* check file header */
 Index: mpeg.h
 ===================================================================
---- mpeg.h	(revision 9465)
+--- mpeg.h	(revision 9473)
 +++ mpeg.h	(working copy)
 @@ -29,19 +29,6 @@
  #define PACKET_START_CODE_PREFIX    ((unsigned int)0x00000100)
@@ -1376,7 +1376,7 @@ Index: mpeg.h
  #endif /* AVFORMAT_MPEG_H */
 Index: mpegenc.c
 ===================================================================
---- mpegenc.c	(revision 9465)
+--- mpegenc.c	(revision 9473)
 +++ mpegenc.c	(working copy)
 @@ -22,8 +22,10 @@
  #include "avformat.h"
@@ -1502,7 +1502,7 @@ Index: mpegenc.c
 -        av_fifo_init(&stream->fifo, 16);
      }
 +
-+    if(ff_pes_mux_init(ctx) != 0)
++    if(ff_pes_muxer_init(ctx) != 0)
 +        goto fail;
 +
      bitrate = 0;
@@ -1583,7 +1583,7 @@ Index: mpegenc.c
 +        if(s->is_mpeg2) {
 +            pes_context->packet_number = s->packet_number;
 +            pes_context->mux_type = PESMUX_PS;
-+            if(ff_pes_mux_write(ctx, stream_index, pts, dts, id, startcode, pes_content, p - pes_content,
++            if(ff_pes_muxer_write(ctx, stream_index, pts, dts, id, startcode, pes_content, p - pes_content,
 +                 header_len, packet_size, payload_size, stuffing_size) < 0)
 +                return -1;
 +        } else {
@@ -1901,7 +1901,7 @@ Index: mpegenc.c
              break;
      }
  
-+    ff_pes_mux_end(ctx);
++    ff_pes_muxer_end(ctx);
      /* End header according to MPEG1 systems standard. We do not write
         it as it is usually not needed by decoders and because it
         complicates MPEG stream concatenation. */
@@ -1923,7 +1923,7 @@ Index: mpeg_pes.h
 +++ mpeg_pes.h	(revision 0)
 @@ -0,0 +1,157 @@
 +/*
-+ * Copyright (c) 2000-2002 Fabrice Bellard.
++ * Copyright (c) 2000-2002 Fabrice Bellard
 + *
 + * This file is part of FFmpeg.
 + *
@@ -1944,7 +1944,7 @@ Index: mpeg_pes.h
 +
 +/**
 + * @file mpeg_pes.h
-+ * PES packetizer api header.
++ * MPEG PES packetizer api header.
 + */
 +
 +#ifndef AVFORMAT_MPEG_PES_H
@@ -2010,21 +2010,21 @@ Index: mpeg_pes.h
 +
 +
 +/**
-+ * Initialization of PES mux.
++ * Initialization of PES muxer.
 + * @param[in] ctx the AVFormatContext which contains streams
 + * @return  On error a negative value is returned, on success zero.
 + */
-+int ff_pes_mux_init(AVFormatContext *ctx);
++int ff_pes_muxer_init(AVFormatContext *ctx);
 +
 +/**
 + * Finalization of PES mux.
 + * @param [in] ctx the AVFormatContext which contains streams.
 + * @return  NULL
 + */
-+void ff_pes_mux_end(AVFormatContext *ctx);
++void ff_pes_muxer_end(AVFormatContext *ctx);
 +
 +/**
-+ * Write packet into PES fifo.
++ * Write packet into PES FIFO.
 + * @param [in] ctx  the AVFormatContext which contains streams.
 + * @param [in] pkt  the packet to write.
 + * @return  NULL
@@ -2032,17 +2032,17 @@ Index: mpeg_pes.h
 +void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
 +
 +/**
-+ * Find the most fit stream to be muxed.
++ * Find which stream is most appropriate be muxed.
 + * @param[in] ctx   the AVFormatContext
-+ * @param[in] packet_size  the packet size of PES stream
-+ * @param[in] flush   whether we flush after every single subtitle packet for subtitle
-+ * @param[out] best_i       the best fit stream index
-+ * @return  On error a negative or zero value is returned, on success 1 is returned
++ * @param[in] packet_size  PES stream packet size
++ * @param[in] flush  whether flush after every single subtitle packet. For subtitle, a single PES packet must be generated
++ * @param[out] best_i      stream index in AVFormatContext that should be muxed
++ * @return  On error a negative or zero value is returned, on success 1 is returned.
 + */
 +int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t scr, int* best_i);
 +
 +/**
-+ * Get how many frames is muxed.
++ * Get total frames that have been muxed.
 + * @param[in] ctx    the AVFormatContext
 + * @param[in] stream the PES stream
 + * @param[in] len    PES packet size
@@ -2054,17 +2054,17 @@ Index: mpeg_pes.h
 + * Mux streams into a PES packet.
 + * @param [in]      ctx            the AVFormatContext which contains streams
 + * @param [in]      stream_index   the stream index to write
-+ * @param [in]      pts            packet presentation time stamp
-+ * @param [in]      dts            packet decoding time stamp
-+ * @param [in]      id             stream id
++ * @param [in]      pts            packet presentation timestamp
++ * @param [in]      dts            packet decoding timestamp
++ * @param [in]      id             stream ID
 + * @param [in]      start_code     PES packet start code
 + * @param [in]      header_len     PES header size
-+ * @param [in]      packet_size    the total packet size
-+ * @param [in]      payload_size   the payload size of the packet
-+ * @param [in]      stuffing_size  the stuffing size of the packet
-+ * @return   bytes wirtten to PES stream.
++ * @param [in]      packet_size    total packet size
++ * @param [in]      payload_size   packet payload size
++ * @param [in]      stuffing_size  packet stuffing size
++ * @return   bytes written to PES stream.
 + */
-+int ff_pes_mux_write(AVFormatContext *ctx, int stream_index,
++int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
 +          int64_t pts,int64_t dts, int  id, int startcode,
 +          uint8_t* pes_content, int pes_content_len,
 +          int header_len, int packet_size, int payload_size, int stuffing_size);
@@ -2072,8 +2072,8 @@ Index: mpeg_pes.h
 +/**
 + * Remove decoded packets of each stream.
 + * @param[in] ctx  the AVFormatContext
-+ * @param[in] scr  System Clock Reference of PES stream.
-+ * @return  On error a negative or zero value is returned, on success 1 is returned
++ * @param[in] scr  System Clock Reference of PES stream
++ * @return  On error a negative or zero value is returned, on success 1 is returned.
 + */
 +int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
 +

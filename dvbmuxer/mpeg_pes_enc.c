@@ -1,6 +1,6 @@
 /*
- * PES muxer.
- * Copyright (c) 2000-2002 Fabrice Bellard.
+ * MPEG PES muxer
+ * Copyright (c) 2000-2002 Fabrice Bellard
  *
  * This file is part of FFmpeg.
  *
@@ -23,7 +23,7 @@
 
 const int lpcm_freq_tab[4] = { 48000, 96000, 44100, 32000 };
 
-int ff_pes_mux_init(AVFormatContext *ctx)
+int ff_pes_muxer_init(AVFormatContext *ctx)
 {
     AVStream *st;
     PESStream *stream;
@@ -89,7 +89,7 @@ int get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
     return nb_frames;
 }
 
-int ff_pes_mux_write(AVFormatContext *ctx, int stream_index,
+int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
     int64_t pts,int64_t dts, int  id, int startcode,
     uint8_t* pes_content, int pes_content_len,
     int header_len, int packet_size, int payload_size, int stuffing_size)
@@ -285,7 +285,7 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 }
 
 
-void ff_pes_mux_end(AVFormatContext *ctx)
+void ff_pes_muxer_end(AVFormatContext *ctx)
 {
     PESStream *stream;
     int i;
