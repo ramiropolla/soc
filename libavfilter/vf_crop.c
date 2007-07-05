@@ -26,7 +26,7 @@
 
 typedef struct
 {
-    int x, y, w, h;
+    int  x,  y,  w,  h;
     int cx, cy, cw, ch;
 } CropContext;
 
