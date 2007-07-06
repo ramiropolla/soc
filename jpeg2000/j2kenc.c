@@ -498,8 +498,8 @@ static int init_tiles(J2kEncoderContext *s)
                         band->y1 = ceildivpow2(comp->y1 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
                     }
 
-                    band->cblknx = ceildiv(band->x1 - band->x0, band->cblkw);
-                    band->cblkny = ceildiv(band->y1 - band->y0, band->cblkh);
+                    band->cblknx = ceildiv(band->x1, band->cblkw) - band->x0 / band->cblkw;
+                    band->cblkny = ceildiv(band->y1, band->cblkh) - band->y0 / band->cblkh;
 
                     band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
                     if (band->cblk == NULL)
