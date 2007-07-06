@@ -29,6 +29,7 @@
 #include "mpegvideo.h"
 
 #include "rv40vlc.h"
+#include "rv40vlc2.h"
 #include "rv40data.h"
 
 //#define DEBUG
@@ -55,6 +56,8 @@ typedef struct RV40VLC{
 }RV40VLC;
 
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
+static VLC aic_top_vlc;
+static VLC aic_mode1_vlc[AIC_MODE1_NUM], aic_mode2_vlc[AIC_MODE2_NUM];
 
 /**
  * @defgroup vlc RV40 VLC generating functions
@@ -142,6 +145,24 @@ static void rv40_init_tables()
         for(j = 0; j < 2; j++)
             rv40_gen_vlc(rv40_inter_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].third_pattern[j]);
         rv40_gen_vlc(rv40_inter_coeffvlc_pointers[i], COEFF_VLC_SIZE, &inter_vlcs[i].coefficient);
+    }
+
+    init_vlc(&aic_top_vlc, AIC_TOP_BITS, AIC_TOP_SIZE,
+             rv40_aic_top_vlc_bits,  1, 1,
+             rv40_aic_top_vlc_codes, 1, 1, INIT_VLC_USE_STATIC);
+    for(i = 0; i < AIC_MODE1_NUM; i++){
+        // For some reason every tenth VLC table is empty
+        // So skip it for consistency
+        // XXX: redo without this hack
+        if((i % 10) == 9) continue;
+        init_vlc(&aic_mode1_vlc[i], AIC_MODE1_BITS, AIC_MODE1_SIZE,
+                 aic_mode1_vlc_bits[i],  1, 1,
+                 aic_mode1_vlc_codes[i], 1, 1, INIT_VLC_USE_STATIC);
+    }
+    for(i = 0; i < AIC_MODE2_NUM; i++){
+        init_vlc(&aic_mode2_vlc[i], AIC_MODE2_BITS, AIC_MODE2_SIZE,
+                 aic_mode2_vlc_bits[i],  1, 1,
+                 aic_mode2_vlc_codes[i], 2, 2, INIT_VLC_USE_STATIC);
     }
 }
 
@@ -354,6 +375,15 @@ static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *r
  * @{
  */
 
+static inline int decode210(GetBitContext *gb){
+    int n;
+    n = get_bits1(gb);
+    if (n == 1)
+        return 0;
+    else
+        return 2 - get_bits1(gb);
+}
+
 /**
  * Get stored dimension from bitstream
  *
@@ -404,7 +434,122 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb)
     mb_start = get_bits(gb, mb_bits);
     return 0;
 }
-/** @} */ //block functions
+
+/**
+ * Decode 4x4 intra types array
+ *
+ * This function expects old array passed as reference, filled with -1 is absent
+ * XXX: Corner cases may be not handled
+ */
+static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int dst[16])
+{
+    MpegEncContext *s = &r->s;
+    int i, j, k, v;
+    int A, B, C;
+    int pattern;
+    int *ptr;
+
+    for(i = 0; i < 4; i++){
+        if(!i && s->first_slice_line){
+            pattern = get_vlc2(gb, aic_top_vlc.table, AIC_TOP_BITS, 1);
+            dst[0] = (pattern >> 2) & 2;
+            dst[1] = (pattern >> 1) & 2;
+            dst[2] =  pattern       & 2;
+            dst[3] = (pattern << 1) & 2;
+            continue;
+        }
+        ptr = dst + i*4;
+        for(j = 0; j < 4; j++){
+            /* Coefficients are read using VLC chosen by prediction pattern
+             * First one (used for retrieving a pair of coefficients) is
+             * (top right) + 10 * top + 100 * left
+             * Second one (used for retrieving only one coefficient) is
+             * top + 10 * left
+             */
+            A = i ? ptr[-3] : dst[j+1]; // it won't be used for the last coefficient in a row
+            B = i ? ptr[-4] : dst[j];
+            C = j ? ptr[-1] : ptr[3];
+            pattern = A + B*10 + C*100;
+            for(k = 0; k < MODE2_PATTERNS_NUM; k++)
+                if(pattern == rv40_aic_table_index[k])
+                    break;
+            if(j < 3 && k < MODE2_PATTERNS_NUM){ //pattern is found, decoding 2 coefficients
+                v = get_vlc2(gb, aic_mode2_vlc[k].table, AIC_MODE2_BITS, 2);
+                *ptr++ = v/9;
+                *ptr++ = v%9;
+                j++;
+            }else{
+                if(B != -1 && C != -1)
+                    v = get_vlc2(gb, aic_mode1_vlc[B + C*10].table, AIC_MODE1_BITS, 1);
+                else{ // tricky decoding
+                    v = 0;
+                    switch(C){
+                    case -1: // code 0 -> 1, 1 -> 0
+                        if(B == -1 || B == 0 || B == 1)
+                            v = get_bits1(gb) ^ 1;
+                        break;
+                    case  0:
+                    case  2: // code 0 -> 2, 1 -> 0
+                        v = (get_bits1(gb) ^ 1) << 1;
+                        break;
+                    }
+                }
+                *ptr++ = v;
+            }
+        }
+    }
+    return 0;
+}
+
+static int rv40_decode_macroblock(RV40DecContext *r)
+{
+    MpegEncContext *s = &r->s;
+    GetBitContext *gb = &s->gb;
+    int q, cbp;
+    int i;
+
+    q = decode210(gb);
+    switch(q){
+    case 0:
+        break;
+    case 1:
+        break;
+    case 2:
+        // q = decode_dquant(gb);
+        break;
+    }
+    //rv40_decode_intra_types(r, gb);
+    cbp = rv40_decode_cbp(gb, &intra_vlcs[2], 0);
+
+    // decode 24 4x4 blocks to fill one macroblock
+    for(i = 0; i < 24; i++, cbp >>= 1){
+        if(!(cbp & 1)) continue;
+        rv40_decode_block(s->block[i>>2] + (i&1)*2 + (i&2)*4, gb, &intra_vlcs[2], 2, 0);
+    }
+    return 0;
+}
+
+static int rv40_decode_slice(RV40DecContext *r, int slice_start, int slice_end)
+{
+    MpegEncContext *s = &r->s;
+
+    ff_er_add_slice(s, 0, slice_start, s->mb_width - 1, slice_end - 1, (AC_END|DC_END|MV_END));
+    s->first_slice_line = 1;
+    for(s->mb_y = slice_start; s->mb_y < slice_end; s->mb_y++) {
+        for(s->mb_x = 0; s->mb_x < s->mb_width; s->mb_x++) {
+            ff_init_block_index(s);
+            ff_update_block_index(s);
+            s->dsp.clear_blocks(s->block[0]);
+
+            rv40_decode_macroblock(r);
+        }
+        ff_draw_horiz_band(s, s->mb_y * 16, 16);
+        s->first_slice_line = 0;
+    }
+    return 0;
+}
+
+/** @} */ //bitstream functions
 
 
 /**
