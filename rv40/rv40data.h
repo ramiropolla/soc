@@ -93,16 +93,16 @@ static const uint8_t modulo_three_table[108][4] = {
 /**
  * Intra types table
  *
- * These values are actually base 10 coded 3-tuples
+ * These values are actually coded 3-tuples
  * used for detecting standard block configurations
  */
 static const uint16_t rv40_aic_table_index[MODE2_PATTERNS_NUM] = {
-   0, 100, 200,
-  11, 111, 211, 511, 611,
-  22, 122, 222, 722,
- 272, 227,
- 822, 282, 228,
- 112, 116, 221
+ 0x000, 0x100, 0x200,
+ 0x011, 0x111, 0x211, 0x511, 0x611,
+ 0x022, 0x122, 0x222, 0x722,
+ 0x272, 0x227,
+ 0x822, 0x282, 0x228,
+ 0x112, 0x116, 0x221
 };
 
 #endif /* RV40DATA_H */

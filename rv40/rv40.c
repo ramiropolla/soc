@@ -460,14 +460,14 @@ static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int dst
         for(j = 0; j < 4; j++){
             /* Coefficients are read using VLC chosen by prediction pattern
              * First one (used for retrieving a pair of coefficients) is
-             * (top right) + 10 * top + 100 * left
+             * constructed from top, top right and left coefficients
              * Second one (used for retrieving only one coefficient) is
              * top + 10 * left
              */
             A = i ? ptr[-3] : dst[j+1]; // it won't be used for the last coefficient in a row
             B = i ? ptr[-4] : dst[j];
             C = j ? ptr[-1] : ptr[3];
-            pattern = A + B*10 + C*100;
+            pattern = A + (B << 4) + (C << 8);
             for(k = 0; k < MODE2_PATTERNS_NUM; k++)
                 if(pattern == rv40_aic_table_index[k])
                     break;
