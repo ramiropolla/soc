@@ -436,35 +436,6 @@ static int rv40_decode_init(AVCodecContext *avctx)
     if(!tables_done){
         rv40_init_tables();
         tables_done = 1;
-
-        if(0){
-         uint8_t bits[] = {0xD1, 0xB7, 0x37, 0x6A};
-         GetBitContext gb;
-         int r;
-
-         init_get_bits(&gb, bits, sizeof(bits)*8);
-         r = rv40_decode_cbp(&gb, &intra_vlcs[2], 0);
-         av_log(NULL,0,"CBP=%04X, %d bits\n",r,get_bits_count(&gb));
-        }
-        if(0){
-         uint8_t bits[] = {0x6A,0xBF,0xFF,0x87,0xDA,0xBE,0x74,0x94,0xE0,0x29,0x0A,0xAB,0x30,0x4B,0x35,0x80,0x8D };
-         GetBitContext gb;
-         DCTELEM block[64];
-         int i,j,k;
-
-         init_get_bits(&gb, bits, sizeof(bits)*8);
-         get_bits1(&gb);
-         for(k=0;k<11;k++){
-         memset(block,0,64*sizeof(DCTELEM));
-         rv40_decode_block(block,&gb,&intra_vlcs[2],k<8,0);
-
-         for(j=0;j<4;j++){
-          for(i=0;i<4;i++)av_log(NULL,0," %3d",block[i+j*8]);
-          av_log(NULL,0,"\n");
-         }
-         av_log(NULL,0,"Used %d bits\n",get_bits_count(&gb));
-         }
-        }
     }
     return 0;
 }
