@@ -7,6 +7,7 @@ OBJECTS = avfilter.o          \
 		  vo_sdl.o            \
 		  vf_crop.o           \
 		  vf_passthrough.o    \
+		  vf_slicify.o        \
 
 all: filter_test
 
