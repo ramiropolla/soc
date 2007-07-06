@@ -116,6 +116,11 @@ void ff_aec_initenc(AecState *aec, uint8_t *bp);
 void ff_aec_encode(AecState *aec, int cx, int d);
 
 /**
+ * number of encoded bytes
+ */
+int ff_aec_length(AecState *aec);
+
+/**
  * flush the encoder [returns number of bytes encoded]
  * */
 int ff_aec_flush(AecState *aec);

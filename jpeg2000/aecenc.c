@@ -109,6 +109,11 @@ void ff_aec_encode(AecState *aec, int cx, int d)
     }
 }
 
+int ff_aec_length(AecState *aec)
+{
+    return aec->bp - aec->bpstart;
+}
+
 int ff_aec_flush(AecState *aec)
 {
     setbits(aec);
