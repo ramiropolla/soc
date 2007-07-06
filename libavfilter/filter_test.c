@@ -20,38 +20,75 @@
  */
 
 #include <unistd.h>
+#include <string.h>
 
 #include "avfilter.h"
 
 void sdl_display(AVFilterContext *ctx);
 
-int main()
+AVFilterContext *create_filter(char *argv)
+{
+    AVFilterContext *ret;
+    char *name, *args;
+
+    name = argv;
+    if((args = strchr(argv, '='))) {
+        /* ensure we at least have a name */
+        if(args == argv)
+            return NULL;
+
+        *args ++ = 0;
+    }
+
+    av_log(NULL, AV_LOG_INFO, "creating filter \"%s\" with args \"%s\"\n",
+           name, args ? args : "(none)");
+
+    if((ret = avfilter_create_by_name(name))) {
+        if(avfilter_init_filter(ret, args)) {
+            av_log(NULL, AV_LOG_ERROR, "error initializing filter!\n");
+            avfilter_destroy(ret);
+            ret = NULL;
+        }
+    } else av_log(NULL, AV_LOG_ERROR, "error creating filter!\n");
+
+    return ret;
+}
+
+int main(int argc, char **argv)
 {
     int i;
-    AVFilterContext *src, *crop, *out;
+    int ret = -1;
+    AVFilterContext **filters;
 
+    if(argc < 3) {
+        av_log(NULL, AV_LOG_ERROR, "require at least two filters\n");
+        return -1;
+    }
+
+    filters = av_mallocz((argc-1) * sizeof(AVFilterContext*));
     avfilter_init();
 
-    src  = avfilter_create_by_name("dummy");
-    crop = avfilter_create_by_name("crop");
-    out  = avfilter_create_by_name("sdl");
-
-    avfilter_init_filter(src,  NULL);
-    avfilter_init_filter(crop, "20:40:320:240");
-    avfilter_init_filter(out,  NULL);
-
-    avfilter_link(src,  0, crop, 0);
-    avfilter_link(crop, 0, out,  0);
+    for(i = 0; i < argc-1; i ++) {
+        if(!(filters[i] = create_filter(argv[i+1])))
+            goto done;
+        if(i && avfilter_link(filters[i-1], 0, filters[i], 0)) {
+            av_log(NULL, AV_LOG_ERROR, "error linking filters!\n");
+            goto done;
+        }
+    }
 
     for(i = 0; i < 10; i ++) {
-        sdl_display(out);
+        sdl_display(filters[argc-2]);
         sleep(1);
     }
 
-    avfilter_destroy(src);
-    avfilter_destroy(crop);
-    avfilter_destroy(out);
+    ret = 0;
 
-    return 0;
+done:
+    for(i = 0; i < argc-1; i ++)
+        if(filters[i]) avfilter_destroy(filters[i]);
+    av_free(filters);
+
+    return ret;
 }
 
