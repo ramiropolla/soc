@@ -51,11 +51,6 @@ static int *query_in_formats(AVFilterLink *link)
     return avfilter_make_format_list(1, PIX_FMT_RGB24);
 }
 
-static int *query_out_formats(AVFilterLink *link)
-{
-    return avfilter_make_format_list(1, link->src->inputs[0]->format);
-}
-
 static int config_input(AVFilterLink *link)
 {
     CropContext *crop = link->dst->priv;
@@ -158,7 +153,6 @@ AVFilter vf_crop =
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
                                     .request_frame   = request_frame,
-                                    .query_formats   = query_out_formats,
                                     .config_props    = config_output, },
                                   { .name = NULL}},
 };
