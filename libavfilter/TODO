@@ -1,10 +1,9 @@
 FRAMEWORK:
-- colorspace negotiation
+- can colorspace negotiation be improved?
 - auto-inserting needed filters (colorspace conversion, buffer, etc)
-- parameter passing
+- parameter passing (can this be done better with AVOption?)
 - pass pts, and whatever info is needed to reorder decode ordered frames
 - other useful image flags?  interlace?  top/bottom field first?
-- rework init sequence
 - ease reuse of same memory for multiple slices
 
 - proper vout filter support, with a display() callback?
