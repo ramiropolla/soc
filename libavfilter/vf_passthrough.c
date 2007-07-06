@@ -24,12 +24,9 @@
 
 #include "avfilter.h"
 
-static int set_video_props(AVFilterLink *link)
+static int *query_formats(AVFilterLink *link)
 {
-    link->w      = link->src->inputs[0]->w;
-    link->h      = link->src->inputs[0]->h;
-    link->format = link->src->inputs[0]->format;
-    return 0;
+    return avfilter_make_format_list(1, PIX_FMT_RGB24);
 }
 
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
@@ -61,12 +58,12 @@ AVFilter vf_passthrough =
                                     .type            = AV_PAD_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
+                                    .query_formats   = query_formats,
                                     .end_frame       = end_frame, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
-                                    .request_frame   = request_frame,
-                                    .set_video_props = set_video_props},
+                                    .request_frame   = request_frame, },
                                   { .name = NULL}},
 };
 
