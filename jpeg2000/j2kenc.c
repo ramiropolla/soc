@@ -30,14 +30,28 @@
 #include "j2k.h"
 #include "common.h"
 
+#define NMSEDEC_BITS 7
+#define NMSEDEC_FRACBITS (NMSEDEC_BITS-1)
+
+static int lut_nmsedec_ref[1<<NMSEDEC_BITS],
+    lut_nmsedec_ref0[1<<NMSEDEC_BITS],
+    lut_nmsedec_sig[1<<NMSEDEC_BITS],
+    lut_nmsedec_sig0[1<<NMSEDEC_BITS];
+
 // TODO: doxygen-compatible comments
 
 typedef struct {
-    int length;
+    uint16_t rate;
+    double disto;
+} J2kPass;
+
+typedef struct {
     int npassess;
+    int ninclpassess; // number of passess included in codestream
     int nonzerobits;
     int zero;
     uint8_t data[8192];
+    J2kPass passess[30];
 } J2kCblk; // code block
 
 typedef struct J2kTgtNode {
@@ -73,6 +87,9 @@ typedef struct {
 
 typedef struct { // flatten with context
    J2kComponent *comp;
+   double distortion;
+   double mindr; // minimum dist/rate value
+   double maxdr;
 } J2kTile;
 
 typedef struct {
@@ -88,6 +105,7 @@ typedef struct {
     int xcb, ycb; // exponent of the code block size
     int XTsiz, YTsiz; // tile size
     int numXtiles, numYtiles;
+    int maxtilelen;
 
     int nguardbits;
 
@@ -428,6 +446,10 @@ static int init_tiles(J2kEncoderContext *s)
         int p = tno % s->numXtiles;
         int q = tno / s->numXtiles;
 
+        tile->distortion = 0.0;
+        tile->mindr = 1e10;
+        tile->maxdr = 0.0;
+
         tile->comp = av_malloc(s->ncomponents * sizeof(J2kComponent));
         if (tile->comp == NULL)
             return -1;
@@ -576,6 +598,26 @@ static int init_tiles(J2kEncoderContext *s)
         }
     }
     return 0;
+}
+
+void init_luts()
+{
+    int i;
+    double u, v, t, pfr;
+
+    pfr = pow(2, NMSEDEC_FRACBITS);
+    for (i = 0; i < (1 << NMSEDEC_BITS); i++){
+        t = i / pfr;
+        u = t;
+        v = t - 1.5;
+        lut_nmsedec_sig[i]  = FFMAX((int) (floor((u*u - v*v) * pfr + 0.5) / pfr * 8192.0), 0);
+        lut_nmsedec_sig0[i] = FFMAX((int) (floor((u*u) * pfr + 0.5) / pfr * 8192.0), 0);
+
+        u = t - 1.0;
+        v = t - ((i & (1<<(NMSEDEC_BITS-1))) ? 1.5 : 0.5);
+        lut_nmsedec_ref[i]  = FFMAX((int) (floor((u*u - v*v) * pfr + 0.5) / pfr * 8192.0), 0);
+        lut_nmsedec_ref0[i] = FFMAX((int) (floor((u*u) * pfr + 0.5) / pfr * 8192.0), 0);
+    }
 }
 
 /* discrete wavelet transform routines */
@@ -759,10 +801,35 @@ static void set_significant(J2kT1Context *t1, int x, int y)
     t1->flags[y-1][x-1] |= J2K_T1_SIG_SE;
 }
 
-
-static void encode_sigpass(J2kT1Context *t1, int width, int height, int mask, int bandno)
+static int getnmsedec_sig(int x, int bpno)
 {
-    int i, j, k;
+    if (bpno > NMSEDEC_FRACBITS)
+        return lut_nmsedec_sig[(x >> (bpno - NMSEDEC_FRACBITS)) & ((1 << NMSEDEC_BITS) - 1)];
+    return lut_nmsedec_sig0[x & ((1 << NMSEDEC_BITS) - 1)];
+}
+
+static int getnmsedec_ref(int x, int bpno)
+{
+    if (bpno > NMSEDEC_FRACBITS)
+        return lut_nmsedec_ref[(x >> (bpno - NMSEDEC_FRACBITS)) & ((1 << NMSEDEC_BITS) - 1)];
+    return lut_nmsedec_ref0[x & ((1 << NMSEDEC_BITS) - 1)];
+}
+
+static double getwmsedec(int nmsedec, int bandpos, int lev, int bpno)
+{
+   static const double dwt_norms[4][10] = {
+    {1.000, 1.500, 2.750, 5.375, 10.68, 21.34, 42.67, 85.33, 170.7, 341.3},
+    {1.038, 1.592, 2.919, 5.703, 11.33, 22.64, 45.25, 90.48, 180.9},
+    {1.038, 1.592, 2.919, 5.703, 11.33, 22.64, 45.25, 90.48, 180.9},
+    {.7186, .9218, 1.586, 3.043, 6.019, 12.01, 24.00, 47.97, 95.93}};
+
+    double t = dwt_norms[bandpos][lev] * (1 << bpno);
+    return t * t * nmsedec / 8192.0;
+}
+
+static void encode_sigpass(J2kT1Context *t1, int width, int height, int bandno, int *nmsedec, int bpno)
+{
+    int i, j, k, mask = 1 << (bpno + NMSEDEC_FRACBITS);
     for (i = 0; i < height; i += 4)
         for (j = 0; j < width; j++)
             for (k = i; k < height && k < i+4; k++){
@@ -774,6 +841,7 @@ static void encode_sigpass(J2kT1Context *t1, int width, int height, int mask, in
                         int xorbit;
                         int ctxno = getsgnctxno(t1->flags[k+1][j+1], &xorbit);
                         ff_aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0 ? 1:0) ^ xorbit);
+                        *nmsedec += getnmsedec_sig(abs(t1->data[k][j]), bpno + NMSEDEC_FRACBITS);
                         set_significant(t1, j, k);
                     }
                     t1->flags[k+1][j+1] |= J2K_T1_VIS;
@@ -781,22 +849,23 @@ static void encode_sigpass(J2kT1Context *t1, int width, int height, int mask, in
             }
 }
 
-static void encode_refpass(J2kT1Context *t1, int width, int height, int mask)
+static void encode_refpass(J2kT1Context *t1, int width, int height, int *nmsedec, int bpno)
 {
-    int i, j, k;
+    int i, j, k, mask = 1 << (bpno + NMSEDEC_FRACBITS);
     for (i = 0; i < height; i += 4)
         for (j = 0; j < width; j++)
             for (k = i; k < height && k < i+4; k++)
                 if ((t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS)) == J2K_T1_SIG){
                     int ctxno = getrefctxno(t1->flags[k+1][j+1]);
+                    *nmsedec += getnmsedec_ref(abs(t1->data[k][j]), bpno + NMSEDEC_FRACBITS);
                     ff_aec_encode(&t1->aec, ctxno, abs(t1->data[k][j]) & mask ? 1:0);
                     t1->flags[k+1][j+1] |= J2K_T1_REF;
                 }
 }
 
-static void encode_clnpass(J2kT1Context *t1, int width, int height, int mask, int bandno)
+static void encode_clnpass(J2kT1Context *t1, int width, int height, int bandno, int *nmsedec, int bpno)
 {
-    int i, j, k;
+    int i, j, k, mask = 1 << (bpno + NMSEDEC_FRACBITS);
     for (i = 0; i < height; i += 4)
         for (j = 0; j < width; j++){
             if (i + 3 < height && !(
@@ -823,6 +892,7 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int mask, in
                         if (abs(t1->data[k][j]) & mask){ // newly significant
                             int xorbit;
                             int ctxno = getsgnctxno(t1->flags[k+1][j+1], &xorbit);
+                            *nmsedec += getnmsedec_sig(abs(t1->data[k][j]), bpno + NMSEDEC_FRACBITS);
                             ff_aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0 ? 1:0) ^ xorbit);
                             set_significant(t1, j, k);
                         }
@@ -838,6 +908,7 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int mask, in
                         if (abs(t1->data[k][j]) & mask){ // newly significant
                             int xorbit;
                             int ctxno = getsgnctxno(t1->flags[k+1][j+1], &xorbit);
+                            *nmsedec += getnmsedec_sig(abs(t1->data[k][j]), bpno + NMSEDEC_FRACBITS);
                             ff_aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0 ? 1:0) ^ xorbit);
                             set_significant(t1, j, k);
                         }
@@ -848,9 +919,11 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int mask, in
         }
 }
 
-static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, int width, int height, int bandno)
+static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J2kTile *tile,
+                        int width, int height, int bandpos, int lev)
 {
-    int pass_t = 2, passno, i, j, mask, max=0;
+    int pass_t = 2, passno, i, j, max=0, nmsedec, bpno;
+    double wmsedec = 0;
 
     for (i = 0; i < height+2; i++)
         bzero(t1->flags[i], (width+2)*sizeof(int));
@@ -862,33 +935,55 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, i
 
     if (max == 0){
         cblk->nonzerobits = 0;
-        mask = 0;
+        bpno = 0;
     }
     else{
-        cblk->nonzerobits = av_log2(max) + 1;
-        mask = 1 << (cblk->nonzerobits - 1);
+        cblk->nonzerobits = av_log2(max) + 1 - NMSEDEC_FRACBITS;
+        bpno = cblk->nonzerobits - 1;
     }
 
     ff_aec_initenc(&t1->aec, cblk->data);
 
-    for (passno = 0; mask != 0; passno++){
+    for (passno = 0; bpno >= 0; passno++){
+        double dr;
+        int drate;
+
+        nmsedec=0;
         switch(pass_t){
-            case 0: encode_sigpass(t1, width, height, mask, bandno);
+            case 0: encode_sigpass(t1, width, height, bandpos, &nmsedec, bpno);
                     break;
-            case 1: encode_refpass(t1, width, height, mask);
+            case 1: encode_refpass(t1, width, height, &nmsedec, bpno);
                     break;
-            case 2: encode_clnpass(t1, width, height, mask, bandno);
+            case 2: encode_clnpass(t1, width, height, bandpos, &nmsedec, bpno);
                     break;
         }
+
+        wmsedec += getwmsedec(nmsedec, bandpos, lev, bpno);
+        cblk->passess[passno].rate = 3 + ff_aec_length(&t1->aec);
+        cblk->passess[passno].disto = wmsedec;
+
+        drate = cblk->passess[passno].rate - (passno > 0 ? cblk->passess[passno-1].rate : 0);
+        if (drate > 0){
+            dr = (cblk->passess[passno].disto
+               - (passno > 0 ? cblk->passess[passno-1].disto : 0.0)) / drate;
+
+            if (dr < tile->mindr)
+                tile->mindr = dr;
+            if (dr > tile->maxdr)
+                tile->maxdr = dr;
+        }
+
         if (++pass_t == 3){
             pass_t = 0;
-            mask = mask >> 1;
+            bpno--;
         }
     }
     cblk->npassess = passno;
+    cblk->ninclpassess = passno;
 
     // TODO: optional flush on each pass
-    cblk->length = ff_aec_flush(&t1->aec);
+    cblk->passess[passno-1].rate = ff_aec_flush(&t1->aec);
+    tile->distortion += wmsedec;
 }
 
 /* tier-2 routines: */
@@ -946,7 +1041,7 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
 
         for (pos=0, yi = band->prec[precno].yi0; yi < band->prec[precno].yi1; yi++){
             for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++, pos++){
-                cblkincl[pos].val = band->cblk[yi * cblknw + xi].npassess == 0 ? 1:0;
+                cblkincl[pos].val = band->cblk[yi * cblknw + xi].ninclpassess == 0 ? 1:0;
                 tag_tree_update(cblkincl + pos);
                 zerobits[pos].val = s->bbps[compno][rlevelno][bandno] - band->cblk[yi * cblknw + xi].nonzerobits;
                 tag_tree_update(zerobits + pos);
@@ -955,19 +1050,20 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
 
         for (pos=0, yi = band->prec[precno].yi0; yi < band->prec[precno].yi1; yi++){
             for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++, pos++){
-                int pad = 0, llen;
+                int pad = 0, llen, length;
                 J2kCblk *cblk = band->cblk + yi * cblknw + xi;
 
                 // inclusion information
                 tag_tree_code(s, cblkincl + pos, 1);
-                if (!cblk->npassess)
+                if (!cblk->ninclpassess)
                     continue;
                 // zerobits information
                 tag_tree_code(s, zerobits + pos, 100);
                 // number of passess
-                putnumpassess(s, cblk->npassess);
+                putnumpassess(s, cblk->ninclpassess);
 
-                llen = av_log2(cblk->length) - av_log2(cblk->npassess) - 2;
+                length = cblk->passess[cblk->ninclpassess-1].rate;
+                llen = av_log2(length) - av_log2(cblk->ninclpassess) - 2;
                 if (llen < 0){
                     pad = -llen;
                     llen = 0;
@@ -975,7 +1071,7 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
                 // length of code block
                 put_bits(s, 1, llen);
                 put_bits(s, 0, 1);
-                put_num(s, cblk->length, av_log2(cblk->length)+1+pad);
+                put_num(s, length, av_log2(length)+1+pad);
             }
         }
 
@@ -991,14 +1087,99 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
             int xi;
             for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++){
                 J2kCblk *cblk = band->cblk + yi * cblknw + xi;
-                if (cblk->npassess)
-                    bytestream_put_buffer(&s->buf, cblk->data, cblk->length);
+                if (cblk->ninclpassess)
+                    bytestream_put_buffer(&s->buf, cblk->data, cblk->passess[cblk->ninclpassess-1].rate);
             }
         }
     }
 }
 
-static void encode_tile(J2kEncoderContext *s, int tileno)
+static void encode_packets(J2kEncoderContext *s, J2kTile *tile, int tileno)
+{
+    int compno, reslevelno;
+
+    av_log(s->avctx, AV_LOG_DEBUG, "tier2\n");
+    // lay-rlevel-comp-pos progression
+    for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
+        for (compno = 0; compno < s->ncomponents; compno++){
+            int precno;
+            J2kResLevel *reslevel = s->tile[tileno].comp[compno].reslevel + reslevelno;
+            for (precno = 0; precno < reslevel->nprecw * reslevel->nprech; precno++){
+                encode_packet(s, reslevel, precno, compno, reslevelno);
+            }
+        }
+    }
+    av_log(s->avctx, AV_LOG_DEBUG, "after tier2\n");
+}
+
+static int getcut(J2kCblk *cblk, double threshold)
+{
+    int passno, res = 0;
+    for (passno = 0; passno < cblk->npassess; passno++){
+        int dr;
+        double dd;
+
+        dr = cblk->passess[passno].rate
+           - (res ? cblk->passess[res-1].rate:0);
+        dd = cblk->passess[passno].disto
+           - (res ? cblk->passess[res-1].disto:0.0);
+
+        if (dd >= dr * threshold)
+            res = passno+1;
+    }
+    return res;
+}
+
+static void truncpassess(J2kEncoderContext *s, J2kTile *tile, double threshold)
+{
+    int compno, reslevelno, bandno, cblkno;
+    for (compno = 0; compno < s->ncomponents; compno++){
+        J2kComponent *comp = tile->comp + compno;
+
+        for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
+            J2kResLevel *reslevel = comp->reslevel + reslevelno;
+
+            for (bandno = 0; bandno < reslevel->nbands ; bandno++){
+                J2kBand *band = reslevel->band + bandno;
+
+                for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
+                    J2kCblk *cblk = band->cblk + cblkno;
+
+                    cblk->ninclpassess = getcut(cblk, threshold);
+                }
+            }
+        }
+    }
+}
+
+static void rate_control(J2kEncoderContext *s, J2kTile *tile, int tileno)
+{
+    int i, ok;
+    uint8_t *oldbuf = s->buf;
+    double lo = tile->mindr, hi = tile->maxdr, resthres = lo;
+    for (i = 0; (i < 32); i++){
+        double thres = (lo+hi)/2;
+
+        ok = 0;
+        s->buf = oldbuf;
+        truncpassess(s, tile, thres);
+        encode_packets(s, tile, tileno);
+
+        if (s->buf - oldbuf > s->maxtilelen)
+            lo = thres;
+        else{
+            resthres = hi = thres;
+            ok=1;
+        }
+    }
+    if (!ok){
+        s->buf = oldbuf;
+        truncpassess(s, tile, resthres);
+        encode_packets(s, tile, tileno);
+    }
+}
+
+static void encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
 {
     int compno, reslevelno, bandno;
     J2kT1Context t1;
@@ -1014,13 +1195,15 @@ static void encode_tile(J2kEncoderContext *s, int tileno)
 
             for (bandno = 0; bandno < reslevel->nbands ; bandno++){
                 J2kBand *band = reslevel->band + bandno;
-                int cblkx, cblky, cblkno=0, xx0, x0, xx1, y0, yy0, yy1;
+                int cblkx, cblky, cblkno=0, xx0, x0, xx1, y0, yy0, yy1, bandpos;
                 yy0 = bandno == 0 ? 0 : comp->reslevel[reslevelno-1].y1 - comp->reslevel[reslevelno-1].y0;
                 y0 = yy0;
                 yy1 = FFMIN(ceildiv(band->y0 + 1, band->cblkh) * band->cblkh, band->y1) - band->y0 + yy0;
 
                 if (band->x0 == band->x1 || band->y0 == band->y1)
                     continue;
+
+                bandpos = bandno + (reslevelno > 0 ? 1:0);
 
                 for (cblky = 0; cblky < band->cblkny; cblky++){
                     if (reslevelno == 0 || bandno == 1)
@@ -1035,9 +1218,10 @@ static void encode_tile(J2kEncoderContext *s, int tileno)
                         for (y = yy0; y < yy1; y++){
                             int *ptr = t1.data[y-yy0];
                             for (x = xx0; x < xx1; x++)
-                                *ptr++ = comp->data[(comp->x1 - comp->x0) * y + x];
+                                *ptr++ = comp->data[(comp->x1 - comp->x0) * y + x] << NMSEDEC_FRACBITS;
                         }
-                        encode_cblk(s, &t1, band->cblk + cblkno, xx1 - xx0, yy1 - yy0, bandno + (reslevelno > 0?1:0));
+                        encode_cblk(s, &t1, band->cblk + cblkno, tile, xx1 - xx0, yy1 - yy0,
+                                    bandpos, s->nreslevels - reslevelno - 1);
                         xx0 = xx1;
                         xx1 = FFMIN(xx1 + band->cblkw, band->x1 - band->x0 + x0);
                     }
@@ -1049,18 +1233,10 @@ static void encode_tile(J2kEncoderContext *s, int tileno)
         av_free(comp->data);
         av_log(s->avctx, AV_LOG_DEBUG, "after tier1\n");
     }
-    av_log(s->avctx, AV_LOG_DEBUG, "tier2\n");
-    // lay-rlevel-comp-pos progression
-    for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
-        for (compno = 0; compno < s->ncomponents; compno++){
-            int precno;
-            J2kResLevel *reslevel = s->tile[tileno].comp[compno].reslevel + reslevelno;
-            for (precno = 0; precno < reslevel->nprecw * reslevel->nprech; precno++){
-                encode_packet(s, reslevel, precno, compno, reslevelno);
-            }
-        }
-    }
-    av_log(s->avctx, AV_LOG_DEBUG, "after tier2\n");
+
+    av_log(s->avctx, AV_LOG_DEBUG, "rate control\n");
+    rate_control(s, tile, tileno);
+    av_log(s->avctx, AV_LOG_DEBUG, "after rate control\n");
 }
 
 void cleanup(J2kEncoderContext *s)
@@ -1113,6 +1289,7 @@ static int encode_frame(AVCodecContext *avctx,
     s->Ysiz = avctx->height;
 
     s->nguardbits = 1;
+    s->maxtilelen = 5000;
 
     // TODO: other pixel formats
     if (avctx->pix_fmt == PIX_FMT_RGB24){
@@ -1126,6 +1303,7 @@ static int encode_frame(AVCodecContext *avctx,
 
     av_log(s->avctx, AV_LOG_DEBUG, "init\n");
     init_tiles(s);
+    init_luts();
     av_log(s->avctx, AV_LOG_DEBUG, "after init\n");
 
     put_soc(s);
@@ -1137,7 +1315,7 @@ static int encode_frame(AVCodecContext *avctx,
         uint8_t *psotptr;
         psotptr = put_sot(s, tileno);
         put_marker(s, J2K_SOD);
-        encode_tile(s, tileno);
+        encode_tile(s, s->tile + tileno, tileno);
         bytestream_put_be32(&psotptr, s->buf - psotptr + 6);
     }
     put_marker(s, J2K_EOC);
