@@ -376,9 +376,7 @@ static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *r
  */
 
 static inline int decode210(GetBitContext *gb){
-    int n;
-    n = get_bits1(gb);
-    if (n == 1)
+    if (get_bits1(gb))
         return 0;
     else
         return 2 - get_bits1(gb);
