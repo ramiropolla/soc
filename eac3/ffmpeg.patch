@@ -1,0 +1,167 @@
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(wersja 9211)
++++ libavcodec/Makefile	(kopia robocza)
+@@ -66,6 +66,7 @@
+ OBJS-$(CONFIG_DVVIDEO_DECODER)         += dv.o
+ OBJS-$(CONFIG_DVVIDEO_ENCODER)         += dv.o
+ OBJS-$(CONFIG_DXA_DECODER)             += dxa.o
++OBJS-$(CONFIG_EAC3_DECODER)            += eac3dec.o eac3_parser.o
+ OBJS-$(CONFIG_EIGHTBPS_DECODER)        += 8bps.o
+ OBJS-$(CONFIG_FFV1_DECODER)            += ffv1.o golomb.o
+ OBJS-$(CONFIG_FFV1_ENCODER)            += ffv1.o
+Index: libavcodec/aac_ac3_parser.c
+===================================================================
+--- libavcodec/aac_ac3_parser.c	(wersja 9211)
++++ libavcodec/aac_ac3_parser.c	(kopia robocza)
+@@ -48,7 +48,7 @@
+             s->inbuf_ptr += len;
+             buf_size -= len;
+             if ((s->inbuf_ptr - s->inbuf) == s->header_size) {
+-                len = s->sync(s->inbuf, &channels, &sample_rate, &bit_rate,
++                len = s->sync(avctx, s->inbuf, &channels, &sample_rate, &bit_rate,
+                               &samples);
+                 if (len == 0) {
+                     /* no sync found : move by one byte (inefficient, but simple!) */
+Index: libavcodec/aac_ac3_parser.h
+===================================================================
+--- libavcodec/aac_ac3_parser.h	(wersja 9211)
++++ libavcodec/aac_ac3_parser.h	(kopia robocza)
+@@ -27,7 +27,7 @@
+     uint8_t *inbuf_ptr;
+     int frame_size;
+     int header_size;
+-    int (*sync)(const uint8_t *buf, int *channels, int *sample_rate,
++    int (*sync)(AVCodecContext *avctx, const uint8_t *buf, int *channels, int *sample_rate,
+                 int *bit_rate, int *samples);
+     uint8_t inbuf[8192]; /* input buffer */
+ } AACAC3ParseContext;
+Index: libavcodec/aac_parser.c
+===================================================================
+--- libavcodec/aac_parser.c	(wersja 9211)
++++ libavcodec/aac_parser.c	(kopia robocza)
+@@ -38,7 +38,7 @@
+ };
+ 
+ 
+-static int aac_sync(const uint8_t *buf, int *channels, int *sample_rate,
++static int aac_sync(AVCodecContext *avctx, const uint8_t *buf, int *channels, int *sample_rate,
+                     int *bit_rate, int *samples)
+ {
+     GetBitContext bits;
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c	(wersja 9211)
++++ libavcodec/allcodecs.c	(kopia robocza)
+@@ -171,6 +171,7 @@
+     REGISTER_DECODER(COOK, cook);
+     REGISTER_DECODER(DCA, dca);
+     REGISTER_DECODER(DSICINAUDIO, dsicinaudio);
++    REGISTER_DECODER(EAC3, eac3);
+     REGISTER_ENCDEC (FLAC, flac);
+     REGISTER_DECODER(IMC, imc);
+     REGISTER_ENCDEC (LIBAMR_NB, libamr_nb);
+@@ -260,6 +261,7 @@
+     /* parsers */
+     REGISTER_PARSER (AAC, aac);
+     REGISTER_PARSER (AC3, ac3);
++    REGISTER_PARSER (EAC3, eac3);
+     REGISTER_PARSER (CAVSVIDEO, cavsvideo);
+     REGISTER_PARSER (DCA, dca);
+     REGISTER_PARSER (DVBSUB, dvbsub);
+Index: libavcodec/avcodec.h
+===================================================================
+--- libavcodec/avcodec.h	(wersja 9211)
++++ libavcodec/avcodec.h	(kopia robocza)
+@@ -222,6 +222,7 @@
+     CODEC_ID_MPEG4AAC,
+ #endif
+     CODEC_ID_AC3,
++    CODEC_ID_EAC3,
+     CODEC_ID_DTS,
+     CODEC_ID_VORBIS,
+     CODEC_ID_DVAUDIO,
+@@ -2261,6 +2262,7 @@
+ extern AVCodec dsicinvideo_decoder;
+ extern AVCodec dvvideo_decoder;
+ extern AVCodec dxa_decoder;
++extern AVCodec eac3_decoder;
+ extern AVCodec eightbps_decoder;
+ extern AVCodec ffv1_decoder;
+ extern AVCodec ffvhuff_decoder;
+@@ -3021,6 +3023,7 @@
+ extern AVCodecParser dca_parser;
+ extern AVCodecParser dvbsub_parser;
+ extern AVCodecParser dvdsub_parser;
++extern AVCodecParser eac3_parser;
+ extern AVCodecParser h261_parser;
+ extern AVCodecParser h263_parser;
+ extern AVCodecParser h264_parser;
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(wersja 9211)
++++ libavcodec/Makefile	(kopia robocza)
+@@ -66,6 +66,7 @@
+ OBJS-$(CONFIG_DVVIDEO_DECODER)         += dv.o
+ OBJS-$(CONFIG_DVVIDEO_ENCODER)         += dv.o
+ OBJS-$(CONFIG_DXA_DECODER)             += dxa.o
++OBJS-$(CONFIG_EAC3_DECODER)            += eac3dec.o eac3_parser.o
+ OBJS-$(CONFIG_EIGHTBPS_DECODER)        += 8bps.o
+ OBJS-$(CONFIG_FFV1_DECODER)            += ffv1.o golomb.o
+ OBJS-$(CONFIG_FFV1_ENCODER)            += ffv1.o
+Index: libavformat/allformats.c
+===================================================================
+--- libavformat/allformats.c	(wersja 9211)
++++ libavformat/allformats.c	(kopia robocza)
+@@ -72,6 +72,7 @@
+     REGISTER_DEMUXER (DV1394, dv1394);
+     REGISTER_DEMUXER (DXA, dxa);
+     REGISTER_DEMUXER (EA, ea);
++    REGISTER_DEMUXER (AC3, ac3);
+     REGISTER_MUXDEMUX(FFM, ffm);
+     REGISTER_MUXDEMUX(FLAC, flac);
+     REGISTER_DEMUXER (FLIC, flic);
+Index: libavformat/allformats.h
+===================================================================
+--- libavformat/allformats.h	(wersja 9211)
++++ libavformat/allformats.h	(kopia robocza)
+@@ -43,6 +43,7 @@
+ extern AVInputFormat dv_demuxer;
+ extern AVInputFormat dxa_demuxer;
+ extern AVInputFormat ea_demuxer;
++extern AVInputFormat eac3_demuxer;
+ extern AVInputFormat ffm_demuxer;
+ extern AVInputFormat flac_demuxer;
+ extern AVInputFormat flic_demuxer;
+Index: libavformat/raw.c
+===================================================================
+--- libavformat/raw.c	(wersja 9211)
++++ libavformat/raw.c	(kopia robocza)
+@@ -440,6 +440,7 @@
+         if(buf == p->buf)
+             first_frames = frames;
+     }
++    av_log(NULL, AV_LOG_INFO, "first_frames = %i max_frames = %i\n", first_frames, max_frames);
+     if   (first_frames>=3) return AVPROBE_SCORE_MAX * 3 / 4;
+     else if(max_frames>=3) return AVPROBE_SCORE_MAX / 2;
+     else if(max_frames>=1) return 1;
+@@ -499,6 +500,19 @@
+     .extensions = "ac3",
+ };
+ #endif
++#ifdef CONFIG_EAC3_DEMUXER
++AVInputFormat eac3_demuxer = {
++    "eac3",
++    "raw ac3",
++    0,
++    ac3_probe,
++    ac3_read_header,
++    raw_read_partial_packet,
++    raw_read_close,
++    .flags= AVFMT_GENERIC_INDEX,
++    .extensions = "ac3",
++};
++#endif
+ 
+ #ifdef CONFIG_MUXERS
+ AVOutputFormat ac3_muxer = {
