@@ -71,6 +71,14 @@ static int qcelp_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
+static int qcelp_decode_close(AVCodecContext *avctx)
+{
+    QCELPContext *q = avctx->priv_data;
+
+    av_free(q->frame);
+
+    return 0;
+}
 
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            int *data_size, uint8_t *buf, int buf_size)
