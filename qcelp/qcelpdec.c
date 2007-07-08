@@ -80,6 +80,26 @@ static int qcelp_decode_close(AVCodecContext *avctx)
     return 0;
 }
 
+/**
+ * Decodes the five |R2 LSPVi vectors to get the 10
+ * quantized LSP frequencies from any packet rate but 1/8
+ *
+ * For details see TIA/EIA/IS-733 2.4.3.2.6.2-2
+ */
+void qcelp_lspv2lspf(const uint8_t *lspv, float *lspf)
+{
+    lspf[0]=        qcelp_lspvq1[lspv[0]].x;
+    lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y;
+    lspf[2]=lspf[1]+qcelp_lspvq2[lspv[1]].x;
+    lspf[3]=lspf[2]+qcelp_lspvq2[lspv[1]].y;
+    lspf[4]=lspf[3]+qcelp_lspvq3[lspv[2]].x;
+    lspf[5]=lspf[4]+qcelp_lspvq3[lspv[2]].y;
+    lspf[6]=lspf[5]+qcelp_lspvq4[lspv[3]].x;
+    lspf[7]=lspf[6]+qcelp_lspvq4[lspv[3]].y;
+    lspf[8]=lspf[7]+qcelp_lspvq5[lspv[4]].x;
+    lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y;
+}
+
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            int *data_size, uint8_t *buf, int buf_size)
 {
@@ -90,6 +110,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     int      n;
     uint16_t first16 = 0; /*!< needed for rate 1/8 peculiarities */
     int      is_ifq = 0;
+    float    qtzd_lspf[10];
 
     init_get_bits(&q->gb, buf, buf_size*8);
 
@@ -162,16 +183,39 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     if(q->frame->rate == RATE_OCTAVE && first16==0xFFFF)
         is_ifq=1;
 
-    /* check for badly received packets */
+    /**
+     * Check for badly received packets
+     * TIA/EIA/IS-733 2.4.8.7.3
+     */
 
     if(q->frame->rate != RATE_OCTAVE)
     {
+        qcelp_lspv2lspf(q->frame->data + QCELP_LSPV0_POS, qtzd_lspf);
+
         /* check for outbound LSP freqs and codebook gain params */
         if(q->frame->rate != RATE_QUARTER)
         {
-               /* magic here */
-        }
+            if(qtzd_lspf[9] <= .66 || qtzd_lspf[9] >= .985)
+                is_ifq=1; /* FIXME 'erase packet'==ifq? */
 
+            for(n=4; !is_ifq && n<10; n++)
+            {
+                if(FFABS(qtzd_lspf[n]-qtzd_lspf[n-4]) < .0931)
+                    is_ifq=1;
+            }
+        }else
+        {
+            if(qtzd_lspf[9] <= .70 || qtzd_lspf[9] >=  .97)
+                is_ifq=1;
+
+            for(n=3; !is_ifq && n<10; n++)
+            {
+                if(FFABS(qtzd_lspf[n]-qtzd_lspf[n-2]) < .08)
+                    is_ifq=1;
+            }
+            /* codebook gain sanity check */
+
+        }
     }
 
      /*
