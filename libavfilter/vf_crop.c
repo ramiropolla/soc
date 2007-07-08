@@ -87,14 +87,15 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     ref2->data[0] += crop->cx * 3;
 
     av_log(link->dst, AV_LOG_INFO, "start_frame()\n");
-    avfilter_default_start_frame(link, picref);
+    link->cur_pic = picref;
 
     avfilter_start_frame(link->dst->outputs[0], ref2);
 }
 
 static void end_frame(AVFilterLink *link)
 {
-    avfilter_default_end_frame(link);
+    avfilter_unref_pic(link->cur_pic);
+    link->cur_pic = NULL;
 
     av_log(link->dst, AV_LOG_INFO, "end_frame()\n");
     avfilter_end_frame(link->dst->outputs[0]);

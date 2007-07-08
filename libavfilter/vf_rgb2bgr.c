@@ -24,10 +24,6 @@
 
 #include "avfilter.h"
 
-typedef struct {
-    AVFilterPicRef *out;
-} RGBContext;
-
 static int *query_in_formats(AVFilterLink *link)
 {
     return avfilter_make_format_list(2, PIX_FMT_RGB24, PIX_FMT_BGR24);
@@ -45,35 +41,15 @@ static int *query_out_formats(AVFilterLink *link)
     return avfilter_make_format_list(1, format);
 }
 
-static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
-{
-    RGBContext *rgb = link->dst->priv;
-
-    rgb->out = avfilter_get_video_buffer(link->dst->outputs[0], AV_PERM_WRITE);
-    avfilter_default_start_frame(link, picref);
-    avfilter_start_frame(link->dst->outputs[0], avfilter_ref_pic(rgb->out, ~0));
-}
-
-static void end_frame(AVFilterLink *link)
-{
-    RGBContext *rgb = link->dst->priv;
-
-    avfilter_unref_pic(rgb->out);
-    rgb->out = NULL;
-
-    avfilter_default_end_frame(link);
-    avfilter_end_frame(link->dst->outputs[0]);
-}
-
 static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
 {
-    RGBContext *rgb = link->dst->priv;
+    AVFilterPicRef *outpic = link->dst->outputs[0]->outpic;
     uint8_t *out[4];
     uint8_t *row[2], *cur[2];
     int i, j;
 
     row[0] = data[0];
-    row[1] = out[0] = &rgb->out->data[0][y * rgb->out->linesize[0]];
+    row[1] = out[0] = &outpic->data[0][y * outpic->linesize[0]];
     out[1] = out[2] = out[3] = 0;
     for(i = 0; i < h; i ++) {
         cur[0] = row[0];
@@ -87,7 +63,7 @@ static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
             cur[1] += 3;
         }
         row[0] += link->cur_pic->linesize[0];
-        row[1] += rgb->out->     linesize[0];
+        row[1] += outpic->       linesize[0];
     }
     avfilter_draw_slice(link->dst->outputs[0], out, y, h);
 }
@@ -104,10 +80,8 @@ AVFilter vf_rgb2bgr =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
-                                    .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
-                                    .query_formats   = query_in_formats,
-                                    .end_frame       = end_frame, },
+                                    .query_formats   = query_in_formats, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
