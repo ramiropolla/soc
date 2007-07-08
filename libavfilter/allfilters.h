@@ -22,6 +22,7 @@
 #include "avfilter.h"
 
 extern AVFilter vsrc_dummy;
+extern AVFilter vsrc_ppm;
 extern AVFilter vf_crop;
 extern AVFilter vf_passthrough;
 extern AVFilter vf_slicify;

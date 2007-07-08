@@ -4,6 +4,7 @@ LIBS = ../libavcodec/libavcodec.a ../libavutil/libavutil.a -lm -lSDL
 
 OBJECTS = avfilter.o          \
           vsrc_dummy.o        \
+		  vsrc_ppm.o          \
 		  vo_sdl.o            \
 		  vf_crop.o           \
 		  vf_passthrough.o    \
