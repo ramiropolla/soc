@@ -77,7 +77,7 @@ int eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s){
 
     GET_BITS(s->bsid, gbc, 5);
     if(s->bsid < 11 || s->bsid > 16){
-        av_log(s, AV_LOG_ERROR, "bsid powinien byc w przedziale 11-16");
+        av_log(s, AV_LOG_ERROR, "bsid should be between 11 and 16");
         return -1;
     }
 
@@ -503,7 +503,7 @@ int eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         GET_BITS(s->spxstre, gbc, 1);
     }
     if(!blk && !s->spxstre){
-        av_log(s, AV_LOG_ERROR, "brak Spectral extension strategy w pierwszym bloku");
+        av_log(s, AV_LOG_ERROR, "no spectral extension strategy in first block");
         return -1;
     }
     if(s->spxstre)
@@ -858,7 +858,7 @@ int eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     for(ch = 1; ch <= s->nfchans; ch++)
     {
         if(!blk && s->chexpstr[blk][ch]==EXP_REUSE){
-            av_log(s, AV_LOG_ERROR,  "brak channel exponent strategy in first block");
+            av_log(s, AV_LOG_ERROR,  "no channel exponent strategy in first block");
             return -1;
         }
         if(s->chexpstr[blk][ch] != EXP_REUSE)
@@ -901,7 +901,7 @@ int eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     for(ch = 1; ch <= s->nfchans; ch++) /* exponents for full bandwidth channels */
     {
         if(!blk && !s->chexpstr[blk][ch] == EXP_REUSE){
-            av_log(s, AV_LOG_ERROR,  "brak channel exponent strategy in first block");
+            av_log(s, AV_LOG_ERROR,  "no channel exponent strategy in first block");
             return -1;
         }
         if(s->chexpstr[blk][ch] != EXP_REUSE)
