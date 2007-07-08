@@ -268,11 +268,21 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         }
     }
 
-     /*
-      * decode loop
-      *
-      */
+    /**
+     * decode loop
+     */
 
+    if(!is_ifq)
+    {
+
+    }else
+    {
+        /**
+         * Insufficient frame quality (erasure) decoding
+         */
+        q->ifq_count++;
+
+    }
 
     return 1;
 }
