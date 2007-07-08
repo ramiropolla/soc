@@ -86,18 +86,52 @@ static int qcelp_decode_close(AVCodecContext *avctx)
  *
  * For details see TIA/EIA/IS-733 2.4.3.2.6.2-2
  */
-void qcelp_lspv2lspf(const uint8_t *lspv, float *lspf)
+void qcelp_lspv2lspf(const uint8_t *lspv, float *lspf, qcelp_packet_rate rate)
 {
-    lspf[0]=        qcelp_lspvq1[lspv[0]].x;
-    lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y;
-    lspf[2]=lspf[1]+qcelp_lspvq2[lspv[1]].x;
-    lspf[3]=lspf[2]+qcelp_lspvq2[lspv[1]].y;
-    lspf[4]=lspf[3]+qcelp_lspvq3[lspv[2]].x;
-    lspf[5]=lspf[4]+qcelp_lspvq3[lspv[2]].y;
-    lspf[6]=lspf[5]+qcelp_lspvq4[lspv[3]].x;
-    lspf[7]=lspf[6]+qcelp_lspvq4[lspv[3]].y;
-    lspf[8]=lspf[7]+qcelp_lspvq5[lspv[4]].x;
-    lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y;
+    /* FIXME a loop is wanted here */
+    /* WIP implement rate 1/8 handling */
+    switch(rate)
+    {
+        case RATE_FULL:
+        case RATE_HALF:
+        case RATE_QUARTER:
+            lspf[0]=        qcelp_lspvq1[lspv[0]].x;
+            lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y;
+            lspf[2]=lspf[1]+qcelp_lspvq2[lspv[1]].x;
+            lspf[3]=lspf[2]+qcelp_lspvq2[lspv[1]].y;
+            lspf[4]=lspf[3]+qcelp_lspvq3[lspv[2]].x;
+            lspf[5]=lspf[4]+qcelp_lspvq3[lspv[2]].y;
+            lspf[6]=lspf[5]+qcelp_lspvq4[lspv[3]].x;
+            lspf[7]=lspf[6]+qcelp_lspvq4[lspv[3]].y;
+            lspf[8]=lspf[7]+qcelp_lspvq5[lspv[4]].x;
+            lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y;
+            break;
+        case RATE_OCTAVE:
+            break;
+    }
+}
+
+/**
+ * TIA/EIA/IS-733 2.4.6.2.2
+ */
+void qcelp_cbgain2g(const uint8_t *cbgain, int *g0, int *gs, int *g1, float *ga, qcelp_packet_rate rate)
+{
+    int i;
+    /* FIXME need better gX varnames */
+    /* WIP right now only decodes rate 1/4 */
+    switch(rate)
+    {
+        case RATE_QUARTER:
+            for(i=0; i<5; i++)
+                g0[i]=g1[i]=QCELP_CBGAIN2G0(cbgain[i]);
+                gs[i]=1;
+                ga[i]=qcelp_g12ga[g1[i]];
+            break;
+        case RATE_FULL:
+        case RATE_HALF:
+        case RATE_OCTAVE:
+            break;
+    }
 }
 
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
@@ -107,10 +141,10 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     const QCELPBitmap *order = NULL;
     int16_t  *outbuffer = data;
     int8_t   samples;
-    int      n;
+    int      n, is_ifq = 0;
     uint16_t first16 = 0; /*!< needed for rate 1/8 peculiarities */
-    int      is_ifq = 0;
-    float    qtzd_lspf[10];
+    float    qtzd_lspf[10], ga[16];
+    int      g0[16], gs[16], g1[16];
 
     init_get_bits(&q->gb, buf, buf_size*8);
 
@@ -184,13 +218,21 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         is_ifq=1;
 
     /**
+     * Preliminary decoding of frame's transmission codes
+     */
+
+    qcelp_lspv2lspf(q->frame->data + QCELP_LSPV0_POS, qtzd_lspf,
+                    q->frame->rate);
+    qcelp_cbgain2g (q->frame->data + QCELP_CBGAIN0_POS, g0, gs, g1, ga,
+                    q->frame->rate);
+
+    /**
      * Check for badly received packets
      * TIA/EIA/IS-733 2.4.8.7.3
      */
 
     if(q->frame->rate != RATE_OCTAVE)
     {
-        qcelp_lspv2lspf(q->frame->data + QCELP_LSPV0_POS, qtzd_lspf);
 
         /* check for outbound LSP freqs and codebook gain params */
         if(q->frame->rate != RATE_QUARTER)
@@ -214,6 +256,12 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
                     is_ifq=1;
             }
             /* codebook gain sanity check */
+            for(n=0; !is_ifq && n<4; n++)
+            {
+                if(FFABS(g0[n+1]-g0[n]) > 40) is_ifq=1;
+                /* FIXME: spec with typing errors here? */
+                if(n<3 && FFABS(g0[n+2] - 2*g0[n+1] + g0[n]) > 48) is_ifq=1;
+            }
 
         }
     }
