@@ -123,9 +123,11 @@ void qcelp_cbgain2g(const uint8_t *cbgain, int *g0, int *gs, int *g1, float *ga,
     {
         case RATE_QUARTER:
             for(i=0; i<5; i++)
+            {
                 g0[i]=g1[i]=QCELP_CBGAIN2G0(cbgain[i]);
                 gs[i]=1;
                 ga[i]=qcelp_g12ga[g1[i]];
+            }
             break;
         case RATE_FULL:
         case RATE_HALF:
