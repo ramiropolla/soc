@@ -48,7 +48,7 @@ static int init(AVFilterContext *ctx, const char *args)
 
 static int *query_in_formats(AVFilterLink *link)
 {
-    return avfilter_make_format_list(1, PIX_FMT_RGB24);
+    return avfilter_make_format_list(2, PIX_FMT_RGB24, PIX_FMT_BGR24);
 }
 
 static int config_input(AVFilterLink *link)
