@@ -129,12 +129,6 @@ static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
     avfilter_draw_slice(ctx->outputs[0], src, top - crop->cy, height);
 }
 
-/* XXX: maybe make the default implementation do this? */
-static void request_frame(AVFilterLink *link)
-{
-    avfilter_request_frame(link->src->inputs[0]);
-}
-
 AVFilter vf_crop =
 {
     .name      = "crop",
@@ -153,7 +147,6 @@ AVFilter vf_crop =
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
-                                    .request_frame   = request_frame,
                                     .config_props    = config_output, },
                                   { .name = NULL}},
 };

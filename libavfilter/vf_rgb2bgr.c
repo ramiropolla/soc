@@ -68,11 +68,6 @@ static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
     avfilter_draw_slice(link->dst->outputs[0], out, y, h);
 }
 
-static void request_frame(AVFilterLink *link)
-{
-    avfilter_request_frame(link->src->inputs[0]);
-}
-
 AVFilter vf_rgb2bgr =
 {
     .name      = "rgb2bgr",
@@ -85,7 +80,6 @@ AVFilter vf_rgb2bgr =
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
-                                    .request_frame   = request_frame,
                                     .query_formats   = query_out_formats, },
                                   { .name = NULL}},
 };
