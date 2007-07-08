@@ -48,7 +48,7 @@ static void request_frame(AVFilterLink *link)
     uint8_t *row, *cur;
 
     pic = avfilter_get_video_buffer(link, AV_PERM_WRITE);
-    avfilter_start_frame(link, avfilter_ref_pic(pic));
+    avfilter_start_frame(link, avfilter_ref_pic(pic), ~0);
 
     row = pic->data[0];
     for(y = 0; y < pic->h; y ++) {

@@ -51,7 +51,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 
     rgb->out = avfilter_get_video_buffer(link->dst->outputs[0], AV_PERM_WRITE);
     avfilter_default_start_frame(link, picref);
-    avfilter_start_frame(link->dst->outputs[0], avfilter_ref_pic(rgb->out));
+    avfilter_start_frame(link->dst->outputs[0], avfilter_ref_pic(rgb->out, ~0));
 }
 
 static void end_frame(AVFilterLink *link)

@@ -61,7 +61,7 @@ static int config_props(AVFilterLink *link)
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     avfilter_default_start_frame(link, picref);
-    avfilter_start_frame(link->dst->outputs[0], avfilter_ref_pic(picref));
+    avfilter_start_frame(link->dst->outputs[0], avfilter_ref_pic(picref, ~0));
 }
 
 static void end_frame(AVFilterLink *link)
