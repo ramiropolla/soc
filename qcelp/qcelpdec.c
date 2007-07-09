@@ -123,14 +123,17 @@ void qcelp_lspv2lspf(const QCELPFrame *frame, float *lspf)
 /**
  * TIA/EIA/IS-733 2.4.6.2.2
  */
-void qcelp_cbgain2g(const uint8_t *cbgain, int *g0, int *gs, int *g1, float *ga, qcelp_packet_rate rate)
+void qcelp_cbgain2g(const QCELPFrame *frame, int *g0, int *gs, int *g1, float *ga)
 {
     int i;
+    uint8_t *cbgain;
+
     /* FIXME need better gX varnames */
     /* WIP right now only decodes rate 1/4 */
-    switch(rate)
+    switch(frame->rate)
     {
         case RATE_QUARTER:
+            cbgain=frame->data+QCELP_CBGAIN0_POS;
             for(i=0; i<5; i++)
             {
                 g0[i]=g1[i]=QCELP_CBGAIN2G0(cbgain[i]);
@@ -233,8 +236,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      */
 
     qcelp_lspv2lspf(q->frame, qtzd_lspf);
-    qcelp_cbgain2g (q->frame->data + QCELP_CBGAIN0_POS, g0, gs, g1, ga,
-                    q->frame->rate);
+    qcelp_cbgain2g (q->frame, g0, gs, g1, ga);
 
     /**
      * Check for badly received packets
