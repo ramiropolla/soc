@@ -166,7 +166,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         // convert float to 16-bit integer
        for(ch = 1; ch<=c->nfchans + c->lfeon; ch++) { // <- out_channels TODO
             for(i=0; i<AC3_BLOCK_SIZE; i++) {
-                c->output[ch][i] = c->output[ch][i] * c->mul_bias
+                c->output[ch][i] = c->output[ch][i] * c->mul_bias +
                     c->add_bias;
             }
             c->dsp.float_to_int16(c->int_output[ch], c->output[ch],

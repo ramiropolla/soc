@@ -900,7 +900,7 @@ int eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     }
     for(ch = 1; ch <= s->nfchans; ch++) /* exponents for full bandwidth channels */
     {
-        if(!blk && !s->chexpstr[blk][ch] == EXP_REUSE){
+        if(!blk && s->chexpstr[blk][ch] == EXP_REUSE){
             av_log(s, AV_LOG_ERROR,  "no channel exponent strategy in first block");
             return -1;
         }

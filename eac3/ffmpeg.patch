@@ -1,3 +1,47 @@
+Index: libavcodec/ac3_parser.c
+===================================================================
+--- libavcodec/ac3_parser.c	(wersja 9211)
++++ libavcodec/ac3_parser.c	(kopia robocza)
+@@ -84,7 +84,7 @@
+     return 0;
+ }
+ 
+-static int ac3_sync(const uint8_t *buf, int *channels, int *sample_rate,
++static int ac3_sync(AVCodecContext *avctx, const uint8_t *buf, int *channels, int *sample_rate,
+                     int *bit_rate, int *samples)
+ {
+     int err;
+@@ -100,12 +100,16 @@
+ 
+     bsid = hdr.bsid;
+     if(bsid <= 10) {             /* Normal AC-3 */
++        if(avctx->codec_id == CODEC_ID_EAC3)
++            avctx->codec_id = CODEC_ID_AC3;
+         *sample_rate = hdr.sample_rate;
+         *bit_rate = hdr.bit_rate;
+         *channels = hdr.channels;
+         *samples = AC3_FRAME_SIZE;
+         return hdr.frame_size;
+     } else if (bsid > 10 && bsid <= 16) { /* Enhanced AC-3 */
++        if(avctx->codec_id == CODEC_ID_AC3)
++            avctx->codec_id = CODEC_ID_EAC3;
+         init_get_bits(&bits, &buf[2], (AC3_HEADER_SIZE-2) * 8);
+         strmtyp = get_bits(&bits, 2);
+         substreamid = get_bits(&bits, 3);
+@@ -152,6 +156,13 @@
+     return 0;
+ }
+ 
++AVCodecParser eac3_parser = {
++    { CODEC_ID_EAC3 },
++    sizeof(AACAC3ParseContext),
++    ac3_parse_init,
++    ff_aac_ac3_parse,
++    NULL,
++};
+ 
+ AVCodecParser ac3_parser = {
+     { CODEC_ID_AC3 },
 Index: libavcodec/Makefile
 ===================================================================
 --- libavcodec/Makefile	(wersja 9211)
@@ -61,26 +105,26 @@ Index: libavcodec/allcodecs.c
      REGISTER_ENCDEC (FLAC, flac);
      REGISTER_DECODER(IMC, imc);
      REGISTER_ENCDEC (LIBAMR_NB, libamr_nb);
-@@ -260,6 +261,7 @@
-     /* parsers */
-     REGISTER_PARSER (AAC, aac);
-     REGISTER_PARSER (AC3, ac3);
-+    REGISTER_PARSER (EAC3, eac3);
-     REGISTER_PARSER (CAVSVIDEO, cavsvideo);
+@@ -264,6 +265,7 @@
      REGISTER_PARSER (DCA, dca);
      REGISTER_PARSER (DVBSUB, dvbsub);
+     REGISTER_PARSER (DVDSUB, dvdsub);
++    REGISTER_PARSER (EAC3, eac3);
+     REGISTER_PARSER (H261, h261);
+     REGISTER_PARSER (H263, h263);
+     REGISTER_PARSER (H264, h264);
 Index: libavcodec/avcodec.h
 ===================================================================
 --- libavcodec/avcodec.h	(wersja 9211)
 +++ libavcodec/avcodec.h	(kopia robocza)
-@@ -222,6 +222,7 @@
-     CODEC_ID_MPEG4AAC,
- #endif
-     CODEC_ID_AC3,
+@@ -252,6 +252,7 @@
+     CODEC_ID_MLP,
+     CODEC_ID_GSM_MS, /* as found in WAV */
+     CODEC_ID_ATRAC3,
 +    CODEC_ID_EAC3,
-     CODEC_ID_DTS,
-     CODEC_ID_VORBIS,
-     CODEC_ID_DVAUDIO,
+ 
+     /* subtitle codecs */
+     CODEC_ID_DVD_SUBTITLE= 0x17000,
 @@ -2261,6 +2262,7 @@
  extern AVCodec dsicinvideo_decoder;
  extern AVCodec dvvideo_decoder;
@@ -97,30 +141,6 @@ Index: libavcodec/avcodec.h
  extern AVCodecParser h261_parser;
  extern AVCodecParser h263_parser;
  extern AVCodecParser h264_parser;
-Index: libavcodec/Makefile
-===================================================================
---- libavcodec/Makefile	(wersja 9211)
-+++ libavcodec/Makefile	(kopia robocza)
-@@ -66,6 +66,7 @@
- OBJS-$(CONFIG_DVVIDEO_DECODER)         += dv.o
- OBJS-$(CONFIG_DVVIDEO_ENCODER)         += dv.o
- OBJS-$(CONFIG_DXA_DECODER)             += dxa.o
-+OBJS-$(CONFIG_EAC3_DECODER)            += eac3dec.o eac3_parser.o
- OBJS-$(CONFIG_EIGHTBPS_DECODER)        += 8bps.o
- OBJS-$(CONFIG_FFV1_DECODER)            += ffv1.o golomb.o
- OBJS-$(CONFIG_FFV1_ENCODER)            += ffv1.o
-Index: libavformat/allformats.c
-===================================================================
---- libavformat/allformats.c	(wersja 9211)
-+++ libavformat/allformats.c	(kopia robocza)
-@@ -72,6 +72,7 @@
-     REGISTER_DEMUXER (DV1394, dv1394);
-     REGISTER_DEMUXER (DXA, dxa);
-     REGISTER_DEMUXER (EA, ea);
-+    REGISTER_DEMUXER (AC3, ac3);
-     REGISTER_MUXDEMUX(FFM, ffm);
-     REGISTER_MUXDEMUX(FLAC, flac);
-     REGISTER_DEMUXER (FLIC, flic);
 Index: libavformat/allformats.h
 ===================================================================
 --- libavformat/allformats.h	(wersja 9211)
