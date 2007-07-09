@@ -86,15 +86,19 @@ static int qcelp_decode_close(AVCodecContext *avctx)
  *
  * For details see TIA/EIA/IS-733 2.4.3.2.6.2-2
  */
-void qcelp_lspv2lspf(const uint8_t *lspv, float *lspf, qcelp_packet_rate rate)
+void qcelp_lspv2lspf(const QCELPFrame *frame, float *lspf)
 {
     /* FIXME a loop is wanted here */
-    /* WIP implement rate 1/8 handling */
-    switch(rate)
+    /* WIP implement I_F_Q handling? */
+    const uint8_t *lspv;
+    int i;
+
+    switch(frame->rate)
     {
         case RATE_FULL:
         case RATE_HALF:
         case RATE_QUARTER:
+            lspv=frame->data+QCELP_LSPV0_POS;
             lspf[0]=        qcelp_lspvq1[lspv[0]].x;
             lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y;
             lspf[2]=lspf[1]+qcelp_lspvq2[lspv[1]].x;
@@ -107,6 +111,11 @@ void qcelp_lspv2lspf(const uint8_t *lspv, float *lspf, qcelp_packet_rate rate)
             lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y;
             break;
         case RATE_OCTAVE:
+            lspv=frame->data+QCELP_LSP0_POS;
+            for(i=0; i<10; i++)
+            {
+                lspf[i]=lspv[i]? 0.02:-0.02; /* 2.4.3.3.1-1 */
+            }
             break;
     }
 }
@@ -223,8 +232,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      * Preliminary decoding of frame's transmission codes
      */
 
-    qcelp_lspv2lspf(q->frame->data + QCELP_LSPV0_POS, qtzd_lspf,
-                    q->frame->rate);
+    qcelp_lspv2lspf(q->frame, qtzd_lspf);
     qcelp_cbgain2g (q->frame->data + QCELP_CBGAIN0_POS, g0, gs, g1, ga,
                     q->frame->rate);
 
