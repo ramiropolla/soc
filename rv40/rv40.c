@@ -588,8 +588,8 @@ static int rv40_decode_frame(AVCodecContext *avctx,
                             void *data, int *data_size,
                             uint8_t *buf, int buf_size)
 {
-    RV40DecContext *v = avctx->priv_data;
-    MpegEncContext *s = &v->s;
+    RV40DecContext *r = avctx->priv_data;
+    MpegEncContext *s = &r->s;
     AVFrame *pict = data;
 
 return 0;
