@@ -460,7 +460,7 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb)
     rv40_parse_picture_size(gb, &w, &h);
     r->s.avctx->coded_width  = w;
     r->s.avctx->coded_height = h;
-    mb_bits = av_log2(t)+1;
+    mb_bits = av_log2((w + 7) >> 3) + av_log2((h + 7) >> 3);
     r->block_start = get_bits(gb, mb_bits);
     r->block_end = r->block_start+70;
     return 0;
