@@ -121,28 +121,62 @@ void qcelp_lspv2lspf(const QCELPFrame *frame, float *lspf)
 }
 
 /**
- * TIA/EIA/IS-733 2.4.6.2.2
+ * Converts codebook transmission codes to GAIN and INDEX
+ *
+ * TIA/EIA/IS-733 2.4.6.2
  */
-void qcelp_cbgain2g(const QCELPFrame *frame, int *g0, int *gs, int *g1, float *ga)
+void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, float *gain, int *index)
 {
-    int i;
-    uint8_t *cbgain;
+    int i, gs[16], g1[16];
+    uint8_t *cbgain, *cbsign, *cindex;
+    float predictor, ga[16];
 
-    /* FIXME need better gX varnames */
-    /* WIP right now only decodes rate 1/4 */
+    /* FIXME need to get rid of g0, sanity checks should be done here */
+    /* WIP this is almost verbatim from spec, seeking workability first */
+    /* WIP lacks rate 1/8 decoding */
     switch(frame->rate)
     {
+        case RATE_FULL:
+        case RATE_HALF:
+            cbsign=frame->data+QCELP_CBSIGN0_POS;
+            cbgain=frame->data+QCELP_CBGAIN0_POS;
+            cindex=frame->data+QCELP_CINDEX0_POS;
+            for(i=0; i<16; i++)
+            {
+                if(frame->rate == RATE_HALF && i>=4) break;
+
+                gs[i]=QCELP_CBSIGN2GS(cbsign[i]);
+                g0[i]=QCELP_CBGAIN2G0(cbgain[i]);
+
+                if(frame->rate == RATE_HALF || !((i+1)%4))
+                {
+                    predictor=0.0;
+
+                }else
+                {
+                    /* WIP Implement predictor 2.4.6.1.4-4/5 */
+                }
+
+                g1[i]=g0[i]+predictor; /* FIXME, not sure */
+                ga[i]=qcelp_g12ga[g1[i]];
+
+                gain[i]=ga[i]*gs[i];
+                index[i]=(gs[i] > 0)? cindex[i]:(cindex[i]-89)%128; /* FIXME */
+            }
+
+            break;
         case RATE_QUARTER:
             cbgain=frame->data+QCELP_CBGAIN0_POS;
             for(i=0; i<5; i++)
             {
                 g0[i]=g1[i]=QCELP_CBGAIN2G0(cbgain[i]);
                 gs[i]=1;
-                ga[i]=qcelp_g12ga[g1[i]];
+                ga[i]=gain[i]=qcelp_g12ga[g1[i]];
+                /* WIP Should implement gain interpolation each 20 samples
+                 * 2.4.6.2.2-1
+                 * */
             }
             break;
-        case RATE_FULL:
-        case RATE_HALF:
         case RATE_OCTAVE:
             break;
     }
@@ -157,8 +191,8 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     int8_t   samples;
     int      n, is_ifq = 0;
     uint16_t first16 = 0; /*!< needed for rate 1/8 peculiarities */
-    float    qtzd_lspf[10], ga[16];
-    int      g0[16], gs[16], g1[16];
+    float    qtzd_lspf[10], gain[16];
+    int      g0[16], index[16];
 
     init_get_bits(&q->gb, buf, buf_size*8);
 
@@ -236,7 +270,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      */
 
     qcelp_lspv2lspf(q->frame, qtzd_lspf);
-    qcelp_cbgain2g (q->frame, g0, gs, g1, ga);
+    qcelp_ctc2GI (q->frame, g0, gain, index);
 
     /**
      * Check for badly received packets
@@ -268,6 +302,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
                     is_ifq=1;
             }
             /* codebook gain sanity check */
+            /* FIXME This should be implemented into qcelp_ctc2GI() */
             for(n=0; !is_ifq && n<4; n++)
             {
                 if(FFABS(g0[n+1]-g0[n]) > 40) is_ifq=1;
