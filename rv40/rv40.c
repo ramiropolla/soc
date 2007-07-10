@@ -260,7 +260,9 @@ static int rv40_decode_cbp(GetBitContext *gb, RV40VLC *vlc, int table)
     int pattern, code, cbp=0;
     int table2;
     static const int cbp_masks[4] = {0x000000, 0x100000, 0x010000, 0x110000};
-    int i, t, mask, shift;
+    static const int shifts[4] = { 0, 2, 8, 10 };
+    int *curshift = shifts;
+    int i, t, mask;
 
     code = get_vlc2(gb, vlc->cbppattern[table].table, 9, 2);
     pattern = code & 0xF;
@@ -268,12 +270,10 @@ static int rv40_decode_cbp(GetBitContext *gb, RV40VLC *vlc, int table)
 
     table2 = rv40_count_ones[pattern];
 
-    for(shift = 0, mask = 8; mask; mask >>= 1){
+    for(mask = 8; mask; mask >>= 1, curshift++){
         if(!(pattern & mask)) continue;
         t = get_vlc2(gb, vlc->cbp[table][table2].table, vlc->cbp[table][table2].bits, 1);
-        cbp |= rv40_cbp_code[t] << shift;
-        shift += 2;
-        if(mask == 4) shift += 4;
+        cbp |= rv40_cbp_code[t] << curshift[0];
     }
 
     for(i = 0; i < 4; i++){
