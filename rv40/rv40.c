@@ -38,6 +38,11 @@
 typedef struct RV40DecContext{
     MpegEncContext s;
     int mb_bits;             ///< bits needed to read MB offet in slice header
+    int intra_types[16];     ///< block types
+    int block_start;         ///< start of slice in blocks
+    int block_end;           ///< end of slice in blocks
+    int ptype;               ///< picture type
+    int quant;               ///< quantizer
 }RV40DecContext;
 
 
@@ -376,6 +381,20 @@ static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *r
     }
 }
 
+/**
+ * Dequantize ordinary 4x4 block
+ * @todo optimize
+ */
+static inline void rv40_dequant4x4(DCTELEM *block, int offset, int Qdc, int Q)
+{
+    int i, j;
+
+    block[0] = (block[0] * Qdc + 8) >> 4;
+    for(i = 0; i < 4; i++)
+        for(j = 0; j < 4; j++)
+            if(i || j)
+                block[j + i*8] = (block[j + i*8] * Q + 8) >> 4;
+}
 /** @} */ //block functions
 
 
@@ -425,21 +444,25 @@ static void rv40_parse_picture_size(GetBitContext *gb, int *w, int *h)
 
 static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb)
 {
-    int ptype, quant, w, h, mb_bits, mb_start;
+    int t, mb_bits;
+    int w, h;
 
     if(get_bits1(gb))
         return -1;
-    ptype = get_bits(gb, 2);
-    quant = get_bits(gb, 5);
+    r->ptype = get_bits(gb, 2);
+    r->quant = get_bits(gb, 5);
     if(get_bits(gb, 2))
         return -1;
     get_bits(gb, 2); /// ???
     if(get_bits1(gb))
         return -1;
-    get_bits(gb, 13); /// ???
+    t = get_bits(gb, 13); /// ???
     rv40_parse_picture_size(gb, &w, &h);
-    mb_bits = av_log2(r->s.mb_width) + av_log2(r->s.mb_height);
-    mb_start = get_bits(gb, mb_bits);
+    r->s.avctx->coded_width  = w;
+    r->s.avctx->coded_height = h;
+    mb_bits = av_log2(t)+1;
+    r->block_start = get_bits(gb, mb_bits);
+    r->block_end = r->block_start+70;
     return 0;
 }
 
@@ -513,27 +536,76 @@ static int rv40_decode_macroblock(RV40DecContext *r)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
+    DSPContext *dsp = &s->dsp;
     int q, cbp;
-    int i;
+    int i, x, y;
+    uint8_t *Y;
+    int luma_vlc, chroma_vlc;
+    int is16 = 0;
+    DCTELEM block16[64];
 
     q = decode210(gb);
     switch(q){
-    case 0:
+    case 0: // 16x16 block
+        is16 = 1;
         break;
     case 1:
         break;
     case 2:
+        av_log(NULL,0,"Need DQUANT\n");
         // q = decode_dquant(gb);
         break;
     }
-    //rv40_decode_intra_types(r, gb);
-    cbp = rv40_decode_cbp(gb, &intra_vlcs[2], 0);
-
-    // decode 24 4x4 blocks to fill one macroblock
-    for(i = 0; i < 24; i++, cbp >>= 1){
-        if(!(cbp & 1)) continue;
-        rv40_decode_block(s->block[i>>2] + (i&1)*2 + (i&2)*4, gb, &intra_vlcs[2], 2, 0);
+    if(!is16){
+        rv40_decode_intra_types(r, gb, r->intra_types);
+        chroma_vlc = 0;
+        luma_vlc   = 1;
+    }else{
+        x = get_bits(gb, 2);
+        if(x==3)
+            av_log(NULL,0,"Got type 3 for Intra16x16\n");
+        for(i = 0; i < 16; i++)
+            r->intra_types[i] = x;
+        chroma_vlc = 0;
+        luma_vlc   = 2;
     }
+    cbp = rv40_decode_cbp(gb, &intra_vlcs[2], is16);
+
+    if(is16){
+        memset(block16, 0, sizeof(block16));
+        rv40_decode_block(block16, gb, &intra_vlcs[2], 3, 0);
+    }
+
+    for(i = 0; i < 16; i++, cbp >>= 1){
+        if(!(cbp & 1)) continue;
+        x = (i & 1) << 2;
+        y = (i & 2) << 4;
+        rv40_decode_block(s->block[i>>2] + x + y, gb, &intra_vlcs[2], luma_vlc, 0);
+        rv40_dequant4x4(s->block[i>>2] + x + y, r->quant, rv40_luma_quant[0][r->quant],rv40_luma_quant[0][r->quant]);
+
+        s->block[i>>2][x+y] += 256;
+        rv40_intra_inv_transform(s->block[i>>2], x+y);
+    }
+    for(; i < 24; i++, cbp >>= 1){
+        if(!(cbp & 1)) continue;
+        x = (i & 1) << 2;
+        y = (i & 2) << 4;
+        rv40_decode_block(s->block[i>>2] + x + y, gb, &intra_vlcs[2], chroma_vlc, 1);
+        rv40_dequant4x4(s->block[i>>2] + x + y, r->quant, rv40_chroma_quant[0][r->quant],rv40_chroma_quant[1][r->quant]);
+
+        s->block[i>>2][x+y] += 256;
+        rv40_intra_inv_transform(s->block[i>>2], x+y);
+    }
+    Y = s->dest[0];
+    dsp->put_pixels_clamped(s->block[0], Y, s->current_picture.linesize[0]);
+    dsp->put_pixels_clamped(s->block[1], Y + 8, s->current_picture.linesize[0]);
+    Y += s->current_picture.linesize[0] * 8;
+    dsp->put_pixels_clamped(s->block[2], Y, s->current_picture.linesize[0]);
+    dsp->put_pixels_clamped(s->block[3], Y + 8, s->current_picture.linesize[0]);
+
+    dsp->put_pixels_clamped(s->block[4], s->dest[1], s->current_picture.linesize[1]);
+    dsp->put_pixels_clamped(s->block[5], s->dest[2], s->current_picture.linesize[2]);
+
     return 0;
 }
 
@@ -541,19 +613,28 @@ static int rv40_decode_slice(RV40DecContext *r, int slice_start, int slice_end)
 {
     MpegEncContext *s = &r->s;
 
-    ff_er_add_slice(s, 0, slice_start, s->mb_width - 1, slice_end - 1, (AC_END|DC_END|MV_END));
-    s->first_slice_line = 1;
-    for(s->mb_y = slice_start; s->mb_y < slice_end; s->mb_y++) {
-        for(s->mb_x = 0; s->mb_x < s->mb_width; s->mb_x++) {
-            ff_init_block_index(s);
-            ff_update_block_index(s);
-            s->dsp.clear_blocks(s->block[0]);
+    ff_er_add_slice(s, 0, 0, s->mb_width - 1, s->mb_height - 1, (AC_END|DC_END|MV_END));
 
-            rv40_decode_macroblock(r);
-        }
+    memset(r->intra_types, -1, 16 * sizeof(int));
+    s->first_slice_line = 1;
+    s->resync_mb_x= s->mb_x;
+    ff_init_block_index(s);
+    for(s->mb_num_left= slice_end-slice_start; s->mb_num_left>0; s->mb_num_left--) {
+        ff_update_block_index(s);
+        s->dsp.clear_blocks(s->block[0]);
+
+        rv40_decode_macroblock(r);
         ff_draw_horiz_band(s, s->mb_y * 16, 16);
-        s->first_slice_line = 0;
+        if (++s->mb_x == s->mb_width) {
+            s->mb_x = 0;
+            s->mb_y++;
+            ff_init_block_index(s);
+        }
+        if(s->mb_x == s->resync_mb_x)
+            s->first_slice_line=0;
     }
+    //ff_er_add_slice(s, slice_start % s->mb_width, s->resync_mb_y, s->mb_x-1, s->mb_y, AC_END|DC_END|MV_END);
+
     return 0;
 }
 
@@ -582,6 +663,8 @@ static int rv40_decode_init(AVCodecContext *avctx)
     r->s.avctx = avctx;
     avctx->flags |= CODEC_FLAG_EMU_EDGE;
     r->s.flags |= CODEC_FLAG_EMU_EDGE;
+    avctx->pix_fmt = PIX_FMT_YUV420P;
+    s->low_delay = 1;
 
     if (MPV_common_init(s) < 0)
         return -1;
@@ -601,8 +684,8 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     RV40DecContext *r = avctx->priv_data;
     MpegEncContext *s = &r->s;
     AVFrame *pict = data;
+    int res;
 
-return 0;
     /* no supplementary picture */
     if (buf_size == 0) {
         /* special case for last picture */
@@ -623,6 +706,10 @@ return 0;
         s->current_picture_ptr= &s->picture[i];
     }
 
+    init_get_bits(&s->gb, buf, buf_size*8);
+    rv40_parse_slice_header(r, &r->s.gb);
+    s->pict_type = r->ptype+1;
+    if(s->pict_type != I_TYPE) return -1;
     init_get_bits(&s->gb, buf, buf_size*8);
 
     // for hurry_up==5
@@ -656,7 +743,20 @@ return 0;
 
     ff_er_frame_start(s);
 
-///XXX: do actual decoding of slices
+    s->mb_x = s->mb_y = 0;
+
+{
+int starts[] = { 0x000, 0x046, 0x08A, 0x0BF, 0x0FE, 0x13E, 0x190, 0x205, 0x244, 0x29D, 0x2A8};
+int i;
+//    do{
+    for(i=0; i < 10; i++){
+        if(rv40_parse_slice_header(r, &r->s.gb) < 0) break;
+        res = rv40_decode_slice(r, starts[i], starts[i+1]);
+    }
+//    }while(res);
+}
+    s->pict_type = r->ptype;
+    s->current_picture.pict_type = s->pict_type;
 
     ff_er_frame_end(s);
 
