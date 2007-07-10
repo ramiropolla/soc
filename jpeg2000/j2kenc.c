@@ -47,10 +47,10 @@ typedef struct {
 } J2kPass;
 
 typedef struct {
-    int npassess;
-    int ninclpassess; // number of passess included in codestream
-    int nonzerobits;
-    int zero;
+    uint8_t npassess;
+    uint8_t ninclpassess; // number of passess included in codestream
+    uint8_t nonzerobits;
+    uint8_t zero;
     uint8_t data[8192];
     J2kPass passess[30];
 } J2kCblk; // code block
@@ -62,28 +62,28 @@ typedef struct J2kTgtNode {
 } J2kTgtNode;
 
 typedef struct {
-    int xi0, xi1, yi0, yi1; /// indices of codeblocks ([xi0, xi1))
+    uint16_t xi0, xi1, yi0, yi1; /// indices of codeblocks ([xi0, xi1))
 } J2kPrec; // precinct
 
 typedef struct {
-    int x0, x1, y0, y1;
-    int cblkw, cblkh;
-    int cblknx, cblkny;
+    uint16_t x0, x1, y0, y1;
+    uint16_t cblkw, cblkh;
+    uint16_t cblknx, cblkny;
     J2kPrec *prec;
     J2kCblk *cblk;
 } J2kBand; // subband
 
 typedef struct {
-    int x0, x1, y0, y1;
-    int nbands;
-    int nprecw, nprech;
+    uint16_t x0, x1, y0, y1;
+    uint8_t nbands;
+    uint16_t nprecw, nprech;
     J2kBand *band;
 } J2kResLevel; // resolution level
 
 typedef struct {
    J2kResLevel *reslevel;
    int *data;
-   int x0, x1, y0, y1;
+   uint16_t x0, x1, y0, y1;
 } J2kComponent;
 
 typedef struct { // flatten with context
