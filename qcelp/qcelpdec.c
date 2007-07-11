@@ -149,10 +149,10 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, float *gain, int *index)
                 g0[i]=QCELP_CBGAIN2G0(cbgain[i]);
 
                 /* FIXME this needs to be further examinated */
-                if(frame->rate == RATE_HALF || !((i+1)%4))
-                    predictor=0;
-                else
+                if(frame->rate == RATE_FULL && i > 0 && !((i+1)%4))
                     predictor=av_clip(6, 38, (g1[i-1]+g1[i-2]+g1[i-3])/3);
+                else
+                    predictor=0;
 
                 g1[i]=g0[i]+predictor;
                 ga[i]=qcelp_g12ga[g1[i]];
@@ -193,6 +193,23 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, float *gain, int *index)
                 default:; /* shouldn't happen.. must propagate some error */
             }
             gs[0]=1;
+    }
+}
+
+/**
+ * Computes the scaled codebook vector Cdn From INDEX and GAIN
+ * For all rates
+ */
+static int qcelp_compute_cdn(qcelp_packet_rate rate, const float *gain,
+                             const int *index, float *cdn_vector)
+{
+    switch(rate)
+    {
+        case RATE_FULL:
+        case RATE_HALF:
+        break;
+        case RATE_QUARTER;
+        case RATE_OCTAVE;
     }
 }
 
