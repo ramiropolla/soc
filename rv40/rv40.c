@@ -40,9 +40,10 @@ typedef struct RV40DecContext{
     int mb_bits;             ///< bits needed to read MB offet in slice header
     int intra_types[16];     ///< block types
     int block_start;         ///< start of slice in blocks
-    int block_end;           ///< end of slice in blocks
     int ptype;               ///< picture type
     int quant;               ///< quantizer
+
+    int bits;                ///< slice size in bits
 }RV40DecContext;
 
 
@@ -462,7 +463,7 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb)
     r->s.avctx->coded_height = h;
     mb_bits = av_log2((w + 7) >> 3) + av_log2((h + 7) >> 3);
     r->block_start = get_bits(gb, mb_bits);
-    r->block_end = r->block_start+70;
+
     return 0;
 }
 
@@ -609,17 +610,25 @@ static int rv40_decode_macroblock(RV40DecContext *r)
     return 0;
 }
 
-static int rv40_decode_slice(RV40DecContext *r, int slice_start, int slice_end)
+static int rv40_decode_slice(RV40DecContext *r)
 {
     MpegEncContext *s = &r->s;
+    int mb_pos;
 
-    ff_er_add_slice(s, 0, 0, s->mb_width - 1, s->mb_height - 1, (AC_END|DC_END|MV_END));
+    //ff_er_add_slice(s, 0, 0, s->mb_width - 1, s->mb_height - 1, (AC_END|DC_END|MV_END));
 
+    mb_pos = s->mb_x + s->mb_y * s->mb_width;
+    if(r->block_start != mb_pos){
+        av_log(s->avctx, AV_LOG_ERROR, "Slice indicates MB offset %d, got %d\n", r->block_start, mb_pos);
+        s->mb_x = r->block_start % s->mb_width;
+        s->mb_y = r->block_start / s->mb_width;
+    }
     memset(r->intra_types, -1, 16 * sizeof(int));
     s->first_slice_line = 1;
     s->resync_mb_x= s->mb_x;
     ff_init_block_index(s);
-    for(s->mb_num_left= slice_end-slice_start; s->mb_num_left>0; s->mb_num_left--) {
+    //XXX: better bounds detection?
+    while((get_bits_count(&s->gb) + 5 < r->bits) && (s->mb_y < s->mb_height)) {
         ff_update_block_index(s);
         s->dsp.clear_blocks(s->block[0]);
 
@@ -633,7 +642,7 @@ static int rv40_decode_slice(RV40DecContext *r, int slice_start, int slice_end)
         if(s->mb_x == s->resync_mb_x)
             s->first_slice_line=0;
     }
-    //ff_er_add_slice(s, slice_start % s->mb_width, s->resync_mb_y, s->mb_x-1, s->mb_y, AC_END|DC_END|MV_END);
+    ff_er_add_slice(s, s->resync_mb_x, s->resync_mb_y, s->mb_x-1, s->mb_y, AC_END|DC_END|MV_END);
 
     return 0;
 }
@@ -688,96 +697,42 @@ static int rv40_decode_frame(AVCodecContext *avctx,
 
     /* no supplementary picture */
     if (buf_size == 0) {
-        /* special case for last picture */
-        if (s->low_delay==0 && s->next_picture_ptr) {
-            *pict= *(AVFrame*)s->next_picture_ptr;
-            s->next_picture_ptr= NULL;
-
-            *data_size = sizeof(AVFrame);
-        }
-
         return 0;
     }
 
-    /* We need to set current_picture_ptr before reading the header,
-     * otherwise we cannot store anything in there. */
-    if(s->current_picture_ptr==NULL || s->current_picture_ptr->data[0]){
-        int i= ff_find_unused_picture(s, 0);
-        s->current_picture_ptr= &s->picture[i];
-    }
-
     init_get_bits(&s->gb, buf, buf_size*8);
+    r->bits = buf_size * 8;
     rv40_parse_slice_header(r, &r->s.gb);
     s->pict_type = r->ptype+1;
-    if(s->pict_type != I_TYPE) return -1;
-    init_get_bits(&s->gb, buf, buf_size*8);
 
-    // for hurry_up==5
-    s->current_picture.pict_type= s->pict_type;
-    s->current_picture.key_frame= s->pict_type == I_TYPE;
-
-    /* skip B-frames if we don't have reference frames */
-    if(s->last_picture_ptr==NULL && (s->pict_type==B_TYPE || s->dropable))
-        return -1;//buf_size;
-
-    /* skip b frames if we are in a hurry */
-    if(avctx->hurry_up && s->pict_type==B_TYPE) return -1;//buf_size;
-    if(   (avctx->skip_frame >= AVDISCARD_NONREF && s->pict_type==B_TYPE)
-       || (avctx->skip_frame >= AVDISCARD_NONKEY && s->pict_type!=I_TYPE)
-       ||  avctx->skip_frame >= AVDISCARD_ALL)
-        return buf_size;
-
-    /* skip everything if we are in a hurry>=5 */
-    if(avctx->hurry_up>=5)
-        return -1;//buf_size;
-
-    if(s->next_p_frame_damaged){
-        if(s->pict_type==B_TYPE)
-            return buf_size;
-        else
-            s->next_p_frame_damaged=0;
+if(s->pict_type != I_TYPE)return -1;
+    if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
+        if(s->current_picture_ptr){ //FIXME write parser so we always have complete frames?
+            ff_er_frame_end(s);
+            MPV_frame_end(s);
+            s->mb_x= s->mb_y = s->resync_mb_x = s->resync_mb_y= 0;
+        }
+        if(MPV_frame_start(s, avctx) < 0)
+            return -1;
+        ff_er_frame_start(s);
     }
+    rv40_decode_slice(r);
 
-    if(MPV_frame_start(s, avctx) < 0)
-        return -1;
+    if(s->current_picture_ptr != NULL && s->mb_y>=s->mb_height){
+        ff_er_frame_end(s);
+        MPV_frame_end(s);
+        if (s->pict_type == B_TYPE || s->low_delay) {
+            *pict= *(AVFrame*)s->current_picture_ptr;
+        } else if (s->last_picture_ptr != NULL) {
+            *pict= *(AVFrame*)s->last_picture_ptr;
+        }
 
-    ff_er_frame_start(s);
-
-    s->mb_x = s->mb_y = 0;
-
-{
-int starts[] = { 0x000, 0x046, 0x08A, 0x0BF, 0x0FE, 0x13E, 0x190, 0x205, 0x244, 0x29D, 0x2A8};
-int i;
-//    do{
-    for(i=0; i < 10; i++){
-        if(rv40_parse_slice_header(r, &r->s.gb) < 0) break;
-        res = rv40_decode_slice(r, starts[i], starts[i+1]);
+        if(s->last_picture_ptr || s->low_delay){
+            *data_size = sizeof(AVFrame);
+            ff_print_debug_info(s, pict);
+        }
+        s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
     }
-//    }while(res);
-}
-    s->pict_type = r->ptype;
-    s->current_picture.pict_type = s->pict_type;
-
-    ff_er_frame_end(s);
-
-    MPV_frame_end(s);
-
-assert(s->current_picture.pict_type == s->current_picture_ptr->pict_type);
-assert(s->current_picture.pict_type == s->pict_type);
-    if (s->pict_type == B_TYPE || s->low_delay) {
-        *pict= *(AVFrame*)s->current_picture_ptr;
-    } else if (s->last_picture_ptr != NULL) {
-        *pict= *(AVFrame*)s->last_picture_ptr;
-    }
-
-    if(s->last_picture_ptr || s->low_delay){
-        *data_size = sizeof(AVFrame);
-        ff_print_debug_info(s, pict);
-    }
-
-    /* Return the Picture timestamp as the frame number */
-    /* we substract 1 because it is added on utils.c    */
-    avctx->frame_number = s->picture_number - 1;
 
     return buf_size;
 }
