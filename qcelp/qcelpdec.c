@@ -201,7 +201,7 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, float *gain, int *index)
  * For all rates
  */
 static int qcelp_compute_cdn(qcelp_packet_rate rate, const float *gain,
-                             const int *index, float *cdn_vector)
+           const int *index, float *cdn_vector)
 {
     switch(rate)
     {
@@ -265,7 +265,6 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             /*
             printf("UNKNOWN PACKET RATE\n");
             */
-            break;
     }
 
     /**
