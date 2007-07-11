@@ -581,7 +581,7 @@ static int rv40_decode_macroblock(RV40DecContext *r)
         x = (i & 1) << 2;
         y = (i & 2) << 4;
         rv40_decode_block(s->block[i>>2] + x + y, gb, &intra_vlcs[2], luma_vlc, 0);
-        rv40_dequant4x4(s->block[i>>2] + x + y, r->quant, rv40_luma_quant[0][r->quant],rv40_luma_quant[0][r->quant]);
+        rv40_dequant4x4(s->block[i>>2] + x + y, r->quant, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
 
         s->block[i>>2][x+y] += 256;
         rv40_intra_inv_transform(s->block[i>>2], x+y);
@@ -591,7 +591,7 @@ static int rv40_decode_macroblock(RV40DecContext *r)
         x = (i & 1) << 2;
         y = (i & 2) << 4;
         rv40_decode_block(s->block[i>>2] + x + y, gb, &intra_vlcs[2], chroma_vlc, 1);
-        rv40_dequant4x4(s->block[i>>2] + x + y, r->quant, rv40_chroma_quant[0][r->quant],rv40_chroma_quant[1][r->quant]);
+        rv40_dequant4x4(s->block[i>>2] + x + y, r->quant, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
 
         s->block[i>>2][x+y] += 256;
         rv40_intra_inv_transform(s->block[i>>2], x+y);
