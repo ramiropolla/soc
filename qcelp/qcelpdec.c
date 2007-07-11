@@ -116,7 +116,6 @@ void qcelp_lspv2lspf(const QCELPFrame *frame, float *lspf)
             {
                 lspf[i]=lspv[i]? 0.02:-0.02; /* 2.4.3.3.1-1 */
             }
-            break;
     }
 }
 
@@ -127,20 +126,21 @@ void qcelp_lspv2lspf(const QCELPFrame *frame, float *lspf)
  */
 void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, float *gain, int *index)
 {
-    int i, gs[16], g1[16];
-    uint8_t *cbgain, *cbsign, *cindex;
-    float predictor, ga[16];
+    int           i, gs[16], g1[16], predictor;
+    const uint8_t *cbgain, *cbsign, *cindex;
+    float         ga[16];
 
     /* FIXME need to get rid of g0, sanity checks should be done here */
     /* WIP this is almost verbatim from spec, seeking workability first */
-    /* WIP lacks rate 1/8 decoding */
+
+    cbsign=frame->data+QCELP_CBSIGN0_POS;
+    cbgain=frame->data+QCELP_CBGAIN0_POS;
+    cindex=frame->data+QCELP_CINDEX0_POS;
+
     switch(frame->rate)
     {
         case RATE_FULL:
         case RATE_HALF:
-            cbsign=frame->data+QCELP_CBSIGN0_POS;
-            cbgain=frame->data+QCELP_CBGAIN0_POS;
-            cindex=frame->data+QCELP_CINDEX0_POS;
             for(i=0; i<16; i++)
             {
                 if(frame->rate == RATE_HALF && i>=4) break;
@@ -148,16 +148,13 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, float *gain, int *index)
                 gs[i]=QCELP_CBSIGN2GS(cbsign[i]);
                 g0[i]=QCELP_CBGAIN2G0(cbgain[i]);
 
+                /* FIXME this needs to be further examinated */
                 if(frame->rate == RATE_HALF || !((i+1)%4))
-                {
-                    predictor=0.0;
+                    predictor=0;
+                else
+                    predictor=av_clip(6, 38, (g1[i-1]+g1[i-2]+g1[i-3])/3);
 
-                }else
-                {
-                    /* WIP Implement predictor 2.4.6.1.4-4/5 */
-                }
-
-                g1[i]=g0[i]+predictor; /* FIXME, not sure */
+                g1[i]=g0[i]+predictor;
                 ga[i]=qcelp_g12ga[g1[i]];
 
                 gain[i]=ga[i]*gs[i];
@@ -166,19 +163,36 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, float *gain, int *index)
 
             break;
         case RATE_QUARTER:
-            cbgain=frame->data+QCELP_CBGAIN0_POS;
             for(i=0; i<5; i++)
             {
                 g0[i]=g1[i]=QCELP_CBGAIN2G0(cbgain[i]);
                 gs[i]=1;
-                ga[i]=gain[i]=qcelp_g12ga[g1[i]];
-                /* WIP Should implement gain interpolation each 20 samples
-                 * 2.4.6.2.2-1
-                 * */
+                ga[i]=qcelp_g12ga[g1[i]];
             }
+            /**
+             * 5->8 Interpolation to 'Provide smoothing of the energy
+             * of the unvoiced excitation' 2.4.6.2
+             */
+            gain[0]=    ga[0];
+            gain[1]=0.6*ga[0]+0.4*ga[1];
+            gain[2]=    ga[1];
+            gain[3]=0.2*ga[1]+0.8*ga[2];
+            gain[4]=0.8*ga[2]+0.2*ga[3];
+            gain[5]=    ga[3];
+            gain[7]=0.4*ga[3]+0.6*ga[4];
+            gain[7]=    ga[4];
+
             break;
         case RATE_OCTAVE:
-            break;
+            switch(cbgain[0])
+            {
+                case 0: gain[0]=-4; break;
+                case 1: gain[0]=-2; break;
+                case 2: gain[0]= 0; break;
+                case 3: gain[0]= 2; break;
+                default:; /* shouldn't happen.. must propagate some error */
+            }
+            gs[0]=1;
     }
 }
 
@@ -270,7 +284,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      */
 
     qcelp_lspv2lspf(q->frame, qtzd_lspf);
-    qcelp_ctc2GI (q->frame, g0, gain, index);
+    qcelp_ctc2GI(q->frame, g0, gain, index);
 
     /**
      * Check for badly received packets
