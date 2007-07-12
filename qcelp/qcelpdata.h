@@ -329,8 +329,6 @@ static const float qcelp_g12ga[]={
  251.250, 281.875, 316.250, 354.875, 398.125,446.625,501.125,563.375,
  631.000, 708.000, 794.375, 891.250,1000.000};
 
-/* rest is currently unused */
-
 static const int   qcelp_cumulative_gainloss[]={0,1,2,6};
 static const float qcelp_cumulative_pitchsaturation[]={0.9,0.6,0.3,0.0};
 
