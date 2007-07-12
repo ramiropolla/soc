@@ -38,7 +38,9 @@
 typedef struct RV40DecContext{
     MpegEncContext s;
     int mb_bits;             ///< bits needed to read MB offet in slice header
-    int intra_types[16];     ///< block types
+    int *intra_types_hist;   ///< old block types, used for prediction
+    int *intra_types;        ///< block types
+    int intra_types_stride;  ///< stride for block types data
     int block_start;         ///< start of slice in blocks
     int ptype;               ///< picture type
     int quant;               ///< quantizer
@@ -469,11 +471,8 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb)
 
 /**
  * Decode 4x4 intra types array
- *
- * This function expects old array passed as reference, filled with -1 is absent
- * XXX: Corner cases may be not handled
  */
-static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int dst[16])
+static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *dst)
 {
     MpegEncContext *s = &r->s;
     int i, j, k, v;
@@ -481,7 +480,7 @@ static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int dst
     int pattern;
     int *ptr;
 
-    for(i = 0; i < 4; i++){
+    for(i = 0; i < 4; i++, dst += r->intra_types_stride){
         if(!i && s->first_slice_line){
             pattern = get_vlc2(gb, aic_top_vlc.table, AIC_TOP_BITS, 1);
             dst[0] = (pattern >> 2) & 2;
@@ -490,7 +489,7 @@ static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int dst
             dst[3] = (pattern << 1) & 2;
             continue;
         }
-        ptr = dst + i*4;
+        ptr = dst;
         for(j = 0; j < 4; j++){
             /* Coefficients are read using VLC chosen by prediction pattern
              * First one (used for retrieving a pair of coefficients) is
@@ -498,9 +497,9 @@ static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int dst
              * Second one (used for retrieving only one coefficient) is
              * top + 10 * left
              */
-            A = i ? ptr[-3] : dst[j+1]; // it won't be used for the last coefficient in a row
-            B = i ? ptr[-4] : dst[j];
-            C = j ? ptr[-1] : ptr[3];
+            A = ptr[-r->intra_types_stride + 1]; // it won't be used for the last coefficient in a row
+            B = ptr[-r->intra_types_stride];
+            C = ptr[-1];
             pattern = A + (B << 4) + (C << 8);
             for(k = 0; k < MODE2_PATTERNS_NUM; k++)
                 if(pattern == rv40_aic_table_index[k])
@@ -533,7 +532,7 @@ static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int dst
     return 0;
 }
 
-static int rv40_decode_macroblock(RV40DecContext *r)
+static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
@@ -558,7 +557,7 @@ static int rv40_decode_macroblock(RV40DecContext *r)
         break;
     }
     if(!is16){
-        rv40_decode_intra_types(r, gb, r->intra_types);
+        rv40_decode_intra_types(r, gb, intra_types);
         chroma_vlc = 0;
         luma_vlc   = 1;
     }else{
@@ -566,7 +565,7 @@ static int rv40_decode_macroblock(RV40DecContext *r)
         if(x==3)
             av_log(NULL,0,"Got type 3 for Intra16x16\n");
         for(i = 0; i < 16; i++)
-            r->intra_types[i] = x;
+            intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = x;
         chroma_vlc = 0;
         luma_vlc   = 2;
     }
@@ -623,7 +622,7 @@ static int rv40_decode_slice(RV40DecContext *r)
         s->mb_x = r->block_start % s->mb_width;
         s->mb_y = r->block_start / s->mb_width;
     }
-    memset(r->intra_types, -1, 16 * sizeof(int));
+    memset(r->intra_types, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
     s->first_slice_line = 1;
     s->resync_mb_x= s->mb_x;
     ff_init_block_index(s);
@@ -632,12 +631,15 @@ static int rv40_decode_slice(RV40DecContext *r)
         ff_update_block_index(s);
         s->dsp.clear_blocks(s->block[0]);
 
-        rv40_decode_macroblock(r);
+        rv40_decode_macroblock(r, r->intra_types + (s->mb_x + 1) * 4);
         ff_draw_horiz_band(s, s->mb_y * 16, 16);
         if (++s->mb_x == s->mb_width) {
             s->mb_x = 0;
             s->mb_y++;
             ff_init_block_index(s);
+
+            memmove(r->intra_types_hist, r->intra_types, r->intra_types_stride * 4 * sizeof(int));
+            memset(r->intra_types, -1, r->intra_types_stride * 4 * sizeof(int));
         }
         if(s->mb_x == s->resync_mb_x)
             s->first_slice_line=0;
@@ -677,6 +679,10 @@ static int rv40_decode_init(AVCodecContext *avctx)
 
     if (MPV_common_init(s) < 0)
         return -1;
+
+    r->intra_types_stride = (s->mb_width + 1) * 4;
+    r->intra_types_hist = av_malloc(r->intra_types_stride * 4 * 2 * sizeof(int));
+    r->intra_types = r->intra_types_hist + r->intra_types_stride * 4;
 
     if(!tables_done){
         rv40_init_tables();
@@ -742,6 +748,10 @@ static int rv40_decode_end(AVCodecContext *avctx)
     RV40DecContext *r = avctx->priv_data;
 
     MPV_common_end(&r->s);
+
+    av_freep(&r->intra_types_hist);
+    r->intra_types = NULL;
+
     return 0;
 }
 
