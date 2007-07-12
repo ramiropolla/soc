@@ -562,8 +562,6 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         luma_vlc   = 1;
     }else{
         x = get_bits(gb, 2);
-        if(x==3)
-            av_log(NULL,0,"Got type 3 for Intra16x16\n");
         for(i = 0; i < 16; i++)
             intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = x;
         chroma_vlc = 0;
