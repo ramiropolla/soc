@@ -374,7 +374,7 @@ static void put_siz(J2kEncoderContext *s)
     bytestream_put_be32(&s->buf, 0); // YT0Siz
     bytestream_put_be16(&s->buf, s->ncomponents); // CSiz
 
-    for (i = 0; i < 3; i++){ // Ssiz_i XRsiz_i, YRsiz_i
+    for (i = 0; i < s->ncomponents; i++){ // Ssiz_i XRsiz_i, YRsiz_i
         bytestream_put_byte(&s->buf, 7);
         bytestream_put_byte(&s->buf, 1);
         bytestream_put_byte(&s->buf, 1);
@@ -1291,13 +1291,17 @@ static int encode_frame(AVCodecContext *avctx,
     s->maxtilelen = 5000;
 
     // TODO: other pixel formats
+    for (i = 0; i < 3; i++)
+        s->cbps[i] = 8;
+
     if (avctx->pix_fmt == PIX_FMT_RGB24){
         s->ncomponents = 3;
-        for (i = 0; i < 3; i++)
-            s->cbps[i] = 8;
+    } else if (avctx->pix_fmt == PIX_FMT_GRAY8){
+        s->ncomponents = 1;
     }
     else{
         av_log(avctx, AV_LOG_ERROR, "only rgb24 supported\n");
+        return -1;
     }
 
     av_log(s->avctx, AV_LOG_DEBUG, "init\n");
@@ -1335,5 +1339,5 @@ AVCodec jpeg2000_encoder = {
     NULL,
     0,
     .pix_fmts =
-        (enum PixelFormat[]) {PIX_FMT_RGB24, -1}
+        (enum PixelFormat[]) {PIX_FMT_GRAY8, PIX_FMT_RGB24, -1}
 };
