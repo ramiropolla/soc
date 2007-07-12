@@ -121,13 +121,14 @@ void qcelp_lspv2lspf(const QCELPFrame *frame, float *lspf)
 
 /**
  * Converts codebook transmission codes to GAIN and INDEX
- *
+ * (and cbseed for rate 1/4)
  * TIA/EIA/IS-733 2.4.6.2
  */
-void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, float *gain, int *index)
+void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
+     float *gain, int *index)
 {
     int           i, gs[16], g1[16], predictor;
-    const uint8_t *cbgain, *cbsign, *cindex;
+    const uint8_t *cbgain, *cbsign, *cindex, *data;
     float         ga[16];
 
     /* FIXME need to get rid of g0, sanity checks should be done here */
@@ -181,7 +182,15 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, float *gain, int *index)
             gain[5]=    ga[3];
             gain[7]=0.4*ga[3]+0.6*ga[4];
             gain[7]=    ga[4];
-
+            /**
+             * Build random* seed needed to make Cdn
+             */
+            data=frame->data;
+            *cbseed=(0x0003 & data[QCELP_LSPV0_POS+4])<<14 |
+                    (0x003C & data[QCELP_LSPV0_POS+3])<< 8 |
+                    (0x0060 & data[QCELP_LSPV0_POS+2])<< 1 |
+                    (0x0007 & data[QCELP_LSPV0_POS+1])<< 3 |
+                    (0x0038 & data[QCELP_LSPV0_POS  ])>> 3 ;
             break;
         case RATE_OCTAVE:
             switch(cbgain[0])
@@ -201,16 +210,18 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, float *gain, int *index)
  * For all rates
  */
 static int qcelp_compute_cdn(qcelp_packet_rate rate, const float *gain,
-           const int *index, float *cdn_vector)
+           const int *index, uint16_t cbseed, float *cdn_vector)
 {
     switch(rate)
     {
         case RATE_FULL:
         case RATE_HALF:
+        case RATE_QUARTER:
+        case RATE_OCTAVE:
         break;
-        case RATE_QUARTER;
-        case RATE_OCTAVE;
     }
+
+    return 1;
 }
 
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
@@ -218,7 +229,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 {
     QCELPContext *q    = avctx->priv_data;
     const QCELPBitmap *order = NULL;
-    int16_t  *outbuffer = data;
+    int16_t  *outbuffer = data, cbseed;
     int8_t   samples;
     int      n, is_ifq = 0;
     uint16_t first16 = 0; /*!< needed for rate 1/8 peculiarities */
@@ -276,9 +287,13 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         q->frame->data[ order[n].index ] |=
         get_bits1(&q->gb)<<order[n].bitpos;
 
-        if(n<16)
+        /* FIXME Should rework this a bit */
+        if(n<20)
         {
-            first16 |= q->frame->data[ order[n].index ]>>n;
+            if(n>3)  /* this is the random seed for rate 1/8 frames */
+                cbseed |= q->frame->data[ order[n].index ]>>n;
+            if(n<16) /* this is for a rate 1/8 only sanity check */
+                first16 |= q->frame->data[ order[n].index ]>>n;
         }
 
     }
@@ -300,7 +315,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      */
 
     qcelp_lspv2lspf(q->frame, qtzd_lspf);
-    qcelp_ctc2GI(q->frame, g0, gain, index);
+    qcelp_ctc2GI(q->frame, g0, &cbseed, gain, index);
 
     /**
      * Check for badly received packets
