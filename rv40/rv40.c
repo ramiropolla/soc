@@ -612,8 +612,6 @@ static int rv40_decode_slice(RV40DecContext *r)
     MpegEncContext *s = &r->s;
     int mb_pos;
 
-    //ff_er_add_slice(s, 0, 0, s->mb_width - 1, s->mb_height - 1, (AC_END|DC_END|MV_END));
-
     mb_pos = s->mb_x + s->mb_y * s->mb_width;
     if(r->block_start != mb_pos){
         av_log(s->avctx, AV_LOG_ERROR, "Slice indicates MB offset %d, got %d\n", r->block_start, mb_pos);
