@@ -361,10 +361,10 @@ typedef struct EAC3Context{
 }EAC3Context;
 
 
-int eac3_parse_syncinfo(GetBitContext *gbc, EAC3Context *s);
-int eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s);
-int eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s);
-int eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk);
-int eac3_parse_auxdata(GetBitContext *gbc, EAC3Context *s);
+int ff_eac3_parse_syncinfo(GetBitContext *gbc, EAC3Context *s);
+int ff_eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s);
+int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s);
+int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk);
+int ff_eac3_parse_auxdata(GetBitContext *gbc, EAC3Context *s);
 
 #endif

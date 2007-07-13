@@ -99,12 +99,12 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     c->csnroffst  = -1;
 
     init_get_bits(&gbc, buf, buf_size*8);
-    eac3_parse_syncinfo(&gbc, c);
+    ff_eac3_parse_syncinfo(&gbc, c);
 
     if(c->syncword != 0x0B77)
         return -1;
 
-    if(eac3_parse_bsi(&gbc, c) || eac3_parse_audfrm(&gbc, c))
+    if(ff_eac3_parse_bsi(&gbc, c) || ff_eac3_parse_audfrm(&gbc, c))
         return -1;
 
     if(c->fscod == 3){
@@ -130,7 +130,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 #ifdef DEBUG
     av_log(NULL, AV_LOG_INFO, "-------START BLK-------\n");
 #endif
-        if(eac3_parse_audblk(&gbc, c, blk)){
+        if(ff_eac3_parse_audblk(&gbc, c, blk)){
             return -1;
         }
 #ifdef DEBUG

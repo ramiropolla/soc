@@ -34,12 +34,12 @@
 
 #include "eac3.h"
 
-int eac3_parse_syncinfo(GetBitContext *gbc, EAC3Context *s){
+int ff_eac3_parse_syncinfo(GetBitContext *gbc, EAC3Context *s){
     GET_BITS(s->syncword, gbc, 16);
     return 0;
 }
 
-int eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s){
+int ff_eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s){
     int i, blk;
 
     GET_BITS(s->strmtyp, gbc, 2);
@@ -254,7 +254,7 @@ int eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s){
 } /* end of bsi */
 
 
-int eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
+int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     int blk, ch;
 
     /* These fields for audio frame exist flags and strategy data */
@@ -454,7 +454,7 @@ int eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     return 0;
 } /* end of audfrm */
 
-int eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
+int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     //int grp, sbnd, n, bin;
     int seg, bnd, ch, i;
     int got_cplchan;
@@ -1310,7 +1310,7 @@ int eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     return 0;
 }
 
-int eac3_parse_auxdata(GetBitContext *gbc, EAC3Context *s){
+int ff_eac3_parse_auxdata(GetBitContext *gbc, EAC3Context *s){
     // TODO
     return 0;
 }
