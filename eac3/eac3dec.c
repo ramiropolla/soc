@@ -138,7 +138,19 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 #endif
         //TODO rematrixing
         //TODO downmix_scaling...
-        //TODO scale
+
+        /* apply scaling to coefficients (dialnorm, dynrng) */
+        for(ch=1; ch<=c->nfchans + c->lfeon; ch++) {
+            float gain=2.0f;
+            if(c->acmod == AC3_CHANNEL_MODE_DUALMONO) {
+                gain *= ff_ac3_dialnorm_tbl[c->dialnorm[ch-1]] * ff_ac3_dynrng_tbl[c->dynrng[ch-1]];
+            } else {
+                gain *= ff_ac3_dialnorm_tbl[c->dialnorm[0]] * ff_ac3_dynrng_tbl[c->dynrng[0]];
+            }
+            for(i=0; i<c->endmant[ch]; i++) {
+                c->transform_coeffs[ch][i] *= gain;
+            }
+        }
 
         ff_eac3_do_imdct(c);
         //TODO downmix

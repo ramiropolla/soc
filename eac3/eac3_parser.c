@@ -81,14 +81,14 @@ int ff_eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s){
         return -1;
     }
 
-    GET_BITS(s->dialnorm, gbc, 5);
+    GET_BITS(s->dialnorm[0], gbc, 5);
     GET_BITS(s->compre, gbc, 1);
     if(s->compre) {
         GET_BITS(s->compr, gbc, 8);
     }
     if(s->acmod == 0x0) /* if 1+1 mode (dual mono, so some items need a second value) */
     {
-        GET_BITS(s->dialnorm2, gbc, 5);
+        GET_BITS(s->dialnorm[1], gbc, 5);
         GET_BITS(s->compr2e, gbc, 1);
         if(s->compr2e) {
             GET_BITS(s->compr2, gbc, 8);
@@ -484,15 +484,15 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
     }
     /* These fields for dynamic range control */
-    GET_BITS(s->dynrnge, gbc, 1);
-    if(s->dynrnge) {
-        GET_BITS(s->dynrng, gbc, 8);
-    }
-    if(s->acmod == 0x0) /* if 1+1 mode */
-    {
-        GET_BITS(s->dynrng2e, gbc, 1);
-        if(s->dynrng2e) {
-            GET_BITS(s->dynrng2, gbc, 8);
+
+    for(i = 0; i < (s->acmod?1:2); i++){
+        GET_BITS(s->dynrnge[i], gbc, 1);
+        if(s->dynrnge[i]){
+            GET_BITS(s->dynrng[i], gbc, 8);
+        }else{
+            if(blk==0){
+                s->dynrng[i] = 0;
+            }
         }
     }
     /* These fields for spectral extension strategy information */

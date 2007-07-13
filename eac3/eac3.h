@@ -85,10 +85,9 @@ typedef struct EAC3Context{
     int acmod; // 3);                ///< Audio coding mode
     int lfeon; // 1);                ///< Low frequency effect channel on
     int bsid; // 5);                 ///< Bit stream identification
-    int dialnorm; // 5);             ///<Dialogue normalization
+    int dialnorm[2]; // 5);          ///< Dialogue normalization
     int compre; // 1);               ///< Compression gain word exists
     int compr; // 8);                ///< Compression gain word
-    int dialnorm2; // 5);            ///< Dialog normalization ch2
     int compr2e; // 1);              ///< Compression gain word ch2 exists
     int compr2; // 8);               ///< Compression gain word ch2
     int chanmape; // 1);             ///< Custom channel map exists
@@ -180,10 +179,8 @@ typedef struct EAC3Context{
 // EAC3Audblk
     int blksw[MAX_CHANNELS]; // 1);  ///< Block switch flag
     int dithflag[MAX_CHANNELS];      ///< Dither flag
-    int dynrnge; // 1);              ///< Dynamic range gain word exists
-    int dynrng; // 8);               ///< Dynamic range gain word
-    int dynrng2e; // 1);             ///< Dynamic range gain word exists, ch2
-    int dynrng2; // 8);              ///< Dynamic range gain word
+    int dynrnge[2]; // 1);           ///< Dynamic range gain word exists
+    int dynrng[2]; // 8);            ///< Dynamic range gain word
     int spxstre; // 1);              ///< Spectral extension strategy exists
     int spxinu; // 1);               ///< spectral extension in use
     int chinspx[MAX_CHANNELS];       ///< Channel in spectral extension
