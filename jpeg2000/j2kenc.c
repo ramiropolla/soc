@@ -106,7 +106,6 @@ typedef struct {
     int xcb, ycb; // exponent of the code block size
     int XTsiz, YTsiz; // tile size
     int numXtiles, numYtiles;
-    int maxtilelen;
 
     int nguardbits;
 
@@ -1151,33 +1150,6 @@ static void truncpassess(J2kEncoderContext *s, J2kTile *tile, double threshold)
     }
 }
 
-static void rate_control(J2kEncoderContext *s, J2kTile *tile, int tileno)
-{
-    int i, ok;
-    uint8_t *oldbuf = s->buf;
-    double lo = tile->mindr, hi = tile->maxdr, resthres = lo;
-    for (i = 0; (i < 32); i++){
-        double thres = (lo+hi)/2;
-
-        ok = 0;
-        s->buf = oldbuf;
-        truncpassess(s, tile, thres);
-        encode_packets(s, tile, tileno);
-
-        if (s->buf - oldbuf > s->maxtilelen)
-            lo = thres;
-        else{
-            resthres = hi = thres;
-            ok=1;
-        }
-    }
-    if (!ok){
-        s->buf = oldbuf;
-        truncpassess(s, tile, resthres);
-        encode_packets(s, tile, tileno);
-    }
-}
-
 static void encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
 {
     int compno, reslevelno, bandno;
@@ -1234,7 +1206,9 @@ static void encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
     }
 
     av_log(s->avctx, AV_LOG_DEBUG, "rate control\n");
-    rate_control(s, tile, tileno);
+    truncpassess(s, tile, tile->mindr +
+            (tile->maxdr - tile->mindr) * s->picture->quality / (FF_LAMBDA_MAX-1));
+    encode_packets(s, tile, tileno);
     av_log(s->avctx, AV_LOG_DEBUG, "after rate control\n");
 }
 
@@ -1288,7 +1262,7 @@ static int encode_frame(AVCodecContext *avctx,
     s->Ysiz = avctx->height;
 
     s->nguardbits = 1;
-    s->maxtilelen = 5000;
+    s->picture->quality = FFMAX(--s->picture->quality, 0);
 
     // TODO: other pixel formats
     for (i = 0; i < 3; i++)
