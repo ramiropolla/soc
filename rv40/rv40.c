@@ -620,7 +620,7 @@ static int rv40_decode_slice(RV40DecContext *r)
         s->mb_x = r->block_start % s->mb_width;
         s->mb_y = r->block_start / s->mb_width;
     }
-    memset(r->intra_types, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
+    memset(r->intra_types_hist, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
     s->first_slice_line = 1;
     s->resync_mb_x= s->mb_x;
     s->resync_mb_y= s->mb_y;
