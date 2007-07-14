@@ -551,14 +551,83 @@ static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *ds
     return 0;
 }
 
+/** Mapping of RV40 intra prediction types to standard H.264 types */
+static const int ittrans[9] = {
+ HOR_PRED, // almost ok
+ VERT_PRED, // ok
+ LEFT_DC_PRED, // ok?
+ DIAG_DOWN_RIGHT_PRED, // ok
+ DIAG_DOWN_LEFT_PRED,
+ VERT_RIGHT_PRED, // ok
+ VERT_LEFT_PRED, //ok
+ HOR_DOWN_PRED,
+ HOR_UP_PRED,
+};
+
+static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp, int is16)
+{
+    MpegEncContext *s = &r->s;
+    DSPContext *dsp = &s->dsp;
+    int i, j, x, y;
+    uint8_t *Y, *YY, *PY;
+    int no_up, no_left, itype;
+
+    no_up = s->first_slice_line;
+    Y = s->dest[0];
+    if(!is16){
+        for(j = 0; j < 4; j++){
+            no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
+            for(YY = Y, i = 0; i < 4; i++, cbp >>= 1, no_left = 0, YY += 4){
+                itype = ittrans[intra_types[i]];
+                if(no_up && no_left)
+                    itype = DC_128_PRED;
+                else if(no_up)
+                    itype = HOR_PRED;
+                else if(no_left)
+                    itype = VERT_PRED;
+                /* silly RV40 predictor assumes that blocks are aligned in one row
+                   so first block may reference block from the previous row
+                   or last block from the previous macroblock
+                 */
+                if(!i && !j)
+                    PY = YY - 1 + s->linesize * 12;
+                else
+                    PY = YY - 1;
+                r->h.pred4x4[itype](YY, PY, YY - s->linesize + 4, s->linesize);
+                if(!(cbp & 1)) continue;
+                /* add_pixels_clamped for 4x4 block */
+                for(y = 0; y < 4; y++)
+                    for(x = 0; x < 4; x++)
+                        YY[x + y * s->linesize] = av_clip_uint8(YY[x + y * s->linesize] + s->block[(i>>1)+(j&2)][(i&1)*4+(j&1)*32+x+y*8]);
+            }
+            no_up = 0;
+            Y += s->linesize * 4;
+            intra_types += r->intra_types_stride;
+        }
+    }else{
+        no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
+        if(no_up && no_left)
+            r->h.pred16x16[DC_128_PRED8x8](Y, s->linesize);
+        else if(no_up)
+            r->h.pred16x16[HOR_PRED8x8](Y, s->linesize);
+        else if(no_left)
+            r->h.pred16x16[VERT_PRED8x8](Y, s->linesize);
+        else
+            r->h.pred16x16[intra_types[0]](Y, s->linesize);
+        dsp->add_pixels_clamped(s->block[0], Y, s->current_picture.linesize[0]);
+        dsp->add_pixels_clamped(s->block[1], Y + 8, s->current_picture.linesize[0]);
+        Y += s->current_picture.linesize[0] * 8;
+        dsp->add_pixels_clamped(s->block[2], Y, s->current_picture.linesize[0]);
+        dsp->add_pixels_clamped(s->block[3], Y + 8, s->current_picture.linesize[0]);
+    }
+}
+
 static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
-    DSPContext *dsp = &s->dsp;
-    int q, cbp;
+    int q, cbp, cbp2;
     int i, blknum, blkoff;
-    uint8_t *Y;
     int luma_vlc, chroma_vlc;
     int is16 = 0;
     DCTELEM block16[64];
@@ -586,7 +655,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         chroma_vlc = 0;
         luma_vlc   = 2;
     }
-    cbp = rv40_decode_cbp(gb, &intra_vlcs[2], is16);
+    cbp = cbp2 = rv40_decode_cbp(gb, &intra_vlcs[2], is16);
 
     if(is16){
         memset(block16, 0, sizeof(block16));
@@ -616,15 +685,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
         rv40_intra_inv_transform(s->block[blknum], blkoff);
     }
-    Y = s->dest[0];
-    dsp->put_pixels_clamped(s->block[0], Y, s->current_picture.linesize[0]);
-    dsp->put_pixels_clamped(s->block[1], Y + 8, s->current_picture.linesize[0]);
-    Y += s->current_picture.linesize[0] * 8;
-    dsp->put_pixels_clamped(s->block[2], Y, s->current_picture.linesize[0]);
-    dsp->put_pixels_clamped(s->block[3], Y + 8, s->current_picture.linesize[0]);
-
-    dsp->put_pixels_clamped(s->block[4], s->dest[1], s->current_picture.linesize[1]);
-    dsp->put_pixels_clamped(s->block[5], s->dest[2], s->current_picture.linesize[2]);
+    rv40_output_macroblock(r, intra_types, cbp2, is16);
 
     return 0;
 }
