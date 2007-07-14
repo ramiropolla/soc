@@ -208,6 +208,10 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
 /**
  * Computes the scaled codebook vector Cdn From INDEX and GAIN
  * For all rates
+ *
+ * FIXME:
+ * - Needs outbound reading checks and error propagation if weirdness
+ *   is detected :-).
  */
 static int qcelp_compute_cdn(qcelp_packet_rate rate, const float *gain,
            const int *index, uint16_t cbseed, float *cdn_vector)
@@ -219,7 +223,14 @@ static int qcelp_compute_cdn(qcelp_packet_rate rate, const float *gain,
     switch(rate)
     {
         case RATE_FULL:
+             for(i=0; i<160; i++)
+                cdn_vector[i]=
+                gain[i/10]*qcelp_fullrate_ccodebook[(i+1-index[i/10]) & 127];
+             break;
         case RATE_HALF:
+             for(i=0; i<160; i++)
+                cdn_vector[i]=
+                gain[i/40]*qcelp_halfrate_ccodebook[(i+1-index[i/40]) & 127];
              break;
         case RATE_QUARTER:
             for(i=0; i<160; i++)

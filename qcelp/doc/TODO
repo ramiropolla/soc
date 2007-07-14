@@ -3,7 +3,7 @@ Clear:
 - finish the codebook transmission code's conversion to gain, index and
   (when needed) cbseed (almost done).
 - review rates 1 and 1/2 gain predictor calculations.
-- code function to generate scaled codebook vector.
+- review qcelp_compute_cdn().
 
 Still somewhat fuzzy:
 
