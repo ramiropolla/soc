@@ -20,40 +20,11 @@
  */
 
 #include <unistd.h>
-#include <string.h>
 
 #include "avfilter.h"
 #include "avfiltergraph.h"
 
 int64_t sdl_display(AVFilterContext *ctx);
-
-AVFilterContext *create_filter(char *argv)
-{
-    AVFilterContext *ret;
-    char *name, *args;
-
-    name = argv;
-    if((args = strchr(argv, '='))) {
-        /* ensure we at least have a name */
-        if(args == argv)
-            return NULL;
-
-        *args ++ = 0;
-    }
-
-    av_log(NULL, AV_LOG_INFO, "creating filter \"%s\" with args \"%s\"\n",
-           name, args ? args : "(none)");
-
-    if((ret = avfilter_create_by_name(name, NULL))) {
-        if(avfilter_init_filter(ret, args)) {
-            av_log(NULL, AV_LOG_ERROR, "error initializing filter!\n");
-            avfilter_destroy(ret);
-            ret = NULL;
-        }
-    } else av_log(NULL, AV_LOG_ERROR, "error creating filter!\n");
-
-    return ret;
-}
 
 int main(int argc, char **argv)
 {
@@ -61,7 +32,7 @@ int main(int argc, char **argv)
     int ret = -1;
     int64_t pts = 0, newpts;
     AVFilterGraph   *graph;
-    AVFilterContext *filters[2] = {NULL,NULL};
+    AVFilterContext *out;
 
     if(argc < 3) {
         av_log(NULL, AV_LOG_ERROR, "require at least two filters\n");
@@ -70,20 +41,11 @@ int main(int argc, char **argv)
 
     avfilter_init();
     graph = avfilter_create_graph();
-
-    for(i = 1; i < argc; i ++) {
-        if(!(filters[1] = create_filter(argv[i])))
-            goto done;
-        avfilter_graph_add_filter(graph, filters[1]);
-        if(filters[0] && avfilter_link(filters[0], 0, filters[1], 0)) {
-            av_log(NULL, AV_LOG_ERROR, "error linking filters!\n");
-            goto done;
-        }
-        filters[0] = filters[1];
-    }
+    if(avfilter_graph_load_chain(graph, argc - 1, argv + 1, NULL, &out) < 0)
+        goto done;
 
     while(pts < 5000) {
-        newpts = sdl_display(filters[1]);
+        newpts = sdl_display(out);
         usleep(newpts - pts);
         pts = newpts;
     }
