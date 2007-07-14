@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2000-2002 Fabrice Bellard
+ * Copyright (c) 2007 Xiaohui Sun <sunxiaohui@dsp.ac.cn>
  *
  * This file is part of FFmpeg.
  *
@@ -20,7 +21,7 @@
 
 /**
  * @file mpeg_pes.h
- * MPEG PES packetizer api header.
+ * MPEG PES packetizer API header
  */
 
 #ifndef AVFORMAT_MPEG_PES_H
@@ -42,19 +43,19 @@ typedef struct PacketDesc {
 } PacketDesc;
 
 /**
- * mux type for PES
+ * muxer type for PES
  */
 typedef enum {
-    PESMUX_PS,
-    PESMUX_TS,
-    PESMUX_PES
-} PESMuxType;
+    PESMUXER_PS,
+    PESMUXER_TS,
+    PESMUXER_PES
+} PESMuxerType;
 
 /**
- * PES Context
+ * PES context
  */
 typedef struct {
-    PESMuxType mux_type;  /**< whether it is a Program Stream */
+    PESMuxerType muxer_type;
     int packet_number;
 } PESContext;
 
@@ -93,7 +94,7 @@ typedef struct {
 int ff_pes_muxer_init(AVFormatContext *ctx);
 
 /**
- * Finalization of PES mux.
+ * Finalization of PES muxer.
  * @param [in] ctx the AVFormatContext which contains streams.
  * @return  NULL
  */
@@ -108,23 +109,23 @@ void ff_pes_muxer_end(AVFormatContext *ctx);
 void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
 
 /**
- * Find which stream is most appropriate be muxed.
- * @param[in] ctx   the AVFormatContext
+ * Find the stream to mux into the PES stream.
+ * @param[in] ctx          the AVFormatContext
  * @param[in] packet_size  PES stream packet size
- * @param[in] flush  whether flush after every single subtitle packet. For subtitle, a single PES packet must be generated
- * @param[out] best_i      stream index in AVFormatContext that should be muxed
+ * @param[in] flush        Flush after every single subtitle packet.Find the stream to mux into the PES strea
+ * @param[out] best_i      index of stream to be muxed
  * @return  On error a negative or zero value is returned, on success 1 is returned.
  */
 int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t scr, int* best_i);
 
 /**
- * Get total frames that have been muxed.
+ * Get total number of frames that have been muxed.
  * @param[in] ctx    the AVFormatContext
  * @param[in] stream the PES stream
  * @param[in] len    PES packet size
  * @return  the frame number to be muxed
  */
-int get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
+int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
 
 /**
  * Mux streams into a PES packet.
@@ -153,5 +154,13 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
  */
 int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
 
+/*
+ * Put a timestamp.
+ * @param[in] pb        the IOContext to be written to
+ * @param[in] id        stream id
+ * @param[in] timestamp the time stamp
+ * @return  NULL
+ */
+void ff_put_timestamp(ByteIOContext *pb, int id, int64_t timestamp);
 
 #endif/* AVFORMAT_MPEG_PES_H */

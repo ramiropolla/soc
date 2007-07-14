@@ -1,17 +1,18 @@
 Index: mpeg_pes_enc.c
 ===================================================================
---- mpeg_pes_enc.c	(revision 9465)
+--- mpeg_pes_enc.c	(revision 9635)
 +++ mpeg_pes_enc.c	(working copy)
-@@ -1,6 +1,6 @@
+@@ -1,6 +1,7 @@
  /*
 - * MPEG1/2 muxer
 - * Copyright (c) 2000, 2001, 2002 Fabrice Bellard.
 + * MPEG PES muxer
 + * Copyright (c) 2000-2002 Fabrice Bellard
++ * Copyright (c) 2007 Xiaohui Sun <sunxiaohui@dsp.ac.cn>
   *
   * This file is part of FFmpeg.
   *
-@@ -19,345 +19,28 @@
+@@ -19,345 +20,26 @@
   * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
   */
  
@@ -24,8 +25,7 @@ Index: mpeg_pes_enc.c
  
 -#define MAX_PAYLOAD_SIZE 4096
 -//#define DEBUG_SEEK
-+const int lpcm_freq_tab[4] = { 48000, 96000, 44100, 32000 };
- 
+-
 -#undef NDEBUG
 -#include <assert.h>
 -
@@ -363,7 +363,7 @@ Index: mpeg_pes_enc.c
  #if 0
                  /* see VCD standard, p. IV-7*/
                  stream->max_buffer_size = 46 * 1024;
-@@ -366,10 +49,12 @@
+@@ -366,10 +48,12 @@
                     Right now it is also used for everything else.*/
                  stream->max_buffer_size = 230 * 1024;
  #endif
@@ -378,7 +378,7 @@ Index: mpeg_pes_enc.c
              stream->max_buffer_size = 16 * 1024;
              break;
          default:
-@@ -377,103 +62,7 @@
+@@ -377,106 +61,10 @@
          }
          av_fifo_init(&stream->fifo, 16);
      }
@@ -481,8 +481,12 @@ Index: mpeg_pes_enc.c
 -    return AVERROR(ENOMEM);
  }
  
- static inline void put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
-@@ -486,136 +75,7 @@
+-static inline void put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
++void ff_put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
+ {
+     put_byte(pb,
+              (id << 4) |
+@@ -486,136 +74,7 @@
      put_be16(pb, (uint16_t)((((timestamp) & 0x7fff) << 1) | 1));
  }
  
@@ -616,11 +620,11 @@ Index: mpeg_pes_enc.c
 -}
 -
 -static int get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len){
-+int get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
++int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
      int nb_frames=0;
      PacketDesc *pkt_desc= stream->premux_packet;
  
-@@ -629,212 +89,21 @@
+@@ -629,212 +88,21 @@
      return nb_frames;
  }
  
@@ -842,26 +846,33 @@ Index: mpeg_pes_enc.c
              pes_flags=0;
  
              if (pts != AV_NOPTS_VALUE) {
-@@ -847,7 +116,7 @@
+@@ -847,16 +115,16 @@
                 P-STD_buffer_size field be included in the first packet of
                 every stream. (see SVCD standard p. 26 V.2.3.1 and V.2.3.2
                 and MPEG-2 standard 2.7.7) */
 -            if (stream->packet_number == 0)
-+            if (context->packet_number == 0 && context->mux_type == PESMUX_PS)
++            if (context->packet_number == 0 && context->muxer_type == PESMUXER_PS)
                  pes_flags |= 0x01;
  
              put_byte(&ctx->pb, pes_flags); /* flags */
-@@ -861,133 +130,35 @@
+             put_byte(&ctx->pb, header_len - 3 + stuffing_size);
+ 
+             if (pes_flags & 0x80)  /*write pts*/
+-                put_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
++                ff_put_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
+             if (pes_flags & 0x40)  /*write dts*/
+-                put_timestamp(&ctx->pb, 0x01, dts);
++                ff_put_timestamp(&ctx->pb, 0x01, dts);
+ 
              if (pes_flags & 0x01) {  /*write pes extension*/
                  put_byte(&ctx->pb, 0x10); /* flags */
- 
--                /* P-STD buffer info */
--                if (id == AUDIO_ID)
--                    put_be16(&ctx->pb, 0x4000 | stream->max_buffer_size/128);
--                else
--                    put_be16(&ctx->pb, 0x6000 | stream->max_buffer_size/1024);
+@@ -866,128 +134,30 @@
+                     put_be16(&ctx->pb, 0x4000 | stream->max_buffer_size/128);
+                 else
+                     put_be16(&ctx->pb, 0x6000 | stream->max_buffer_size/1024);
 -            }
--
++    }
+ 
 -        } else {
 -            if (pts != AV_NOPTS_VALUE) {
 -                if (dts != pts) {
@@ -876,14 +887,17 @@ Index: mpeg_pes_enc.c
 -        }
 -
 -        if (s->is_mpeg2) {
--            /* special stuffing byte that is always written
--               to prevent accidental generation of start codes. */
+             /* special stuffing byte that is always written
+                to prevent accidental generation of start codes. */
 -            put_byte(&ctx->pb, 0xff);
--
++             put_byte(&ctx->pb, 0xff);
+ 
 -            for(i=0;i<stuffing_size;i++)
 -                put_byte(&ctx->pb, 0xff);
 -        }
--
++             for(i=0;i<stuffing_size;i++)
++                 put_byte(&ctx->pb, 0xff);
+ 
 -        if (startcode == PRIVATE_STREAM_1) {
 -            put_byte(&ctx->pb, id);
 -            if (id >= 0xa0) {
@@ -899,7 +913,8 @@ Index: mpeg_pes_enc.c
 -                put_be16(&ctx->pb, trailer_size+1);
 -            }
 -        }
--
++             put_buffer(&ctx->pb, pes_content, pes_content_len);
+ 
 -        /* output data */
 -        if(av_fifo_generic_read(&stream->fifo, payload_size - stuffing_size, &put_buffer, &ctx->pb) < 0)
 -            return -1;
@@ -907,27 +922,16 @@ Index: mpeg_pes_enc.c
 -    }else{
 -        payload_size=
 -        stuffing_size= 0;
-+        /* P-STD buffer info */
-+        if (id == AUDIO_ID)
-+            put_be16(&ctx->pb, 0x4000 | stream->max_buffer_size/128);
-+        else
-+            put_be16(&ctx->pb, 0x6000 | stream->max_buffer_size/1024);
-     }
- 
+-    }
+-
 -    if (pad_packet_bytes > 0)
 -        put_padding_packet(ctx,&ctx->pb, pad_packet_bytes);
-+    /* special stuffing byte that is always written
-+       to prevent accidental generation of start codes. */
-+    put_byte(&ctx->pb, 0xff);
- 
+-
 -    for(i=0;i<zero_trail_bytes;i++)
 -        put_byte(&ctx->pb, 0x00);
-+    for(i=0;i<stuffing_size;i++)
-+        put_byte(&ctx->pb, 0xff);
- 
+-
 -    put_flush_packet(&ctx->pb);
-+     put_buffer(&ctx->pb, pes_content, pes_content_len);
- 
+-
 -    s->packet_number++;
 -
 -    /* only increase the stream packet number if this pack actually contains
@@ -1002,7 +1006,7 @@ Index: mpeg_pes_enc.c
          PacketDesc *pkt_desc;
  
          while((pkt_desc= stream->predecode_packet)
-@@ -1009,22 +180,18 @@
+@@ -1009,22 +179,18 @@
      return 0;
  }
  
@@ -1032,7 +1036,7 @@ Index: mpeg_pes_enc.c
          const int avail_data=  av_fifo_size(&stream->fifo);
          const int space= stream->max_buffer_size - stream->buffer_index;
          int rel_space= 1024*space / stream->max_buffer_size;
-@@ -1032,14 +199,14 @@
+@@ -1032,14 +198,14 @@
  
          /* for subtitle, a single PES packet must be generated,
             so we flush after every single subtitle packet */
@@ -1049,7 +1053,7 @@ Index: mpeg_pes_enc.c
              continue;
  
          if(next_pkt && next_pkt->dts - scr > max_delay)
-@@ -1047,17 +214,17 @@
+@@ -1047,17 +213,17 @@
  
          if(rel_space > best_score){
              best_score= rel_space;
@@ -1070,7 +1074,7 @@ Index: mpeg_pes_enc.c
              PacketDesc *pkt_desc= stream->predecode_packet;
              if(pkt_desc && pkt_desc->dts < best_dts)
                  best_dts= pkt_desc->dts;
-@@ -1075,75 +242,25 @@
+@@ -1075,75 +241,25 @@
              ignore_constraints= 1;
          }
          scr= FFMAX(best_dts+1, scr);
@@ -1153,7 +1157,7 @@ Index: mpeg_pes_enc.c
  
      pts= pkt->pts;
      dts= pkt->dts;
-@@ -1151,13 +268,12 @@
+@@ -1151,13 +267,12 @@
      if(pts != AV_NOPTS_VALUE) pts += preload;
      if(dts != AV_NOPTS_VALUE) dts += preload;
  
@@ -1169,7 +1173,7 @@ Index: mpeg_pes_enc.c
      pkt_desc->unwritten_size=
      pkt_desc->size= size;
      if(!stream->predecode_packet)
-@@ -1165,126 +281,19 @@
+@@ -1165,126 +280,19 @@
      stream->next_packet= &pkt_desc->next;
  
      av_fifo_realloc(&stream->fifo, av_fifo_size(&stream->fifo) + size + 1);
@@ -1301,7 +1305,7 @@ Index: mpeg_pes_enc.c
 -#endif
 Index: Makefile
 ===================================================================
---- Makefile	(revision 9473)
+--- Makefile	(revision 9635)
 +++ Makefile	(working copy)
 @@ -84,13 +84,13 @@
  OBJS-$(CONFIG_MP3_MUXER)                 += mp3.o
@@ -1324,7 +1328,7 @@ Index: Makefile
  OBJS-$(CONFIG_MPEGTS_MUXER)              += mpegtsenc.o
 Index: mpeg.c
 ===================================================================
---- mpeg.c	(revision 9473)
+--- mpeg.c	(revision 9635)
 +++ mpeg.c	(working copy)
 @@ -21,6 +21,7 @@
  
@@ -1338,36 +1342,25 @@ Index: mpeg.c
  
  #define MAX_SYNC_SIZE 100000
  
-+extern const int lpcm_freq_tab[4];
++extern const int ff_lpcm_freq_tab[4];
 +
  static int cdxa_probe(AVProbeData *p)
  {
      /* check file header */
+@@ -481,7 +484,7 @@
+         get_byte(&s->pb); /* dynamic range control (0x80 = off) */
+         len -= 3;
+         freq = (b1 >> 4) & 3;
+-        st->codec->sample_rate = lpcm_freq_tab[freq];
++        st->codec->sample_rate = ff_lpcm_freq_tab[freq];
+         st->codec->channels = 1 + (b1 & 7);
+         st->codec->bit_rate = st->codec->channels * st->codec->sample_rate * 2;
+     }
 Index: mpeg.h
 ===================================================================
---- mpeg.h	(revision 9473)
+--- mpeg.h	(revision 9635)
 +++ mpeg.h	(working copy)
-@@ -29,19 +29,6 @@
- #define PACKET_START_CODE_PREFIX    ((unsigned int)0x00000100)
- #define ISO_11172_END_CODE          ((unsigned int)0x000001b9)
- 
--/* mpeg2 */
--#define PROGRAM_STREAM_MAP 0x1bc
--#define PRIVATE_STREAM_1   0x1bd
--#define PADDING_STREAM     0x1be
--#define PRIVATE_STREAM_2   0x1bf
--
--#define AUDIO_ID 0xc0
--#define VIDEO_ID 0xe0
--#define AC3_ID   0x80
--#define DTS_ID   0x8a
--#define LPCM_ID  0xa0
--#define SUB_ID   0x20
--
- #define STREAM_TYPE_VIDEO_MPEG1     0x01
- #define STREAM_TYPE_VIDEO_MPEG2     0x02
- #define STREAM_TYPE_AUDIO_MPEG1     0x03
-@@ -55,6 +42,5 @@
+@@ -55,6 +55,5 @@
  #define STREAM_TYPE_AUDIO_AC3       0x81
  #define STREAM_TYPE_AUDIO_DTS       0x8a
  
@@ -1376,7 +1369,7 @@ Index: mpeg.h
  #endif /* AVFORMAT_MPEG_H */
 Index: mpegenc.c
 ===================================================================
---- mpegenc.c	(revision 9473)
+--- mpegenc.c	(revision 9635)
 +++ mpegenc.c	(working copy)
 @@ -22,8 +22,10 @@
  #include "avformat.h"
@@ -1426,7 +1419,7 @@ Index: mpegenc.c
  
  } MpegMuxContext;
  
-+extern const int lpcm_freq_tab[4];
++const int ff_lpcm_freq_tab[4] = { 48000, 96000, 44100, 32000};
 +
  static int put_pack_header(AVFormatContext *ctx,
                             uint8_t *buf, int64_t timestamp)
@@ -1466,7 +1459,16 @@ Index: mpegenc.c
                  }
              }
          }
-@@ -346,37 +340,23 @@
+@@ -332,7 +326,7 @@
+             } else if (st->codec->codec_id == CODEC_ID_PCM_S16BE) {
+                 stream->id = lpcm_id++;
+                 for(j = 0; j < 4; j++) {
+-                    if (lpcm_freq_tab[j] == st->codec->sample_rate)
++                    if (ff_lpcm_freq_tab[j] == st->codec->sample_rate)
+                         break;
+                 }
+                 if (j == 4)
+@@ -346,44 +340,30 @@
              } else {
                  stream->id = mpa_id++;
              }
@@ -1508,7 +1510,33 @@ Index: mpegenc.c
      bitrate = 0;
      audio_bitrate = 0;
      video_bitrate = 0;
-@@ -615,35 +595,24 @@
+     for(i=0;i<ctx->nb_streams;i++) {
+         int codec_rate;
+         st = ctx->streams[i];
+-        stream = (StreamInfo*) st->priv_data;
++        stream = st->priv_data;
+ 
+         if(st->codec->rc_max_rate || stream->id==VIDEO_ID)
+             codec_rate= st->codec->rc_max_rate;
+@@ -476,17 +456,6 @@
+     return AVERROR(ENOMEM);
+ }
+ 
+-static inline void put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
+-{
+-    put_byte(pb,
+-             (id << 4) |
+-             (((timestamp >> 30) & 0x07) << 1) |
+-             1);
+-    put_be16(pb, (uint16_t)((((timestamp >> 15) & 0x7fff) << 1) | 1));
+-    put_be16(pb, (uint16_t)((((timestamp) & 0x7fff) << 1) | 1));
+-}
+-
+-
+ /* return the number of padding bytes that should be inserted into
+    the multiplexed stream.*/
+ static int get_vcd_padding_size(AVFormatContext *ctx, int64_t pts)
+@@ -615,35 +584,24 @@
          put_byte(pb, 0xff);
  }
  
@@ -1537,7 +1565,7 @@ Index: mpegenc.c
      uint8_t *buf_ptr;
      int size, payload_size, startcode, id, stuffing_size, i, header_len;
 -    int packet_size;
-+    int packet_size, es_size, pes_content_len;
++    int packet_size, es_size;
      uint8_t buffer[128];
      int zero_trail_bytes = 0;
      int pad_packet_bytes = 0;
@@ -1549,7 +1577,7 @@ Index: mpegenc.c
  
      id = stream->id;
  
-@@ -780,7 +749,7 @@
+@@ -780,7 +738,7 @@
              startcode = 0x100 + id;
          }
  
@@ -1558,7 +1586,7 @@ Index: mpegenc.c
  
          // first byte does not fit -> reset pts/dts + stuffing
          if(payload_size <= trailer_size && pts != AV_NOPTS_VALUE){
-@@ -821,55 +790,39 @@
+@@ -821,94 +779,54 @@
              payload_size -= stuffing_size;
              stuffing_size = 0;
          }
@@ -1575,14 +1603,14 @@ Index: mpegenc.c
 +                bytestream_put_byte(&p, stream->lpcm_header[2]);
 +            } else if (id >= 0x40) {
 +                /* AC3 */
-+                nb_frames= get_nb_frames(ctx, stream, payload_size - stuffing_size);
++                nb_frames= ff_get_nb_frames(ctx, stream, payload_size - stuffing_size);
 +                bytestream_put_byte(&p, nb_frames);
 +                bytestream_put_be16(&p, trailer_size+1);
 +            }
 +        }
 +        if(s->is_mpeg2) {
 +            pes_context->packet_number = s->packet_number;
-+            pes_context->mux_type = PESMUX_PS;
++            pes_context->muxer_type = PESMUXER_PS;
 +            if(ff_pes_muxer_write(ctx, stream_index, pts, dts, id, startcode, pes_content, p - pes_content,
 +                 header_len, packet_size, payload_size, stuffing_size) < 0)
 +                return -1;
@@ -1635,9 +1663,14 @@ Index: mpegenc.c
 -        } else {
 -            if (pts != AV_NOPTS_VALUE) {
                  if (dts != pts) {
-                     put_timestamp(&ctx->pb, 0x03, pts);
-                     put_timestamp(&ctx->pb, 0x01, dts);
-@@ -879,36 +832,12 @@
+-                    put_timestamp(&ctx->pb, 0x03, pts);
+-                    put_timestamp(&ctx->pb, 0x01, dts);
++                    ff_put_timestamp(&ctx->pb, 0x03, pts);
++                    ff_put_timestamp(&ctx->pb, 0x01, dts);
+                 } else {
+-                    put_timestamp(&ctx->pb, 0x02, pts);
++                    ff_put_timestamp(&ctx->pb, 0x02, pts);
+                 }
              } else {
                  put_byte(&ctx->pb, 0x0f);
              }
@@ -1665,19 +1698,19 @@ Index: mpegenc.c
 -                /* AC3 */
 -                put_byte(&ctx->pb, nb_frames);
 -                put_be16(&ctx->pb, trailer_size+1);
--            }
--        }
++            /* output data */
++            if(av_fifo_generic_read(&pes_stream->fifo, payload_size - stuffing_size, &put_buffer, &ctx->pb) < 0) {
++                return -1;
+             }
+         }
 -
-         /* output data */
+-        /* output data */
 -        if(av_fifo_generic_read(&stream->fifo, payload_size - stuffing_size, &put_buffer, &ctx->pb) < 0)
-+        if(av_fifo_generic_read(&pes_stream->fifo, payload_size - stuffing_size, &put_buffer, &ctx->pb) < 0) {
-             return -1;
-+            }
-+        }
+-            return -1;
          stream->bytes_to_iframe -= payload_size - stuffing_size;
      }else{
          payload_size=
-@@ -931,6 +860,16 @@
+@@ -931,6 +849,16 @@
      if (!general_pack)
          stream->packet_number++;
  
@@ -1694,7 +1727,7 @@ Index: mpegenc.c
      return payload_size - stuffing_size;
  }
  
-@@ -981,105 +920,19 @@
+@@ -981,105 +909,19 @@
  }
  #endif
  
@@ -1805,7 +1838,7 @@ Index: mpegenc.c
      assert(best_i >= 0);
  
      st = ctx->streams[best_i];
-@@ -1087,8 +940,6 @@
+@@ -1087,8 +929,6 @@
  
      assert(av_fifo_size(&stream->fifo) > 0);
  
@@ -1814,7 +1847,7 @@ Index: mpegenc.c
      timestamp_packet= stream->premux_packet;
      if(timestamp_packet->unwritten_size == timestamp_packet->size){
          trailer_size= 0;
-@@ -1116,17 +967,9 @@
+@@ -1116,17 +956,9 @@
          }
      }
  
@@ -1833,7 +1866,7 @@ Index: mpegenc.c
          return -1;
  
      return 1;
-@@ -1136,39 +979,18 @@
+@@ -1136,39 +968,18 @@
  {
      MpegMuxContext *s = ctx->priv_data;
      int stream_index= pkt->stream_index;
@@ -1878,7 +1911,7 @@ Index: mpegenc.c
              stream->align_iframe = 1;
              stream->vobu_start_pts = pts;
          } else {
-@@ -1176,7 +998,6 @@
+@@ -1176,7 +987,6 @@
          }
      }
  
@@ -1886,7 +1919,7 @@ Index: mpegenc.c
  
      for(;;){
          int ret= output_packet(ctx, 0);
-@@ -1187,10 +1008,6 @@
+@@ -1187,10 +997,6 @@
  
  static int mpeg_mux_end(AVFormatContext *ctx)
  {
@@ -1897,7 +1930,7 @@ Index: mpegenc.c
      for(;;){
          int ret= output_packet(ctx, 1);
          if(ret<0)
-@@ -1199,18 +1016,13 @@
+@@ -1199,18 +1005,13 @@
              break;
      }
  
@@ -1921,9 +1954,10 @@ Index: mpeg_pes.h
 ===================================================================
 --- mpeg_pes.h	(revision 0)
 +++ mpeg_pes.h	(revision 0)
-@@ -0,0 +1,157 @@
+@@ -0,0 +1,166 @@
 +/*
 + * Copyright (c) 2000-2002 Fabrice Bellard
++ * Copyright (c) 2007 Xiaohui Sun <sunxiaohui@dsp.ac.cn>
 + *
 + * This file is part of FFmpeg.
 + *
@@ -1944,7 +1978,7 @@ Index: mpeg_pes.h
 +
 +/**
 + * @file mpeg_pes.h
-+ * MPEG PES packetizer api header.
++ * MPEG PES packetizer API header
 + */
 +
 +#ifndef AVFORMAT_MPEG_PES_H
@@ -1966,19 +2000,19 @@ Index: mpeg_pes.h
 +} PacketDesc;
 +
 +/**
-+ * mux type for PES
++ * muxer type for PES
 + */
 +typedef enum {
-+    PESMUX_PS,
-+    PESMUX_TS,
-+    PESMUX_PES
-+} PESMuxType;
++    PESMUXER_PS,
++    PESMUXER_TS,
++    PESMUXER_PES
++} PESMuxerType;
 +
 +/**
-+ * PES Context
++ * PES context
 + */
 +typedef struct {
-+    PESMuxType mux_type;  /**< whether it is a Program Stream */
++    PESMuxerType muxer_type;
 +    int packet_number;
 +} PESContext;
 +
@@ -2017,7 +2051,7 @@ Index: mpeg_pes.h
 +int ff_pes_muxer_init(AVFormatContext *ctx);
 +
 +/**
-+ * Finalization of PES mux.
++ * Finalization of PES muxer.
 + * @param [in] ctx the AVFormatContext which contains streams.
 + * @return  NULL
 + */
@@ -2032,23 +2066,23 @@ Index: mpeg_pes.h
 +void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
 +
 +/**
-+ * Find which stream is most appropriate be muxed.
-+ * @param[in] ctx   the AVFormatContext
++ * Find the stream to mux into the PES stream.
++ * @param[in] ctx          the AVFormatContext
 + * @param[in] packet_size  PES stream packet size
-+ * @param[in] flush  whether flush after every single subtitle packet. For subtitle, a single PES packet must be generated
-+ * @param[out] best_i      stream index in AVFormatContext that should be muxed
++ * @param[in] flush        Flush after every single subtitle packet.Find the stream to mux into the PES strea
++ * @param[out] best_i      index of stream to be muxed
 + * @return  On error a negative or zero value is returned, on success 1 is returned.
 + */
 +int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t scr, int* best_i);
 +
 +/**
-+ * Get total frames that have been muxed.
++ * Get total number of frames that have been muxed.
 + * @param[in] ctx    the AVFormatContext
 + * @param[in] stream the PES stream
 + * @param[in] len    PES packet size
 + * @return  the frame number to be muxed
 + */
-+int get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
++int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
 +
 +/**
 + * Mux streams into a PES packet.
@@ -2077,5 +2111,13 @@ Index: mpeg_pes.h
 + */
 +int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
 +
++/*
++ * Put a timestamp.
++ * @param[in] pb        the IOContext to be written to
++ * @param[in] id        stream id
++ * @param[in] timestamp the time stamp
++ * @return  NULL
++ */
++void ff_put_timestamp(ByteIOContext *pb, int id, int64_t timestamp);
 +
 +#endif/* AVFORMAT_MPEG_PES_H */

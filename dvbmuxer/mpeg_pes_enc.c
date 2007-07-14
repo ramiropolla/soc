@@ -1,6 +1,7 @@
 /*
  * MPEG PES muxer
  * Copyright (c) 2000-2002 Fabrice Bellard
+ * Copyright (c) 2007 Xiaohui Sun <sunxiaohui@dsp.ac.cn>
  *
  * This file is part of FFmpeg.
  *
@@ -20,8 +21,6 @@
  */
 
 #include "mpeg_pes.h"
-
-const int lpcm_freq_tab[4] = { 48000, 96000, 44100, 32000 };
 
 int ff_pes_muxer_init(AVFormatContext *ctx)
 {
@@ -65,7 +64,7 @@ int ff_pes_muxer_init(AVFormatContext *ctx)
     return 0;
 }
 
-static inline void put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
+void ff_put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
 {
     put_byte(pb,
              (id << 4) |
@@ -75,7 +74,7 @@ static inline void put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
     put_be16(pb, (uint16_t)((((timestamp) & 0x7fff) << 1) | 1));
 }
 
-int get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
+int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
     int nb_frames=0;
     PacketDesc *pkt_desc= stream->premux_packet;
 
@@ -116,35 +115,35 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
                P-STD_buffer_size field be included in the first packet of
                every stream. (see SVCD standard p. 26 V.2.3.1 and V.2.3.2
                and MPEG-2 standard 2.7.7) */
-            if (context->packet_number == 0 && context->mux_type == PESMUX_PS)
+            if (context->packet_number == 0 && context->muxer_type == PESMUXER_PS)
                 pes_flags |= 0x01;
 
             put_byte(&ctx->pb, pes_flags); /* flags */
             put_byte(&ctx->pb, header_len - 3 + stuffing_size);
 
             if (pes_flags & 0x80)  /*write pts*/
-                put_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
+                ff_put_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
             if (pes_flags & 0x40)  /*write dts*/
-                put_timestamp(&ctx->pb, 0x01, dts);
+                ff_put_timestamp(&ctx->pb, 0x01, dts);
 
             if (pes_flags & 0x01) {  /*write pes extension*/
                 put_byte(&ctx->pb, 0x10); /* flags */
 
-        /* P-STD buffer info */
-        if (id == AUDIO_ID)
-            put_be16(&ctx->pb, 0x4000 | stream->max_buffer_size/128);
-        else
-            put_be16(&ctx->pb, 0x6000 | stream->max_buffer_size/1024);
+                /* P-STD buffer info */
+                if (id == AUDIO_ID)
+                    put_be16(&ctx->pb, 0x4000 | stream->max_buffer_size/128);
+                else
+                    put_be16(&ctx->pb, 0x6000 | stream->max_buffer_size/1024);
     }
 
-    /* special stuffing byte that is always written
-       to prevent accidental generation of start codes. */
-    put_byte(&ctx->pb, 0xff);
+            /* special stuffing byte that is always written
+               to prevent accidental generation of start codes. */
+             put_byte(&ctx->pb, 0xff);
 
-    for(i=0;i<stuffing_size;i++)
-        put_byte(&ctx->pb, 0xff);
+             for(i=0;i<stuffing_size;i++)
+                 put_byte(&ctx->pb, 0xff);
 
-     put_buffer(&ctx->pb, pes_content, pes_content_len);
+             put_buffer(&ctx->pb, pes_content, pes_content_len);
 
     /* output data */
     if(av_fifo_generic_read(&stream->fifo, data_size, &put_buffer, &ctx->pb) < 0)
