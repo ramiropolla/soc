@@ -59,27 +59,30 @@ int main(int argc, char **argv)
     int i;
     int ret = -1;
     int64_t pts = 0, newpts;
-    AVFilterContext **filters;
+    AVFilterGraph   *graph;
+    AVFilterContext *filters[2];
 
     if(argc < 3) {
         av_log(NULL, AV_LOG_ERROR, "require at least two filters\n");
         return -1;
     }
 
-    filters = av_mallocz((argc-1) * sizeof(AVFilterContext*));
     avfilter_init();
+    graph = avfilter_create_graph();
 
     for(i = 0; i < argc-1; i ++) {
-        if(!(filters[i] = create_filter(argv[i+1])))
+        if(!(filters[1] = create_filter(argv[i+1])))
             goto done;
-        if(i && avfilter_link(filters[i-1], 0, filters[i], 0)) {
+        avfilter_graph_add_filter(graph, filters[1]);
+        if(i && avfilter_link(filters[0], 0, filters[1], 0)) {
             av_log(NULL, AV_LOG_ERROR, "error linking filters!\n");
             goto done;
         }
+        filters[0] = filters[1];
     }
 
     while(pts < 5000) {
-        newpts = sdl_display(filters[argc-2]);
+        newpts = sdl_display(filters[1]);
         usleep(newpts - pts);
         pts = newpts;
     }
@@ -87,9 +90,7 @@ int main(int argc, char **argv)
     ret = 0;
 
 done:
-    for(i = 0; i < argc-1; i ++)
-        if(filters[i]) avfilter_destroy(filters[i]);
-    av_free(filters);
+    avfilter_destroy_graph(graph);
 
     return ret;
 }
