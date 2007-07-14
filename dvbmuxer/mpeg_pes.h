@@ -112,7 +112,7 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
  * Find the stream to mux into the PES stream.
  * @param[in] ctx          the AVFormatContext
  * @param[in] packet_size  PES stream packet size
- * @param[in] flush        Flush after every single subtitle packet.Find the stream to mux into the PES strea
+ * @param[in] flush        Flush after every single subtitle packet.
  * @param[out] best_i      index of stream to be muxed
  * @return  On error a negative or zero value is returned, on success 1 is returned.
  */
@@ -155,10 +155,10 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
 int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
 
 /*
- * Put a timestamp.
- * @param[in] pb        the IOContext to be written to
- * @param[in] id        stream id
- * @param[in] timestamp the time stamp
+ * Insert a timestamp into the ByteIOContext.
+ * @param[in] pb        the ByteIOContext to be written to
+ * @param[in] id        stream ID
+ * @param[in] timestamp the timestamp
  * @return  NULL
  */
 void ff_put_timestamp(ByteIOContext *pb, int id, int64_t timestamp);

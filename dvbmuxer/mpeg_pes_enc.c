@@ -137,7 +137,7 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
     }
 
             /* special stuffing byte that is always written
-               to prevent accidental generation of start codes. */
+               to prevent accidental generation of startcodes. */
              put_byte(&ctx->pb, 0xff);
 
              for(i=0;i<stuffing_size;i++)
