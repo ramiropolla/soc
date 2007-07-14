@@ -392,6 +392,7 @@ static inline void rv40_dequant4x4(DCTELEM *block, int offset, int Qdc, int Q)
 {
     int i, j;
 
+    block += offset;
     block[0] = (block[0] * Qdc + 8) >> 4;
     for(i = 0; i < 4; i++)
         for(j = 0; j < 4; j++)
