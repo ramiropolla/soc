@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     int ret = -1;
     int64_t pts = 0, newpts;
     AVFilterGraph   *graph;
-    AVFilterContext *filters[2];
+    AVFilterContext *filters[2] = {NULL,NULL};
 
     if(argc < 3) {
         av_log(NULL, AV_LOG_ERROR, "require at least two filters\n");
@@ -70,11 +70,11 @@ int main(int argc, char **argv)
     avfilter_init();
     graph = avfilter_create_graph();
 
-    for(i = 0; i < argc-1; i ++) {
-        if(!(filters[1] = create_filter(argv[i+1])))
+    for(i = 1; i < argc; i ++) {
+        if(!(filters[1] = create_filter(argv[i])))
             goto done;
         avfilter_graph_add_filter(graph, filters[1]);
-        if(i && avfilter_link(filters[0], 0, filters[1], 0)) {
+        if(filters[0] && avfilter_link(filters[0], 0, filters[1], 0)) {
             av_log(NULL, AV_LOG_ERROR, "error linking filters!\n");
             goto done;
         }
