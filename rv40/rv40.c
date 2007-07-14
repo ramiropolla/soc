@@ -554,7 +554,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     GetBitContext *gb = &s->gb;
     DSPContext *dsp = &s->dsp;
     int q, cbp;
-    int i, x, y;
+    int i, blknum, blkoff;
     uint8_t *Y;
     int luma_vlc, chroma_vlc;
     int is16 = 0;
@@ -592,19 +592,19 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
 
     for(i = 0; i < 16; i++, cbp >>= 1){
         if(!(cbp & 1)) continue;
-        x = (i & 1) << 2;
-        y = (i & 2) << 4;
-        rv40_decode_block(s->block[i>>2] + x + y, gb, &intra_vlcs[2], luma_vlc, 0);
-        rv40_dequant4x4(s->block[i>>2] + x + y, r->quant, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
-        rv40_intra_inv_transform(s->block[i>>2], x+y);
+        blknum = ((i & 2) >> 1) + ((i & 8) >> 2);
+        blkoff = ((i & 1) << 2) + ((i & 4) << 3);
+        rv40_decode_block(s->block[blknum] + blkoff, gb, &intra_vlcs[2], luma_vlc, 0);
+        rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
+        rv40_intra_inv_transform(s->block[blknum], blkoff);
     }
     for(; i < 24; i++, cbp >>= 1){
         if(!(cbp & 1)) continue;
-        x = (i & 1) << 2;
-        y = (i & 2) << 4;
-        rv40_decode_block(s->block[i>>2] + x + y, gb, &intra_vlcs[2], chroma_vlc, 1);
-        rv40_dequant4x4(s->block[i>>2] + x + y, r->quant, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
-        rv40_intra_inv_transform(s->block[i>>2], x+y);
+        blknum = ((i & 2) >> 1) + ((i & 8) >> 2);
+        blkoff = ((i & 1) << 2) + ((i & 4) << 3);
+        rv40_decode_block(s->block[blknum] + blkoff, gb, &intra_vlcs[2], chroma_vlc, 1);
+        rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
+        rv40_intra_inv_transform(s->block[blknum], blkoff);
     }
     Y = s->dest[0];
     dsp->put_pixels_clamped(s->block[0], Y, s->current_picture.linesize[0]);
