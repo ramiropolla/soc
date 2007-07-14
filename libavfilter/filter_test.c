@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "avfilter.h"
+#include "avfiltergraph.h"
 
 int64_t sdl_display(AVFilterContext *ctx);
 

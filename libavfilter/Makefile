@@ -3,6 +3,7 @@ CFLAGS = -g -I../libavcodec -I../libavutil
 LIBS = ../libavcodec/libavcodec.a ../libavutil/libavutil.a -lm -lSDL
 
 OBJECTS = avfilter.o          \
+          avfiltergraph.o     \
           vsrc_dummy.o        \
 		  vsrc_ppm.o          \
 		  vo_sdl.o            \
