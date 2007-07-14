@@ -150,7 +150,7 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
                 g0[i]=QCELP_CBGAIN2G0(cbgain[i]);
 
                 /* FIXME this needs to be further examinated */
-                if(frame->rate == RATE_FULL && i > 0 && !((i+1)%4))
+                if(frame->rate == RATE_FULL && i > 0 && !(i+1 & 3))
                     predictor=av_clip(6, 38, (g1[i-1]+g1[i-2]+g1[i-3])/3);
                 else
                     predictor=0;
@@ -159,7 +159,7 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
                 ga[i]=qcelp_g12ga[g1[i]];
 
                 gain[i]=ga[i]*gs[i];
-                index[i]=(gs[i] > 0)? cindex[i]:(cindex[i]-89)%128; /* FIXME */
+                index[i]=(gs[i] > 0)? cindex[i]:cindex[i]-89 & 127; /* FIXME */
             }
 
             break;
@@ -212,13 +212,41 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
 static int qcelp_compute_cdn(qcelp_packet_rate rate, const float *gain,
            const int *index, uint16_t cbseed, float *cdn_vector)
 {
+    int      i,j;
+    uint16_t new_cbseed;
+    float    rnd[160];
+
     switch(rate)
     {
         case RATE_FULL:
         case RATE_HALF:
+             break;
         case RATE_QUARTER:
+            for(i=0; i<160; i++)
+            {
+                new_cbseed=521*cbseed+259 & 65535;
+                cbseed=rnd[i]=
+                QCELP_SQRT1887*((new_cbseed+32768 & 65535)-32768)/32768.0;
+
+                /* FIR filter */
+                cdn_vector[i]=qcelp_rnd_fir_coefs[1]*rnd[i];
+                for(j=1; j<22 && !(i-j+1); j++)
+                {
+                    cdn_vector[i]+=qcelp_rnd_fir_coefs[j]*rnd[i-j];
+                }
+                /* final scaling */
+                cdn_vector[i]*=gain[i/20];
+            }
+            break;
         case RATE_OCTAVE:
-        break;
+            for(i=0; i<160; i++)
+            {
+                new_cbseed=521*cbseed+259 & 65535;
+                cbseed=rnd[i]=
+                QCELP_SQRT1887*((new_cbseed+32768 & 65535)-32768)/32768.0;
+
+                cdn_vector[i]=gain[0]*rnd[i];
+            }
     }
 
     return 1;
