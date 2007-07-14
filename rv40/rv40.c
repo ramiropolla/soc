@@ -577,9 +577,9 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         chroma_vlc = 0;
         luma_vlc   = 1;
     }else{
-        x = get_bits(gb, 2);
+        q = get_bits(gb, 2);
         for(i = 0; i < 16; i++)
-            intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = x;
+            intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = q;
         chroma_vlc = 0;
         luma_vlc   = 2;
     }
