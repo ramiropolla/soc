@@ -399,6 +399,21 @@ static inline void rv40_dequant4x4(DCTELEM *block, int offset, int Qdc, int Q)
             if(i || j)
                 block[j + i*8] = (block[j + i*8] * Q + 8) >> 4;
 }
+
+/**
+ * Dequantize 4x4 block of DC values for 16x16 macroblock
+ * @todo optimize
+ */
+static inline void rv40_dequant4x4_16x16(DCTELEM *block, int offset, int Qdc, int Q)
+{
+    int i;
+
+    block += offset;
+    for(i = 0; i < 3; i++)
+         block[rv40_dezigzag[i]] = (block[rv40_dezigzag[i]] * Qdc + 8) >> 4;
+    for(; i < 16; i++)
+         block[rv40_dezigzag[i]] = (block[rv40_dezigzag[i]] * Q + 8) >> 4;
+}
 /** @} */ //block functions
 
 

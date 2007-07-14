@@ -137,4 +137,14 @@ static uint16_t rv40_qscale_tab[32] = {
  963, 1074, 1212, 1392, 1566, 1708, 1978, 2211
 };
 
+/**
+ * 4x4 dezigzag pattern
+ */
+static uint8_t rv40_dezigzag[16] = {
+  0,  1,  8, 16,
+  9,  2,  3, 10,
+ 17, 24, 25, 18,
+ 11, 19, 26, 27
+};
+
 #endif /* RV40DATA_H */
