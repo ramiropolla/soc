@@ -43,7 +43,7 @@ AVFilterContext *create_filter(char *argv)
     av_log(NULL, AV_LOG_INFO, "creating filter \"%s\" with args \"%s\"\n",
            name, args ? args : "(none)");
 
-    if((ret = avfilter_create_by_name(name))) {
+    if((ret = avfilter_create_by_name(name, NULL))) {
         if(avfilter_init_filter(ret, args)) {
             av_log(NULL, AV_LOG_ERROR, "error initializing filter!\n");
             avfilter_destroy(ret);
