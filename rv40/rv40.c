@@ -32,6 +32,8 @@
 #include "rv40vlc2.h"
 #include "rv40data.h"
 
+#include "h264pred.h"
+
 //#define DEBUG
 
 /** Decoder context */
@@ -46,6 +48,7 @@ typedef struct RV40DecContext{
     int quant;               ///< quantizer
 
     int bits;                ///< slice size in bits
+    H264PredContext h;       ///< functions for 4x4 and 16x16 intra block prediction
 }RV40DecContext;
 
 
@@ -695,6 +698,8 @@ static int rv40_decode_init(AVCodecContext *avctx)
 
     if (MPV_common_init(s) < 0)
         return -1;
+
+    ff_h264_pred_init(&r->h);
 
     r->intra_types_stride = (s->mb_width + 1) * 4;
     r->intra_types_hist = av_malloc(r->intra_types_stride * 4 * 2 * sizeof(int));
