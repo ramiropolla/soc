@@ -27,6 +27,10 @@
 #define GREEN   0x60
 #define BLUE    0xC0
 
+typedef struct {
+    int64_t pts;
+} DummyContext;
+
 static int *query_formats(AVFilterLink *link)
 {
     return avfilter_make_format_list(1, PIX_FMT_RGB24);
@@ -42,12 +46,15 @@ static int config_props(AVFilterLink *link)
 
 static void request_frame(AVFilterLink *link)
 {
+    DummyContext *ctx = link->src->priv;
     AVFilterPicRef *pic;
 
     int x, y;
     uint8_t *row, *cur;
 
     pic = avfilter_get_video_buffer(link, AV_PERM_WRITE);
+    pic->pts  =
+    ctx->pts += 30;
     avfilter_start_frame(link, avfilter_ref_pic(pic, ~0));
 
     row = pic->data[0];
@@ -71,7 +78,7 @@ AVFilter vsrc_dummy =
 {
     .name      = "dummy",
     .author    = "Bobby Bingham",
-    .priv_size = 0,
+    .priv_size = sizeof(DummyContext),
 
     .inputs    = (AVFilterPad[]) {{ .name = NULL }},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",

@@ -24,6 +24,7 @@
 #include "avfilter.h"
 
 typedef struct {
+    int64_t pts;
     int w, h;
     FILE *in;
     AVFilterPicRef *pic;
@@ -89,6 +90,8 @@ static void request_frame(AVFilterLink *link)
     }
 
     out = avfilter_ref_pic(ppm->pic, ~AV_PERM_WRITE);
+    out->pts  =
+    ppm->pts += 30;
     avfilter_start_frame(link, out);
     avfilter_draw_slice(link, out->data, 0, out->h);
     avfilter_end_frame(link);

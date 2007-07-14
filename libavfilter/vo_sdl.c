@@ -28,6 +28,7 @@
 typedef struct
 {
     SDL_Surface *surface;
+    int64_t pts;
 } SDLContext;
 
 static int init(AVFilterContext *ctx, const char *args)
@@ -69,6 +70,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     SDLContext *sdl = link->dst->priv;
     avfilter_default_start_frame(link, picref);
+    sdl->pts = picref->pts;
     SDL_LockSurface(sdl->surface);
 
     av_log(link->dst, AV_LOG_INFO, "start_frame()\n");
@@ -104,12 +106,13 @@ static void end_frame(AVFilterLink *link)
 }
 
 /* XXX: this is a hack.  should provide a proper vout interface */
-void sdl_display(AVFilterContext *ctx)
+int64_t sdl_display(AVFilterContext *ctx)
 {
     SDLContext *sdl = ctx->priv;
 
     SDL_Flip(sdl->surface);
     avfilter_request_frame(ctx->inputs[0]);
+    return sdl->pts;
 }
 
 AVFilter vo_sdl =

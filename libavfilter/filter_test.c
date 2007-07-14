@@ -24,7 +24,7 @@
 
 #include "avfilter.h"
 
-void sdl_display(AVFilterContext *ctx);
+int64_t sdl_display(AVFilterContext *ctx);
 
 AVFilterContext *create_filter(char *argv)
 {
@@ -58,6 +58,7 @@ int main(int argc, char **argv)
 {
     int i;
     int ret = -1;
+    int64_t pts = 0, newpts;
     AVFilterContext **filters;
 
     if(argc < 3) {
@@ -77,9 +78,10 @@ int main(int argc, char **argv)
         }
     }
 
-    for(i = 0; i < 10; i ++) {
-        sdl_display(filters[argc-2]);
-        sleep(1);
+    while(pts < 5000) {
+        newpts = sdl_display(filters[argc-2]);
+        usleep(newpts - pts);
+        pts = newpts;
     }
 
     ret = 0;
