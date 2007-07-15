@@ -36,21 +36,6 @@
 
 //#define DEBUG
 
-/** Decoder context */
-typedef struct RV40DecContext{
-    MpegEncContext s;
-    int mb_bits;             ///< bits needed to read MB offet in slice header
-    int *intra_types_hist;   ///< old block types, used for prediction
-    int *intra_types;        ///< block types
-    int intra_types_stride;  ///< stride for block types data
-    int block_start;         ///< start of slice in blocks
-    int ptype;               ///< picture type
-    int quant;               ///< quantizer
-
-    int bits;                ///< slice size in bits
-    H264PredContext h;       ///< functions for 4x4 and 16x16 intra block prediction
-}RV40DecContext;
-
 
 /**
  * VLC tables used by decoder
@@ -65,6 +50,21 @@ typedef struct RV40VLC{
     VLC third_pattern[2];  ///< VLCs used for decoding coefficients in the last subblock
     VLC coefficient;       ///< VLCs used for decoding big coefficients
 }RV40VLC;
+
+/** Decoder context */
+typedef struct RV40DecContext{
+    MpegEncContext s;
+    int mb_bits;             ///< bits needed to read MB offet in slice header
+    int *intra_types_hist;   ///< old block types, used for prediction
+    int *intra_types;        ///< block types
+    int intra_types_stride;  ///< stride for block types data
+    int block_start;         ///< start of slice in blocks
+    int ptype;               ///< picture type
+    int quant;               ///< quantizer
+
+    int bits;                ///< slice size in bits
+    H264PredContext h;       ///< functions for 4x4 and 16x16 intra block prediction
+}RV40DecContext;
 
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
 static VLC aic_top_vlc;
