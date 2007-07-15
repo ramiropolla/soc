@@ -62,6 +62,7 @@ typedef struct RV40DecContext{
     int ptype;               ///< picture type
     int quant;               ///< quantizer
 
+    int vlc_set;             ///< index of currently selected VLC set
     RV40VLC *cur_vlcs;       ///< VLC set used for current frame decoding
     int bits;                ///< slice size in bits
     H264PredContext h;       ///< functions for 4x4 and 16x16 intra block prediction
@@ -476,7 +477,7 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb)
     r->quant = get_bits(gb, 5);
     if(get_bits(gb, 2))
         return -1;
-    get_bits(gb, 2); /// ???
+    r->vlc_set = get_bits(gb, 2) + 1;
     if(get_bits1(gb))
         return -1;
     t = get_bits(gb, 13); /// ???
@@ -803,7 +804,7 @@ if(s->pict_type != I_TYPE)return -1;
         if(MPV_frame_start(s, avctx) < 0)
             return -1;
         ff_er_frame_start(s);
-        r->cur_vlcs = &intra_vlcs[2];
+        r->cur_vlcs = &intra_vlcs[r->vlc_set];
     }
     rv40_decode_slice(r);
 
