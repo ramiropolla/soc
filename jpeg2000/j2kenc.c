@@ -33,6 +33,7 @@
 
 #define NMSEDEC_BITS 7
 #define NMSEDEC_FRACBITS (NMSEDEC_BITS-1)
+#define WMSEDEC_SHIFT 13
 
 static int lut_nmsedec_ref [1<<NMSEDEC_BITS],
            lut_nmsedec_ref0[1<<NMSEDEC_BITS],
@@ -43,7 +44,7 @@ static int lut_nmsedec_ref [1<<NMSEDEC_BITS],
 
 typedef struct {
     uint16_t rate;
-    double disto;
+    int64_t disto;
 } J2kPass;
 
 typedef struct {
@@ -88,9 +89,9 @@ typedef struct {
 
 typedef struct { // flatten with context
    J2kComponent *comp;
-   double distortion;
-   double mindr; // minimum dist/rate value
-   double maxdr;
+   int64_t distortion;
+   int64_t mindr; // minimum dist/rate value
+   int64_t maxdr;
 } J2kTile;
 
 typedef struct {
@@ -815,7 +816,7 @@ static int getnmsedec_ref(int x, int bpno)
     return lut_nmsedec_ref0[x & ((1 << NMSEDEC_BITS) - 1)];
 }
 
-static double getwmsedec(int nmsedec, int bandpos, int lev, int bpno)
+static int64_t getwmsedec(int nmsedec, int bandpos, int lev, int bpno)
 {
    static const int dwt_norms[4][10] = { // multiplied by 10000
     {10000, 15000, 27500, 53750, 106800, 213400, 426700, 853300, 1707000, 3413000},
@@ -823,8 +824,8 @@ static double getwmsedec(int nmsedec, int bandpos, int lev, int bpno)
     {10380, 15920, 29190, 57030, 113300, 226400, 452500, 904800, 1809000},
     { 7186,  9218, 15860, 30430,  60190, 120100, 240000, 479700,  959300}};
 
-    int t = (dwt_norms[bandpos][lev]) * (1 << bpno);
-    return (double) t * (double) t * nmsedec;
+    int64_t t = dwt_norms[bandpos][lev] << bpno;
+    return (t * t >> WMSEDEC_SHIFT) * nmsedec;
 }
 
 static void encode_sigpass(J2kT1Context *t1, int width, int height, int bandno, int *nmsedec, int bpno)
@@ -923,7 +924,7 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
                         int width, int height, int bandpos, int lev)
 {
     int pass_t = 2, passno, i, j, max=0, nmsedec, bpno;
-    double wmsedec = 0;
+    int64_t wmsedec = 0;
 
     for (i = 0; i < height+2; i++)
         bzero(t1->flags[i], (width+2)*sizeof(int));
@@ -945,7 +946,7 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
     ff_aec_initenc(&t1->aec, cblk->data);
 
     for (passno = 0; bpno >= 0; passno++){
-        double dr;
+        int64_t dr;
         int drate;
 
         nmsedec=0;
@@ -1110,12 +1111,12 @@ static void encode_packets(J2kEncoderContext *s, J2kTile *tile, int tileno)
     av_log(s->avctx, AV_LOG_DEBUG, "after tier2\n");
 }
 
-static int getcut(J2kCblk *cblk, double threshold)
+static int getcut(J2kCblk *cblk, int64_t threshold)
 {
     int passno, res = 0;
     for (passno = 0; passno < cblk->npassess; passno++){
         int dr;
-        double dd;
+        int64_t dd;
 
         dr = cblk->passess[passno].rate
            - (res ? cblk->passess[res-1].rate:0);
@@ -1128,7 +1129,7 @@ static int getcut(J2kCblk *cblk, double threshold)
     return res;
 }
 
-static void truncpassess(J2kEncoderContext *s, J2kTile *tile, double threshold)
+static void truncpassess(J2kEncoderContext *s, J2kTile *tile, int64_t threshold)
 {
     int compno, reslevelno, bandno, cblkno;
     for (compno = 0; compno < s->ncomponents; compno++){
