@@ -62,6 +62,7 @@ typedef struct RV40DecContext{
     int ptype;               ///< picture type
     int quant;               ///< quantizer
 
+    RV40VLC *cur_vlcs;       ///< VLC set used for current frame decoding
     int bits;                ///< slice size in bits
     H264PredContext h;       ///< functions for 4x4 and 16x16 intra block prediction
 }RV40DecContext;
@@ -655,11 +656,11 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         chroma_vlc = 0;
         luma_vlc   = 2;
     }
-    cbp = cbp2 = rv40_decode_cbp(gb, &intra_vlcs[2], is16);
+    cbp = cbp2 = rv40_decode_cbp(gb, r->cur_vlcs, is16);
 
     if(is16){
         memset(block16, 0, sizeof(block16));
-        rv40_decode_block(block16, gb, &intra_vlcs[2], 3, 0);
+        rv40_decode_block(block16, gb, r->cur_vlcs, 3, 0);
         rv40_dequant4x4_16x16(block16, 0, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
         rv40_intra_inv_transform_noround(block16, 0);
     }
@@ -669,7 +670,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         blknum = ((i & 2) >> 1) + ((i & 8) >> 2);
         blkoff = ((i & 1) << 2) + ((i & 4) << 3);
         if(cbp & 1)
-            rv40_decode_block(s->block[blknum] + blkoff, gb, &intra_vlcs[2], luma_vlc, 0);
+            rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, luma_vlc, 0);
         if((cbp & 1) || is16){
             if(is16) //FIXME: optimize
                 s->block[blknum][blkoff] = block16[i];
@@ -681,7 +682,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         if(!(cbp & 1)) continue;
         blknum = ((i & 4) >> 2) + 4;
         blkoff = ((i & 1) << 2) + ((i & 2) << 4);
-        rv40_decode_block(s->block[blknum] + blkoff, gb, &intra_vlcs[2], chroma_vlc, 1);
+        rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, chroma_vlc, 1);
         rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
         rv40_intra_inv_transform(s->block[blknum], blkoff);
     }
@@ -803,6 +804,7 @@ if(s->pict_type != I_TYPE)return -1;
         if(MPV_frame_start(s, avctx) < 0)
             return -1;
         ff_er_frame_start(s);
+        r->cur_vlcs = &intra_vlcs[2];
     }
     rv40_decode_slice(r);
 
