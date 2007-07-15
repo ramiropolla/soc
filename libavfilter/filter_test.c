@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 
     avfilter_init();
     graph = avfilter_create_graph();
-    if(avfilter_graph_load_chain(graph, argc - 1, argv + 1, NULL, &out) < 0)
+    if(avfilter_graph_load_chain(graph, argc - 1, argv + 1, NULL, NULL, &out) < 0)
         goto done;
 
     while(pts < 5000) {

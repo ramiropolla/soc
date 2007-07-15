@@ -30,7 +30,7 @@ typedef struct
     int cx, cy, cw, ch;
 } CropContext;
 
-static int init(AVFilterContext *ctx, const char *args)
+static int init(AVFilterContext *ctx, const char *args, const void *opaque)
 {
     CropContext *crop = ctx->priv;
 
