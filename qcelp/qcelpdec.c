@@ -86,7 +86,7 @@ static int qcelp_decode_close(AVCodecContext *avctx)
  *
  * For details see TIA/EIA/IS-733 2.4.3.2.6.2-2
  */
-void qcelp_lspv2lspf(const QCELPFrame *frame, float *lspf)
+void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
 {
     /* FIXME a loop is wanted here */
     /* WIP implement I_F_Q handling? */
@@ -124,7 +124,7 @@ void qcelp_lspv2lspf(const QCELPFrame *frame, float *lspf)
  * (and cbseed for rate 1/4)
  * TIA/EIA/IS-733 2.4.6.2
  */
-void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
+void qcelp_decode_params(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
      float *gain, int *index)
 {
     int           i, gs[16], g1[16], predictor;
@@ -213,7 +213,7 @@ void qcelp_ctc2GI(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
  * - Needs outbound reading checks and error propagation if weirdness
  *   is detected :-).
  */
-static int qcelp_compute_cdn(qcelp_packet_rate rate, const float *gain,
+static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
            const int *index, uint16_t cbseed, float *cdn_vector)
 {
     int      i,j;
@@ -269,11 +269,11 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     QCELPContext *q    = avctx->priv_data;
     const QCELPBitmap *order = NULL;
     int16_t  *outbuffer = data, cbseed;
-    int8_t   samples;
-    int      n, is_ifq = 0;
-    uint16_t first16 = 0; /*!< needed for rate 1/8 peculiarities */
-    float    qtzd_lspf[10], gain[16];
+    int      n, is_ifq = 0, is_codecframe_fmt = 0;
+    uint16_t first16 = 0;
+    float    qtzd_lspf[10], gain[16], cdn_vector[160];
     int      g0[16], index[16];
+    uint8_t  claimed_rate;
 
     init_get_bits(&q->gb, buf, buf_size*8);
 
@@ -285,29 +285,39 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     switch(buf_size)
     {
+        case 35:
         case 34:
             q->frame->rate = RATE_FULL;
             q->frame->bits = qcelp_bits_per_rate[RATE_FULL];
             order = QCELP_REFERENCE_FRAME + QCELP_FULLPKT_REFERENCE_POS;
+            if(buf_size == 35) is_codecframe_fmt=1;
             break;
+        case 17:
         case 16:
             q->frame->rate = RATE_HALF;
             q->frame->bits = qcelp_bits_per_rate[RATE_HALF];
             order = QCELP_REFERENCE_FRAME + QCELP_HALFPKT_REFERENCE_POS;
+            if(buf_size == 17) is_codecframe_fmt=1;
             break;
-        case 7:
+        case  8:
+        case  7:
             q->frame->rate = RATE_QUARTER;
             q->frame->bits = qcelp_bits_per_rate[RATE_QUARTER];
             order = QCELP_REFERENCE_FRAME + QCELP_4THRPKT_REFERENCE_POS;
+            if(buf_size == 8) is_codecframe_fmt=1;
             break;
-        case 3:
+        case  4:
+        case  3:
             q->frame->rate = RATE_OCTAVE;
             q->frame->bits = qcelp_bits_per_rate[RATE_OCTAVE];
             order = QCELP_REFERENCE_FRAME + QCELP_8THRPKT_REFERENCE_POS;
+            if(buf_size == 9) is_codecframe_fmt=1;
             break;
-        case 0: /* FIXME */
+        case  0: /* FIXME */
+        case  1:
             q->frame->rate = BLANK;
             q->frame->bits = 0;
+            if(buf_size == 1) is_codecframe_fmt=1;
             break;
         default:
             q->frame->rate = RATE_UNKNOWN;
@@ -316,6 +326,24 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             printf("UNKNOWN PACKET RATE\n");
             */
     }
+
+    if(is_codecframe_fmt)
+    {
+        claimed_rate=get_bits(&q->gb, 8);
+
+        if(claimed_rate ==  0 && q->frame->rate != BLANK       ||
+           claimed_rate ==  1 && q->frame->rate != RATE_OCTAVE ||
+           claimed_rate ==  2 && q->frame->rate != RATE_QUARTER||
+           claimed_rate ==  3 && q->frame->rate != RATE_HALF   ||
+           claimed_rate ==  4 && q->frame->rate != RATE_FULL)
+        {
+           av_log(NULL, AV_LOG_ERROR,
+           "Claimed rate and buffer size missmatch\n");
+           is_ifq=1;
+        }
+    }
+
+    av_log(NULL, AV_LOG_INFO, "Rate %d Size %d\n", q->frame->rate, buf_size);
 
     /**
      * reordering loop
@@ -337,8 +365,6 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     }
 
-    /* DONE REORDERING */
-
     /**
      * check for erasures/blanks on rates 1, 1/4 and 1/8
      */
@@ -353,8 +379,8 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      * Preliminary decoding of frame's transmission codes
      */
 
-    qcelp_lspv2lspf(q->frame, qtzd_lspf);
-    qcelp_ctc2GI(q->frame, g0, &cbseed, gain, index);
+    qcelp_decode_lspf(q->frame, qtzd_lspf);
+    qcelp_decode_params(q->frame, g0, &cbseed, gain, index);
 
     /**
      * Check for badly received packets
@@ -386,7 +412,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
                     is_ifq=1;
             }
             /* codebook gain sanity check */
-            /* FIXME This should be implemented into qcelp_ctc2GI() */
+            /* FIXME This should be implemented into qcelp_decode_params() */
             for(n=0; !is_ifq && n<4; n++)
             {
                 if(FFABS(g0[n+1]-g0[n]) > 40) is_ifq=1;
@@ -403,6 +429,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     if(!is_ifq)
     {
+        qcelp_compute_svector(q->frame->rate, gain, index, cbseed, cdn_vector);
 
     }else
     {
@@ -414,7 +441,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     }
 
     *data_size=buf_size;
-    return 1;
+    return *data_size;
 }
 
 AVCodec qcelp_decoder =
