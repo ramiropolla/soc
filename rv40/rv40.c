@@ -713,7 +713,6 @@ static int rv40_decode_slice(RV40DecContext *r)
         s->dsp.clear_blocks(s->block[0]);
 
         rv40_decode_macroblock(r, r->intra_types + (s->mb_x + 1) * 4);
-        ff_draw_horiz_band(s, s->mb_y * 16, 16);
         if (++s->mb_x == s->mb_width) {
             s->mb_x = 0;
             s->mb_y++;
