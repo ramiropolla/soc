@@ -30,7 +30,7 @@ int ff_pes_muxer_init(AVFormatContext *ctx)
 
     for(i=0;i<ctx->nb_streams;i++) {
         st = ctx->streams[i];
-        stream = (PESStream*)st->priv_data;
+        stream = st->priv_data;
         av_set_pts_info(st, 64, 1, 90000);
 
         switch(st->codec->codec_type) {
@@ -138,10 +138,10 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
 
             /* special stuffing byte that is always written
                to prevent accidental generation of startcodes. */
-             put_byte(&ctx->pb, 0xff);
+            put_byte(&ctx->pb, 0xff);
 
-             for(i=0;i<stuffing_size;i++)
-                 put_byte(&ctx->pb, 0xff);
+            for(i=0;i<stuffing_size;i++)
+                put_byte(&ctx->pb, 0xff);
 
              put_buffer(&ctx->pb, pes_content, pes_content_len);
 
@@ -182,9 +182,9 @@ int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
 
 int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t scr, int* best_i)
 {
-    int best_score = INT_MIN;
-    int i, avail_space = 0;
-    int ignore_constraints = 0;
+    int i, avail_space;
+    int best_score= INT_MIN;
+    int ignore_constraints=0;
     const int64_t max_delay= av_rescale(ctx->max_delay, 90000, AV_TIME_BASE);
 
 retry:
@@ -253,12 +253,12 @@ retry:
 void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 {
     int stream_index= pkt->stream_index;
-    AVStream *st = ctx->streams[stream_index];
-    PESStream *stream = st->priv_data;
-    PacketDesc *pkt_desc;
     int size= pkt->size;
     uint8_t *buf= pkt->data;
+    AVStream *st = ctx->streams[stream_index];
+    PESStream *stream = st->priv_data;
     int64_t pts, dts;
+    PacketDesc *pkt_desc;
     const int preload= av_rescale(ctx->preload, 90000, AV_TIME_BASE);
 
     pts= pkt->pts;
@@ -267,6 +267,7 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
     if(pts != AV_NOPTS_VALUE) pts += preload;
     if(dts != AV_NOPTS_VALUE) dts += preload;
 
+//av_log(ctx, AV_LOG_DEBUG, "dts:%f pts:%f flags:%d stream:%d nopts:%d\n", dts/90000.0, pts/90000.0, pkt->flags, pkt->stream_index, pts != AV_NOPTS_VALUE);
     if (!stream->premux_packet)
         stream->next_packet = &stream->premux_packet;
     *stream->next_packet=
