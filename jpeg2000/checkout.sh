@@ -8,4 +8,5 @@ ln -s ../../j2kenc.c j2kenc.c
 ln -s ../../j2k.h j2k.h
 ln -s ../../aecenc.c aecenc.c
 ln -s ../../aec.h aec.h
+ln -s ../../aecdec.c aecdec.c
 echo "Done, now just do a regular configure and make to build."

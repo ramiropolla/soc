@@ -107,6 +107,8 @@ typedef struct {
     AecContext *curctx;
 } AecState;
 
+/** encoder */
+
 void ff_aec_initenc(AecState *aec, uint8_t *bp);
 
 /**
@@ -123,5 +125,12 @@ int ff_aec_length(AecState *aec);
  * flush the encoder [returns number of bytes encoded]
  * */
 int ff_aec_flush(AecState *aec);
+
+/** decoder */
+
+void ff_aec_initdec(AecState *aec, uint8_t *bp);
+
+/** returns decoded bit with context cx */
+int ff_aec_decode(AecState *aec, int cx);
 
 #endif
