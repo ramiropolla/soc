@@ -432,8 +432,6 @@ static uint8_t *put_sot(J2kEncoderContext *s, int tileno)
  */
 static int init_tiles(J2kEncoderContext *s)
 {
-    // only one tile
-    // only rgb24 supported now
     int y, x, tno, compno, reslevelno, bandno, i;
 
     s->numXtiles = ceildiv(s->Xsiz, s->XTsiz);
