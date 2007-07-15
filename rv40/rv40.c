@@ -679,8 +679,8 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     }
     for(; i < 24; i++, cbp >>= 1){
         if(!(cbp & 1)) continue;
-        blknum = ((i & 2) >> 1) + ((i & 8) >> 2);
-        blkoff = ((i & 1) << 2) + ((i & 4) << 3);
+        blknum = ((i & 4) >> 2) + 4;
+        blkoff = ((i & 1) << 2) + ((i & 2) << 4);
         rv40_decode_block(s->block[blknum] + blkoff, gb, &intra_vlcs[2], chroma_vlc, 1);
         rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
         rv40_intra_inv_transform(s->block[blknum], blkoff);
