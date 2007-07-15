@@ -202,6 +202,7 @@ void qcelp_decode_params(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
                 default:; /* shouldn't happen.. must propagate some error */
             }
             gs[0]=1;
+            /* WIP finish rate 1/8 calculations, spec is kind of fuzzy here */
     }
 }
 
@@ -370,10 +371,17 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      */
 
     if(q->frame->rate != RATE_HALF && !q->frame->data[QCELP_RSRVD_POS])
+    {
+        av_log(NULL, AV_LOG_ERROR, "Wrong data in reserved frame area\n");
         is_ifq=1;
+    }
 
     if(q->frame->rate == RATE_OCTAVE && first16==0xFFFF)
+    {
+        av_log(NULL, AV_LOG_ERROR,
+        "Wrong frame data, rate 1/8 and first 16 bits are on\n");
         is_ifq=1;
+    }
 
     /**
      * Preliminary decoding of frame's transmission codes
@@ -394,12 +402,20 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         if(q->frame->rate != RATE_QUARTER)
         {
             if(qtzd_lspf[9] <= .66 || qtzd_lspf[9] >= .985)
+            {
+                av_log(NULL, AV_LOG_ERROR,
+                "Wrong frame data, 9th LSPF=%4f outside [.66,.985]\n", qtzd_lspf[9]);
                 is_ifq=1; /* FIXME 'erase packet'==ifq? */
+            }
 
             for(n=4; !is_ifq && n<10; n++)
             {
                 if(FFABS(qtzd_lspf[n]-qtzd_lspf[n-4]) < .0931)
+                {
+                    av_log(NULL, AV_LOG_ERROR,
+                    "Wrong frame data, outbound LSP freqs\n");
                     is_ifq=1;
+                }
             }
         }else
         {
