@@ -482,7 +482,7 @@ Index: mpeg_pes_enc.c
  }
  
 -static inline void put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
-+void ff_put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
++void ff_insert_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
  {
      put_byte(pb,
               (id << 4) |
@@ -859,10 +859,10 @@ Index: mpeg_pes_enc.c
  
              if (pes_flags & 0x80)  /*write pts*/
 -                put_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
-+                ff_put_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
++                ff_insert_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
              if (pes_flags & 0x40)  /*write dts*/
 -                put_timestamp(&ctx->pb, 0x01, dts);
-+                ff_put_timestamp(&ctx->pb, 0x01, dts);
++                ff_insert_timestamp(&ctx->pb, 0x01, dts);
  
              if (pes_flags & 0x01) {  /*write pes extension*/
                  put_byte(&ctx->pb, 0x10); /* flags */
@@ -1294,7 +1294,7 @@ Index: mpeg_pes_enc.c
 -#endif
 Index: Makefile
 ===================================================================
---- Makefile	(revision 9682)
+--- Makefile	(revision 9693)
 +++ Makefile	(working copy)
 @@ -84,13 +84,13 @@
  OBJS-$(CONFIG_MP3_MUXER)                 += mp3.o
@@ -1317,7 +1317,7 @@ Index: Makefile
  OBJS-$(CONFIG_MPEGTSRAW_DEMUXER)         += mpegts.o
 Index: mpeg.c
 ===================================================================
---- mpeg.c	(revision 9682)
+--- mpeg.c	(revision 9693)
 +++ mpeg.c	(working copy)
 @@ -21,6 +21,7 @@
  
@@ -1347,7 +1347,7 @@ Index: mpeg.c
      }
 Index: mpeg.h
 ===================================================================
---- mpeg.h	(revision 9682)
+--- mpeg.h	(revision 9693)
 +++ mpeg.h	(working copy)
 @@ -55,6 +55,5 @@
  #define STREAM_TYPE_AUDIO_AC3       0x81
@@ -1358,7 +1358,7 @@ Index: mpeg.h
  #endif /* AVFORMAT_MPEG_H */
 Index: mpegenc.c
 ===================================================================
---- mpegenc.c	(revision 9682)
+--- mpegenc.c	(revision 9693)
 +++ mpegenc.c	(working copy)
 @@ -22,8 +22,10 @@
  #include "avformat.h"
@@ -1646,11 +1646,11 @@ Index: mpegenc.c
                  if (dts != pts) {
 -                    put_timestamp(&ctx->pb, 0x03, pts);
 -                    put_timestamp(&ctx->pb, 0x01, dts);
-+                    ff_put_timestamp(&ctx->pb, 0x03, pts);
-+                    ff_put_timestamp(&ctx->pb, 0x01, dts);
++                    ff_insert_timestamp(&ctx->pb, 0x03, pts);
++                    ff_insert_timestamp(&ctx->pb, 0x01, dts);
                  } else {
 -                    put_timestamp(&ctx->pb, 0x02, pts);
-+                    ff_put_timestamp(&ctx->pb, 0x02, pts);
++                    ff_insert_timestamp(&ctx->pb, 0x02, pts);
                  }
              } else {
                  put_byte(&ctx->pb, 0x0f);
@@ -1847,7 +1847,7 @@ Index: mpegenc.c
          return -1;
  
      return 1;
-@@ -1138,39 +970,18 @@
+@@ -1138,45 +970,23 @@
  {
      MpegMuxContext *s = ctx->priv_data;
      int stream_index= pkt->stream_index;
@@ -1891,8 +1891,6 @@ Index: mpegenc.c
 +            stream->bytes_to_iframe = av_fifo_size(&pes_stream->fifo);
              stream->align_iframe = 1;
              stream->vobu_start_pts = pts;
-         } else {
-@@ -1178,7 +989,6 @@
          }
      }
  
@@ -1900,7 +1898,7 @@ Index: mpegenc.c
  
      for(;;){
          int ret= output_packet(ctx, 0);
-@@ -1189,10 +999,6 @@
+@@ -1187,10 +997,6 @@
  
  static int mpeg_mux_end(AVFormatContext *ctx)
  {
@@ -1911,7 +1909,7 @@ Index: mpegenc.c
      for(;;){
          int ret= output_packet(ctx, 1);
          if(ret<0)
-@@ -1201,18 +1007,13 @@
+@@ -1199,18 +1005,13 @@
              break;
      }
  
@@ -2099,6 +2097,6 @@ Index: mpeg_pes.h
 + * @param[in] timestamp the timestamp
 + * @return  NULL
 + */
-+void ff_put_timestamp(ByteIOContext *pb, int id, int64_t timestamp);
++void ff_insert_timestamp(ByteIOContext *pb, int id, int64_t timestamp);
 +
 +#endif/* AVFORMAT_MPEG_PES_H */

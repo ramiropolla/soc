@@ -161,6 +161,6 @@ int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
  * @param[in] timestamp the timestamp
  * @return  NULL
  */
-void ff_put_timestamp(ByteIOContext *pb, int id, int64_t timestamp);
+void ff_insert_timestamp(ByteIOContext *pb, int id, int64_t timestamp);
 
 #endif/* AVFORMAT_MPEG_PES_H */

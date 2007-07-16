@@ -64,7 +64,7 @@ int ff_pes_muxer_init(AVFormatContext *ctx)
     return 0;
 }
 
-void ff_put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
+void ff_insert_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
 {
     put_byte(pb,
              (id << 4) |
@@ -122,9 +122,9 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
             put_byte(&ctx->pb, header_len - 3 + stuffing_size);
 
             if (pes_flags & 0x80)  /*write pts*/
-                ff_put_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
+                ff_insert_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
             if (pes_flags & 0x40)  /*write dts*/
-                ff_put_timestamp(&ctx->pb, 0x01, dts);
+                ff_insert_timestamp(&ctx->pb, 0x01, dts);
 
             if (pes_flags & 0x01) {  /*write pes extension*/
                 put_byte(&ctx->pb, 0x10); /* flags */
