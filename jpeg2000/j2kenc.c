@@ -91,8 +91,6 @@ typedef struct {
 typedef struct { // flatten with context
    J2kComponent *comp;
    int64_t distortion;
-   int64_t mindr; // minimum dist/rate value
-   int64_t maxdr;
 } J2kTile;
 
 typedef struct {
@@ -449,8 +447,6 @@ static int init_tiles(J2kEncoderContext *s)
         int q = tno / s->numXtiles;
 
         tile->distortion = 0.0;
-        tile->mindr = DBL_MAX;
-        tile->maxdr = 0.0;
 
         tile->comp = av_malloc(s->ncomponents * sizeof(J2kComponent));
         if (tile->comp == NULL)
@@ -968,9 +964,6 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
         if (drate > 0){
             dr = (cblk->passess[passno].disto
                - (passno > 0 ? cblk->passess[passno-1].disto : 0.0)) / drate;
-
-            tile->mindr = FFMIN(dr, tile->mindr);
-            tile->maxdr = FFMAX(dr, tile->maxdr);
         }
 
         if (++pass_t == 3){
