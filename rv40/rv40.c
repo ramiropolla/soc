@@ -675,7 +675,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         if((cbp & 1) || is16){
             rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
             if(is16) //FIXME: optimize
-                s->block[blknum][blkoff] = block16[i];
+                s->block[blknum][blkoff] = block16[(i & 3) | ((i & 0xC) << 1)];
             rv40_intra_inv_transform(s->block[blknum], blkoff);
         }
     }
