@@ -99,6 +99,9 @@ void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
         case RATE_HALF:
         case RATE_QUARTER:
             lspv=frame->data+QCELP_LSPV0_POS;
+            av_log(NULL, AV_LOG_DEBUG,"LSPV:%5d,%5d,%5d,%5d,%5d\n",
+                   lspv[0],lspv[1],lspv[2],
+                   lspv[3],lspv[4]);
             lspf[0]=        qcelp_lspvq1[lspv[0]].x;
             lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y;
             lspf[2]=lspf[1]+qcelp_lspvq2[lspv[1]].x;
@@ -349,7 +352,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     /**
      * reordering loop
      */
-
+    memset(q->frame->data, 0, 76);
     for(n=0; n < q->frame->bits; n++)
     {
         q->frame->data[ order[n].index ] |=
@@ -366,13 +369,17 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     }
 
+    /* skip padding bits */
+    skip_bits(&q->gb, 8*(buf_size - is_codecframe_fmt) - q->frame->bits);
+
     /**
      * check for erasures/blanks on rates 1, 1/4 and 1/8
      */
 
-    if(q->frame->rate != RATE_HALF && !q->frame->data[QCELP_RSRVD_POS])
+    if(q->frame->rate != RATE_HALF && q->frame->data[QCELP_RSRVD_POS])
     {
-        av_log(NULL, AV_LOG_ERROR, "Wrong data in reserved frame area\n");
+        av_log(NULL, AV_LOG_ERROR, "Wrong data in reserved frame area:%d\n",
+               q->frame->data[QCELP_RSRVD_POS]);
         is_ifq=1;
     }
 
