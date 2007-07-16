@@ -90,7 +90,6 @@ typedef struct {
 
 typedef struct { // flatten with context
    J2kComponent *comp;
-   int64_t distortion;
 } J2kTile;
 
 typedef struct {
@@ -445,8 +444,6 @@ static int init_tiles(J2kEncoderContext *s)
         J2kTile *tile = s->tile + tno;
         int p = tno % s->numXtiles;
         int q = tno / s->numXtiles;
-
-        tile->distortion = 0.0;
 
         tile->comp = av_malloc(s->ncomponents * sizeof(J2kComponent));
         if (tile->comp == NULL)
@@ -813,18 +810,6 @@ static int getnmsedec_ref(int x, int bpno)
     return lut_nmsedec_ref0[x & ((1 << NMSEDEC_BITS) - 1)];
 }
 
-static int64_t getwmsedec(int nmsedec, int bandpos, int lev, int bpno)
-{
-   static const int dwt_norms[4][10] = { // multiplied by 10000
-    {10000, 15000, 27500, 53750, 106800, 213400, 426700, 853300, 1707000, 3413000},
-    {10380, 15920, 29190, 57030, 113300, 226400, 452500, 904800, 1809000},
-    {10380, 15920, 29190, 57030, 113300, 226400, 452500, 904800, 1809000},
-    { 7186,  9218, 15860, 30430,  60190, 120100, 240000, 479700,  959300}};
-
-    int64_t t = dwt_norms[bandpos][lev] << bpno;
-    return (t * t >> WMSEDEC_SHIFT) * nmsedec;
-}
-
 static void encode_sigpass(J2kT1Context *t1, int width, int height, int bandno, int *nmsedec, int bpno)
 {
     int i, j, k, mask = 1 << (bpno + NMSEDEC_FRACBITS);
@@ -943,9 +928,6 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
     ff_aec_initenc(&t1->aec, cblk->data);
 
     for (passno = 0; bpno >= 0; passno++){
-        int64_t dr;
-        int drate;
-
         nmsedec=0;
         switch(pass_t){
             case 0: encode_sigpass(t1, width, height, bandpos, &nmsedec, bpno);
@@ -956,15 +938,9 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
                     break;
         }
 
-        wmsedec += getwmsedec(nmsedec, bandpos, lev, bpno);
         cblk->passess[passno].rate = 3 + ff_aec_length(&t1->aec);
+        wmsedec += (int64_t)nmsedec << (2*bpno);
         cblk->passess[passno].disto = wmsedec;
-
-        drate = cblk->passess[passno].rate - (passno > 0 ? cblk->passess[passno-1].rate : 0);
-        if (drate > 0){
-            dr = (cblk->passess[passno].disto
-               - (passno > 0 ? cblk->passess[passno-1].disto : 0.0)) / drate;
-        }
 
         if (++pass_t == 3){
             pass_t = 0;
@@ -976,7 +952,6 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
 
     // TODO: optional flush on each pass
     cblk->passess[passno-1].rate = ff_aec_flush(&t1->aec);
-    tile->distortion += wmsedec;
 }
 
 /* tier-2 routines: */
@@ -1105,7 +1080,7 @@ static void encode_packets(J2kEncoderContext *s, J2kTile *tile, int tileno)
     av_log(s->avctx, AV_LOG_DEBUG, "after tier2\n");
 }
 
-static int getcut(J2kCblk *cblk, int64_t lambda)
+static int getcut(J2kCblk *cblk, int64_t lambda, int dwt_norm)
 {
     int passno, res = 0;
     for (passno = 0; passno < cblk->npassess; passno++){
@@ -1115,9 +1090,9 @@ static int getcut(J2kCblk *cblk, int64_t lambda)
         dr = cblk->passess[passno].rate
            - (res ? cblk->passess[res-1].rate:0);
         dd = cblk->passess[passno].disto
-           - (res ? cblk->passess[res-1].disto:0.0);
+           - (res ? cblk->passess[res-1].disto:0);
 
-        if (dd >= dr * lambda)
+        if (((dd * dwt_norm) >> WMSEDEC_SHIFT) * dwt_norm >= dr * lambda)
             res = passno+1;
     }
     return res;
@@ -1125,20 +1100,26 @@ static int getcut(J2kCblk *cblk, int64_t lambda)
 
 static void truncpassess(J2kEncoderContext *s, J2kTile *tile)
 {
-    int compno, reslevelno, bandno, cblkno;
+    static const int dwt_norms[4][10] = { // multiplied by 10000
+        {10000, 15000, 27500, 53750, 106800, 213400, 426700, 853300, 1707000, 3413000},
+        {10380, 15920, 29190, 57030, 113300, 226400, 452500, 904800, 1809000},
+        {10380, 15920, 29190, 57030, 113300, 226400, 452500, 904800, 1809000},
+        { 7186,  9218, 15860, 30430,  60190, 120100, 240000, 479700,  959300}};
+    int compno, reslevelno, bandno, cblkno, lev;
     for (compno = 0; compno < s->ncomponents; compno++){
         J2kComponent *comp = tile->comp + compno;
 
-        for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
+        for (reslevelno = 0, lev = s->nreslevels-1; reslevelno < s->nreslevels; reslevelno++, lev--){
             J2kResLevel *reslevel = comp->reslevel + reslevelno;
 
             for (bandno = 0; bandno < reslevel->nbands ; bandno++){
+                int bandpos = bandno + (reslevelno > 0);
                 J2kBand *band = reslevel->band + bandno;
 
                 for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
                     J2kCblk *cblk = band->cblk + cblkno;
 
-                    cblk->ninclpassess = getcut(cblk, s->lambda);
+                    cblk->ninclpassess = getcut(cblk, s->lambda, dwt_norms[bandpos][lev]);
                 }
             }
         }
