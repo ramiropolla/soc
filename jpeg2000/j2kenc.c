@@ -33,7 +33,8 @@
 
 #define NMSEDEC_BITS 7
 #define NMSEDEC_FRACBITS (NMSEDEC_BITS-1)
-#define WMSEDEC_SHIFT 13
+#define WMSEDEC_SHIFT 13 ///< must be >= 13
+#define LAMBDA_SCALE (100000000LL << (WMSEDEC_SHIFT - 13))
 
 static int lut_nmsedec_ref [1<<NMSEDEC_BITS],
            lut_nmsedec_ref0[1<<NMSEDEC_BITS],
@@ -116,6 +117,8 @@ typedef struct {
     uint8_t *buf;
     uint8_t *buf_end;
     int bit_index;
+
+    int64_t lambda;
 
     J2kTile *tile;
 } J2kEncoderContext;
@@ -1109,7 +1112,7 @@ static void encode_packets(J2kEncoderContext *s, J2kTile *tile, int tileno)
     av_log(s->avctx, AV_LOG_DEBUG, "after tier2\n");
 }
 
-static int getcut(J2kCblk *cblk, int64_t threshold)
+static int getcut(J2kCblk *cblk, int64_t lambda)
 {
     int passno, res = 0;
     for (passno = 0; passno < cblk->npassess; passno++){
@@ -1121,13 +1124,13 @@ static int getcut(J2kCblk *cblk, int64_t threshold)
         dd = cblk->passess[passno].disto
            - (res ? cblk->passess[res-1].disto:0.0);
 
-        if (dd >= dr * threshold)
+        if (dd >= dr * lambda)
             res = passno+1;
     }
     return res;
 }
 
-static void truncpassess(J2kEncoderContext *s, J2kTile *tile, int64_t threshold)
+static void truncpassess(J2kEncoderContext *s, J2kTile *tile)
 {
     int compno, reslevelno, bandno, cblkno;
     for (compno = 0; compno < s->ncomponents; compno++){
@@ -1142,7 +1145,7 @@ static void truncpassess(J2kEncoderContext *s, J2kTile *tile, int64_t threshold)
                 for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
                     J2kCblk *cblk = band->cblk + cblkno;
 
-                    cblk->ninclpassess = getcut(cblk, threshold);
+                    cblk->ninclpassess = getcut(cblk, s->lambda);
                 }
             }
         }
@@ -1205,8 +1208,7 @@ static void encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
     }
 
     av_log(s->avctx, AV_LOG_DEBUG, "rate control\n");
-    truncpassess(s, tile, tile->mindr +
-            (tile->maxdr - tile->mindr) * s->picture->quality / (FF_LAMBDA_MAX-1));
+    truncpassess(s, tile);
     encode_packets(s, tile, tileno);
     av_log(s->avctx, AV_LOG_DEBUG, "after rate control\n");
 }
@@ -1261,7 +1263,7 @@ static int encode_frame(AVCodecContext *avctx,
     s->Ysiz = avctx->height;
 
     s->nguardbits = 1;
-    s->picture->quality = FFMAX(--s->picture->quality, 0);
+    s->lambda = s->picture->quality * LAMBDA_SCALE;
 
     // TODO: other pixel formats
     for (i = 0; i < 3; i++)
