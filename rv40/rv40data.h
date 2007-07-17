@@ -109,7 +109,7 @@ static const uint16_t rv40_aic_table_index[MODE2_PATTERNS_NUM] = {
  * Luma quantizer values
  * Second table is used for inter blocks
  */
-static uint8_t rv40_luma_quant[2][32] = {
+static const uint8_t rv40_luma_quant[2][32] = {
  {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
    16, 17, 17, 18, 18, 18, 19, 19, 19, 20, 20, 20, 22, 22, 22, 22 },
  {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
@@ -120,7 +120,7 @@ static uint8_t rv40_luma_quant[2][32] = {
  * Chroma quantizer values
  * Second table is used for DC-only blocks
  */
-static uint8_t rv40_chroma_quant[2][32] = {
+static const uint8_t rv40_chroma_quant[2][32] = {
  {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
    16, 17, 17, 18, 19, 20, 20, 21, 22, 22, 23, 23, 24, 24, 25, 25 },
  {  0,  0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13,
@@ -130,7 +130,7 @@ static uint8_t rv40_chroma_quant[2][32] = {
 /**
  * This table is used for dequantizing
  */
-static uint16_t rv40_qscale_tab[32] = {
+static const uint16_t rv40_qscale_tab[32] = {
   60,   67,   76,   85,   96,  108,  121,  136,
  152,  171,  192,  216,  242,  272,  305,  341,
  383,  432,  481,  544,  606,  683,  767,  854,
@@ -140,7 +140,7 @@ static uint16_t rv40_qscale_tab[32] = {
 /**
  * 4x4 dezigzag pattern
  */
-static uint8_t rv40_dezigzag[16] = {
+static const uint8_t rv40_dezigzag[16] = {
   0,  1,  8, 16,
   9,  2,  3, 10,
  17, 24, 25, 18,
