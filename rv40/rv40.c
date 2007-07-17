@@ -824,6 +824,7 @@ if(s->pict_type != I_TYPE)return -1;
             ff_print_debug_info(s, pict);
         }
         s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
+        s->mb_x = s->mb_y = 0;
     }
 
     return buf_size;
