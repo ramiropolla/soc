@@ -694,6 +694,20 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     return 0;
 }
 
+static int check_slice_end(RV40DecContext *r, GetBitContext *gb, MpegEncContext *s)
+{
+    int bits;
+    if(s->mb_y >= s->mb_height)
+        return 1;
+    bits = r->bits - get_bits_count(&s->gb);
+    if(bits < 2)
+        return 1;
+    if(bits < 16){av_log(NULL,0,"Bits left = %d(%02X)\n",bits,show_bits(gb,bits));}
+    if(bits < 8 && (show_bits(gb, bits) == 0))
+        return 1;
+    return 0;
+}
+
 static int rv40_decode_slice(RV40DecContext *r)
 {
     MpegEncContext *s = &r->s;
@@ -710,8 +724,7 @@ static int rv40_decode_slice(RV40DecContext *r)
     s->resync_mb_x= s->mb_x;
     s->resync_mb_y= s->mb_y;
     ff_init_block_index(s);
-    //XXX: better bounds detection?
-    while((get_bits_count(&s->gb) + 5 < r->bits) && (s->mb_y < s->mb_height)) {
+    while(!check_slice_end(r, &s->gb, s)) {
         ff_update_block_index(s);
         s->dsp.clear_blocks(s->block[0]);
 
