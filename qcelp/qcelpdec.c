@@ -153,7 +153,7 @@ void qcelp_decode_params(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
                 g0[i]=QCELP_CBGAIN2G0(cbgain[i]);
 
                 /* FIXME this needs to be further examinated */
-                if(frame->rate == RATE_FULL && i > 0 && !(i+1 & 3))
+                if(frame->rate == RATE_FULL && i > 0 && !((i+1) & 3))
                     predictor=av_clip(6, 38, (g1[i-1]+g1[i-2]+g1[i-3])/3);
                 else
                     predictor=0;
@@ -162,7 +162,7 @@ void qcelp_decode_params(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
                 ga[i]=qcelp_g12ga[g1[i]];
 
                 gain[i]=ga[i]*gs[i];
-                index[i]=(gs[i] > 0)? cindex[i]:cindex[i]-89 & 127; /* FIXME */
+                index[i]=(gs[i] > 0)? cindex[i]:(cindex[i]-89) & 127;/* FIXME */
             }
 
             break;
@@ -239,9 +239,9 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
         case RATE_QUARTER:
             for(i=0; i<160; i++)
             {
-                new_cbseed=521*cbseed+259 & 65535;
+                new_cbseed=(521*cbseed+259) & 65535;
                 cbseed=rnd[i]=
-                QCELP_SQRT1887*((new_cbseed+32768 & 65535)-32768)/32768.0;
+                QCELP_SQRT1887*(((new_cbseed+32768) & 65535)-32768)/32768.0;
 
                 /* FIR filter */
                 cdn_vector[i]=qcelp_rnd_fir_coefs[1]*rnd[i];
@@ -256,9 +256,9 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
         case RATE_OCTAVE:
             for(i=0; i<160; i++)
             {
-                new_cbseed=521*cbseed+259 & 65535;
+                new_cbseed=(521*cbseed+259) & 65535;
                 cbseed=rnd[i]=
-                QCELP_SQRT1887*((new_cbseed+32768 & 65535)-32768)/32768.0;
+                QCELP_SQRT1887*(((new_cbseed+32768) & 65535)-32768)/32768.0;
 
                 cdn_vector[i]=gain[0]*rnd[i];
             }
@@ -404,11 +404,11 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     {
         claimed_rate=get_bits(&q->gb, 8);
 
-        if(claimed_rate ==  0 && q->frame->rate != BLANK       ||
-           claimed_rate ==  1 && q->frame->rate != RATE_OCTAVE ||
-           claimed_rate ==  2 && q->frame->rate != RATE_QUARTER||
-           claimed_rate ==  3 && q->frame->rate != RATE_HALF   ||
-           claimed_rate ==  4 && q->frame->rate != RATE_FULL)
+        if((claimed_rate ==  0 && q->frame->rate != BLANK       ) ||
+           (claimed_rate ==  1 && q->frame->rate != RATE_OCTAVE ) ||
+           (claimed_rate ==  2 && q->frame->rate != RATE_QUARTER) ||
+           (claimed_rate ==  3 && q->frame->rate != RATE_HALF   ) ||
+           (claimed_rate ==  4 && q->frame->rate != RATE_FULL   ))
         {
            av_log(NULL, AV_LOG_ERROR,
            "Claimed rate and buffer size missmatch\n");
@@ -522,7 +522,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     if(!is_ifq)
     {
         qcelp_compute_svector(q->frame->rate, gain, index, cbseed, cdn_vector);
-        if(is_ifq = qcelp_do_pitchfilter(q->frame, cdn_vector))
+        if((is_ifq = qcelp_do_pitchfilter(q->frame, cdn_vector)))
         {
             av_log(NULL, AV_LOG_ERROR, "Error can't pitch cdn_vector[%d]\n",
             is_ifq);
