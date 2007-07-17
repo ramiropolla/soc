@@ -555,15 +555,13 @@ static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *ds
 
 /** Mapping of RV40 intra prediction types to standard H.264 types */
 static const int ittrans[9] = {
- HOR_PRED, // almost ok
- VERT_PRED, // ok
- LEFT_DC_PRED, // ok?
- DIAG_DOWN_RIGHT_PRED, // ok
- DIAG_DOWN_LEFT_PRED,
- VERT_RIGHT_PRED, // ok
- VERT_LEFT_PRED, //ok
- HOR_DOWN_PRED,
- HOR_UP_PRED,
+ DC_PRED, VERT_PRED, HOR_PRED, DIAG_DOWN_RIGHT_PRED, DIAG_DOWN_LEFT_PRED,
+ VERT_RIGHT_PRED, VERT_LEFT_PRED, HOR_UP_PRED, HOR_DOWN_PRED,
+};
+
+/** Mapping of RV40 intra 16x16 prediction types to standard H.264 types */
+static const int ittrans16[4] = {
+ DC_PRED8x8, VERT_PRED8x8, HOR_PRED8x8, PLANE_PRED8x8,
 };
 
 static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp, int is16)
@@ -573,6 +571,7 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
     int i, j, x, y;
     uint8_t *Y, *YY, *PY;
     int no_up, no_left, itype;
+    uint32_t topleft;
 
     no_up = s->first_slice_line;
     Y = s->dest[0];
@@ -583,19 +582,19 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
                 itype = ittrans[intra_types[i]];
                 if(no_up && no_left)
                     itype = DC_128_PRED;
-                else if(no_up)
-                    itype = HOR_PRED;
-                else if(no_left)
-                    itype = VERT_PRED;
-                /* silly RV40 predictor assumes that blocks are aligned in one row
-                   so first block may reference block from the previous row
-                   or last block from the previous macroblock
-                 */
-                if(!i && !j)
-                    PY = YY - 1 + s->linesize * 12;
-                else
-                    PY = YY - 1;
-                r->h.pred4x4[itype](YY, PY, YY - s->linesize + 4, s->linesize);
+                else if(no_up){
+                    if(itype == VERT_PRED) itype = HOR_PRED;
+                    if(itype == DC_PRED)   itype = LEFT_DC_PRED;
+                }else if(no_left){
+                    if(itype == HOR_PRED)  itype = VERT_PRED;
+                    if(itype == DC_PRED)   itype = TOP_DC_PRED;
+                }
+                PY = YY - s->linesize + 4;
+                if(j && i == 3){
+                    topleft = YY[-s->linesize + 3] * 0x01010101;
+                    PY = &topleft;
+                }
+                r->h.pred4x4[itype](YY, YY - 1, PY, s->linesize);
                 if(!(cbp & 1)) continue;
                 /* add_pixels_clamped for 4x4 block */
                 for(y = 0; y < 4; y++)
@@ -608,14 +607,17 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
         }
     }else{
         no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
+        itype = ittrans16[intra_types[0]];
         if(no_up && no_left)
-            r->h.pred16x16[DC_128_PRED8x8](Y, s->linesize);
-        else if(no_up)
-            r->h.pred16x16[HOR_PRED8x8](Y, s->linesize);
-        else if(no_left)
-            r->h.pred16x16[VERT_PRED8x8](Y, s->linesize);
-        else
-            r->h.pred16x16[intra_types[0]](Y, s->linesize);
+            itype = DC_128_PRED8x8;
+        else if(no_up){
+            if(itype == VERT_PRED8x8) itype = HOR_PRED8x8;
+            if(itype == DC_PRED8x8)   itype = LEFT_DC_PRED8x8;
+        }else if(no_left){
+            if(itype == HOR_PRED8x8)  itype = VERT_PRED8x8;
+            if(itype == DC_PRED8x8)   itype = TOP_DC_PRED8x8;
+        }
+        r->h.pred16x16[itype](Y, s->linesize);
         dsp->add_pixels_clamped(s->block[0], Y, s->current_picture.linesize[0]);
         dsp->add_pixels_clamped(s->block[1], Y + 8, s->current_picture.linesize[0]);
         Y += s->current_picture.linesize[0] * 8;
