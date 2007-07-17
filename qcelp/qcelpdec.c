@@ -267,6 +267,75 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
     return 1;
 }
 
+/**
+ * Computes hammsinc(x), this will probably be replaced
+ * by a lookup table
+ */
+static float qcelp_hammsinc(int i)
+{
+    return (sin(PI*i)/(PI*i))*(0.5+0.46*cos(PI*i/4));
+}
+
+/**
+ * pitch filters cdn_vector, returns 0 if everything goes well, otherwise
+ * it returns the index of the failing-to-be-pitched element or -1 if
+ * an invalid (140.5, 141.5, 142.5) fractional lag is found.
+ *
+ * For details see 2.4.5.2
+ */
+static int qcelp_do_pitchfilter(QCELPFrame *frame, float *cdn_vector)
+{
+    int     i,j;
+    uint8_t *pgain, *plag, *pfrac;
+    float   gain, lag;
+
+    switch(frame->rate)
+    {
+        case RATE_FULL:
+        case RATE_HALF:
+            pgain=frame->data+QCELP_PGAIN0_POS;
+            plag =frame->data+QCELP_PLAG0_POS;
+            pfrac=frame->data+QCELP_PFRAC0_POS;
+
+            for(i=0; i<160; i++)
+            {
+                gain=plag[i/40]? (pgain[i/40]+1)/4.0 : 0.0;
+                lag =plag[i/40]+16+0.5*pfrac[i/40];
+
+                if(lag == 140.5 || lag == 141.5 || lag == 142.5)
+                    return -1;
+
+                if(pfrac[i/40]==1) /* if lag is a fractional lag... */
+                {
+                    /* see equation 2.4.5.2-2 */
+                    for(j=-4; j<4; j++)
+                    {
+                        if(i + j - lag + 0.5 < 0)
+                            break; /*XXX may be unneded */
+
+                        cdn_vector[i]+=
+                        gain*qcelp_hammsinc(j+0.5)*
+                        cdn_vector[i + j - (int)(lag + 0.5)];
+                    }
+                    if(j<4) break;
+
+                }else if(i >= lag) /*XXX may be unneded*/
+                    cdn_vector[i]+=gain*cdn_vector[i - (int)lag];
+                else
+                    break; /* shouldn't happen */
+            }
+            if(i < 160) return i;
+
+            break;
+        case RATE_QUARTER:
+        case RATE_OCTAVE:
+            /* ? */
+        break;
+    }
+
+    return 0;
+}
+
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            int *data_size, uint8_t *buf, int buf_size)
 {
@@ -447,14 +516,21 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     }
 
     /**
-     * decode loop
+     * decode loop glue code. WIP - mean it, WIP. :-)
      */
 
     if(!is_ifq)
     {
         qcelp_compute_svector(q->frame->rate, gain, index, cbseed, cdn_vector);
+        if(is_ifq = qcelp_do_pitchfilter(q->frame, cdn_vector))
+        {
+            av_log(NULL, AV_LOG_ERROR, "Error can't pitch cdn_vector[%d]\n",
+            is_ifq);
+            is_ifq=1;
+        }
+    }
 
-    }else
+    if(is_ifq)
     {
         /**
          * Insufficient frame quality (erasure) decoding

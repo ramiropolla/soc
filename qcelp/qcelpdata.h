@@ -25,6 +25,9 @@
  */
 
 #define FXQ(v)  (roundf(16384.0*v)/16384.0)
+#ifndef PI
+#define PI 3.141592653
+#endif
 
 typedef enum
 {

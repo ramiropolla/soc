@@ -1,17 +1,15 @@
-Clear:
+Clear
 
-- finish the codebook transmission code's conversion to gain, index and
-  (when needed) cbseed (almost done).
-- review rates 1 and 1/2 gain predictor calculations.
-- review qcelp_compute_cdn().
+- Finish Pitch synthesis filter (almost done).
+- Pitch pre-filter.
 
 Still somewhat fuzzy:
 
-- Pitch synthesis filter.
 - Pitch pre-filter.
 - LSP freqs interpolation.
 - Formant synthesis filter.
 - Adaptive postfilter.
+
 - Workability tests / Sample smashing
 - Fixes (if needed :-)
 
