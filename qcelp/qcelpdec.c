@@ -273,7 +273,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
  */
 static float qcelp_hammsinc(int i)
 {
-    return (sin(PI*i)/(PI*i))*(0.5+0.46*cos(PI*i/4));
+    return (sin(M_PI*i)/(M_PI*i))*(0.5+0.46*cos(M_PI*i/4));
 }
 
 /**
