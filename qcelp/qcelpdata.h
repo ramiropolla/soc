@@ -40,8 +40,8 @@ typedef enum
 static const uint16_t qcelp_bits_per_rate[]={266,124,54,20};
 
 typedef struct {
-    uint8_t index;  /*!< index into the reference frame */
-    uint8_t bitpos; /*!< bit position in the value's byte */
+    int index;  /*!< index into the reference frame */
+    int bitpos; /*!< bit position in the value's byte */
 } QCELPBitmap;
 
 
@@ -80,9 +80,6 @@ typedef struct {
  * What follows are the reference frame slices. Each tuple will be mapped
  * to a QCELPBitmap showing the location of each bit in the input with respect
  * to a transmission code in the 'universal frame'.
- *
- * FIXME
- * it would be really nice if someone reviewed these numbers :)
  *---------------------------------------------------------------------------*/
 
 
