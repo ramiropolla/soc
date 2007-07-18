@@ -796,7 +796,6 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     RV40DecContext *r = avctx->priv_data;
     MpegEncContext *s = &r->s;
     AVFrame *pict = data;
-    int res;
 
     /* no supplementary picture */
     if (buf_size == 0) {
