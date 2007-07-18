@@ -807,6 +807,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     r->bits = buf_size * 8;
     rv40_parse_slice_header(r, &r->s.gb);
     s->pict_type = r->ptype+1;
+    r->cur_vlcs = &intra_vlcs[r->vlc_set];
 
 if(s->pict_type != I_TYPE)return -1;
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
@@ -818,7 +819,6 @@ if(s->pict_type != I_TYPE)return -1;
         if(MPV_frame_start(s, avctx) < 0)
             return -1;
         ff_er_frame_start(s);
-        r->cur_vlcs = &intra_vlcs[r->vlc_set];
     }
     rv40_decode_slice(r);
 
