@@ -51,6 +51,16 @@ typedef struct RV40VLC{
     VLC coefficient;       ///< VLCs used for decoding big coefficients
 }RV40VLC;
 
+/** Essential slice information */
+typedef struct SliceInfo{
+    int type;              ///< slice type (intra, inter)
+    int size;              ///< size of the slice in bits
+    int quant;             ///< quantizer used for this slice
+    int vlc_set;           ///< VLCs used for this slice
+    int start, end;        ///< start and end macroblocks of the slice
+    int header_size;       ///< header size in bits
+}SliceInfo;
+
 /** Decoder context */
 typedef struct RV40DecContext{
     MpegEncContext s;
@@ -66,6 +76,9 @@ typedef struct RV40DecContext{
     RV40VLC *cur_vlcs;       ///< VLC set used for current frame decoding
     int bits;                ///< slice size in bits
     H264PredContext h;       ///< functions for 4x4 and 16x16 intra block prediction
+    SliceInfo prev_si;       ///< info for the saved slice
+    uint8_t *slice_data;     ///< saved slice data
+    int has_slice;           ///< has previously saved slice
 }RV40DecContext;
 
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
@@ -466,18 +479,19 @@ static void rv40_parse_picture_size(GetBitContext *gb, int *w, int *h)
     *h = get_dimension(gb, rv40_standard_heights, rv40_standard_heights2);
 }
 
-static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb)
+static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceInfo *si)
 {
     int t, mb_bits;
     int w, h;
 
+    memset(si, 0, sizeof(SliceInfo));
     if(get_bits1(gb))
         return -1;
-    r->ptype = get_bits(gb, 2);
-    r->quant = get_bits(gb, 5);
+    si->type = get_bits(gb, 2);
+    si->quant = get_bits(gb, 5);
     if(get_bits(gb, 2))
         return -1;
-    r->vlc_set = get_bits(gb, 2) + 1;
+    si->vlc_set = get_bits(gb, 2) + 1;
     if(get_bits1(gb))
         return -1;
     t = get_bits(gb, 13); /// ???
@@ -485,7 +499,8 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb)
 //    r->s.avctx->coded_width  = w;
 //    r->s.avctx->coded_height = h;
     mb_bits = av_log2((w + 7) >> 3) + av_log2((h + 7) >> 3);
-    r->block_start = get_bits(gb, mb_bits);
+    si->start = get_bits(gb, mb_bits);
+    si->header_size = get_bits_count(gb);
 
     return 0;
 }
@@ -712,6 +727,17 @@ static int rv40_decode_slice(RV40DecContext *r)
     MpegEncContext *s = &r->s;
     int mb_pos;
 
+    init_get_bits(&r->s.gb, r->slice_data, r->prev_si.size);
+    skip_bits(&r->s.gb, r->prev_si.header_size);
+    if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
+        s->current_picture_ptr = (AVFrame*)&s->picture[ff_find_unused_picture(s, 0)];
+        if(MPV_frame_start(s, s->avctx) < 0)
+            return -1;
+        ff_er_frame_start(s);
+        s->current_picture_ptr = &s->current_picture;
+    }
+if(r->prev_si.type)return 0;
+
     mb_pos = s->mb_x + s->mb_y * s->mb_width;
     if(r->block_start != mb_pos){
         av_log(s->avctx, AV_LOG_ERROR, "Slice indicates MB offset %d, got %d\n", r->block_start, mb_pos);
@@ -723,7 +749,7 @@ static int rv40_decode_slice(RV40DecContext *r)
     s->resync_mb_x= s->mb_x;
     s->resync_mb_y= s->mb_y;
     ff_init_block_index(s);
-    while(!check_slice_end(r, &s->gb, s)) {
+    while(s->mb_num_left--) {
         ff_update_block_index(s);
         s->dsp.clear_blocks(s->block[0]);
 
@@ -760,7 +786,7 @@ static int rv40_decode_init(AVCodecContext *avctx)
 
     MPV_decode_defaults(s);
     s->avctx= avctx;
-    s->out_format = FMT_H264;
+    s->out_format = FMT_H263;
     s->codec_id= avctx->codec_id;
 
     s->width = avctx->width;
@@ -796,6 +822,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     RV40DecContext *r = avctx->priv_data;
     MpegEncContext *s = &r->s;
     AVFrame *pict = data;
+    SliceInfo si;
 
     /* no supplementary picture */
     if (buf_size == 0) {
@@ -803,25 +830,23 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     }
 
     init_get_bits(&s->gb, buf, buf_size*8);
-    r->bits = buf_size * 8;
-    rv40_parse_slice_header(r, &r->s.gb);
-    s->pict_type = r->ptype+1;
-    r->cur_vlcs = &intra_vlcs[r->vlc_set];
+    rv40_parse_slice_header(r, &r->s.gb, &si);
+    si.size = buf_size * 8;
+    si.end = s->mb_width * s->mb_height;
 
-if(s->pict_type != I_TYPE)return -1;
-    if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
-        if(s->current_picture_ptr){ //FIXME write parser so we always have complete frames?
-            ff_er_frame_end(s);
-            MPV_frame_end(s);
-            s->mb_x= s->mb_y = s->resync_mb_x = s->resync_mb_y= 0;
-        }
-        if(MPV_frame_start(s, avctx) < 0)
-            return -1;
-        ff_er_frame_start(s);
+    if(si.start > r->prev_si.start && si.type == r->prev_si.type) r->prev_si.end = si.start;
+    if(r->has_slice){
+        //XXX: Take it directly from slice info
+        r->cur_vlcs = &intra_vlcs[r->prev_si.vlc_set];
+        r->quant = r->prev_si.quant;
+        r->bits = r->prev_si.size;
+        r->block_start = r->prev_si.start;
+        s->mb_num_left = r->prev_si.end - r->prev_si.start;
+        s->pict_type = r->prev_si.type ? P_TYPE : I_TYPE;
+        rv40_decode_slice(r);
     }
-    rv40_decode_slice(r);
 
-    if(s->current_picture_ptr != NULL && s->mb_y>=s->mb_height){
+    if(r->has_slice && (si.start < r->prev_si.start || si.type != r->prev_si.type)){ // output complete frame
         ff_er_frame_end(s);
         MPV_frame_end(s);
         if (s->pict_type == B_TYPE || s->low_delay) {
@@ -837,6 +862,11 @@ if(s->pict_type != I_TYPE)return -1;
         s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
         s->mb_x = s->mb_y = 0;
     }
+    //save slice for future decoding
+    r->slice_data = av_realloc(r->slice_data, buf_size + FF_INPUT_BUFFER_PADDING_SIZE);
+    memcpy(r->slice_data, buf, buf_size);
+    r->prev_si = si;
+    r->has_slice = 1;
 
     return buf_size;
 }
@@ -849,6 +879,7 @@ static int rv40_decode_end(AVCodecContext *avctx)
 
     av_freep(&r->intra_types_hist);
     r->intra_types = NULL;
+    av_freep(&r->slice_data);
 
     return 0;
 }
