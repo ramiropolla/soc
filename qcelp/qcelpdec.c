@@ -319,9 +319,8 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *cdn_vector)
                         if(i + j - lag + 0.5 < 0)
                             break; /*XXX may be unneded */
 
-                        cdn_vector[i]+=
-                        gain*qcelp_hammsinc(j+0.5)*
-                        cdn_vector[i + j - (int)(lag + 0.5)];
+                        cdn_vector[i]+=gain*qcelp_hammsinc(j+0.5)*
+                                       cdn_vector[i + j - (int)(lag + 0.5)];
                     }
                     if(j<4) break;
 
@@ -335,7 +334,8 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *cdn_vector)
             break;
         case RATE_QUARTER:
         case RATE_OCTAVE:
-            /* ? */
+            gain=0.0;
+            /* WIP - Trying to figure out what happens with L */
         break;
     }
 
@@ -365,38 +365,39 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     switch(buf_size)
     {
         case 35:
+            is_codecframe_fmt=1;
         case 34:
             q->frame->rate = RATE_FULL;
             q->frame->bits = qcelp_bits_per_rate[RATE_FULL];
             order = QCELP_REFERENCE_FRAME + QCELP_FULLPKT_REFERENCE_POS;
-            if(buf_size == 35) is_codecframe_fmt=1;
             break;
         case 17:
+            is_codecframe_fmt=1;
         case 16:
             q->frame->rate = RATE_HALF;
             q->frame->bits = qcelp_bits_per_rate[RATE_HALF];
             order = QCELP_REFERENCE_FRAME + QCELP_HALFPKT_REFERENCE_POS;
-            if(buf_size == 17) is_codecframe_fmt=1;
             break;
         case  8:
+            is_codecframe_fmt=1;
         case  7:
             q->frame->rate = RATE_QUARTER;
             q->frame->bits = qcelp_bits_per_rate[RATE_QUARTER];
             order = QCELP_REFERENCE_FRAME + QCELP_4THRPKT_REFERENCE_POS;
-            if(buf_size == 8) is_codecframe_fmt=1;
             break;
         case  4:
+            is_codecframe_fmt=1;
         case  3:
             q->frame->rate = RATE_OCTAVE;
             q->frame->bits = qcelp_bits_per_rate[RATE_OCTAVE];
             order = QCELP_REFERENCE_FRAME + QCELP_8THRPKT_REFERENCE_POS;
-            if(buf_size == 9) is_codecframe_fmt=1;
             break;
-        case  0: /* FIXME */
         case  1:
+            is_codecframe_fmt=1;
+        case  0:
             q->frame->rate = BLANK;
             q->frame->bits = 0;
-            if(buf_size == 1) is_codecframe_fmt=1;
+            order = NULL;
             break;
         default:
             q->frame->rate = RATE_UNKNOWN;
@@ -420,7 +421,8 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         }
     }
 
-    av_log(NULL, AV_LOG_DEBUG, "Rate %d Size %d\n", q->frame->rate, q->frame->bits);
+    av_log(NULL, AV_LOG_DEBUG, "Rate %d Size %d\n",
+           q->frame->rate, q->frame->bits);
 
     /**
      * reordering loop
@@ -442,7 +444,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     }
 
-    /* skip padding bits */
+    /* skip padding byte if codec_frame_fmt */
     skip_bits(&q->gb, 8*(buf_size - is_codecframe_fmt) - q->frame->bits);
 
     /**
@@ -506,12 +508,11 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
                 if(FFABS(qtzd_lspf[n]-qtzd_lspf[n-2]) < .08)
                     is_ifq=1;
             }
-            /* codebook gain sanity check */
+            /* codebook gain sanity check - warn, spec with errors? */
             /* FIXME This should be implemented into qcelp_decode_params() */
             for(n=0; !is_ifq && n<4; n++)
             {
                 if(FFABS(g0[n+1]-g0[n]) > 40) is_ifq=1;
-                /* FIXME: spec with typing errors here? */
                 if(n<3 && FFABS(g0[n+2] - 2*g0[n+1] + g0[n]) > 48) is_ifq=1;
             }
 
