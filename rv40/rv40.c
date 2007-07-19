@@ -640,9 +640,11 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
         if(no_up && no_left)
             itype = DC_128_PRED8x8;
         else if(no_up){
+            if(itype == PLANE_PRED8x8)itype = HOR_PRED8x8;
             if(itype == VERT_PRED8x8) itype = HOR_PRED8x8;
             if(itype == DC_PRED8x8)   itype = LEFT_DC_PRED8x8;
         }else if(no_left){
+            if(itype == PLANE_PRED8x8)itype = VERT_PRED8x8;
             if(itype == HOR_PRED8x8)  itype = VERT_PRED8x8;
             if(itype == DC_PRED8x8)   itype = TOP_DC_PRED8x8;
         }
