@@ -746,7 +746,6 @@ static int rv40_decode_slice(RV40DecContext *r)
     init_get_bits(&r->s.gb, r->slice_data, r->prev_si.size);
     skip_bits(&r->s.gb, r->prev_si.header_size);
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
-        s->current_picture_ptr = (AVFrame*)&s->picture[ff_find_unused_picture(s, 0)];
         if(MPV_frame_start(s, s->avctx) < 0)
             return -1;
         ff_er_frame_start(s);
