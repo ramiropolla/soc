@@ -116,7 +116,7 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
  * @param[out] best_i      index of stream to be muxed
  * @return  On error a negative or zero value is returned, on success 1 is returned.
  */
-int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t scr, int* best_i);
+int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int* best_i);
 
 /**
  * Get total number of frames that have been muxed.
