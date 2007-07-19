@@ -751,7 +751,11 @@ static int rv40_decode_slice(RV40DecContext *r)
         ff_er_frame_start(s);
         s->current_picture_ptr = &s->current_picture;
     }
-if(r->prev_si.type)return 0;
+if(r->prev_si.type){
+memcpy(s->current_picture_ptr->data[0],s->last_picture_ptr->data[0],s->linesize*s->avctx->height);
+ff_er_add_slice(s, 0, 0, s->mb_width-1, s->mb_height-1, AC_END|DC_END|MV_END);
+return 0;
+}
 
     mb_pos = s->mb_x + s->mb_y * s->mb_width;
     if(r->block_start != mb_pos){
