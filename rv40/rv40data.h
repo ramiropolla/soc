@@ -147,4 +147,14 @@ static const uint8_t rv40_dezigzag[16] = {
  11, 19, 26, 27
 };
 
+/**
+ * Tables used to translate quantizer value into VLC set for decoding
+ * First table is used for intraframes.
+ */
+static const uint8_t rv40_quant_to_vlc_set[2][31] = {
+ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
+   2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 0 },
+ { 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3,
+   3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6 },
+};
 #endif /* RV40DATA_H */

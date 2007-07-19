@@ -479,6 +479,20 @@ static void rv40_parse_picture_size(GetBitContext *gb, int *w, int *h)
     *h = get_dimension(gb, rv40_standard_heights, rv40_standard_heights2);
 }
 
+/**
+ * Select VLC set for decoding from current quantizer, modifier and frame type
+ */
+static inline int choose_vlc_set(int quant, int mod, int type)
+{
+    if(mod == 2){
+        if(quant < 19) quant += 10;
+        else if(quant < 26) quant += 5;
+    }
+    if(mod == 1)
+        if(quant < 26) quant += 5;
+    return rv40_quant_to_vlc_set[!!type][av_clip(quant, 0, 30)];
+}
+
 static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceInfo *si)
 {
     int t, mb_bits;
@@ -491,7 +505,7 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     si->quant = get_bits(gb, 5);
     if(get_bits(gb, 2))
         return -1;
-    si->vlc_set = get_bits(gb, 2) + 1;
+    si->vlc_set = choose_vlc_set(si->quant, get_bits(gb, 2), si->type);
     if(get_bits1(gb))
         return -1;
     t = get_bits(gb, 13); /// ???
