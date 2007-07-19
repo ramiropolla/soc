@@ -39,7 +39,7 @@ typedef struct
 {
     qcelp_packet_rate rate;
     uint8_t data[76];       /*!< data from a _parsed_ frame */
-    int bits;
+    int     bits;
 } QCELPFrame;
 
 typedef struct {
@@ -283,50 +283,79 @@ static float qcelp_hammsinc(int i)
 }
 
 /**
- * pitch filters cdn_vector, returns 0 if everything goes well, otherwise
- * it returns the index of the failing-to-be-pitched element or -1 if
- * an invalid (140.5, 141.5, 142.5) fractional lag is found.
+ * Computes energy of the subframeno-ith subvector, using equations
+ * 2.4.8.3-2 and 2.4.3.8-3
+ */
+static float qcelp_compute_subframe_energy(const float *cdn_vector,
+                                           int subframeno)
+{
+    int   i;
+    float energy=0;
+
+    cdn_vector+=40*subframeno;
+    for(i=0; i<40; i++)
+    {
+        /* do someting here */
+    }
+    return 0.0;
+}
+
+/**
+ * pitch filters & pre-filters pv, returns 0 if everything goes
+ * well, otherwise it returns the index of the failing-to-be-pitched
+ * element or -1 if an invalid (140.5, 141.5, 142.5) lag is found.
+ *
+ * This function implements both, the pitch pre-filter whose result is
+ * stored in pv and the pitch pre-filter whose result gets stored in ppv.
  *
  * For details see 2.4.5.2
+ *
+ * WIP (but should work)
  */
-static int qcelp_do_pitchfilter(QCELPFrame *frame, float *cdn_vector)
+static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pv, float *ppv)
 {
     int     i,j;
     uint8_t *pgain, *plag, *pfrac;
-    float   gain, lag;
+    float   gain1, gain2, lag;
 
     switch(frame->rate)
     {
         case RATE_FULL:
         case RATE_HALF:
+
             pgain=frame->data+QCELP_PGAIN0_POS;
             plag =frame->data+QCELP_PLAG0_POS;
             pfrac=frame->data+QCELP_PFRAC0_POS;
 
             for(i=0; i<160; i++)
             {
-                gain=plag[i/40]? (pgain[i/40]+1)/4.0 : 0.0;
-                lag =plag[i/40]+16+0.5*pfrac[i/40];
+                gain1=plag[i/40]? (pgain[i/40]+1)/4.0 : 0.0;
+                gain2=0.5*FFMIN(gain1,1.0);
+                lag=plag[i/40]+16+0.5*pfrac[i/40];
 
                 if(lag == 140.5 || lag == 141.5 || lag == 142.5)
                     return -1;
 
-                if(pfrac[i/40]==1) /* if lag is a fractional lag... */
+                if(pfrac[i/40]==1) /* if is a fractional lag... */
                 {
-                    /* see equation 2.4.5.2-2 */
                     for(j=-4; j<4; j++)
                     {
                         if(i + j - lag + 0.5 < 0)
                             break; /*XXX may be unneded */
 
-                        cdn_vector[i]+=gain*qcelp_hammsinc(j+0.5)*
-                                       cdn_vector[i + j - (int)(lag + 0.5)];
+                        /* WIP this will get simpler soon */
+                        pv [i]+=gain1*qcelp_hammsinc(j+0.5)*
+                                pv [i + j - (int)(lag + 0.5)];
+                        ppv[i]+=gain2*qcelp_hammsinc(j+0.5)*
+                                ppv[i + j - (int)(lag + 0.5)];
                     }
                     if(j<4) break;
 
                 }else if(i >= lag) /*XXX may be unneded*/
-                    cdn_vector[i]+=gain*cdn_vector[i - (int)lag];
-                else
+                {
+                    pv [i]+=gain1*pv [i - (int)lag];
+                    ppv[i]+=gain2*ppv[i - (int)lag];
+                }else
                     break; /* shouldn't happen */
             }
             if(i < 160) return i;
@@ -334,9 +363,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *cdn_vector)
             break;
         case RATE_QUARTER:
         case RATE_OCTAVE:
-            gain=0.0;
-            /* WIP - Trying to figure out what happens with L */
-        break;
+            break;
     }
 
     return 0;
@@ -350,7 +377,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     int16_t  *outbuffer = data, cbseed;
     int      n, is_ifq = 0, is_codecframe_fmt = 0;
     uint16_t first16 = 0;
-    float    qtzd_lspf[10], gain[16], cdn_vector[160];
+    float    qtzd_lspf[10], gain[16], cdn_vector[160], ppf_vector[160];
     int      g0[16], index[16];
     uint8_t  claimed_rate;
 
@@ -526,12 +553,16 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     if(!is_ifq)
     {
         qcelp_compute_svector(q->frame->rate, gain, index, cbseed, cdn_vector);
-        if((is_ifq = qcelp_do_pitchfilter(q->frame, cdn_vector)))
+        /* pitch filter */
+        if((is_ifq = qcelp_do_pitchfilter(q->frame, cdn_vector, ppf_vector)))
         {
             av_log(NULL, AV_LOG_ERROR, "Error can't pitch cdn_vector[%d]\n",
                    is_ifq);
             is_ifq=1;
         }
+
+        /* pitch gain control */
+
     }
 
     if(is_ifq)
