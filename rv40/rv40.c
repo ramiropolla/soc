@@ -79,11 +79,13 @@ typedef struct RV40DecContext{
     SliceInfo prev_si;       ///< info for the saved slice
     uint8_t *slice_data;     ///< saved slice data
     int has_slice;           ///< has previously saved slice
+    int skip_blocks;         ///< blocks to skip (interframe slice only)
 }RV40DecContext;
 
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
 static VLC aic_top_vlc;
 static VLC aic_mode1_vlc[AIC_MODE1_NUM], aic_mode2_vlc[AIC_MODE2_NUM];
+static VLC mbinfo_vlc;
 
 /**
  * @defgroup vlc RV40 VLC generating functions
@@ -190,6 +192,10 @@ static void rv40_init_tables()
                  aic_mode2_vlc_bits[i],  1, 1,
                  aic_mode2_vlc_codes[i], 2, 2, INIT_VLC_USE_STATIC);
     }
+    init_vlc_sparse(&mbinfo_vlc, MBINFO_BITS, NUM_MBINFO,
+                    mbinfo_vlc_bits,  1, 1,
+                    mbinfo_vlc_codes, 1, 1,
+                    mbinfo_vlc_syms,  1, 1, INIT_VLC_USE_STATIC);
 }
 
 /** @} */ // vlc group
@@ -509,7 +515,10 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     if(get_bits1(gb))
         return -1;
     t = get_bits(gb, 13); /// ???
-    rv40_parse_picture_size(gb, &w, &h);
+    if(!si->type)
+        rv40_parse_picture_size(gb, &w, &h);
+    else
+        get_bits1(gb);
 //    r->s.avctx->coded_width  = w;
 //    r->s.avctx->coded_height = h;
     mb_bits = av_log2((w + 7) >> 3) + av_log2((h + 7) >> 3);
@@ -579,6 +588,62 @@ static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *ds
             }
         }
     }
+    return 0;
+}
+
+/**
+ * Decode quantizer difference and return modified quantizer
+ */
+static inline int rv40_decode_dquant(GetBitContext *gb, int quant)
+{
+    if(get_bits1(gb))
+        return av_clip(quant + rv40_dquant_tab[quant * 2 + get_bits1(gb)], 0, 31);
+    else
+        return get_bits(gb, 5);
+}
+
+/**
+ * Decode variable-length code constructed from variable-length codes
+ * similar to Even-Rodeh and Elias Omega codes
+ *
+ * Code is constructed from bit chunks of even length (odd length means end of code)
+ * and chunks are coded with variable-length codes too
+ */
+static inline int get_omega(GetBitContext *gb)
+{
+    int bits = 0, code = 0, t, tb;
+
+    for(;;){
+        t = get_vlc2(gb, mbinfo_vlc.table, MBINFO_BITS, 1);
+        tb = t >> 4;
+        code = (code << tb) | (t & 0xF);
+        bits += tb;
+        if(bits & 1) break;
+    }
+    return (code >> 1) | (1 << (bits - 1));
+}
+
+/**
+ * Decode macroblock information
+ */
+static int rv40_decode_mb_info(RV40DecContext *r, int *skip, int *mv_bits)
+{
+    MpegEncContext *s = &r->s;
+    GetBitContext *gb = &s->gb;
+
+    if(r->skip_blocks){
+         r->skip_blocks--;
+    }else{
+        r->skip_blocks = get_omega(gb);
+    }
+    if(r->skip_blocks){
+         *skip = 0;
+         r->skip_blocks--;
+         return 0;
+    }
+
+    //TODO: get size of mv from near blocks and select maximum value
+    //      then get size for the current MB and optional dquant
     return 0;
 }
 
