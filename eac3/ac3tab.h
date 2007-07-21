@@ -31,6 +31,7 @@ extern const uint16_t ff_ac3_bitratetab[19];
 extern const int16_t  ff_ac3_window[256];
 extern const uint8_t  ff_ac3_latab[260];
 extern const uint16_t ff_ac3_hth[50][3];
+extern const uint8_t  ff_ac3_hebaptab[64];
 extern const uint8_t  ff_ac3_baptab[64];
 extern const uint8_t  ff_sdecaytab[4];
 extern const uint8_t  ff_fdecaytab[4];

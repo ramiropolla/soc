@@ -175,6 +175,8 @@ typedef struct EAC3Context{
     int blkstrtinfoe; // 1);         ///< Block start information exists
     uint32_t blkstrtinfo;            ///< Block start information
     int ncplblks;
+    int ncplregs;
+    int nchregs[MAX_CHANNELS];
 
 // EAC3Audblk
     int blksw[MAX_CHANNELS]; // 1);  ///< Block switch flag
@@ -290,6 +292,7 @@ typedef struct EAC3Context{
     int cplgaqsections;
     int chgaqbin[MAX_CHANNELS][TODO_SIZE]; // [][nchmant]
     int chgaqsections[MAX_CHANNELS];
+    int chactivegaqbins[MAX_CHANNELS];
     int nchmant[MAX_CHANNELS];         ///< Number of fbw channel mantissas
     int ncplsubnd;                     ///< Number of coupling sub-bands
     int ncplbnd;                       ///< Number of structured coupled bands
@@ -315,6 +318,7 @@ typedef struct EAC3Context{
     int nfchans; ///< Number of fbw channels
 
     uint8_t bap[MAX_CHANNELS][AC3_MAX_COEFS]; ///< bit allocation pointers
+    uint8_t hebap[MAX_CHANNELS][AC3_MAX_COEFS];
     int16_t psd[MAX_CHANNELS][AC3_MAX_COEFS]; ///< scaled exponents
     int16_t bndpsd[MAX_CHANNELS][350];        ///< interpolated exponents FIXME in ac3dec [50] !?
     int16_t mask[MAX_CHANNELS][350];          ///< masking values
@@ -363,5 +367,10 @@ int ff_eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s);
 int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s);
 int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk);
 int ff_eac3_parse_auxdata(GetBitContext *gbc, EAC3Context *s);
+
+#define EAC3_GAQ_NO 0
+#define EAC3_GAQ_12 1
+#define EAC3_GAQ_14 2
+#define EAC3_GAQ_124 3
 
 #endif

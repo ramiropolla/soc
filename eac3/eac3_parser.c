@@ -363,14 +363,39 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         /* ncplregs derived from cplstre and cplexpstr ? see Section E3.3.2 */
         av_log(s, AV_LOG_ERROR, "AHT NOT IMPLEMENTED");
         return -1;
-#if 0
+
+        /* AHT is only available in 6 block mode (numblkscod ==0x3) */
+
+        s->ncplregs = 0;
+        for(blk = 0; blk < 6; blk++){
+            if(s->cplstre[blk]==1 || s->cplexpstr[blk] != EXP_REUSE)
+                s->ncplregs++;
+        }
+        s->nchregs[0] = s->ncplregs;
+
+        for(ch = 1; ch <= s->nfchans+s->lfeon; ch++){
+            s->nchregs[ch] = 0;
+            for(blk = 0; blk < 6; blk++){
+                if(s->chexpstr[blk][ch] != EXP_REUSE)
+                    s->nchregs[ch]++;
+            }
+        }
+
         /*
+        s->nlferegs = 0;
+        for(blk = 0; blk < 6; blk++){
+            if(s->lfeexpstr[blk] != EXP_REUSE)
+                s->nlferegs++;
+        }
+        */
+
         if( (s->ncplblks == 6) && (s->ncplregs ==1) ) {
             GET_BITS(s->cplahtinu, gbc, 1);
         }
         else {
-            cplahtinu = 0
+            s->cplahtinu = 0;
         }
+        s->chahtinu[0] = s->cplahtinu;
 
         for(ch = 1; ch <= s->nfchans; ch++)
         {
@@ -379,21 +404,21 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
                 GET_BITS(s->chahtinu[ch], gbc, 1);
             }
             else {
-                chahtinu[ch] = 0
+                s->chahtinu[ch] = 0;
             }
         }
-        if(lfeon)
+
+        if(s->lfeon)
         {
-            // nlferegs derived from lfeexpstr ? see Section E3.3.2
-            if(nlferegs == 1) {
+            if(s->nchregs[s->lfe_channel] == 1) {
                 GET_BITS(s->lfeahtinu, gbc, 1);
             }
             else {
-                lfeahtinu = 0
+                s->lfeahtinu = 0;
             }
+            s->chahtinu[s->lfe_channel] = s->lfeahtinu;
         }
-        */
-#endif
+
     }
     /* These fields for audio frame SNR offset data */
     if(s->snroffststr == 0x0)
@@ -1164,6 +1189,8 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             int snroffst = (((s->csnroffst - 15) << 4) + s->fsnroffst[ch]) << 2;
             //av_log(NULL, AV_LOG_INFO, "s->csnroffst=%i s->fsnroffst=%i snroffst = %i\n",
              //       s->csnroffst, s->fsnroffst[ch], snroffst);
+
+            // TODO calculate hebap
             ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], start, end,
                     snroffst, s->bit_alloc_params.floor,
                     s->bap[ch]);
@@ -1186,11 +1213,48 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
         else if(s->chahtinu[ch] == 1)
         {
-            av_log(s, AV_LOG_ERROR,  "AHT NOT IMPLEMENTED");
-            return -1;
+            int endbap, bin, n;
 
-#if 0
+            av_log(s, AV_LOG_INFO,  "AHT NOT TESTED");
+
             GET_BITS(s->chgaqmod[ch], gbc, 2);
+
+            if (s->chgaqmod[ch] < 2){
+                endbap = 12;
+            }
+            else{
+                endbap = 17;
+            }
+
+            s->chactivegaqbins[ch] = 0;
+            for(bin = 0; bin < s->endmant[ch]; bin++){
+                if(s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < endbap){
+                    s->chgaqbin[ch][bin] = 1; /* Gain word is present */
+                    s->chactivegaqbins[ch]++;
+                }
+                else if (s->hebap[ch][bin] >= endbap){
+                    s->chgaqbin[ch][bin] = -1;/* Gain word not present */
+                }else{
+                    s->chgaqbin[ch][bin] = 0;
+                }
+            }
+
+
+            switch(s->chgaqmod[ch]){
+                    case EAC3_GAQ_NO: /* No GAQ gains present */
+                        s->chgaqsections[ch] = 0;
+                        break;
+                    case EAC3_GAQ_12: /* GAQ gains 1 and 2 */
+                    case EAC3_GAQ_14: /* GAQ gains 1 and 4 */
+                        s->chgaqsections[ch] = s->chactivegaqbins[ch];
+                        /* chactivegaqbins[ch] was computed earlier */
+                        break;
+                    case EAC3_GAQ_124: /* GAQ gains 1, 2, and 4 */
+                        s->chgaqsections[ch] = s->chactivegaqbins[ch] / 3;
+                        if (s->chactivegaqbins[ch] % 3) s->chgaqsections[ch]++;
+                        break;
+            }
+
             if((s->chgaqmod[ch] > 0x0) && (s->chgaqmod[ch] < 0x3) )
             {
                 for(n = 0; n < s->chgaqsections[ch]; n++) { // TODO chgaqsections ?
@@ -1199,13 +1263,16 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }
             else if(s->chgaqmod[ch] == 0x3)
             {
-                for(n = 0; n < s->chgaqsections[ch]; n++) { //TODO chgaqsections ?
+                for(n = 0; n < s->chgaqsections[ch]; n++) {
                     GET_BITS(s->chgaqgain[ch][n], gbc, 5);
                 }
             }
-            for(bin = 0; bin < s->nchmant[ch]; bin++) // TODO nchmant ?
+
+            // TODO add VQ and GAQ
+#if 0
+            for(bin = 0; bin < s->nchmant[ch]; bin++)
             {
-                if(s->chgaqbin[ch][bin]) // TODO chgaqbin ?
+                if(s->chgaqbin[ch][bin]>0) // XXX !=0, >0 ?
                 {
                     for(n = 0; n < 6; n++) {
                         GET_BITS(s->pre_chmant[n][ch][bin], gbc, (0-16)); // TODO 0-16 :]
@@ -1215,8 +1282,8 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     GET_BITS(s->pre_chmant[0][ch][bin], gbc, (0-9)); //  TODO 0-9 :]
                 }
             }
-            s->chahtinu[ch] = -1; /* AHT info for this frame has been read ? do not read again */
 #endif
+            s->chahtinu[ch] = -1; /* AHT info for this frame has been read ? do not read again */
         }
         if(s->cplinu[blk] && s->chincpl[ch] && !got_cplchan)
         {
