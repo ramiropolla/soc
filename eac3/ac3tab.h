@@ -44,4 +44,13 @@ extern const uint8_t  ff_qntztab[16];
 extern const uint8_t ff_nfchans_tbl[8];
 extern const uint8_t ff_eac3_blocks[4];
 
+extern const int16_t ff_vq_hebap1[4][6];
+extern const int16_t ff_vq_hebap2[8][6];
+extern const int16_t ff_vq_hebap3[16][6];
+extern const int16_t ff_vq_hebap4[32][6];
+extern const int16_t ff_vq_hebap5[128][6];
+extern const int16_t ff_vq_hebap6[256][6];
+extern const int16_t ff_vq_hebap7[512][6];
+
+
 #endif /* AC3TAB_H */
