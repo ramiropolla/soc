@@ -72,6 +72,8 @@ typedef enum {
 typedef struct EAC3Context{
     // TODO erase unused variables
     // TODO add documentation
+
+    AVCodecContext *avctx;
 //Syncinfo
     int syncword;
 

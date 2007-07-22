@@ -205,6 +205,7 @@ static int eac3_decode_init(AVCodecContext *avctx){
     int ch;
     EAC3Context *ctx = avctx->priv_data;
 
+    ctx->avctx = avctx;
     ff_ac3_decoder_tables_init();
     ac3_common_init();
     av_init_random(0, &ctx->dith_state);
