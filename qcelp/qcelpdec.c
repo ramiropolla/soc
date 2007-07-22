@@ -312,7 +312,7 @@ static void qcelp_get_gain_scalefactors(const float *in, const float *out,
 static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
 {
     int i;
-    float tmp,scalefactors[4];
+    float scalefactors[4];
 
     qcelp_get_gain_scalefactors(in, out, scalefactors);
 
