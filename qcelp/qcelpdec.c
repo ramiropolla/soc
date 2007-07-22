@@ -274,8 +274,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
 }
 
 /**
- * Computes hammsinc(x), this will probably be replaced
- * by a lookup table
+ * Computes hammsinc(x), this will be replaced by a lookup table
  */
 static float qcelp_hammsinc(int i)
 {
@@ -286,18 +285,47 @@ static float qcelp_hammsinc(int i)
  * Computes energy of the subframeno-ith subvector, using equations
  * 2.4.8.3-2 and 2.4.3.8-3
  */
-static float qcelp_compute_subframe_energy(const float *cdn_vector,
-                                           int subframeno)
+static float qcelp_compute_subframe_energy(const float *vector, int subframeno)
 {
     int   i;
     float energy=0;
 
-    cdn_vector+=40*subframeno;
+    vector+=40*subframeno;
+
     for(i=0; i<40; i++)
+        energy+=vector[i]*vector[i];
+
+    return energy;
+}
+
+static void qcelp_get_gain_scalefactors(const float *in, const float *out,
+            float *scalefactors)
+{
+    int i;
+
+    for(i=0; i<4; i++)
+          scalefactors[i]=sqrt(qcelp_compute_subframe_energy(in , i)/
+                               qcelp_compute_subframe_energy(out, i));
+}
+
+static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
+{
+    int i;
+    float tmp,scalefactors[4];
+
+    qcelp_get_gain_scalefactors(in, out, scalefactors);
+
+    /* 2.4.8.6-6 */
+    if(do_iirf)
     {
-        /* do someting here */
+        scalefactors[0]*=0.0625;
+
+        for(i=1;i<4;i++)
+            scalefactors[i]=0.9375*scalefactors[i-1]+0.0625*scalefactors[i];
     }
-    return 0.0;
+
+    for(i=0; i<160; i++)
+        out[i]=scalefactors[i/40]*out[i];
 }
 
 /**
@@ -305,8 +333,8 @@ static float qcelp_compute_subframe_energy(const float *cdn_vector,
  * well, otherwise it returns the index of the failing-to-be-pitched
  * element or -1 if an invalid (140.5, 141.5, 142.5) lag is found.
  *
- * This function implements both, the pitch pre-filter whose result is
- * stored in pv and the pitch pre-filter whose result gets stored in ppv.
+ * This function implements both, the pitch filter whose result is stored
+ * in pv and the pitch pre-filter whose result gets stored in ppv.
  *
  * For details see 2.4.5.2
  *
@@ -562,7 +590,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         }
 
         /* pitch gain control */
-
+        qcelp_apply_gain_ctrl(0, cdn_vector, ppf_vector);
     }
 
     if(is_ifq)
