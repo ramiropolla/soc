@@ -86,7 +86,8 @@ static int qcelp_decode_close(AVCodecContext *avctx)
  *
  * For details see TIA/EIA/IS-733 2.4.3.2.6.2-2
  */
-void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
+void qcelp_decode_lspf(AVCodecContext *avctx, const QCELPFrame *frame,
+     float *lspf)
 {
     /* FIXME a loop is wanted here */
     /* WIP implement I_F_Q handling? */
@@ -100,7 +101,7 @@ void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
         case RATE_QUARTER:
             lspv=frame->data+QCELP_LSPV0_POS;
 
-            av_log(NULL, AV_LOG_DEBUG, "LSPV:%5d,%5d,%5d,%5d,%5d\n",
+            av_log(avctx, AV_LOG_DEBUG, "LSPV:%5d,%5d,%5d,%5d,%5d\n",
                    lspv[0],lspv[1],lspv[2],lspv[3],lspv[4]);
 
             lspf[0]=        qcelp_lspvq1[lspv[0]].x;
@@ -114,7 +115,7 @@ void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
             lspf[8]=lspf[7]+qcelp_lspvq5[lspv[4]].x;
             lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y;
 
-            av_log(NULL, AV_LOG_DEBUG,
+            av_log(avctx, AV_LOG_DEBUG,
                    "%7f %7f %7f %7f %7f %7f %7f %7f %7f %7f\n",
                    lspf[0], lspf[1], lspf[2], lspf[3], lspf[4],
                    lspf[5], lspf[6], lspf[7], lspf[8], lspf[9]);
@@ -457,7 +458,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         default:
             q->frame->rate = RATE_UNKNOWN;
             q->frame->bits = 0;
-            av_log(NULL, AV_LOG_ERROR, "UNKNOWN PACKET RATE\n");
+            av_log(avctx, AV_LOG_ERROR, "UNKNOWN PACKET RATE\n");
     }
 
     if(is_codecframe_fmt)
@@ -470,13 +471,13 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            (claimed_rate ==  3 && q->frame->rate != RATE_HALF   ) ||
            (claimed_rate ==  4 && q->frame->rate != RATE_FULL   ))
         {
-           av_log(NULL, AV_LOG_ERROR,
+           av_log(avctx, AV_LOG_ERROR,
                   "Claimed rate and buffer size missmatch\n");
            is_ifq=1;
         }
     }
 
-    av_log(NULL, AV_LOG_DEBUG, "Rate %d Size %d\n",
+    av_log(avctx, AV_LOG_DEBUG, "Rate %d Size %d\n",
            q->frame->rate, q->frame->bits);
 
     /**
@@ -508,14 +509,14 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     if(q->frame->rate != RATE_HALF && q->frame->data[QCELP_RSRVD_POS])
     {
-        av_log(NULL, AV_LOG_ERROR, "Wrong data in reserved frame area:%d\n",
+        av_log(avctx, AV_LOG_ERROR, "Wrong data in reserved frame area:%d\n",
                q->frame->data[QCELP_RSRVD_POS]);
         is_ifq=1;
     }
 
     if(q->frame->rate == RATE_OCTAVE && first16==0xFFFF)
     {
-        av_log(NULL, AV_LOG_ERROR,
+        av_log(avctx, AV_LOG_ERROR,
                "Wrong frame data, rate 1/8 and first 16 bits are on\n");
         is_ifq=1;
     }
@@ -524,7 +525,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      * Preliminary decoding of frame's transmission codes
      */
 
-    qcelp_decode_lspf(q->frame, qtzd_lspf);
+    qcelp_decode_lspf(avctx, q->frame, qtzd_lspf);
     qcelp_decode_params(q->frame, g0, &cbseed, gain, index);
 
     /**
@@ -540,7 +541,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         {
             if(qtzd_lspf[9] <= .66 || qtzd_lspf[9] >= .985)
             {
-                av_log(NULL, AV_LOG_ERROR,
+                av_log(avctx, AV_LOG_ERROR,
                        "IFQ: 9th LSPF=%4f outside [.66,.985]\n", qtzd_lspf[9]);
                 is_ifq=1; /* FIXME 'erase packet'==ifq? */
             }
@@ -549,7 +550,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             {
                 if(FFABS(qtzd_lspf[n]-qtzd_lspf[n-4]) < .0931)
                 {
-                    av_log(NULL, AV_LOG_ERROR, "Wrong data, outbound LSPFs\n");
+                    av_log(avctx, AV_LOG_ERROR, "Wrong data, outbound LSPFs\n");
                     is_ifq=1;
                 }
             }
@@ -584,7 +585,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         /* pitch filter */
         if((is_ifq = qcelp_do_pitchfilter(q->frame, cdn_vector, ppf_vector)))
         {
-            av_log(NULL, AV_LOG_ERROR, "Error can't pitch cdn_vector[%d]\n",
+            av_log(avctx, AV_LOG_ERROR, "Error can't pitch cdn_vector[%d]\n",
                    is_ifq);
             is_ifq=1;
         }
