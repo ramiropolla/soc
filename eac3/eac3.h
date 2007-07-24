@@ -269,7 +269,7 @@ typedef struct EAC3Context{
 //    int chmant[MAX_CHANNELS][TODO_SIZE];
     int chgaqmod[MAX_CHANNELS];                 ///< Channel gain adaptive quantization mode
     int chgaqgain[MAX_CHANNELS][TODO_SIZE];     ///< Channel gain adaptive quantization gain
-    int pre_chmant[6][MAX_CHANNELS][TODO_SIZE]; ///< Pre channel mantissas
+    float pre_chmant[6][MAX_CHANNELS][TODO_SIZE];///< Pre channel mantissas
     int cplmant[TODO_SIZE]; // cplmant          ///< Coupling mantisass
     int cplgaqmod;                              ///< Coupling channel gain adaptive quantization mode
     int cplgaqgain[TODO_SIZE];                  ///< Coupling gain adaptive quantization gain
