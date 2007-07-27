@@ -47,6 +47,7 @@ typedef struct {
     QCELPFrame    *frame;
     uint8_t       erasure_count;
     uint8_t       ifq_count;
+    float         prev_lspf[10];
 } QCELPContext;
 
 static int qcelp_decode_init(AVCodecContext *avctx);
@@ -58,6 +59,7 @@ static int qcelp_decode_close(AVCodecContext *avctx);
 static int qcelp_decode_init(AVCodecContext *avctx)
 {
     QCELPContext *q = (QCELPContext *) avctx->priv_data;
+    int i;
 
     avctx->sample_rate = 8000;
     avctx->channels = 1;
@@ -67,6 +69,11 @@ static int qcelp_decode_init(AVCodecContext *avctx)
 
     if(q->frame == NULL)
         return -1;
+
+    for(i=0; i<10; i++)
+    {
+        q->prev_lspf[i]=0.0;
+    }
 
     return 0;
 }
@@ -396,6 +403,53 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pv, float *ppv)
     }
 
     return 0;
+}
+
+/**
+ * 2.4.3.3.4
+ */
+void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
+     float *curr_lspf)
+{
+    int   i,j;
+    float curr_weight, prev_weight;
+
+    switch(rate)
+    {
+        case RATE_FULL:
+        case RATE_HALF:
+        case RATE_QUARTER:
+            for(i=0;i<9;i+=3)
+            {
+                switch(i)
+                {
+                    case 0:
+                        prev_weight=0.75;
+                        curr_weight=0.25;
+                        break;
+                    case 3:
+                        prev_weight=curr_weight=0.5;
+                        break;
+                    default: /* 6 */
+                        prev_weight=0.25;
+                        curr_weight=0.75;
+                }
+
+                for(j=0;j<3;j++)
+                {
+                    curr_lspf[i+j]=prev_weight*prev_lspf[i+j]+
+                                   curr_weight*curr_lspf[i+j];
+                }
+            }
+            break;
+        case RATE_OCTAVE:
+            for(i=0;i<10;i++)
+                curr_lspf[i]=0.375*prev_lspf[i]+0.625*curr_lspf[i];
+            break;
+        case I_F_Q:
+            for(i=0;i<10;i++)
+                curr_lspf[i]=prev_lspf[i];
+    }
 }
 
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
