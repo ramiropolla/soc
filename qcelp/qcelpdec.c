@@ -71,9 +71,7 @@ static int qcelp_decode_init(AVCodecContext *avctx)
         return -1;
 
     for(i=0; i<10; i++)
-    {
         q->prev_lspf[i]=0.0;
-    }
 
     return 0;
 }
