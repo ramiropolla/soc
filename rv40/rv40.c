@@ -912,10 +912,57 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     MpegEncContext *s = &r->s;
     AVFrame *pict = data;
     SliceInfo si;
+    int i;
 
     /* no supplementary picture */
     if (buf_size == 0) {
         return 0;
+    }
+
+    if(avctx->slice_count){
+        for(i=0; i<avctx->slice_count; i++){
+            int offset= avctx->slice_offset[i];
+            int size;
+
+            if(i+1 == avctx->slice_count)
+                size= buf_size - offset;
+            else
+                size= avctx->slice_offset[i+1] - offset;
+
+            init_get_bits(&s->gb, buf + offset, size * 8);
+            rv40_parse_slice_header(r, &r->s.gb, &r->prev_si);
+            r->prev_si.size = size * 8;
+            r->prev_si.end = s->mb_width * s->mb_height;
+            if(i+1 < avctx->slice_count){
+                init_get_bits(&s->gb, buf+avctx->slice_offset[i+1], (buf_size-avctx->slice_offset[i+1])*8);
+                rv40_parse_slice_header(r, &r->s.gb, &si);
+                r->prev_si.end = si.start;
+            }
+            r->slice_data = buf + offset;
+            r->cur_vlcs = &intra_vlcs[r->prev_si.vlc_set];
+            r->quant = r->prev_si.quant;
+            r->bits = r->prev_si.size;
+            r->block_start = r->prev_si.start;
+            s->mb_num_left = r->prev_si.end - r->prev_si.start;
+            s->pict_type = r->prev_si.type ? P_TYPE : I_TYPE;
+            rv40_decode_slice(r);
+            r->slice_data = NULL;
+        }
+        ff_er_frame_end(s);
+        MPV_frame_end(s);
+        if (s->pict_type == B_TYPE || s->low_delay) {
+            *pict= *(AVFrame*)s->current_picture_ptr;
+        } else if (s->last_picture_ptr != NULL) {
+            *pict= *(AVFrame*)s->last_picture_ptr;
+        }
+
+        if(s->last_picture_ptr || s->low_delay){
+            *data_size = sizeof(AVFrame);
+            ff_print_debug_info(s, pict);
+        }
+        s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
+        s->mb_x = s->mb_y = 0;
+        return buf_size;
     }
 
     init_get_bits(&s->gb, buf, buf_size*8);
