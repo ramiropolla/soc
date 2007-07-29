@@ -693,7 +693,7 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
                     topleft = YY[-s->linesize + 3] * 0x01010101;
                     PY = &topleft;
                 }
-                r->h.pred4x4[itype](YY, YY - 1, PY, s->linesize);
+                r->h.pred4x4[itype](YY, PY, s->linesize);
                 if(!(cbp & 1)) continue;
                 /* add_pixels_clamped for 4x4 block */
                 for(y = 0; y < 4; y++)
