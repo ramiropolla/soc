@@ -84,24 +84,26 @@ int ff_eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s){
     }
 
     GET_BITS(s->dialnorm[0], gbc, 5);
-    GET_BITS(s->compre, gbc, 1);
-    if(s->compre) {
+    if(get_bits1(gbc)) {
         GET_BITS(s->compr, gbc, 8);
+    }else{
+        //TODO default compr
     }
     if(s->acmod == 0x0) /* if 1+1 mode (dual mono, so some items need a second value) */
     {
         GET_BITS(s->dialnorm[1], gbc, 5);
-        GET_BITS(s->compr2e, gbc, 1);
-        if(s->compr2e) {
+        if(get_bits1(gbc)) {
             GET_BITS(s->compr2, gbc, 8);
+        }else{
+            //TODO default compr2
         }
-
     }
     if(s->strmtyp == 0x1) /* if dependent stream */
     {
-        GET_BITS(s->chanmape, gbc, 1);
-        if(s->chanmape) {
+        if(get_bits1(gbc)) {
             GET_BITS(s->chanmap, gbc, 16);
+        }else{
+            //TODO default channel map
         }
     }
     GET_BITS(s->mixmdate, gbc, 1);
@@ -130,45 +132,42 @@ int ff_eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s){
         }
         if(s->strmtyp == 0x0) /* if independent stream */
         {
-            GET_BITS(s->pgmscle, gbc, 1);
-            if(s->pgmscle) {
+            if(get_bits1(gbc)) {
                 GET_BITS(s->pgmscl, gbc, 6);
+            }else{
+                //TODO program scale factor = 0dB
             }
             if(s->acmod == 0x0) /* if 1+1 mode (dual mono, so some items need a second value) */
             {
-                GET_BITS(s->pgmscl2e, gbc, 1);
-                if(s->pgmscl2e) {
+                if(get_bits1(gbc)) {
                     GET_BITS(s->pgmscl2, gbc, 6);
+                }else{
+                    //TODO program scale factor 2 = 0dB
                 }
             }
-            GET_BITS(s->extpgmscle, gbc, 1);
-            if(s->extpgmscle) {
+            if(get_bits1(gbc)) {
                 GET_BITS(s->extpgmscl, gbc, 6);
             }
             GET_BITS(s->mixdef, gbc, 2);
             if(s->mixdef == 0x1) /* mixing option 2 */ {
-                GET_BITS(s->mixdata, gbc, 5);
+                skip_bits(gbc, 5);
             }
             else if(s->mixdef == 0x2) /* mixing option 3 */ {
-                GET_BITS(s->mixdata, gbc, 12);
+                skip_bits(gbc, 12);
             }
             else if(s->mixdef == 0x3) /* mixing option 4 */
             {
                 GET_BITS(s->mixdeflen, gbc, 5);
-                av_log(s->avctx, AV_LOG_ERROR, "NOT IMPLEMENTED");
-                return -1;
-//                GET_BITS(s->mixdata, gbc, 8*(mixdeflen+2));
+                skip_bits(gbc, 8*(s->mixdeflen+2));
             }
             if(s->acmod < 0x2) /* if mono or dual mono source */
             {
-                GET_BITS(s->paninfoe, gbc, 1);
-                if(s->paninfoe) {
+                if(get_bits1(gbc)) {
                     GET_BITS(s->paninfo, gbc, 14);
                 }
                 if(s->acmod == 0x0) /* if 1+1 mode (dual mono, so some items need a second value) */
                 {
-                    GET_BITS(s->paninfo2e, gbc, 1);
-                    if(s->paninfo2e) {
+                    if(get_bits1(gbc)) {
                         GET_BITS(s->paninfo2, gbc, 14);
                     }
                 }
@@ -229,17 +228,11 @@ int ff_eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s){
         }
     }
     if((s->strmtyp == 0x0) && (s->numblkscod != 0x3) ) {
-        GET_BITS(s->convsync, gbc, 1);
+        skip_bits1(gbc); //converter synchronization flag
     }
     if(s->strmtyp == 0x2) /* if bit stream converted from AC-3 */
     {
-        if(s->numblkscod == 0x3) /* 6 blocks per frame */ {
-            s->blkid = 1;
-        }
-        else {
-            GET_BITS(s->blkid, gbc, 1);
-        }
-        if(s->blkid) {
+        if(s->numblkscod == 0x3 || get_bits1(gbc)) /* 6 blocks per frame */ {
             GET_BITS(s->frmsizecod, gbc, 6);
         }
     }
@@ -316,6 +309,7 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         {
             if(s->cplinu[blk] == 1) {
                 GET_BITS(s->cplexpstr[blk], gbc, 2);
+                s->chexpstr[blk][0] = s->cplexpstr[blk];
             }
 
             for(ch = 1; ch <= s->nfchans; ch++) {
@@ -327,6 +321,7 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     {
         if( (s->acmod > 0x1) && (s->ncplblks > 0) ) {
             GET_BITS(s->frmcplexpstr, gbc, 5);
+            s->frmchexpstr[0] = s->frmcplexpstr;
         }
         for(ch = 1; ch <= s->nfchans; ch++) {
             GET_BITS(s->frmchexpstr[ch], gbc, 5);
@@ -345,14 +340,7 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     /* These fields for converter exponent strategy data */
     if(s->strmtyp == 0x0)
     {
-        if(s->numblkscod != 0x3) {
-            GET_BITS(s->convexpstre, gbc, 1);
-        }
-        else {
-            s->convexpstre = 1;
-        }
-        if(s->convexpstre == 1)
-        {
+        if(s->numblkscod == 0x3 || get_bits1(gbc)){
             for(ch = 1; ch <= s->nfchans; ch++) {
                 GET_BITS(s->convexpstr[ch], gbc, 5);
             }
@@ -960,27 +948,21 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         assert(s->baie || blk);
         if(s->baie)
         {
-            GET_BITS(s->sdcycod, gbc, 2);
-            GET_BITS(s->fdcycod, gbc, 2);
-            GET_BITS(s->sgaincod, gbc, 2);
-            GET_BITS(s->dbpbcod, gbc, 2);
-            GET_BITS(s->floorcod, gbc, 3);
+            s->sdecay = ff_sdecaytab[get_bits(gbc, 2)];   /* Table 7.6 */
+            s->fdecay = ff_fdecaytab[get_bits(gbc, 2)];   /* Table 7.7 */
+            s->sgain = ff_sgaintab[get_bits(gbc, 2)];     /* Table 7.8 */
+            s->dbknee = ff_dbkneetab[get_bits(gbc, 2)];   /* Table 7.9 */
+            s->floor = ff_floortab[get_bits(gbc, 3)];     /* Table 7.10 */
         }
     }
     else
     {
-        s->sdcycod = 0x2;
-        s->fdcycod = 0x1;
-        s->sgaincod = 0x1;
-        s->dbpbcod = 0x2;
-        s->floorcod = 0x7;
+        s->sdecay = ff_sdecaytab[0x2];   /* Table 7.6 */
+        s->fdecay = ff_fdecaytab[0x1];   /* Table 7.7 */
+        s->sgain = ff_sgaintab[0x1];     /* Table 7.8 */
+        s->dbknee = ff_dbkneetab[0x2];   /* Table 7.9 */
+        s->floor = ff_floortab[0x7];     /* Table 7.10 */
     }
-
-    s->sdecay = ff_sdecaytab[s->sdcycod];   /* Table 7.6 */
-    s->fdecay = ff_fdecaytab[s->fdcycod];   /* Table 7.7 */
-    s->sgain = ff_sgaintab[s->sgaincod];    /* Table 7.8 */
-    s->dbknee = ff_dbkneetab[s->dbpbcod];   /* Table 7.9 */
-    s->floor = ff_floortab[s->floorcod];    /* Table 7.10 */
 
     if(s->snroffststr == 0x0)
     {

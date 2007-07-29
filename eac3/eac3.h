@@ -88,11 +88,8 @@ typedef struct EAC3Context{
     int lfeon; // 1);                ///< Low frequency effect channel on
     int bsid; // 5);                 ///< Bit stream identification
     int dialnorm[2]; // 5);          ///< Dialogue normalization
-    int compre; // 1);               ///< Compression gain word exists
     int compr; // 8);                ///< Compression gain word
-    int compr2e; // 1);              ///< Compression gain word ch2 exists
     int compr2; // 8);               ///< Compression gain word ch2
-    int chanmape; // 1);             ///< Custom channel map exists
     int chanmap; // 16);             ///< Custom channel map
     int mixmdate; // 1);             ///< Mixing meta-data exists
     int dmixmod; // 2);              ///<
@@ -102,19 +99,13 @@ typedef struct EAC3Context{
     int lorosurmixlev; // 3);
     int lfemixlevcode; // 1);        ///< lfe mix level code exists
     int lfemixlevcod; // 5);         ///< lfe mix level code
-    int pgmscle; // 1);              ///<  Program scale factor exists
     int pgmscl; // 6);               ///< Program scale factor
-    int pgmscl2e; // 1);             ///< Program scale factor #2 exists
     int pgmscl2; // 6);              ///< Program scale factor #2
-    int extpgmscle; // 1);           ///< External program scale factor exists
     int extpgmscl; // 6);            ///< External program scale factor
     int mixdef; // 2);               ///< Mix control type
-    int mixdata; // 12);             ///< Mixing parameter data
     int mixdeflen; // 5);            ///< Length of mixing parameter data field
 //    int *mixdata; // 8*(mixdeflen+2));
-    int paninfoe; // 1);             ///< Pan information exists
     int paninfo; // 14);             ///< Pan information
-    int paninfo2e; // 1);            ///< Pan information 2 exists
     int paninfo2; // 14);            ///< Pan information 2
     int frmmixcfginfoe; // 1);       ///< Frame mixing configuration information exists
     int blkmixcfginfo0; // 5);
@@ -136,8 +127,6 @@ typedef struct EAC3Context{
     int roomtyp2; // 2);             ///< room type ch2
     int adconvtyp2; // 1);           ///< A/D converter type
     int sourcefscod; // 1);          ///< Source sample rate code
-    int convsync; // 1);             ///< Converter synchronization flag
-    int blkid; // 1);                ///< Block identification
     int frmsizecod; // 6);           ///< Frame size code
     int addbsie; // 1);              ///< Additional bit stream information exists
     int addbsil; // 6);              ///< Additional bit stream information length
@@ -162,7 +151,6 @@ typedef struct EAC3Context{
     int frmcplexpstr; // 5);         ///< Frame based coupling exponent strategy
     int frmchexpstr[MAX_CHANNELS];   ///< frame based channel exponent strategy
     int lfeexpstr[MAX_BLOCKS];       ///< Lfe exponent strategy
-    int convexpstre; // 1);          ///< Converter exponent strategy exists
     int convexpstr[MAX_CHANNELS];    ///< Converter channel exponent strategy
     int cplahtinu; // 1);            ///< Coupling channel AHT in use
     int chahtinu[MAX_CHANNELS];      ///< Channel AHT in use
