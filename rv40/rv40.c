@@ -505,6 +505,7 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     int w, h;
 
     memset(si, 0, sizeof(SliceInfo));
+    si->type = -1;
     if(get_bits1(gb))
         return -1;
     si->type = get_bits(gb, 2);
@@ -950,7 +951,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     r->slice_data = av_realloc(r->slice_data, buf_size + FF_INPUT_BUFFER_PADDING_SIZE);
     memcpy(r->slice_data, buf, buf_size);
     r->prev_si = si;
-    r->has_slice = 1;
+    r->has_slice = si.type != -1;
 
     return buf_size;
 }
