@@ -316,13 +316,6 @@ typedef struct EAC3Context{
 
     DECLARE_ALIGNED_16(float, transform_coeffs[MAX_CHANNELS][AC3_MAX_COEFS]);
 
-    /// TODO move to AC3BitAllocParameters
-    int sdecay;
-    int fdecay;
-    int sgain;
-    int dbknee;
-    int floor;
-
     AC3BitAllocParameters bit_alloc_params;
 
     AVRandomState dith_state;        ///< for dither generation

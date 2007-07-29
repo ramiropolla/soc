@@ -948,20 +948,20 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         assert(s->baie || blk);
         if(s->baie)
         {
-            s->sdecay = ff_sdecaytab[get_bits(gbc, 2)];   /* Table 7.6 */
-            s->fdecay = ff_fdecaytab[get_bits(gbc, 2)];   /* Table 7.7 */
-            s->sgain = ff_sgaintab[get_bits(gbc, 2)];     /* Table 7.8 */
-            s->dbknee = ff_dbkneetab[get_bits(gbc, 2)];   /* Table 7.9 */
-            s->floor = ff_floortab[get_bits(gbc, 3)];     /* Table 7.10 */
+            s->bit_alloc_params.sdecay = ff_sdecaytab[get_bits(gbc, 2)];   /* Table 7.6 */
+            s->bit_alloc_params.fdecay = ff_fdecaytab[get_bits(gbc, 2)];   /* Table 7.7 */
+            s->bit_alloc_params.sgain = ff_sgaintab[get_bits(gbc, 2)];     /* Table 7.8 */
+            s->bit_alloc_params.dbknee = ff_dbkneetab[get_bits(gbc, 2)];   /* Table 7.9 */
+            s->bit_alloc_params.floor = ff_floortab[get_bits(gbc, 3)];     /* Table 7.10 */
         }
     }
     else
     {
-        s->sdecay = ff_sdecaytab[0x2];   /* Table 7.6 */
-        s->fdecay = ff_fdecaytab[0x1];   /* Table 7.7 */
-        s->sgain = ff_sgaintab[0x1];     /* Table 7.8 */
-        s->dbknee = ff_dbkneetab[0x2];   /* Table 7.9 */
-        s->floor = ff_floortab[0x7];     /* Table 7.10 */
+        s->bit_alloc_params.sdecay = ff_sdecaytab[0x2];   /* Table 7.6 */
+        s->bit_alloc_params.fdecay = ff_fdecaytab[0x1];   /* Table 7.7 */
+        s->bit_alloc_params.sgain = ff_sgaintab[0x1];     /* Table 7.8 */
+        s->bit_alloc_params.dbknee = ff_dbkneetab[0x2];   /* Table 7.9 */
+        s->bit_alloc_params.floor = ff_floortab[0x7];     /* Table 7.10 */
     }
 
     if(s->snroffststr == 0x0)
@@ -1148,11 +1148,6 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         // TODO hmm... :)
         s->bit_alloc_params.fscod = s->fscod;
         s->bit_alloc_params.halfratecod = 0; // TODO
-        s->bit_alloc_params.sdecay = s->sdecay;
-        s->bit_alloc_params.fdecay = s->fdecay;
-        s->bit_alloc_params.sgain = s->sgain;
-        s->bit_alloc_params.dbknee = s->dbknee;
-        s->bit_alloc_params.floor = s->floor;
         s->bit_alloc_params.cplfleak = s->cplfleak;
         s->bit_alloc_params.cplsleak = s->cplsleak;
 
