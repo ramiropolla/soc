@@ -48,6 +48,9 @@
 #define TOP_DC_PRED           10
 #define DC_128_PRED           11
 
+#define DIAG_DOWN_LEFT_PRED_RV40          12
+#define DIAG_DOWN_LEFT_PRED_RV40_NODOWN   13
+#define DIAG_DOWN_LEFT_PRED_RV40_NOTOP    14
 
 #define DC_PRED8x8            0
 #define HOR_PRED8x8           1
@@ -63,7 +66,7 @@
  * Context for storing H.264 prediction functions
  */
 typedef struct H264PredContext{
-    void (*pred4x4  [9+3])(uint8_t *src, uint8_t *left, uint8_t *topright, int stride);//FIXME move to dsp?
+    void (*pred4x4  [9+3+3])(uint8_t *src, uint8_t *left, uint8_t *topright, int stride);//FIXME move to dsp?
     void (*pred8x8l [9+3])(uint8_t *src, int topleft, int topright, int stride);
     void (*pred8x8  [4+3])(uint8_t *src, int stride);
     void (*pred16x16[4+3])(uint8_t *src, int stride);

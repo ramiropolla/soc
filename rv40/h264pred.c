@@ -86,6 +86,12 @@ static void pred4x4_128_dc_c(uint8_t *src, uint8_t *left, uint8_t *topright, int
     const int av_unused t6= topright[2];\
     const int av_unused t7= topright[3];\
 
+#define LOAD_DOWN_LEFT_EDGE\
+    const int av_unused l4= src[-1+4*stride];\
+    const int av_unused l5= src[-1+5*stride];\
+    const int av_unused l6= src[-1+6*stride];\
+    const int av_unused l7= src[-1+7*stride];\
+
 #define LOAD_LEFT_EDGE\
     const int av_unused l0= left[0*stride];\
     const int av_unused l1= left[1*stride];\
@@ -142,6 +148,75 @@ static void pred4x4_down_left_c(uint8_t *src, uint8_t *left, uint8_t *topright, 
     src[3+2*stride]=
     src[2+3*stride]=(t5 + t7 + 2*t6 + 2)>>2;
     src[3+3*stride]=(t6 + 3*t7 + 2)>>2;
+}
+
+static void pred4x4_down_left_rv40_c(uint8_t *src, uint8_t *left, uint8_t *topright, int stride){
+    LOAD_TOP_EDGE
+    LOAD_TOP_RIGHT_EDGE
+    LOAD_LEFT_EDGE
+    LOAD_DOWN_LEFT_EDGE
+
+    src[0+0*stride]=(t0 + t2 + 2*t1 + 2 + l0 + l2 + 2*l1 + 2)>>3;
+    src[1+0*stride]=
+    src[0+1*stride]=(t1 + t3 + 2*t2 + 2 + l1 + l3 + 2*l2 + 2)>>3;
+    src[2+0*stride]=
+    src[1+1*stride]=
+    src[0+2*stride]=(t2 + t4 + 2*t3 + 2 + l2 + l4 + 2*l3 + 2)>>3;
+    src[3+0*stride]=
+    src[2+1*stride]=
+    src[1+2*stride]=
+    src[0+3*stride]=(t3 + t5 + 2*t4 + 2 + l3 + l5 + 2*l4 + 2)>>3;
+    src[3+1*stride]=
+    src[2+2*stride]=
+    src[1+3*stride]=(t4 + t6 + 2*t5 + 2 + l4 + l6 + 2*l5 + 2)>>3;
+    src[3+2*stride]=
+    src[2+3*stride]=(t5 + t7 + 2*t6 + 2 + l5 + l7 + 2*l6 + 2)>>3;
+    src[3+3*stride]=(t6 + 3*t7 + 2 + l6 + 3*l7 + 2)>>3;
+}
+
+static void pred4x4_down_left_rv40_notop_c(uint8_t *src, uint8_t *left, uint8_t *topright, int stride){
+    LOAD_LEFT_EDGE
+    LOAD_DOWN_LEFT_EDGE
+
+    src[0+0*stride]=(l0 + l2 + 2*l1 + 2)>>2;
+    src[1+0*stride]=
+    src[0+1*stride]=(l1 + l3 + 2*l2 + 2)>>2;
+    src[2+0*stride]=
+    src[1+1*stride]=
+    src[0+2*stride]=(l2 + l4 + 2*l3 + 2)>>2;
+    src[3+0*stride]=
+    src[2+1*stride]=
+    src[1+2*stride]=
+    src[0+3*stride]=(l3 + l5 + 2*l4 + 2)>>2;
+    src[3+1*stride]=
+    src[2+2*stride]=
+    src[1+3*stride]=(l4 + l6 + 2*l5 + 2)>>2;
+    src[3+2*stride]=
+    src[2+3*stride]=(l5 + l7 + 2*l6 + 2)>>2;
+    src[3+3*stride]=(l6 + 3*l7 + 2)>>2;
+}
+
+static void pred4x4_down_left_rv40_nodown_c(uint8_t *src, uint8_t *left, uint8_t *topright, int stride){
+    LOAD_TOP_EDGE
+    LOAD_TOP_RIGHT_EDGE
+    LOAD_LEFT_EDGE
+
+    src[0+0*stride]=(t0 + t2 + 2*t1 + 2 + l0 + l2 + 2*l1 + 2)>>3;
+    src[1+0*stride]=
+    src[0+1*stride]=(t1 + t3 + 2*t2 + 2 + l1 + l3 + 2*l2 + 2)>>3;
+    src[2+0*stride]=
+    src[1+1*stride]=
+    src[0+2*stride]=(t2 + t4 + 2*t3 + 2 + l2 + 3*l3 + 2)>>3;
+    src[3+0*stride]=
+    src[2+1*stride]=
+    src[1+2*stride]=
+    src[0+3*stride]=(t3 + t5 + 2*t4 + 2 + l3*4 + 2)>>3;
+    src[3+1*stride]=
+    src[2+2*stride]=
+    src[1+3*stride]=(t4 + t6 + 2*t5 + 2 + l3*4 + 2)>>3;
+    src[3+2*stride]=
+    src[2+3*stride]=(t5 + t7 + 2*t6 + 2 + l3*4 + 2)>>3;
+    src[3+3*stride]=(t6 + 3*t7 + 2 + l3*4 + 2)>>3;
 }
 
 static void pred4x4_vertical_right_c(uint8_t *src, uint8_t *left, uint8_t *topright, int stride){
@@ -760,6 +835,9 @@ void ff_h264_pred_init(H264PredContext *h){
     h->pred4x4[LEFT_DC_PRED        ]= pred4x4_left_dc_c;
     h->pred4x4[TOP_DC_PRED         ]= pred4x4_top_dc_c;
     h->pred4x4[DC_128_PRED         ]= pred4x4_128_dc_c;
+    h->pred4x4[DIAG_DOWN_LEFT_PRED_RV40]= pred4x4_down_left_rv40_c;
+    h->pred4x4[DIAG_DOWN_LEFT_PRED_RV40_NODOWN]= pred4x4_down_left_rv40_nodown_c;
+    h->pred4x4[DIAG_DOWN_LEFT_PRED_RV40_NOTOP]= pred4x4_down_left_rv40_notop_c;
 
     h->pred8x8l[VERT_PRED           ]= pred8x8l_vertical_c;
     h->pred8x8l[HOR_PRED            ]= pred8x8l_horizontal_c;
