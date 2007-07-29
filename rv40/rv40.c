@@ -509,6 +509,7 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     if(get_bits1(gb))
         return -1;
     si->type = get_bits(gb, 2);
+    if(si->type == 1) si->type == 0;
     si->quant = get_bits(gb, 5);
     if(get_bits(gb, 2))
         return -1;
