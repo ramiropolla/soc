@@ -502,7 +502,7 @@ static inline int choose_vlc_set(int quant, int mod, int type)
 static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceInfo *si)
 {
     int t, mb_bits;
-    int w, h;
+    int w = r->s.avctx->width, h = r->s.avctx->height;
 
     memset(si, 0, sizeof(SliceInfo));
     si->type = -1;
