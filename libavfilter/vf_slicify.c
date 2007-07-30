@@ -56,6 +56,8 @@ static int config_props(AVFilterLink *link)
     /* ensure that slices play nice with chroma subsampling, and enforce
      * a reasonable minimum size for the slices */
     slice->h = FFMAX(8, slice->h & (-1 << slice->vshift));
+
+    return 0;
 }
 
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)

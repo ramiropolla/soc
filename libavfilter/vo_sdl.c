@@ -33,8 +33,6 @@ typedef struct
 
 static int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
-    SDLContext *sdl = ctx->priv;
-
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE)) {
         av_log(ctx, AV_LOG_FATAL, "unable to initialize SDL: %s\n",
                SDL_GetError());

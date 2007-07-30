@@ -32,8 +32,7 @@ typedef struct {
 static int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     PPMContext *ppm = ctx->priv;
-    FILE *in;
-    int max, x, y;
+    int max;
 
     if(!args) return -1;
     if(!(ppm->in = fopen(args, "r"))) return -1;
@@ -71,8 +70,8 @@ static void request_frame(AVFilterLink *link)
     PPMContext *ppm = link->src->priv;
     AVFilterPicRef *out;
 
-    int x, y;
-    uint8_t *row, *cur;
+    int y;
+    uint8_t *row;
 
     if(!ppm->pic) {
         ppm->pic = avfilter_get_video_buffer(link,
