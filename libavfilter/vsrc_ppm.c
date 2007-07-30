@@ -29,7 +29,7 @@ typedef struct {
     AVFilterPicRef *pic;
 } PPMContext;
 
-static int init(AVFilterContext *ctx, const char *args, const void *opaque)
+static int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     PPMContext *ppm = ctx->priv;
     FILE *in;

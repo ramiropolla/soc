@@ -31,7 +31,7 @@ typedef struct
     int64_t pts;
 } SDLContext;
 
-static int init(AVFilterContext *ctx, const char *args, const void *opaque)
+static int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     SDLContext *sdl = ctx->priv;
 
