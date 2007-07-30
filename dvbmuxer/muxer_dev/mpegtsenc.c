@@ -62,8 +62,9 @@ static void mpegts_write_section(MpegTSSection *s, uint8_t *buf, int len)
             b |= 0x40;
         *q++ = b;
         *q++ = s->pid;
-        s->cc = (s->cc + 1) & 0xf;
+        s->cc = (s->cc) & 0xf;
         *q++ = 0x10 | s->cc;
+        s->cc++;
         if (first)
             *q++ = 0; /* 0 offset */
         len1 = TS_PACKET_SIZE - (q - packet);
@@ -454,28 +455,18 @@ static int mpegts_write_header(AVFormatContext *s)
 
     bitrate = 0;
     for(i=0;i<s->nb_streams;i++) {
-        int codec_rate;
         st = s->streams[i];
         ts_st = (MpegTSWriteStream*) st->priv_data;
-
-        if(st->codec->rc_max_rate || ts_st->id==VIDEO_ID)
-            codec_rate= st->codec->rc_max_rate;
-        else
-            codec_rate= st->codec->bit_rate;
-        bitrate += codec_rate;
+        bitrate += st->codec->bit_rate;
     }
 
-    if(s->mux_rate){
-        ts->mux_rate= (s->mux_rate + (8 * 50) - 1) / (8 * 50);
-    } else {
-        bitrate += bitrate*5/100;
-        bitrate = bitrate * 25 / (8 *  DEFAULT_PES_PAYLOAD_SIZE) +  /* PES header size */
-                   bitrate * 4 / (8 * TS_PACKET_SIZE) +             /* TS  header size */
-                   500 * 12 +                                       /* SDT size */
-                   100 * 16;                                        /* PAT size */
-        ts->mux_rate = (bitrate + (8 * 50) - 1) / (8 * 50);
-    }
-    ts->last_pcr = 0;
+    //bitrate += bitrate*5/100;
+    bitrate += bitrate * 25 / (8 *  DEFAULT_PES_PAYLOAD_SIZE) +  /* PES header size */
+               bitrate * 4 / (8 * TS_PACKET_SIZE) +             /* TS  header size */
+               500 * 12 +                                       /* SDT size */
+               100 * 16;                                        /* PAT size */
+    ts->mux_rate = bitrate;
+    ts->last_pcr = 10000;  /* add a preload value */
 
     service->pcr_packet_freq = (ts->mux_rate * PCR_RETRANS_TIME) /
         (TS_PACKET_SIZE * 8 * 1000);
@@ -536,23 +527,23 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
     int val, is_start, len, header_len, write_pcr;
     int afc_len, stuffing_len;
     int64_t pcr = -1; /* avoid warning */
-    int offset = 0;
-
+    int offset = 0, packet_count = 0;
+    static int p = 0;
     is_start = 1;
     while (payload_size > 0) {
         retransmit_si_info(s);
-
+        p++;
         write_pcr = 0;
         if (ts_st->pid == ts_st->service->pcr_pid) {
+            packet_count ++;
             ts_st->service->pcr_packet_count++;
             if (ts_st->service->pcr_packet_count >=
-                ts_st->service->pcr_packet_freq) {
+                ts_st->service->pcr_packet_freq && dts != AV_NOPTS_VALUE) {
                 ts_st->service->pcr_packet_count = 0;
                 write_pcr = 1;
-                pcr = ts->last_pcr;
+                pcr = dts + packet_count * TS_PACKET_SIZE* 8*90000LL / ts->mux_rate;
             }
         }
-
         /* prepare packet header */
         q = buf;
         *q++ = 0x47;
@@ -677,6 +668,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
                 stuffing_size += payload_size - trailer_size;
         }
 
+        //av_log(ctx, AV_LOG_INFO, "Cur pts is %"PRId64", Cur dts is %"PRId64", payload_size %d, tailer_size %d\n", pts, dts, payload_size, trailer_size);
         if (pad_packet_bytes > 0 && pad_packet_bytes <= 7) { // can't use padding, so use stuffing
             packet_size += pad_packet_bytes;
             payload_size += pad_packet_bytes; // undo the previous adjustment
@@ -708,8 +700,8 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
         stuffing_size= 0;
     }
 
-    if (pad_packet_bytes > 0)
-        put_padding_packet(ctx,&ctx->pb, pad_packet_bytes);
+    //if (pad_packet_bytes > 0)
+     //   put_padding_packet(ctx,&ctx->pb, pad_packet_bytes);
 
     for(i=0;i<zero_trail_bytes;i++)
         put_byte(&ctx->pb, 0x00);
@@ -744,10 +736,10 @@ static int output_packet(AVFormatContext *ctx, int flush){
     int es_size, trailer_size;
     int result;
     int best_i= -1;
-    int64_t pcr= s->last_pcr;
+    int pcr = s->last_pcr;
     PacketDesc *timestamp_packet;
 
-    if((result = ff_pes_find_beststream(ctx, s->packet_size, flush, pcr, &best_i)) <= 0)
+    if((result = ff_pes_find_beststream(ctx, s->packet_size, flush, &pcr, &best_i)) <= 0)
         return result;
 
     assert(best_i >= 0);
@@ -774,8 +766,7 @@ static int output_packet(AVFormatContext *ctx, int flush){
     }
 
 
-    s->last_pcr += s->packet_size*90000LL / (s->mux_rate*50LL); //FIXME rounding and first few bytes of each packet
-
+    s->last_pcr += s->packet_size*8*90000LL / (s->mux_rate); //FIXME rounding and first few bytes of each packet
     if(ff_pes_remove_decoded_packets(ctx, s->last_pcr) < 0)
         return -1;
 
@@ -786,11 +777,17 @@ static int output_packet(AVFormatContext *ctx, int flush){
 static int mpegts_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 {
     int stream_index= pkt->stream_index;
+    int size = pkt->size;
+    static int total_size = 0;
     AVStream *st = ctx->streams[stream_index];
     MpegTSWriteStream *stream = st->priv_data;
     PESStream *pes_stream = &stream->pes_stream;
     int64_t pts;
 
+    /* add a preload value to avoid negative dts*/
+    pkt->pts += 10000;
+    pkt->dts += 10000;
+    total_size += size;
     ff_pes_write_packet(ctx, pkt);
     pts= pes_stream->predecode_packet->pts;
 

@@ -112,7 +112,7 @@ int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
               && scr > pkt_desc->dts){ //FIXME > vs >=
             if(stream->buffer_index < pkt_desc->size ||
                stream->predecode_packet == stream->premux_packet){
-                av_log(ctx, AV_LOG_ERROR,
+                   av_log(ctx, AV_LOG_ERROR,
                        "buffer underflow i=%d bufi=%d size=%d\n",
                        i, stream->buffer_index, pkt_desc->size);
                 break;
@@ -190,7 +190,7 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buff
     return (q - pes_buffer + data_size);
 }
 
-int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t scr, int* best_i)
+int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int* best_i)
 {
     int best_score = INT_MIN;
     int i, avail_space = 0;
@@ -218,7 +218,7 @@ retry:
         if(space < packet_size && !ignore_constraints)
             continue;
 
-        if(next_pkt && next_pkt->dts - scr > max_delay)
+        if(next_pkt && next_pkt->dts - *scr > max_delay)
             continue;
 
         if(rel_space > best_score){
@@ -247,12 +247,12 @@ retry:
         if(best_dts == INT64_MAX)
             return 0;
 
-        if(scr >= best_dts+1 && !ignore_constraints){
+        if(*scr >= best_dts+1 && !ignore_constraints){
             av_log(ctx, AV_LOG_ERROR, "packet too large, ignoring buffer limits to mux it\n");
             ignore_constraints= 1;
         }
-        scr= FFMAX(best_dts+1, scr);
-        if(ff_pes_remove_decoded_packets(ctx, scr) < 0)
+        *scr= FFMAX(best_dts+1, *scr);
+        if(ff_pes_remove_decoded_packets(ctx, *scr) < 0)
             return -1;
         goto retry;
     }
@@ -282,8 +282,8 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
         stream->next_packet = &stream->premux_packet;
     *stream->next_packet=
     pkt_desc= av_mallocz(sizeof(PacketDesc));
-    pkt_desc->pts= pkt->pts;
-    pkt_desc->dts= pkt->dts;
+    pkt_desc->pts= pts;
+    pkt_desc->dts= dts;
     pkt_desc->unwritten_size=
     pkt_desc->size= size;
     if(!stream->predecode_packet)
