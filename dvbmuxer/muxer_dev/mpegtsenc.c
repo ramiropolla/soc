@@ -479,7 +479,7 @@ static int mpegts_write_header(AVFormatContext *s)
                    100 * 16;                                        /* PAT size */
         ts->mux_rate = bitrate;
     }
-    ts->last_pcr = 10000;  /* add a preload value */
+    ts->last_pcr = 0;
 
     service->pcr_packet_freq = (ts->mux_rate * PCR_RETRANS_TIME) /
         (TS_PACKET_SIZE * 8 * 1000);
@@ -755,6 +755,7 @@ static int output_packet(AVFormatContext *ctx, int flush){
     if((result = ff_pes_find_beststream(ctx, s->packet_size, flush, &pcr, &best_i)) <= 0)
         return result;
 
+    s->last_pcr = pcr;
     assert(best_i >= 0);
 
     st = ctx->streams[best_i];
