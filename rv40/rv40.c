@@ -704,11 +704,13 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
     MpegEncContext *s = &r->s;
     DSPContext *dsp = &s->dsp;
     int i, j, x, y;
-    uint8_t *Y, *YY;
+    uint8_t *Y, *YY, *U, *V;
     int no_up, no_left, itype;
 
     no_up = s->first_slice_line;
     Y = s->dest[0];
+    U = s->dest[1];
+    V = s->dest[2];
     if(!is16){
         for(j = 0; j < 4; j++){
             no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
@@ -720,6 +722,27 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
             no_up = 0;
             Y += s->linesize * 4;
             intra_types += r->intra_types_stride;
+        }
+        intra_types -= r->intra_types_stride * 4;
+        no_up = s->first_slice_line;
+        for(j = 0; j < 2; j++){
+            no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
+            for(i = 0; i < 2; i++, cbp >>= 1, no_left = 0){
+                rv40_pred_4x4_block(r, U + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, i);
+                if(!(cbp & 1)) continue;
+                rv40_add_4x4_block(U + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[4], i*4+j*32);
+            }
+            no_up = 0;
+        }
+        no_up = s->first_slice_line;
+        for(j = 0; j < 2; j++){
+            no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
+            for(i = 0; i < 2; i++, cbp >>= 1, no_left = 0){
+                rv40_pred_4x4_block(r, V + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, i);
+                if(!(cbp & 1)) continue;
+                rv40_add_4x4_block(V + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[5], i*4+j*32);
+            }
+            no_up = 0;
         }
     }else{
         no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
@@ -741,6 +764,12 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
         Y += s->current_picture.linesize[0] * 8;
         dsp->add_pixels_clamped(s->block[2], Y, s->current_picture.linesize[0]);
         dsp->add_pixels_clamped(s->block[3], Y + 8, s->current_picture.linesize[0]);
+
+        if(itype == PLANE_PRED8x8) itype = DC_PRED8x8;
+        r->h.pred8x8[itype](U, s->uvlinesize);
+        dsp->add_pixels_clamped(s->block[4], U, s->uvlinesize);
+        r->h.pred8x8[itype](V, s->uvlinesize);
+        dsp->add_pixels_clamped(s->block[5], V, s->uvlinesize);
     }
 }
 
@@ -840,6 +869,8 @@ static int rv40_decode_slice(RV40DecContext *r)
     }
 if(r->prev_si.type){
 memcpy(s->current_picture_ptr->data[0],s->last_picture_ptr->data[0],s->linesize*s->avctx->height);
+memcpy(s->current_picture_ptr->data[1],s->last_picture_ptr->data[1],s->uvlinesize*s->avctx->height/2);
+memcpy(s->current_picture_ptr->data[2],s->last_picture_ptr->data[2],s->uvlinesize*s->avctx->height/2);
 ff_er_add_slice(s, 0, 0, s->mb_width-1, s->mb_height-1, AC_END|DC_END|MV_END);
 return 0;
 }
