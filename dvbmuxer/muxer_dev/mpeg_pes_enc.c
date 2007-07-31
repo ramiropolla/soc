@@ -118,10 +118,12 @@ int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
                 break;
             }
             stream->buffer_index -= pkt_desc->size;
+
             stream->predecode_packet= pkt_desc->next;
             av_freep(&pkt_desc);
         }
     }
+
     return 0;
 }
 
