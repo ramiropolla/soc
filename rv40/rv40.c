@@ -652,7 +652,7 @@ static int rv40_decode_mb_info(RV40DecContext *r, int *skip, int *mv_bits)
 /** Mapping of RV40 intra prediction types to standard H.264 types */
 static const int ittrans[9] = {
  DC_PRED, VERT_PRED, HOR_PRED, DIAG_DOWN_RIGHT_PRED, DIAG_DOWN_LEFT_PRED_RV40,
- VERT_RIGHT_PRED, VERT_LEFT_PRED, HOR_UP_PRED, HOR_DOWN_PRED,
+ VERT_RIGHT_PRED, VERT_LEFT_PRED_RV40, HOR_UP_PRED_RV40, HOR_DOWN_PRED,
 };
 
 /** Mapping of RV40 intra 16x16 prediction types to standard H.264 types */
@@ -688,6 +688,7 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
                     if(itype == DIAG_DOWN_LEFT_PRED_RV40) itype = DIAG_DOWN_LEFT_PRED;
                 }
                 if((i || j==3) && itype == DIAG_DOWN_LEFT_PRED_RV40) itype = DIAG_DOWN_LEFT_PRED_RV40_NODOWN;
+                if((i || j==3) && itype == HOR_UP_PRED_RV40) itype = HOR_UP_PRED_RV40_NODOWN;
                 PY = YY - s->linesize + 4;
                 if(j && i == 3){
                     topleft = YY[-s->linesize + 3] * 0x01010101;
