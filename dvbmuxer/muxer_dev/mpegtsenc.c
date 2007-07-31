@@ -455,13 +455,23 @@ static int mpegts_write_header(AVFormatContext *s)
 
     bitrate = 0;
     for(i=0;i<s->nb_streams;i++) {
+        int codec_rate;
         st = s->streams[i];
         ts_st = (MpegTSWriteStream*) st->priv_data;
+        if(st->codec->rc_max_rate || st->codec->codec_type == CODEC_TYPE_VIDEO)
+            codec_rate= st->codec->rc_max_rate;
+        else
+            codec_rate= st->codec->bit_rate;
+
+        if(!codec_rate)
+            bitrate= (1<<21) * 8/s->nb_streams;
+        bitrate += codec_rate;
+
         bitrate += st->codec->bit_rate;
     }
 
     if(s->mux_rate) {
-        ts->mux_rate= (s->mux_rate + (8 * 50) - 1) / (8 * 50);
+        ts->mux_rate= s->mux_rate;
     } else {
         bitrate += bitrate * 25 / (8 *  DEFAULT_PES_PAYLOAD_SIZE) +  /* PES header size */
                    bitrate * 4 / (8 * TS_PACKET_SIZE) +             /* TS  header size */
