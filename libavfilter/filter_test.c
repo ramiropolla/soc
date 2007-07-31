@@ -31,21 +31,21 @@ int main(int argc, char **argv)
     int i;
     int ret = -1;
     int64_t pts = 0, newpts;
-    AVFilterGraph   *graph;
-    AVFilterContext *out;
+    AVFilterContext *graph;
+    AVFilterContext *filters[2];
 
-    if(argc < 3) {
-        av_log(NULL, AV_LOG_ERROR, "require at least two filters\n");
+    if(argc < 2) {
+        av_log(NULL, AV_LOG_ERROR, "require a list of filters\n");
         return -1;
     }
 
     avfilter_init();
-    graph = avfilter_create_graph();
-    if(avfilter_graph_load_chain(graph, argc - 1, argv + 1, NULL, NULL, &out) < 0)
+    graph = avfilter_create_by_name("graph", NULL);
+    if(avfilter_init_filter(graph, argv[1], filters) < 0)
         goto done;
 
     while(pts < 5000) {
-        newpts = sdl_display(out);
+        newpts = sdl_display(filters[1]);
         usleep(newpts - pts);
         pts = newpts;
     }
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
     ret = 0;
 
 done:
-    avfilter_destroy_graph(graph);
+    avfilter_destroy(graph);
 
     return ret;
 }
