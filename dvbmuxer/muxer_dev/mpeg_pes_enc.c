@@ -220,7 +220,9 @@ retry:
         if(space < packet_size && !ignore_constraints)
             continue;
 
-        if(next_pkt && next_pkt->dts - *scr > max_delay)
+        /* FIX set max_delay to 0 can temporary produce good stream */
+        //if(next_pkt && next_pkt->dts - *scr > max_delay)
+        if(next_pkt && next_pkt->dts - *scr > 0)
             continue;
 
         if(rel_space > best_score){
