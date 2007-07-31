@@ -660,14 +660,52 @@ static const int ittrans16[4] = {
  DC_PRED8x8, VERT_PRED8x8, HOR_PRED8x8, PLANE_PRED8x8,
 };
 
+/**
+ * Perform 4x4 intra prediction
+ */
+static void rv40_pred_4x4_block(RV40DecContext *r, uint8_t *dst, int stride, int itype, int no_up, int no_left, int no_down, int no_right)
+{
+    uint8_t *prev = dst - stride + 4;
+    uint32_t topleft;
+
+    if(no_up && no_left)
+        itype = DC_128_PRED;
+    else if(no_up){
+        if(itype == VERT_PRED) itype = HOR_PRED;
+        if(itype == DC_PRED)   itype = LEFT_DC_PRED;
+        if(itype == DIAG_DOWN_LEFT_PRED_RV40) itype = DIAG_DOWN_LEFT_PRED_RV40_NOTOP;
+    }else if(no_left){
+        if(itype == HOR_PRED)  itype = VERT_PRED;
+        if(itype == DC_PRED)   itype = TOP_DC_PRED;
+        if(itype == DIAG_DOWN_LEFT_PRED_RV40) itype = DIAG_DOWN_LEFT_PRED;
+    }
+    if(no_down){
+        if(itype == DIAG_DOWN_LEFT_PRED_RV40) itype = DIAG_DOWN_LEFT_PRED_RV40_NODOWN;
+        if(itype == HOR_UP_PRED_RV40) itype = HOR_UP_PRED_RV40_NODOWN;
+    }
+    if(no_right){
+        topleft = dst[-stride + 3] * 0x01010101;
+        prev = &topleft;
+    }
+    r->h.pred4x4[itype](dst, prev, stride);
+}
+
+/** add_pixels_clamped for 4x4 block */
+static void rv40_add_4x4_block(uint8_t *dst, int stride, DCTELEM block[64], int off)
+{
+    int x, y;
+    for(y = 0; y < 4; y++)
+        for(x = 0; x < 4; x++)
+            dst[x + y*stride] = av_clip_uint8(dst[x + y*stride] + block[off + x+y*8]);
+}
+
 static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp, int is16)
 {
     MpegEncContext *s = &r->s;
     DSPContext *dsp = &s->dsp;
     int i, j, x, y;
-    uint8_t *Y, *YY, *PY;
+    uint8_t *Y, *YY;
     int no_up, no_left, itype;
-    uint32_t topleft;
 
     no_up = s->first_slice_line;
     Y = s->dest[0];
@@ -675,31 +713,9 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
         for(j = 0; j < 4; j++){
             no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
             for(YY = Y, i = 0; i < 4; i++, cbp >>= 1, no_left = 0, YY += 4){
-                itype = ittrans[intra_types[i]];
-                if(no_up && no_left)
-                    itype = DC_128_PRED;
-                else if(no_up){
-                    if(itype == VERT_PRED) itype = HOR_PRED;
-                    if(itype == DC_PRED)   itype = LEFT_DC_PRED;
-                    if(itype == DIAG_DOWN_LEFT_PRED_RV40) itype = DIAG_DOWN_LEFT_PRED_RV40_NOTOP;
-                }else if(no_left){
-                    if(itype == HOR_PRED)  itype = VERT_PRED;
-                    if(itype == DC_PRED)   itype = TOP_DC_PRED;
-                    if(itype == DIAG_DOWN_LEFT_PRED_RV40) itype = DIAG_DOWN_LEFT_PRED;
-                }
-                if((i || j==3) && itype == DIAG_DOWN_LEFT_PRED_RV40) itype = DIAG_DOWN_LEFT_PRED_RV40_NODOWN;
-                if((i || j==3) && itype == HOR_UP_PRED_RV40) itype = HOR_UP_PRED_RV40_NODOWN;
-                PY = YY - s->linesize + 4;
-                if(j && i == 3){
-                    topleft = YY[-s->linesize + 3] * 0x01010101;
-                    PY = &topleft;
-                }
-                r->h.pred4x4[itype](YY, PY, s->linesize);
+                rv40_pred_4x4_block(r, YY, s->linesize, ittrans[intra_types[i]], no_up, no_left, i || (j==3), i==3);
                 if(!(cbp & 1)) continue;
-                /* add_pixels_clamped for 4x4 block */
-                for(y = 0; y < 4; y++)
-                    for(x = 0; x < 4; x++)
-                        YY[x + y * s->linesize] = av_clip_uint8(YY[x + y * s->linesize] + s->block[(i>>1)+(j&2)][(i&1)*4+(j&1)*32+x+y*8]);
+                rv40_add_4x4_block(YY, s->linesize, s->block[(i>>1)+(j&2)], (i&1)*4+(j&1)*32);
             }
             no_up = 0;
             Y += s->linesize * 4;
