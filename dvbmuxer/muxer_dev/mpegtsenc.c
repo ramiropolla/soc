@@ -740,7 +740,7 @@ static int output_packet(AVFormatContext *ctx, int flush){
     int es_size, trailer_size;
     int result;
     int best_i= -1;
-    int pcr = s->last_pcr;
+    int64_t pcr = s->last_pcr;
     PacketDesc *timestamp_packet;
 
     if((result = ff_pes_find_beststream(ctx, s->packet_size, flush, &pcr, &best_i)) <= 0)
