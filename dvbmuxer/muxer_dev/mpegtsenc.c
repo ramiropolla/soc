@@ -554,7 +554,7 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
                 ts_st->service->pcr_packet_freq && dts != AV_NOPTS_VALUE) {
                 ts_st->service->pcr_packet_count = 0;
                 write_pcr = 1;
-                pcr = dts + packet_count * TS_PACKET_SIZE* 8*90000LL / ts->mux_rate;
+                pcr = ts->last_pcr + packet_count * TS_PACKET_SIZE* 8*90000LL / ts->mux_rate;
             }
         }
         /* prepare packet header */
