@@ -171,7 +171,7 @@ static void pred4x4_down_left_rv40_c(uint8_t *src, uint8_t *topright, int stride
     src[1+3*stride]=(t4 + t6 + 2*t5 + 2 + l4 + l6 + 2*l5 + 2)>>3;
     src[3+2*stride]=
     src[2+3*stride]=(t5 + t7 + 2*t6 + 2 + l5 + l7 + 2*l6 + 2)>>3;
-    src[3+3*stride]=(t6 + 3*t7 + 2 + l6 + 3*l7 + 2)>>3;
+    src[3+3*stride]=(t6 + t7 + 1 + l6 + l7 + 1)>>2;
 }
 
 static void pred4x4_down_left_rv40_notop_c(uint8_t *src, uint8_t *topright, int stride){
@@ -193,7 +193,7 @@ static void pred4x4_down_left_rv40_notop_c(uint8_t *src, uint8_t *topright, int 
     src[1+3*stride]=(l4 + l6 + 2*l5 + 2)>>2;
     src[3+2*stride]=
     src[2+3*stride]=(l5 + l7 + 2*l6 + 2)>>2;
-    src[3+3*stride]=(l6 + 3*l7 + 2)>>2;
+    src[3+3*stride]=(l6 + l7 + 1)>>1;
 }
 
 static void pred4x4_down_left_rv40_nodown_c(uint8_t *src, uint8_t *topright, int stride){
@@ -216,7 +216,7 @@ static void pred4x4_down_left_rv40_nodown_c(uint8_t *src, uint8_t *topright, int
     src[1+3*stride]=(t4 + t6 + 2*t5 + 2 + l3*4 + 2)>>3;
     src[3+2*stride]=
     src[2+3*stride]=(t5 + t7 + 2*t6 + 2 + l3*4 + 2)>>3;
-    src[3+3*stride]=(t6 + 3*t7 + 2 + l3*4 + 2)>>3;
+    src[3+3*stride]=(t6 + t7 + 1 + 2*l3 + 1)>>2;
 }
 
 static void pred4x4_vertical_right_c(uint8_t *src, uint8_t *topright, int stride){
