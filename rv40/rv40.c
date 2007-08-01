@@ -765,7 +765,17 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
         dsp->add_pixels_clamped(s->block[2], Y, s->current_picture.linesize[0]);
         dsp->add_pixels_clamped(s->block[3], Y + 8, s->current_picture.linesize[0]);
 
+        itype = ittrans16[intra_types[0]];
         if(itype == PLANE_PRED8x8) itype = DC_PRED8x8;
+        if(no_up && no_left)
+            itype = DC_128_PRED8x8;
+        else if(no_up){
+            if(itype == VERT_PRED8x8) itype = HOR_PRED8x8;
+            if(itype == DC_PRED8x8)   itype = LEFT_DC_PRED8x8;
+        }else if(no_left){
+            if(itype == HOR_PRED8x8)  itype = VERT_PRED8x8;
+            if(itype == DC_PRED8x8)   itype = TOP_DC_PRED8x8;
+        }
         r->h.pred8x8[itype](U, s->uvlinesize);
         dsp->add_pixels_clamped(s->block[4], U, s->uvlinesize);
         r->h.pred8x8[itype](V, s->uvlinesize);
