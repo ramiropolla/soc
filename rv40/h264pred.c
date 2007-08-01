@@ -928,33 +928,33 @@ void ff_h264_pred_init(H264PredContext *h, int codec_id){
 //    MpegEncContext * const s = &h->s;
 
     if(codec_id != CODEC_ID_RV40){
-    h->pred4x4[VERT_PRED           ]= pred4x4_vertical_c;
-    h->pred4x4[HOR_PRED            ]= pred4x4_horizontal_c;
-    h->pred4x4[DC_PRED             ]= pred4x4_dc_c;
-    h->pred4x4[DIAG_DOWN_LEFT_PRED ]= pred4x4_down_left_c;
-    h->pred4x4[DIAG_DOWN_RIGHT_PRED]= pred4x4_down_right_c;
-    h->pred4x4[VERT_RIGHT_PRED     ]= pred4x4_vertical_right_c;
-    h->pred4x4[HOR_DOWN_PRED       ]= pred4x4_horizontal_down_c;
-    h->pred4x4[VERT_LEFT_PRED      ]= pred4x4_vertical_left_c;
-    h->pred4x4[HOR_UP_PRED         ]= pred4x4_horizontal_up_c;
-    h->pred4x4[LEFT_DC_PRED        ]= pred4x4_left_dc_c;
-    h->pred4x4[TOP_DC_PRED         ]= pred4x4_top_dc_c;
-    h->pred4x4[DC_128_PRED         ]= pred4x4_128_dc_c;
+        h->pred4x4[VERT_PRED           ]= pred4x4_vertical_c;
+        h->pred4x4[HOR_PRED            ]= pred4x4_horizontal_c;
+        h->pred4x4[DC_PRED             ]= pred4x4_dc_c;
+        h->pred4x4[DIAG_DOWN_LEFT_PRED ]= pred4x4_down_left_c;
+        h->pred4x4[DIAG_DOWN_RIGHT_PRED]= pred4x4_down_right_c;
+        h->pred4x4[VERT_RIGHT_PRED     ]= pred4x4_vertical_right_c;
+        h->pred4x4[HOR_DOWN_PRED       ]= pred4x4_horizontal_down_c;
+        h->pred4x4[VERT_LEFT_PRED      ]= pred4x4_vertical_left_c;
+        h->pred4x4[HOR_UP_PRED         ]= pred4x4_horizontal_up_c;
+        h->pred4x4[LEFT_DC_PRED        ]= pred4x4_left_dc_c;
+        h->pred4x4[TOP_DC_PRED         ]= pred4x4_top_dc_c;
+        h->pred4x4[DC_128_PRED         ]= pred4x4_128_dc_c;
     }else{
-    h->pred4x4[VERT_PRED           ]= pred4x4_vertical_c;
-    h->pred4x4[HOR_PRED            ]= pred4x4_horizontal_c;
-    h->pred4x4[DC_PRED             ]= pred4x4_dc_c;
-    h->pred4x4[DIAG_DOWN_LEFT_PRED ]= pred4x4_down_left_rv40_c;
-    h->pred4x4[DIAG_DOWN_RIGHT_PRED]= pred4x4_down_right_c;
-    h->pred4x4[VERT_RIGHT_PRED     ]= pred4x4_vertical_right_c;
-    h->pred4x4[HOR_DOWN_PRED       ]= pred4x4_horizontal_down_c;
-    h->pred4x4[VERT_LEFT_PRED      ]= pred4x4_vertical_left_rv40_c;
-    h->pred4x4[HOR_UP_PRED         ]= pred4x4_horizontal_up_rv40_c;
-    h->pred4x4[LEFT_DC_PRED        ]= pred4x4_left_dc_c;
-    h->pred4x4[TOP_DC_PRED         ]= pred4x4_top_dc_c;
-    h->pred4x4[DC_128_PRED         ]= pred4x4_128_dc_c;
-    h->pred4x4[DIAG_DOWN_LEFT_PRED_RV40_NODOWN]= pred4x4_down_left_rv40_nodown_c;
-    h->pred4x4[HOR_UP_PRED_RV40_NODOWN]= pred4x4_horizontal_up_rv40_nodown_c;
+        h->pred4x4[VERT_PRED           ]= pred4x4_vertical_c;
+        h->pred4x4[HOR_PRED            ]= pred4x4_horizontal_c;
+        h->pred4x4[DC_PRED             ]= pred4x4_dc_c;
+        h->pred4x4[DIAG_DOWN_LEFT_PRED ]= pred4x4_down_left_rv40_c;
+        h->pred4x4[DIAG_DOWN_RIGHT_PRED]= pred4x4_down_right_c;
+        h->pred4x4[VERT_RIGHT_PRED     ]= pred4x4_vertical_right_c;
+        h->pred4x4[HOR_DOWN_PRED       ]= pred4x4_horizontal_down_c;
+        h->pred4x4[VERT_LEFT_PRED      ]= pred4x4_vertical_left_rv40_c;
+        h->pred4x4[HOR_UP_PRED         ]= pred4x4_horizontal_up_rv40_c;
+        h->pred4x4[LEFT_DC_PRED        ]= pred4x4_left_dc_c;
+        h->pred4x4[TOP_DC_PRED         ]= pred4x4_top_dc_c;
+        h->pred4x4[DC_128_PRED         ]= pred4x4_128_dc_c;
+        h->pred4x4[DIAG_DOWN_LEFT_PRED_RV40_NODOWN]= pred4x4_down_left_rv40_nodown_c;
+        h->pred4x4[HOR_UP_PRED_RV40_NODOWN]= pred4x4_horizontal_up_rv40_nodown_c;
     }
 
     h->pred8x8l[VERT_PRED           ]= pred8x8l_vertical_c;
@@ -975,11 +975,11 @@ void ff_h264_pred_init(H264PredContext *h, int codec_id){
     h->pred8x8[HOR_PRED8x8    ]= pred8x8_horizontal_c;
     h->pred8x8[PLANE_PRED8x8  ]= pred8x8_plane_c;
     if(codec_id != CODEC_ID_RV40){
-    h->pred8x8[LEFT_DC_PRED8x8]= pred8x8_left_dc_c;
-    h->pred8x8[TOP_DC_PRED8x8 ]= pred8x8_top_dc_c;
+        h->pred8x8[LEFT_DC_PRED8x8]= pred8x8_left_dc_c;
+        h->pred8x8[TOP_DC_PRED8x8 ]= pred8x8_top_dc_c;
     }else{
-    h->pred8x8[LEFT_DC_PRED8x8]= pred8x8_left_dc_rv40_c;
-    h->pred8x8[TOP_DC_PRED8x8 ]= pred8x8_top_dc_rv40_c;
+        h->pred8x8[LEFT_DC_PRED8x8]= pred8x8_left_dc_rv40_c;
+        h->pred8x8[TOP_DC_PRED8x8 ]= pred8x8_top_dc_rv40_c;
     }
     h->pred8x8[DC_128_PRED8x8 ]= pred8x8_128_dc_c;
 
