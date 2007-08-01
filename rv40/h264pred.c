@@ -513,6 +513,10 @@ static void pred16x16_plane_c(uint8_t *src, int stride){
     pred16x16_plane_compat_c(src, stride, 0);
 }
 
+static void pred16x16_plane_svq3_c(uint8_t *src, int stride){
+    pred16x16_plane_compat_c(src, stride, 1);
+}
+
 static void pred8x8_vertical_c(uint8_t *src, int stride){
     int i;
     const uint32_t a= ((uint32_t*)(src-stride))[0];
@@ -564,6 +568,21 @@ static void pred8x8_left_dc_c(uint8_t *src, int stride){
     }
 }
 
+static void pred8x8_left_dc_rv40_c(uint8_t *src, int stride){
+    int i;
+    int dc0;
+
+    dc0=0;
+    for(i=0;i<8; i++)
+        dc0+= src[-1 + i*stride];
+    dc0= 0x01010101*((dc0 + 4)>>3);
+
+    for(i=0; i<8; i++){
+        ((uint32_t*)(src+i*stride))[0]=
+        ((uint32_t*)(src+i*stride))[1]= dc0;
+    }
+}
+
 static void pred8x8_top_dc_c(uint8_t *src, int stride){
     int i;
     int dc0, dc1;
@@ -583,6 +602,21 @@ static void pred8x8_top_dc_c(uint8_t *src, int stride){
     for(i=4; i<8; i++){
         ((uint32_t*)(src+i*stride))[0]= dc0;
         ((uint32_t*)(src+i*stride))[1]= dc1;
+    }
+}
+
+static void pred8x8_top_dc_rv40_c(uint8_t *src, int stride){
+    int i;
+    int dc0;
+
+    dc0=0;
+    for(i=0;i<8; i++)
+        dc0+= src[i-stride];
+    dc0= 0x01010101*((dc0 + 4)>>3);
+
+    for(i=0; i<8; i++){
+        ((uint32_t*)(src+i*stride))[0]=
+        ((uint32_t*)(src+i*stride))[1]= dc0;
     }
 }
 
@@ -890,9 +924,10 @@ static void pred8x8l_horizontal_up_c(uint8_t *src, int has_topleft, int has_topr
 /**
  * Sets the intra prediction function pointers.
  */
-void ff_h264_pred_init(H264PredContext *h){
+void ff_h264_pred_init(H264PredContext *h, int codec_id){
 //    MpegEncContext * const s = &h->s;
 
+    if(codec_id != CODEC_ID_RV40){
     h->pred4x4[VERT_PRED           ]= pred4x4_vertical_c;
     h->pred4x4[HOR_PRED            ]= pred4x4_horizontal_c;
     h->pred4x4[DC_PRED             ]= pred4x4_dc_c;
@@ -905,12 +940,22 @@ void ff_h264_pred_init(H264PredContext *h){
     h->pred4x4[LEFT_DC_PRED        ]= pred4x4_left_dc_c;
     h->pred4x4[TOP_DC_PRED         ]= pred4x4_top_dc_c;
     h->pred4x4[DC_128_PRED         ]= pred4x4_128_dc_c;
-    h->pred4x4[DIAG_DOWN_LEFT_PRED_RV40]= pred4x4_down_left_rv40_c;
+    }else{
+    h->pred4x4[VERT_PRED           ]= pred4x4_vertical_c;
+    h->pred4x4[HOR_PRED            ]= pred4x4_horizontal_c;
+    h->pred4x4[DC_PRED             ]= pred4x4_dc_c;
+    h->pred4x4[DIAG_DOWN_LEFT_PRED ]= pred4x4_down_left_rv40_c;
+    h->pred4x4[DIAG_DOWN_RIGHT_PRED]= pred4x4_down_right_c;
+    h->pred4x4[VERT_RIGHT_PRED     ]= pred4x4_vertical_right_c;
+    h->pred4x4[HOR_DOWN_PRED       ]= pred4x4_horizontal_down_c;
+    h->pred4x4[VERT_LEFT_PRED      ]= pred4x4_vertical_left_rv40_c;
+    h->pred4x4[HOR_UP_PRED         ]= pred4x4_horizontal_up_rv40_c;
+    h->pred4x4[LEFT_DC_PRED        ]= pred4x4_left_dc_c;
+    h->pred4x4[TOP_DC_PRED         ]= pred4x4_top_dc_c;
+    h->pred4x4[DC_128_PRED         ]= pred4x4_128_dc_c;
     h->pred4x4[DIAG_DOWN_LEFT_PRED_RV40_NODOWN]= pred4x4_down_left_rv40_nodown_c;
-    h->pred4x4[DIAG_DOWN_LEFT_PRED_RV40_NOTOP]= pred4x4_down_left_rv40_notop_c;
-    h->pred4x4[VERT_LEFT_PRED_RV40 ]= pred4x4_vertical_left_rv40_c;
-    h->pred4x4[HOR_UP_PRED_RV40    ]= pred4x4_horizontal_up_rv40_c;
     h->pred4x4[HOR_UP_PRED_RV40_NODOWN]= pred4x4_horizontal_up_rv40_nodown_c;
+    }
 
     h->pred8x8l[VERT_PRED           ]= pred8x8l_vertical_c;
     h->pred8x8l[HOR_PRED            ]= pred8x8l_horizontal_c;
@@ -929,14 +974,29 @@ void ff_h264_pred_init(H264PredContext *h){
     h->pred8x8[VERT_PRED8x8   ]= pred8x8_vertical_c;
     h->pred8x8[HOR_PRED8x8    ]= pred8x8_horizontal_c;
     h->pred8x8[PLANE_PRED8x8  ]= pred8x8_plane_c;
+    if(codec_id != CODEC_ID_RV40){
     h->pred8x8[LEFT_DC_PRED8x8]= pred8x8_left_dc_c;
     h->pred8x8[TOP_DC_PRED8x8 ]= pred8x8_top_dc_c;
+    }else{
+    h->pred8x8[LEFT_DC_PRED8x8]= pred8x8_left_dc_rv40_c;
+    h->pred8x8[TOP_DC_PRED8x8 ]= pred8x8_top_dc_rv40_c;
+    }
     h->pred8x8[DC_128_PRED8x8 ]= pred8x8_128_dc_c;
 
     h->pred16x16[DC_PRED8x8     ]= pred16x16_dc_c;
     h->pred16x16[VERT_PRED8x8   ]= pred16x16_vertical_c;
     h->pred16x16[HOR_PRED8x8    ]= pred16x16_horizontal_c;
     h->pred16x16[PLANE_PRED8x8  ]= pred16x16_plane_c;
+    switch(codec_id){
+    case CODEC_ID_SVQ3:
+       h->pred16x16[PLANE_PRED8x8  ]= pred16x16_plane_svq3_c;
+       break;
+    case CODEC_ID_RV40: //FIXME find right predictor
+       h->pred16x16[PLANE_PRED8x8  ]= pred16x16_plane_c;
+       break;
+    default:
+       h->pred16x16[PLANE_PRED8x8  ]= pred16x16_plane_c;
+    }
     h->pred16x16[LEFT_DC_PRED8x8]= pred16x16_left_dc_c;
     h->pred16x16[TOP_DC_PRED8x8 ]= pred16x16_top_dc_c;
     h->pred16x16[DC_128_PRED8x8 ]= pred16x16_128_dc_c;
