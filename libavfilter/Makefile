@@ -4,6 +4,7 @@ CFLAGS+=-I$(SRC_PATH)/libavcodec
 
 OBJS = avfilter.o \
        avfiltergraph.o \
+	   defaults.o \
 
 # TODO: real conditional compilation
 OBJS-yes = vsrc_dummy.o \
