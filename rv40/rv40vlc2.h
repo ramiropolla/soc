@@ -659,4 +659,75 @@ static const uint8_t mbinfo_vlc_syms[NUM_MBINFO] = {
 };
 //@}
 
+#define PBTYPE_ESCAPE 0xFF
+
+/** Tables used for P-frame macroblock type decoding */
+//@{
+#define NUM_PTYPE_VLCS 7
+#define PTYPE_VLC_SIZE 8
+#define PTYPE_VLC_BITS 7
+
+static const uint8_t ptype_vlc_codes[NUM_PTYPE_VLCS][PTYPE_VLC_SIZE] = {
+ { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00 },
+ { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00 },
+ { 0x0D, 0x05, 0x01, 0x04, 0x01, 0x00, 0x07, 0x0C },
+ { 0x09, 0x11, 0x01, 0x00, 0x05, 0x03, 0x21, 0x20 },
+ { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00 },
+ { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00 },
+ { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00 }
+};
+
+static const uint8_t ptype_vlc_bits[NUM_PTYPE_VLCS][PTYPE_VLC_SIZE] = {
+ { 1, 2, 3, 6, 5, 4, 7, 7 },
+ { 3, 1, 2, 7, 6, 5, 4, 7 },
+ { 5, 4, 1, 4, 3, 3, 4, 5 },
+ { 4, 5, 2, 2, 3, 2, 6, 6 },
+ { 5, 6, 1, 4, 2, 3, 7, 7 },
+ { 5, 6, 1, 4, 3, 2, 7, 7 },
+ { 6, 3, 2, 7, 5, 4, 1, 7 }
+};
+
+static const uint8_t ptype_vlc_syms[PTYPE_VLC_SIZE] = {
+ 0, 1, 2, 3, 8, 9, 11, PBTYPE_ESCAPE
+};
+
+/** reverse of ptype_vlc_syms */
+static const uint8_t block_num_to_ptype_vlc_num[12] = {
+ 0, 1, 2, 3, 0, 0, 0, 0, 4, 5, 0, 6
+};
+//@}
+
+/** Tables used for P-frame macroblock type decoding */
+//@{
+#define NUM_BTYPE_VLCS 6
+#define BTYPE_VLC_SIZE 7
+#define BTYPE_VLC_BITS 6
+
+static const uint8_t btype_vlc_codes[NUM_BTYPE_VLCS][BTYPE_VLC_SIZE] = {
+ { 0x01, 0x05, 0x00, 0x03, 0x11, 0x09, 0x10 },
+ { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00 },
+ { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00 },
+ { 0x09, 0x01, 0x00, 0x01, 0x05, 0x03, 0x08 },
+ { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00 },
+ { 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00 }
+};
+
+static const uint8_t btype_vlc_bits[NUM_BTYPE_VLCS][PTYPE_VLC_SIZE] = {
+ { 2, 3, 2, 2, 5, 4, 5 },
+ { 4, 1, 3, 2, 6, 5, 6 },
+ { 6, 4, 1, 2, 5, 3, 6 },
+ { 5, 3, 3, 1, 4, 3, 5 },
+ { 6, 5, 3, 2, 4, 1, 6 },
+ { 6, 5, 3, 1, 4, 2, 6 }
+};
+
+static const uint8_t btype_vlc_syms[BTYPE_VLC_SIZE] = {
+ 0, 1, 4, 5, 10, 7, PBTYPE_ESCAPE
+};
+
+/** reverse of btype_vlc_syms */
+static const uint8_t block_num_to_btype_vlc_num[12] = {
+ 0, 1, 0, 0, 2, 3, 0, 5, 0, 0, 4, 0
+};
+//@}
 #endif /* RV40VLC2_H */

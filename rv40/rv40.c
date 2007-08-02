@@ -85,7 +85,7 @@ typedef struct RV40DecContext{
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
 static VLC aic_top_vlc;
 static VLC aic_mode1_vlc[AIC_MODE1_NUM], aic_mode2_vlc[AIC_MODE2_NUM];
-static VLC mbinfo_vlc;
+static VLC mbinfo_vlc, ptype_vlc[NUM_PTYPE_VLCS], btype_vlc[NUM_BTYPE_VLCS];
 
 /**
  * @defgroup vlc RV40 VLC generating functions
@@ -196,6 +196,16 @@ static void rv40_init_tables()
                     mbinfo_vlc_bits,  1, 1,
                     mbinfo_vlc_codes, 1, 1,
                     mbinfo_vlc_syms,  1, 1, INIT_VLC_USE_STATIC);
+    for(i = 0; i < NUM_PTYPE_VLCS; i++)
+         init_vlc_sparse(&ptype_vlc[i], PTYPE_VLC_BITS, PTYPE_VLC_SIZE,
+                         ptype_vlc_bits[i],  1, 1,
+                         ptype_vlc_codes[i], 1, 1,
+                         ptype_vlc_syms,     1, 1, INIT_VLC_USE_STATIC);
+    for(i = 0; i < NUM_BTYPE_VLCS; i++)
+         init_vlc_sparse(&btype_vlc[i], BTYPE_VLC_BITS, BTYPE_VLC_SIZE,
+                         btype_vlc_bits[i],  1, 1,
+                         btype_vlc_codes[i], 1, 1,
+                         btype_vlc_syms,     1, 1, INIT_VLC_USE_STATIC);
 }
 
 /** @} */ // vlc group
