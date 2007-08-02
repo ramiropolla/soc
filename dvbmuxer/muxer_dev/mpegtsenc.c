@@ -619,16 +619,16 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
 }
 
 /* Write an MPEG padding packet header. */
-static void put_padding_packet(AVFormatContext *ctx, ByteIOContext *pb,int packet_bytes)
+static void put_padding_packet(uint8_t** pes_payload, int packet_bytes)
 {
     int i;
 
-    put_be32(pb, PADDING_STREAM);
-    put_be16(pb, packet_bytes - 6);
+    bytestream_put_be32(pes_payload, PADDING_STREAM);
+    bytestream_put_be16(pes_payload, packet_bytes - 6);
     packet_bytes -= 6;
 
     for(i=0;i<packet_bytes;i++)
-        put_byte(pb, 0xff);
+        bytestream_put_byte(pes_payload, 0xff);
 }
 /* flush the packet on stream stream_index */
 static int flush_packet(AVFormatContext *ctx, int stream_index,
@@ -644,10 +644,10 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     int pad_packet_bytes = 0;
     int general_pack = 0;  /*"general" pack without data specific to one stream?*/
     int pes_size;
+    uint8_t* q = stream->payload;
 
     id = stream->id;
     packet_size = s->packet_size;
-    packet_size -= pad_packet_bytes + zero_trail_bytes;
 
     if (packet_size > 0) {
 
@@ -684,18 +684,6 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
                 stuffing_size += payload_size - trailer_size;
         }
 
-        //av_log(ctx, AV_LOG_INFO, "Cur pts is %"PRId64", Cur dts is %"PRId64", payload_size %d, tailer_size %d\n", pts, dts, payload_size, trailer_size);
-        if (pad_packet_bytes > 0 && pad_packet_bytes <= 7) { // can't use padding, so use stuffing
-            packet_size += pad_packet_bytes;
-            payload_size += pad_packet_bytes; // undo the previous adjustment
-            if (stuffing_size < 0) {
-                stuffing_size = pad_packet_bytes;
-            } else {
-                stuffing_size += pad_packet_bytes;
-            }
-            pad_packet_bytes = 0;
-        }
-
         if (stuffing_size < 0)
             stuffing_size = 0;
         if (stuffing_size > 16) {    /*<=16 for MPEG-1, <=32 for MPEG-2*/
@@ -710,18 +698,19 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
                  header_len, packet_size, payload_size, stuffing_size);
         if(pes_size < 0)
             return -1;
-        mpegts_write_pes(ctx, stream, stream->payload, pes_size, pts, dts);
+        q += pes_size;
     }else{
         payload_size=
         stuffing_size= 0;
     }
 
-    //if (pad_packet_bytes > 0)
-     //   put_padding_packet(ctx,&ctx->pb, pad_packet_bytes);
+    if (pad_packet_bytes > 0)
+        put_padding_packet(&q, pad_packet_bytes);
 
     for(i=0;i<zero_trail_bytes;i++)
-        put_byte(&ctx->pb, 0x00);
+        bytestream_put_byte(&q, 0x00);
 
+    mpegts_write_pes(ctx, stream, stream->payload, q - stream->payload, pts, dts);
     put_flush_packet(&ctx->pb);
 
     s->packet_number++;
