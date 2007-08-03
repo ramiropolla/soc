@@ -663,24 +663,78 @@ static inline int get_omega(GetBitContext *gb)
 /**
  * Decode macroblock information
  */
-static int rv40_decode_mb_info(RV40DecContext *r, int *skip, int *mv_bits)
+static int rv40_decode_mb_info(RV40DecContext *r)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
+    int q;
+    int prev_type = 0;
+    int mb_pos = s->mb_x + s->mb_y * s->mb_stride;
 
-    if(r->skip_blocks){
-         r->skip_blocks--;
-    }else{
+    if(!r->skip_blocks)
         r->skip_blocks = get_omega(gb);
+
+    if(--r->skip_blocks)
+         return RV40_MB_SKIP;
+
+    if(s->pict_type == P_TYPE){
+        if(s->mb_y) prev_type = r->mb_type[mb_pos - s->mb_stride];
+        if(s->mb_x) prev_type = r->mb_type[mb_pos - 1];
+        if(prev_type == RV40_MB_SKIP) prev_type = RV40_MB_P_16x16;
+        prev_type = block_num_to_ptype_vlc_num[prev_type];
+        q = get_vlc2(gb, ptype_vlc[prev_type].table, PTYPE_VLC_BITS, 1);
+        if(q < PBTYPE_ESCAPE)
+            return q;
+        q = get_vlc2(gb, ptype_vlc[prev_type].table, PTYPE_VLC_BITS, 1);
+        av_log(NULL,0,"Dquant for P-frame\n");
+    }else{
+        prev_type = block_num_to_btype_vlc_num[0];
+        q = get_vlc2(gb, btype_vlc[prev_type].table, BTYPE_VLC_BITS, 1);
+        if(q < PBTYPE_ESCAPE)
+            return q;
+        q = get_vlc2(gb, btype_vlc[prev_type].table, BTYPE_VLC_BITS, 1);
+        av_log(NULL,0,"Dquant for B-frame\n");
     }
-    if(r->skip_blocks){
-         *skip = 0;
-         r->skip_blocks--;
-         return 0;
+    return 0;
+}
+
+static int rv40_decode_mv(RV40DecContext *r, int block_type)
+{
+    MpegEncContext *s = &r->s;
+    GetBitContext *gb = &s->gb;
+    int mv[16][2];
+    int i;
+
+    switch(block_type){
+    case RV40_MB_TYPE_0:
+    case RV40_MB_TYPE_1:
+    case RV40_MB_SKIP:
+        return;
+    case RV40_MB_B_INTERP:
+        break;
+    case RV40_MB_P_16x16:
+    case RV40_MB_B_FORWARD:
+    case RV40_MB_B_BACKWARD:
+    case RV40_MB_P_1MV:
+        mv[0][0] = get_omega(gb);
+        mv[0][1] = get_omega(gb);
+        break;
+    case RV40_MB_P_16x8:
+    case RV40_MB_P_8x16:
+    case RV40_MB_B_DIRECT:
+        mv[0][0] = get_omega(gb);
+        mv[0][1] = get_omega(gb);
+        mv[1][0] = get_omega(gb);
+        mv[1][1] = get_omega(gb);
+        break;
+    case RV40_MB_P_8x8:
+        for(i=0;i< 4;i++){
+            mv[i][0] = get_omega(gb);
+            mv[i][1] = get_omega(gb);
+        }
+        break;
     }
 
-    //TODO: get size of mv from near blocks and select maximum value
-    //      then get size for the current MB and optional dquant
     return 0;
 }
 
