@@ -541,7 +541,7 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
     int afc_len, stuffing_len;
     int64_t pcr = -1; /* avoid warning */
 
-    int offset = 0, packet_count = 0;
+    int offset = 0;
     static int p = 0;
     is_start = 1;
     while (payload_size > 0) {
@@ -550,13 +550,12 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
         p++;
         write_pcr = 0;
         if (ts_st->pid == ts_st->service->pcr_pid) {
-            packet_count ++;
             ts_st->service->pcr_packet_count++;
             if (ts_st->service->pcr_packet_count >=
                 ts_st->service->pcr_packet_freq && dts != AV_NOPTS_VALUE) {
                 ts_st->service->pcr_packet_count = 0;
                 write_pcr = 1;
-                pcr = ts->last_pcr + packet_count * TS_PACKET_SIZE* 8*90000LL / ts->mux_rate;
+                pcr = ts->last_pcr + offset* 8*90000LL / ts->mux_rate;
             }
         }
 
@@ -772,6 +771,7 @@ static int output_packet(AVFormatContext *ctx, int flush){
     }
 
 
+    s->last_pcr += es_size*8*90000LL / (s->mux_rate); //FIXME rounding and first few bytes of each packet
     if(ff_pes_remove_decoded_packets(ctx, s->last_pcr) < 0)
         return -1;
 
