@@ -1038,7 +1038,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
             r->bits = r->prev_si.size;
             r->block_start = r->prev_si.start;
             s->mb_num_left = r->prev_si.end - r->prev_si.start;
-            s->pict_type = r->prev_si.type ? P_TYPE : I_TYPE;
+            s->pict_type = r->prev_si.type ? r->prev_si.type : I_TYPE;
             rv40_decode_slice(r);
             r->slice_data = NULL;
         }
@@ -1072,7 +1072,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         r->bits = r->prev_si.size;
         r->block_start = r->prev_si.start;
         s->mb_num_left = r->prev_si.end - r->prev_si.start;
-        s->pict_type = r->prev_si.type ? P_TYPE : I_TYPE;
+        s->pict_type = r->prev_si.type ? r->prev_si.type : I_TYPE;
         rv40_decode_slice(r);
     }
 
