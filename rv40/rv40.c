@@ -36,6 +36,28 @@
 
 //#define DEBUG
 
+/** Translation of RV40 macroblock types to lavc ones */
+static const int rv40_mb_type_to_lavc[12] = {
+    MB_TYPE_INTRA, MB_TYPE_16x16, MB_TYPE_16x16,   MB_TYPE_8x8,
+    MB_TYPE_16x16, MB_TYPE_16x16, MB_TYPE_SKIP,    MB_TYPE_DIRECT2,
+    MB_TYPE_16x8,  MB_TYPE_8x16,  MB_TYPE_DIRECT2, MB_TYPE_16x16
+};
+
+/** RV40 Macroblock types */
+enum RV40BlockTypes{
+    RV40_MB_TYPE_0,
+    RV40_MB_TYPE_1,
+    RV40_MB_P_16x16,
+    RV40_MB_P_8x8,
+    RV40_MB_B_FORWARD, //XXX: maybe vice versa
+    RV40_MB_B_BACKWARD,
+    RV40_MB_SKIP,
+    RV40_MB_B_INTERP,
+    RV40_MB_P_16x8,
+    RV40_MB_P_8x16,
+    RV40_MB_B_DIRECT,
+    RV40_MB_P_1MV, //XXX: unknown
+};
 
 /**
  * VLC tables used by decoder
@@ -80,6 +102,8 @@ typedef struct RV40DecContext{
     uint8_t *slice_data;     ///< saved slice data
     int has_slice;           ///< has previously saved slice
     int skip_blocks;         ///< blocks to skip (interframe slice only)
+
+    int *mb_type;            ///< internal macroblock types
 }RV40DecContext;
 
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
@@ -963,6 +987,8 @@ static int rv40_decode_init(AVCodecContext *avctx)
     r->intra_types_hist = av_malloc(r->intra_types_stride * 4 * 2 * sizeof(int));
     r->intra_types = r->intra_types_hist + r->intra_types_stride * 4;
 
+    r->mb_type = av_mallocz(r->s.mb_stride * r->s.mb_height * sizeof(int));
+
     if(!tables_done){
         rv40_init_tables();
         tables_done = 1;
@@ -1083,6 +1109,7 @@ static int rv40_decode_end(AVCodecContext *avctx)
     av_freep(&r->intra_types_hist);
     r->intra_types = NULL;
     av_freep(&r->slice_data);
+    av_freep(&r->mb_type);
 
     return 0;
 }
