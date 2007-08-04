@@ -713,7 +713,7 @@ static int rv40_decode_mv(RV40DecContext *r, int block_type)
     case RV40_MB_TYPE_0:
     case RV40_MB_TYPE_1:
     case RV40_MB_SKIP:
-        return;
+        return 0;
     case RV40_MB_B_INTERP:
         break;
     case RV40_MB_P_16x16:
