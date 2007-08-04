@@ -450,6 +450,73 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
     }
 }
 
+/**
+ * 2.4.3.3.5-1/2
+ */
+static void qcelp_lsp2paqa(float *lspf, float *pa, float *qa)
+{
+    int i,j;
+
+    for(i=0; i<10; i++)
+    {
+        pa[i]=1.0+1.0/i;
+        qa[i]=1.0-1.0/i;
+
+        for(j=1; j<6; j++)
+        {
+            pa[i]*=1.0-2*1.0/i*cos(M_PI*lspf[2*j-1])+pow(i,2);
+            qa[i]*=1.0-2*1.0/i*cos(M_PI*lspf[2*j  ])+pow(i,2);
+        }
+    }
+}
+
+/**
+ * 2.4.3.3.5
+ */
+static void qcelp_lsp2lpc(float *lspf, float *lpc)
+{
+    float pa[10],qa[10];
+    int   i;
+
+    qcelp_lsp2paqa(lspf, pa, qa);
+
+    for(i=0; i< 5; i++)
+            lpc[i]=-(pa[i]+qa[i])/2.0;
+    for(i=5; i<10; i++)
+            lpc[i]=-(pa[10-i]-qa[10-i])/2.0;
+
+    /**
+     * FIXME see 2.4.3.3.6-1, the scaling may be necesary at decoding too
+     *
+     * for(i=0, 1<10; i++)
+     *     lpc[i]*=powf(0.9883, i+1);
+     */
+}
+
+/**
+ * 2.4.3.1
+ *
+ * FIXME WIP draft
+ */
+static float qcelp_prede_filter(float *lpc, float z)
+{
+    int   i;
+    float tmp=0.0;
+
+    for(i=0; i<10; i++)
+       tmp+=lpc[i]*1.0/z;
+
+    return(1.0-tmp);
+}
+
+/**
+ * FIXME WIP draft
+ */
+static float qcelp_formant_synthesis_filter(float *lpc, float z)
+{
+    return(1.0/qcelp_prede_filter(lpc, z));
+}
+
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            int *data_size, uint8_t *buf, int buf_size)
 {
@@ -458,7 +525,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     int16_t  *outbuffer = data, cbseed;
     int      n, is_ifq = 0, is_codecframe_fmt = 0;
     uint16_t first16 = 0;
-    float    qtzd_lspf[10], gain[16], cdn_vector[160], ppf_vector[160];
+    float    qtzd_lspf[10], gain[16], cdn_vector[160], ppf_vector[160], lpc[10];
     int      g0[16], index[16];
     uint8_t  claimed_rate;
 
@@ -641,10 +708,14 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
                    is_ifq);
             is_ifq=1;
         }
-
-        /* pitch gain control */
-        qcelp_apply_gain_ctrl(0, cdn_vector, ppf_vector);
     }
+
+    /* pitch gain control */
+    qcelp_apply_gain_ctrl(0, cdn_vector, ppf_vector);
+    /* lsp freq interpolation */
+    qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf);
+    /* get lpc coeficients */
+    qcelp_lsp2lpc(qtzd_lspf, lpc);
 
     if(is_ifq)
     {

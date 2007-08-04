@@ -1,6 +1,5 @@
 Clear
 
-- Review & code LSP freqs interpolation.
 - Code formant synthesis filter.
 - Hook adaptive postfilter using qcelp_apply_gain_ctrl()
 
