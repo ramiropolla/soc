@@ -655,8 +655,6 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
 
         /* packet header */
         header_len = 3;
-        if (stream->packet_number==0)
-            header_len += 3; /* PES extension */
         header_len += 1; /* obligatory stuffing byte */
         if (pts != AV_NOPTS_VALUE) {
             if (dts != pts)
