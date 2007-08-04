@@ -104,6 +104,10 @@ typedef struct RV40DecContext{
     int skip_blocks;         ///< blocks to skip (interframe slice only)
 
     int *mb_type;            ///< internal macroblock types
+    int block_type;          ///< current block type
+    int luma_vlc;            ///< which VLC set will be used for luma blocks decoding
+    int chroma_vlc;          ///< which VLC set will be used for chroma blocks decoding
+    int is16;                ///< current block has additional 16x16 specific features or not
 }RV40DecContext;
 
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
@@ -871,42 +875,59 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
     }
 }
 
+/**
+ * Decode macroblock header and return CBP in case of success, -1 otherwise
+ */
+static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
+{
+    MpegEncContext *s = &r->s;
+    GetBitContext *gb = &s->gb;
+    int mb_pos = s->mb_x + s->mb_y * s->mb_stride;
+    int i, t;
+
+    if(!r->prev_si.type){
+        r->is16 = 0;
+        switch(decode210(gb)){
+        case 0: // 16x16 block
+            r->is16 = 1;
+            break;
+        case 1:
+            break;
+        case 2:
+            av_log(NULL,0,"Need DQUANT\n");
+            // q = decode_dquant(gb);
+            break;
+        }
+        s->current_picture_ptr->mb_type[mb_pos] = r->is16 ? MB_TYPE_INTRA16x16 : MB_TYPE_INTRA;
+    }else{
+    }
+    if(IS_INTRA(s->current_picture_ptr->mb_type[mb_pos])){
+        if(!r->is16){
+            rv40_decode_intra_types(r, gb, intra_types);
+            r->chroma_vlc = 0;
+            r->luma_vlc   = 1;
+        }else{
+            t = get_bits(gb, 2);
+            for(i = 0; i < 16; i++)
+                intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = t;
+            r->chroma_vlc = 0;
+            r->luma_vlc   = 2;
+        }
+    }
+    return rv40_decode_cbp(gb, r->cur_vlcs, !r->prev_si.type && r->is16);
+}
+
 static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
     int q, cbp, cbp2;
     int i, blknum, blkoff;
-    int luma_vlc, chroma_vlc;
-    int is16 = 0;
     DCTELEM block16[64];
 
-    q = decode210(gb);
-    switch(q){
-    case 0: // 16x16 block
-        is16 = 1;
-        break;
-    case 1:
-        break;
-    case 2:
-        av_log(NULL,0,"Need DQUANT\n");
-        // q = decode_dquant(gb);
-        break;
-    }
-    if(!is16){
-        rv40_decode_intra_types(r, gb, intra_types);
-        chroma_vlc = 0;
-        luma_vlc   = 1;
-    }else{
-        q = get_bits(gb, 2);
-        for(i = 0; i < 16; i++)
-            intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = q;
-        chroma_vlc = 0;
-        luma_vlc   = 2;
-    }
-    cbp = cbp2 = rv40_decode_cbp(gb, r->cur_vlcs, is16);
+    cbp = cbp2 = rv40_decode_mb_header(r, intra_types);
 
-    if(is16){
+    if(r->is16){
         memset(block16, 0, sizeof(block16));
         rv40_decode_block(block16, gb, r->cur_vlcs, 3, 0);
         rv40_dequant4x4_16x16(block16, 0, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
@@ -914,14 +935,14 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     }
 
     for(i = 0; i < 16; i++, cbp >>= 1){
-        if(!is16 && !(cbp & 1)) continue;
+        if(!r->is16 && !(cbp & 1)) continue;
         blknum = ((i & 2) >> 1) + ((i & 8) >> 2);
         blkoff = ((i & 1) << 2) + ((i & 4) << 3);
         if(cbp & 1)
-            rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, luma_vlc, 0);
-        if((cbp & 1) || is16){
+            rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, r->luma_vlc, 0);
+        if((cbp & 1) || r->is16){
             rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[rv40_luma_quant[0][r->quant]],rv40_qscale_tab[rv40_luma_quant[0][r->quant]]);
-            if(is16) //FIXME: optimize
+            if(r->is16) //FIXME: optimize
                 s->block[blknum][blkoff] = block16[(i & 3) | ((i & 0xC) << 1)];
             rv40_intra_inv_transform(s->block[blknum], blkoff);
         }
@@ -930,11 +951,11 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         if(!(cbp & 1)) continue;
         blknum = ((i & 4) >> 2) + 4;
         blkoff = ((i & 1) << 2) + ((i & 2) << 4);
-        rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, chroma_vlc, 1);
+        rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, r->chroma_vlc, 1);
         rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[rv40_chroma_quant[1][r->quant]],rv40_qscale_tab[rv40_chroma_quant[0][r->quant]]);
         rv40_intra_inv_transform(s->block[blknum], blkoff);
     }
-    rv40_output_macroblock(r, intra_types, cbp2, is16);
+    rv40_output_macroblock(r, intra_types, cbp2, r->is16);
 
     return 0;
 }
