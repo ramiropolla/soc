@@ -38,15 +38,15 @@
 
 /** Translation of RV40 macroblock types to lavc ones */
 static const int rv40_mb_type_to_lavc[12] = {
-    MB_TYPE_INTRA, MB_TYPE_16x16, MB_TYPE_16x16,   MB_TYPE_8x8,
-    MB_TYPE_16x16, MB_TYPE_16x16, MB_TYPE_SKIP,    MB_TYPE_DIRECT2,
-    MB_TYPE_16x8,  MB_TYPE_8x16,  MB_TYPE_DIRECT2, MB_TYPE_16x16
+    MB_TYPE_INTRA, MB_TYPE_INTRA16x16, MB_TYPE_16x16,   MB_TYPE_8x8,
+    MB_TYPE_16x16, MB_TYPE_16x16,      MB_TYPE_SKIP,    MB_TYPE_DIRECT2,
+    MB_TYPE_16x8,  MB_TYPE_8x16,       MB_TYPE_DIRECT2, MB_TYPE_16x16
 };
 
 /** RV40 Macroblock types */
 enum RV40BlockTypes{
-    RV40_MB_TYPE_0,
-    RV40_MB_TYPE_1,
+    RV40_MB_TYPE_INTRA,
+    RV40_MB_TYPE_INTRA16x16,
     RV40_MB_P_16x16,
     RV40_MB_P_8x8,
     RV40_MB_B_FORWARD, //XXX: maybe vice versa
@@ -56,7 +56,8 @@ enum RV40BlockTypes{
     RV40_MB_P_16x8,
     RV40_MB_P_8x16,
     RV40_MB_B_DIRECT,
-    RV40_MB_P_1MV, //XXX: unknown
+    RV40_MB_P_MIX16x16, // inter 16x16 block very similar to Intra16x16
+    RV40_MB_TYPES
 };
 
 /**
@@ -671,9 +672,11 @@ static int rv40_decode_mb_info(RV40DecContext *r)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
-    int q;
+    int q, i;
     int prev_type = 0;
     int mb_pos = s->mb_x + s->mb_y * s->mb_stride;
+    int blocks[RV40_MB_TYPES];
+    int count = 0;
 
     if(!r->skip_blocks)
         r->skip_blocks = get_omega(gb);
@@ -681,9 +684,25 @@ static int rv40_decode_mb_info(RV40DecContext *r)
     if(--r->skip_blocks)
          return RV40_MB_SKIP;
 
+    memset(blocks, 0, sizeof(blocks));
     if(s->pict_type == P_TYPE){
-        if(s->mb_y) prev_type = r->mb_type[mb_pos - s->mb_stride];
-        if(s->mb_x) prev_type = r->mb_type[mb_pos - 1];
+        if(!s->first_slice_line){
+            blocks[r->mb_type[mb_pos - s->mb_stride]]++;
+            if(s->mb_x)
+                blocks[r->mb_type[mb_pos - s->mb_stride - 1]]++;
+            if(s->mb_x-1 < s->mb_width)
+                blocks[r->mb_type[mb_pos - s->mb_stride + 1]]++;
+            if(s->mb_x == s->resync_mb_x && (s->mb_y-1) == s->resync_mb_y)
+                blocks[r->mb_type[mb_pos - s->mb_stride - 1]]--; //that's another slice
+        }
+        if(s->mb_x && !(s->first_slice_line && s->mb_x == s->resync_mb_x))
+            blocks[r->mb_type[mb_pos - 1]]++;
+        for(i = 0; i < RV40_MB_TYPES; i++){
+            if(blocks[i] > count){
+                count = blocks[i];
+                prev_type = i;
+            }
+        }
         if(prev_type == RV40_MB_SKIP) prev_type = RV40_MB_P_16x16;
         prev_type = block_num_to_ptype_vlc_num[prev_type];
         q = get_vlc2(gb, ptype_vlc[prev_type].table, PTYPE_VLC_BITS, 1);
@@ -710,8 +729,8 @@ static int rv40_decode_mv(RV40DecContext *r, int block_type)
     int i;
 
     switch(block_type){
-    case RV40_MB_TYPE_0:
-    case RV40_MB_TYPE_1:
+    case RV40_MB_TYPE_INTRA:
+    case RV40_MB_TYPE_INTRA16x16:
     case RV40_MB_SKIP:
         return 0;
     case RV40_MB_B_INTERP:
@@ -719,7 +738,7 @@ static int rv40_decode_mv(RV40DecContext *r, int block_type)
     case RV40_MB_P_16x16:
     case RV40_MB_B_FORWARD:
     case RV40_MB_B_BACKWARD:
-    case RV40_MB_P_1MV:
+    case RV40_MB_P_MIX16x16:
         mv[0][0] = get_omega(gb);
         mv[0][1] = get_omega(gb);
         break;
@@ -884,6 +903,7 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
     GetBitContext *gb = &s->gb;
     int mb_pos = s->mb_x + s->mb_y * s->mb_stride;
     int i, t;
+    int cbp;
 
     if(!r->prev_si.type){
         r->is16 = 0;
@@ -900,6 +920,18 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
         }
         s->current_picture_ptr->mb_type[mb_pos] = r->is16 ? MB_TYPE_INTRA16x16 : MB_TYPE_INTRA;
     }else{
+        r->block_type = rv40_decode_mb_info(r);
+        s->current_picture_ptr->mb_type[mb_pos] = rv40_mb_type_to_lavc[r->block_type];
+        r->mb_type[mb_pos] = (r->block_type == RV40_MB_SKIP) ? RV40_MB_P_16x16 : r->block_type;
+        r->is16 = !!IS_INTRA16x16(s->current_picture_ptr->mb_type[mb_pos]);
+        if(r->block_type == RV40_MB_SKIP){
+            for(i = 0; i < 16; i++)
+                intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = 0;
+            return 0;
+        }
+        rv40_decode_mv(r, r->block_type);
+        r->chroma_vlc = 1;
+        r->luma_vlc   = 0;
     }
     if(IS_INTRA(s->current_picture_ptr->mb_type[mb_pos])){
         if(!r->is16){
@@ -913,8 +945,19 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
             r->chroma_vlc = 0;
             r->luma_vlc   = 2;
         }
+        r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, 0);
+    }else{
+        for(i = 0; i < 16; i++)
+            intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = 0;
+        r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, 1);
+        if(r->mb_type[mb_pos] == RV40_MB_P_MIX16x16){
+            r->is16 = 1;
+            r->chroma_vlc = 1;
+            r->luma_vlc   = 2;
+            r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, 0);
+        }
     }
-    return rv40_decode_cbp(gb, r->cur_vlcs, !r->prev_si.type && r->is16);
+    return rv40_decode_cbp(gb, r->cur_vlcs, r->is16);
 }
 
 static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
@@ -947,6 +990,8 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
             rv40_intra_inv_transform(s->block[blknum], blkoff);
         }
     }
+    if(r->block_type == RV40_MB_P_MIX16x16)
+        r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, 1);
     for(; i < 24; i++, cbp >>= 1){
         if(!(cbp & 1)) continue;
         blknum = ((i & 4) >> 2) + 4;
