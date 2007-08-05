@@ -769,7 +769,6 @@ static int output_packet(AVFormatContext *ctx, int flush){
     }
 
 
-    s->last_pcr += es_size*8*90000LL / (s->mux_rate); //FIXME rounding and first few bytes of each packet
     if(ff_pes_remove_decoded_packets(ctx, s->last_pcr) < 0)
         return -1;
 
