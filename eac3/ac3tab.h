@@ -55,6 +55,7 @@ extern const int16_t ff_vq_hebap5[128][6];
 extern const int16_t ff_vq_hebap6[256][6];
 extern const int16_t ff_vq_hebap7[512][6];
 extern const int16_t (*ff_vq_hebap[8])[6];
+const uint8_t ff_eac3_frm_expstr[32][6];
 
 
 #endif /* AC3TAB_H */

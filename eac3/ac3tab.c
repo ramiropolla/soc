@@ -25,6 +25,7 @@
  */
 
 #include "ac3tab.h"
+#include "ac3.h"
 
 /**
  * Possible frame sizes.
@@ -1302,3 +1303,39 @@ const int16_t (*ff_vq_hebap[8])[6] = {
     ff_vq_hebap7,
 };
 
+/**
+ * Table E2.14 Frame Exponent Strategy Combinations
+ */
+const uint8_t ff_eac3_frm_expstr[32][6] = {
+{    EXP_D15,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE},
+{    EXP_D15,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE,    EXP_D45},
+{    EXP_D15,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE,    EXP_D25,  EXP_REUSE},
+{    EXP_D15,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE,    EXP_D45,    EXP_D45},
+{    EXP_D25,  EXP_REUSE,  EXP_REUSE,    EXP_D25,  EXP_REUSE,  EXP_REUSE},
+{    EXP_D25,  EXP_REUSE,  EXP_REUSE,    EXP_D25,  EXP_REUSE,    EXP_D45},
+{    EXP_D25,  EXP_REUSE,  EXP_REUSE,    EXP_D45,    EXP_D25,  EXP_REUSE},
+{    EXP_D25,  EXP_REUSE,  EXP_REUSE,    EXP_D45,    EXP_D45,    EXP_D45},
+{    EXP_D25,  EXP_REUSE,    EXP_D15,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE},
+{    EXP_D25,  EXP_REUSE,    EXP_D25,  EXP_REUSE,  EXP_REUSE,    EXP_D45},
+{    EXP_D25,  EXP_REUSE,    EXP_D25,  EXP_REUSE,    EXP_D25,  EXP_REUSE},
+{    EXP_D25,  EXP_REUSE,    EXP_D25,  EXP_REUSE,    EXP_D45,    EXP_D45},
+{    EXP_D25,  EXP_REUSE,    EXP_D45,    EXP_D25,  EXP_REUSE,  EXP_REUSE},
+{    EXP_D25,  EXP_REUSE,    EXP_D45,    EXP_D25,  EXP_REUSE,    EXP_D45},
+{    EXP_D25,  EXP_REUSE,    EXP_D45,    EXP_D45,    EXP_D25,  EXP_REUSE},
+{    EXP_D25,  EXP_REUSE,    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D45},
+{    EXP_D45,    EXP_D15,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE},
+{    EXP_D45,    EXP_D15,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE,    EXP_D45},
+{    EXP_D45,    EXP_D25,  EXP_REUSE,  EXP_REUSE,    EXP_D25,  EXP_REUSE},
+{    EXP_D45,    EXP_D25,  EXP_REUSE,  EXP_REUSE,    EXP_D45,    EXP_D45},
+{    EXP_D45,    EXP_D25,  EXP_REUSE,    EXP_D25,  EXP_REUSE,  EXP_REUSE},
+{    EXP_D45,    EXP_D25,  EXP_REUSE,    EXP_D25,  EXP_REUSE,    EXP_D45},
+{    EXP_D45,    EXP_D25,  EXP_REUSE,    EXP_D45,    EXP_D25,  EXP_REUSE},
+{    EXP_D45,    EXP_D25,  EXP_REUSE,    EXP_D45,    EXP_D45,    EXP_D45},
+{    EXP_D45,    EXP_D45,    EXP_D15,  EXP_REUSE,  EXP_REUSE,  EXP_REUSE},
+{    EXP_D45,    EXP_D45,    EXP_D25,  EXP_REUSE,  EXP_REUSE,    EXP_D45},
+{    EXP_D45,    EXP_D45,    EXP_D25,  EXP_REUSE,    EXP_D25,  EXP_REUSE},
+{    EXP_D45,    EXP_D45,    EXP_D25,  EXP_REUSE,    EXP_D45,    EXP_D45},
+{    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D25,  EXP_REUSE,  EXP_REUSE},
+{    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D25,  EXP_REUSE,    EXP_D45},
+{    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D25,  EXP_REUSE},
+};

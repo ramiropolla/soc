@@ -319,16 +319,21 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
     else
     {
+        /* cplexpstr[blk] and chexpstr[blk][ch] derived from table lookups. see Table E2.14 */
         if( (s->acmod > 0x1) && (s->ncplblks > 0) ) {
             GET_BITS(s->frmcplexpstr, gbc, 5);
             s->frmchexpstr[0] = s->frmcplexpstr;
+            for(blk=0; blk<6; blk++){
+                s->chexpstr[0][blk] = ff_eac3_frm_expstr[s->frmchexpstr[0]][blk];
+                s->cplexpstr[blk] = s->chexpstr[0][blk];
+            }
         }
         for(ch = 1; ch <= s->nfchans; ch++) {
             GET_BITS(s->frmchexpstr[ch], gbc, 5);
+            for(blk=0; blk<6; blk++){
+                s->chexpstr[ch][blk] = ff_eac3_frm_expstr[s->frmchexpstr[ch]][blk];
+            }
         }
-        /* cplexpstr[blk] and chexpstr[blk][ch] derived from table lookups ? see Table E2.14 */
-        av_log(s->avctx, AV_LOG_ERROR, "NOT IMPLEMENTED");
-        return -1;
     }
     if(s->lfeon)
     {
