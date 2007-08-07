@@ -31,8 +31,8 @@ int main(int argc, char **argv)
     int i;
     int ret = -1;
     int64_t pts = 0, newpts;
-    AVFilterContext *graph;
-    AVFilterContext *filters[2];
+    AVFilterContext *graph = NULL;
+    AVFilterContext *out   = NULL;
 
     if(argc < 2) {
         av_log(NULL, AV_LOG_ERROR, "require a list of filters\n");
@@ -41,16 +41,36 @@ int main(int argc, char **argv)
 
     avfilter_init();
     graph = avfilter_create_by_name("graph", NULL);
-    if(avfilter_init_filter(graph, argv[1], filters) < 0)
+    if(avfilter_init_filter(graph, argv[1], NULL) < 0)
         goto done;
+
+    if(!(out = avfilter_create_by_name("sdl", NULL))) {
+        av_log(NULL, AV_LOG_ERROR, "error creating output filter\n");
+        goto done;
+    }
+
+    if(avfilter_init_filter(out, NULL, NULL)) {
+        av_log(NULL, AV_LOG_ERROR, "error initializing output filter\n");
+        goto done;
+    }
+
+    if(avfilter_link(graph, 0, out, 0)) {
+        av_log(NULL, AV_LOG_ERROR, "error linking graph to output\n");
+        goto done;
+    }
 
     if(avfilter_graph_config_links(graph)) {
         av_log(NULL, AV_LOG_ERROR, "cannot configure graph\n");
         goto done;
     }
 
+    if(avfilter_config_link(out->inputs[0])) {
+        av_log(NULL, AV_LOG_ERROR, "cannot configure output link\n");
+        goto done;
+    }
+
     while(pts < 5000) {
-        newpts = sdl_display(filters[1]);
+        newpts = sdl_display(out);
         usleep(newpts - pts);
         pts = newpts;
     }
@@ -58,7 +78,8 @@ int main(int argc, char **argv)
     ret = 0;
 
 done:
-    avfilter_destroy(graph);
+    if(out)   avfilter_destroy(out);
+    if(graph) avfilter_destroy(graph);
 
     return ret;
 }
