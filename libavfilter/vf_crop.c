@@ -63,7 +63,7 @@ static int config_input(AVFilterLink *link)
     if(crop->cw <= 0) crop->cw = link->w - crop->cx;
     if(crop->ch <= 0) crop->ch = link->h - crop->cy;
 
-    return 0;
+    return avfilter_config_link(link->dst->outputs[0]);
 }
 
 static int config_output(AVFilterLink *link)

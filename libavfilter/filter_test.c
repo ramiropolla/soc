@@ -44,6 +44,11 @@ int main(int argc, char **argv)
     if(avfilter_init_filter(graph, argv[1], filters) < 0)
         goto done;
 
+    if(avfilter_graph_config_links(graph)) {
+        av_log(NULL, AV_LOG_ERROR, "cannot configure graph\n");
+        goto done;
+    }
+
     while(pts < 5000) {
         newpts = sdl_display(filters[1]);
         usleep(newpts - pts);
