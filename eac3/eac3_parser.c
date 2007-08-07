@@ -756,7 +756,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* These fields for coupling coordinates */
     if(s->cplinu[blk])
     {
-        av_log(s->avctx, AV_LOG_INFO, "NOT TESTED");
+        av_log(s->avctx, AV_LOG_INFO, "NOT TESTED CPLINU\n");
 
         if(s->ecplinu == 0) /* standard coupling in use */
         {
@@ -857,21 +857,19 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* These fields for rematrixing operation in the 2/0 mode */
     if(s->acmod == 0x2) /* if in 2/0 mode */
     {
-        if (blk == 0) {
+        if (blk == 0 || get_bits1(gbc)) {
             s->rematstr = 1;
-        }
-        else {
-            GET_BITS(s->rematstr, gbc, 1);
         }
         if(s->rematstr)
         {
             /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf
-             * TODO: how ? */
-            av_log(s->avctx, AV_LOG_ERROR,  "NOT IMPLEMENTED");
-            return -1;
-            /*for(bnd = 0; bnd < s->nrematbnds; bnd++) {
+             * TODO XXX (code from AC-3) */
+            s->nrematbnds = 4;
+            if(s->cplinu && s->cplbegf <= 2)
+                s->nrematbnds -= 1 + (s->cplbegf == 0);
+            for(bnd = 0; bnd < s->nrematbnds; bnd++) {
                 GET_BITS(s->rematflg[bnd], gbc, 1);
-            }*/
+            }
         }
     }
     /* This field for channel bandwidth code */
