@@ -324,14 +324,14 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
             GET_BITS(s->frmcplexpstr, gbc, 5);
             s->frmchexpstr[0] = s->frmcplexpstr;
             for(blk=0; blk<6; blk++){
-                s->chexpstr[0][blk] = ff_eac3_frm_expstr[s->frmchexpstr[0]][blk];
-                s->cplexpstr[blk] = s->chexpstr[0][blk];
+                s->chexpstr[blk][CPL_CH] = ff_eac3_frm_expstr[s->frmchexpstr[0]][blk];
+                s->cplexpstr[blk] = s->chexpstr[blk][CPL_CH];
             }
         }
         for(ch = 1; ch <= s->nfchans; ch++) {
             GET_BITS(s->frmchexpstr[ch], gbc, 5);
             for(blk=0; blk<6; blk++){
-                s->chexpstr[ch][blk] = ff_eac3_frm_expstr[s->frmchexpstr[ch]][blk];
+                s->chexpstr[blk][ch] = ff_eac3_frm_expstr[s->frmchexpstr[ch]][blk];
             }
         }
     }
@@ -674,8 +674,11 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 }
 
                 // calc
-                s->cplstrtmant = 37 + (12 * s->cplbegf);
-                s->cplendmant = 37 + (12 * (s->cplendf + 3));
+                s->strtmant[CPL_CH] = 37 + (12 * s->cplbegf);
+                s->endmant[CPL_CH] = 37 + (12 * (s->cplendf + 3));
+
+                s->cplstrtmant = s->strtmant[CPL_CH];
+                s->cplendmant = s->endmant[CPL_CH];
 
                 GET_BITS(s->cplbndstrce, gbc, 1);
                 if(s->cplbndstrce)
@@ -906,14 +909,25 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     {
         if(s->cplexpstr[blk] != EXP_REUSE)
         {
+            int grp;
             GET_BITS(s->cplabsexp, gbc, 4);
             /* ncplgrps derived from cplbegf, ecplbegf, cplendf, ecplendf, and cplexpstr */
-            /* how... ? */
-            av_log(s->avctx, AV_LOG_ERROR,  "NOT IMPLEMENTED");
-            return -1;
-            /*for(grp = 0; grp< s->ncplgrps; grp++) {
+            /* TODO add support for enhanced coupling */
+            switch(s->chexpstr[blk][CPL_CH]){
+                case EXP_D15:
+                    s->nchgrps[CPL_CH] = (s->endmant[CPL_CH] - s->strtmant[CPL_CH])/3;
+                    break;
+                case EXP_D25:
+                    s->nchgrps[CPL_CH] = (s->endmant[CPL_CH] - s->strtmant[CPL_CH])/6;
+                    break;
+                case EXP_D45:
+                    s->nchgrps[CPL_CH] = (s->endmant[CPL_CH] - s->strtmant[CPL_CH])/12;
+                    break;
+            }
+            s->ncplgrps = s->nchgrps[CPL_CH];
+            for(grp = 0; grp < s->nchgrps[CPL_CH]; grp++) {
                 GET_BITS(s->cplexps[grp], gbc, 7);
-            }*/
+            }
         }
     }
     for(ch = 1; ch <= s->nfchans; ch++) /* exponents for full bandwidth channels */
@@ -1136,7 +1150,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     /* run bit allocation */
     if(s->cplinu[blk]) {
-        av_log(s->avctx, AV_LOG_ERROR,  "NOT IMPLEMENTED");
+        av_log(s->avctx, AV_LOG_ERROR,  "NOT IMPLEMENTED (cplinu && run bit allocation)");
         return -1;
     }
 
