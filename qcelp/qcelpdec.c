@@ -496,7 +496,8 @@ static void qcelp_lsp2lpc(float *lspf, float *lpc)
 /**
  * 2.4.3.1
  *
- * FIXME WIP draft
+ * This is the 10th order predictor error filter -- the reciprocal
+ * of the formant synthesis filter.
  */
 static float qcelp_prede_filter(float *lpc, float z)
 {
@@ -510,11 +511,12 @@ static float qcelp_prede_filter(float *lpc, float z)
 }
 
 /**
- * FIXME WIP draft
+ * 2.4.8.6-2
+ * Used after the adaptive postfilter at sample generation stage.
  */
-static float qcelp_formant_synthesis_filter(float *lpc, float z)
+static void qcelp_detilt(float *z)
 {
-    return(1.0/qcelp_prede_filter(lpc, z));
+    *z = 1.0/(1.0 + 0.3 / *z);
 }
 
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
@@ -523,7 +525,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     QCELPContext *q    = avctx->priv_data;
     const QCELPBitmap *order = NULL;
     int16_t  *outbuffer = data, cbseed;
-    int      n, is_ifq = 0, is_codecframe_fmt = 0;
+    int      i, n, is_ifq = 0, is_codecframe_fmt = 0;
     uint16_t first16 = 0;
     float    qtzd_lspf[10], gain[16], cdn_vector[160], ppf_vector[160], lpc[10];
     int      g0[16], index[16];
@@ -716,6 +718,11 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf);
     /* get lpc coeficients */
     qcelp_lsp2lpc(qtzd_lspf, lpc);
+    /* apply formant synthesis filter over pitch pre filter's output */
+    for(i=0; i<160; i++)
+        ppf_vector[i]=1.0/qcelp_prede_filter(lpc, ppf_vector[i]);
+
+    /* WIP adaptive postifilter here */
 
     if(is_ifq)
     {

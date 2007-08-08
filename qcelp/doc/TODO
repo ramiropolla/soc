@@ -1,6 +1,5 @@
 Clear
 
-- Code formant synthesis filter.
 - Hook adaptive postfilter using qcelp_apply_gain_ctrl()
 
 Still somewhat fuzzy:
