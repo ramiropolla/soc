@@ -1,11 +1,7 @@
 Clear
 
-- Hook adaptive postfilter using qcelp_apply_gain_ctrl()
-
-Still somewhat fuzzy:
-
-- Workability tests / Sample smashing
-- Fixes (if needed :-)
+- Make it work / Sample smashing
+- Code and Hook adaptive postfilter using qcelp_apply_gain_ctrl()
 - Rework IFQ handling & decoding glue code in general.
 
 End goals:

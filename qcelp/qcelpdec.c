@@ -473,7 +473,7 @@ static void qcelp_lsp2paqa(float *lspf, float *pa, float *qa)
 /**
  * 2.4.3.3.5
  */
-static void qcelp_lsp2lpc(float *lspf, float *lpc)
+static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
 {
     float pa[10],qa[10];
     int   i;
@@ -491,6 +491,9 @@ static void qcelp_lsp2lpc(float *lspf, float *lpc)
      * for(i=0, 1<10; i++)
      *     lpc[i]*=powf(0.9883, i+1);
      */
+    av_log(avctx, AV_LOG_DEBUG, "lsp2lpc:%f%f%f%f%f%f%f%f%f%f\n",
+           lpc[0], lpc[1], lpc[2], lpc[3], lpc[4],
+           lpc[5], lpc[6], lpc[7], lpc[8], lpc[9]);
 }
 
 /**
@@ -717,12 +720,16 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     /* lsp freq interpolation */
     qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf);
     /* get lpc coeficients */
-    qcelp_lsp2lpc(qtzd_lspf, lpc);
-    /* apply formant synthesis filter over pitch pre filter's output */
+    qcelp_lsp2lpc(avctx, qtzd_lspf, lpc);
+    /* Apply formant synthesis filter over the pitch prefilter output. */
     for(i=0; i<160; i++)
+    {
         ppf_vector[i]=1.0/qcelp_prede_filter(lpc, ppf_vector[i]);
+        /* WIP adaptive postfilter here */
 
-    /* WIP adaptive postifilter here */
+        /* output stage */
+        outbuffer[i]=av_clip(lrintf(ppf_vector[i]), -32768, 32767);
+    }
 
     if(is_ifq)
     {
