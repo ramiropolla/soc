@@ -74,7 +74,33 @@ Index: ffplay.c
  } VideoState;
  
  void show_help(void);
-@@ -1160,6 +1173,20 @@
+@@ -201,6 +214,9 @@
+ static int error_resilience = FF_ER_CAREFUL;
+ static int error_concealment = 3;
+ static int decoder_reorder_pts= 0;
++#if ENABLE_AVFILTER
++static char *vfilters = NULL;
++#endif
+ 
+ /* current context */
+ static int is_full_screen;
+@@ -852,9 +868,15 @@
+     } else if(!is_full_screen && screen_width){
+         w = screen_width;
+         h = screen_height;
++#if ENABLE_AVFILTER
++    }else if (is->out_video_filter && is->out_video_filter->inputs[0]){
++        w = is->out_video_filter->inputs[0]->w;
++        h = is->out_video_filter->inputs[0]->h;
++#else
+     }else if (is->video_st && is->video_st->codec->width){
+         w = is->video_st->codec->width;
+         h = is->video_st->codec->height;
++#endif
+     } else {
+         w = 640;
+         h = 480;
+@@ -1160,6 +1182,20 @@
      if (vp->bmp)
          SDL_FreeYUVOverlay(vp->bmp);
  
@@ -95,7 +121,7 @@ Index: ffplay.c
  #if 0
      /* XXX: use generic function */
      /* XXX: disable overlay if no hardware acceleration or if RGB format */
-@@ -1177,12 +1204,9 @@
+@@ -1177,12 +1213,9 @@
          break;
      }
  #endif
@@ -109,7 +135,7 @@ Index: ffplay.c
  
      SDL_LockMutex(is->pictq_mutex);
      vp->allocated = 1;
-@@ -1216,8 +1240,13 @@
+@@ -1216,8 +1249,13 @@
  
      /* alloc or resize hardware picture buffer */
      if (!vp->bmp ||
@@ -123,7 +149,7 @@ Index: ffplay.c
          SDL_Event event;
  
          vp->allocated = 0;
-@@ -1241,6 +1270,12 @@
+@@ -1241,6 +1279,12 @@
  
      /* if the frame is not skipped, then display it */
      if (vp->bmp) {
@@ -136,7 +162,7 @@ Index: ffplay.c
          /* get a pointer on the bitmap */
          SDL_LockYUVOverlay (vp->bmp);
  
-@@ -1253,9 +1288,9 @@
+@@ -1253,9 +1297,9 @@
          pict.linesize[1] = vp->bmp->pitches[2];
          pict.linesize[2] = vp->bmp->pitches[1];
          if (img_convert_ctx == NULL) {
@@ -149,7 +175,7 @@ Index: ffplay.c
                      dst_pix_fmt, sws_flags, NULL, NULL, NULL);
              if (img_convert_ctx == NULL) {
                  fprintf(stderr, "Cannot initialize the conversion context\n");
-@@ -1263,7 +1298,7 @@
+@@ -1263,7 +1307,7 @@
              }
          }
          sws_scale(img_convert_ctx, src_frame->data, src_frame->linesize,
@@ -158,7 +184,7 @@ Index: ffplay.c
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1333,21 +1368,12 @@
+@@ -1333,21 +1377,12 @@
      avcodec_default_release_buffer(c, pic);
  }
  
@@ -183,7 +209,7 @@ Index: ffplay.c
          if(pkt->data == flush_pkt.data){
              avcodec_flush_buffers(is->video_st->codec);
              continue;
-@@ -1356,31 +1382,204 @@
+@@ -1356,31 +1391,217 @@
          /* NOTE: ipts is the PTS of the _first_ picture beginning in
             this packet, if any */
          global_video_pkt_pts= pkt->pts;
@@ -358,8 +384,9 @@ Index: ffplay.c
 +    double pts;
 +
 +#if ENABLE_AVFILTER
-+    AVFilterContext *filt_src, *filt_out;
++    AVFilterContext *filt_src = NULL, *filt_out = NULL, *filt_graph = NULL;
 +
++    avfilter_init();
 +    //avfilter_register(&input_filter);
 +    //avfilter_register(&output_filter);
 +
@@ -369,8 +396,20 @@ Index: ffplay.c
 +    if(avfilter_init_filter(filt_src, NULL, is))             goto the_end;
 +    if(avfilter_init_filter(filt_out, NULL, frame))          goto the_end;
 +
++    if(vfilters) {
++        if(!(filt_graph = avfilter_create_by_name("graph", NULL)))
++            goto the_end;
++        if(avfilter_init_filter(filt_graph, vfilters, NULL))
++            goto the_end;
++        if(avfilter_link(filt_src, 0, filt_graph, 0))        goto the_end;
++        if(avfilter_link(filt_graph, 0, filt_out, 0))        goto the_end;
++        if(avfilter_config_link(filt_src->outputs[0]))       goto the_end;
++        if(avfilter_graph_config_links(filt_graph))          goto the_end;
++        if(avfilter_config_link(filt_out->inputs[0]))        goto the_end;
++    } else {
 +    if(avfilter_link(filt_src, 0, filt_out, 0) < 0)          goto the_end;
 +    if(avfilter_config_link(filt_src->outputs[0]))           goto the_end;
++    }
 +    is->out_video_filter = filt_out;
 +#endif
 +
@@ -400,7 +439,7 @@ Index: ffplay.c
      av_free(frame);
      return 0;
  }
-@@ -2131,6 +2330,12 @@
+@@ -2131,6 +2352,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -413,6 +452,16 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
+@@ -2475,6 +2702,9 @@
+ #endif
+     { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
+     { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
++#if ENABLE_AVFILTER
++    { "vfilters", OPT_STRING | HAS_ARG, {(void*)&vfilters}, "video filters", "filter list" },
++#endif
+     { NULL, },
+ };
+ 
 Index: Makefile
 ===================================================================
 --- Makefile	(revision 9832)
