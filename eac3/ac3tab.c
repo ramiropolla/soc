@@ -1338,4 +1338,12 @@ const uint8_t ff_eac3_frm_expstr[32][6] = {
 {    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D25,  EXP_REUSE,  EXP_REUSE},
 {    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D25,  EXP_REUSE,    EXP_D45},
 {    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D25,  EXP_REUSE},
+{    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D45,    EXP_D45},
 };
+
+/**
+ * Table E2.16 Default Coupling Banding Structure
+ */
+const uint8_t ff_eac3_defcplbndstrc[18] =
+{ 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1 };
+

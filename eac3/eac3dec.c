@@ -131,6 +131,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     av_log(NULL, AV_LOG_INFO, "-------START BLK-------\n");
 #endif
         if(ff_eac3_parse_audblk(&gbc, c, blk)){
+            av_log(c->avctx, AV_LOG_ERROR, "Error in ff_eac3_parse_audblk\n");
             return -1;
         }
 #ifdef DEBUG

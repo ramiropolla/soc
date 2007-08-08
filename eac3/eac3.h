@@ -313,6 +313,7 @@ typedef struct EAC3Context{
     int16_t bndpsd[MAX_CHANNELS][350];        ///< interpolated exponents FIXME in ac3dec [50] !?
     int16_t mask[MAX_CHANNELS][350];          ///< masking values
 
+    float   cplco[AC3_MAX_CHANNELS][18];        ///< coupling coordinates
 
     DECLARE_ALIGNED_16(float, transform_coeffs[MAX_CHANNELS][AC3_MAX_COEFS]);
 

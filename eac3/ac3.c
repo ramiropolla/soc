@@ -489,7 +489,7 @@ static void apply_dithering(int nchans, int *endmant, int *dithflag, float (*tra
  * use, coupled coefficients are also reconstructed here.
  */
 
-void ff_ac3_get_transform_coeffs(GetBitContext *gb, uint8_t (*bap)[AC3_MAX_COEFS], uint8_t (*dexps)[AC3_MAX_COEFS], int nchans, int *chincpl, int *dithflag, float (*transform_coeffs)[AC3_MAX_COEFS], int *strtmant, int *endmant, AVRandomState *dith_state)
+void ff_ac3_get_transform_coeffs(GetBitContext *gb, uint8_t (*bap)[AC3_MAX_COEFS], uint8_t (*dexps)[AC3_MAX_COEFS], int nchans, int *chincpl, int *dithflag, float (*transform_coeffs)[AC3_MAX_COEFS], int *strtmant, int *endmant, AVRandomState *dith_state, int ncplbnd, int *cplbndstrc, float (*cplco)[18])
 {
     int ch, end;
     int got_cplch = 0;
@@ -504,11 +504,40 @@ void ff_ac3_get_transform_coeffs(GetBitContext *gb, uint8_t (*bap)[AC3_MAX_COEFS
         /* tranform coefficients for coupling channel */
         if(chincpl[ch]) {
             if(!got_cplch) {
-                assert(0);
+                int i;
                 // TODO
-               // get_transform_coeffs_ch(ctx, CPL_CH, &m);
+                for(i=0; i<AC3_MAX_COEFS; i++) transform_coeffs[0][i]=0;
+
+                get_transform_coeffs_ch(gb, bap[CPL_CH], dexps[CPL_CH], &m, dithflag[CPL_CH], transform_coeffs[CPL_CH], strtmant[CPL_CH],endmant[CPL_CH]);
                // uncouple_channels(ctx);
-                got_cplch = 1;
+                {
+                    //TODO (form ac3)
+                    int i, j, ch, bnd, subbnd;
+
+                    subbnd = 0;
+                    i = strtmant[CPL_CH];
+                    /*av_log(NULL, AV_LOG_INFO, "strtmant=%i endmant=%i\n", strtmant[CPL_CH], endmant[CPL_CH]);
+                    for(bnd=0; bnd<256; bnd++){
+                        av_log(NULL, AV_LOG_INFO, "%i: %f\n", bnd, transform_coeffs[CPL_CH][bnd]);
+                    }*/
+                    for(bnd=0; bnd<ncplbnd; bnd++) {
+                        do {
+                            for(j=0; j<12; j++) {
+                                for(ch=1; ch<=nchans; ch++) {// TODO lfe?
+                                    if(chincpl[ch]) {
+                                        transform_coeffs[ch][i] =
+                                            transform_coeffs[CPL_CH][i] *
+                                            cplco[ch][bnd] * 8.0f;
+                                    }
+                                }
+                                //av_log(NULL, AV_LOG_INFO, "%i ", i);
+                                i++;
+                            }
+                        } while(cplbndstrc[subbnd++]);
+                    }
+                    //av_log(NULL, AV_LOG_INFO, "\n");
+                }
+               got_cplch = 1;
             }
             end = endmant[CPL_CH];
         } else {

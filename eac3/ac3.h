@@ -185,7 +185,7 @@ void ac3_parametric_bit_allocation(AC3BitAllocParameters *s, uint8_t *bap,
 void ff_ac3_window_init(float *window);
 void ff_ac3_decoder_tables_init(void);
 
-void ff_ac3_get_transform_coeffs(GetBitContext *gb, uint8_t (*bap)[AC3_MAX_COEFS], uint8_t (*dexps)[AC3_MAX_COEFS], int nchans, int *chincpl, int *dithflag, float (*transform_coeffs)[AC3_MAX_COEFS], int *strtmant, int *endmant, AVRandomState *dith_state);
+void ff_ac3_get_transform_coeffs(GetBitContext *gb, uint8_t (*bap)[AC3_MAX_COEFS], uint8_t (*dexps)[AC3_MAX_COEFS], int nchans, int *chincpl, int *dithflag, float (*transform_coeffs)[AC3_MAX_COEFS], int *strtmant, int *endmant, AVRandomState *dith_state, int ncplbnd, int *cplbndstrc, float (*cplco)[18]);
 
 void ff_ac3_decode_exponents(GetBitContext *gb, int expstr, int ngrps,
                              uint8_t absexp, uint8_t *dexps);
