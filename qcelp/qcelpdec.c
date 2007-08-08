@@ -733,7 +733,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     }
 
-    *data_size=buf_size;
+    *data_size=160;
     return *data_size;
 }
 
