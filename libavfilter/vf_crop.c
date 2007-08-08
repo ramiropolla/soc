@@ -136,7 +136,6 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
         }
     }
 
-    av_log(link->dst, AV_LOG_INFO, "start_frame()\n");
     link->cur_pic = picref;
 
     avfilter_start_frame(link->dst->outputs[0], ref2);
@@ -146,8 +145,6 @@ static void end_frame(AVFilterLink *link)
 {
     avfilter_unref_pic(link->cur_pic);
     link->cur_pic = NULL;
-
-    av_log(link->dst, AV_LOG_INFO, "end_frame()\n");
     avfilter_end_frame(link->dst->outputs[0]);
 }
 
@@ -161,8 +158,6 @@ static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
     int top = y;
     int height = h;
     int i;
-
-    av_log(link->dst, AV_LOG_INFO, "draw_slice()\n");
 
     if(y >= crop->cy + crop->ch || y + h <= crop->cy) return;
 
