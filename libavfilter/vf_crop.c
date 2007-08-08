@@ -131,7 +131,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     ref2->data[0] += crop->cx * crop->bpp;
     for(i = 1; i < 4; i ++) {
         if(ref2->data[i]) {
-            ref2->data[i] += (crop->cy >> crop->vsub) * ref2->linesize[1];
+            ref2->data[i] += (crop->cy >> crop->vsub) * ref2->linesize[i];
             ref2->data[i] +=  crop->cx >> crop->hsub;
         }
     }
