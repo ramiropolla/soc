@@ -28,6 +28,9 @@ typedef struct
 {
     int  x,  y,  w,  h;
     int cx, cy, cw, ch;
+
+    int bpp;                //< bytes per pixel
+    int hsub, vsub;         //< chroma subsampling
 } CropContext;
 
 static int init(AVFilterContext *ctx, const char *args, void *opaque)
@@ -48,7 +51,21 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
 
 static int *query_in_formats(AVFilterLink *link)
 {
-    return avfilter_make_format_list(2, PIX_FMT_RGB24, PIX_FMT_BGR24);
+    return avfilter_make_format_list(31,
+                PIX_FMT_YUV444P,  PIX_FMT_YUV422P,  PIX_FMT_YUV420P,
+                PIX_FMT_YUV411P,  PIX_FMT_YUV410P,
+                PIX_FMT_YUYV422,  PIX_FMT_UYVY422,  PIX_FMT_UYYVYY411,
+                PIX_FMT_YUVJ444P, PIX_FMT_YUVJ422P, PIX_FMT_YUVJ420P,
+                PIX_FMT_YUV440P,  PIX_FMT_YUVJ440P,
+                PIX_FMT_RGB32,    PIX_FMT_BGR32,
+                PIX_FMT_RGB32_1,  PIX_FMT_BGR32_1,
+                PIX_FMT_RGB24,    PIX_FMT_BGR24,
+                PIX_FMT_RGB565,   PIX_FMT_BGR565,
+                PIX_FMT_RGB555,   PIX_FMT_BGR555,
+                PIX_FMT_RGB8,     PIX_FMT_BGR8,
+                PIX_FMT_RGB4_BYTE,PIX_FMT_BGR4_BYTE,
+                PIX_FMT_GRAY16BE, PIX_FMT_GRAY16LE,
+                PIX_FMT_GRAY8,    PIX_FMT_PAL8);
 }
 
 static int config_input(AVFilterLink *link)
@@ -62,6 +79,32 @@ static int config_input(AVFilterLink *link)
 
     if(crop->cw <= 0) crop->cw = link->w - crop->cx;
     if(crop->ch <= 0) crop->ch = link->h - crop->cy;
+
+    switch(link->format) {
+    case PIX_FMT_RGB32:
+    case PIX_FMT_BGR32:
+        crop->bpp = 4;
+        break;
+    case PIX_FMT_RGB24:
+    case PIX_FMT_BGR24:
+        crop->bpp = 3;
+        break;
+    case PIX_FMT_RGB565:
+    case PIX_FMT_RGB555:
+    case PIX_FMT_BGR565:
+    case PIX_FMT_BGR555:
+    case PIX_FMT_GRAY16BE:
+    case PIX_FMT_GRAY16LE:
+        crop->bpp = 2;
+        break;
+    default:
+        crop->bpp = 1;
+    }
+
+    avcodec_get_chroma_sub_sample(link->format, &crop->hsub, &crop->vsub);
+    crop->cx &= ~((1 << crop->hsub) - 1);
+    crop->cw &= ~((1 << crop->hsub) - 1);
+    crop->ch &= ~((1 << crop->vsub) - 1);
 
     return avfilter_config_link(link->dst->outputs[0]);
 }
@@ -80,11 +123,18 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     CropContext *crop = link->dst->priv;
     AVFilterPicRef *ref2 = avfilter_ref_pic(picref, ~0);
+    int i;
 
     ref2->w = crop->cw;
     ref2->h = crop->ch;
     ref2->data[0] += crop->cy * ref2->linesize[0];
-    ref2->data[0] += crop->cx * 3;
+    ref2->data[0] += crop->cx * crop->bpp;
+    for(i = 1; i < 4; i ++) {
+        if(ref2->data[i]) {
+            ref2->data[i] += (crop->cy >> crop->vsub) * ref2->linesize[1];
+            ref2->data[i] +=  crop->cx >> crop->hsub;
+        }
+    }
 
     av_log(link->dst, AV_LOG_INFO, "start_frame()\n");
     link->cur_pic = picref;
@@ -110,6 +160,7 @@ static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
     uint8_t *src[4];
     int top = y;
     int height = h;
+    int i;
 
     av_log(link->dst, AV_LOG_INFO, "draw_slice()\n");
 
@@ -120,11 +171,17 @@ static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
     if(top < crop->cy) {
         height -=  crop->cy - top;
         src[0] += (crop->cy - top) * pic->linesize[0];
+        for(i = 0; i < 4; i ++)
+            if(src[i])
+                src[i] += (crop->cy >> crop->vsub) * pic->linesize[i];
         top     =  crop->cy;
     }
     if(top + height > crop->cy + crop->ch)
         height = crop->cy + crop->ch - top;
-    src[0] += 3 * crop->cx;
+    src[0] += crop->cx * crop->bpp;
+    for(i = 0; i < 4; i ++)
+        if(src[i])
+            src[i] += crop->cx >> crop->hsub;
 
     avfilter_draw_slice(ctx->outputs[0], src, top - crop->cy, height);
 }
