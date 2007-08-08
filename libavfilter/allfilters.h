@@ -28,4 +28,5 @@ extern AVFilter vf_graph;
 extern AVFilter vf_passthrough;
 extern AVFilter vf_rgb2bgr;
 extern AVFilter vf_slicify;
+extern AVFilter vf_vflip;
 extern AVFilter vo_sdl;
