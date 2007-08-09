@@ -462,10 +462,10 @@ static void qcelp_lsp2paqa(float *lspf, float *pa, float *qa)
         pa[i]=1.0+1.0/i;
         qa[i]=1.0-1.0/i;
 
-        for(j=1; j<6; j++)
+        for(j=0; j<5; j++)
         {
-            pa[i]*=1.0-2*1.0/i*cos(M_PI*lspf[2*j-1])+pow(i,2);
-            qa[i]*=1.0-2*1.0/i*cos(M_PI*lspf[2*j  ])+pow(i,2);
+            pa[i]*=1.0-2*1.0/i*cos(M_PI*lspf[2*j  ])+pow(i,2);
+            qa[i]*=1.0-2*1.0/i*cos(M_PI*lspf[2*j+1])+pow(i,2);
         }
     }
 }
@@ -479,6 +479,11 @@ static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
     int   i;
 
     qcelp_lsp2paqa(lspf, pa, qa);
+
+    av_log(avctx, AV_LOG_DEBUG, "lslp2lpc: [PA] %f %f %f %f %f %f %f %f %f %f\n\
+           [QA] %f %f %f %f %f %f %f %f %f %f\n", pa[0], pa[1], pa[2], pa[3],
+           pa[4], pa[5], pa[6], pa[7], pa[8], pa[9], qa[0], qa[1], qa[2], qa[3],
+           qa[4], qa[5], qa[6], qa[7], qa[8], qa[9]);
 
     for(i=0; i< 5; i++)
             lpc[i]=-(pa[i]+qa[i])/2.0;

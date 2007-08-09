@@ -1,6 +1,6 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 9994)
+--- libavcodec/Makefile	(revision 10006)
 +++ libavcodec/Makefile	(working copy)
 @@ -134,6 +134,7 @@
  OBJS-$(CONFIG_PNG_ENCODER)             += png.o pngenc.o
@@ -12,7 +12,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_QPEG_DECODER)            += qpeg.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 9994)
+--- libavcodec/allcodecs.c	(revision 10006)
 +++ libavcodec/allcodecs.c	(working copy)
 @@ -192,6 +192,7 @@
      REGISTER_DECODER(MP3ADU, mp3adu);
@@ -24,7 +24,7 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER(RA_288, ra_288);
 Index: libavcodec/allcodecs.h
 ===================================================================
---- libavcodec/allcodecs.h	(revision 9994)
+--- libavcodec/allcodecs.h	(revision 10006)
 +++ libavcodec/allcodecs.h	(working copy)
 @@ -147,6 +147,7 @@
  extern AVCodec nuv_decoder;
@@ -36,7 +36,7 @@ Index: libavcodec/allcodecs.h
  extern AVCodec qpeg_decoder;
 Index: libavformat/mov.c
 ===================================================================
---- libavformat/mov.c	(revision 9994)
+--- libavformat/mov.c	(revision 10006)
 +++ libavformat/mov.c	(working copy)
 @@ -835,6 +835,7 @@
          st->codec->sample_rate= 16000;
