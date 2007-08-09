@@ -1,5 +1,5 @@
 diff --git a/libavformat/Makefile b/libavformat/Makefile
-index 7c837ce..dacbe68 100644
+index 4263719..6ab86df 100644
 --- a/libavformat/Makefile
 +++ b/libavformat/Makefile
 @@ -72,6 +72,7 @@ OBJS-$(CONFIG_IPMOVIE_DEMUXER)           += ipmovie.o
@@ -11,27 +11,29 @@ index 7c837ce..dacbe68 100644
  OBJS-$(CONFIG_MJPEG_MUXER)               += raw.o
  OBJS-$(CONFIG_MM_DEMUXER)                += mm.o
 diff --git a/libavformat/allformats.c b/libavformat/allformats.c
-index 84ba067..0b4b4af 100644
+index 6c5f6de..7031370 100644
 --- a/libavformat/allformats.c
 +++ b/libavformat/allformats.c
-@@ -92,7 +92,7 @@ void av_register_all(void)
+@@ -92,7 +92,8 @@ void av_register_all(void)
      if (!ENABLE_NUT_DEMUXER) REGISTER_DEMUXER (LIBNUT, libnut);
      REGISTER_MUXER   (LIBNUT, libnut);
      REGISTER_MUXDEMUX(M4V, m4v);
 -    REGISTER_DEMUXER (MATROSKA, matroska);
 +    REGISTER_MUXDEMUX(MATROSKA, matroska);
++    REGISTER_MUXER   (MATROSKA, matroska_audio);
      REGISTER_MUXDEMUX(MJPEG, mjpeg);
      REGISTER_DEMUXER (MM, mm);
      REGISTER_MUXDEMUX(MMF, mmf);
 diff --git a/libavformat/allformats.h b/libavformat/allformats.h
-index 4c9a904..c1d4e6a 100644
+index fec5038..cc54856 100644
 --- a/libavformat/allformats.h
 +++ b/libavformat/allformats.h
-@@ -141,6 +141,7 @@ extern AVOutputFormat image_muxer;
+@@ -144,6 +144,8 @@ extern AVOutputFormat image_muxer;
  extern AVOutputFormat imagepipe_muxer;
  extern AVOutputFormat libnut_muxer;
  extern AVOutputFormat m4v_muxer;
 +extern AVOutputFormat matroska_muxer;
++extern AVOutputFormat matroska_audio_muxer;
  extern AVOutputFormat mjpeg_muxer;
  extern AVOutputFormat mmf_muxer;
  extern AVOutputFormat mov_muxer;
