@@ -58,11 +58,6 @@ static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
     avfilter_draw_slice(link->dst->outputs[0], data, y, h);
 }
 
-static void request_frame(AVFilterLink *link)
-{
-    avfilter_request_frame(link->src->inputs[0]);
-}
-
 AVFilter vf_passthrough =
 {
     .name      = "passthrough",
@@ -76,8 +71,7 @@ AVFilter vf_passthrough =
                                     .end_frame       = end_frame, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
-                                    .request_frame   = request_frame, },
+                                    .type            = AV_PAD_VIDEO },
                                   { .name = NULL}},
 };
 
