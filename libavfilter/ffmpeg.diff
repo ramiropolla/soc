@@ -237,8 +237,8 @@ Index: ffplay.c
 -        if (got_picture) {
 -            if (output_picture2(is, frame, pts) < 0)
 +        /* put pts into milliseconds */
-+        *pts = 1000 * (*pts) * is->video_st->codec->time_base.num /
-+                               is->video_st->codec->time_base.den;
++        *pts = 1000 * (*pts) * is->video_st->time_base.num /
++                               is->video_st->time_base.den;
 +
 +        av_free_packet(pkt);
 +        if(got_picture)
