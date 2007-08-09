@@ -46,20 +46,20 @@ static const uint8_t rematrix_band_tbl[5] = { 13, 25, 37, 61, 253 };
 
 /**
  * table for exponent to scale_factor mapping
- * scale_factors[i] = 2 ^ -i
+ * ff_ac3_scale_factors[i] = 2 ^ -i
  */
-static float scale_factors[25];
+static float ff_ac3_scale_factors[25];
 
 /** table for grouping exponents */
-static uint8_t exp_ungroup_tbl[128][3];
+static uint8_t ff_ac3_exp_ungroup_tbl[128][3];
 
 
 /** tables for ungrouping mantissas */
-static float b1_mantissas[32][3];
-static float b2_mantissas[128][3];
-static float b3_mantissas[8];
-static float b4_mantissas[128][2];
-static float b5_mantissas[16];
+float ff_ac3_b1_mantissas[32][3];
+float ff_ac3_b2_mantissas[128][3];
+float ff_ac3_b3_mantissas[8];
+float ff_ac3_b4_mantissas[128][2];
+float ff_ac3_b5_mantissas[16];
 
 /**
  * Quantization table: levels for symmetric. bits for asymmetric.
@@ -71,10 +71,10 @@ static const uint8_t qntztab[16] = {
 };
 
 /** dynamic range table. converts codes to scale factors. */
-static float dynrng_tbl[256];
+float ff_ac3_dynrng_tbl[256];
 
 /** dialogue normalization table */
-static float dialnorm_tbl[32];
+float ff_ac3_dialnorm_tbl[32];
 
 /** Adjustments in dB gain */
 #define LEVEL_MINUS_3DB         0.7071067811865476
@@ -201,7 +201,7 @@ typedef struct {
 /**
  * Generate a Kaiser-Bessel Derived Window.
  */
-static void ac3_window_init(float *window)
+void ff_ac3_window_init(float *window)
 {
    int i, j;
    double sum = 0.0, bessel, tmp;
@@ -236,7 +236,7 @@ symmetric_dequant(int code, int levels)
 /*
  * Initialize tables at runtime.
  */
-static void ac3_tables_init(void)
+void ff_ac3_tables_init(void)
 {
     int i;
 
@@ -244,57 +244,57 @@ static void ac3_tables_init(void)
        reference: Section 7.3.5 Ungrouping of Mantissas */
     for(i=0; i<32; i++) {
         /* bap=1 mantissas */
-        b1_mantissas[i][0] = symmetric_dequant( i / 9     , 3);
-        b1_mantissas[i][1] = symmetric_dequant((i % 9) / 3, 3);
-        b1_mantissas[i][2] = symmetric_dequant((i % 9) % 3, 3);
+        ff_ac3_b1_mantissas[i][0] = symmetric_dequant( i / 9     , 3);
+        ff_ac3_b1_mantissas[i][1] = symmetric_dequant((i % 9) / 3, 3);
+        ff_ac3_b1_mantissas[i][2] = symmetric_dequant((i % 9) % 3, 3);
     }
     for(i=0; i<128; i++) {
         /* bap=2 mantissas */
-        b2_mantissas[i][0] = symmetric_dequant( i / 25     , 5);
-        b2_mantissas[i][1] = symmetric_dequant((i % 25) / 5, 5);
-        b2_mantissas[i][2] = symmetric_dequant((i % 25) % 5, 5);
+        ff_ac3_b2_mantissas[i][0] = symmetric_dequant( i / 25     , 5);
+        ff_ac3_b2_mantissas[i][1] = symmetric_dequant((i % 25) / 5, 5);
+        ff_ac3_b2_mantissas[i][2] = symmetric_dequant((i % 25) % 5, 5);
 
         /* bap=4 mantissas */
-        b4_mantissas[i][0] = symmetric_dequant(i / 11, 11);
-        b4_mantissas[i][1] = symmetric_dequant(i % 11, 11);
+        ff_ac3_b4_mantissas[i][0] = symmetric_dequant(i / 11, 11);
+        ff_ac3_b4_mantissas[i][1] = symmetric_dequant(i % 11, 11);
     }
     /* generate ungrouped mantissa tables
        reference: Tables 7.21 and 7.23 */
     for(i=0; i<7; i++) {
         /* bap=3 mantissas */
-        b3_mantissas[i] = symmetric_dequant(i, 7);
+        ff_ac3_b3_mantissas[i] = symmetric_dequant(i, 7);
     }
     for(i=0; i<15; i++) {
         /* bap=5 mantissas */
-        b5_mantissas[i] = symmetric_dequant(i, 15);
+        ff_ac3_b5_mantissas[i] = symmetric_dequant(i, 15);
     }
 
     /* generate dynamic range table
        reference: Section 7.7.1 Dynamic Range Control */
     for(i=0; i<256; i++) {
         int v = (i >> 5) - ((i >> 7) << 3) - 5;
-        dynrng_tbl[i] = powf(2.0f, v) * ((i & 0x1F) | 0x20);
+        ff_ac3_dynrng_tbl[i] = powf(2.0f, v) * ((i & 0x1F) | 0x20);
     }
 
     /* generate dialogue normalization table
        references: Section 5.4.2.8 dialnorm
                    Section 7.6 Dialogue Normalization */
     for(i=1; i<32; i++) {
-        dialnorm_tbl[i] = expf((i-31) * M_LN10 / 20.0f);
+        ff_ac3_dialnorm_tbl[i] = expf((i-31) * M_LN10 / 20.0f);
     }
-    dialnorm_tbl[0] = dialnorm_tbl[31];
+    ff_ac3_dialnorm_tbl[0] = ff_ac3_dialnorm_tbl[31];
 
     /* generate scale factors for exponents and asymmetrical dequantization
        reference: Section 7.3.2 Expansion of Mantissas for Asymmetric Quantization */
     for (i = 0; i < 25; i++)
-        scale_factors[i] = pow(2.0, -i);
+        ff_ac3_scale_factors[i] = pow(2.0, -i);
 
     /* generate exponent tables
        reference: Section 7.1.3 Exponent Decoding */
     for(i=0; i<128; i++) {
-        exp_ungroup_tbl[i][0] =  i / 25;
-        exp_ungroup_tbl[i][1] = (i % 25) / 5;
-        exp_ungroup_tbl[i][2] = (i % 25) % 5;
+        ff_ac3_exp_ungroup_tbl[i][0] =  i / 25;
+        ff_ac3_exp_ungroup_tbl[i][1] = (i % 25) / 5;
+        ff_ac3_exp_ungroup_tbl[i][2] = (i % 25) % 5;
     }
 }
 
@@ -308,10 +308,10 @@ static int ac3_decode_init(AVCodecContext *avctx)
     ctx->avctx = avctx;
 
     ac3_common_init();
-    ac3_tables_init();
+    ff_ac3_tables_init();
     ff_mdct_init(&ctx->imdct_256, 8, 1);
     ff_mdct_init(&ctx->imdct_512, 9, 1);
-    ac3_window_init(ctx->window);
+    ff_ac3_window_init(ctx->window);
     dsputil_init(&ctx->dsp, avctx);
     av_init_random(0, &ctx->dith_state);
 
@@ -382,7 +382,7 @@ static int ac3_parse_header(AC3DecodeContext *ctx)
     /* read the rest of the bsi. read twice for dual mono mode. */
     i = !(ctx->acmod);
     do {
-        ctx->dialnorm[i] = dialnorm_tbl[get_bits(gb, 5)]; // dialogue normalization
+        ctx->dialnorm[i] = ff_ac3_dialnorm_tbl[get_bits(gb, 5)]; // dialogue normalization
         if (get_bits1(gb))
             skip_bits(gb, 8); //skip compression
         if (get_bits1(gb))
@@ -433,7 +433,7 @@ static int ac3_parse_header(AC3DecodeContext *ctx)
  * Decode the grouped exponents according to exponent strategy.
  * reference: Section 7.1.3 Exponent Decoding
  */
-static void decode_exponents(GetBitContext *gb, int expstr, int ngrps,
+void ff_ac3_decode_exponents(GetBitContext *gb, int expstr, int ngrps,
                              uint8_t absexp, int8_t *dexps)
 {
     int i, j, grp, grpsize;
@@ -444,9 +444,9 @@ static void decode_exponents(GetBitContext *gb, int expstr, int ngrps,
     grpsize = expstr + (expstr == EXP_D45);
     for(grp=0,i=0; grp<ngrps; grp++) {
         expacc = get_bits(gb, 7);
-        dexp[i++] = exp_ungroup_tbl[expacc][0];
-        dexp[i++] = exp_ungroup_tbl[expacc][1];
-        dexp[i++] = exp_ungroup_tbl[expacc][2];
+        dexp[i++] = ff_ac3_exp_ungroup_tbl[expacc][0];
+        dexp[i++] = ff_ac3_exp_ungroup_tbl[expacc][1];
+        dexp[i++] = ff_ac3_exp_ungroup_tbl[expacc][2];
     }
 
     /* convert to absolute exps and expand groups */
@@ -524,9 +524,9 @@ static int get_transform_coeffs_ch(AC3DecodeContext *ctx, int ch_index, mant_gro
             case 1:
                 if(m->b1ptr > 2) {
                     gcode = get_bits(gb, 5);
-                    m->b1_mant[0] = b1_mantissas[gcode][0];
-                    m->b1_mant[1] = b1_mantissas[gcode][1];
-                    m->b1_mant[2] = b1_mantissas[gcode][2];
+                    m->b1_mant[0] = ff_ac3_b1_mantissas[gcode][0];
+                    m->b1_mant[1] = ff_ac3_b1_mantissas[gcode][1];
+                    m->b1_mant[2] = ff_ac3_b1_mantissas[gcode][2];
                     m->b1ptr = 0;
                 }
                 coeffs[i] = m->b1_mant[m->b1ptr++];
@@ -535,38 +535,38 @@ static int get_transform_coeffs_ch(AC3DecodeContext *ctx, int ch_index, mant_gro
             case 2:
                 if(m->b2ptr > 2) {
                     gcode = get_bits(gb, 7);
-                    m->b2_mant[0] = b2_mantissas[gcode][0];
-                    m->b2_mant[1] = b2_mantissas[gcode][1];
-                    m->b2_mant[2] = b2_mantissas[gcode][2];
+                    m->b2_mant[0] = ff_ac3_b2_mantissas[gcode][0];
+                    m->b2_mant[1] = ff_ac3_b2_mantissas[gcode][1];
+                    m->b2_mant[2] = ff_ac3_b2_mantissas[gcode][2];
                     m->b2ptr = 0;
                 }
                 coeffs[i] = m->b2_mant[m->b2ptr++];
                 break;
 
             case 3:
-                coeffs[i] = b3_mantissas[get_bits(gb, 3)];
+                coeffs[i] = ff_ac3_b3_mantissas[get_bits(gb, 3)];
                 break;
 
             case 4:
                 if(m->b4ptr > 1) {
                     gcode = get_bits(gb, 7);
-                    m->b4_mant[0] = b4_mantissas[gcode][0];
-                    m->b4_mant[1] = b4_mantissas[gcode][1];
+                    m->b4_mant[0] = ff_ac3_b4_mantissas[gcode][0];
+                    m->b4_mant[1] = ff_ac3_b4_mantissas[gcode][1];
                     m->b4ptr = 0;
                 }
                 coeffs[i] = m->b4_mant[m->b4ptr++];
                 break;
 
             case 5:
-                coeffs[i] = b5_mantissas[get_bits(gb, 4)];
+                coeffs[i] = ff_ac3_b5_mantissas[get_bits(gb, 4)];
                 break;
 
             default:
                 /* asymmetric dequantization */
-                coeffs[i] = get_sbits(gb, qntztab[tbap]) * scale_factors[qntztab[tbap]-1];
+                coeffs[i] = get_sbits(gb, qntztab[tbap]) * ff_ac3_scale_factors[qntztab[tbap]-1];
                 break;
         }
-        coeffs[i] *= scale_factors[exps[i]];
+        coeffs[i] *= ff_ac3_scale_factors[exps[i]];
     }
 
     return 0;
@@ -804,7 +804,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
     i = !(ctx->acmod);
     do {
         if(get_bits1(gb)) {
-            ctx->dynrng[i] = dynrng_tbl[get_bits(gb, 8)];
+            ctx->dynrng[i] = ff_ac3_dynrng_tbl[get_bits(gb, 8)];
         } else if(blk == 0) {
             ctx->dynrng[i] = 1.0f;
         }
@@ -866,7 +866,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
                             ctx->cplco[ch][bnd] = cplcomant / 16.0f;
                         else
                             ctx->cplco[ch][bnd] = (cplcomant + 16.0f) / 32.0f;
-                        ctx->cplco[ch][bnd] *= scale_factors[cplcoexp + mstrcplco];
+                        ctx->cplco[ch][bnd] *= ff_ac3_scale_factors[cplcoexp + mstrcplco];
                     }
                 }
             }
@@ -938,7 +938,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
             else
                 ngrps = (ctx->endmant[ch] + grpsize - 4) / grpsize;
             ctx->dexps[ch][0] = get_bits(gb, 4) << !ch;
-            decode_exponents(gb, ctx->expstr[ch], ngrps, ctx->dexps[ch][0],
+            ff_ac3_decode_exponents(gb, ctx->expstr[ch], ngrps, ctx->dexps[ch][0],
                              &ctx->dexps[ch][ctx->startmant[ch]+!!ch]);
             if(ch != CPL_CH && ch != ctx->lfe_ch)
                 skip_bits(gb, 2); /* skip gainrng */
