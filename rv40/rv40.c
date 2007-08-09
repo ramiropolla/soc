@@ -810,7 +810,7 @@ static void rv40_pred_4x4_block(RV40DecContext *r, uint8_t *dst, int stride, int
         if(itype == DIAG_DOWN_LEFT_PRED) itype = DIAG_DOWN_LEFT_PRED_RV40_NODOWN;
         if(itype == HOR_UP_PRED) itype = HOR_UP_PRED_RV40_NODOWN;
     }
-    if(no_right){
+    if(no_right && !no_up){
         topleft = dst[-stride + 3] * 0x01010101;
         prev = &topleft;
     }
