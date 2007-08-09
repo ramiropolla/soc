@@ -666,6 +666,24 @@ static inline int get_omega(GetBitContext *gb)
 }
 
 /**
+ * Decode signed integer variable-length code constructed from variable-length codes
+ * similar to Even-Rodeh and Elias Omega codes
+ *
+ * Code is constructed from bit chunks of even length (odd length means end of code)
+ * and chunks are coded with variable-length codes too
+ */
+static inline int get_omega_signed(GetBitContext *gb)
+{
+    int code;
+
+    code = get_omega(gb);
+    if(code & 1)
+        return -(code >> 1);
+    else
+        return code >> 1;
+}
+
+/**
  * Decode macroblock information
  */
 static int rv40_decode_mb_info(RV40DecContext *r)
@@ -739,21 +757,21 @@ static int rv40_decode_mv(RV40DecContext *r, int block_type)
     case RV40_MB_B_FORWARD:
     case RV40_MB_B_BACKWARD:
     case RV40_MB_P_MIX16x16:
-        mv[0][0] = get_omega(gb);
-        mv[0][1] = get_omega(gb);
+        mv[0][0] = get_omega_signed(gb);
+        mv[0][1] = get_omega_signed(gb);
         break;
     case RV40_MB_P_16x8:
     case RV40_MB_P_8x16:
     case RV40_MB_B_DIRECT:
-        mv[0][0] = get_omega(gb);
-        mv[0][1] = get_omega(gb);
-        mv[1][0] = get_omega(gb);
-        mv[1][1] = get_omega(gb);
+        mv[0][0] = get_omega_signed(gb);
+        mv[0][1] = get_omega_signed(gb);
+        mv[1][0] = get_omega_signed(gb);
+        mv[1][1] = get_omega_signed(gb);
         break;
     case RV40_MB_P_8x8:
         for(i=0;i< 4;i++){
-            mv[i][0] = get_omega(gb);
-            mv[i][1] = get_omega(gb);
+            mv[i][0] = get_omega_signed(gb);
+            mv[i][1] = get_omega_signed(gb);
         }
         break;
     }
