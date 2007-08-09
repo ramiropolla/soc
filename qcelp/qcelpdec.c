@@ -106,7 +106,9 @@ void qcelp_decode_lspf(AVCodecContext *avctx, const QCELPFrame *frame,
         case RATE_QUARTER:
             lspv=frame->data+QCELP_LSPV0_POS;
 
-            av_log(avctx, AV_LOG_DEBUG, "LSPV:%5d,%5d,%5d,%5d,%5d\n",
+            av_log(avctx, AV_LOG_DEBUG,
+                   "-------- Decoded values from frame --------\n");
+            av_log(avctx, AV_LOG_DEBUG, "[LSPV] %5d %5d %5d %5d %5d\n",
                    lspv[0],lspv[1],lspv[2],lspv[3],lspv[4]);
 
             lspf[0]=        qcelp_lspvq1[lspv[0]].x;
@@ -121,7 +123,7 @@ void qcelp_decode_lspf(AVCodecContext *avctx, const QCELPFrame *frame,
             lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y;
 
             av_log(avctx, AV_LOG_DEBUG,
-                   "%7f %7f %7f %7f %7f %7f %7f %7f %7f %7f\n",
+                   "[LSPF] %7f %7f %7f %7f %7f %7f %7f %7f %7f %7f\n",
                    lspf[0], lspf[1], lspf[2], lspf[3], lspf[4],
                    lspf[5], lspf[6], lspf[7], lspf[8], lspf[9]);
             break;
@@ -459,13 +461,13 @@ static void qcelp_lsp2paqa(float *lspf, float *pa, float *qa)
 
     for(i=0; i<10; i++)
     {
-        pa[i]=1.0+1.0/i;
-        qa[i]=1.0-1.0/i;
+        pa[i]=1.0+1.0/(i+1);
+        qa[i]=1.0-1.0/(i+1);
 
         for(j=0; j<5; j++)
         {
-            pa[i]*=1.0-2*1.0/i*cos(M_PI*lspf[2*j  ])+pow(i,2);
-            qa[i]*=1.0-2*1.0/i*cos(M_PI*lspf[2*j+1])+pow(i,2);
+            pa[i]*=1.0-2*(1.0/(i+1))*cos(M_PI*lspf[2*j  ])+pow(i+1,-2);
+            qa[i]*=1.0-2*(1.0/(i+1))*cos(M_PI*lspf[2*j+1])+pow(i+1,-2);
         }
     }
 }
@@ -480,11 +482,6 @@ static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
 
     qcelp_lsp2paqa(lspf, pa, qa);
 
-    av_log(avctx, AV_LOG_DEBUG, "lslp2lpc: [PA] %f %f %f %f %f %f %f %f %f %f\n\
-           [QA] %f %f %f %f %f %f %f %f %f %f\n", pa[0], pa[1], pa[2], pa[3],
-           pa[4], pa[5], pa[6], pa[7], pa[8], pa[9], qa[0], qa[1], qa[2], qa[3],
-           qa[4], qa[5], qa[6], qa[7], qa[8], qa[9]);
-
     for(i=0; i< 5; i++)
             lpc[i]=-(pa[i]+qa[i])/2.0;
     for(i=5; i<10; i++)
@@ -496,7 +493,18 @@ static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
      * for(i=0, 1<10; i++)
      *     lpc[i]*=powf(0.9883, i+1);
      */
-    av_log(avctx, AV_LOG_DEBUG, "lsp2lpc:%f%f%f%f%f%f%f%f%f%f\n",
+
+    av_log(avctx, AV_LOG_DEBUG,"-------- Interpolated lspf to lpc --------\n");
+    av_log(avctx, AV_LOG_DEBUG, "[PA  ] %f %f %f %f %f %f %f %f %f %f\n",
+           pa[0], pa[1], pa[2], pa[3], pa[4],
+           pa[5], pa[6], pa[7], pa[8], pa[9]);
+    av_log(avctx, AV_LOG_DEBUG, "[QA  ] %f %f %f %f %f %f %f %f %f %f\n",
+           qa[0], qa[1], qa[2], qa[3], qa[4],
+           qa[5], qa[6], qa[7], qa[8], qa[9]);
+    av_log(avctx, AV_LOG_DEBUG, "[LSPF] %f %f %f %f %f %f %f %f %f %f\n",
+           lspf[0], lpc[1], lpc[2], lpc[3], lpc[4],
+           lspf[5], lpc[6], lpc[7], lpc[8], lpc[9]);
+    av_log(avctx, AV_LOG_DEBUG, "[LPC ] %f %f %f %f %f %f %f %f %f %f\n",
            lpc[0], lpc[1], lpc[2], lpc[3], lpc[4],
            lpc[5], lpc[6], lpc[7], lpc[8], lpc[9]);
 }
