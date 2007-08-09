@@ -1,6 +1,6 @@
 Index: configure
 ===================================================================
---- configure	(revision 9832)
+--- configure	(revision 10017)
 +++ configure	(working copy)
 @@ -70,6 +70,7 @@
    echo "                           and ffmpeg will be under GPL [default=no]"
@@ -10,15 +10,15 @@ Index: configure
    echo "  --enable-beosthreads     use BeOS threads [default=no]"
    echo "  --enable-pthreads        use pthreads [default=no]"
    echo "  --enable-w32threads      use Win32 threads [default=no]"
-@@ -575,6 +576,7 @@
-     demuxers
+@@ -570,6 +571,7 @@
+ CONFIG_LIST='
      audio_beos
      audio_oss
 +    avfilter
      avisynth
      beos_netserver
      bktr
-@@ -1826,6 +1828,7 @@
+@@ -1832,6 +1834,7 @@
  echo "shared                    ${shared-no}"
  echo "postprocessing support    ${pp-no}"
  echo "software scaler enabled   ${swscaler-no}"
@@ -26,7 +26,7 @@ Index: configure
  echo "video hooking             ${vhook-no}"
  if enabled vhook; then
      echo "Imlib2 support            ${imlib2-no}"
-@@ -2108,3 +2111,8 @@
+@@ -2110,3 +2113,8 @@
    apply libswscale.pc sed s/^Libs:.*$/Libs:/
    apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
  fi
@@ -37,7 +37,7 @@ Index: configure
 +fi
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 9832)
+--- ffplay.c	(revision 10017)
 +++ ffplay.c	(working copy)
 @@ -25,6 +25,10 @@
  #include "swscale.h"
@@ -162,21 +162,20 @@ Index: ffplay.c
          /* get a pointer on the bitmap */
          SDL_LockYUVOverlay (vp->bmp);
  
-@@ -1253,9 +1297,9 @@
+@@ -1253,16 +1297,16 @@
          pict.linesize[1] = vp->bmp->pitches[2];
          pict.linesize[2] = vp->bmp->pitches[1];
+         img_convert_ctx = sws_getCachedContext(img_convert_ctx,
+-            is->video_st->codec->width, is->video_st->codec->height,
+-            is->video_st->codec->pix_fmt,
+-            is->video_st->codec->width, is->video_st->codec->height,
++            vp->width, vp->height,
++            vp->pix_fmt,
++            vp->width, vp->height,
+             dst_pix_fmt, sws_flags, NULL, NULL, NULL);
          if (img_convert_ctx == NULL) {
--            img_convert_ctx = sws_getContext(is->video_st->codec->width,
--                    is->video_st->codec->height, is->video_st->codec->pix_fmt,
--                    is->video_st->codec->width, is->video_st->codec->height,
-+            img_convert_ctx = sws_getContext(vp->width,
-+                    vp->height, vp->pix_fmt,
-+                    vp->width, vp->height,
-                     dst_pix_fmt, sws_flags, NULL, NULL, NULL);
-             if (img_convert_ctx == NULL) {
-                 fprintf(stderr, "Cannot initialize the conversion context\n");
-@@ -1263,7 +1307,7 @@
-             }
+             fprintf(stderr, "Cannot initialize the conversion context\n");
+             exit(1);
          }
          sws_scale(img_convert_ctx, src_frame->data, src_frame->linesize,
 -                  0, is->video_st->codec->height, pict.data, pict.linesize);
@@ -184,7 +183,7 @@ Index: ffplay.c
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1333,21 +1377,12 @@
+@@ -1332,21 +1376,12 @@
      avcodec_default_release_buffer(c, pic);
  }
  
@@ -209,7 +208,7 @@ Index: ffplay.c
          if(pkt->data == flush_pkt.data){
              avcodec_flush_buffers(is->video_st->codec);
              continue;
-@@ -1356,31 +1391,217 @@
+@@ -1355,31 +1390,217 @@
          /* NOTE: ipts is the PTS of the _first_ picture beginning in
             this packet, if any */
          global_video_pkt_pts= pkt->pts;
@@ -439,7 +438,7 @@ Index: ffplay.c
      av_free(frame);
      return 0;
  }
-@@ -2131,6 +2352,12 @@
+@@ -2130,6 +2351,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -452,7 +451,7 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2475,6 +2702,9 @@
+@@ -2482,6 +2709,9 @@
  #endif
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
@@ -464,7 +463,7 @@ Index: ffplay.c
  
 Index: Makefile
 ===================================================================
---- Makefile	(revision 9832)
+--- Makefile	(revision 10017)
 +++ Makefile	(working copy)
 @@ -8,6 +8,7 @@
  
