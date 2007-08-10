@@ -21,6 +21,8 @@
 
 #include "avcodec.h"
 #include "eac3.h"
+#include "ac3dec.h"
+#include "ac3.h"
 
 static void do_imdct_256(EAC3Context *ctx, int ch)
 {
@@ -143,7 +145,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         /* apply scaling to coefficients (dialnorm, dynrng) */
         for(ch=1; ch<=c->nfchans + c->lfeon; ch++) {
             float gain=2.0f;
-            if(c->acmod == AC3_CHANNEL_MODE_DUALMONO) {
+            if(c->acmod == AC3_ACMOD_DUALMONO) {
                 gain *= ff_ac3_dialnorm_tbl[c->dialnorm[ch-1]] * ff_ac3_dynrng_tbl[c->dynrng[ch-1]];
             } else {
                 gain *= ff_ac3_dialnorm_tbl[c->dialnorm[0]] * ff_ac3_dynrng_tbl[c->dynrng[0]];
@@ -207,8 +209,8 @@ static int eac3_decode_init(AVCodecContext *avctx){
     EAC3Context *ctx = avctx->priv_data;
 
     ctx->avctx = avctx;
-    ff_ac3_decoder_tables_init();
     ac3_common_init();
+    ff_ac3_tables_init();
     av_init_random(0, &ctx->dith_state);
     ff_mdct_init(&ctx->imdct_256, 8, 1);
     ff_mdct_init(&ctx->imdct_512, 9, 1);

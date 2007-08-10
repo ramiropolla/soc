@@ -37,6 +37,7 @@
 #endif //DEBUG
 
 #include "eac3.h"
+#include "ac3dec.h"
 
 int ff_eac3_parse_syncinfo(GetBitContext *gbc, EAC3Context *s){
     GET_BITS(s->syncword, gbc, 16);
@@ -72,6 +73,7 @@ int ff_eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s){
     s->lfe_channel = s->ntchans+1;
     if(s->lfeon){
         s->nlfemant = 7;
+        s->strtmant[s->lfe_channel] = 0;
         s->endmant[s->lfe_channel] = 7;
         s->nchgrps[s->lfe_channel] = 2;
 
@@ -479,6 +481,10 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     //int grp, sbnd, n, bin;
     int seg, bnd, ch, i;
     int got_cplchan;
+    mant_groups m;
+
+    m.b1ptr = m.b2ptr = m.b4ptr = 3;
+
     /* These fields for block switch and dither flags */
     if(s->blkswe)
     {
@@ -675,9 +681,14 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     s->cplendf = s->spxbegf - 1;
                 }
 
+                av_log(s->avctx, AV_LOG_DEBUG, "cplbegf=%i cplendf=%i\n", s->cplbegf, s->cplendf);
                 // calc
                 s->strtmant[CPL_CH] = 37 + (12 * s->cplbegf);
                 s->endmant[CPL_CH] = 37 + (12 * (s->cplendf));
+                if(s->strtmant[CPL_CH] > s->endmant[CPL_CH]){
+                    av_log(s->avctx, AV_LOG_ERROR, "cplstrtmant > cplendmant [blk=%i]\n", blk);
+                    return -1;
+                }
 
                 s->cplstrtmant = s->strtmant[CPL_CH];
                 s->cplendmant = s->endmant[CPL_CH];
@@ -695,6 +706,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 //TODO calc ncplsubnd ?
                 s->ncplsubnd =  s->cplendf - s->cplbegf;
                 s->ncplbnd = s->ncplsubnd;
+                assert(!s->cplbndstrc[0]);
                 for(bnd = s->cplbegf+1; bnd < s->cplendf; bnd++){
                     s->ncplbnd -= s->cplbndstrc[bnd];
                 }
@@ -797,6 +809,12 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                             s->cplco[ch][bnd] *=  pow(2.0, -(s->cplcoexp[ch][bnd]+mstrcplco));
                         }
                     } /* cplcoe[ch] */
+                    else{
+                        if(!blk){
+                            av_log(s->avctx, AV_LOG_ERROR,  "no coupling coordinates in first block");
+                            return -1;
+                        }
+                    }
                 }
                 else /* ! chincpl[ch] */
                 {
@@ -924,7 +942,6 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     {
         if(s->cplexpstr[blk] != EXP_REUSE)
         {
-            int grp;
             /* ncplgrps derived from cplbegf, ecplbegf, cplendf, ecplendf, and cplexpstr */
             /* TODO add support for enhanced coupling */
             switch(s->chexpstr[blk][CPL_CH]){
@@ -944,7 +961,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 GET_BITS(s->cplexps[grp], gbc, 7);
             }*/
             ff_ac3_decode_exponents(gbc, s->chexpstr[blk][CPL_CH], s->nchgrps[CPL_CH],
-                    s->cplabsexp<<1, s->dexps[CPL_CH]+1);
+                    s->cplabsexp<<1, s->dexps[CPL_CH] + s->strtmant[CPL_CH]);
         }
     }
     for(ch = 1; ch <= s->nfchans; ch++) /* exponents for full bandwidth channels */
@@ -1227,13 +1244,19 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* These fields for quantized mantissa values */
 
     got_cplchan = 0;
-    ff_ac3_get_transform_coeffs(gbc, s->bap, s->dexps, s->nfchans+s->lfeon, s->chincpl, s->dithflag, s->transform_coeffs, s->strtmant, s->endmant, &s->dith_state, s->ncplbnd, s->cplbndstrc, s->cplco);
+//    ff_ac3_get_transform_coeffs(gbc, s->bap, s->dexps, s->nfchans+s->lfeon, s->chincpl, s->dithflag, s->transform_coeffs, s->strtmant, s->endmant, &s->dith_state, s->ncplbnd, s->cplbndstrc, s->cplco);
+
+    // TODO only for debug
+    for(ch=0; ch<=s->nfchans+s->lfeon; ch++)
+        memset(s->transform_coeffs[ch], 0, 256*sizeof(float));
 
     for(ch = 1; ch <= s->nfchans; ch++)
     {
         if(s->chahtinu[ch] == 0)
         {
+            ff_ac3_get_transform_coeffs_ch(&m, gbc, s->dexps[ch], s->bap[ch], s->transform_coeffs[ch], s->strtmant[ch], s->endmant[ch], &s->dith_state);
             // ff_ac3_get_transform
+            //memset(s->transform_coeffs[ch], 0, (256)*sizeof(float));
         }
         else if(s->chahtinu[ch] == 1)
         {
@@ -1379,22 +1402,54 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
         if(s->cplinu[blk] && s->chincpl[ch] && !got_cplchan)
         {
-            if(s->cplahtinu){
-                av_log(s->avctx, AV_LOG_ERROR,  "NOT IMPLEMENTED CPLINU && AHT");
-                return -1;
-            }
-#if 0
-            av_log(s->avctx, AV_LOG_ERROR,  "NOT IMPLEMENTED");
-            return -1;
+
             if(s->cplahtinu == 0)
             {
+                /*
                 for(bin = 0; bin < s->ncplmant; bin++) { // TODO ncplmant ?
                     GET_BITS(s->cplmant[bin], gbc, (0-16)); // TODO 0-16 :]
+                }
+                */
+                ff_ac3_get_transform_coeffs_ch(&m, gbc, s->dexps[CPL_CH], s->bap[CPL_CH], s->transform_coeffs[CPL_CH], s->strtmant[CPL_CH], s->endmant[CPL_CH], &s->dith_state);
+               // uncouple_channels(ctx);
+                {
+                    //TODO (form ac3)
+                    int i, j, ch, bnd, subbnd;
+
+                    subbnd = s->cplbegf+1;
+                    i = s->strtmant[CPL_CH];
+                    av_log(NULL, AV_LOG_DEBUG, "strtmant=%i endmant=%i\n", s->strtmant[CPL_CH], s->endmant[CPL_CH]);
+                    av_log(NULL, AV_LOG_DEBUG, "ncplbnd=%i ncplsubbnd=%i\n", s->ncplbnd, s->ncplsubnd);
+                    /*
+                    for(bnd=0; bnd<256; bnd++){
+                        av_log(NULL, AV_LOG_INFO, "%i: %f\n", bnd, transform_coeffs[CPL_CH][bnd]);
+                    }*/
+                    for(bnd=0; bnd<s->ncplbnd; bnd++) {
+                        do {
+                            for(j=0; j<12; j++) {
+                                for(ch=1; ch<=s->nfchans; ch++) {// TODO lfe?
+                                    if(s->chincpl[ch]) {
+                                        s->transform_coeffs[ch][i] =
+                                            s->transform_coeffs[CPL_CH][i] *
+                                            s->cplco[ch][bnd] * 8.0f;
+                                    }
+                                }
+                                av_log(NULL, AV_LOG_DEBUG, "%i ", i);
+                                i++;
+                            }
+                            av_log(NULL, AV_LOG_DEBUG, "cplbndstrc[%i] = %i bnd=%i\n ", subbnd,
+                                    s->cplbndstrc[subbnd], bnd);
+                        } while(s->cplbndstrc[subbnd++] && subbnd<=s->cplendf);
+                    }
+                    av_log(NULL, AV_LOG_DEBUG, "\n");
                 }
                 got_cplchan = 1;
             }
             else if(s->cplahtinu == 1)
             {
+                av_log(s->avctx, AV_LOG_ERROR,  "NOT IMPLEMENTED CPLINU && AHT");
+                return -1;
+#if 0
                 GET_BITS(s->cplgaqmod, gbc, 2);
                 if((s->cplgaqmod > 0x0) && (s->cplgaqmod < 0x3) )
                 {
@@ -1422,18 +1477,20 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 }
                 got_cplchan = 1;
                 s->cplahtinu = -1; /* AHT info for this frame has been read ? do not read again */
+#endif
             }
             else {
                 got_cplchan = 1;
             }
-#endif
         }
     }
+
     if(s->lfeon) /* mantissas of low frequency effects channel */
     {
         if(s->lfeahtinu == 0)
         {
             //ff_ac3_get_transform
+            ff_ac3_get_transform_coeffs_ch(&m, gbc, s->dexps[s->lfe_channel], s->bap[s->lfe_channel], s->transform_coeffs[s->lfe_channel], s->strtmant[s->lfe_channel], s->endmant[s->lfe_channel], &s->dith_state);
         }
         else if(s->lfeahtinu == 1)
         {

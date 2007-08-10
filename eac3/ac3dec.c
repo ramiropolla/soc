@@ -37,6 +37,7 @@
 #include "bitstream.h"
 #include "dsputil.h"
 #include "random.h"
+#include "ac3dec.h"
 
 /**
  * Table of bin locations for rematrixing bands

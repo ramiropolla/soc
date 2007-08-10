@@ -28,10 +28,16 @@
 #include "ac3.h"
 #include "random.h"
 
+/* override ac3.h to include coupling channel */
+#undef AC3_MAX_CHANNELS
+#define AC3_MAX_CHANNELS 7
+
 #define DBA_NEW      0x01
 #define DBA_NONE     0x02
 #define DBA_RESERVED 0x03
 #define DBA_REUSE    0x00
+
+#define AC3_MAX_COEFS   256
 
 // TODO
 #define MAX_CHANNELS AC3_MAX_CHANNELS
@@ -57,17 +63,6 @@
 #define AC3_OUTPUT_DOLBY      0x08
 #define AC3_OUTPUT_LFEON      0x10
 /** AC-3 channel mode (audio coding mode) */
-
-typedef enum {
-    AC3_CHANNEL_MODE_DUALMONO = 0,
-    AC3_CHANNEL_MODE_MONO,
-    AC3_CHANNEL_MODE_STEREO,
-    AC3_CHANNEL_MODE_3F,
-    AC3_CHANNEL_MODE_2F_1R,
-    AC3_CHANNEL_MODE_3F_1R,
-    AC3_CHANNEL_MODE_2F_2R,
-    AC3_CHANNEL_MODE_3F_2R
-} AC3ChannelMode;
 
 typedef struct EAC3Context{
     // TODO erase unused variables
