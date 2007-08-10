@@ -48,10 +48,10 @@ static const uint8_t rematrix_band_tbl[5] = { 13, 25, 37, 61, 253 };
  * table for exponent to scale_factor mapping
  * ff_ac3_scale_factors[i] = 2 ^ -i
  */
-static float ff_ac3_scale_factors[25];
+float ff_ac3_scale_factors[25];
 
 /** table for grouping exponents */
-static uint8_t ff_ac3_exp_ungroup_tbl[128][3];
+uint8_t ff_ac3_exp_ungroup_tbl[128][3];
 
 
 /** tables for ungrouping mantissas */
@@ -123,7 +123,6 @@ static const uint8_t ac3_default_coeffs[8][5][2] = {
 /* override ac3.h to include coupling channel */
 #undef AC3_MAX_CHANNELS
 #define AC3_MAX_CHANNELS 7
-#define CPL_CH 0
 
 #define AC3_OUTPUT_LFEON  8
 
@@ -485,40 +484,18 @@ static void uncouple_channels(AC3DecodeContext *ctx)
 }
 
 /**
- * Grouped mantissas for 3-level 5-level and 11-level quantization
- */
-typedef struct {
-    float b1_mant[3];
-    float b2_mant[3];
-    float b4_mant[2];
-    int b1ptr;
-    int b2ptr;
-    int b4ptr;
-} mant_groups;
-
-/**
  * Get the transform coefficients for a particular channel
  * reference: Section 7.3 Quantization and Decoding of Mantissas
  */
-static int get_transform_coeffs_ch(AC3DecodeContext *ctx, int ch_index, mant_groups *m)
+int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *exps, uint8_t *bap, float *coeffs, int start, int end, AVRandomState *dith_state)
 {
-    GetBitContext *gb = &ctx->gb;
-    int i, gcode, tbap, start, end;
-    uint8_t *exps;
-    uint8_t *bap;
-    float *coeffs;
-
-    exps = ctx->dexps[ch_index];
-    bap = ctx->bap[ch_index];
-    coeffs = ctx->transform_coeffs[ch_index];
-    start = ctx->startmant[ch_index];
-    end = ctx->endmant[ch_index];
+    int i, gcode, tbap;
 
     for (i = start; i < end; i++) {
         tbap = bap[i];
         switch (tbap) {
             case 0:
-                coeffs[i] = ((av_random(&ctx->dith_state) & 0xFFFF) * LEVEL_MINUS_3DB) / 32768.0f;
+                coeffs[i] = ((av_random(dith_state) & 0xFFFF) * LEVEL_MINUS_3DB) / 32768.0f;
                 break;
 
             case 1:
@@ -618,13 +595,13 @@ static int get_transform_coeffs(AC3DecodeContext * ctx)
 
     for (ch = 1; ch <= ctx->nchans; ch++) {
         /* transform coefficients for full-bandwidth channel */
-        if (get_transform_coeffs_ch(ctx, ch, &m))
+        if (ff_ac3_get_transform_coeffs_ch(&m, &ctx->gb, ctx->dexps[ch], ctx->bap[ch], ctx->transform_coeffs[ch], ctx->startmant[ch], ctx->endmant[ch], &ctx->dith_state))
             return -1;
         /* tranform coefficients for coupling channel come right after the
            coefficients for the first coupled channel*/
         if (ctx->chincpl[ch])  {
             if (!got_cplchan) {
-                if (get_transform_coeffs_ch(ctx, CPL_CH, &m)) {
+                if (ff_ac3_get_transform_coeffs_ch(&m, &ctx->gb, ctx->dexps[CPL_CH], ctx->bap[CPL_CH], ctx->transform_coeffs[CPL_CH], ctx->startmant[CPL_CH], ctx->endmant[CPL_CH], &ctx->dith_state)){
                     av_log(ctx->avctx, AV_LOG_ERROR, "error in decoupling channels\n");
                     return -1;
                 }

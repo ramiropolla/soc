@@ -29,6 +29,9 @@
 
 #include "ac3tab.h"
 #include "bitstream.h"
+#include "random.h"
+
+#define CPL_CH 0
 
 #define AC3_MAX_CODED_FRAME_SIZE 3840 /* in bytes */
 #define AC3_MAX_CHANNELS 6 /* including LFE channel */
@@ -177,11 +180,11 @@ void ff_ac3_window_init(float *window);
 void ff_ac3_tables_init(void);
 
 /** tables for ungrouping mantissas */
-extern float ff_b1_mantissas[32][3];
-extern float ff_b2_mantissas[128][3];
-extern float ff_b3_mantissas[8];
-extern float ff_b4_mantissas[128][2];
-extern float ff_b5_mantissas[16];
+extern float ff_ac3_b1_mantissas[32][3];
+extern float ff_ac3_b2_mantissas[128][3];
+extern float ff_ac3_b3_mantissas[8];
+extern float ff_ac3_b4_mantissas[128][2];
+extern float ff_ac3_b5_mantissas[16];
 
 /** dynamic range table. converts codes to scale factors. */
 extern float ff_ac3_dynrng_tbl[256];
@@ -204,5 +207,21 @@ extern uint8_t ff_ac3_exp_ungroup_tbl[128][3];
  */
 void ff_ac3_decode_exponents(GetBitContext *gb, int expstr, int ngrps,
                              uint8_t absexp, int8_t *dexps);
+
+/**
+ * Grouped mantissas for 3-level 5-level and 11-level quantization
+ */
+typedef struct {
+    float b1_mant[3];
+    float b2_mant[3];
+    float b4_mant[2];
+    int b1ptr;
+    int b2ptr;
+    int b4ptr;
+} mant_groups;
+
+int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *exps,
+        uint8_t *bap, float *coeffs, int start, int end, AVRandomState *dith_state);
+
 
 #endif /* AC3_H */
