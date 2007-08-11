@@ -208,7 +208,7 @@ Index: ffplay.c
          if(pkt->data == flush_pkt.data){
              avcodec_flush_buffers(is->video_st->codec);
              continue;
-@@ -1355,31 +1390,217 @@
+@@ -1355,31 +1390,216 @@
          /* NOTE: ipts is the PTS of the _first_ picture beginning in
             this packet, if any */
          global_video_pkt_pts= pkt->pts;
@@ -269,18 +269,14 @@ Index: ffplay.c
 +    av_free(priv->frame);
 +}
 +
-+static void input_request_frame(AVFilterLink *link)
++static int input_request_frame(AVFilterLink *link)
 +{
 +    FilterPriv *priv = link->src->priv;
 +    AVFilterPicRef *picref;
 +    uint64_t pts;
 +
-+    if(!get_video_frame(priv->is, priv->frame, &pts)) {
-+        /* FIXME: we need a way to signal to the following filters that
-+         * we have reached the end of the video */
-+        av_log(link->src, AV_LOG_ERROR, "cannot get next frame\n");
-+        return;
-+    }
++    if(!get_video_frame(priv->is, priv->frame, &pts))
++        return -1;
 +
 +    /* FIXME: until I figure out how to hook everything up to the codec
 +     * right, we're just copying the entire frame. */
@@ -293,6 +289,8 @@ Index: ffplay.c
 +    avfilter_draw_slice(link, picref->data, 0, picref->h);
 +    avfilter_end_frame(link);
 +    avfilter_unref_pic(picref);
++
++    return 0;
 +}
 +
 +static int *input_query_formats(AVFilterLink *link)
@@ -347,7 +345,8 @@ Index: ffplay.c
 +{
 +    AVFilterPicRef *pic;
 +
-+    avfilter_request_frame(ctx->inputs[0]);
++    if(avfilter_request_frame(ctx->inputs[0]))
++        return 0;
 +    if(!(pic = ctx->inputs[0]->cur_pic))
 +        return 0;
 +    ctx->inputs[0]->cur_pic = NULL;
@@ -438,7 +437,7 @@ Index: ffplay.c
      av_free(frame);
      return 0;
  }
-@@ -2130,6 +2351,12 @@
+@@ -2130,6 +2350,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -451,7 +450,7 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2482,6 +2709,9 @@
+@@ -2482,6 +2708,9 @@
  #endif
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
