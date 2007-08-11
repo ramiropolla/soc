@@ -44,7 +44,7 @@ static int config_props(AVFilterLink *link)
     return 0;
 }
 
-static void request_frame(AVFilterLink *link)
+static int request_frame(AVFilterLink *link)
 {
     DummyContext *ctx = link->src->priv;
     AVFilterPicRef *pic;
@@ -72,6 +72,8 @@ static void request_frame(AVFilterLink *link)
 
     avfilter_end_frame(link);
     avfilter_unref_pic(pic);
+
+    return 0;
 }
 
 AVFilter vsrc_dummy =

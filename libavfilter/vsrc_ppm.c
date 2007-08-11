@@ -65,7 +65,7 @@ static int config_props(AVFilterLink *link)
     return 0;
 }
 
-static void request_frame(AVFilterLink *link)
+static int request_frame(AVFilterLink *link)
 {
     PPMContext *ppm = link->src->priv;
     AVFilterPicRef *out;
@@ -91,6 +91,8 @@ static void request_frame(AVFilterLink *link)
     avfilter_start_frame(link, out);
     avfilter_draw_slice(link, out->data, 0, out->h);
     avfilter_end_frame(link);
+
+    return 0;
 }
 
 static void uninit(AVFilterContext *ctx)
