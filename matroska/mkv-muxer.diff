@@ -1,17 +1,18 @@
 diff --git a/libavformat/Makefile b/libavformat/Makefile
-index 794d212..91ab90c 100644
+index 794d212..c033b68 100644
 --- a/libavformat/Makefile
 +++ b/libavformat/Makefile
-@@ -72,6 +72,7 @@ OBJS-$(CONFIG_IPMOVIE_DEMUXER)           += ipmovie.o
+@@ -72,6 +72,8 @@ OBJS-$(CONFIG_IPMOVIE_DEMUXER)           += ipmovie.o
  OBJS-$(CONFIG_M4V_DEMUXER)               += raw.o
  OBJS-$(CONFIG_M4V_MUXER)                 += raw.o
  OBJS-$(CONFIG_MATROSKA_DEMUXER)          += matroskadec.o matroska.o riff.o
 +OBJS-$(CONFIG_MATROSKA_MUXER)            += matroskaenc.o matroska.o riff.o
++OBJS-$(CONFIG_MATROSKA_AUDIO_MUXER)      += matroskaenc.o matroska.o riff.o
  OBJS-$(CONFIG_MJPEG_DEMUXER)             += raw.o
  OBJS-$(CONFIG_MJPEG_MUXER)               += raw.o
  OBJS-$(CONFIG_MM_DEMUXER)                += mm.o
 diff --git a/libavformat/allformats.c b/libavformat/allformats.c
-index a71f1bf..a5bedd5 100644
+index a71f1bf..60c2cae 100644
 --- a/libavformat/allformats.c
 +++ b/libavformat/allformats.c
 @@ -91,7 +91,8 @@ void av_register_all(void)
@@ -20,7 +21,7 @@ index a71f1bf..a5bedd5 100644
      REGISTER_MUXDEMUX(M4V, m4v);
 -    REGISTER_DEMUXER (MATROSKA, matroska);
 +    REGISTER_MUXDEMUX(MATROSKA, matroska);
-+    REGISTER_MUXER   (MATROSKA, matroska_audio);
++    REGISTER_MUXER   (MATROSKA_AUDIO, matroska_audio);
      REGISTER_MUXDEMUX(MJPEG, mjpeg);
      REGISTER_DEMUXER (MM, mm);
      REGISTER_MUXDEMUX(MMF, mmf);
