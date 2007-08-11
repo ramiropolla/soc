@@ -11,6 +11,7 @@ OBJS-yes = vsrc_dummy.o \
            vsrc_ppm.o \
            vo_sdl.o \
            vf_crop.o \
+           vf_fps.o \
            vf_passthrough.o \
            vf_rgb2bgr.o \
            vf_slicify.o \
