@@ -40,8 +40,8 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
     if(args && sscanf(args, "%d", &framerate))
         fps->timebase = 1000 / framerate;
     else
-        /* default to 15 fps for no apparent reason */
-        fps->timebase = 1000 / 15;
+        /* default to 25 fps */
+        fps->timebase = 1000 / 25;
 
     fps->pts = 0;
 
