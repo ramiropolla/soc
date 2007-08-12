@@ -48,6 +48,8 @@ typedef struct {
     uint8_t       erasure_count;
     uint8_t       ifq_count;
     float         prev_lspf[10];
+    float         pitchf_mem[144];
+    float         ppitchf_mem[144];
 } QCELPContext;
 
 static int qcelp_decode_init(AVCodecContext *avctx);
@@ -55,6 +57,15 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            int *data_size, uint8_t *buf, int buf_size);
 static int qcelp_decode_close(AVCodecContext *avctx);
 
+
+static void qcelp_update_pitchf_mem(float *pitchf_mem, float last)
+{
+    float tmp[144];
+
+    memcpy(tmp, pitchf_mem+1, 143*sizeof(float));
+    pitchf_mem[143]=last;
+    memcpy(pitchf_mem, tmp, 143*sizeof(float));
+}
 
 static int qcelp_decode_init(AVCodecContext *avctx)
 {
@@ -72,6 +83,9 @@ static int qcelp_decode_init(AVCodecContext *avctx)
 
     for(i=0; i<10; i++)
         q->prev_lspf[i]=0.0;
+
+    for(i=0; i<144; i++)
+        q->pitchf_mem[i]=q->ppitchf_mem[i]=0.0;
 
     return 0;
 }
@@ -284,7 +298,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
 /**
  * Computes hammsinc(x), this will be replaced by a lookup table
  */
-static float qcelp_hammsinc(int i)
+static float qcelp_hammsinc(float i)
 {
     return (sin(M_PI*i)/(M_PI*i))*(0.5+0.46*cos(M_PI*i/4));
 }
@@ -348,11 +362,12 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
  *
  * WIP (but should work)
  */
-static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pv, float *ppv)
+static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitchf_mem,
+           float *ppitchf_mem, float *pv, float *ppv)
 {
-    int     i,j;
+    int     i, j, tmp;
     uint8_t *pgain, *plag, *pfrac;
-    float   gain1, gain2, lag;
+    float   gain1[4], gain2[4], lag[4], lagged_out;
 
     switch(frame->rate)
     {
@@ -363,38 +378,71 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pv, float *ppv)
             plag =frame->data+QCELP_PLAG0_POS;
             pfrac=frame->data+QCELP_PFRAC0_POS;
 
+            /**
+             * Compute Gain & Lag
+             */
+
+            for(i=0; i<4; i++)
+            {
+                gain1[i]=plag[i]? (pgain[i]+1)/4.0 : 0.0;
+                gain2[i]=0.5*FFMIN(gain1[i],1.0);
+                lag[i]  =plag[i]+16;
+
+                if(pfrac[i])
+                    lag[i]+=0.5;
+
+
+                if(lag[i] == 140.5 || lag[i] == 141.5 || lag[i] == 142.5)
+                    return -1;
+            }
+
+            /**
+             * Apply pitch and pre pitch filters in tandem
+             */
+
             for(i=0; i<160; i++)
             {
-                gain1=plag[i/40]? (pgain[i/40]+1)/4.0 : 0.0;
-                gain2=0.5*FFMIN(gain1,1.0);
-                lag=plag[i/40]+16+0.5*pfrac[i/40];
+                ppv[i]=pv[i];
 
-                if(lag == 140.5 || lag == 141.5 || lag == 142.5)
-                    return -1;
-
-                if(pfrac[i/40]==1) /* if is a fractional lag... */
+                if(pfrac[i/40]) /* if is a fractional lag... */
                 {
                     for(j=-4; j<4; j++)
                     {
-                        if(i + j - lag + 0.5 < 0)
-                            break; /*XXX may be unneded */
+                        tmp = i+j+0.5-lag[i/40];
 
-                        /* WIP this will get simpler soon */
-                        pv [i]+=gain1*qcelp_hammsinc(j+0.5)*
-                                pv [i + j - (int)(lag + 0.5)];
-                        ppv[i]+=gain2*qcelp_hammsinc(j+0.5)*
-                                ppv[i + j - (int)(lag + 0.5)];
+                        if(tmp < 0)
+                        {
+                            pv [i]+=gain1[i/40]*qcelp_hammsinc(j+0.5)
+                                    * pitchf_mem[144+tmp];
+                            ppv[i]+=gain2[i/40]*qcelp_hammsinc(j+0.5)
+                                    *ppitchf_mem[144+tmp];
+                        }else
+                        {
+                            pv [i]+=gain1[i/40]*qcelp_hammsinc(j+0.5)*pv [tmp];
+                            ppv[i]+=gain2[i/40]*qcelp_hammsinc(j+0.5)*ppv[tmp];
+                        }
                     }
-                    if(j<4) break;
 
-                }else if(i >= lag) /*XXX may be unneded*/
-                {
-                    pv [i]+=gain1*pv [i - (int)lag];
-                    ppv[i]+=gain2*ppv[i - (int)lag];
                 }else
-                    break; /* shouldn't happen */
+                {
+                    tmp=i-lag[i/40];
+
+                    if(tmp < 0)
+                    {
+                        pv [i]+=gain1[i/40]* pitchf_mem[144+tmp];
+                        ppv[i]+=gain2[i/40]*ppitchf_mem[144+tmp];
+                    }else
+                    {
+                        pv [i]+=gain1[i/40]*pv [i - lrintf(lag[i/40])];
+                        ppv[i]+=gain2[i/40]*ppv[i - lrintf(lag[i/40])];
+                    }
+
+
+                }
+
+                qcelp_update_pitchf_mem( pitchf_mem,  pv[i]);
+                qcelp_update_pitchf_mem(ppitchf_mem, ppv[i]);
             }
-            if(i < 160) return i;
 
             break;
         case RATE_QUARTER:
@@ -719,8 +767,17 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     if(!is_ifq)
     {
         qcelp_compute_svector(q->frame->rate, gain, index, cbseed, cdn_vector);
+
+        av_log(avctx, AV_LOG_DEBUG, "-------- Pre pitch filters --------\n");
+        av_log(avctx, AV_LOG_DEBUG, "[CDN_VECTOR]:\n");
+        for(i=0; i<160; i++)
+        {
+            av_log(avctx, AV_LOG_DEBUG, " %f", cdn_vector[i]);
+        }
         /* pitch filter */
-        if((is_ifq = qcelp_do_pitchfilter(q->frame, cdn_vector, ppf_vector)))
+        if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchf_mem,
+                                          q->ppitchf_mem, cdn_vector,
+                                          ppf_vector)))
         {
             av_log(avctx, AV_LOG_ERROR, "Error can't pitch cdn_vector[%d]\n",
                    is_ifq);
@@ -728,21 +785,55 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         }
     }
 
+    av_log(avctx, AV_LOG_DEBUG, "-------- Post pitch filters --------\n");
+    av_log(avctx, AV_LOG_DEBUG, "[CDN_VECTOR]:\n");
+    for(i=0; i<160; i++)
+    {
+        av_log(avctx, AV_LOG_DEBUG, " %f", cdn_vector[i]);
+    }
+
+    av_log(avctx, AV_LOG_DEBUG, "[PPF_VECTOR]:\n");
+    for(i=0; i<160; i++)
+    {
+        av_log(avctx, AV_LOG_DEBUG, " %f", ppf_vector[i]);
+    }
+    av_log(avctx, AV_LOG_DEBUG, "\n");
+
     /* pitch gain control */
     qcelp_apply_gain_ctrl(0, cdn_vector, ppf_vector);
+
+    av_log(avctx, AV_LOG_DEBUG, "-------- Post Gain control --------\n");
+    av_log(avctx, AV_LOG_DEBUG, "[CDN_VECTOR]:\n");
+    for(i=0; i<160; i++)
+    {
+        av_log(avctx, AV_LOG_DEBUG, " %f", cdn_vector[i]);
+    }
+    av_log(avctx, AV_LOG_DEBUG, "\n");
+
+    av_log(avctx, AV_LOG_DEBUG, "[PPF_VECTOR]:\n");
+    for(i=0; i<160; i++)
+    {
+        av_log(avctx, AV_LOG_DEBUG, " %f", ppf_vector[i]);
+    }
+    av_log(avctx, AV_LOG_DEBUG, "\n");
+
     /* lsp freq interpolation */
     qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf);
     /* get lpc coeficients */
     qcelp_lsp2lpc(avctx, qtzd_lspf, lpc);
     /* Apply formant synthesis filter over the pitch prefilter output. */
+    av_log(avctx, AV_LOG_DEBUG, "-------- Output --------\n");
     for(i=0; i<160; i++)
     {
         ppf_vector[i]=1.0/qcelp_prede_filter(lpc, ppf_vector[i]);
+        av_log(avctx, AV_LOG_DEBUG, " %f/", ppf_vector[i]);
         /* WIP adaptive postfilter here */
 
         /* output stage */
         outbuffer[i]=av_clip(lrintf(ppf_vector[i]), -32768, 32767);
+        av_log(avctx, AV_LOG_DEBUG, "%d", outbuffer[i]);
     }
+    av_log(avctx, AV_LOG_DEBUG, "\n");
 
     if(is_ifq)
     {
