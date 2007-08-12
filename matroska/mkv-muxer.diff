@@ -1,13 +1,14 @@
 diff --git a/libavformat/Makefile b/libavformat/Makefile
-index 794d212..c033b68 100644
+index 794d212..7bbd0e2 100644
 --- a/libavformat/Makefile
 +++ b/libavformat/Makefile
-@@ -72,6 +72,8 @@ OBJS-$(CONFIG_IPMOVIE_DEMUXER)           += ipmovie.o
+@@ -71,7 +71,9 @@ OBJS-$(CONFIG_INGENIENT_DEMUXER)         += raw.o
+ OBJS-$(CONFIG_IPMOVIE_DEMUXER)           += ipmovie.o
  OBJS-$(CONFIG_M4V_DEMUXER)               += raw.o
  OBJS-$(CONFIG_M4V_MUXER)                 += raw.o
++OBJS-$(CONFIG_MATROSKA_AUDIO_MUXER)      += matroskaenc.o matroska.o riff.o
  OBJS-$(CONFIG_MATROSKA_DEMUXER)          += matroskadec.o matroska.o riff.o
 +OBJS-$(CONFIG_MATROSKA_MUXER)            += matroskaenc.o matroska.o riff.o
-+OBJS-$(CONFIG_MATROSKA_AUDIO_MUXER)      += matroskaenc.o matroska.o riff.o
  OBJS-$(CONFIG_MJPEG_DEMUXER)             += raw.o
  OBJS-$(CONFIG_MJPEG_MUXER)               += raw.o
  OBJS-$(CONFIG_MM_DEMUXER)                += mm.o
