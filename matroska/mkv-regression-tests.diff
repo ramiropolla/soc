@@ -1,0 +1,100 @@
+commit db5f8088a45c50de71dd7582ceb2ce819ea30be4
+Author: David Conrad <davedc@crescens.myhome.westell.com>
+Date:   Sat Aug 11 16:26:11 2007 -0400
+
+    Regression tests for mkv
+
+diff --git a/tests/libav.regression.ref b/tests/libav.regression.ref
+index 13b445c..3508277 100644
+--- a/tests/libav.regression.ref
++++ b/tests/libav.regression.ref
+@@ -34,6 +34,9 @@ f8ad5bd78f4d012a8ce9570aa395ac54 *./tests/data/b-libav.flv
+ 1df60f0160da3aa6502e886591ca95c0 *./tests/data/b-libav.nut
+ 331017 ./tests/data/b-libav.nut
+ ./tests/data/b-libav.nut CRC=0x400c29e9
++526c5c2a84174337506f537a9f5d8076 *./tests/data/b-libav.mkv
++329853 ./tests/data/b-libav.mkv
++./tests/data/b-libav.mkv CRC=0x400c29e9
+ 9a9da315747599f7718cc9a9a09c21ff *./tests/data/b-libav.pbm
+  317075 ./tests/data/b-libav.pbm
+ ./tests/data/b-libav.pbm CRC=0xb92906cb
+diff --git a/tests/regression.sh b/tests/regression.sh
+index 34acc1c..7580e86 100755
+--- a/tests/regression.sh
++++ b/tests/regression.sh
+@@ -638,6 +638,9 @@ do_libav gxf "-ar 48000 -r 25 -s pal -ac 1"
+ # nut
+ do_libav nut "-acodec mp2"
+ 
++# mkv
++do_libav mkv
++
+ 
+ ####################
+ # streamed images
+diff --git a/tests/seek.regression.ref b/tests/seek.regression.ref
+index 798632b..5d9bb0a 100644
+--- a/tests/seek.regression.ref
++++ b/tests/seek.regression.ref
+@@ -2888,6 +2888,61 @@ ret: 0 st: 0 dts:0.480000 pts:-184467440737095520.000000 pos:376324 size:54324 f
+ ret: 0 st:-1 ts:-0.645825 flags:1
+ ret: 0 st: 0 dts:0.000000 pts:-184467440737095520.000000 pos:748 size:55568 flags:1
+ ----------------
++tests/data/b-libav.mkv
++ret: 0 st: 0 dts:0.000000 pts:0.000000 pos:468 size:28118 flags:1
++ret: 0 st:-1 ts:-1.000000 flags:0
++ret:-5
++ret: 0 st:-1 ts:1.894167 flags:1
++ret:-5
++ret: 0 st: 0 ts:0.788000 flags:0
++ret:-5
++ret: 0 st: 0 ts:-0.317000 flags:1
++ret:-5
++ret: 0 st: 1 ts:2.577000 flags:0
++ret:-5
++ret: 0 st: 1 ts:1.471000 flags:1
++ret:-5
++ret: 0 st:-1 ts:0.365002 flags:0
++ret:-5
++ret: 0 st:-1 ts:-0.740831 flags:1
++ret:-5
++ret: 0 st: 0 ts:2.153000 flags:0
++ret:-5
++ret: 0 st: 0 ts:1.048000 flags:1
++ret:-5
++ret: 0 st: 1 ts:-0.058000 flags:0
++ret:-5
++ret: 0 st: 1 ts:2.836000 flags:1
++ret:-5
++ret: 0 st:-1 ts:1.730004 flags:0
++ret:-5
++ret: 0 st:-1 ts:0.624171 flags:1
++ret:-5
++ret: 0 st: 0 ts:-0.482000 flags:0
++ret:-5
++ret: 0 st: 0 ts:2.413000 flags:1
++ret:-5
++ret: 0 st: 1 ts:1.307000 flags:0
++ret:-5
++ret: 0 st: 1 ts:0.201000 flags:1
++ret:-5
++ret: 0 st:-1 ts:-0.904994 flags:0
++ret:-5
++ret: 0 st:-1 ts:1.989173 flags:1
++ret:-5
++ret: 0 st: 0 ts:0.883000 flags:0
++ret:-5
++ret: 0 st: 0 ts:-0.222000 flags:1
++ret:-5
++ret: 0 st: 1 ts:2.672000 flags:0
++ret:-5
++ret: 0 st: 1 ts:1.566000 flags:1
++ret:-5
++ret: 0 st:-1 ts:0.460008 flags:0
++ret:-5
++ret: 0 st:-1 ts:-0.645825 flags:1
++ret:-5
++----------------
+ tests/data/b-libav.mmf
+ ret: 0 st: 0 dts:0.000000 pts:0.000000 pos:-1 size:4096 flags:1
+ ret:-1 st:-1 ts:-1.000000 flags:0
