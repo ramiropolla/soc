@@ -141,9 +141,7 @@ typedef struct EAC3Context{
     int spxattene; // 1);            ///< Spectral extension attenuation enabled
     int cplinu[MAX_BLOCKS]; // 1);   ///< Coupling in use
     int cplstre[MAX_BLOCKS]; // 1);  ///< Coupling strategy exists
-    int cplexpstr[MAX_BLOCKS]; // 2);///< Coupling exponents strategy
     int chexpstr[MAX_BLOCKS][MAX_CHANNELS]; // 2); ///< Channel exponent strategy
-    int frmcplexpstr; // 5);         ///< Frame based coupling exponent strategy
     int frmchexpstr[MAX_CHANNELS];   ///< frame based channel exponent strategy
     int lfeexpstr[MAX_BLOCKS];       ///< Lfe exponent strategy
     int convexpstr[MAX_CHANNELS];    ///< Converter channel exponent strategy
@@ -193,10 +191,7 @@ typedef struct EAC3Context{
     int ecplbndstrce; // 1);         ///< Enhanced coupling band structure exists
     int ecplbndstrc[TODO_SIZE];      ///< Enhanced coupling band structure
     int cplcoe[MAX_CHANNELS];        ///< Coupling coordinates exists
-    int mstrcplco[MAX_CHANNELS];     ///< Master coupling coordinates
-    int cplcoexp[MAX_CHANNELS][TODO_SIZE]; ///< Coupling coordinate exponent
-    int cplcomant[MAX_CHANNELS][TODO_SIZE]; ///< Coupling coordinate mantissa
-    int phsflg[TODO_SIZE]; // 1);    ///< Phase flag
+    int phsflg[18]; // 1);           ///< Phase flag
     int ecplangleintrp; // 1);       ///< Enhanced coupling angle interpolation flag
     int ecplparam1e[MAX_CHANNELS];   ///< Enhanced coupling parameters 1 exists
     int ecplparam2e[MAX_CHANNELS];   ///< Enhanced coupling parameters 2 exists
@@ -208,7 +203,6 @@ typedef struct EAC3Context{
     int rematflg[TODO_SIZE]; // 1);  ///< Rematrixing flag
     int chbwcod[MAX_CHANNELS];       ///< Rematrixing strategy
     int cplabsexp; // 4);            ///< Coupling absolute exponent
-    int cplexps[TODO_SIZE]; // 7);   ///< Coupling exponent
 
     int gainrng[MAX_CHANNELS];  ///< Channel Gain range code
 //    int lfeexps[3]; // 7); // 0...nlfegrps = const 0...2
@@ -225,14 +219,10 @@ typedef struct EAC3Context{
     int fsnroffst[MAX_CHANNELS];     ///< Channel fine SNR offset
     int lfefsnroffst; // 4);         ///< Lfe fine SNR offset
     int fgaincode; // 1);            ///< Channel fast gain code enabled
-    int cplfgaincod; // 3);          ///< Coupling fast gain code code
     int fgaincod[MAX_CHANNELS];      ///< Channel fast gain code
-    int lfefgaincod; // 3);          ///< Lfe fast gain code
     int convsnroffste; // 1);        ///< Converter SNR offset exists
     int convsnroffst; // 10);        ///< Converter SNR offset
     int cplleake; // 1);             ///< Coupling leak initialization exists
-    int cplfleak; // 3);             ///< Coupling fast leak initialization
-    int cplsleak; // 3);             ///< Coupling slow leak initialization
     int deltbaie; // 1);             ///< Delta bit allocation information exists
     int cpldeltbae; // 2);           ///< Coupling delta bit allocation exists
     uint8_t deltbae[MAX_CHANNELS];   ///< Delta bit allocation exists
@@ -244,16 +234,11 @@ typedef struct EAC3Context{
     uint8_t deltoffst[MAX_CHANNELS][9]; ///< Channel delta bit allocation offset
     uint8_t deltlen[MAX_CHANNELS][9];   ///< Channel delta bit allocation length
     uint8_t deltba[MAX_CHANNELS][9];    ///< Channel delta bit allocation
-    int skiple; // 1);               ///< Skip length exists
-    int skipl; // 9);                ///< Skip length
-    int skipfld; // TODO skipl * 8); ///< Skip field
 
     int got_cplchan;
-//    int chmant[MAX_CHANNELS][TODO_SIZE];
     int chgaqmod[MAX_CHANNELS];                 ///< Channel gain adaptive quantization mode
     int chgaqgain[MAX_CHANNELS][TODO_SIZE];     ///< Channel gain adaptive quantization gain
     float pre_chmant[6][MAX_CHANNELS][TODO_SIZE];///< Pre channel mantissas
-    int cplmant[TODO_SIZE]; // cplmant          ///< Coupling mantisass
     int cplgaqmod;                              ///< Coupling channel gain adaptive quantization mode
     int cplgaqgain[TODO_SIZE];                  ///< Coupling gain adaptive quantization gain
     int pre_cplmant[6][TODO_SIZE];              ///< Pre coupling channel_mantissas
@@ -282,15 +267,10 @@ typedef struct EAC3Context{
     int ncplsubnd;                     ///< Number of coupling sub-bands
     int ncplbnd;                       ///< Number of structured coupled bands
     int nrematbnds;
-    int ncplgrps;                      ///< Number of coupled exponent groups
-    int ncplmant;                      ///< Number of coupled mantissas
 
-    int nlfemant;                      ///< Number of lfe mantissas
     int nchgrps[MAX_CHANNELS];         ///< Number of fbw channel exponent groups
     uint8_t dexps[MAX_CHANNELS][AC3_MAX_COEFS]; ///< Differential exponents
 
-    int cplstrtmant;
-    int cplendmant;
     int endmant[MAX_CHANNELS];
     int strtmant[MAX_CHANNELS];
     int firstchincpl;
