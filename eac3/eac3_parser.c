@@ -39,6 +39,8 @@
 #include "eac3.h"
 #include "ac3dec.h"
 
+void spectral_extension(EAC3Context *s);
+
 int ff_eac3_parse_syncinfo(GetBitContext *gbc, EAC3Context *s){
     GET_BITS(s->syncword, gbc, 16);
     return 0;
@@ -440,6 +442,9 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
                 GET_BITS(s->spxattencod[ch], gbc, 5);
             }
         }
+    }else{
+        for(ch = 1; ch <= s->nfchans; ch++)
+            s->chinspxatten[ch]=0;
     }
     /* These fields for block start information */
     if (s->numblkscod != 0x0) {
@@ -1452,6 +1457,10 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 got_cplchan = 1;
             }
         }
+
+        //apply spectral extension
+        if(s->spxinu)
+            spectral_extension(s);
     }
 
     if(s->lfeon) /* mantissas of low frequency effects channel */
@@ -1502,4 +1511,119 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 int ff_eac3_parse_auxdata(GetBitContext *gbc, EAC3Context *s){
     // TODO
     return 0;
+}
+
+void spectral_extension(EAC3Context *s){
+#if 0
+    int copystartmant, copyendmant, copyindex, insertindex;
+    int wrapflag[18];
+    int bandsize, bnd, bin, spxmant, filtbin, ch;
+    float nratio, accum, nscale, sscale, spxcotemp;
+    float noffset[AC3_MAX_CHANNELS], nblendfact[AC3_MAX_CHANNELS][18], sblendfact[AC3_MAX_CHANNELS][18];
+    float rmsenergy[AC3_MAX_CHANNELS][18];
+
+    //XXX spxbandtable[bnd] = 25 + 12 * bnd ?
+
+    copystartmant = spxbandtable[s->spxstrtf];
+    copyendmant = spxbandtable[s->spxbegf];
+
+    for(ch = 1; ch <= s->nfchans; ch++){
+        if(!s->chinspx[ch])
+            continue;
+
+        copyindex = copystartmant;
+        insertindex = copyendmant;
+
+        for (bnd = 0; bnd < s->nspxbnds; bnd++){
+            bandsize = s->spxbndsztab[bnd];
+            if ((copyindex + bandsize) > copyendmant){
+                copyindex = copystartmant;
+                wrapflag[bnd] = 1;
+            }else
+                wrapflag[bnd] = 0;
+            for (bin = 0; bin < bandsize; bin++){
+                if (copyindex == copyendmant)
+                    copyindex = copystartmant;
+                s->transform_coeffs[ch][insertindex++] = s->transform_coeffs[ch][copyindex++];
+            }
+        }
+
+        noffset[ch] = s->spxblnd[ch] / 32.0;
+        spxmant = spxbandtable[s->spxbegf];
+        if (s->spxcoe[ch]){
+            for (bnd = 0; bnd < s->nspxbnds; bnd++){
+                bandsize = s->spxbndsztab[bnd];
+                nratio = ((spxmant + 0.5*bandsize) / spxbandtable[s->spxendf]) - noffset[ch];
+                if (nratio < 0.0)
+                    nratio = 0.0;
+                else if (nratio > 1.0)
+                    nratio = 1.0;
+                nblendfact[ch][bnd] = sqrt(nratio);
+                sblendfact[ch][bnd] = sqrt(1 - nratio);
+                spxmant += bandsize;
+            }
+        }
+
+        spxmant = spxbandtable[s->spxbegf];
+        for (bnd = 0; bnd < s->nspxbnds; bnd++){
+            bandsize = s->spxbndsztab[bnd];
+            accum = 0;
+            for (bin = 0; bin < bandsize; bin++){
+                accum += (s->transform_coeffs[ch][spxmant] * s->transform_coeffs[ch][spxmant]);
+                spxmant++;
+            }
+            rmsenergy[ch][bnd] = sqrt(accum / bandsize);
+        }
+
+        if (s->chinspxatten[ch]){
+            /* apply notch filter at baseband / extension region border */
+            filtbin = spxbandtable[s->spxbegf] - 2;
+            for (bin = 0; bin < 3; bin++){
+                s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
+                filtbin++;
+            }
+            for (bin = 1; bin >= 0; bin--){
+                s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
+                filtbin++;
+            }
+            filtbin += s->spxbndsztab[0];
+            /* apply notch at all other wrap points */
+            for (bnd = 1; bnd < s->nspxbnds; bnd++){
+                if (wrapflag[bnd]){
+                    filtbin = filtbin - 5;
+                    for (bin = 0; bin < 3; bin++){
+                        s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
+                        filtbin++;
+                    }
+                    for (bin = 1; bin >= 0; bin--){
+                        s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
+                        filtbin++;
+                    }
+                }
+                filtbin += s->spxbndsztab[bnd];
+            }
+        }
+
+        spxmant = spxbandtable[s->spxbegf];
+        for (bnd = 0; bnd < s->nspxbnds; bnd++){
+            nscale = rmsenergy[ch][bnd] * nblendfact[ch][bnd];
+            sscale = sblendfact[ch][bnd];
+            for (bin = 0; bin < s->spxbndsztab[bnd]; bin++){
+                //TODO generate noise()
+                s->transform_coeffs[ch][spxmant] =
+                    s->transform_coeffs[ch][spxmant] * sscale + noise() * nscale;
+                spxmant++;
+            }
+        }
+
+        spxmant = spxbandtable[s->spxbegf];
+        for (bnd = 0; bnd < s->nspxbnds; bnd++){
+            spxcotemp = s->spxco[ch][bnd];
+            for (bin = 0; bin < s->spxbndsztab[bnd]; bin++){
+                s->transform_coeffs[ch][spxmant] *= spxcotemp * 32;
+                spxmant++;
+            }
+        }
+    }
+#endif
 }
