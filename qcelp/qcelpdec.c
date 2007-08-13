@@ -363,7 +363,7 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
  *
  * WIP (but should work)
  *
- * @param step mode 1 for pitch filter or 2 for pitch pre filter
+ * @param step Mode, 1 for pitch filter or 2 for pitch pre filter
  *
  */
 static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitchf_mem, int step,
