@@ -43,8 +43,6 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
         /* default to 25 fps */
         fps->timebase = 1000 / 25;
 
-    fps->pts = 0;
-
     return 0;
 }
 
@@ -112,6 +110,8 @@ AVFilter vf_fps =
 
     .init      = init,
     .uninit    = uninit,
+
+    .priv_size = sizeof(FPSContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
