@@ -448,12 +448,14 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitchf_mem, int step,
 }
 
 /**
- * 2.4.3.3.4
+ * Computes interpolated lsp frequencies for a given rate & pitch subframe
+ *
+ * For details see 2.4.3.3.4
  */
 void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
-     float *curr_lspf)
+     float *curr_lspf, float *interpolated_lspf, int sample_num)
 {
-    int   i,j;
+    int   i;
     float curr_weight, prev_weight;
 
     switch(rate)
@@ -461,36 +463,41 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
         case RATE_FULL:
         case RATE_HALF:
         case RATE_QUARTER:
-            for(i=0;i<9;i+=3)
-            {
-                switch(i)
-                {
-                    case 0:
-                        prev_weight=0.75;
-                        curr_weight=0.25;
-                        break;
-                    case 3:
-                        prev_weight=curr_weight=0.5;
-                        break;
-                    default: /* 6 */
-                        prev_weight=0.25;
-                        curr_weight=0.75;
-                }
 
-                for(j=0;j<3;j++)
-                {
-                    curr_lspf[i+j]=prev_weight*prev_lspf[i+j]+
-                                   curr_weight*curr_lspf[i+j];
-                }
+            switch(sample_num)
+            {
+                case 0:
+                    curr_weight=0.25;
+                    prev_weight=0.75;
+                    break;
+                case 39:
+                    curr_weight=0.5;
+                    prev_weight=0.5;
+                    break;
+                case 79:
+                    curr_weight=0.75;
+                    prev_weight=0.25;
+                    break;
+                default:
+                    curr_weight=1.0;
+                    prev_weight=0;
             }
+
+            for(i=0;i<10;i++)
+                interpolated_lspf[i]=prev_weight*prev_lspf[i]+
+                                       curr_weight*curr_lspf[i];
             break;
         case RATE_OCTAVE:
+
+            curr_weight=0.625;
+            prev_weight=0.375;
+
             for(i=0;i<10;i++)
-                curr_lspf[i]=0.375*prev_lspf[i]+0.625*curr_lspf[i];
+                interpolated_lspf[i]=prev_weight*prev_lspf[i]+
+                                     curr_weight*curr_lspf[i];
             break;
         case I_F_Q:
-            for(i=0;i<10;i++)
-                curr_lspf[i]=prev_lspf[i];
+            memcpy(interpolated_lspf, prev_lspf, 10*sizeof(float));
     }
 }
 
@@ -532,8 +539,8 @@ static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
     /**
      * FIXME see 2.4.3.3.6-1, the scaling may be necesary at decoding too
      *
-     * for(i=0, 1<10; i++)
-     *     lpc[i]*=powf(0.9883, i+1);
+     * for(i=0; i<10; i++)
+     *    lpc[i]*=powf(0.9883, i+1);
      */
 
     av_log(avctx, AV_LOG_DEBUG,"-------- Interpolated lspf to lpc --------\n");
@@ -586,6 +593,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     int      i, n, is_ifq = 0, is_codecframe_fmt = 0;
     uint16_t first16 = 0;
     float    qtzd_lspf[10], gain[16], cdn_vector[160], ppf_vector[160], lpc[10];
+    float    interpolated_lspf[10];
     int      g0[16], index[16];
     uint8_t  claimed_rate;
 
@@ -822,14 +830,18 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     }
     av_log(avctx, AV_LOG_DEBUG, "\n");
 
-    /* lsp freq interpolation */
-    qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf);
-    /* get lpc coeficients */
-    qcelp_lsp2lpc(avctx, qtzd_lspf, lpc);
     /* Apply formant synthesis filter over the pitch prefilter output. */
     av_log(avctx, AV_LOG_DEBUG, "-------- Output --------\n");
     for(i=0; i<160; i++)
     {
+        /* interpolate lsp freqs */
+        if(i == 0 || i == 39  || i == 79 || i == 119)
+        {
+            qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf,
+                                      interpolated_lspf, i);
+            qcelp_lsp2lpc(avctx, interpolated_lspf, lpc);
+        }
+
         ppf_vector[i]=1.0/qcelp_prede_filter(lpc, ppf_vector[i]);
         av_log(avctx, AV_LOG_DEBUG, " %f/", ppf_vector[i]);
         /* WIP adaptive postfilter here */
