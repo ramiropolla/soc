@@ -143,7 +143,6 @@ typedef struct EAC3Context{
     int cplstre[MAX_BLOCKS]; // 1);  ///< Coupling strategy exists
     int chexpstr[MAX_BLOCKS][MAX_CHANNELS]; // 2); ///< Channel exponent strategy
     int frmchexpstr[MAX_CHANNELS];   ///< frame based channel exponent strategy
-    int lfeexpstr[MAX_BLOCKS];       ///< Lfe exponent strategy
     int convexpstr[MAX_CHANNELS];    ///< Converter channel exponent strategy
     int cplahtinu; // 1);            ///< Coupling channel AHT in use
     int chahtinu[MAX_CHANNELS];      ///< Channel AHT in use
@@ -214,7 +213,6 @@ typedef struct EAC3Context{
     int blkfsnroffst; // 4);         ///< Block fine SNR offset
     int cplfsnroffst; // 4);         ///< Coupling fine SNR offset
     int fsnroffst[MAX_CHANNELS];     ///< Channel fine SNR offset
-    int lfefsnroffst; // 4);         ///< Lfe fine SNR offset
     int fgaincode; // 1);            ///< Channel fast gain code enabled
     int fgaincod[MAX_CHANNELS];      ///< Channel fast gain code
     int convsnroffste; // 1);        ///< Converter SNR offset exists
@@ -272,7 +270,6 @@ typedef struct EAC3Context{
     int strtmant[MAX_CHANNELS];
     int firstchincpl;
     int ecpl_start_subbnd, ecpl_end_subbnd;
-    int nlfegrps; ///< Number of lfe channel exponent groups
 
     int necplbnd;
     int nspxbnds;

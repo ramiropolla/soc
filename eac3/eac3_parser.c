@@ -26,7 +26,7 @@
 #include "ac3.h"
 #include "random.h"
 
-//#undef DEBUG
+#undef DEBUG
 
 #ifdef DEBUG
 #define GET_BITS(a, gbc, n) {a = get_bits(gbc, n); av_log(NULL, AV_LOG_INFO, "%s: %i\n", __STRING(a), a);}
@@ -333,8 +333,7 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     if(s->lfeon)
     {
         for(blk = 0; blk < ff_eac3_blocks[s->numblkscod]; blk++) {
-            GET_BITS(s->lfeexpstr[blk], gbc, 1);
-            s->chexpstr[blk][s->lfe_channel] = s->lfeexpstr[blk];
+            GET_BITS(s->chexpstr[blk][s->lfe_channel], gbc, 1);
         }
     }
     /* These fields for converter exponent strategy data */
@@ -980,12 +979,11 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     }
     if(s->lfeon) /* exponents for the low frequency effects channel */
     {
-        if(s->lfeexpstr[blk] != EXP_REUSE)
+        if(s->chexpstr[blk][s->lfe_channel] != EXP_REUSE)
         {
             ch = s->lfe_channel;
             GET_BITS(s->dexps[ch][0], gbc, 4);
-            s->nlfegrps = 2;
-            ff_ac3_decode_exponents(gbc, s->lfeexpstr[blk], s->nlfegrps, s->dexps[ch][0],
+            ff_ac3_decode_exponents(gbc, s->chexpstr[blk][s->lfe_channel], s->nchgrps[s->lfe_channel], s->dexps[ch][0],
                     s->dexps[ch] + 1);
         }
     }
@@ -1025,7 +1023,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             s->fsnroffst[ch] = s->frmfsnroffst;
         }
         if(s->lfeon) {
-            s->lfefsnroffst = s->frmfsnroffst;
+            s->fsnroffst[s->lfe_channel] = s->frmfsnroffst;
         }
     }
     else
@@ -1047,7 +1045,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 for(ch = 1; ch <= s->nfchans; ch++) {
                     s->fsnroffst[ch] = s->blkfsnroffst;
                 }
-                s->lfefsnroffst = s->blkfsnroffst;
+                s->fsnroffst[s->lfe_channel] = s->blkfsnroffst;
             }
             else if(s->snroffststr == 0x2)
             {
@@ -1058,16 +1056,12 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     GET_BITS(s->fsnroffst[ch], gbc, 4);
                 }
                 if(s->lfeon) {
-                    GET_BITS(s->lfefsnroffst, gbc, 4);
+                    GET_BITS(s->fsnroffst[s->lfe_channel], gbc, 4);
                 }
             }
         }
     }
     s->fsnroffst[CPL_CH] = s->cplfsnroffst;
-
-    if(s->lfeon){
-        s->fsnroffst[s->lfe_channel] = s->lfefsnroffst;
-    }
 
     if(s->frmfgaincode) {
         GET_BITS(s->fgaincode, gbc, 1);
@@ -1155,7 +1149,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     }/* if(s->dbaflde) */
     else{
         if(!blk){
-            for(ch=0; ch<=s->nfchans+s->lfe_channel; ch++){
+            for(ch=0; ch<=s->nfchans+s->lfeon; ch++){
                 s->deltbae[ch] = DBA_NONE;
             }
         }
