@@ -272,7 +272,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
 
                 /* FIR filter */
                 cdn_vector[i]=qcelp_rnd_fir_coefs[1]*rnd[i];
-                for(j=1; j<22 && !(i-j+1); j++)
+                for(j=1; j<22 && i>0; j++)
                 {
                     cdn_vector[i]+=qcelp_rnd_fir_coefs[j]*rnd[i-j];
                 }
