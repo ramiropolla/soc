@@ -40,6 +40,8 @@
 #include "ac3dec.h"
 
 void spectral_extension(EAC3Context *s);
+void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch);
+void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk);
 
 int ff_eac3_parse_syncinfo(GetBitContext *gbc, EAC3Context *s){
     GET_BITS(s->syncword, gbc, 16);
@@ -1228,281 +1230,87 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         if(s->chahtinu[ch] == 0)
         {
             ff_ac3_get_transform_coeffs_ch(&m, gbc, s->dexps[ch], s->bap[ch], s->transform_coeffs[ch], s->strtmant[ch], s->endmant[ch], &s->dith_state);
-            // ff_ac3_get_transform
             //memset(s->transform_coeffs[ch], 0, (256)*sizeof(float));
         }
         else if(s->chahtinu[ch] == 1)
         {
-            int endbap, bin, n, m;
-            int bg, g, bits, pre_chmant, remap;
-            float mant;
-
-            av_log(s->avctx, AV_LOG_INFO,  "AHT NOT TESTED");
-
-            GET_BITS(s->chgaqmod[ch], gbc, 2);
-
-            if (s->chgaqmod[ch] < 2){
-                endbap = 12;
-            }
-            else{
-                endbap = 17;
-            }
-
-            s->chactivegaqbins[ch] = 0;
-            for(bin = 0; bin < s->endmant[ch]; bin++){
-                if(s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < endbap){
-                    s->chgaqbin[ch][bin] = 1; /* Gain word is present */
-                    s->chactivegaqbins[ch]++;
-                }
-                else if (s->hebap[ch][bin] >= endbap){
-                    s->chgaqbin[ch][bin] = -1;/* Gain word not present */
-                }else{
-                    s->chgaqbin[ch][bin] = 0;
-                }
-            }
-
-
-            switch(s->chgaqmod[ch]){
-                    case EAC3_GAQ_NO: /* No GAQ gains present */
-                        s->chgaqsections[ch] = 0;
-                        break;
-                    case EAC3_GAQ_12: /* GAQ gains 1 and 2 */
-                    case EAC3_GAQ_14: /* GAQ gains 1 and 4 */
-                        s->chgaqsections[ch] = s->chactivegaqbins[ch];
-                        /* chactivegaqbins[ch] was computed earlier */
-                        break;
-                    case EAC3_GAQ_124: /* GAQ gains 1, 2, and 4 */
-                        s->chgaqsections[ch] = s->chactivegaqbins[ch] / 3;
-                        if (s->chactivegaqbins[ch] % 3) s->chgaqsections[ch]++;
-                        break;
-            }
-
-            if((s->chgaqmod[ch] > 0x0) && (s->chgaqmod[ch] < 0x3) )
-            {
-                for(n = 0; n < s->chgaqsections[ch]; n++) { // TODO chgaqsections ?
-                    GET_BITS(s->chgaqgain[ch][n], gbc, 1);
-                }
-            }
-            else if(s->chgaqmod[ch] == 0x3)
-            {
-                int grpgain;
-                for(n = 0; n < s->chgaqsections[ch]; n++) {
-                    GET_BITS(grpgain, gbc, 5);
-                    s->chgaqgain[ch][3*n]   = grpgain/9;
-                    s->chgaqgain[ch][3*n+1] = (grpgain%9)/3;
-                    s->chgaqgain[ch][3*n+2] = grpgain%3;
-                }
-            }
-
-            // TODO test VQ and GAQ
-            m=0;
-            ///TODO calculate nchmant
-            for(bin = 0; bin < s->nchmant[ch]; bin++)
-            {
-                if(s->chgaqbin[ch][bin]!=0)
-                {
-                    // GAQ (E3.3.4.2)
-                    // XXX what about gaqmod = 0 ?
-                    // difference between Gk=1 and gaqmod=0 ?
-                    if(s->chgaqbin[ch][bin]>0){
-                        // hebap in active range
-                        // Gk = 1<<bg
-                        bg = ff_gaq_gk[s->chgaqmod[ch]][s->chgaqgain[ch][m++]];
-                    }else{
-                        bg = 0;
-                    }
-                    bits = ff_bits_vs_hebap[s->hebap[ch][bin]];
-
-                    for(n = 0; n < 6; n++){
-                        // pre_chmant[n][ch][bin]
-                        GET_SBITS(pre_chmant, gbc, bits-bg);
-                        if(s->chgaqbin[ch][bin]>0 && bg && pre_chmant == -(1<<(bits-bg-1))){
-                            // large mantissa
-                            GET_SBITS(pre_chmant, gbc, bits - ((bg==1)?1:0));
-                            mant = (float) pre_chmant / (1<<(bits - ((bg==1)?2:1)));
-                            g = 0;
-                            remap = 1;
-                        }else{
-                            // small mantissa
-                            mant = (float) pre_chmant / (1<<(bits-bg-1));
-                            g = bg;
-                            remap = bg?0:1;
-                        }
-
-                        //TODO when remap needed ?
-                        if(remap){
-                            if(mant>=0){
-                                mant = (float)
-                                    ((ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][0] + 1.0f)
-                                     * mant / (1<<g) +
-                                     ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][1]) / 32768.0f;
-                            }else{
-                                mant = (float)
-                                    ((ff_eac3_gaq_remap[s->hebap[ch][bin]-8][1][g][0] + 1.0f)
-                                     * mant / (1<<g) +
-                                     ff_eac3_gaq_remap[s->hebap[ch][bin]-8][1][g][1]) / 32768.0f;
-                            }
-                        }
-                        s->pre_chmant[n][ch][bin] = mant;
-                    }
-                }
-                else {
-                    // hebap = 0 or VQ
-                    if(s->hebap[ch][bin]){
-                        GET_BITS(pre_chmant, gbc, ff_bits_vs_hebap[s->hebap[ch][bin]]);
-                        for(n = 0; n < 6; n++){
-                            s->pre_chmant[n][ch][bin] = ff_vq_hebap[s->hebap[ch][bin]][pre_chmant][n];
-                        }
-                    }else{
-                        for(n = 0; n < 6; n++){
-                            s->pre_chmant[n][ch][bin] = 0;
-                        }
-                    }
-                }
-            }
+            get_transform_coeffs_aht_ch(gbc, s, ch);
             s->chahtinu[ch] = -1; /* AHT info for this frame has been read ? do not read again */
         }
         if(s->chahtinu[ch] != 0){
-            // TODO fast DCT
-            int bin;
-            float tmp;
-            for(bin=0; bin<s->nchmant[ch]; bin++){
-                tmp = 0;
-                for(i=0; i<6; i++){
-                    tmp += (i?sqrt(2):1) * s->pre_chmant[i][ch][bin] * cos(M_PI*i*(2*blk + 1)/12);
-                }
-                s->transform_coeffs[ch][bin] = tmp;
-            }
+            dct_transform_coeffs_ch(s, ch, blk);
         }
         if(s->cplinu[blk] && s->chincpl[ch] && !got_cplchan)
         {
-
             if(s->cplahtinu == 0)
             {
-                /*
-                for(bin = 0; bin < s->ncplmant; bin++) { // TODO ncplmant ?
-                    GET_BITS(s->cplmant[bin], gbc, (0-16)); // TODO 0-16 :]
-                }
-                */
                 ff_ac3_get_transform_coeffs_ch(&m, gbc, s->dexps[CPL_CH], s->bap[CPL_CH], s->transform_coeffs[CPL_CH], s->strtmant[CPL_CH], s->endmant[CPL_CH], &s->dith_state);
-               // uncouple_channels(ctx);
-                {
-                    //TODO (form ac3)
-                    int i, j, ch, bnd, subbnd;
-
-                    subbnd = s->cplbegf+1;
-                    i = s->strtmant[CPL_CH];
-                    av_log(NULL, AV_LOG_DEBUG, "strtmant=%i endmant=%i\n", s->strtmant[CPL_CH], s->endmant[CPL_CH]);
-                    av_log(NULL, AV_LOG_DEBUG, "ncplbnd=%i ncplsubbnd=%i\n", s->ncplbnd, s->ncplsubnd);
-                    /*
-                    for(bnd=0; bnd<256; bnd++){
-                        av_log(NULL, AV_LOG_INFO, "%i: %f\n", bnd, transform_coeffs[CPL_CH][bnd]);
-                    }*/
-                    for(bnd=0; bnd<s->ncplbnd; bnd++) {
-                        do {
-                            for(j=0; j<12; j++) {
-                                for(ch=1; ch<=s->nfchans; ch++) {// TODO lfe?
-                                    if(s->chincpl[ch]) {
-                                        s->transform_coeffs[ch][i] =
-                                            s->transform_coeffs[CPL_CH][i] *
-                                            s->cplco[ch][bnd] * 8.0f;
-                                    }
-                                }
-                                av_log(NULL, AV_LOG_DEBUG, "%i ", i);
-                                i++;
-                            }
-                            av_log(NULL, AV_LOG_DEBUG, "cplbndstrc[%i] = %i bnd=%i\n ", subbnd,
-                                    s->cplbndstrc[subbnd], bnd);
-                        } while(s->cplbndstrc[subbnd++] && subbnd<=s->cplendf);
-                    }
-                    av_log(NULL, AV_LOG_DEBUG, "\n");
-                }
-                got_cplchan = 1;
             }
             else if(s->cplahtinu == 1)
             {
-                av_log(s->avctx, AV_LOG_ERROR,  "NOT IMPLEMENTED CPLINU && AHT");
-                return -1;
-#if 0
-                GET_BITS(s->cplgaqmod, gbc, 2);
-                if((s->cplgaqmod > 0x0) && (s->cplgaqmod < 0x3) )
-                {
-                    for(n = 0; n < s->cplgaqsections; n++) { // TODO cplgaqsections?
-                        GET_BITS(s->cplgaqgain[n], gbc, 1);
-                    }
-                }
-                else if(s->cplgaqmod == 0x3)
-                {
-                    for(n = 0; n < s->cplgaqsections; n++) {
-                        GET_BITS(s->cplgaqgain[n], gbc, 5);
-                    }
-                }
-                for(bin = 0; bin < s->ncplmant; bin++) // TODO ncplmant?
-                {
-                    if(s->cplgaqbin[bin])
-                    {
-                        for(n = 0; n < 6; n++) {
-                            GET_BITS(s->pre_cplmant[n][bin], gbc, (0-16)); // TODO 0-16 :]
-                        }
-                    }
-                    else {
-                        GET_BITS(s->pre_cplmant[0][bin], gbc, (0-9));
-                    }
-                }
-                got_cplchan = 1;
+                get_transform_coeffs_aht_ch(gbc, s, CPL_CH);
                 s->cplahtinu = -1; /* AHT info for this frame has been read ? do not read again */
-#endif
             }
-            else {
-                got_cplchan = 1;
+            got_cplchan = 1;
+            if(s->cplahtinu != 0){
+                dct_transform_coeffs_ch(s, CPL_CH, blk);
             }
         }
 
-        //apply spectral extension
-        if(s->spxinu)
-            spectral_extension(s);
     }
+
+    if(s->cplinu[blk]){
+        // uncouple_channels(ctx);
+        {
+            //TODO (form ac3)
+            int i, j, ch, bnd, subbnd;
+
+            subbnd = s->cplbegf+1;
+            i = s->strtmant[CPL_CH];
+            av_log(NULL, AV_LOG_DEBUG, "strtmant=%i endmant=%i\n", s->strtmant[CPL_CH], s->endmant[CPL_CH]);
+            av_log(NULL, AV_LOG_DEBUG, "ncplbnd=%i ncplsubbnd=%i\n", s->ncplbnd, s->ncplsubnd);
+            /*
+               for(bnd=0; bnd<256; bnd++){
+               av_log(NULL, AV_LOG_INFO, "%i: %f\n", bnd, transform_coeffs[CPL_CH][bnd]);
+               }*/
+            for(bnd=0; bnd<s->ncplbnd; bnd++) {
+                do {
+                    for(j=0; j<12; j++) {
+                        for(ch=1; ch<=s->nfchans; ch++) {// TODO lfe?
+                            if(s->chincpl[ch]) {
+                                s->transform_coeffs[ch][i] =
+                                    s->transform_coeffs[CPL_CH][i] *
+                                    s->cplco[ch][bnd] * 8.0f;
+                            }
+                        }
+                        av_log(NULL, AV_LOG_DEBUG, "%i ", i);
+                        i++;
+                    }
+                    av_log(NULL, AV_LOG_DEBUG, "cplbndstrc[%i] = %i bnd=%i\n ", subbnd,
+                            s->cplbndstrc[subbnd], bnd);
+                } while(s->cplbndstrc[subbnd++] && subbnd<=s->cplendf);
+            }
+            av_log(NULL, AV_LOG_DEBUG, "\n");
+        }
+    }
+
+    //apply spectral extension
+    if(s->spxinu)
+        spectral_extension(s);
 
     if(s->lfeon) /* mantissas of low frequency effects channel */
     {
         if(s->lfeahtinu == 0)
         {
-            //ff_ac3_get_transform
             ff_ac3_get_transform_coeffs_ch(&m, gbc, s->dexps[s->lfe_channel], s->bap[s->lfe_channel], s->transform_coeffs[s->lfe_channel], s->strtmant[s->lfe_channel], s->endmant[s->lfe_channel], &s->dith_state);
         }
         else if(s->lfeahtinu == 1)
         {
-            av_log(s->avctx, AV_LOG_ERROR,  "NOT IMPLEMENTED");
-            return -1;
-#if 0
-            assert(0 && "TODO: AHT");
-            GET_BITS(s->lfegaqmod, gbc, 2);
-            if( (s->lfegaqmod > 0x0) && (s->lfegaqmod < 0x3) )
-            {
-                for(n = 0; n < s->lfegaqsections; n++) { // TODO  lfegaqsections?
-                    GET_BITS(s->lfegaqgain[n], gbc, 1);
-                }
-            }
-            else if(s->lfegaqmod == 0x3)
-            {
-                for(n = 0; n < s->lfegaqsections; n++) { // TODO
-                    GET_BITS(s->lfegaqgain[n], gbc, 5);
-                }
-            }
-            for(bin = 0; bin < s->nlfemant; bin++)
-            {
-                if(s->lfegaqbin[bin])
-                {
-                    for(n = 0; n < 6; n++) {
-                        GET_BITS(s->pre_lfemant[n][bin], gbc, (0-16)); // TODO 0-16 :]
-                    }
-                }
-                else {
-                    GET_BITS(s->pre_lfemant[0][bin], gbc, (0-9)); // TODO 0-9 :]
-                }
-            }
-            s->lfeahtinu = -1; /* AHT info for this frame has been read ? do not read again */
-#endif
+            get_transform_coeffs_aht_ch(gbc, s, s->lfe_channel);
+            s->lfeahtinu = -1;
+        }
+        if(s->chahtinu[s->lfe_channel] != 0){
+            dct_transform_coeffs_ch(s, s->lfe_channel, blk);
         }
     }
     return 0;
@@ -1514,6 +1322,7 @@ int ff_eac3_parse_auxdata(GetBitContext *gbc, EAC3Context *s){
 }
 
 void spectral_extension(EAC3Context *s){
+    //Now turned off, because there are no samples for testing it.
 #if 0
     int copystartmant, copyendmant, copyindex, insertindex;
     int wrapflag[18];
@@ -1626,4 +1435,149 @@ void spectral_extension(EAC3Context *s){
         }
     }
 #endif
+}
+
+
+
+void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
+    int endbap, bin, n, m;
+    int bg, g, bits, pre_chmant, remap;
+    float mant;
+
+    av_log(s->avctx, AV_LOG_INFO,  "AHT NOT TESTED");
+
+    GET_BITS(s->chgaqmod[ch], gbc, 2);
+
+    if (s->chgaqmod[ch] < 2){
+        endbap = 12;
+    }
+    else{
+        endbap = 17;
+    }
+
+    s->chactivegaqbins[ch] = 0;
+    for(bin = 0; bin < s->endmant[ch]; bin++){
+        if(s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < endbap){
+            s->chgaqbin[ch][bin] = 1; /* Gain word is present */
+            s->chactivegaqbins[ch]++;
+        }
+        else if (s->hebap[ch][bin] >= endbap){
+            s->chgaqbin[ch][bin] = -1;/* Gain word not present */
+        }else{
+            s->chgaqbin[ch][bin] = 0;
+        }
+    }
+
+
+    switch(s->chgaqmod[ch]){
+        case EAC3_GAQ_NO: /* No GAQ gains present */
+            s->chgaqsections[ch] = 0;
+            break;
+        case EAC3_GAQ_12: /* GAQ gains 1 and 2 */
+        case EAC3_GAQ_14: /* GAQ gains 1 and 4 */
+            s->chgaqsections[ch] = s->chactivegaqbins[ch];
+            /* chactivegaqbins[ch] was computed earlier */
+            break;
+        case EAC3_GAQ_124: /* GAQ gains 1, 2, and 4 */
+            s->chgaqsections[ch] = s->chactivegaqbins[ch] / 3;
+            if (s->chactivegaqbins[ch] % 3) s->chgaqsections[ch]++;
+            break;
+    }
+
+    if((s->chgaqmod[ch] > 0x0) && (s->chgaqmod[ch] < 0x3) )
+    {
+        for(n = 0; n < s->chgaqsections[ch]; n++) { // TODO chgaqsections ?
+            GET_BITS(s->chgaqgain[ch][n], gbc, 1);
+        }
+    }
+    else if(s->chgaqmod[ch] == 0x3)
+    {
+        int grpgain;
+        for(n = 0; n < s->chgaqsections[ch]; n++) {
+            GET_BITS(grpgain, gbc, 5);
+            s->chgaqgain[ch][3*n]   = grpgain/9;
+            s->chgaqgain[ch][3*n+1] = (grpgain%9)/3;
+            s->chgaqgain[ch][3*n+2] = grpgain%3;
+        }
+    }
+
+    // TODO test VQ and GAQ
+    m=0;
+    ///TODO calculate nchmant
+    for(bin = 0; bin < s->nchmant[ch]; bin++)
+    {
+        if(s->chgaqbin[ch][bin]!=0)
+        {
+            // GAQ (E3.3.4.2)
+            // XXX what about gaqmod = 0 ?
+            // difference between Gk=1 and gaqmod=0 ?
+            if(s->chgaqbin[ch][bin]>0){
+                // hebap in active range
+                // Gk = 1<<bg
+                bg = ff_gaq_gk[s->chgaqmod[ch]][s->chgaqgain[ch][m++]];
+            }else{
+                bg = 0;
+            }
+            bits = ff_bits_vs_hebap[s->hebap[ch][bin]];
+
+            for(n = 0; n < 6; n++){
+                // pre_chmant[n][ch][bin]
+                GET_SBITS(pre_chmant, gbc, bits-bg);
+                if(s->chgaqbin[ch][bin]>0 && bg && pre_chmant == -(1<<(bits-bg-1))){
+                    // large mantissa
+                    GET_SBITS(pre_chmant, gbc, bits - ((bg==1)?1:0));
+                    mant = (float) pre_chmant / (1<<(bits - ((bg==1)?2:1)));
+                    g = 0;
+                    remap = 1;
+                }else{
+                    // small mantissa
+                    mant = (float) pre_chmant / (1<<(bits-bg-1));
+                    g = bg;
+                    remap = bg?0:1;
+                }
+
+                //TODO when remap needed ?
+                if(remap){
+                    if(mant>=0){
+                        mant = (float)
+                            ((ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][0] + 1.0f)
+                             * mant / (1<<g) +
+                             ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][1]) / 32768.0f;
+                    }else{
+                        mant = (float)
+                            ((ff_eac3_gaq_remap[s->hebap[ch][bin]-8][1][g][0] + 1.0f)
+                             * mant / (1<<g) +
+                             ff_eac3_gaq_remap[s->hebap[ch][bin]-8][1][g][1]) / 32768.0f;
+                    }
+                }
+                s->pre_chmant[n][ch][bin] = mant;
+            }
+        }
+        else {
+            // hebap = 0 or VQ
+            if(s->hebap[ch][bin]){
+                GET_BITS(pre_chmant, gbc, ff_bits_vs_hebap[s->hebap[ch][bin]]);
+                for(n = 0; n < 6; n++){
+                    s->pre_chmant[n][ch][bin] = ff_vq_hebap[s->hebap[ch][bin]][pre_chmant][n];
+                }
+            }else{
+                for(n = 0; n < 6; n++){
+                    s->pre_chmant[n][ch][bin] = 0;
+                }
+            }
+        }
+    }
+}
+
+void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
+    // TODO fast DCT
+    int bin, i;
+    float tmp;
+    for(bin=0; bin<s->nchmant[ch]; bin++){
+        tmp = 0;
+        for(i=0; i<6; i++){
+            tmp += (i?sqrt(2):1) * s->pre_chmant[i][ch][bin] * cos(M_PI*i*(2*blk + 1)/12);
+        }
+        s->transform_coeffs[ch][bin] = tmp;
+    }
 }
