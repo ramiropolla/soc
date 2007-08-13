@@ -176,9 +176,6 @@ typedef struct EAC3Context{
     int spxbndstrc[MAX_SPX_CODES];   ///< Spectral extension band structure
     int spxcoe[MAX_CHANNELS];        ///< Spectral extension coordinates exists
     int spxblnd[MAX_CHANNELS];       ///< Spectral extension blend
-    int mstrspxco[MAX_CHANNELS];     ///< Master spectral extension coordinates
-    int spxcoexp[MAX_CHANNELS][MAX_SPX_CODES];  ///< Spectral extension coordinate exponent
-    int spxcomant[MAX_CHANNELS][MAX_SPX_CODES]; ///< Spectral extension coordinate mantissa
     int ecplinu; // 1);              ///< Enhanced coupling in use
     int chincpl[MAX_CHANNELS];       ///< Channel in coupling
     int phsflginu; // 1);            ///< Phase flag in use
@@ -289,6 +286,7 @@ typedef struct EAC3Context{
     int16_t mask[MAX_CHANNELS][350];          ///< masking values
 
     float   cplco[AC3_MAX_CHANNELS][18];        ///< coupling coordinates
+    float   spxco[AC3_MAX_CHANNELS][18];        ///< Spectral extension coordinates
 
     DECLARE_ALIGNED_16(float, transform_coeffs[MAX_CHANNELS][AC3_MAX_COEFS]);
 

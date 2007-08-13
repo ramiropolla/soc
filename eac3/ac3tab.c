@@ -1347,3 +1347,9 @@ const uint8_t ff_eac3_frm_expstr[32][6] = {
 const uint8_t ff_eac3_defcplbndstrc[18] =
 { 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1 };
 
+/**
+ * Table E2.15 Default Spectral Extension Banding Structure
+ */
+const uint8_t ff_eac3_defspxbndstrc[17] =
+{ 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
+

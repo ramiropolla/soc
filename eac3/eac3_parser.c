@@ -26,7 +26,7 @@
 #include "ac3.h"
 #include "random.h"
 
-#undef DEBUG
+//#undef DEBUG
 
 #ifdef DEBUG
 #define GET_BITS(a, gbc, n) {a = get_bits(gbc, n); av_log(NULL, AV_LOG_INFO, "%s: %i\n", __STRING(a), a);}
@@ -532,6 +532,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         GET_BITS(s->spxinu, gbc, 1);
         if(s->spxinu)
         {
+//            av_log(s->avctx, AV_LOG_INFO, "Spectral extension in use\n");
             if(s->acmod == 0x1)
             {
                 s->chinspx[1] = 1;
@@ -566,6 +567,9 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 for(bnd = s->spxbegf+1; bnd < s->spxendf; bnd++) {
                     GET_BITS(s->spxbndstrc[bnd], gbc, 1);
                 }
+            }else if(!blk){
+                for(bnd = 0; bnd < 17; bnd++)
+                    s->spxbndstrc[bnd] = ff_eac3_defspxbndstrc[bnd];
             }
             // calculate number of spectral extension bands
             s->nspxbnds = 1;
@@ -620,17 +624,20 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
                 if(s->spxcoe[ch])
                 {
+                    int spxcoexp, spxcomant, mstrspxco;
                     GET_BITS(s->spxblnd[ch], gbc, 5);
-                    GET_BITS(s->mstrspxco[ch], gbc, 2);
+                    GET_BITS(mstrspxco, gbc, 2);
+                    mstrspxco*=3;
                     /* nspxbnds determined from spxbegf, spxendf, and spxbndstrc[ ] */
-                    if(s->nspxbnds >= MAX_SPX_CODES){
-                        av_log(s->avctx, AV_LOG_ERROR, "s->nspxbnds >= MAX_SPX_CODES");
-                        return -1;
-                    }
                     for(bnd = 0; bnd < s->nspxbnds; bnd++)
                     {
-                        GET_BITS(s->spxcoexp[ch][bnd], gbc, 4);
-                        GET_BITS(s->spxcomant[ch][bnd], gbc, 2);
+                        GET_BITS(spxcoexp, gbc, 4);
+                        GET_BITS(spxcomant, gbc, 2);
+                        if(spxcoexp==15)
+                            s->spxco[ch][bnd] = spxcomant / 4.0f;
+                        else
+                            s->spxco[ch][bnd] = (spxcomant+4) / 8.0f;
+                        s->spxco[ch][bnd] *= ff_ac3_scale_factors[spxcoexp + mstrspxco];
                     }
                 }
             }
@@ -889,7 +896,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf
              * TODO XXX (code from AC-3) */
             s->nrematbnds = 4;
-            if(s->cplinu && s->cplbegf <= 2)
+            if(s->cplinu[blk] && s->cplbegf <= 2)
                 s->nrematbnds -= 1 + (s->cplbegf == 0);
             for(bnd = 0; bnd < s->nrematbnds; bnd++) {
                 GET_BITS(s->rematflg[bnd], gbc, 1);
@@ -1075,8 +1082,10 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     }
     else
     {
-        for(ch = !s->cplinu[blk]; ch <= s->nfchans+s->lfeon; ch++)
-            s->fgaincod[ch] = 0x4;
+        if(!blk){
+            for(ch = !s->cplinu[blk]; ch <= s->nfchans+s->lfeon; ch++)
+                s->fgaincod[ch] = 0x4;
+        }
     }
     if(s->strmtyp == 0x0)
     {
@@ -1178,9 +1187,8 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 s->psd[ch], s->bndpsd[ch]);
 
 
-        // TODO hmm... :)
         s->bit_alloc_params.fscod = s->fscod;
-        s->bit_alloc_params.halfratecod = 0; // TODO
+        s->bit_alloc_params.halfratecod = 0;
 
         {
             int fgain = ff_fgaintab[s->fgaincod[ch]];
