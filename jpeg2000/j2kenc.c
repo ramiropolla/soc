@@ -869,8 +869,8 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
             }
         }
 
-        ff_j2k_tag_tree_destroy(cblkincl);
-        ff_j2k_tag_tree_destroy(zerobits);
+        av_free(cblkincl);
+        av_free(zerobits);
     }
     j2k_flush(s);
     for (bandno = 0; bandno < rlevel->nbands; bandno++){

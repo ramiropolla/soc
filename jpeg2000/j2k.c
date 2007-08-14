@@ -57,24 +57,15 @@ int ff_j2k_ceildiv(int a, int b)
 /* tag tree routines */
 
 /** allocate the memory for tag tree */
-//TODO: optimize (too many mallocs)
-static J2kTgtNode *tag_tree_alloc(int w, int h)
-{
-    int i;
-   J2kTgtNode *t = av_malloc(w*h*sizeof(J2kTgtNode));
-    if (t == NULL)
-        return NULL;
-    for (i = 0; i < w*h; i++){
-        t[i].val = 0;
-        t[i].vis = 0;
-    }
-    return t;
-}
-
 J2kTgtNode *ff_j2k_tag_tree_init(int w, int h)
 {
-    J2kTgtNode *res = tag_tree_alloc(w, h),
-               *t = res;
+    int size = 2 << av_log2(w*h);
+    J2kTgtNode *res, *t, *t2;
+
+    if (size < w*h)
+        size *= 4;
+
+    t = res = av_mallocz(size*sizeof(J2kTgtNode));
 
     if (res == NULL)
         return NULL;
@@ -82,13 +73,10 @@ J2kTgtNode *ff_j2k_tag_tree_init(int w, int h)
     while (w > 1 || h > 1){
         int pw = w, ph = h;
         int i, j;
-        J2kTgtNode *t2;
 
         w = (w+1) >> 1;
         h = (h+1) >> 1;
-        t2 = tag_tree_alloc(w, h);
-        if (t2 == NULL)
-            return NULL;
+        t2 = t + pw*ph;
 
         for (i = 0; i < ph; i++)
             for (j = 0; j < pw; j++){
@@ -98,15 +86,6 @@ J2kTgtNode *ff_j2k_tag_tree_init(int w, int h)
     }
     t[0].parent = NULL;
     return res;
-}
-
-void ff_j2k_tag_tree_destroy(J2kTgtNode *tree)
-{
-    while (tree != NULL){
-        J2kTgtNode *parent = tree[0].parent;
-        av_free(tree);
-        tree = parent;
-    }
 }
 
 int ff_j2k_getnbctxno(int flag, int bandno)

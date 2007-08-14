@@ -105,7 +105,6 @@ int ff_j2k_ceildiv(int a, int b);
 
 /** tag tree routines */
 J2kTgtNode *ff_j2k_tag_tree_init(int w, int h);
-void ff_j2k_tag_tree_destroy(J2kTgtNode *tree);
 
 /** TIER-1 routines */
 int ff_j2k_getnbctxno(int flag, int bandno);

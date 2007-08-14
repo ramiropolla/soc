@@ -984,8 +984,8 @@ static void cleanup(J2kDecoderContext *s)
 
                     for (precno = 0; precno < reslevel->nprecw * reslevel->nprech; precno++){
                         J2kPrec *prec = band->prec + precno;
-                        ff_j2k_tag_tree_destroy(prec->zerobits);
-                        ff_j2k_tag_tree_destroy(prec->cblkincl);
+                        av_free(prec->zerobits);
+                        av_free(prec->cblkincl);
                     }
                     av_free(band->cblk);
                     av_free(band->prec);
