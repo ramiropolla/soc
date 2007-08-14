@@ -591,11 +591,11 @@ static void dwt_encode53(J2kEncoderContext *s, J2kComponent *comp)
             sd_1d(pv, v0, v1, tileft[v0&1], tiright[v1&1]);
 
             // copy back and deinterleave
-            for (i = (v0+1)/2, j = 0; i < (v1+1)/2; i++, j++){
-                t[w*j + u-u0] = pv[2*i];
+            for (i = v0+v0%2, j = 0; i < v1; i+=2, j++){
+                t[w*j + u-u0] = pv[i];
             }
-            for (i = v0/2; i < v1/2; i++, j++){
-                t[w*j + u-u0] = pv[2*i+1];
+            for (i = v0+1-v0%2; i < v1; i+=2, j++){
+                t[w*j + u-u0] = pv[i];
             }
             u++;
         }
@@ -608,11 +608,11 @@ static void dwt_encode53(J2kEncoderContext *s, J2kComponent *comp)
             sd_1d(pu, u0, u1, tileft[u0&1], tiright[u1&1]);
 
             // copy back and deinterleave
-            for (i = (u0+1)/2, j = 0; i < (u1+1)/2; i++, j++){
-                t[w*(v-v0) + j] = pu[2*i];
+            for (i = u0+u0%2, j = 0; i < u1; i+=2, j++){
+                t[w*(v-v0) + j] = pu[i];
             }
-            for (i = u0/2; i < u1/2; i++, j++){
-                t[w*(v-v0) + j] = pu[2*i + 1];
+            for (i = u0+1-u0%2; i < u1; i+=2, j++){
+                t[w*(v-v0) + j] = pu[i];
             }
             v++;
         }
