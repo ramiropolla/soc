@@ -67,12 +67,7 @@ static void setbits(AecState *aec)
 
 void ff_aec_initenc(AecState *aec, uint8_t *bp)
 {
-    memset(aec->contexts, 0, 19*sizeof(AecContext));
-    aec->contexts[AEC_CX_UNI].state = 46;
-    aec->contexts[AEC_CX_RL].state = 3;
-    aec->contexts[0].state = 4;
-    aec->curctx = aec->contexts;
-
+    ff_aec_init_contexts(aec);
     aec->a = 0x8000;
     aec->c = 0;
     aec->bp = bp-1;

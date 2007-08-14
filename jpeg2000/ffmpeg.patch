@@ -6,8 +6,8 @@ Index: Makefile
  OBJS-$(CONFIG_INDEO3_DECODER)          += indeo3.o
  OBJS-$(CONFIG_INTERPLAY_VIDEO_DECODER) += interplayvideo.o
  OBJS-$(CONFIG_INTERPLAY_DPCM_DECODER)  += dpcm.o
-+OBJS-$(CONFIG_JPEG2000_ENCODER)        += j2kenc.o aecenc.o j2k.o
-+OBJS-$(CONFIG_JPEG2000_DECODER)        += j2kdec.o aecdec.o j2k.o
++OBJS-$(CONFIG_JPEG2000_ENCODER)        += j2kenc.o aecenc.o aec.o j2k.o
++OBJS-$(CONFIG_JPEG2000_DECODER)        += j2kdec.o aecdec.o aec.o j2k.o
  OBJS-$(CONFIG_JPEGLS_DECODER)          += jpeglsdec.o jpegls.o mjpegdec.o mjpeg.o golomb.o
  OBJS-$(CONFIG_JPEGLS_ENCODER)          += jpeglsenc.o jpegls.o golomb.o
  OBJS-$(CONFIG_KMVC_DECODER)            += kmvc.o

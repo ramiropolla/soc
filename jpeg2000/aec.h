@@ -133,4 +133,8 @@ void ff_aec_initdec(AecState *aec, uint8_t *bp);
 /** returns decoded bit with context cx */
 int ff_aec_decode(AecState *aec, int cx);
 
+/** common */
+
+void ff_aec_init_contexts(AecState *aec);
+
 #endif
