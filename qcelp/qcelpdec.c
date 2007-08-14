@@ -154,8 +154,8 @@ void qcelp_decode_lspf(AVCodecContext *avctx, const QCELPFrame *frame,
  * (and cbseed for rate 1/4)
  * TIA/EIA/IS-733 2.4.6.2
  */
-void qcelp_decode_params(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
-     float *gain, int *index)
+void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
+     int *g0, uint16_t *cbseed, float *gain, int *index)
 {
     int           i, gs[16], g1[16], predictor;
     const uint8_t *cbgain, *cbsign, *cindex, *data;
@@ -186,10 +186,19 @@ void qcelp_decode_params(const QCELPFrame *frame, int *g0, uint16_t *cbseed,
                     predictor=0;
 
                 g1[i]=g0[i]+predictor;
+
+                if(g1[i]<0 || g1[i]>60) /* Shouldn't happen */
+                {
+                    av_log(avctx, AV_LOG_WARNING,
+                           "Gain Ga %d out of range for CBGAIN number %d\n",
+                           g1[i], i);
+                    g1[i]=av_clip(g1[i], 0, 60);
+                }
+
                 ga[i]=qcelp_g12ga[g1[i]];
 
                 gain[i]=ga[i]*gs[i];
-                index[i]=(gs[i] > 0)? cindex[i]:(cindex[i]-89) & 127;/* FIXME */
+                index[i]=(gs[i] == 1)? cindex[i]:(cindex[i]-89) & 127;
             }
 
             break;
@@ -716,7 +725,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      */
 
     qcelp_decode_lspf(avctx, q->frame, qtzd_lspf);
-    qcelp_decode_params(q->frame, g0, &cbseed, gain, index);
+    qcelp_decode_params(avctx, q->frame, g0, &cbseed, gain, index);
 
     /**
      * Check for badly received packets
