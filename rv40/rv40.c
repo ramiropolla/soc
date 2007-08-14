@@ -109,6 +109,7 @@ typedef struct RV40DecContext{
     int luma_vlc;            ///< which VLC set will be used for luma blocks decoding
     int chroma_vlc;          ///< which VLC set will be used for chroma blocks decoding
     int is16;                ///< current block has additional 16x16 specific features or not
+    int dmv[4][2];           ///< differential motion vectors for the current macroblock
 }RV40DecContext;
 
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
@@ -737,39 +738,247 @@ static int rv40_decode_mb_info(RV40DecContext *r)
     return 0;
 }
 
+/** Macroblock partition width in 8x8 blocks */
+const int part_sizes_w[RV40_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 2, 1, 2, 2 };
+
+/** Macroblock partition height in 8x8 blocks */
+const int part_sizes_h[RV40_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2 };
+
+/**
+ * Motion vectors prediction
+ *
+ * Motion prediction performed for the block by using median prediction of
+ * motion vector from the left, top and right top blocks but in corener cases
+ * some other vectors may be used instead
+ */
+static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
+{
+    MpegEncContext *s = &r->s;
+    int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride;
+    int A[2], B[2], C[2];
+    int no_A = 1, no_B = 1, no_C = 1;
+    int i, j;
+    int mx, my;
+
+    memset(A, 0, sizeof(A));
+    memset(B, 0, sizeof(B));
+    memset(C, 0, sizeof(C));
+    no_A = s->mb_x < 1 || (s->first_slice_line && s->mb_x == s->resync_mb_x);
+    no_B = s->first_slice_line;
+    no_C = s->first_slice_line || (s->mb_x + 1) == s->mb_width;
+    switch(block_type){
+    case RV40_MB_P_16x16:
+    case RV40_MB_P_MIX16x16:
+        if(!no_C){
+            C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][0];
+            C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][1];
+        }
+        break;
+    case RV40_MB_P_8x8:
+        mv_pos += (subblock_no & 1) + (subblock_no >> 1)*s->b8_stride;
+        if(subblock_no & 1) no_A = 0;
+        if(subblock_no & 2) no_B = 0;
+        no_C |= (subblock_no == 3);
+        if(subblock_no == 2) no_C = 0;
+        if(!no_C){
+            C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][0];
+            C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][1];
+        }
+        if(subblock_no == 3){
+            no_C = 0;
+            C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][0];
+            C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][1];
+        }
+        break;
+    case RV40_MB_P_16x8:
+        mv_pos += subblock_no*s->b8_stride;
+        no_B &= ~subblock_no;
+        no_C |= subblock_no;
+        if(!no_C){
+            C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][0];
+            C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][1];
+        }
+        break;
+    case RV40_MB_P_8x16:
+        mv_pos += subblock_no;
+        no_A &= ~subblock_no;
+        if(!no_C){
+            C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][0];
+            C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][1];
+        }
+        break;
+    default:
+        no_A = no_B = no_C = 1;
+    }
+    if(!no_A){
+        A[0] = s->current_picture_ptr->motion_val[0][mv_pos-1][0];
+        A[1] = s->current_picture_ptr->motion_val[0][mv_pos-1][1];
+    }
+    if(!no_B){
+        B[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride][0];
+        B[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride][1];
+    }else{
+        B[0] = A[0];
+        B[1] = A[1];
+    }
+    if(no_C){
+        if(no_B){
+            C[0] = A[0];
+            C[1] = A[1];
+        }else{
+            if(!no_A){
+                C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][0];
+                C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][1];
+            }else{
+                C[0] = A[0];
+                C[1] = A[1];
+            }
+        }
+    }
+    mx = mid_pred(A[0], B[0], C[0]);
+    my = mid_pred(A[1], B[1], C[1]);
+    mx += r->dmv[subblock_no][0];
+    my += r->dmv[subblock_no][1];
+    for(j = 0; j < part_sizes_h[block_type]; j++){
+        for(i = 0; i < part_sizes_w[block_type]; i++){
+            s->current_picture_ptr->motion_val[0][mv_pos + i + j*s->b8_stride][0] = mx;
+            s->current_picture_ptr->motion_val[0][mv_pos + i + j*s->b8_stride][1] = my;
+        }
+    }
+}
+
+/**
+ * Generic motion compensation function - hopefully compiler will optimize it for each case
+ *
+ * @param r decoder context
+ * @param block_type type of the current block
+ * @param xoff horizontal offset from the start of the current block
+ * @param yoff vertical offset from the start of the current block
+ * @param mv_off offset to the motion vector information
+ * @param width width of the current partition in 8x8 blocks
+ * @param height height of the current partition in 8x8 blocks
+ */
+static inline void rv40_mc(RV40DecContext *r, const int block_type,
+                          const int xoff, const int yoff, int mv_off,
+                          const int width, const int height)
+{
+    MpegEncContext *s = &r->s;
+    uint8_t *Y, *U, *V, *srcY, *srcU, *srcV;
+    int dxy, mx, my, uvmx, uvmy, src_x, src_y, uvsrc_x, uvsrc_y;
+    int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride + mv_off;
+
+    mx = s->current_picture_ptr->motion_val[0][mv_pos][0];
+    my = s->current_picture_ptr->motion_val[0][mv_pos][1];
+    srcY = s->last_picture_ptr->data[0];
+    srcU = s->last_picture_ptr->data[1];
+    srcV = s->last_picture_ptr->data[2];
+    src_x = s->mb_x * 16 + xoff + (mx >> 2);
+    src_y = s->mb_y * 16 + yoff + (my >> 2);
+    uvsrc_x = s->mb_x * 8 + (xoff >> 1) + (mx >> 3);
+    uvsrc_y = s->mb_y * 8 + (yoff >> 1) + (my >> 3);
+    srcY += src_y * s->linesize + src_x;
+    srcU += uvsrc_y * s->uvlinesize + uvsrc_x;
+    srcV += uvsrc_y * s->uvlinesize + uvsrc_x;
+    if(   (unsigned)src_x > s->h_edge_pos - (mx&3) - (width <<3)
+       || (unsigned)src_y > s->v_edge_pos - (my&3) - (height<<3)){
+        uint8_t *uvbuf= s->edge_emu_buffer + 19 * s->linesize;
+
+        ff_emulated_edge_mc(s->edge_emu_buffer, srcY, s->linesize, (width<<3)+1, (height<<3)+1,
+                            src_x, src_y, s->h_edge_pos, s->v_edge_pos);
+        srcY = s->edge_emu_buffer;
+        ff_emulated_edge_mc(uvbuf     , srcU, s->uvlinesize, (width<<2)+1, (height<<2)+1,
+                            uvsrc_x, uvsrc_y, s->h_edge_pos >> 1, s->v_edge_pos >> 1);
+        ff_emulated_edge_mc(uvbuf + 16, srcV, s->uvlinesize, (width<<2)+1, (height<<2)+1,
+                            uvsrc_x, uvsrc_y, s->h_edge_pos >> 1, s->v_edge_pos >> 1);
+        srcU = uvbuf;
+        srcV = uvbuf + 16;
+    }
+    dxy = ((my & 3) << 2) | (mx & 3);
+    uvmx = mx & 6;
+    uvmy = my & 6;
+    Y = s->dest[0] + xoff + yoff*s->linesize;
+    U = s->dest[1] + (xoff>>1) + (yoff>>1)*s->uvlinesize;
+    V = s->dest[2] + (xoff>>1) + (yoff>>1)*s->uvlinesize;
+    if(block_type == RV40_MB_P_16x8){
+        s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
+        Y    += 8;
+        srcY += 8;
+        s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
+        s->dsp.put_h264_chroma_pixels_tab[0]   (U, srcU, s->uvlinesize, 4, uvmx, uvmy);
+        s->dsp.put_h264_chroma_pixels_tab[0]   (V, srcV, s->uvlinesize, 4, uvmx, uvmy);
+    }else if(block_type == RV40_MB_P_8x16){
+        s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
+        Y    += 8 * s->linesize;
+        srcY += 8 * s->linesize;
+        s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
+        s->dsp.put_h264_chroma_pixels_tab[1]   (U, srcU, s->uvlinesize, 8, uvmx, uvmy);
+        s->dsp.put_h264_chroma_pixels_tab[1]   (V, srcV, s->uvlinesize, 8, uvmx, uvmy);
+    }else if(block_type == RV40_MB_P_8x8){
+        s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
+        s->dsp.put_h264_chroma_pixels_tab[1]   (U, srcU, s->uvlinesize, 4, uvmx, uvmy);
+        s->dsp.put_h264_chroma_pixels_tab[1]   (V, srcV, s->uvlinesize, 4, uvmx, uvmy);
+    }else{
+        s->dsp.put_h264_qpel_pixels_tab[0][dxy](Y, srcY, s->linesize);
+        s->dsp.put_h264_chroma_pixels_tab[0]   (U, srcU, s->uvlinesize, 8, uvmx, uvmy);
+        s->dsp.put_h264_chroma_pixels_tab[0]   (V, srcV, s->uvlinesize, 8, uvmx, uvmy);
+    }
+}
+
 static int rv40_decode_mv(RV40DecContext *r, int block_type)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
-    int mv[16][2];
-    int i;
+    int i, j;
 
     switch(block_type){
     case RV40_MB_TYPE_INTRA:
     case RV40_MB_TYPE_INTRA16x16:
-    case RV40_MB_SKIP:
+        for(j = 0; j < 2; j++){
+            for(i = 0; i < 2; i++){
+                s->current_picture_ptr->motion_val[0][s->mb_x * 2 + s->mb_y * 2 * s->b8_stride + i + j*s->b8_stride][0] = 0;
+                s->current_picture_ptr->motion_val[0][s->mb_x * 2 + s->mb_y * 2 * s->b8_stride + i + j*s->b8_stride][1] = 0;
+            }
+        }
         return 0;
+    case RV40_MB_SKIP:
+        rv40_pred_mv(r, block_type, 0);
+        rv40_mc(r, block_type, 0, 0, 0, 2, 2);
+        break;
     case RV40_MB_B_INTERP:
         break;
     case RV40_MB_P_16x16:
     case RV40_MB_B_FORWARD:
     case RV40_MB_B_BACKWARD:
     case RV40_MB_P_MIX16x16:
-        mv[0][0] = get_omega_signed(gb);
-        mv[0][1] = get_omega_signed(gb);
+        r->dmv[0][0] = get_omega_signed(gb);
+        r->dmv[0][1] = get_omega_signed(gb);
+        rv40_pred_mv(r, block_type, 0);
+        rv40_mc(r, block_type, 0, 0, 0, 2, 2);
         break;
     case RV40_MB_P_16x8:
     case RV40_MB_P_8x16:
     case RV40_MB_B_DIRECT:
-        mv[0][0] = get_omega_signed(gb);
-        mv[0][1] = get_omega_signed(gb);
-        mv[1][0] = get_omega_signed(gb);
-        mv[1][1] = get_omega_signed(gb);
+        r->dmv[0][0] = get_omega_signed(gb);
+        r->dmv[0][1] = get_omega_signed(gb);
+        r->dmv[1][0] = get_omega_signed(gb);
+        r->dmv[1][1] = get_omega_signed(gb);
+        rv40_pred_mv(r, block_type, 0);
+        rv40_pred_mv(r, block_type, 1);
+        if(block_type == RV40_MB_P_16x8){
+            rv40_mc(r, block_type, 0, 0, 0,            2, 1);
+            rv40_mc(r, block_type, 0, 8, s->b8_stride, 2, 1);
+        }
+        if(block_type == RV40_MB_P_8x16){
+            rv40_mc(r, block_type, 0, 0, 0, 1, 2);
+            rv40_mc(r, block_type, 8, 0, 1, 1, 2);
+        }
         break;
     case RV40_MB_P_8x8:
         for(i=0;i< 4;i++){
-            mv[i][0] = get_omega_signed(gb);
-            mv[i][1] = get_omega_signed(gb);
+            r->dmv[i][0] = get_omega_signed(gb);
+            r->dmv[i][1] = get_omega_signed(gb);
+            rv40_pred_mv(r, block_type, i);
+            rv40_mc(r, block_type, (i&1)<<3, (i&2)<<2, (i&1)+(i>>1)*s->b8_stride, 1, 1);
         }
         break;
     }
@@ -978,6 +1187,30 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
     return rv40_decode_cbp(gb, r->cur_vlcs, r->is16);
 }
 
+/** Mask for retrieving all bits in coded block pattern
+ * corresponding to one 8x8 block
+ */
+#define LUMA_CBP_BLOCK_MASK 0x303
+
+#define U_CBP_MASK 0x0F0000
+#define V_CBP_MASK 0xF00000
+
+
+static void rv40_apply_differences(RV40DecContext *r, int cbp)
+{
+    static const int shifts[4] = { 0, 2, 8, 10 };
+    MpegEncContext *s = &r->s;
+    int i;
+
+    for(i = 0; i < 4; i++)
+        if(cbp & (LUMA_CBP_BLOCK_MASK << shifts[i]))
+            s->dsp.add_pixels_clamped(s->block[i], s->dest[0] + (i & 1)*8 + (i&2)*4*s->linesize, s->linesize);
+    if(cbp & U_CBP_MASK)
+        s->dsp.add_pixels_clamped(s->block[4], s->dest[1], s->uvlinesize);
+    if(cbp & V_CBP_MASK)
+        s->dsp.add_pixels_clamped(s->block[5], s->dest[2], s->uvlinesize);
+}
+
 static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
 {
     MpegEncContext *s = &r->s;
@@ -1018,7 +1251,10 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[rv40_chroma_quant[1][r->quant]],rv40_qscale_tab[rv40_chroma_quant[0][r->quant]]);
         rv40_intra_inv_transform(s->block[blknum], blkoff);
     }
-    rv40_output_macroblock(r, intra_types, cbp2, r->is16);
+    if(IS_INTRA(s->current_picture_ptr->mb_type[s->mb_x + s->mb_y*s->mb_stride]))
+        rv40_output_macroblock(r, intra_types, cbp2, r->is16);
+    else
+        rv40_apply_differences(r, cbp2);
 
     return 0;
 }
@@ -1049,12 +1285,12 @@ static int rv40_decode_slice(RV40DecContext *r)
         ff_er_frame_start(s);
         s->current_picture_ptr = &s->current_picture;
     }
-if(r->prev_si.type){
-memcpy(s->current_picture_ptr->data[0],s->last_picture_ptr->data[0],s->linesize*s->avctx->height);
-memcpy(s->current_picture_ptr->data[1],s->last_picture_ptr->data[1],s->uvlinesize*s->avctx->height/2);
-memcpy(s->current_picture_ptr->data[2],s->last_picture_ptr->data[2],s->uvlinesize*s->avctx->height/2);
-ff_er_add_slice(s, 0, 0, s->mb_width-1, s->mb_height-1, AC_END|DC_END|MV_END);
-return 0;
+if(s->pict_type == B_TYPE){
+    memcpy(s->current_picture_ptr->data[0], s->last_picture_ptr->data[0], s->linesize*s->avctx->height);
+    memcpy(s->current_picture_ptr->data[1], s->last_picture_ptr->data[1], s->uvlinesize*s->avctx->height/2);
+    memcpy(s->current_picture_ptr->data[2], s->last_picture_ptr->data[2], s->uvlinesize*s->avctx->height/2);
+    ff_er_add_slice(s, 0, 0, s->mb_width-1, s->mb_height-1, AC_END|DC_END|MV_END);
+    return 0;
 }
 
     r->skip_blocks = 0;
@@ -1116,7 +1352,8 @@ static int rv40_decode_init(AVCodecContext *avctx)
     avctx->flags |= CODEC_FLAG_EMU_EDGE;
     r->s.flags |= CODEC_FLAG_EMU_EDGE;
     avctx->pix_fmt = PIX_FMT_YUV420P;
-    s->low_delay = 1;
+    avctx->has_b_frames = 1;
+    s->low_delay = 0;
 
     if (MPV_common_init(s) < 0)
         return -1;
