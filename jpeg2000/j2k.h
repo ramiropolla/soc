@@ -44,7 +44,7 @@ enum J2kMarkers{
     J2K_POC,
     J2K_PPM,
     J2K_PPT,
-    J2K_CRG,
+    J2K_CRG = 0xff63,
     J2K_COM,
     J2K_SOT = 0xff90,
     J2K_SOP,
@@ -84,5 +84,34 @@ typedef struct {
     int flags[J2K_MAX_CBLKW+2][J2K_MAX_CBLKH+2];
     AecState aec;
 } J2kT1Context;
+
+typedef struct J2kTgtNode {
+    uint8_t val;
+    uint8_t vis;
+    struct J2kTgtNode *parent;
+} J2kTgtNode;
+
+/** debug routines */
+#if 0
+#undef fprintf
+#undef printf
+void ff_j2k_printv(int *tab, int l);
+void ff_j2k_printu(uint8_t *tab, int l);
+#endif
+
+/** misc tools */
+int ff_j2k_ceildivpow2(int a, int b);
+int ff_j2k_ceildiv(int a, int b);
+
+/** tag tree routines */
+J2kTgtNode *ff_j2k_tag_tree_init(int w, int h);
+void ff_j2k_tag_tree_destroy(J2kTgtNode *tree);
+
+/** TIER-1 routines */
+int ff_j2k_getnbctxno(int flag, int bandno);
+int ff_j2k_getrefctxno(int flag);
+int ff_j2k_getsgnctxno(int flag, int *xorbit);
+
+void ff_j2k_set_significant(J2kT1Context *t1, int x, int y);
 
 #endif

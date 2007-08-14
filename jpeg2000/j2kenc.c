@@ -57,12 +57,6 @@ typedef struct {
     J2kPass passess[30];
 } J2kCblk; // code block
 
-typedef struct J2kTgtNode {
-    uint8_t val;
-    uint8_t vis;
-    struct J2kTgtNode *parent;
-} J2kTgtNode;
-
 typedef struct {
     uint16_t xi0, xi1, yi0, yi1; /// indices of codeblocks ([xi0, xi1))
 } J2kPrec; // precinct
@@ -207,17 +201,6 @@ static void dump(J2kEncoderContext *s, FILE *fd)
 }
 #endif
 
-/* misc tools */
-static int ceildivpow2(int a, int b)
-{
-    return (a + (1 << b) - 1)>> b;
-}
-
-static int ceildiv(int a, int b)
-{
-    return (a + b - 1) / b;
-}
-
 /* bitstream routines */
 
 /* put n times val bit */
@@ -250,51 +233,6 @@ static void j2k_flush(J2kEncoderContext *s)
 }
 
 /* tag tree routines */
-
-/* allocate the memory for tag tree */
-//TODO: optimize (too many mallocs)
-static J2kTgtNode *tag_tree_alloc(int w, int h)
-{
-    int i;
-   J2kTgtNode *t = av_malloc(w*h*sizeof(J2kTgtNode));
-    if (t == NULL)
-        return NULL;
-    for (i = 0; i < w*h; i++){
-        t[i].val = 0xff;
-        t[i].vis = 0;
-    }
-    return t;
-}
-
-static J2kTgtNode *tag_tree_init(int w, int h)
-{
-    J2kTgtNode *res = tag_tree_alloc(w, h),
-               *t = res;
-
-    if (res == NULL)
-        return NULL;
-
-    while (w > 1 || h > 1){
-        int pw = w, ph = h;
-        int i, j;
-        J2kTgtNode *t2;
-
-        w = (w+1) >> 1;
-        h = (h+1) >> 1;
-        t2 = tag_tree_alloc(w, h);
-        if (t2 == NULL)
-            return NULL;
-
-        for (i = 0; i < ph; i++)
-            for (j = 0; j < pw; j++){
-                t[i*pw + j].parent = &t2[(i>>1)*w + (j>>1)];
-            }
-        t = t2;
-    }
-    t[0].parent = NULL;
-    return res;
-}
-
 /* code the value stored in node */
 static void tag_tree_code(J2kEncoderContext *s, J2kTgtNode *node, int threshold)
 {
@@ -333,15 +271,6 @@ static void tag_tree_update(J2kTgtNode *node)
         node->parent->val = node->val;
         node = node->parent;
         lev++;
-    }
-}
-
-static void tag_tree_destroy(J2kTgtNode *tree)
-{
-    while (tree != NULL){
-        J2kTgtNode *parent = tree[0].parent;
-        av_free(tree);
-        tree = parent;
     }
 }
 
@@ -434,8 +363,8 @@ static int init_tiles(J2kEncoderContext *s)
 {
     int y, x, tno, compno, reslevelno, bandno, i;
 
-    s->numXtiles = ceildiv(s->Xsiz, s->XTsiz);
-    s->numYtiles = ceildiv(s->Ysiz, s->YTsiz);
+    s->numXtiles = ff_j2k_ceildiv(s->Xsiz, s->XTsiz);
+    s->numYtiles = ff_j2k_ceildiv(s->Ysiz, s->YTsiz);
 
     s->tile = av_malloc(s->numXtiles * s->numYtiles * sizeof(J2kTile));
     if (s->tile == NULL)
@@ -466,10 +395,10 @@ static int init_tiles(J2kEncoderContext *s)
                 int n = s->nreslevels - reslevelno;
                 J2kResLevel *reslevel = comp->reslevel + reslevelno;
 
-                reslevel->x0 = ceildivpow2(comp->x0, s->nreslevels - reslevelno - 1);
-                reslevel->x1 = ceildivpow2(comp->x1, s->nreslevels - reslevelno - 1);
-                reslevel->y0 = ceildivpow2(comp->y0, s->nreslevels - reslevelno - 1);
-                reslevel->y1 = ceildivpow2(comp->y1, s->nreslevels - reslevelno - 1);
+                reslevel->x0 = ff_j2k_ceildivpow2(comp->x0, s->nreslevels - reslevelno - 1);
+                reslevel->x1 = ff_j2k_ceildivpow2(comp->x1, s->nreslevels - reslevelno - 1);
+                reslevel->y0 = ff_j2k_ceildivpow2(comp->y0, s->nreslevels - reslevelno - 1);
+                reslevel->y1 = ff_j2k_ceildivpow2(comp->y1, s->nreslevels - reslevelno - 1);
 
                 if (reslevelno == 0)
                     reslevel->nbands = 1;
@@ -479,12 +408,12 @@ static int init_tiles(J2kEncoderContext *s)
                 if (reslevel->x1 == reslevel->x0)
                     reslevel->nprecw = 0;
                 else
-                    reslevel->nprecw = ceildivpow2(reslevel->x1, s->ppx) - reslevel->x0 / (1<<s->ppx);
+                    reslevel->nprecw = ff_j2k_ceildivpow2(reslevel->x1, s->ppx) - reslevel->x0 / (1<<s->ppx);
 
                 if (reslevel->y1 == reslevel->y0)
                     reslevel->nprech = 0;
                 else
-                    reslevel->nprech = ceildivpow2(reslevel->y1, s->ppy) - reslevel->y0 / (1<<s->ppy);
+                    reslevel->nprech = ff_j2k_ceildivpow2(reslevel->y1, s->ppy) - reslevel->y0 / (1<<s->ppy);
 
                 reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
                 if (reslevel->band == NULL)
@@ -500,23 +429,23 @@ static int init_tiles(J2kEncoderContext *s)
                         band->cblkw = 1 << FFMIN(s->xcb, s->ppx-1);
                         band->cblkh = 1 << FFMIN(s->ycb, s->ppy-1);
 
-                        band->x0 = ceildivpow2(comp->x0, n-1);
-                        band->x1 = ceildivpow2(comp->x1, n-1);
-                        band->y0 = ceildivpow2(comp->y0, n-1);
-                        band->y1 = ceildivpow2(comp->y1, n-1);
+                        band->x0 = ff_j2k_ceildivpow2(comp->x0, n-1);
+                        band->x1 = ff_j2k_ceildivpow2(comp->x1, n-1);
+                        band->y0 = ff_j2k_ceildivpow2(comp->y0, n-1);
+                        band->y1 = ff_j2k_ceildivpow2(comp->y1, n-1);
                     }
                     else{
                         band->cblkw = 1 << FFMIN(s->xcb, s->ppx);
                         band->cblkh = 1 << FFMIN(s->ycb, s->ppy);
 
-                        band->x0 = ceildivpow2(comp->x0 - (1 << (n-1)) * ((bandno+1)&1), n);
-                        band->x1 = ceildivpow2(comp->x1 - (1 << (n-1)) * ((bandno+1)&1), n);
-                        band->y0 = ceildivpow2(comp->y0 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
-                        band->y1 = ceildivpow2(comp->y1 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
+                        band->x0 = ff_j2k_ceildivpow2(comp->x0 - (1 << (n-1)) * ((bandno+1)&1), n);
+                        band->x1 = ff_j2k_ceildivpow2(comp->x1 - (1 << (n-1)) * ((bandno+1)&1), n);
+                        band->y0 = ff_j2k_ceildivpow2(comp->y0 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
+                        band->y1 = ff_j2k_ceildivpow2(comp->y1 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
                     }
 
-                    band->cblknx = ceildiv(band->x1, band->cblkw) - band->x0 / band->cblkw;
-                    band->cblkny = ceildiv(band->y1, band->cblkh) - band->y0 / band->cblkh;
+                    band->cblknx = ff_j2k_ceildiv(band->x1, band->cblkw) - band->x0 / band->cblkw;
+                    band->cblkny = ff_j2k_ceildiv(band->y1, band->cblkh) - band->y0 / band->cblkh;
 
                     band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
                     if (band->cblk == NULL)
@@ -532,7 +461,7 @@ static int init_tiles(J2kEncoderContext *s)
                     y0 = band->y0;
                     y1 = (band->y0 + (1<<s->ppy))/(1<<s->ppy)*(1<<s->ppy) - band->y0;
                     yi0 = 0;
-                    yi1 = ceildiv(y1 - y0, 1<<s->ycb) * (1<<s->ycb);
+                    yi1 = ff_j2k_ceildiv(y1 - y0, 1<<s->ycb) * (1<<s->ycb);
                     yi1 = FFMIN(yi1, band->cblkny);
                     cblkperprech = 1<<(s->ppy - s->ycb);
                     for (precy = 0, precno = 0; precy < reslevel->nprech; precy++){
@@ -547,7 +476,7 @@ static int init_tiles(J2kEncoderContext *s)
                     x0 = band->x0;
                     x1 = (band->x0 + (1<<s->ppx))/(1<<s->ppx)*(1<<s->ppx) - band->x0;
                     xi0 = 0;
-                    xi1 = ceildiv(x1 - x0, 1<<s->xcb) * (1<<s->xcb);
+                    xi1 = ff_j2k_ceildiv(x1 - x0, 1<<s->xcb) * (1<<s->xcb);
                     xi1 = FFMIN(xi1, band->cblknx);
                     cblkperprecw = 1<<(s->ppx - s->xcb);
                     for (precx = 0, precno = 0; precx < reslevel->nprecw; precx++){
@@ -693,109 +622,6 @@ static void dwt_encode53(J2kEncoderContext *s, J2kComponent *comp)
 }
 
 /* tier-1 routines */
-static int getnbctxno(int flag, int bandno)
-{
-    int h, v, d;
-
-    h = ((flag & J2K_T1_SIG_E) ? 1:0)+
-        ((flag & J2K_T1_SIG_W) ? 1:0);
-    v = ((flag & J2K_T1_SIG_N) ? 1:0)+
-        ((flag & J2K_T1_SIG_S) ? 1:0);
-    d = ((flag & J2K_T1_SIG_NE) ? 1:0)+
-        ((flag & J2K_T1_SIG_NW) ? 1:0)+
-        ((flag & J2K_T1_SIG_SE) ? 1:0)+
-        ((flag & J2K_T1_SIG_SW) ? 1:0);
-    switch(bandno){
-        case 0: // LL || LH
-        case 2:
-            if (h == 2) return 8;
-            if (h == 1){
-                if (v >= 1) return 7;
-                if (d >= 1) return 6;
-                return 5;
-            }
-            if (v == 2) return 4;
-            if (v == 1) return 3;
-            if (d >= 2) return 2;
-            if (d == 1) return 1;
-            return 0;
-        case 1: // HL
-            if (v == 2) return 8;
-            if (v == 1){
-                if (h >= 1) return 7;
-                if (d >= 1) return 6;
-                return 5;
-            }
-            if (h == 2) return 4;
-            if (h == 1) return 3;
-            if (d >= 2) return 2;
-            if (d >= 1) return 1;
-            return 0;
-        case 3:
-            if (d >= 3) return 8;
-            if (d == 2){
-                if (h+v >= 1) return 7;
-                return 6;
-            }
-            if (d == 1){
-                if (h+v >= 2) return 5;
-                if (h+v == 1) return 4;
-                return 3;
-            }
-            if (h+v >= 2) return 2;
-            if (h+v == 1) return 1;
-            return 0;
-    }
-    assert(0);
-}
-
-static int getrefctxno(int flag)
-{
-    if (!(flag & J2K_T1_REF)){
-        if (flag & J2K_T1_SIG_NB)
-            return 15;
-        return 14;
-    }
-    return 16;
-}
-
-static int getsgnctxno(int flag, int *xorbit)
-{
-    int vcontrib, hcontrib;
-    const int contribtab[3][3] = {{0, -1, 1}, {-1, -1, 0}, {1, 0, 1}};
-    const int ctxlbltab[3][3] = {{13, 12, 11}, {10, 9, 10}, {11, 12, 13}};
-    const int xorbittab[3][3] = {{1, 1, 1,}, {1, 0, 0}, {0, 0, 0}};
-
-    hcontrib = contribtab[flag & J2K_T1_SIG_E ? flag & J2K_T1_SGN_E ? 1:2:0]
-                         [flag & J2K_T1_SIG_W ? flag & J2K_T1_SGN_W ? 1:2:0]+1;
-    vcontrib = contribtab[flag & J2K_T1_SIG_S ? flag & J2K_T1_SGN_S ? 1:2:0]
-                         [flag & J2K_T1_SIG_N ? flag & J2K_T1_SGN_N ? 1:2:0]+1;
-    *xorbit = xorbittab[hcontrib][vcontrib];
-    return ctxlbltab[hcontrib][vcontrib];
-}
-
-static void set_significant(J2kT1Context *t1, int x, int y)
-{
-    x++; y++;
-    t1->flags[y][x] |= J2K_T1_SIG;
-    if (t1->data[y-1][x-1] < 0){
-        t1->flags[y][x+1] |= J2K_T1_SIG_W | J2K_T1_SGN_W;
-        t1->flags[y][x-1] |= J2K_T1_SIG_E | J2K_T1_SGN_E;
-        t1->flags[y+1][x] |= J2K_T1_SIG_N | J2K_T1_SGN_N;
-        t1->flags[y-1][x] |= J2K_T1_SIG_S | J2K_T1_SGN_S;
-    }
-    else{
-        t1->flags[y][x+1] |= J2K_T1_SIG_W;
-        t1->flags[y][x-1] |= J2K_T1_SIG_E;
-        t1->flags[y+1][x] |= J2K_T1_SIG_N;
-        t1->flags[y-1][x] |= J2K_T1_SIG_S;
-    }
-    t1->flags[y+1][x+1] |= J2K_T1_SIG_NW;
-    t1->flags[y+1][x-1] |= J2K_T1_SIG_NE;
-    t1->flags[y-1][x+1] |= J2K_T1_SIG_SW;
-    t1->flags[y-1][x-1] |= J2K_T1_SIG_SE;
-}
-
 static int getnmsedec_sig(int x, int bpno)
 {
     if (bpno > NMSEDEC_FRACBITS)
@@ -817,15 +643,15 @@ static void encode_sigpass(J2kT1Context *t1, int width, int height, int bandno, 
         for (j = 0; j < width; j++)
             for (k = i; k < height && k < i+4; k++){
                 if (!(t1->flags[k+1][j+1] & J2K_T1_SIG) && (t1->flags[k+1][j+1] & J2K_T1_SIG_NB)){
-                    int ctxno = getnbctxno(t1->flags[k+1][j+1], bandno),
+                    int ctxno = ff_j2k_getnbctxno(t1->flags[k+1][j+1], bandno),
                         bit = abs(t1->data[k][j]) & mask ? 1 : 0;
                     ff_aec_encode(&t1->aec, ctxno, bit);
                     if (bit){
                         int xorbit;
-                        int ctxno = getsgnctxno(t1->flags[k+1][j+1], &xorbit);
+                        int ctxno = ff_j2k_getsgnctxno(t1->flags[k+1][j+1], &xorbit);
                         ff_aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0) ^ xorbit);
                         *nmsedec += getnmsedec_sig(abs(t1->data[k][j]), bpno + NMSEDEC_FRACBITS);
-                        set_significant(t1, j, k);
+                        ff_j2k_set_significant(t1, j, k);
                     }
                     t1->flags[k+1][j+1] |= J2K_T1_VIS;
                 }
@@ -839,7 +665,7 @@ static void encode_refpass(J2kT1Context *t1, int width, int height, int *nmsedec
         for (j = 0; j < width; j++)
             for (k = i; k < height && k < i+4; k++)
                 if ((t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS)) == J2K_T1_SIG){
-                    int ctxno = getrefctxno(t1->flags[k+1][j+1]);
+                    int ctxno = ff_j2k_getrefctxno(t1->flags[k+1][j+1]);
                     *nmsedec += getnmsedec_ref(abs(t1->data[k][j]), bpno + NMSEDEC_FRACBITS);
                     ff_aec_encode(&t1->aec, ctxno, abs(t1->data[k][j]) & mask ? 1:0);
                     t1->flags[k+1][j+1] |= J2K_T1_REF;
@@ -869,15 +695,15 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int bandno, 
                 ff_aec_encode(&t1->aec, AEC_CX_UNI, rlen & 1);
                 for (k = i + rlen; k < i + 4; k++){
                     if (!(t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS))){
-                        int ctxno = getnbctxno(t1->flags[k+1][j+1], bandno);
+                        int ctxno = ff_j2k_getnbctxno(t1->flags[k+1][j+1], bandno);
                         if (k > i + rlen)
                             ff_aec_encode(&t1->aec, ctxno, abs(t1->data[k][j]) & mask ? 1:0);
                         if (abs(t1->data[k][j]) & mask){ // newly significant
                             int xorbit;
-                            int ctxno = getsgnctxno(t1->flags[k+1][j+1], &xorbit);
+                            int ctxno = ff_j2k_getsgnctxno(t1->flags[k+1][j+1], &xorbit);
                             *nmsedec += getnmsedec_sig(abs(t1->data[k][j]), bpno + NMSEDEC_FRACBITS);
                             ff_aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0) ^ xorbit);
-                            set_significant(t1, j, k);
+                            ff_j2k_set_significant(t1, j, k);
                         }
                     }
                     t1->flags[k+1][j+1] &= ~J2K_T1_VIS;
@@ -886,14 +712,14 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int bandno, 
             else{
                 for (k = i; k < i + 4 && k < height; k++){
                     if (!(t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS))){
-                        int ctxno = getnbctxno(t1->flags[k+1][j+1], bandno);
+                        int ctxno = ff_j2k_getnbctxno(t1->flags[k+1][j+1], bandno);
                         ff_aec_encode(&t1->aec, ctxno, abs(t1->data[k][j]) & mask ? 1:0);
                         if (abs(t1->data[k][j]) & mask){ // newly significant
                             int xorbit;
-                            int ctxno = getsgnctxno(t1->flags[k+1][j+1], &xorbit);
+                            int ctxno = ff_j2k_getsgnctxno(t1->flags[k+1][j+1], &xorbit);
                             *nmsedec += getnmsedec_sig(abs(t1->data[k][j]), bpno + NMSEDEC_FRACBITS);
                             ff_aec_encode(&t1->aec, ctxno, (t1->data[k][j] < 0) ^ xorbit);
-                            set_significant(t1, j, k);
+                            ff_j2k_set_significant(t1, j, k);
                         }
                     }
                     t1->flags[k+1][j+1] &= ~J2K_T1_VIS;
@@ -1004,8 +830,8 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
         cblknh = band->prec[precno].yi1 - band->prec[precno].yi0;
         cblknw = band->prec[precno].xi1 - band->prec[precno].xi0;
 
-        cblkincl = tag_tree_init(cblknw, cblknh);
-        zerobits = tag_tree_init(cblknw, cblknh);
+        cblkincl = ff_j2k_tag_tree_init(cblknw, cblknh);
+        zerobits = ff_j2k_tag_tree_init(cblknw, cblknh);
 
         for (pos=0, yi = band->prec[precno].yi0; yi < band->prec[precno].yi1; yi++){
             for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++, pos++){
@@ -1043,8 +869,8 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
             }
         }
 
-        tag_tree_destroy(cblkincl);
-        tag_tree_destroy(zerobits);
+        ff_j2k_tag_tree_destroy(cblkincl);
+        ff_j2k_tag_tree_destroy(zerobits);
     }
     j2k_flush(s);
     for (bandno = 0; bandno < rlevel->nbands; bandno++){
@@ -1145,7 +971,7 @@ static void encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
                 int cblkx, cblky, cblkno=0, xx0, x0, xx1, y0, yy0, yy1, bandpos;
                 yy0 = bandno == 0 ? 0 : comp->reslevel[reslevelno-1].y1 - comp->reslevel[reslevelno-1].y0;
                 y0 = yy0;
-                yy1 = FFMIN(ceildiv(band->y0 + 1, band->cblkh) * band->cblkh, band->y1) - band->y0 + yy0;
+                yy1 = FFMIN(ff_j2k_ceildiv(band->y0 + 1, band->cblkh) * band->cblkh, band->y1) - band->y0 + yy0;
 
                 if (band->x0 == band->x1 || band->y0 == band->y1)
                     continue;
@@ -1158,7 +984,7 @@ static void encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
                     else
                         xx0 = comp->reslevel[reslevelno-1].x1 - comp->reslevel[reslevelno-1].x0;
                     x0 = xx0;
-                    xx1 = FFMIN(ceildiv(band->x0 + 1, band->cblkw) * band->cblkw, band->x1) - band->x0 + xx0;
+                    xx1 = FFMIN(ff_j2k_ceildiv(band->x0 + 1, band->cblkw) * band->cblkw, band->x1) - band->x0 + xx0;
 
                     for (cblkx = 0; cblkx < band->cblknx; cblkx++, cblkno++){
                         int y, x;
