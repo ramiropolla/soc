@@ -28,6 +28,7 @@
 #include "j2k.h"
 #include "avcodec.h"
 
+#if 0
 void ff_j2k_printv(int *tab, int l)
 {
     int i;
@@ -43,6 +44,7 @@ void ff_j2k_printu(uint8_t *tab, int l)
         printf("%.3hd ", tab[i]);
     printf("\n");
 }
+#endif
 
 int ff_j2k_ceildivpow2(int a, int b)
 {
