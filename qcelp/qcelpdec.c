@@ -534,7 +534,7 @@ static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
     for(i=0; i< 5; i++)
             lpc[i]=-(pa[i]+qa[i])/2.0;
     for(i=5; i<10; i++)
-            lpc[i]=-(pa[10-i]-qa[10-i])/2.0;
+            lpc[i]=-(pa[9-i]-qa[9-i])/2.0;
 
     /**
      * FIXME see 2.4.3.3.6-1, the scaling may be necesary at decoding too
