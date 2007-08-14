@@ -4,6 +4,7 @@ CFLAGS+=-I$(SRC_PATH)/libavcodec
 
 OBJS = avfilter.o \
        avfiltergraph.o \
+       avfiltergraphdesc.o \
        defaults.o \
 
 # TODO: real conditional compilation

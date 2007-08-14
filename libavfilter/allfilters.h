@@ -26,6 +26,8 @@ extern AVFilter vsrc_ppm;
 extern AVFilter vf_crop;
 extern AVFilter vf_fps;
 extern AVFilter vf_graph;
+extern AVFilter vf_graphdesc;
+extern AVFilter vf_graphfile;
 extern AVFilter vf_overlay;
 extern AVFilter vf_passthrough;
 extern AVFilter vf_rgb2bgr;
