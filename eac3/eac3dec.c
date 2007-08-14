@@ -98,7 +98,6 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
     c->gbc = &gbc;
     c->syncword = 0;
-    c->csnroffst  = -1;
 
     init_get_bits(&gbc, buf, buf_size*8);
     ff_eac3_parse_syncinfo(&gbc, c);

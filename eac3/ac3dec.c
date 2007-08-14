@@ -1005,6 +1005,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
                                       ctx->startmant[ch], ctx->endmant[ch],
                                       ctx->snroffst[ch],
                                       ctx->bit_alloc_params.floor,
+                                      ff_ac3_baptab,
                                       ctx->bap[ch]);
         }
     }

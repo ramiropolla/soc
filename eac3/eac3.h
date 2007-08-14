@@ -131,6 +131,7 @@ typedef struct EAC3Context{
     int expstre; // 1);              ///< Exponent strategy syntax enabled
     int ahte; // 1);                 ///< Adaptive hybrid transform enabled
     int snroffststr; // 2);          ///< SNR offset strategy
+    int snroffst[AC3_MAX_CHANNELS];  ///< SNR offset
     int transproce; // 1);           ///< Transient pre-noise processing enabled
     int blkswe; // 1);               ///< Block switch syntax enabled
     int dithflage; // 1);            ///< Dither flag syntax enabled
@@ -142,13 +143,10 @@ typedef struct EAC3Context{
     int cplinu[MAX_BLOCKS]; // 1);   ///< Coupling in use
     int cplstre[MAX_BLOCKS]; // 1);  ///< Coupling strategy exists
     int chexpstr[MAX_BLOCKS][MAX_CHANNELS]; // 2); ///< Channel exponent strategy
-    int frmchexpstr[MAX_CHANNELS];   ///< frame based channel exponent strategy
     int convexpstr[MAX_CHANNELS];    ///< Converter channel exponent strategy
     int cplahtinu; // 1);            ///< Coupling channel AHT in use
     int chahtinu[MAX_CHANNELS];      ///< Channel AHT in use
     int lfeahtinu; // 1);            ///< Lfe channel AHT in use
-    int frmcsnroffst; // 6);         ///< Frame coarse SNR offset
-    int frmfsnroffst; // 4);         ///< Frame fine SNR offset
     int chintransproc[MAX_CHANNELS]; ///< Channel in transient pre-noise processing
     int transprocloc[MAX_CHANNELS];  ///< Transient location relative to start of frame
     int transproclen[MAX_CHANNELS];  ///< Transient processing length
@@ -208,12 +206,6 @@ typedef struct EAC3Context{
     int sgaincod; // 2);             ///< Slow gain code
     int dbpbcod; // 2);              ///< dB per bit code
     int floorcod; // 3);             ///< Masking floor code
-    int snroffste; // 1);            ///< SNR offset exists
-    int csnroffst; // 6);            ///< Coarse SNR offset
-    int blkfsnroffst; // 4);         ///< Block fine SNR offset
-    int cplfsnroffst; // 4);         ///< Coupling fine SNR offset
-    int fsnroffst[MAX_CHANNELS];     ///< Channel fine SNR offset
-    int fgaincode; // 1);            ///< Channel fast gain code enabled
     int fgaincod[MAX_CHANNELS];      ///< Channel fast gain code
     int convsnroffste; // 1);        ///< Converter SNR offset exists
     int convsnroffst; // 10);        ///< Converter SNR offset
