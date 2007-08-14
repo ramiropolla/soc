@@ -363,7 +363,7 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
  *
  * WIP (but should work)
  *
- * @param step Mode, 1 for pitch filter or 2 for pitch pre filter
+ * @param step Mode, 1 for pitch filter or 2 for pitch pre-filter
  *
  */
 static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitchf_mem, int step,
@@ -393,7 +393,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitchf_mem, int step,
             {
                 gain[i]=plag[i]? (pgain[i]+1)/4.0 : 0.0;
 
-                if(step == 2) /* become pitch pre filter */
+                if(step == 2) /* become pitch pre-filter */
                     gain[i]=0.5*FFMIN(gain[i],1.0);
 
                 lag[i]  =plag[i]+16;
@@ -790,7 +790,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         }
 
         memcpy(ppf_vector, cdn_vector, 160*sizeof(float));
-        /* pitch pre filter */
+        /* pitch pre-filter */
         if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchf_mem,
                                           2, ppf_vector)))
         {
@@ -833,7 +833,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     }
     av_log(avctx, AV_LOG_DEBUG, "\n");
 
-    /* Apply formant synthesis filter over the pitch prefilter output. */
+    /* Apply formant synthesis filter over the pitch pre-filter output. */
     av_log(avctx, AV_LOG_DEBUG, "-------- Output --------\n");
     for(i=0; i<160; i++)
     {
