@@ -181,7 +181,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
 
                 /* FIXME this needs to be further examinated */
                 if(frame->rate == RATE_FULL && i > 0 && !((i+1) & 3))
-                    predictor=av_clip(6, 38, (g1[i-1]+g1[i-2]+g1[i-3])/3);
+                    predictor=av_clip((g1[i-1]+g1[i-2]+g1[i-3])/3, 6, 38);
                 else
                     predictor=0;
 
@@ -865,7 +865,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         /* WIP adaptive postfilter here */
 
         /* output stage */
-        outbuffer[i]=av_clip(lrintf(4*ppf_vector[i]), -32768, 32767);
+        outbuffer[i]=av_clip(lrintf(4*ppf_vector[i]), -32768, 32768);
         av_log(avctx, AV_LOG_DEBUG, "%d", outbuffer[i]);
     }
     av_log(avctx, AV_LOG_DEBUG, "\n");
