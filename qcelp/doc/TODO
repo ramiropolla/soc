@@ -1,7 +1,7 @@
 Clear
 
 - Make it work / Sample smashing
-- Code and Hook adaptive postfilter using qcelp_apply_gain_ctrl()
+- Hook final gain control stage using qcelp_apply_gain_ctrl()
 - Rework IFQ handling & decoding glue code in general.
 - Stop calling hammsinc a zillion times, make a table and fill it at init
   instead.
