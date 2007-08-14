@@ -577,11 +577,14 @@ static float qcelp_prede_filter(float *lpc, float z)
 
 /**
  * 2.4.8.6-2
- * Used after the adaptive postfilter at sample generation stage.
+ * Used in the adaptive postfilter at sample generation stage.
  */
-static void qcelp_detilt(float *z)
+static float qcelp_detilt(float z)
 {
-    *z = 1.0/(1.0 + 0.3 / *z);
+    if(z)
+        return (1.0/(1.0 + 0.3 / z));
+    else
+        return 0;
 }
 
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
@@ -842,7 +845,13 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             qcelp_lsp2lpc(avctx, interpolated_lspf, lpc);
         }
 
+        /* formant */
         ppf_vector[i]=1.0/qcelp_prede_filter(lpc, ppf_vector[i]);
+        /* adaptive postfilter */
+        ppf_vector[i]=qcelp_detilt(ppf_vector[i])*
+                      qcelp_prede_filter(lpc, ppf_vector[i]/0.625)/
+                      qcelp_prede_filter(lpc, ppf_vector[i]/0.775);
+
         av_log(avctx, AV_LOG_DEBUG, " %f/", ppf_vector[i]);
         /* WIP adaptive postfilter here */
 
