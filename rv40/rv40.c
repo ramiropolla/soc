@@ -942,12 +942,12 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
         s->current_picture_ptr->mb_type[mb_pos] = rv40_mb_type_to_lavc[r->block_type];
         r->mb_type[mb_pos] = (r->block_type == RV40_MB_SKIP) ? RV40_MB_P_16x16 : r->block_type;
         r->is16 = !!IS_INTRA16x16(s->current_picture_ptr->mb_type[mb_pos]);
+        rv40_decode_mv(r, r->block_type);
         if(r->block_type == RV40_MB_SKIP){
             for(i = 0; i < 16; i++)
                 intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = 0;
             return 0;
         }
-        rv40_decode_mv(r, r->block_type);
         r->chroma_vlc = 1;
         r->luma_vlc   = 0;
     }
