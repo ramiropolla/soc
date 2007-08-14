@@ -865,7 +865,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         /* WIP adaptive postfilter here */
 
         /* output stage */
-        outbuffer[i]=av_clip_int16(lrintf(4*ppf_vector[i]), -32768, 32767);
+        outbuffer[i]=av_clip(lrintf(4*ppf_vector[i]), -32768, 32767);
         av_log(avctx, AV_LOG_DEBUG, "%d", outbuffer[i]);
     }
     av_log(avctx, AV_LOG_DEBUG, "\n");
