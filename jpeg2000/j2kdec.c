@@ -782,10 +782,10 @@ static int decode_cblk(J2kDecoderContext *s, J2kT1Context *t1, J2kCblk *cblk, in
     int passno = cblk->npassess, pass_t = 2, bpno = cblk->nonzerobits - 1, i;
 
     for (i = 0; i < height+2; i++)
-        bzero(t1->flags[i], (width+2)*sizeof(int));
+        memset(t1->flags[i], 0, (width+2)*sizeof(int));
 
     for (i = 0; i < height; i++)
-        bzero(t1->data[i], width*sizeof(int));
+        memset(t1->data[i], 0, width*sizeof(int));
 
     ff_aec_initdec(&t1->aec, cblk->data);
     cblk->data[cblk->length] = 0xff;

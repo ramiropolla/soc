@@ -735,7 +735,7 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
     int64_t wmsedec = 0;
 
     for (i = 0; i < height+2; i++)
-        bzero(t1->flags[i], (width+2)*sizeof(int));
+        memset(t1->flags[i], 0, (width+2)*sizeof(int));
 
     for (i = 0; i < height; i++){
         for (j = 0; j < width; j++)

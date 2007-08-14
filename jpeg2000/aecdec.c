@@ -75,7 +75,7 @@ static int exchange(AecState *aec, int lps)
 
 void ff_aec_initdec(AecState *aec, uint8_t *bp)
 {
-    bzero(aec->contexts, 19*sizeof(AecContext));
+    memset(aec->contexts, 0, 19*sizeof(AecContext));
     aec->contexts[AEC_CX_UNI].state = 46;
     aec->contexts[AEC_CX_RL].state = 3;
     aec->contexts[0].state = 4;
