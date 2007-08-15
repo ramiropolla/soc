@@ -1,5 +1,5 @@
 /*
- * JPEG2000 encoder and decoder
+ * JPEG2000 encoder and decoder common functions
  * Copyright (c) 2007 Kamil Nowosad
  *
  * This file is part of FFmpeg.

@@ -1,5 +1,5 @@
 /*
- * Arithmetic entropy encoder and decoder commons
+ * Arithmetic entropy encoder and decoder common functions
  * Copyright (c) 2007 Kamil Nowosad
  *
  * This file is part of FFmpeg.
@@ -20,7 +20,7 @@
  */
 
 /**
- * Arithmetic entropy coder and decoder commons
+ * Arithmetic entropy coder and decoder common functions
  * @file aec.c
  * @author Kamil Nowosad
  */
