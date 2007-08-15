@@ -1408,6 +1408,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
 
             init_get_bits(&s->gb, buf + offset, size * 8);
             rv40_parse_slice_header(r, &r->s.gb, &r->prev_si);
+            if(r->prev_si.type == -1) continue;
             r->prev_si.size = size * 8;
             r->prev_si.end = s->mb_width * s->mb_height;
             if(i+1 < avctx->slice_count){
