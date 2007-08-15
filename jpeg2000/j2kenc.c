@@ -545,19 +545,17 @@ static void init_luts()
 }
 
 /* discrete wavelet transform routines */
-static void sd_1d(int *p, int i0, int i1, int ileft, int iright)
+static void sd_1d(int *p, int i0, int i1)
 {
-#define PSE (i0 + FFMIN((i-i0+2*(i1-i0-1))%(2*(i1-i0-1)), 2*(i1-i0-1)-(i-i0+2*(i1-i0-1))%(2*(i1-i0-1))))
     int i;
 
     if (i1 == i0 + 1)
         return;
-    for (i = i0 - ileft; i < i0; i++){
-        p[i] = p[PSE];
-    }
-    for (i = i1; i < i1+iright; i++){
-        p[i] = p[PSE];
-    }
+
+    p[i0 - 1] = p[i0 + 1];
+    p[i1    ] = p[i1 - 2];
+    p[i0 - 2] = p[i0 + 2];
+    p[i1 + 1] = p[i1 - 3];
 
     for (i = (i0+1)/2 - 1; i < (i1+1)/2; i++){
         p[2*i+1] -= (p[2*i] + p[2*i+2]) >> 1;
@@ -565,7 +563,6 @@ static void sd_1d(int *p, int i0, int i1, int ileft, int iright)
     for (i = (i0+1)/2; i < (i1+1)/2; i++){
         p[2*i] += (p[2*i-1] + p[2*i+1] + 2) >> 2;
     }
-#undef PSE
 }
 
 static void dwt_encode53(J2kEncoderContext *s, J2kComponent *comp)
@@ -581,14 +578,13 @@ static void dwt_encode53(J2kEncoderContext *s, J2kComponent *comp)
             v0 = comp->reslevel[lev].y0,
             v1 = comp->reslevel[lev].y1,
             u = u0, v = v0;
-        const static int tileft[2] = {2, 1}, tiright[2] = {1, 2};
 
         //VER_SD
         while (u < u1){
             int i, j;
             for (i = v0; i < v1; i++)
                 pv[i] = t[w*(i-v0) + u-u0];
-            sd_1d(pv, v0, v1, tileft[v0&1], tiright[v1&1]);
+            sd_1d(pv, v0, v1);
 
             // copy back and deinterleave
             for (i = v0+v0%2, j = 0; i < v1; i+=2, j++){
@@ -605,7 +601,7 @@ static void dwt_encode53(J2kEncoderContext *s, J2kComponent *comp)
             int i, j;
             for (i = u0; i < u1; i++)
                 pu[i] = t[w*(v-v0) + i-u0];
-            sd_1d(pu, u0, u1, tileft[u0&1], tiright[u1&1]);
+            sd_1d(pu, u0, u1);
 
             // copy back and deinterleave
             for (i = u0+u0%2, j = 0; i < u1; i+=2, j++){
