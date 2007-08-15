@@ -709,7 +709,7 @@ static int rv40_decode_mb_info(RV40DecContext *r)
             blocks[r->mb_type[mb_pos - s->mb_stride]]++;
             if(s->mb_x && !(s->mb_x == s->resync_mb_x && (s->mb_y-1) == s->resync_mb_y))
                 blocks[r->mb_type[mb_pos - s->mb_stride - 1]]++;
-            if(s->mb_x-1 < s->mb_width)
+            if(s->mb_x+1 < s->mb_width)
                 blocks[r->mb_type[mb_pos - s->mb_stride + 1]]++;
         }
         if(s->mb_x && !(s->first_slice_line && s->mb_x == s->resync_mb_x))
