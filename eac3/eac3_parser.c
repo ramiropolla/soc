@@ -42,6 +42,8 @@
 void spectral_extension(EAC3Context *s);
 void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch);
 void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk);
+void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
+        int ch, mant_groups *m);
 
 int ff_eac3_parse_syncinfo(GetBitContext *gbc, EAC3Context *s){
     GET_BITS(s->syncword, gbc, 16);
@@ -385,12 +387,11 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         */
 
         if( (s->ncplblks == 6) && (s->ncplregs ==1) ) {
-            GET_BITS(s->cplahtinu, gbc, 1);
+            GET_BITS(s->chahtinu[CPL_CH], gbc, 1);
         }
         else {
-            s->cplahtinu = 0;
+            s->chahtinu[CPL_CH] = 0;
         }
-        s->chahtinu[0] = s->cplahtinu;
 
         for(ch = 1; ch <= s->nfchans; ch++)
         {
@@ -406,12 +407,11 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         if(s->lfeon)
         {
             if(s->nchregs[s->lfe_channel] == 1) {
-                GET_BITS(s->lfeahtinu, gbc, 1);
+                GET_BITS(s->chahtinu[s->lfe_channel], gbc, 1);
             }
             else {
-                s->lfeahtinu = 0;
+                s->chahtinu[s->lfe_channel] = 0;
             }
-            s->chahtinu[s->lfe_channel] = s->lfeahtinu;
         }
 #endif
     }else{
@@ -429,6 +429,9 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     /* These fields for audio frame transient pre-noise processing data */
     if(s->transproce)
     {
+        av_log(s->avctx, AV_LOG_ERROR, "transient pre-noise processing NOT IMPLEMENTED\n");
+        return -1;
+#if 0
         for(ch = 1; ch <= s->nfchans; ch++)
         {
             GET_BITS(s->chintransproc[ch], gbc, 1);
@@ -438,6 +441,7 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
                 GET_BITS(s->transproclen[ch], gbc, 8);
             }
         }
+#endif
     }
     /* These fields for spectral extension attenuation data */
     if(s->spxattene)
@@ -484,7 +488,7 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
 
 int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     //int grp, sbnd, n, bin;
-    int seg, bnd, ch, i;
+    int seg, bnd, ch, i, chbwcod, grpsize;
     int got_cplchan;
     mant_groups m;
 
@@ -924,27 +928,22 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
         if(s->chexpstr[blk][ch] != EXP_REUSE)
         {
-            if((!s->chincpl[ch]) && (!s->chinspx[ch])) {
-                GET_BITS(s->chbwcod[ch], gbc, 6);
-              if(s->chbwcod[ch] > 60){
-                  av_log(s->avctx, AV_LOG_ERROR, "s->chbwcod[ch] > 60\n");
-                  return -1;
-              }
+            grpsize = 3 << (s->chexpstr[blk][ch] - 1);
+            if(s->chincpl[ch]){
+                s->endmant[ch] = s->strtmant[CPL_CH]; /* channel is coupled */
+            }else if(s->chinspx[ch]){
+                //TODO endmant for Spectral extension
+            }else{
+                GET_BITS(chbwcod, gbc, 6);
+                if(chbwcod > 60){
+                    av_log(s->avctx, AV_LOG_ERROR, "chbwcod > 60\n");
+                    return -1;
+                }
+                s->endmant[ch] = ((chbwcod + 12) * 3) + 37; /* (ch is not coupled) */
             }
+            grpsize = 3 << (s->chexpstr[blk][ch] - 1);
+            s->nchgrps[ch] = (s->endmant[ch] + grpsize - 4) / grpsize;
         }
-    }
-
-    // calc
-    for(ch = 1; ch<=s->nfchans; ch++){
-        int grpsize = 3 << (s->chexpstr[blk][ch] - 1);
-
-        s->strtmant[ch] = 0;
-        if(s->chincpl[ch])
-            s->endmant[ch] = s->strtmant[CPL_CH]; /* channel is coupled */
-        else
-            s->endmant[ch] = ((s->chbwcod[ch] + 12) * 3) + 37; /* (ch is not coupled) */
-
-        s->nchgrps[ch] = (s->endmant[ch] + grpsize - 4) / grpsize;
     }
 
     /* These fields for exponents */
@@ -1042,13 +1041,13 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     if(s->frmfgaincode && get_bits1(gbc)) {
         for(ch = !s->cplinu[blk]; ch <= s->nfchans+s->lfeon; ch++)
-            GET_BITS(s->fgaincod[ch], gbc, 3);
+            s->fgain[ch] = ff_fgaintab[get_bits(gbc, 3)];
     }
     else
     {
         if(!blk){
             for(ch = !s->cplinu[blk]; ch <= s->nfchans+s->lfeon; ch++)
-                s->fgaincod[ch] = 0x4;
+                s->fgain[ch] = ff_fgaintab[0x4];
         }
     }
     if(s->strmtyp == 0x0)
@@ -1150,9 +1149,8 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         s->bit_alloc_params.halfratecod = 0;
 
         {
-            int fgain = ff_fgaintab[s->fgaincod[ch]];
             ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params,
-                    s->bndpsd[ch], start, end, fgain,
+                    s->bndpsd[ch], start, end, s->fgain[ch],
                     (ch == s->lfe_channel),
                     s->deltbae[ch], s->deltnseg[ch],
                     s->deltoffst[ch], s->deltlen[ch],
@@ -1184,34 +1182,11 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     for(ch = 1; ch <= s->nfchans; ch++)
     {
-        if(s->chahtinu[ch] == 0)
-        {
-            ff_ac3_get_transform_coeffs_ch(&m, gbc, s->dexps[ch], s->bap[ch], s->transform_coeffs[ch], s->strtmant[ch], s->endmant[ch], &s->dith_state);
-            //memset(s->transform_coeffs[ch], 0, (256)*sizeof(float));
-        }
-        else if(s->chahtinu[ch] == 1)
-        {
-            get_transform_coeffs_aht_ch(gbc, s, ch);
-            s->chahtinu[ch] = -1; /* AHT info for this frame has been read ? do not read again */
-        }
-        if(s->chahtinu[ch] != 0){
-            dct_transform_coeffs_ch(s, ch, blk);
-        }
+        get_eac3_transform_coeffs_ch(gbc, s, blk, ch, &m);
         if(s->cplinu[blk] && s->chincpl[ch] && !got_cplchan)
         {
-            if(s->cplahtinu == 0)
-            {
-                ff_ac3_get_transform_coeffs_ch(&m, gbc, s->dexps[CPL_CH], s->bap[CPL_CH], s->transform_coeffs[CPL_CH], s->strtmant[CPL_CH], s->endmant[CPL_CH], &s->dith_state);
-            }
-            else if(s->cplahtinu == 1)
-            {
-                get_transform_coeffs_aht_ch(gbc, s, CPL_CH);
-                s->cplahtinu = -1; /* AHT info for this frame has been read ? do not read again */
-            }
+            get_eac3_transform_coeffs_ch(gbc, s, blk, CPL_CH, &m);
             got_cplchan = 1;
-            if(s->cplahtinu != 0){
-                dct_transform_coeffs_ch(s, CPL_CH, blk);
-            }
         }
 
     }
@@ -1256,20 +1231,8 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         spectral_extension(s);
 
     if(s->lfeon) /* mantissas of low frequency effects channel */
-    {
-        if(s->lfeahtinu == 0)
-        {
-            ff_ac3_get_transform_coeffs_ch(&m, gbc, s->dexps[s->lfe_channel], s->bap[s->lfe_channel], s->transform_coeffs[s->lfe_channel], s->strtmant[s->lfe_channel], s->endmant[s->lfe_channel], &s->dith_state);
-        }
-        else if(s->lfeahtinu == 1)
-        {
-            get_transform_coeffs_aht_ch(gbc, s, s->lfe_channel);
-            s->lfeahtinu = -1;
-        }
-        if(s->chahtinu[s->lfe_channel] != 0){
-            dct_transform_coeffs_ch(s, s->lfe_channel, blk);
-        }
-    }
+        get_eac3_transform_coeffs_ch(gbc, s, blk, s->lfe_channel, &m);
+
     return 0;
 }
 
@@ -1397,6 +1360,8 @@ void spectral_extension(EAC3Context *s){
 
 
 void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
+    //Now turned off, because there are no samples for testing it.
+#if 0
     int endbap, bin, n, m;
     int bg, g, bits, pre_chmant, remap;
     float mant;
@@ -1524,6 +1489,7 @@ void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
             }
         }
     }
+#endif
 }
 
 void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
@@ -1536,5 +1502,20 @@ void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
             tmp += (i?sqrt(2):1) * s->pre_chmant[i][ch][bin] * cos(M_PI*i*(2*blk + 1)/12);
         }
         s->transform_coeffs[ch][bin] = tmp;
+    }
+}
+
+void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
+        int ch, mant_groups *m){
+    if(s->chahtinu[ch] == 0){
+        ff_ac3_get_transform_coeffs_ch(m, gbc, s->dexps[ch], s->bap[ch],
+                s->transform_coeffs[ch], s->strtmant[ch], s->endmant[ch],
+                &s->dith_state);
+    }else if(s->chahtinu[ch] == 1){
+        get_transform_coeffs_aht_ch(gbc, s, ch);
+        s->chahtinu[ch] = -1; /* AHT info for this frame has been read - do not read again */
+    }
+    if(s->chahtinu[ch] != 0){
+        dct_transform_coeffs_ch(s, ch, blk);
     }
 }

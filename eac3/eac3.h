@@ -100,7 +100,6 @@ typedef struct EAC3Context{
     int extpgmscl; // 6);            ///< External program scale factor
     int mixdef; // 2);               ///< Mix control type
     int mixdeflen; // 5);            ///< Length of mixing parameter data field
-//    int *mixdata; // 8*(mixdeflen+2));
     int paninfo; // 14);             ///< Pan information
     int paninfo2; // 14);            ///< Pan information 2
     int frmmixcfginfoe; // 1);       ///< Frame mixing configuration information exists
@@ -196,18 +195,12 @@ typedef struct EAC3Context{
     int ecpltrans[MAX_CHANNELS];     ///< Enhanced coupling transient present
     int rematstr; // 1);             ///< Rematrixing strategy
     int rematflg[TODO_SIZE]; // 1);  ///< Rematrixing flag
-    int chbwcod[MAX_CHANNELS];       ///< Rematrixing strategy
     int cplabsexp; // 4);            ///< Coupling absolute exponent
 
     int gainrng[MAX_CHANNELS];  ///< Channel Gain range code
 //    int lfeexps[3]; // 7); // 0...nlfegrps = const 0...2
     int baie; // 1);                 ///< Bit allocation information exists
-    int sdcycod; // 2);              ///< Slow decay code
-    int fdcycod; // 2);              ///< Fast decay code
-    int sgaincod; // 2);             ///< Slow gain code
-    int dbpbcod; // 2);              ///< dB per bit code
-    int floorcod; // 3);             ///< Masking floor code
-    int fgaincod[MAX_CHANNELS];      ///< Channel fast gain code
+    int fgain[MAX_CHANNELS];         ///< Channel fast gain
     int convsnroffste; // 1);        ///< Converter SNR offset exists
     int convsnroffst; // 10);        ///< Converter SNR offset
     int cplleake; // 1);             ///< Coupling leak initialization exists
@@ -225,17 +218,8 @@ typedef struct EAC3Context{
 
     int got_cplchan;
     int chgaqmod[MAX_CHANNELS];                 ///< Channel gain adaptive quantization mode
-    int chgaqgain[MAX_CHANNELS][TODO_SIZE];     ///< Channel gain adaptive quantization gain
-    float pre_chmant[6][MAX_CHANNELS][TODO_SIZE];///< Pre channel mantissas
-    int cplgaqmod;                              ///< Coupling channel gain adaptive quantization mode
-    int cplgaqgain[TODO_SIZE];                  ///< Coupling gain adaptive quantization gain
-    int pre_cplmant[6][TODO_SIZE];              ///< Pre coupling channel_mantissas
-    int lfegaqmod;                              ///<  Lfe channel gain adaptive quantization mode
-    int lfegaqgain[TODO_SIZE];                  ///<  LFE channel gain adaptive quantization mode
-    int pre_lfemant[6][TODO_SIZE];              ///< Pre lfe channel mantissas
-
-
-
+    int chgaqgain[MAX_CHANNELS][256];           ///< Channel gain adaptive quantization gain
+    float pre_chmant[6][MAX_CHANNELS][256];     ///< Pre channel mantissas
 
     int firstspxcos[MAX_CHANNELS]; // TODO type ? ///< First spectral extension coordinates states
     int firstcplcos[MAX_CHANNELS]; // TODO type ? ///< First coupling coordinates states
@@ -244,11 +228,7 @@ typedef struct EAC3Context{
 
 
     // TODO
-    int lfegaqbin[TODO_SIZE];
-    int lfegaqsections;
-    int cplgaqbin[TODO_SIZE];
-    int cplgaqsections;
-    int chgaqbin[MAX_CHANNELS][TODO_SIZE]; // [][nchmant]
+    int chgaqbin[MAX_CHANNELS][256]; // [][nchmant]
     int chgaqsections[MAX_CHANNELS];
     int chactivegaqbins[MAX_CHANNELS];
     int nchmant[MAX_CHANNELS];         ///< Number of fbw channel mantissas
