@@ -210,6 +210,7 @@ static int request_frame(AVFilterLink *link)
     avfilter_start_frame(link, avfilter_ref_pic(pic, ~0));
     avfilter_draw_slice (link, pic->data, 0, pic->h);
     avfilter_end_frame  (link);
+    avfilter_unref_pic(pic);
 
     return 0;
 }
