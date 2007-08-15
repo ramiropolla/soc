@@ -82,6 +82,8 @@ typedef struct SliceInfo{
     int vlc_set;           ///< VLCs used for this slice
     int start, end;        ///< start and end macroblocks of the slice
     int header_size;       ///< header size in bits
+    int width;             ///< coded width
+    int height;            ///< coded height
 }SliceInfo;
 
 /** Decoder context */
@@ -543,7 +545,7 @@ static inline RV40VLC* choose_vlc_set(int quant, int mod, int type)
 static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceInfo *si)
 {
     int t, mb_bits;
-    int w = r->s.avctx->width, h = r->s.avctx->height;
+    int w = r->s.avctx->coded_width, h = r->s.avctx->coded_height;
 
     memset(si, 0, sizeof(SliceInfo));
     si->type = -1;
@@ -562,8 +564,8 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
         rv40_parse_picture_size(gb, &w, &h);
     else
         get_bits1(gb);
-//    r->s.avctx->coded_width  = w;
-//    r->s.avctx->coded_height = h;
+    si->width  = w;
+    si->height = h;
     mb_bits = av_log2((w + 7) >> 3) + av_log2((h + 7) >> 3);
     si->start = get_bits(gb, mb_bits);
     si->header_size = get_bits_count(gb);
@@ -1283,6 +1285,8 @@ static int rv40_decode_slice(RV40DecContext *r)
     init_get_bits(&r->s.gb, r->slice_data, r->prev_si.size);
     skip_bits(&r->s.gb, r->prev_si.header_size);
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
+        s->avctx->coded_width  = r->prev_si.width;
+        s->avctx->coded_height = r->prev_si.height;
         if(MPV_frame_start(s, s->avctx) < 0)
             return -1;
         ff_er_frame_start(s);
