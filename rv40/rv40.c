@@ -941,6 +941,8 @@ static int rv40_decode_mv(RV40DecContext *r, int block_type)
         }
         return 0;
     case RV40_MB_SKIP:
+        r->dmv[0][0] = 0;
+        r->dmv[0][1] = 0;
         rv40_pred_mv(r, block_type, 0);
         rv40_mc(r, block_type, 0, 0, 0, 2, 2);
         break;
