@@ -104,8 +104,15 @@ void ff_j2k_printu(uint8_t *tab, int l);
 #endif
 
 /** misc tools */
-int ff_j2k_ceildivpow2(int a, int b);
-int ff_j2k_ceildiv(int a, int b);
+static inline int ff_j2k_ceildivpow2(int a, int b)
+{
+    return (a + (1 << b) - 1)>> b;
+}
+
+static inline int ff_j2k_ceildiv(int a, int b)
+{
+    return (a + b - 1) / b;
+}
 
 /** tag tree routines */
 J2kTgtNode *ff_j2k_tag_tree_init(int w, int h);

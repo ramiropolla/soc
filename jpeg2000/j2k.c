@@ -46,16 +46,6 @@ void ff_j2k_printu(uint8_t *tab, int l)
 }
 #endif
 
-int ff_j2k_ceildivpow2(int a, int b)
-{
-    return (a + (1 << b) - 1)>> b;
-}
-
-int ff_j2k_ceildiv(int a, int b)
-{
-    return (a + b - 1) / b;
-}
-
 /* tag tree routines */
 
 /** allocate the memory for tag tree */
