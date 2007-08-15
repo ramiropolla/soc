@@ -1065,6 +1065,8 @@ static int encode_frame(AVCodecContext *avctx,
     s->nguardbits = 1;
     s->lambda = s->picture->quality * LAMBDA_SCALE;
 
+    ff_j2k_init_tier1_luts();
+
     // TODO: other pixel formats
     for (i = 0; i < 3; i++)
         s->cbps[i] = 8;

@@ -1109,6 +1109,8 @@ static int decode_frame(AVCodecContext *avctx,
 
     s->ppx = s->ppy = 15;
 
+    ff_j2k_init_tier1_luts();
+
     if (bytestream_get_be16(&s->buf) != J2K_SOC){
         av_log(avctx, AV_LOG_ERROR, "SOC marker not present\n");
         return -1;

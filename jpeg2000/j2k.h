@@ -121,6 +121,7 @@ J2kTgtNode *ff_j2k_tag_tree_init(int w, int h);
 int ff_j2k_getnbctxno(int flag, int bandno);
 int ff_j2k_getrefctxno(int flag);
 int ff_j2k_getsgnctxno(int flag, int *xorbit);
+void ff_j2k_init_tier1_luts();
 
 void ff_j2k_set_significant(J2kT1Context *t1, int x, int y);
 
