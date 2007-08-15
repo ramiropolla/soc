@@ -53,6 +53,10 @@ enum J2kMarkers{
     J2K_EOC = 0xffd9,
 };
 
+enum J2kTransform{
+    J2K_DWT97,
+    J2K_DWT53
+};
 
 #define J2K_MAX_CBLKW 64
 #define J2K_MAX_CBLKH 64
