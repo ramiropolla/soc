@@ -1229,7 +1229,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     if(r->is16){
         memset(block16, 0, sizeof(block16));
         rv40_decode_block(block16, gb, r->cur_vlcs, 3, 0);
-        rv40_dequant4x4_16x16(block16, 0, rv40_qscale_tab[r->quant],rv40_qscale_tab[r->quant]);
+        rv40_dequant4x4_16x16(block16, 0, rv40_qscale_tab[rv40_luma_quant[r->prev_si.type>>1][r->quant]],rv40_qscale_tab[r->quant]);
         rv40_intra_inv_transform_noround(block16, 0);
     }
 
@@ -1240,7 +1240,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         if(cbp & 1)
             rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, r->luma_vlc, 0);
         if((cbp & 1) || r->is16){
-            rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[rv40_luma_quant[0][r->quant]],rv40_qscale_tab[rv40_luma_quant[0][r->quant]]);
+            rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[rv40_luma_quant[r->prev_si.type>>1][r->quant]],rv40_qscale_tab[r->quant]);
             if(r->is16) //FIXME: optimize
                 s->block[blknum][blkoff] = block16[(i & 3) | ((i & 0xC) << 1)];
             rv40_intra_inv_transform(s->block[blknum], blkoff);
