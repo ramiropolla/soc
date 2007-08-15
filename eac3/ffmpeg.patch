@@ -1,6 +1,6 @@
 Index: libavcodec/ac3_parser.c
 ===================================================================
---- libavcodec/ac3_parser.c	(wersja 9211)
+--- libavcodec/ac3_parser.c	(wersja 10118)
 +++ libavcodec/ac3_parser.c	(kopia robocza)
 @@ -84,7 +84,7 @@
      return 0;
@@ -44,19 +44,19 @@ Index: libavcodec/ac3_parser.c
      { CODEC_ID_AC3 },
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(wersja 9211)
+--- libavcodec/Makefile	(wersja 10118)
 +++ libavcodec/Makefile	(kopia robocza)
-@@ -66,6 +66,7 @@
+@@ -63,6 +63,7 @@
  OBJS-$(CONFIG_DVVIDEO_DECODER)         += dv.o
  OBJS-$(CONFIG_DVVIDEO_ENCODER)         += dv.o
  OBJS-$(CONFIG_DXA_DECODER)             += dxa.o
 +OBJS-$(CONFIG_EAC3_DECODER)            += eac3dec.o eac3_parser.o ac3dec.o
  OBJS-$(CONFIG_EIGHTBPS_DECODER)        += 8bps.o
- OBJS-$(CONFIG_FFV1_DECODER)            += ffv1.o golomb.o
- OBJS-$(CONFIG_FFV1_ENCODER)            += ffv1.o
+ OBJS-$(CONFIG_FFV1_DECODER)            += ffv1.o rangecoder.o golomb.o
+ OBJS-$(CONFIG_FFV1_ENCODER)            += ffv1.o rangecoder.o
 Index: libavcodec/aac_ac3_parser.c
 ===================================================================
---- libavcodec/aac_ac3_parser.c	(wersja 9211)
+--- libavcodec/aac_ac3_parser.c	(wersja 10118)
 +++ libavcodec/aac_ac3_parser.c	(kopia robocza)
 @@ -48,7 +48,7 @@
              s->inbuf_ptr += len;
@@ -69,9 +69,9 @@ Index: libavcodec/aac_ac3_parser.c
                      /* no sync found : move by one byte (inefficient, but simple!) */
 Index: libavcodec/aac_ac3_parser.h
 ===================================================================
---- libavcodec/aac_ac3_parser.h	(wersja 9211)
+--- libavcodec/aac_ac3_parser.h	(wersja 10118)
 +++ libavcodec/aac_ac3_parser.h	(kopia robocza)
-@@ -27,7 +27,7 @@
+@@ -30,7 +30,7 @@
      uint8_t *inbuf_ptr;
      int frame_size;
      int header_size;
@@ -82,7 +82,7 @@ Index: libavcodec/aac_ac3_parser.h
  } AACAC3ParseContext;
 Index: libavcodec/aac_parser.c
 ===================================================================
---- libavcodec/aac_parser.c	(wersja 9211)
+--- libavcodec/aac_parser.c	(wersja 10118)
 +++ libavcodec/aac_parser.c	(kopia robocza)
 @@ -38,7 +38,7 @@
  };
@@ -95,9 +95,9 @@ Index: libavcodec/aac_parser.c
      GetBitContext bits;
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(wersja 9211)
+--- libavcodec/allcodecs.c	(wersja 10118)
 +++ libavcodec/allcodecs.c	(kopia robocza)
-@@ -171,6 +171,7 @@
+@@ -172,6 +172,7 @@
      REGISTER_DECODER(COOK, cook);
      REGISTER_DECODER(DCA, dca);
      REGISTER_DECODER(DSICINAUDIO, dsicinaudio);
@@ -105,7 +105,7 @@ Index: libavcodec/allcodecs.c
      REGISTER_ENCDEC (FLAC, flac);
      REGISTER_DECODER(IMC, imc);
      REGISTER_ENCDEC (LIBAMR_NB, libamr_nb);
-@@ -264,6 +265,7 @@
+@@ -266,6 +267,7 @@
      REGISTER_PARSER (DCA, dca);
      REGISTER_PARSER (DVBSUB, dvbsub);
      REGISTER_PARSER (DVDSUB, dvdsub);
@@ -115,25 +115,17 @@ Index: libavcodec/allcodecs.c
      REGISTER_PARSER (H264, h264);
 Index: libavcodec/avcodec.h
 ===================================================================
---- libavcodec/avcodec.h	(wersja 9211)
+--- libavcodec/avcodec.h	(wersja 10118)
 +++ libavcodec/avcodec.h	(kopia robocza)
-@@ -252,6 +252,7 @@
-     CODEC_ID_MLP,
+@@ -260,6 +260,7 @@
      CODEC_ID_GSM_MS, /* as found in WAV */
      CODEC_ID_ATRAC3,
+     CODEC_ID_VOXWARE,
 +    CODEC_ID_EAC3,
  
      /* subtitle codecs */
      CODEC_ID_DVD_SUBTITLE= 0x17000,
-@@ -2261,6 +2262,7 @@
- extern AVCodec dsicinvideo_decoder;
- extern AVCodec dvvideo_decoder;
- extern AVCodec dxa_decoder;
-+extern AVCodec eac3_decoder;
- extern AVCodec eightbps_decoder;
- extern AVCodec ffv1_decoder;
- extern AVCodec ffvhuff_decoder;
-@@ -3021,6 +3023,7 @@
+@@ -2780,6 +2781,7 @@
  extern AVCodecParser dca_parser;
  extern AVCodecParser dvbsub_parser;
  extern AVCodecParser dvdsub_parser;
@@ -141,31 +133,11 @@ Index: libavcodec/avcodec.h
  extern AVCodecParser h261_parser;
  extern AVCodecParser h263_parser;
  extern AVCodecParser h264_parser;
-Index: libavformat/allformats.h
-===================================================================
---- libavformat/allformats.h	(wersja 9211)
-+++ libavformat/allformats.h	(kopia robocza)
-@@ -43,6 +43,7 @@
- extern AVInputFormat dv_demuxer;
- extern AVInputFormat dxa_demuxer;
- extern AVInputFormat ea_demuxer;
-+extern AVInputFormat eac3_demuxer;
- extern AVInputFormat ffm_demuxer;
- extern AVInputFormat flac_demuxer;
- extern AVInputFormat flic_demuxer;
 Index: libavformat/raw.c
 ===================================================================
---- libavformat/raw.c	(wersja 9211)
+--- libavformat/raw.c	(wersja 10118)
 +++ libavformat/raw.c	(kopia robocza)
-@@ -440,6 +440,7 @@
-         if(buf == p->buf)
-             first_frames = frames;
-     }
-+    av_log(NULL, AV_LOG_INFO, "first_frames = %i max_frames = %i\n", first_frames, max_frames);
-     if   (first_frames>=3) return AVPROBE_SCORE_MAX * 3 / 4;
-     else if(max_frames>=3) return AVPROBE_SCORE_MAX / 2;
-     else if(max_frames>=1) return 1;
-@@ -499,6 +500,19 @@
+@@ -489,6 +489,19 @@
      .extensions = "ac3",
  };
  #endif
@@ -185,3 +157,29 @@ Index: libavformat/raw.c
  
  #ifdef CONFIG_MUXERS
  AVOutputFormat ac3_muxer = {
+Index: libavcodec/allcodecs.h
+===================================================================
+--- libavcodec/allcodecs.h	(wersja 10118)
++++ libavcodec/allcodecs.h	(kopia robocza)
+@@ -98,6 +98,7 @@
+ extern AVCodec dsicinvideo_decoder;
+ extern AVCodec dvvideo_decoder;
+ extern AVCodec dxa_decoder;
++extern AVCodec eac3_decoder;
+ extern AVCodec eightbps_decoder;
+ extern AVCodec ffv1_decoder;
+ extern AVCodec ffvhuff_decoder;
+Index: libavcodec/ac3enc.c
+===================================================================
+--- libavcodec/ac3enc.c	(wersja 10118)
++++ libavcodec/ac3enc.c	(kopia robocza)
+@@ -479,7 +479,8 @@
+         for(ch=0;ch<s->nb_all_channels;ch++) {
+             ff_ac3_bit_alloc_calc_bap(mask[i][ch], psd[i][ch], 0,
+                                       s->nb_coefs[ch], snroffset,
+-                                      s->bit_alloc.floor, bap[i][ch]);
++                                      s->bit_alloc.floor, ff_ac3_baptab,
++                                      bap[i][ch]);
+             frame_bits += compute_mantissa_size(s, bap[i][ch],
+                                                  s->nb_coefs[ch]);
+         }

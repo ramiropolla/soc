@@ -28,10 +28,6 @@
 #define AC3_H
 
 #include "ac3tab.h"
-#include "bitstream.h"
-#include "random.h"
-
-#define CPL_CH 0
 
 #define AC3_MAX_CODED_FRAME_SIZE 3840 /* in bytes */
 #define AC3_MAX_CHANNELS 6 /* including LFE channel */
@@ -176,4 +172,5 @@ void ac3_parametric_bit_allocation(AC3BitAllocParameters *s, uint8_t *bap,
                                    int snroffset, int fgain, int is_lfe,
                                    int deltbae,int deltnseg,
                                    uint8_t *deltoffst, uint8_t *deltlen, uint8_t *deltba);
+
 #endif /* AC3_H */

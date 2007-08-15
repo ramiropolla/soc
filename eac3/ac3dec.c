@@ -488,7 +488,9 @@ static void uncouple_channels(AC3DecodeContext *ctx)
  * Get the transform coefficients for a particular channel
  * reference: Section 7.3 Quantization and Decoding of Mantissas
  */
-int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *exps, uint8_t *bap, float *coeffs, int start, int end, AVRandomState *dith_state)
+int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb,
+        uint8_t *exps, uint8_t *bap, float *coeffs, int start, int end,
+        AVRandomState *dith_state)
 {
     int i, gcode, tbap;
 
@@ -596,13 +598,19 @@ static int get_transform_coeffs(AC3DecodeContext * ctx)
 
     for (ch = 1; ch <= ctx->nchans; ch++) {
         /* transform coefficients for full-bandwidth channel */
-        if (ff_ac3_get_transform_coeffs_ch(&m, &ctx->gb, ctx->dexps[ch], ctx->bap[ch], ctx->transform_coeffs[ch], ctx->startmant[ch], ctx->endmant[ch], &ctx->dith_state))
+        if (ff_ac3_get_transform_coeffs_ch(&m, &ctx->gb, ctx->dexps[ch],
+                    ctx->bap[ch], ctx->transform_coeffs[ch], ctx->startmant[ch],
+                    ctx->endmant[ch], &ctx->dith_state))
             return -1;
         /* tranform coefficients for coupling channel come right after the
            coefficients for the first coupled channel*/
         if (ctx->chincpl[ch])  {
             if (!got_cplchan) {
-                if (ff_ac3_get_transform_coeffs_ch(&m, &ctx->gb, ctx->dexps[CPL_CH], ctx->bap[CPL_CH], ctx->transform_coeffs[CPL_CH], ctx->startmant[CPL_CH], ctx->endmant[CPL_CH], &ctx->dith_state)){
+                if (ff_ac3_get_transform_coeffs_ch(&m, &ctx->gb,
+                            ctx->dexps[CPL_CH], ctx->bap[CPL_CH],
+                            ctx->transform_coeffs[CPL_CH],
+                            ctx->startmant[CPL_CH], ctx->endmant[CPL_CH],
+                            &ctx->dith_state)){
                     av_log(ctx->avctx, AV_LOG_ERROR, "error in decoupling channels\n");
                     return -1;
                 }

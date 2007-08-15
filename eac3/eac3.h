@@ -27,6 +27,7 @@
 #include "avcodec.h"
 #include "ac3.h"
 #include "random.h"
+#include "bitstream.h"
 
 /* override ac3.h to include coupling channel */
 #undef AC3_MAX_CHANNELS

@@ -31,6 +31,8 @@
 #include "bitstream.h"
 #include "random.h"
 
+#define CPL_CH 0
+
 void ff_ac3_window_init(float *window);
 void ff_ac3_tables_init(void);
 
