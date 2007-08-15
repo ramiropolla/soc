@@ -33,7 +33,7 @@
 
 /** code block */
 typedef struct {
-    uint8_t npassess;
+    uint8_t npassess;  ///< number of coding passess
     uint8_t nonzerobits;
     uint16_t lengthinc;
     uint16_t length;
@@ -45,7 +45,7 @@ typedef struct {
 
 /** precinct */
 typedef struct {
-    uint16_t xi0, xi1, yi0, yi1;
+    uint16_t xi0, xi1, yi0, yi1; ///< indices of codeblocks included
     J2kTgtNode *zerobits;
     J2kTgtNode *cblkincl;
 } J2kPrec;
@@ -64,7 +64,7 @@ typedef struct {
     uint16_t x0, x1, y0, y1;
     uint8_t nbands;
     uint16_t nprecw, nprech;
-    uint8_t ppx, ppy;
+    uint8_t ppx, ppy; ///< exponent of precinct size
     J2kBand *band;
 } J2kResLevel;
 
@@ -76,15 +76,15 @@ typedef struct {
    uint8_t properties;
 
    /// COx fields
-   int nreslevels;
-   int xcb, ycb;
-   uint8_t transform;
-   int csty;
+   int nreslevels; ///< number of resolution levels
+   int xcb, ycb; ///< exponent of codeblock size
+   uint8_t transform; ///< DWT type
+   int csty; ///< coding style
    int ppx, ppy;
 
    /// QCx fields
-   uint8_t expn[32 * 3];
-   uint8_t bbps[32 * 3];
+   uint8_t expn[32 * 3]; ///< quantization exponent
+   uint8_t bbps[32 * 3]; ///< number bps in bands
    uint8_t nguardbits;
 } J2kComponent;
 
@@ -598,6 +598,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
     return 0;
 }
 
+/** read the number of coding passess */
 static int getnpassess(J2kDecoderContext *s)
 {
     int num;
