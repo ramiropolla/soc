@@ -28,8 +28,6 @@
  */
 
 #include "parser.h"
-#undef printf
-#include <stdio.h>
 
 #define DEBUG 1
 
@@ -81,10 +79,10 @@ static int dirac_parse(AVCodecParserContext *s, AVCodecContext *avctx,
 {
     ParseContext *pc = s->priv_data;
     int next;
-    //        printf("XXXXXXXXX Foo\n");
-/*     if(s->flags & PARSER_FLAG_COMPLETE_FRAMES){ */
-/*         next = buf_size; */
-/*     }else */{
+
+    if(s->flags & PARSER_FLAG_COMPLETE_FRAMES){
+        next = buf_size;
+    }else{
         next = find_frame_end(pc, buf, buf_size);
 
         if (ff_combine_frame(pc, next, &buf, &buf_size) < 0) {
