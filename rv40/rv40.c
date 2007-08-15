@@ -802,6 +802,7 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
     case RV40_MB_P_8x16:
         mv_pos += subblock_no;
         no_A &= ~subblock_no;
+        if(!subblock_no) no_C = no_B;
         if(!no_C){
             C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][0];
             C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][1];
