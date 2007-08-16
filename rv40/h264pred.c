@@ -469,7 +469,7 @@ static void pred16x16_128_dc_c(uint8_t *src, int stride){
     }
 }
 
-static inline void pred16x16_plane_compat_c(uint8_t *src, int stride, const int svq3){
+static inline void pred16x16_plane_compat_c(uint8_t *src, int stride, const int svq3, const int rv40){
   int i, j, k;
   int a;
   uint8_t *cm = ff_cropTbl + MAX_NEG_CROP;
@@ -489,6 +489,9 @@ static inline void pred16x16_plane_compat_c(uint8_t *src, int stride, const int 
 
     /* required for 100% accuracy */
     i = H; H = V; V = i;
+  }else if(rv40){
+    H = ( H + (H>>2) ) >> 4;
+    V = ( V + (V>>2) ) >> 4;
   }else{
     H = ( 5*H+32 ) >> 6;
     V = ( 5*V+32 ) >> 6;
@@ -510,11 +513,15 @@ static inline void pred16x16_plane_compat_c(uint8_t *src, int stride, const int 
 }
 
 static void pred16x16_plane_c(uint8_t *src, int stride){
-    pred16x16_plane_compat_c(src, stride, 0);
+    pred16x16_plane_compat_c(src, stride, 0, 0);
 }
 
 static void pred16x16_plane_svq3_c(uint8_t *src, int stride){
-    pred16x16_plane_compat_c(src, stride, 1);
+    pred16x16_plane_compat_c(src, stride, 1, 0);
+}
+
+static void pred16x16_plane_rv40_c(uint8_t *src, int stride){
+    pred16x16_plane_compat_c(src, stride, 0, 1);
 }
 
 static void pred8x8_vertical_c(uint8_t *src, int stride){
@@ -1013,8 +1020,8 @@ void ff_h264_pred_init(H264PredContext *h, int codec_id){
     case CODEC_ID_SVQ3:
        h->pred16x16[PLANE_PRED8x8  ]= pred16x16_plane_svq3_c;
        break;
-    case CODEC_ID_RV40: //FIXME find right predictor
-       h->pred16x16[PLANE_PRED8x8  ]= pred16x16_plane_c;
+    case CODEC_ID_RV40:
+       h->pred16x16[PLANE_PRED8x8  ]= pred16x16_plane_rv40_c;
        break;
     default:
        h->pred16x16[PLANE_PRED8x8  ]= pred16x16_plane_c;
