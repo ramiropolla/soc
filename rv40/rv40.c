@@ -1152,6 +1152,7 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
             break;
         }
         s->current_picture_ptr->mb_type[mb_pos] = r->is16 ? MB_TYPE_INTRA16x16 : MB_TYPE_INTRA;
+        r->block_type = r->is16 ? RV40_MB_TYPE_INTRA16x16 : RV40_MB_TYPE_INTRA;
     }else{
         r->block_type = rv40_decode_mb_info(r);
         s->current_picture_ptr->mb_type[mb_pos] = rv40_mb_type_to_lavc[r->block_type];
