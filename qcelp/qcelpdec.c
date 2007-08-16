@@ -181,7 +181,8 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
 
                 /* FIXME this needs to be further examinated */
                 if(frame->rate == RATE_FULL && i > 0 && !((i+1) & 3))
-                    predictor=av_clip((g1[i-1]+g1[i-2]+g1[i-3])/3, 6, 38);
+                    predictor=av_clip(floor((g1[i-1]+g1[i-2]+g1[i-3])/3), 6,
+                                      38);
                 else
                     predictor=0;
 
