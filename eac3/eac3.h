@@ -138,9 +138,7 @@ typedef struct EAC3Context{
     int cplstre[MAX_BLOCKS]; // 1);  ///< Coupling strategy exists
     int chexpstr[MAX_BLOCKS][MAX_CHANNELS]; // 2); ///< Channel exponent strategy
     int convexpstr[MAX_CHANNELS];    ///< Converter channel exponent strategy
-    int cplahtinu; // 1);            ///< Coupling channel AHT in use
     int chahtinu[MAX_CHANNELS];      ///< Channel AHT in use
-    int lfeahtinu; // 1);            ///< Lfe channel AHT in use
     int chintransproc[MAX_CHANNELS]; ///< Channel in transient pre-noise processing
     int transprocloc[MAX_CHANNELS];  ///< Transient location relative to start of frame
     int transproclen[MAX_CHANNELS];  ///< Transient processing length
@@ -149,15 +147,12 @@ typedef struct EAC3Context{
     int blkstrtinfoe; // 1);         ///< Block start information exists
     uint32_t blkstrtinfo;            ///< Block start information
     int ncplblks;
-    int ncplregs;
-    int nchregs[MAX_CHANNELS];
 
 // EAC3Audblk
     int blksw[MAX_CHANNELS]; // 1);  ///< Block switch flag
     int dithflag[MAX_CHANNELS];      ///< Dither flag
     int dynrnge[2]; // 1);           ///< Dynamic range gain word exists
     int dynrng[2]; // 8);            ///< Dynamic range gain word
-    int spxstre; // 1);              ///< Spectral extension strategy exists
     int spxinu; // 1);               ///< spectral extension in use
     int chinspx[MAX_CHANNELS];       ///< Channel in spectral extension
     int spxstrtf; // 2);             ///< Spectral extension start copy frequency code

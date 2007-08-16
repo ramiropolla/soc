@@ -39,10 +39,10 @@
 #include "eac3.h"
 #include "ac3dec.h"
 
-void spectral_extension(EAC3Context *s);
-void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch);
-void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk);
-void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
+static void spectral_extension(EAC3Context *s);
+static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch);
+static void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk);
+static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
         int ch, mant_groups *m);
 
 int ff_eac3_parse_syncinfo(GetBitContext *gbc, EAC3Context *s){
@@ -251,7 +251,20 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     GET_BITS(s->snroffststr, gbc, 2);
     GET_BITS(s->transproce, gbc, 1);
     GET_BITS(s->blkswe, gbc, 1);
+
+    if(!s->blkswe){
+        for(ch = 1; ch <= s->nfchans; ch++)
+            s->blksw[ch] = 0;
+    }
+
     GET_BITS(s->dithflage, gbc, 1);
+
+    if(!s->dithflage){
+        for(ch = 1; ch <= s->nfchans; ch++)
+            s->dithflag[ch] = 1; /* dither on */
+    }
+    s->dithflag[CPL_CH] = s->dithflag[s->lfe_channel] = 0;
+
     GET_BITS(s->bamode, gbc, 1);
     GET_BITS(s->frmfgaincode, gbc, 1);
     GET_BITS(s->dbaflde, gbc, 1);
@@ -326,67 +339,25 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     /* These fields for AHT data */
     if(s->ahte)
     {
-        /* coupling can use AHT only when coupling in use for all blocks */
-        /* ncplregs derived from cplstre and cplexpstr ? see Section E3.3.2 */
-        av_log(s->avctx, AV_LOG_ERROR, "AHT NOT IMPLEMENTED");
-        return -1;
-
+        //Now turned off, because there are no samples for testing it.
 #if 0
         /* AHT is only available in 6 block mode (numblkscod ==0x3) */
-
-        s->ncplregs = 0;
-        for(blk = 0; blk < 6; blk++){
-            if(s->cplstre[blk]==1 || s->chexpstr[blk][CPL_CH] != EXP_REUSE)
-                s->ncplregs++;
+        /* coupling can use AHT only when coupling in use for all blocks */
+        /* ncplregs derived from cplstre and cplexpstr - see Section E3.3.2 */
+        int nchregs;
+        s->chahtinu[CPL_CH]=0;
+        for(ch = (s->ncplblks!=6); ch <= s->nfchans+s->lfeon; ch++){
+            nchregs = 0;
+            for(blk = 0; blk < 6; blk++)
+                nchregs += (s->chexpstr[blk][ch] != EXP_REUSE);
+            s->chahtinu[ch] = (nchregs == 1) && get_bits1(gbc);
         }
-        s->nchregs[0] = s->ncplregs;
-
-        for(ch = 1; ch <= s->nfchans+s->lfeon; ch++){
-            s->nchregs[ch] = 0;
-            for(blk = 0; blk < 6; blk++){
-                if(s->chexpstr[blk][ch] != EXP_REUSE)
-                    s->nchregs[ch]++;
-            }
-        }
-
-        /*
-        s->nlferegs = 0;
-        for(blk = 0; blk < 6; blk++){
-            if(s->lfeexpstr[blk] != EXP_REUSE)
-                s->nlferegs++;
-        }
-        */
-
-        if( (s->ncplblks == 6) && (s->ncplregs ==1) ) {
-            GET_BITS(s->chahtinu[CPL_CH], gbc, 1);
-        }
-        else {
-            s->chahtinu[CPL_CH] = 0;
-        }
-
-        for(ch = 1; ch <= s->nfchans; ch++)
-        {
-            // nchregs derived from chexpstr ? see Section E3.3.2
-            if(s->nchregs[ch] == 1) {
-                GET_BITS(s->chahtinu[ch], gbc, 1);
-            }
-            else {
-                s->chahtinu[ch] = 0;
-            }
-        }
-
-        if(s->lfeon)
-        {
-            if(s->nchregs[s->lfe_channel] == 1) {
-                GET_BITS(s->chahtinu[s->lfe_channel], gbc, 1);
-            }
-            else {
-                s->chahtinu[s->lfe_channel] = 0;
-            }
-        }
+#else
+        av_log(s->avctx, AV_LOG_ERROR, "AHT NOT IMPLEMENTED");
+        return -1;
 #endif
     }else{
-        for(ch=!s->cplinu; ch<=s->nfchans+s->lfeon; ch++)
+        for(ch=!s->cplinu[blk]; ch<=s->nfchans+s->lfeon; ch++)
             s->chahtinu[ch] = 0;
     }
     /* These fields for audio frame SNR offset data */
@@ -472,25 +443,12 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             GET_BITS(s->blksw[ch], gbc, 1);
         }
     }
-    else
-    {
-        for(ch = 1; ch <= s->nfchans; ch++) {
-            s->blksw[ch] = 0;
-        }
-    }
     if(s->dithflage)
     {
         for(ch = 1; ch <= s->nfchans; ch++) {
             GET_BITS(s->dithflag[ch], gbc, 1);
         }
     }
-    else
-    {
-        for(ch = 1; ch <= s->nfchans; ch++) {
-            s->dithflag[ch] = 1; /* dither on */
-        }
-    }
-    s->dithflag[CPL_CH] = s->dithflag[s->lfe_channel] = 0;
     /* These fields for dynamic range control */
 
     for(i = 0; i < (s->acmod?1:2); i++){
@@ -504,17 +462,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
     }
     /* These fields for spectral extension strategy information */
-    if(blk == 0) {
-        s->spxstre = 1;
-    }
-    else {
-        GET_BITS(s->spxstre, gbc, 1);
-    }
-    if(!blk && !s->spxstre){
-        av_log(s->avctx, AV_LOG_ERROR, "no spectral extension strategy in first block");
-        return -1;
-    }
-    if(s->spxstre)
+    if((!blk) || get_bits1(gbc))
     {
         GET_BITS(s->spxinu, gbc, 1);
         if(s->spxinu)
@@ -530,6 +478,16 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     GET_BITS(s->chinspx[ch], gbc, 1);
                 }
             }
+#if 0
+            {
+                int nspx=0;
+                for(ch=1; ch<=s->nfchans; ch++){
+                    nspx+=s->chinspx[ch];
+                }
+                if(!nspx)
+                    av_log(s->avctx, AV_LOG_INFO, "No channels in spectral extension\n");
+            }
+#endif
             GET_BITS(s->spxstrtf, gbc, 2);
             GET_BITS(s->spxbegf, gbc, 3);
             GET_BITS(s->spxendf, gbc, 3);
@@ -669,7 +627,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 av_log(s->avctx, AV_LOG_DEBUG, "cplbegf=%i cplendf=%i\n", s->cplbegf, s->cplendf);
                 // calc
                 s->strtmant[CPL_CH] = 37 + (12 * s->cplbegf);
-                s->endmant[CPL_CH] = 37 + (12 * (s->cplendf));
+                s->endmant[CPL_CH] = 37 + (12 * s->cplendf);
                 if(s->strtmant[CPL_CH] > s->endmant[CPL_CH]){
                     av_log(s->avctx, AV_LOG_ERROR, "cplstrtmant > cplendmant [blk=%i]\n", blk);
                     return -1;
@@ -902,7 +860,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             if(s->chincpl[ch]){
                 s->endmant[ch] = s->strtmant[CPL_CH]; /* channel is coupled */
             }else if(s->chinspx[ch]){
-                //TODO endmant for Spectral extension
+                s->endmant[ch] = 25 + 12 * s->spxbegf;
             }else{
                 GET_BITS(chbwcod, gbc, 6);
                 if(chbwcod > 60){
@@ -1045,33 +1003,12 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
     }
     /* Delta bit allocation information */
-    if(s->dbaflde)
+    if(s->dbaflde && get_bits1(gbc))
     {
-        av_log(s->avctx, AV_LOG_INFO, "NOT TESTED");
-        GET_BITS(s->deltbaie, gbc, 1);
-        if(s->deltbaie)
-        {
-            if(s->cplinu[blk]) {
-                GET_BITS(s->cpldeltbae, gbc, 2);
-            }
-            for(ch = 1; ch <= s->nfchans; ch++) {
+            for(ch = !s->cplinu[blk]; ch <= s->nfchans; ch++) {
                 GET_BITS(s->deltbae[ch], gbc, 2);
             }
-            if(s->cplinu[blk])
-            {
-                //TODO
-                if(s->cpldeltbae==DBA_NEW)
-                {
-                    GET_BITS(s->cpldeltnseg, gbc, 3);
-                    for(seg = 0; seg <= s->cpldeltnseg; seg++)
-                    {
-                        GET_BITS(s->cpldeltoffst[seg], gbc, 5);
-                        GET_BITS(s->cpldeltlen[seg], gbc, 4);
-                        GET_BITS(s->cpldeltba[seg], gbc, 3);
-                    }
-                }
-            }
-            for(ch = 1; ch <= s->nfchans; ch++)
+            for(ch = !s->cplinu[blk]; ch <= s->nfchans; ch++)
             {
                 if(s->deltbae[ch]==DBA_NEW)
                 {
@@ -1084,8 +1021,7 @@ int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     }
                 }
             }
-        } /* if(s->deltbaie) */
-    }/* if(s->dbaflde) */
+    }
     else{
         if(!blk){
             for(ch=0; ch<=s->nfchans+s->lfeon; ch++){
@@ -1203,7 +1139,7 @@ int ff_eac3_parse_auxdata(GetBitContext *gbc, EAC3Context *s){
     return 0;
 }
 
-void spectral_extension(EAC3Context *s){
+static void spectral_extension(EAC3Context *s){
     //Now turned off, because there are no samples for testing it.
 #if 0
     int copystartmant, copyendmant, copyindex, insertindex;
@@ -1321,7 +1257,7 @@ void spectral_extension(EAC3Context *s){
 
 
 
-void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
+static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
     //Now turned off, because there are no samples for testing it.
 #if 0
     int endbap, bin, n, m;
@@ -1454,7 +1390,7 @@ void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
 #endif
 }
 
-void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
+static void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
     // TODO fast DCT
     int bin, i;
     float tmp;
@@ -1467,7 +1403,7 @@ void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
     }
 }
 
-void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
+static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
         int ch, mant_groups *m){
     if(s->chahtinu[ch] == 0){
         ff_ac3_get_transform_coeffs_ch(m, gbc, s->dexps[ch], s->bap[ch],

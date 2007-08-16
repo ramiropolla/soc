@@ -96,6 +96,8 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     int k, i, blk, ch;
     GetBitContext gbc;
 
+    *data_size = 0;
+
     c->gbc = &gbc;
     c->syncword = 0;
 
@@ -209,7 +211,6 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 }
 
 static int eac3_decode_init(AVCodecContext *avctx){
-    int ch;
     EAC3Context *ctx = avctx->priv_data;
 
     ctx->avctx = avctx;
@@ -227,10 +228,6 @@ static int eac3_decode_init(AVCodecContext *avctx){
         ctx->mul_bias = 32767.0f;
     }
     ff_ac3_window_init(ctx->window);
-    for(ch=0; ch<AC3_MAX_CHANNELS; ch++) {
-        memset(ctx->delay[ch], 0, sizeof(ctx->delay[ch]));
-    }
-    memset(ctx->strtmant, 0, sizeof(int)*MAX_CHANNELS);
     return 0;
 }
 
