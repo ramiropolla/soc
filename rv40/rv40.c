@@ -546,6 +546,7 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
 {
     int t, mb_bits;
     int w = r->s.avctx->coded_width, h = r->s.avctx->coded_height;
+    int i, mb_size;
 
     memset(si, 0, sizeof(SliceInfo));
     si->type = -1;
@@ -566,7 +567,11 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
         get_bits1(gb);
     si->width  = w;
     si->height = h;
-    mb_bits = av_log2((w + 7) >> 3) + av_log2((h + 7) >> 3);
+    mb_size = ((w + 15) >> 4) * ((h + 15) >> 4);
+    for(i = 0; i < 5; i++)
+        if(rv40_mb_max_sizes[i] > mb_size)
+            break;
+    mb_bits = rv40_mb_bits_sizes[i];
     si->start = get_bits(gb, mb_bits);
     si->header_size = get_bits_count(gb);
 

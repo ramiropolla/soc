@@ -167,4 +167,14 @@ static const int8_t rv40_dquant_tab[] = {
  -2,  2, -2,  2, -2,  2, -2,  2, -2,  2, -3,  3, -3,  3, -3,  3,
  -3,  3, -3,  3, -3,  3, -3,  3, -3,  3, -3,  2, -3,  1, -3, -5
 };
+
+/**
+ * Maximum number of macroblocks for each of the possible slice offset sizes
+ */
+static const uint16_t rv40_mb_max_sizes[6] = { 0x2F, 0x68, 0x18B, 0x62F, 0x18BF, 0x23FF };
+/**
+ * Bits needed to code slice offset for the given size
+ */
+static const uint8_t rv40_mb_bits_sizes[6] = { 6, 7, 9, 11, 13, 14 };
+
 #endif /* RV40DATA_H */
