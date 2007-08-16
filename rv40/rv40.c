@@ -1062,7 +1062,8 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
         for(j = 0; j < 4; j++){
             no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
             for(YY = Y, i = 0; i < 4; i++, cbp >>= 1, no_left = 0, YY += 4){
-                rv40_pred_4x4_block(r, YY, s->linesize, ittrans[intra_types[i]], no_up, no_left, i || (j==3), i==3);
+                no_topright = no_up || (i==3 && j) || (i==3 && !j && (s->mb_x-1) == s->mb_width);
+                rv40_pred_4x4_block(r, YY, s->linesize, ittrans[intra_types[i]], no_up, no_left, i || (j==3), no_topright);
                 if(!(cbp & 1)) continue;
                 rv40_add_4x4_block(YY, s->linesize, s->block[(i>>1)+(j&2)], (i&1)*4+(j&1)*32);
             }
