@@ -1422,7 +1422,8 @@ static int rv40_decode_frame(AVCodecContext *avctx,
             if(i+1 < avctx->slice_count){
                 init_get_bits(&s->gb, buf+avctx->slice_offset[i+1], (buf_size-avctx->slice_offset[i+1])*8);
                 rv40_parse_slice_header(r, &r->s.gb, &si);
-                r->prev_si.end = si.start;
+                if(si.type != -1)
+                    r->prev_si.end = si.start;
             }
             r->slice_data = buf + offset;
             r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, r->prev_si.type);
