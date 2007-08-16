@@ -637,22 +637,20 @@ static int get_transform_coeffs(AC3DecodeContext * ctx)
  * Stereo rematrixing.
  * reference: Section 7.5.4 Rematrixing : Decoding Technique
  */
-static void do_rematrixing(AC3DecodeContext *ctx)
+void ff_ac3_do_rematrixing(float (*transform_coeffs)[256], int end, int nrematbnd, int *rematflg)
 {
     int bnd, i;
-    int end, bndend;
+    int bndend;
     float tmp0, tmp1;
 
-    end = FFMIN(ctx->endmant[1], ctx->endmant[2]);
-
-    for(bnd=0; bnd<ctx->nrematbnd; bnd++) {
-        if(ctx->rematflg[bnd]) {
+    for(bnd=0; bnd<nrematbnd; bnd++) {
+        if(rematflg[bnd]) {
             bndend = FFMIN(end, rematrix_band_tbl[bnd+1]);
             for(i=rematrix_band_tbl[bnd]; i<bndend; i++) {
-                tmp0 = ctx->transform_coeffs[1][i];
-                tmp1 = ctx->transform_coeffs[2][i];
-                ctx->transform_coeffs[1][i] = tmp0 + tmp1;
-                ctx->transform_coeffs[2][i] = tmp0 - tmp1;
+                tmp0 = transform_coeffs[1][i];
+                tmp1 = transform_coeffs[2][i];
+                transform_coeffs[1][i] = tmp0 + tmp1;
+                transform_coeffs[2][i] = tmp0 - tmp1;
             }
         }
     }
@@ -1034,7 +1032,9 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
 
     /* recover coefficients if rematrixing is in use */
     if(ctx->acmod == AC3_ACMOD_STEREO)
-        do_rematrixing(ctx);
+        ff_ac3_do_rematrixing(ctx->transform_coeffs,
+                FFMIN(ctx->endmant[1], ctx->endmant[2]),
+                ctx->nrematbnd, ctx->rematflg);
 
     /* apply scaling to coefficients (headroom, dialnorm, dynrng) */
     for(ch=1; ch<=ctx->nchans; ch++) {

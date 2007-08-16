@@ -83,9 +83,8 @@ typedef struct EAC3Context{
     int acmod; // 3);                ///< Audio coding mode
     int lfeon; // 1);                ///< Low frequency effect channel on
     int bsid; // 5);                 ///< Bit stream identification
-    int dialnorm[2]; // 5);          ///< Dialogue normalization
-    int compr; // 8);                ///< Compression gain word
-    int compr2; // 8);               ///< Compression gain word ch2
+    float dialnorm[2]; // 5);        ///< Dialogue normalization
+    int compr[2]; // 8);             ///< Compression gain word
     int chanmap; // 16);             ///< Custom channel map
     int mixmdate; // 1);             ///< Mixing meta-data exists
     int dmixmod; // 2);              ///<
@@ -95,13 +94,11 @@ typedef struct EAC3Context{
     int lorosurmixlev; // 3);
     int lfemixlevcode; // 1);        ///< lfe mix level code exists
     int lfemixlevcod; // 5);         ///< lfe mix level code
-    int pgmscl; // 6);               ///< Program scale factor
-    int pgmscl2; // 6);              ///< Program scale factor #2
+    int pgmscl[2]; // 6);            ///< Program scale factor
     int extpgmscl; // 6);            ///< External program scale factor
     int mixdef; // 2);               ///< Mix control type
     int mixdeflen; // 5);            ///< Length of mixing parameter data field
-    int paninfo; // 14);             ///< Pan information
-    int paninfo2; // 14);            ///< Pan information 2
+    int paninfo[2]; // 14);          ///< Pan information
     int frmmixcfginfoe; // 1);       ///< Frame mixing configuration information exists
     int blkmixcfginfo0; // 5);
     int blkmixcfginfoe; // 1);       ///< Block mixing configuration information exists
@@ -113,14 +110,11 @@ typedef struct EAC3Context{
     int dsurmod; // 2);
     int dheadphonmod; // 2);
     int dsurexmod; // 2);
-    int audprodie; // 1);
-    int mixlevel; // 5);             ///< Mix level
-    int roomtyp; // 2);              ///< Room type
-    int adconvtyp; // 1);            ///< A/D converter type
+    int audprodie[2]; // 1);
+    int mixlevel[2]; // 5);          ///< Mix level
+    int roomtyp[2]; // 2);           ///< Room type
+    int adconvtyp[2]; // 1);         ///< A/D converter type
     int audprodi2e; // 1);           ///< Audio production information exists ch2
-    int mixlevel2; // 5);            ///< Mixing level ch2
-    int roomtyp2; // 2);             ///< room type ch2
-    int adconvtyp2; // 1);           ///< A/D converter type
     int sourcefscod; // 1);          ///< Source sample rate code
     int frmsizecod; // 6);           ///< Frame size code
     int addbsie; // 1);              ///< Additional bit stream information exists

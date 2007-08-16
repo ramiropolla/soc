@@ -80,5 +80,6 @@ typedef struct {
 int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *exps,
         uint8_t *bap, float *coeffs, int start, int end, AVRandomState *dith_state);
 
+void ff_ac3_do_rematrixing(float (*transform_coeffs)[256], int end, int nrematbnd, int *rematflg);
 
 #endif /* AC3DEC_H */

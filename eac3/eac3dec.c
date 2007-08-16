@@ -138,16 +138,21 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 #ifdef DEBUG
     av_log(NULL, AV_LOG_INFO, "-------END BLK-------\n");
 #endif
-        //TODO rematrixing
+
+    /* recover coefficients if rematrixing is in use */
+    if(c->acmod == AC3_ACMOD_STEREO)
+        ff_ac3_do_rematrixing(c->transform_coeffs,
+                FFMIN(c->endmant[1], c->endmant[2]),
+                c->nrematbnds, c->rematflg);
         //TODO downmix_scaling...
 
         /* apply scaling to coefficients (dialnorm, dynrng) */
         for(ch=1; ch<=c->nfchans + c->lfeon; ch++) {
             float gain=2.0f;
             if(c->acmod == AC3_ACMOD_DUALMONO) {
-                gain *= ff_ac3_dialnorm_tbl[c->dialnorm[ch-1]] * ff_ac3_dynrng_tbl[c->dynrng[ch-1]];
+                gain *= c->dialnorm[ch-1] * ff_ac3_dynrng_tbl[c->dynrng[ch-1]];
             } else {
-                gain *= ff_ac3_dialnorm_tbl[c->dialnorm[0]] * ff_ac3_dynrng_tbl[c->dynrng[0]];
+                gain *= c->dialnorm[0] * ff_ac3_dynrng_tbl[c->dynrng[0]];
             }
             for(i=0; i<c->endmant[ch]; i++) {
                 c->transform_coeffs[ch][i] *= gain;
