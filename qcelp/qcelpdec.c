@@ -239,7 +239,6 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
                 case 1: gain[0]=-2; break;
                 case 2: gain[0]= 0; break;
                 case 3: gain[0]= 2; break;
-                default:; /* shouldn't happen.. must propagate some error */
             }
             gs[0]=1;
             /* WIP finish rate 1/8 calculations, spec is kind of fuzzy here */
