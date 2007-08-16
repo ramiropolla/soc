@@ -887,8 +887,8 @@ static inline void rv40_mc(RV40DecContext *r, const int block_type,
     srcY += src_y * s->linesize + src_x;
     srcU += uvsrc_y * s->uvlinesize + uvsrc_x;
     srcV += uvsrc_y * s->uvlinesize + uvsrc_x;
-    if(   (unsigned)src_x > s->h_edge_pos - (mx&3) - (width <<3) - 2
-       || (unsigned)src_y > s->v_edge_pos - (my&3) - (height<<3) - 2){
+    if(   (unsigned)(src_x - !!(mx&3)*2) > s->h_edge_pos - !!(mx&3)*2 - (width <<3) - 3
+       || (unsigned)(src_y - !!(my&3)*2) > s->v_edge_pos - !!(my&3)*2 - (height<<3) - 3){
         uint8_t *uvbuf= s->edge_emu_buffer + 20 * s->linesize;
 
         srcY -= 2 + 2*s->linesize;
