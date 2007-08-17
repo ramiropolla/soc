@@ -2,8 +2,6 @@ FRAMEWORK:
 - auto-inserting needed filters (colorspace conversion, buffer, etc)
 - pass info needed to reorder decode ordered frames
 - other useful image flags? interlace? top/bottom field first? aspect ratio?
-- let filters specify required permissions on incoming picture buffers
-  and have the framework automatically copy the buffers if needed
 
 POSSIBLE FRAMEWORK IDEAS:
 - can colorspace negotiation be improved?
