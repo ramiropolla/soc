@@ -37,7 +37,7 @@ Index: configure
 +fi
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 10118)
+--- ffplay.c	(revision 10134)
 +++ ffplay.c	(working copy)
 @@ -25,6 +25,10 @@
  #include "swscale.h"
@@ -208,7 +208,7 @@ Index: ffplay.c
          if(pkt->data == flush_pkt.data){
              avcodec_flush_buffers(is->video_st->codec);
              continue;
-@@ -1361,31 +1396,216 @@
+@@ -1361,31 +1396,217 @@
          /* NOTE: ipts is the PTS of the _first_ picture beginning in
             this packet, if any */
          global_video_pkt_pts= pkt->pts;
@@ -368,7 +368,8 @@ Index: ffplay.c
 +    .inputs    = (AVFilterPad[]) {{ .name          = "default",
 +                                    .type          = AV_PAD_VIDEO,
 +                                    .end_frame     = output_end_frame,
-+                                    .query_formats = output_query_formats, },
++                                    .query_formats = output_query_formats,
++                                    .min_perms     = AV_PERM_READ, },
 +                                  { .name = NULL }},
 +    .outputs   = (AVFilterPad[]) {{ .name = NULL }},
 +};
@@ -437,7 +438,7 @@ Index: ffplay.c
      av_free(frame);
      return 0;
  }
-@@ -2136,6 +2356,12 @@
+@@ -2136,6 +2357,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -450,7 +451,7 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2488,6 +2714,9 @@
+@@ -2488,6 +2715,9 @@
  #endif
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },

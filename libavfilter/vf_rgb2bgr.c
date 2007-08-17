@@ -76,7 +76,7 @@ AVFilter vf_rgb2bgr =
                                     .type            = AV_PAD_VIDEO,
                                     .draw_slice      = draw_slice,
                                     .query_formats   = query_in_formats,
-                                    .min_perms       = AV_PERM_READ, },
+                                    .min_perms       = AV_PERM_READ | AV_PERM_WRITE, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
