@@ -523,11 +523,11 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
 /**
  * 2.4.3.3.5-1/2
  */
-static void qcelp_lsp2paqa(float *lspf, float *pa, float *qa)
+static void qcelp_lsp2poly(float *lspf, float *pa, float *qa)
 {
     int i,j;
 
-    for(i=0; i<10; i++)
+    for(i=0; i<5; i++)
     {
         pa[i]=1.0+1.0/(i+1);
         qa[i]=1.0-1.0/(i+1);
@@ -545,10 +545,10 @@ static void qcelp_lsp2paqa(float *lspf, float *pa, float *qa)
  */
 static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
 {
-    float pa[10],qa[10];
+    float pa[5],qa[5];
     int   i;
 
-    qcelp_lsp2paqa(lspf, pa, qa);
+    qcelp_lsp2poly(lspf, pa, qa);
 
     for(i=0; i< 5; i++)
             lpc[i]=-(pa[i]+qa[i])/2.0;
