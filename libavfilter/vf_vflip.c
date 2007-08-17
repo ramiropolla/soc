@@ -73,8 +73,6 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
         }
     }
 
-    link->cur_pic = picref;
-
     avfilter_start_frame(link->dst->outputs[0], ref2);
 }
 
