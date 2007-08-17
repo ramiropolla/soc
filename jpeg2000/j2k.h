@@ -58,6 +58,12 @@ enum J2kTransform{
     J2K_DWT53
 };
 
+enum J2kQuantsty{
+    J2K_QSTY_NONE, ///< no quantization
+    J2K_QSTY_SI,   ///< scalar derived
+    J2K_QSTY_SE    ///< scalar expoounded
+};
+
 #define J2K_MAX_CBLKW 64
 #define J2K_MAX_CBLKH 64
 

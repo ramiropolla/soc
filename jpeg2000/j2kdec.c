@@ -31,6 +31,8 @@
 #include "j2k.h"
 #include "common.h"
 
+#define SHL(a, n) ((n)>=0 ? (a) << (n) : (a) >> -(n))
+
 /** code block */
 typedef struct {
     uint8_t npassess;  ///< number of coding passess
@@ -55,6 +57,7 @@ typedef struct {
     uint16_t x0, x1, y0, y1;
     uint16_t cblkw, cblkh;
     uint16_t cblknx, cblkny;
+    uint32_t stepsize; ///< quantization stepsize (* 2^13)
     J2kPrec *prec;
     J2kCblk *cblk;
 } J2kBand;
@@ -85,7 +88,8 @@ typedef struct {
    /// QCx fields
    uint8_t expn[32 * 3]; ///< quantization exponent
    uint8_t bbps[32 * 3]; ///< number bps in bands
-   uint8_t nguardbits;
+   uint16_t mant[32 * 3]; ///< quantization mantissa
+   uint8_t qstyle; ///< quantization style
 } J2kComponent;
 
 #define HAD_COC 0x01
@@ -109,14 +113,14 @@ typedef struct {
     uint8_t sgnd[4]; ///< if a component is signed
     uint8_t bbps[3 * 32][4]; ///< numbps in bands
     uint8_t expn[3 * 32][4]; ///< quantization exponents
+    uint16_t mant[3 * 32][4]; ///< quantization mantissa
+    uint8_t qstyle[4]; ///< quantization style
     int properties[4];
 
     int ncomponents;
     int XTsiz, YTsiz; ///< tile size
     int numXtiles, numYtiles;
     int maxtilelen;
-
-    int nguardbits[4];
 
     int nreslevels[4]; ///< number of resolution levels
     int xcb[4], ycb[4]; ///< exponent of the code block size
@@ -272,11 +276,12 @@ static void copy_defaults(J2kDecoderContext *s, J2kTile *tile)
         comp->xcb = s->xcb[compno];
         comp->ycb = s->ycb[compno];
         comp->transform = s->transform[compno];
+        comp->qstyle = s->qstyle[compno];
         for (i = 0; i < 3*32; i++){
             comp->expn[i] = s->expn[i][compno];
+            comp->mant[i] = s->mant[i][compno];
             comp->bbps[i] = s->bbps[i][compno];
         }
-        comp->nguardbits = s->nguardbits[compno];
     }
 }
 
@@ -400,21 +405,38 @@ static int get_coc(J2kDecoderContext *s)
 
 static int get_qcx(J2kDecoderContext *s, int n, int compno)
 {
-    int i, x;
+    int i, x, qst, nguardbits;
     x = bytestream_get_byte(&s->buf); ///< Sqcd
-    SETFIELDC(nguardbits, x >> 5);
+    nguardbits = x >> 5;
 
-    if (x & 0x1f){
-        av_log(s->avctx, AV_LOG_ERROR, "no quantization supported\n");
-        return -1;
-    }
-    n -= 3;
+    qst = x & 0x1f;
+    SETFIELDC(qstyle, qst);
 
-    for (i = 0; i < n; i++){
-        x = bytestream_get_byte(&s->buf);
-        SETFIELDC(expn[i], x >> 3);
-        SETFIELDC(bbps[i], (x >> 3) + GETFIELDC(nguardbits) - 1);
+    if (qst == J2K_QSTY_NONE){
+        n -= 3;
+        for (i = 0; i < n; i++)
+            SETFIELDC(expn[i], bytestream_get_byte(&s->buf) >> 3);
     }
+    else if (qst == J2K_QSTY_SI){
+        x = bytestream_get_be16(&s->buf);
+        SETFIELDC(expn[0], x >> 11);
+        SETFIELDC(mant[0], x & 0x7ff);
+        for (i = 1; i < 32 * 3; i++){
+            int curexpn = FFMAX(0, GETFIELDC(expn[0]) - (i-1)/3);
+            SETFIELDC(expn[i], curexpn);
+            SETFIELDC(mant[i], GETFIELDC(mant[0]));
+        }
+    }
+    else{
+        n = (n - 3) >> 1;
+        for (i = 0; i < n; i++){
+            x = bytestream_get_be16(&s->buf);
+            SETFIELDC(expn[i], x >> 11);
+            SETFIELDC(mant[i], x & 0x7ff);
+        }
+    }
+    for (i = 0; i < 32 * 3; i++)
+        SETFIELDC(bbps[i], GETFIELDC(expn[i]) + nguardbits - 1);
     return 0;
 }
 
@@ -471,6 +493,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
         return -1;
     for (compno = 0; compno < s->ncomponents; compno++){
         J2kComponent *comp = tile->comp + compno;
+        int gbandno = 0; ///< global bandno
 
         comp->x0 = FFMAX(p * s->XTsiz + s->XT0siz, s->X0siz);
         comp->x1 = FFMIN((p+1)*s->XTsiz + s->XT0siz, s->Xsiz);
@@ -510,12 +533,22 @@ static int init_tile(J2kDecoderContext *s, int tileno)
             reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
             if (reslevel->band == NULL)
                 return -1;
-            for (bandno = 0; bandno < reslevel->nbands; bandno++){
+            for (bandno = 0; bandno < reslevel->nbands; bandno++, gbandno++){
                 J2kBand *band = reslevel->band + bandno;
                 int cblkno, precx, precy, precno;
                 int x0, y0, x1, y1;
                 int xi0, yi0, xi1, yi1;
                 int cblkperprecw, cblkperprech;
+
+                if (comp->qstyle != J2K_QSTY_NONE){
+                    const static uint8_t lut_gain[2][4] = {{0, 0, 0, 0}, {0, 1, 1, 2}};
+                    int numbps;
+
+                    numbps = s->cbps[compno] + lut_gain[comp->transform][bandno + reslevelno>0];
+                    band->stepsize = SHL(2048 + comp->mant[gbandno], 2 + numbps - comp->expn[gbandno]);
+                }
+                else
+                    band->stepsize = 1 << 13;
 
                 if (reslevelno == 0){  // the same everywhere
                     band->cblkw = 1 << FFMIN(comp->xcb, s->ppx-1);
@@ -1004,10 +1037,21 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                     for (cblkx = 0; cblkx < band->cblknx; cblkx++, cblkno++){
                         int y, x;
                         decode_cblk(s, &t1, band->cblk + cblkno, xx1 - xx0, yy1 - yy0, bandpos);
+                        if (comp->transform == J2K_DWT53){
                         for (y = yy0; y < yy1; y++){
                             int *ptr = t1.data[y-yy0];
                             for (x = xx0; x < xx1; x++){
                                 comp->data[(comp->x1 - comp->x0) * y + x] = *ptr++ >> 1;
+                            }
+                        }
+                        } else{
+                            for (y = yy0; y < yy1; y++){
+                                int *ptr = t1.data[y-yy0];
+                                for (x = xx0; x < xx1; x++){
+                                    int tmp = ((int64_t)*ptr++) * ((int64_t)band->stepsize) >> 13, tmp2;
+                                    tmp2 = FFABS(tmp>>1) + FFABS(tmp&1);
+                                    comp->data[(comp->x1 - comp->x0) * y + x] = tmp < 0 ? -tmp2 : tmp2;
+                                }
                             }
                         }
                         xx0 = xx1;
