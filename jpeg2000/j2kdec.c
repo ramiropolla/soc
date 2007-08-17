@@ -1038,12 +1038,12 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                         int y, x;
                         decode_cblk(s, &t1, band->cblk + cblkno, xx1 - xx0, yy1 - yy0, bandpos);
                         if (comp->transform == J2K_DWT53){
-                        for (y = yy0; y < yy1; y++){
-                            int *ptr = t1.data[y-yy0];
-                            for (x = xx0; x < xx1; x++){
-                                comp->data[(comp->x1 - comp->x0) * y + x] = *ptr++ >> 1;
+                            for (y = yy0; y < yy1; y++){
+                                int *ptr = t1.data[y-yy0];
+                                for (x = xx0; x < xx1; x++){
+                                    comp->data[(comp->x1 - comp->x0) * y + x] = *ptr++ >> 1;
+                                }
                             }
-                        }
                         } else{
                             for (y = yy0; y < yy1; y++){
                                 int *ptr = t1.data[y-yy0];
