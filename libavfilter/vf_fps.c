@@ -94,9 +94,7 @@ static int request_frame(AVFilterLink *link)
         if(avfilter_request_frame(link->src->inputs[0]))
             return -1;
 
-    avfilter_start_frame(link, avfilter_ref_pic(fps->pic,
-                                                link->dst->outputs[0]->dst,
-                                                ~AV_PERM_WRITE));
+    avfilter_start_frame(link, avfilter_ref_pic(fps->pic, ~AV_PERM_WRITE));
     avfilter_draw_slice (link, 0, fps->pic->h);
     avfilter_end_frame  (link);
 
@@ -120,8 +118,7 @@ AVFilter vf_fps =
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .query_formats   = query_formats,
-                                    .end_frame       = end_frame,
-                                    .get_video_buffer= avfilter_next_get_video_buffer, },
+                                    .end_frame       = end_frame, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,

@@ -62,12 +62,8 @@ static int config_props(AVFilterLink *link)
 
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
-    AVFilterPicRef *ref2 = avfilter_ref_pic(picref,
-                                            link->dst->outputs[0]->dst,
-                                            ~0);
-
     avfilter_default_start_frame(link, picref);
-    avfilter_start_frame(link->dst->outputs[0], ref2);
+    avfilter_start_frame(link->dst->outputs[0], avfilter_ref_pic(picref, ~0));
 }
 
 static void end_frame(AVFilterLink *link)
@@ -102,8 +98,7 @@ AVFilter vf_slicify =
                                     .draw_slice      = draw_slice,
                                     .query_formats   = query_formats,
                                     .config_props    = config_props,
-                                    .end_frame       = end_frame,
-                                    .get_video_buffer= avfilter_next_get_video_buffer, },
+                                    .end_frame       = end_frame, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO, },

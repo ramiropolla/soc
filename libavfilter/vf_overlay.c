@@ -207,9 +207,7 @@ static int request_frame(AVFilterLink *link)
     pic->pts = over->pics[!lower_timestamp(over)][0]->pts;
 
     /* and send it to the next filter */
-    avfilter_start_frame(link, avfilter_ref_pic(pic,
-                                                link->dst->outputs[0]->dst,
-                                                ~0));
+    avfilter_start_frame(link, avfilter_ref_pic(pic, ~0));
     avfilter_draw_slice (link, 0, pic->h);
     avfilter_end_frame  (link);
     avfilter_unref_pic(pic);
