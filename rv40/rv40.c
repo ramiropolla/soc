@@ -508,7 +508,7 @@ static inline int get_dimension(GetBitContext *gb, const int *dim1, const int *d
     t = get_bits(gb, 3);
     val = dim1[t];
     if(!val && dim2)
-        val = dim2[(t | get_bits1(gb)) & 3];
+        val = dim2[(t*2 | get_bits1(gb)) & 3];
     if(!val){
         do{
             t = get_bits(gb, 8);
