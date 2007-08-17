@@ -61,7 +61,9 @@ static int config_input(AVFilterLink *link)
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     FlipContext *flip = link->dst->priv;
-    AVFilterPicRef *ref2 = avfilter_ref_pic(picref, ~0);
+    AVFilterPicRef *ref2 = avfilter_ref_pic(picref,
+                                            link->dst->outputs[0]->dst,
+                                            ~0);
     int i;
 
     ref2->data[0] += (ref2->h-1) * ref2->linesize[0];
@@ -95,7 +97,8 @@ AVFilter vf_vflip =
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .query_formats   = query_in_formats,
-                                    .config_props    = config_input, },
+                                    .config_props    = config_input,
+                                    .get_video_buffer= avfilter_next_get_video_buffer, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO, },

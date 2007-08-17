@@ -55,7 +55,9 @@ static int request_frame(AVFilterLink *link)
     pic = avfilter_get_video_buffer(link, AV_PERM_WRITE);
     pic->pts  =
     ctx->pts += 30;
-    avfilter_start_frame(link, avfilter_ref_pic(pic, ~0));
+    avfilter_start_frame(link, avfilter_ref_pic(pic,
+                                                link->dst->outputs[0]->dst,
+                                                ~0));
 
     row = pic->data[0];
     for(y = 0; y < pic->h; y ++) {

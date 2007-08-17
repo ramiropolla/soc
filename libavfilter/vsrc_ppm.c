@@ -87,7 +87,8 @@ static int request_frame(AVFilterLink *link)
         ppm->in = NULL;
     } else ppm->pic->pts += 30;
 
-    out = avfilter_ref_pic(ppm->pic, ~AV_PERM_WRITE);
+    out = avfilter_ref_pic(ppm->pic, link->dst->outputs[0]->dst,
+                           ~AV_PERM_WRITE);
     avfilter_start_frame(link, out);
     avfilter_draw_slice(link, 0, out->h);
     avfilter_end_frame(link);
