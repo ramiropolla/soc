@@ -208,7 +208,7 @@ Index: ffplay.c
          if(pkt->data == flush_pkt.data){
              avcodec_flush_buffers(is->video_st->codec);
              continue;
-@@ -1361,31 +1396,217 @@
+@@ -1361,31 +1396,219 @@
          /* NOTE: ipts is the PTS of the _first_ picture beginning in
             this packet, if any */
          global_video_pkt_pts= pkt->pts;
@@ -384,19 +384,21 @@ Index: ffplay.c
 +
 +#if ENABLE_AVFILTER
 +    AVFilterContext *filt_src = NULL, *filt_out = NULL, *filt_graph = NULL;
++    AVFilter *filterdef;
 +
 +    avfilter_init();
 +    //avfilter_register(&input_filter);
 +    //avfilter_register(&output_filter);
 +
-+    if(!(filt_src = avfilter_create(&input_filter,  "src"))) goto the_end;
-+    if(!(filt_out = avfilter_create(&output_filter, "out"))) goto the_end;
++    if(!(filt_src = avfilter_open(&input_filter,  "src")))   goto the_end;
++    if(!(filt_out = avfilter_open(&output_filter, "out")))   goto the_end;
 +
 +    if(avfilter_init_filter(filt_src, NULL, is))             goto the_end;
 +    if(avfilter_init_filter(filt_out, NULL, frame))          goto the_end;
 +
 +    if(vfilters) {
-+        if(!(filt_graph = avfilter_create_by_name("graph", NULL)))
++        if(!(filterdef = avfilter_get_by_name("graph")) ||
++           !(filt_graph = avfilter_open(filterdef, NULL)))
 +            goto the_end;
 +        if(avfilter_init_filter(filt_graph, vfilters, NULL))
 +            goto the_end;
@@ -438,7 +440,7 @@ Index: ffplay.c
      av_free(frame);
      return 0;
  }
-@@ -2136,6 +2357,12 @@
+@@ -2136,6 +2359,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -451,7 +453,7 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2488,6 +2715,9 @@
+@@ -2488,6 +2717,9 @@
  #endif
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
