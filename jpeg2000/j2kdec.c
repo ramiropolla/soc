@@ -157,10 +157,10 @@ static int get_bits(J2kDecoderContext *s, int n)
 
 void j2k_flush(J2kDecoderContext *s)
 {
-    if (s->bit_index != 8){
-        s->bit_index = 8;
+    if (*s->buf == 0xff)
         s->buf++;
-    }
+    s->bit_index = 8;
+    s->buf++;
 }
 #if 0
 void printcomp(J2kComponent *comp)
