@@ -85,23 +85,12 @@ static void end_frame(AVFilterLink *link)
     avfilter_end_frame(link->dst->outputs[0]);
 }
 
-static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
+static void draw_slice(AVFilterLink *link, int y, int h)
 {
     AVFilterContext *ctx = link->dst;
     AVFilterPicRef *pic = link->cur_pic;
-    FlipContext *flip = ctx->priv;
 
-    uint8_t *src[4];
-    int i;
-
-    memcpy(src, data, sizeof(src));
-
-    src[0] += (y+h-1) * pic->linesize[0];
-    for(i = 0; i < 4; i ++)
-        if(src[i])
-            src[i] += (((y+h) >> flip->vsub)-1) * pic->linesize[i];
-
-    avfilter_draw_slice(ctx->outputs[0], src, pic->h - (y+h), h);
+    avfilter_draw_slice(ctx->outputs[0], pic->h - (y+h), h);
 }
 
 AVFilter vf_vflip =

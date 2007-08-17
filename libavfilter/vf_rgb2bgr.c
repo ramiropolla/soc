@@ -41,16 +41,15 @@ static int *query_out_formats(AVFilterLink *link)
     return avfilter_make_format_list(1, format);
 }
 
-static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
+static void draw_slice(AVFilterLink *link, int y, int h)
 {
+    AVFilterPicRef *curpic = link->cur_pic;
     AVFilterPicRef *outpic = link->dst->outputs[0]->outpic;
-    uint8_t *out[4];
     uint8_t *row[2], *cur[2];
     int i, j;
 
-    row[0] = data[0];
-    row[1] = out[0] = &outpic->data[0][y * outpic->linesize[0]];
-    out[1] = out[2] = out[3] = 0;
+    row[0] = &curpic->data[0][y * curpic->linesize[0]];
+    row[1] = &outpic->data[0][y * outpic->linesize[0]];
     for(i = 0; i < h; i ++) {
         cur[0] = row[0];
         cur[1] = row[1];
@@ -65,7 +64,7 @@ static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
         row[0] += link->cur_pic->linesize[0];
         row[1] += outpic->       linesize[0];
     }
-    avfilter_draw_slice(link->dst->outputs[0], out, y, h);
+    avfilter_draw_slice(link->dst->outputs[0], y, h);
 }
 
 AVFilter vf_rgb2bgr =

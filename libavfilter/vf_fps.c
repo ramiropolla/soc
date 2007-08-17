@@ -82,7 +82,7 @@ static void end_frame(AVFilterLink *link)
 {
 }
 
-static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
+static void draw_slice(AVFilterLink *link, int y, int h)
 {
 }
 
@@ -95,7 +95,7 @@ static int request_frame(AVFilterLink *link)
             return -1;
 
     avfilter_start_frame(link, avfilter_ref_pic(fps->pic, ~AV_PERM_WRITE));
-    avfilter_draw_slice (link, fps->pic->data, 0, fps->pic->h);
+    avfilter_draw_slice (link, 0, fps->pic->h);
     avfilter_end_frame  (link);
 
     fps->pts += fps->timebase;

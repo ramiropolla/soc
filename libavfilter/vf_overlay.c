@@ -133,7 +133,7 @@ static void end_frame(AVFilterLink *link)
 {
 }
 
-static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
+static void draw_slice(AVFilterLink *link, int y, int h)
 {
 }
 
@@ -208,7 +208,7 @@ static int request_frame(AVFilterLink *link)
 
     /* and send it to the next filter */
     avfilter_start_frame(link, avfilter_ref_pic(pic, ~0));
-    avfilter_draw_slice (link, pic->data, 0, pic->h);
+    avfilter_draw_slice (link, 0, pic->h);
     avfilter_end_frame  (link);
     avfilter_unref_pic(pic);
 

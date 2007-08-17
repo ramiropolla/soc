@@ -148,37 +148,24 @@ static void end_frame(AVFilterLink *link)
     avfilter_end_frame(link->dst->outputs[0]);
 }
 
-static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
+static void draw_slice(AVFilterLink *link, int y, int h)
 {
     AVFilterContext *ctx = link->dst;
-    AVFilterPicRef *pic = link->cur_pic;
     CropContext *crop = ctx->priv;
 
-    uint8_t *src[4];
     int top = y;
     int height = h;
-    int i;
 
     if(y >= crop->cy + crop->ch || y + h <= crop->cy) return;
 
-    memcpy(src, data, sizeof(uint8_t *) * 4);
-
     if(top < crop->cy) {
         height -=  crop->cy - top;
-        src[0] += (crop->cy - top) * pic->linesize[0];
-        for(i = 0; i < 4; i ++)
-            if(src[i])
-                src[i] += (crop->cy >> crop->vsub) * pic->linesize[i];
         top     =  crop->cy;
     }
     if(top + height > crop->cy + crop->ch)
         height = crop->cy + crop->ch - top;
-    src[0] += crop->cx * crop->bpp;
-    for(i = 0; i < 4; i ++)
-        if(src[i])
-            src[i] += crop->cx >> crop->hsub;
 
-    avfilter_draw_slice(ctx->outputs[0], src, top - crop->cy, height);
+    avfilter_draw_slice(ctx->outputs[0], top - crop->cy, height);
 }
 
 AVFilter vf_crop =

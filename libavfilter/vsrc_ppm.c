@@ -89,7 +89,7 @@ static int request_frame(AVFilterLink *link)
 
     out = avfilter_ref_pic(ppm->pic, ~AV_PERM_WRITE);
     avfilter_start_frame(link, out);
-    avfilter_draw_slice(link, out->data, 0, out->h);
+    avfilter_draw_slice(link, 0, out->h);
     avfilter_end_frame(link);
 
     return 0;

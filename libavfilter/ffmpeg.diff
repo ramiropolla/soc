@@ -286,7 +286,7 @@ Index: ffplay.c
 +
 +    picref->pts = pts;
 +    avfilter_start_frame(link, avfilter_ref_pic(picref, ~0));
-+    avfilter_draw_slice(link, picref->data, 0, picref->h);
++    avfilter_draw_slice(link, 0, picref->h);
 +    avfilter_end_frame(link);
 +    avfilter_unref_pic(picref);
 +

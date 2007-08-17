@@ -72,25 +72,17 @@ static void end_frame(AVFilterLink *link)
     avfilter_end_frame(link->dst->outputs[0]);
 }
 
-static void draw_slice(AVFilterLink *link, uint8_t *data[4], int y, int h)
+static void draw_slice(AVFilterLink *link, int y, int h)
 {
     SliceContext *slice = link->dst->priv;
-    uint8_t *src[4];
     int y2, i;
 
-    memcpy(src, data, sizeof(src));
-
     for(y2 = y; y2 + slice->h <= y + h; y2 += slice->h) {
-        avfilter_draw_slice(link->dst->outputs[0], src, y2, slice->h);
-        src[0] += link->cur_pic->linesize[0] * slice->h;
-        src[3] += link->cur_pic->linesize[3] * slice->h;
-        /* TODO: make sure this works once other filters support YUV too */
-        for(i = 1; i < 3; i ++)
-            src[i] += link->cur_pic->linesize[i] * (slice->h >> slice->vshift);
+        avfilter_draw_slice(link->dst->outputs[0], y2, slice->h);
     }
 
     if(y2 < y + h)
-        avfilter_draw_slice(link->dst->outputs[0], src, y2, y + h - y2);
+        avfilter_draw_slice(link->dst->outputs[0], y2, y + h - y2);
 }
 
 AVFilter vf_slicify =
