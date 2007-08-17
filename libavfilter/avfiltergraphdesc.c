@@ -42,7 +42,7 @@ typedef enum
     SEC_OUTPUTS
 } Section;
 
-/* a comment is a line which is empty, or starts with whitespace, ';' or '#' */
+/** a comment is a line which is empty, or starts with whitespace, ';' or '#' */
 static inline int is_line_comment(char *line)
 {
     return line[0] == 0     ||
