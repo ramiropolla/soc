@@ -61,8 +61,8 @@ static void draw_slice(AVFilterLink *link, int y, int h)
             cur[0] += 3;
             cur[1] += 3;
         }
-        row[0] += link->cur_pic->linesize[0];
-        row[1] += outpic->       linesize[0];
+        row[0] += curpic->linesize[0];
+        row[1] += outpic->linesize[0];
     }
     avfilter_draw_slice(link->dst->outputs[0], y, h);
 }
