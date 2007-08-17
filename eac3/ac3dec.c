@@ -77,14 +77,6 @@ float ff_ac3_dynrng_tbl[256];
 /** dialogue normalization table */
 float ff_ac3_dialnorm_tbl[32];
 
-/** Adjustments in dB gain */
-#define LEVEL_MINUS_3DB         0.7071067811865476
-#define LEVEL_MINUS_4POINT5DB   0.5946035575013605
-#define LEVEL_MINUS_6DB         0.5000000000000000
-#define LEVEL_MINUS_9DB         0.3535533905932738
-#define LEVEL_ZERO              0.0000000000000000
-#define LEVEL_ONE               1.0000000000000000
-
 static const float gain_levels[6] = {
     LEVEL_ZERO,
     LEVEL_ONE,

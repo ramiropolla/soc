@@ -82,4 +82,13 @@ int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *e
 
 void ff_ac3_do_rematrixing(float (*transform_coeffs)[256], int end, int nrematbnd, int *rematflg);
 
+/** Adjustments in dB gain */
+#define LEVEL_MINUS_3DB         0.7071067811865476
+#define LEVEL_MINUS_4POINT5DB   0.5946035575013605
+#define LEVEL_MINUS_6DB         0.5000000000000000
+#define LEVEL_MINUS_9DB         0.3535533905932738
+#define LEVEL_ZERO              0.0000000000000000
+#define LEVEL_ONE               1.0000000000000000
+
+
 #endif /* AC3DEC_H */
