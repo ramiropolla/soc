@@ -49,6 +49,7 @@ typedef struct {
     uint8_t       ifq_count;
     float         prev_lspf[10];
     float         pitchf_mem[144];
+    int           frame_num;
 } QCELPContext;
 
 static int qcelp_decode_init(AVCodecContext *avctx);
@@ -79,6 +80,8 @@ static int qcelp_decode_init(AVCodecContext *avctx)
 
     if(q->frame == NULL)
         return -1;
+
+    q->frame_num=0;
 
     for(i=0; i<10; i++)
         q->prev_lspf[i]=0.0;
@@ -462,7 +465,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitchf_mem, int step,
  * For details see 2.4.3.3.4
  */
 void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
-     float *curr_lspf, float *interpolated_lspf, int sample_num)
+     float *curr_lspf, float *interpolated_lspf, int sample_num, int frame_num)
 {
     int   i;
     float curr_weight, prev_weight;
@@ -473,24 +476,31 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
         case RATE_HALF:
         case RATE_QUARTER:
 
-            switch(sample_num)
-            {
-                case 0:
-                    curr_weight=0.25;
-                    prev_weight=0.75;
-                    break;
-                case 39:
-                    curr_weight=0.5;
-                    prev_weight=0.5;
-                    break;
-                case 79:
-                    curr_weight=0.75;
-                    prev_weight=0.25;
-                    break;
-                default:
+                if(!frame_num)
+                {
                     curr_weight=1.0;
-                    prev_weight=0;
-            }
+                    prev_weight=0.0;
+                }else
+                {
+                    switch(sample_num)
+                    {
+                        case 0:
+                            curr_weight=0.25;
+                            prev_weight=0.75;
+                            break;
+                        case 39:
+                            curr_weight=0.5;
+                            prev_weight=0.5;
+                            break;
+                        case 79:
+                            curr_weight=0.75;
+                            prev_weight=0.25;
+                            break;
+                        case 119:
+                            curr_weight=1.0;
+                            prev_weight=0;
+                    }
+                }
 
             for(i=0;i<10;i++)
                 interpolated_lspf[i]=prev_weight*prev_lspf[i]+
@@ -850,7 +860,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         if(i == 0 || i == 39  || i == 79 || i == 119)
         {
             qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf,
-                                      interpolated_lspf, i);
+                                      interpolated_lspf, i, q->frame_num);
             qcelp_lsp2lpc(avctx, interpolated_lspf, lpc);
         }
 
@@ -878,6 +888,13 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         q->ifq_count++;
 
     }
+
+    /**
+     * Copy current lspf freqs over to prev_lspf
+     */
+
+    memcpy(q->prev_lspf, qtzd_lspf, 10*sizeof(float));
+    q->frame_num++;
 
     *data_size=160;
     return *data_size;
