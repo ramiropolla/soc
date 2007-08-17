@@ -76,13 +76,6 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     avfilter_start_frame(link->dst->outputs[0], ref2);
 }
 
-static void end_frame(AVFilterLink *link)
-{
-    avfilter_unref_pic(link->cur_pic);
-    link->cur_pic = NULL;
-    avfilter_end_frame(link->dst->outputs[0]);
-}
-
 static void draw_slice(AVFilterLink *link, int y, int h)
 {
     AVFilterContext *ctx = link->dst;
@@ -101,7 +94,6 @@ AVFilter vf_vflip =
                                     .type            = AV_PAD_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
-                                    .end_frame       = end_frame,
                                     .query_formats   = query_in_formats,
                                     .config_props    = config_input, },
                                   { .name = NULL}},
