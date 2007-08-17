@@ -131,7 +131,7 @@ int ff_eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 GET_BITS(s->lfemixlevcod, gbc, 5);
             }
         }
-        if(s->strmtyp == AC_ACMOD_DUALMONO) /* if independent stream */
+        if(s->strmtyp == AC3_ACMOD_DUALMONO) /* if independent stream */
         {
             for(i = 0; i < (s->acmod?1:2); i++){
                 if(get_bits1(gbc)) {
@@ -356,7 +356,7 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         }
 #endif
     }else{
-        for(ch=!s->cplinu[blk]; ch<=s->ntchans; ch++)
+        for(ch=0; ch<=s->ntchans; ch++)
             s->chahtinu[ch] = 0;
     }
     /* Audio frame SNR offset data */
@@ -364,7 +364,7 @@ int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     {
         int csnroffst = (get_bits(gbc, 6) - 15) << 4;
         int snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
-        for(ch=!s->cplinu[blk]; ch<= s->ntchans; ch++)
+        for(ch=0; ch<= s->ntchans; ch++)
             s->snroffst[ch] = snroffst;
     }
     /* Audio frame transient pre-noise processing data */
