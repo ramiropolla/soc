@@ -318,10 +318,15 @@ static int get_siz(J2kDecoderContext *s)
     s->numYtiles = ff_j2k_ceildiv(s->Ysiz - s->YT0siz, s->YTsiz);
 
     s->tile = av_mallocz(s->numXtiles * s->numYtiles * sizeof(J2kTile));
+    if (!s->tile)
+        return -1;
+
     for (i = 0; i < s->numXtiles * s->numYtiles; i++){
         J2kTile *tile = s->tile + i;
 
         tile->comp = av_mallocz(s->ncomponents * sizeof(J2kComponent));
+        if (!tile->comp)
+            return -1;
     }
 
     s->avctx->width = s->Xsiz - s->X0siz;
@@ -626,6 +631,8 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                                                               prec->yi1 - prec->yi0);
                         prec->zerobits = ff_j2k_tag_tree_init(prec->xi1 - prec->xi0,
                                                               prec->yi1 - prec->yi0);
+                        if (!prec->cblkincl || !prec->zerobits)
+                            return -1;
 
                     }
                     xi1 += cblkperprecw;
@@ -904,6 +911,9 @@ static int dwt_decode53(J2kDecoderContext *s, J2kComponent *comp, int nreslevels
     int *ppv = av_malloc((comp->reslevel[lev-1].y1 + 4)*sizeof(int)), *pv = ppv+2;
     int *ppu = av_malloc((comp->reslevel[lev-1].x1 + 4)*sizeof(int)), *pu = ppu+2;
 
+    if (!ppv || !ppu)
+        return -1;
+
     for (i = 1; i < lev; i++){
         int u0 = comp->reslevel[i].x0,
             u1 = comp->reslevel[i].x1,
@@ -959,6 +969,9 @@ static int dwt_decode97(J2kDecoderContext *s, J2kComponent *comp, int nreslevels
         *t = comp->data, w = comp->x1 - comp->x0;
     float *ppv = av_malloc((comp->reslevel[lev-1].y1 + 8)*sizeof(float)), *pv = ppv+4;
     float *ppu = av_malloc((comp->reslevel[lev-1].x1 + 8)*sizeof(float)), *pu = ppu+4;
+
+    if (!ppv || !ppu)
+        return -1;
 
     for (i = 1; i < lev; i++){
         int u0 = comp->reslevel[i].x0,
