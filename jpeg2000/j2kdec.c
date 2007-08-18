@@ -737,7 +737,8 @@ static int decode_packets(J2kDecoderContext *s, J2kTile *tile)
                     J2kResLevel *rlevel = tile->comp[compno].reslevel + reslevelno;
                     ok_reslevel = 1;
                     for (precno = 0; precno < rlevel->nprecw * rlevel->nprech; precno++){
-                        decode_packet(s, rlevel, precno, layno, comp->bbps + (reslevelno ? 3*(reslevelno-1)+1 : 0));
+                        if (decode_packet(s, rlevel, precno, layno, comp->bbps + (reslevelno ? 3*(reslevelno-1)+1 : 0)))
+                            return -1;
                     }
                 }
             }
@@ -1111,10 +1112,13 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                 }
             }
         }
-        if (comp->transform == J2K_DWT53)
-            dwt_decode53(s, comp, comp->nreslevels);
-        else
-            dwt_decode97(s, comp, comp->nreslevels);
+        if (comp->transform == J2K_DWT53){
+            if (dwt_decode53(s, comp, comp->nreslevels))
+                return -1;
+        } else{
+            if (dwt_decode97(s, comp, comp->nreslevels))
+                return -1;
+        }
         src[compno] = comp->data;
     }
     if (tile->mct)
@@ -1204,15 +1208,16 @@ static int decode_frame(AVCodecContext *avctx,
         av_log(avctx, AV_LOG_ERROR, "SOC marker not present\n");
         return -1;
     }
-
     for (;;){
-        int marker = bytestream_get_be16(&s->buf), len;
+        int marker = bytestream_get_be16(&s->buf), len, ret = 0;
         uint8_t *oldbuf = s->buf;
 
         if (marker == J2K_SOD){
             J2kTile *tile = s->tile + s->curtileno;
-            init_tile(s, s->curtileno);
-            decode_packets(s, tile);
+            if (init_tile(s, s->curtileno))
+                return -1;
+            if (decode_packets(s, tile))
+                return -1;
             continue;
         }
         if (marker == J2K_EOC)
@@ -1221,17 +1226,17 @@ static int decode_frame(AVCodecContext *avctx,
         len = bytestream_get_be16(&s->buf);
         switch(marker){
             case J2K_SIZ:
-                get_siz(s); break;
+                ret = get_siz(s); break;
             case J2K_COC:
-                get_coc(s); break;
+                ret = get_coc(s); break;
             case J2K_COD:
-                get_cod(s); break;
+                ret = get_cod(s); break;
             case J2K_QCC:
-                get_qcc(s, len); break;
+                ret = get_qcc(s, len); break;
             case J2K_QCD:
-                get_qcd(s, len); break;
+                ret = get_qcd(s, len); break;
             case J2K_SOT:
-                get_sot(s); break;
+                ret = get_sot(s); break;
             case J2K_COM:
                 /// the comment is ignored
                 s->buf += len - 2; break;
@@ -1239,13 +1244,14 @@ static int decode_frame(AVCodecContext *avctx,
                 av_log(avctx, AV_LOG_ERROR, "unsupported marker 0x%.4X at pos 0x%x\n", marker, s->buf - s->buf_start - 4);
                 return -1;
         }
-        if (s->buf - oldbuf != len){
+        if (s->buf - oldbuf != len || ret){
             av_log(avctx, AV_LOG_ERROR, "error during processing marker segment %.4x\n", marker);
             return -1;
         }
     }
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++)
-        decode_tile(s, s->tile + tileno);
+        if (decode_tile(s, s->tile + tileno))
+            return -1;
 
     cleanup(s);
     av_log(s->avctx, AV_LOG_DEBUG, "end\n");
