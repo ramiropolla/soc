@@ -772,7 +772,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             {
                 av_log(avctx, AV_LOG_ERROR,
                        "IFQ: 9th LSPF=%4f outside [.66,.985]\n", qtzd_lspf[9]);
-                is_ifq=1; /* FIXME 'erase packet'==ifq? */
+                is_ifq=1;
             }
 
             for(n=4; !is_ifq && n<10; n++)
@@ -917,6 +917,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         /**
          * Insufficient frame quality (erasure) decoding
          */
+
         q->ifq_count++;
 
     }
