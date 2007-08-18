@@ -242,24 +242,22 @@ static int tag_tree_decode(J2kDecoderContext *s, J2kTgtNode *node, int threshold
         node = node->parent;
     }
 
-    if (stack[sp]->val >= threshold)
-        return threshold;
-
     if (node)
         curval = node->val;
     else
         curval = stack[sp]->val;
 
-    while(sp >= 0){
-        while (!get_bits(s, 1)){
-            curval++;
-            if (curval == threshold)
+    while(curval < threshold && sp >= 0){
+        if (curval < stack[sp]->val)
+            curval = stack[sp]->val;
+        while (curval < threshold){
+            if (get_bits(s, 1)){
+                stack[sp]->vis++;
                 break;
+            } else
+                curval++;
         }
         stack[sp]->val = curval;
-        if (curval == threshold)
-            break;
-        stack[sp]->vis++;
         sp--;
     }
     return curval;
