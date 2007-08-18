@@ -632,7 +632,7 @@ static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
     for(i=5; i<10; i++)
             lpc[i]=-(pa[9-i]-qa[9-i])/2.0;
 
-    av_log(avctx, AV_LOG_ERROR, "[LPC ] %f %f %f %f %f %f %f %f %f %f\n",
+    av_log(avctx, AV_LOG_DEBUG, "[LPC ] %f %f %f %f %f %f %f %f %f %f\n",
            lpc[0], lpc[1], lpc[2], lpc[3], lpc[4],
            lpc[5], lpc[6], lpc[7], lpc[8], lpc[9]);
 }
