@@ -33,4 +33,5 @@ extern AVFilter vf_overlay;
 extern AVFilter vf_passthrough;
 extern AVFilter vf_rgb2bgr;
 extern AVFilter vf_slicify;
+extern AVFilter vf_split;
 extern AVFilter vf_vflip;

@@ -17,6 +17,7 @@ OBJS-yes = vsrc_dummy.o \
            vf_passthrough.o \
            vf_rgb2bgr.o \
            vf_slicify.o \
+           vf_split.o \
            vf_vflip.o \
 
 HEADERS = avfilter.h
