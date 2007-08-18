@@ -1,7 +1,9 @@
 echo "checking out ffmpeg svn"
 svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg
 echo "patching ffmpeg"
-cd ffmpeg/libavcodec ;
+cd ffmpeg/libavformat ;
+patch -p0 <../../avformat.patch
+cd ../libavcodec ;
 patch -p0 <../../ffmpeg.patch
 echo "copying the jpeg2000 files to ffmpeg/libavcodec"
 ln -s ../../j2kenc.c j2kenc.c
