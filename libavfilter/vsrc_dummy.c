@@ -76,7 +76,7 @@ static int request_frame(AVFilterLink *link)
     return 0;
 }
 
-AVFilter vsrc_dummy =
+AVFilter avfilter_vsrc_dummy =
 {
     .name      = "dummy",
     .author    = "Bobby Bingham",

@@ -21,17 +21,17 @@
 
 #include "avfilter.h"
 
-extern AVFilter vsrc_dummy;
-extern AVFilter vsrc_ppm;
-extern AVFilter vf_crop;
-extern AVFilter vf_fifo;
-extern AVFilter vf_fps;
-extern AVFilter vf_graph;
-extern AVFilter vf_graphdesc;
-extern AVFilter vf_graphfile;
-extern AVFilter vf_overlay;
-extern AVFilter vf_passthrough;
-extern AVFilter vf_rgb2bgr;
-extern AVFilter vf_slicify;
-extern AVFilter vf_split;
-extern AVFilter vf_vflip;
+extern AVFilter avfilter_vsrc_dummy;
+extern AVFilter avfilter_vsrc_ppm;
+extern AVFilter avfilter_vf_crop;
+extern AVFilter avfilter_vf_fifo;
+extern AVFilter avfilter_vf_fps;
+extern AVFilter avfilter_vf_graph;
+extern AVFilter avfilter_vf_graphdesc;
+extern AVFilter avfilter_vf_graphfile;
+extern AVFilter avfilter_vf_overlay;
+extern AVFilter avfilter_vf_passthrough;
+extern AVFilter avfilter_vf_rgb2bgr;
+extern AVFilter avfilter_vf_slicify;
+extern AVFilter avfilter_vf_split;
+extern AVFilter avfilter_vf_vflip;

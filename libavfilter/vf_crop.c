@@ -159,7 +159,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
     avfilter_draw_slice(ctx->outputs[0], top - crop->cy, height);
 }
 
-AVFilter vf_crop =
+AVFilter avfilter_vf_crop =
 {
     .name      = "crop",
     .author    = "Bobby Bingham",

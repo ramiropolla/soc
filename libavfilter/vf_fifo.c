@@ -115,7 +115,7 @@ static int request_frame(AVFilterLink *link)
     return 0;
 }
 
-AVFilter vf_fifo =
+AVFilter avfilter_vf_fifo =
 {
     .name      = "fifo",
     .author    = "Bobby Bingham",

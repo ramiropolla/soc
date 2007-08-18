@@ -67,7 +67,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
     avfilter_draw_slice(link->dst->outputs[0], y, h);
 }
 
-AVFilter vf_rgb2bgr =
+AVFilter avfilter_vf_rgb2bgr =
 {
     .name      = "rgb2bgr",
     .author    = "Bobby Bingham",

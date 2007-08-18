@@ -84,7 +84,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
     avfilter_draw_slice(ctx->outputs[0], pic->h - (y+h), h);
 }
 
-AVFilter vf_vflip =
+AVFilter avfilter_vf_vflip =
 {
     .name      = "vflip",
     .author    = "Bobby Bingham",

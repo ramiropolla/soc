@@ -85,7 +85,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
         avfilter_draw_slice(link->dst->outputs[0], y2, y + h - y2);
 }
 
-AVFilter vf_slicify =
+AVFilter avfilter_vf_slicify =
 {
     .name      = "slicify",
     .author    = "Bobby Bingham",

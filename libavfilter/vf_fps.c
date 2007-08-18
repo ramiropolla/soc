@@ -103,7 +103,7 @@ static int request_frame(AVFilterLink *link)
     return 0;
 }
 
-AVFilter vf_fps =
+AVFilter avfilter_vf_fps =
 {
     .name      = "fps",
     .author    = "Bobby Bingham",

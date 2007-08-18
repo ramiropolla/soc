@@ -58,7 +58,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
     avfilter_draw_slice(link->dst->outputs[0], y, h);
 }
 
-AVFilter vf_passthrough =
+AVFilter avfilter_vf_passthrough =
 {
     .name      = "passthrough",
     .author    = "Bobby Bingham",

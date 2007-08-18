@@ -215,7 +215,7 @@ static int request_frame(AVFilterLink *link)
     return 0;
 }
 
-AVFilter vf_overlay =
+AVFilter avfilter_vf_overlay =
 {
     .name      = "overlay",
     .author    = "Bobby Bingham",

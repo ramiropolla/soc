@@ -62,7 +62,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
     avfilter_draw_slice(link->dst->outputs[1], y, h);
 }
 
-AVFilter vf_split =
+AVFilter avfilter_vf_split =
 {
     .name      = "split",
     .author    = "Bobby Bingham",

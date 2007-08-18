@@ -105,7 +105,7 @@ static void uninit(AVFilterContext *ctx)
         fclose(ppm->in);
 }
 
-AVFilter vsrc_ppm =
+AVFilter avfilter_vsrc_ppm =
 {
     .name      = "ppm",
     .author    = "Bobby Bingham",
