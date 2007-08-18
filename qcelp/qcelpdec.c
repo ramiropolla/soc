@@ -447,7 +447,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
 
                         if(tmp < 0)
                             pv[i]+=gain[i/40]*hammsinc_table[j+4]
-                                   * pitchf_mem[144+tmp];
+                                   * pitch_mem[144+tmp];
                         else
                             pv[i]+=gain[i/40]*hammsinc_table[j+4]
                                    * pv [tmp];
@@ -458,12 +458,12 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
                     tmp=i-lag[i/40];
 
                     if(tmp < 0)
-                        pv[i]+=gain[i/40]*pitchf_mem[144+tmp];
+                        pv[i]+=gain[i/40]*pitch_mem[144+tmp];
                     else
                         pv[i]+=gain[i/40]*pv[i - lrintf(lag[i/40])];
                 }
 
-                qcelp_update_pitchf_mem(pitchf_mem, pv[i]);
+                qcelp_update_pitchf_mem(pitch_mem, pv[i]);
             }
 
             break;
