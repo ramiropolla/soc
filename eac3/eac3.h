@@ -251,13 +251,6 @@ typedef struct EAC3Context{
     AC3ChannelMode  blkoutput;
 }EAC3Context;
 
-
-int ff_eac3_parse_syncinfo(GetBitContext *gbc, EAC3Context *s);
-int ff_eac3_parse_bsi(GetBitContext *gbc, EAC3Context *s);
-int ff_eac3_parse_audfrm(GetBitContext *gbc, EAC3Context *s);
-int ff_eac3_parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk);
-int ff_eac3_parse_auxdata(GetBitContext *gbc, EAC3Context *s);
-
 /** Channel gain adaptive quantization mode */
 typedef enum {
     EAC3_GAQ_NO =0,
