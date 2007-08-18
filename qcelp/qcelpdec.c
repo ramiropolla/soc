@@ -527,7 +527,7 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
 
             for(i=0;i<10;i++)
                 interpolated_lspf[i]=prev_weight*prev_lspf[i]+
-                                       curr_weight*curr_lspf[i];
+                                     curr_weight*curr_lspf[i];
             break;
         case RATE_OCTAVE:
 
