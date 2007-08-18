@@ -90,9 +90,9 @@ static int qcelp_decode_init(AVCodecContext *avctx)
 
     q->frame_num=0;
 
-    memset(q->prev_lspf , 0, 10 *sizeof(float));
-    memset(q->pitchf_mem, 0, 144*sizeof(float));
-    memset(q->pitchp_mem, 0, 144*sizeof(float));
+    memset(q->prev_lspf , 0, sizeof(q->prev_lspf ));
+    memset(q->pitchf_mem, 0, sizeof(q->pitchf_mem));
+    memset(q->pitchp_mem, 0, sizeof(q->pitchp_mem));
 
     /**
      * Fill hammsinc table
