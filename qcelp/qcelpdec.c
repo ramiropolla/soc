@@ -565,7 +565,7 @@ static void qcelp_convolve(float *vector_a, float *vector_b, int d1, int d2)
     {
         vector_a[i]=0.0;
         for(j=0;j<=i;j++)
-            vector_a[i]+=(i>=d1? 0:copy[i])*(j>=d2? 0:vector_b[j]);
+            vector_a[i]+=(((i-j)>=d1 || (i-j)<0)? 0:copy[i-j])*(j>=d2? 0:vector_b[j]);
     }
 
 }
