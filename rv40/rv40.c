@@ -1363,6 +1363,194 @@ if(s->pict_type == B_TYPE){
     return 0;
 }
 
+#define CLIP_SYMM(a, b) av_clip(a, -(b), b)
+/**
+ * Weaker deblocking
+ */
+static inline void rv40_weak_loop_filter(uint8_t *src, const int step,
+                            const int flag0, const int flag1, const int mult,
+                            const int lim0, const int lim1, const int lim2, const int thr1,
+                            const int S0, const int S1, const int S2, const int S3)
+{
+    uint8_t *cm = ff_cropTbl + MAX_NEG_CROP;
+    int t, diff;
+
+    t = src[0*step] - src[-1*step];
+    if(!t) return;
+    t = (mult * FFABS(t)) >> 7;
+    if(t > 3) return;
+    if(flag0 && flag1 && t > 2) return;
+    t = src[-1*step] - src[0*step];
+
+    if(flag0 && flag1)
+        diff = (src[-2*step] - src[1*step] + t*4 + 4) >> 3;
+    else
+        diff = (t + 1) >> 1;
+    diff = CLIP_SYMM(diff, lim2);
+    src[-1*step] = cm[src[-1*step] + diff];
+    src[ 0*step] = cm[src[ 0*step] - diff];
+    if(FFABS(S1) <= thr1 && flag0){
+        t = (S0 + S1 - diff) >> 1;
+        src[-2*step] = cm[src[-2*step] - CLIP_SYMM(t, lim1)];
+    }
+    if(FFABS(S3) <= thr1 && flag1){
+        t = (S2 + S3 + diff) >> 1;
+        src[ 1*step] = cm[src[ 1*step] - CLIP_SYMM(t, lim0)];
+    }
+}
+
+/**
+ * This macro is used for calculating 25*x0+26*x1+26*x2+26*x3+25*x4
+ * or 25*x0+26*x1+51*x2+26*x3
+ * parameter  sub - index of the value with coefficient = 25
+ * parameter last - index of the value with coefficient 25 or 51
+ */
+#define RV40_STRONG_FILTER(src, step, start, last, sub) \
+     26*(src[start*step] + src[(start+1)*step] + src[(start+2)*step] + src[(start+3)*step] + src[last*step]) - src[last*step] - src[sub*step]
+/**
+ * Deblocking filter, the alternated version from JVT-A003r1 H.26L draft.
+ */
+static inline void rv40_loop_filter(uint8_t *src, const int step, const int stride, const int dmode, const int lim0, const int lim1, const int mult, const int thr0, const int thr1, const int chroma, const int edge)
+{
+    int diffs[4][4];
+    int s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+    uint8_t *ptr;
+    int flag0 = 1, flag1 = 1;
+    int llim0 = 3, llim1 = 3;
+    int i, t, sflag;
+    int p0, p1;
+    int v88;
+
+    for(i = 0, ptr = src; i < 4; i++, ptr += stride){
+        diffs[i][0] = ptr[-2*step] - ptr[-1*step];
+        diffs[i][1] = ptr[-2*step] - ptr[-3*step];
+        diffs[i][2] = ptr[ 1*step] - ptr[ 0*step];
+        diffs[i][3] = ptr[ 1*step] - ptr[ 2*step];
+        s0 += diffs[i][0];
+        s1 += diffs[i][1];
+        s2 += diffs[i][2];
+        s3 += diffs[i][3];
+    }
+    if(FFABS(s0) >= (thr0<<2)){
+        llim0 = 1;
+        flag0 = 0;
+    }
+    if(FFABS(s2) >= (thr0<<2)){
+        llim1 = 1;
+        flag1 = 0;
+    }
+    if(llim0 + llim1 == 2)
+        return;
+
+    if(!edge)
+        flag0 = flag1 = 0;
+    if(flag0 && FFABS(s1) >= thr1)
+        flag0 = 0;
+    if(flag1 && FFABS(s3) >= thr1)
+        flag1 = 0;
+
+    v88 = (lim0 + lim1 + llim0 + llim1) >> 1;
+    if(flag0 + flag1 == 2){ /* strong filtering */
+        for(i = 0; i < 4; i++, src += stride){
+            t = src[0*step] - src[-1*step];
+            if(!t) continue;
+            sflag = (mult * FFABS(t)) >> 7;
+            if(sflag > 1) continue;
+
+            p0 = (RV40_STRONG_FILTER(src, step, -3, 1, -3) + rv40_dither_l[dmode + i]) >> 7;
+            p1 = (RV40_STRONG_FILTER(src, step, -1, 3, -1) + rv40_dither_r[dmode + i]) >> 7;
+            if(!sflag){
+                src[-1*step] = p0;
+                src[ 0*step] = p1;
+            }else{
+                if((src[-1*step] - p0) >= -v88 && (src[-1*step] - p0) <= v88)
+                    src[-1*step] = p0;
+                else
+                    src[-1*step] = p1;
+                if((src[ 0*step] - p1) >= -v88 && (src[ 0*step] - p1) <= v88)
+                    src[ 0*step] = p1;
+                else
+                    src[ 0*step] = src[-1*step];
+            }
+            p0 = (RV40_STRONG_FILTER(src, step, -4, 0, -4) + rv40_dither_l[dmode + i]) >> 7;
+            p1 = (RV40_STRONG_FILTER(src, step, -1, 3, -1) + rv40_dither_r[dmode + i]) >> 7;
+            if(!sflag){
+                src[-2*step] = p0;
+                src[ 1*step] = p1;
+            }else{
+                if((src[-2*step] - p0) >= -v88 && (src[-2*step] - p0) <= v88)
+                    src[-2*step] = p0;
+                else
+                    src[-2*step] += v88;
+                if((src[ 1*step] - p1) >= -v88 && (src[ 1*step] - p1) <= v88)
+                    src[ 1*step] = p1;
+                else
+                    src[ 1*step] += v88;
+            }
+            if(!chroma){
+                src[-3*step] = (RV40_STRONG_FILTER(src, step, -4, -1, -3) + 64) >> 7;
+                src[ 2*step] = (RV40_STRONG_FILTER(src, step,  0,  0,  2) + 64) >> 7;
+            }
+        }
+    }else if(llim0 == 3 && llim1 == 3)
+        for(i = 0; i < 4; i++, src += stride)
+            rv40_weak_loop_filter(src, step, 1, 1, mult, lim0, lim1, v88, thr1,
+                                  diffs[i][0], diffs[i][1], diffs[i][2], diffs[i][3]);
+    else
+        for(i = 0; i < 4; i++, src += stride)
+            rv40_weak_loop_filter(src, step, llim0==3, llim1==3, mult, lim0>>1, lim1>>1, v88>>1, thr1,
+                                  diffs[i][0], diffs[i][1], diffs[i][2], diffs[i][3]);
+}
+
+static void rv40_v_loop_filter(uint8_t *src, int stride, int dmode, int lim0, int lim1, int mult, int thr0, int thr1, int chroma, int edge){
+    rv40_loop_filter(src, 1, stride, dmode, lim0, lim1, mult, thr0, thr1, chroma, edge);
+}
+static void rv40_h_loop_filter(uint8_t *src, int stride, int dmode, int lim0, int lim1, int mult, int thr0, int thr1, int chroma, int edge){
+    rv40_loop_filter(src, stride, 1, dmode, lim0, lim1, mult, thr0, thr1, chroma, edge);
+}
+
+static void rv40_postprocess(RV40DecContext *r)
+{
+    MpegEncContext *s = &r->s;
+    int mb_pos;
+    int i, j;
+    int no_up, no_left;
+    uint8_t *Y, *U, *V;
+
+    mb_pos = s->resync_mb_x + s->resync_mb_y * s->mb_stride;
+    memset(r->intra_types_hist, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
+    s->first_slice_line = 1;
+    s->mb_x= s->resync_mb_x;
+    s->mb_y= s->resync_mb_y;
+    ff_init_block_index(s);
+    while(s->mb_num_left-- && s->mb_y < s->mb_height) {
+        ff_update_block_index(s);
+        if(IS_INTRA(s->current_picture_ptr->mb_type[mb_pos])){
+            no_up = s->first_slice_line || !IS_INTRA(s->current_picture_ptr->mb_type[mb_pos - s->mb_stride]);
+            no_left = !s->mb_x || (s->first_slice_line && s->mb_x == s->resync_mb_x) || !IS_INTRA(s->current_picture_ptr->mb_type[mb_pos - 1]);
+            for(j = 0; j < 4; j++){
+                for(i = 0; i < 4; i++){
+                    Y = s->dest[0] + i*4 + j*4*s->linesize;
+                    if(!j && !no_up)
+                        rv40_h_loop_filter(Y, s->linesize, i*4+j, 1, 1, 0x4B, 0x4, 0xC, 0, 1);
+                    if(j != 3)
+                        rv40_h_loop_filter(Y + 4*s->linesize, s->linesize, i*4+j, 1, 1, 0x4B, 0x4, 0xC, 0, 0);
+                    if(i || !no_left)
+                        rv40_v_loop_filter(Y, s->linesize, i*4+j, 1, 1, 0x4B, 0x4, 0xC, 0, !i);
+                }
+            }
+        }
+        if (++s->mb_x == s->mb_width) {
+            s->mb_x = 0;
+            s->mb_y++;
+            ff_init_block_index(s);
+            mb_pos = s->mb_x + s->mb_y * s->mb_stride;
+        }
+        if(s->mb_x == s->resync_mb_x)
+            s->first_slice_line=0;
+    }
+
+}
 /** @} */ // recons group end
 
 /**
@@ -1454,6 +1642,8 @@ static int rv40_decode_frame(AVCodecContext *avctx,
             s->mb_num_left = r->prev_si.end - r->prev_si.start;
             s->pict_type = r->prev_si.type ? r->prev_si.type : I_TYPE;
             rv40_decode_slice(r);
+            s->mb_num_left = r->prev_si.end - r->prev_si.start;
+            //rv40_postprocess(r);
             r->slice_data = NULL;
         }
         ff_er_frame_end(s);
@@ -1488,6 +1678,8 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         s->mb_num_left = r->prev_si.end - r->prev_si.start;
         s->pict_type = r->prev_si.type ? r->prev_si.type : I_TYPE;
         rv40_decode_slice(r);
+        s->mb_num_left = r->prev_si.end - r->prev_si.start;
+        //rv40_postprocess(r);
     }
 
     if(r->has_slice && (si.start < r->prev_si.start || si.type != r->prev_si.type)){ // output complete frame
