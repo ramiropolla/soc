@@ -745,6 +745,13 @@ static int rv40_decode_mb_info(RV40DecContext *r)
     return 0;
 }
 
+/** @} */ //bitstream functions
+
+/**
+ * @defgroup mv Motion vectors related code (prediction, reconstruction, motion compensation)
+ * @{
+ */
+
 /** Macroblock partition width in 8x8 blocks */
 const int part_sizes_w[RV40_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 2, 1, 2, 2 };
 
@@ -933,6 +940,9 @@ static inline void rv40_mc(RV40DecContext *r, const int block_type,
     }
 }
 
+/**
+ * Decode motion vector differences and perform motion vector reconstruction and motion compensation
+ */
 static int rv40_decode_mv(RV40DecContext *r, int block_type)
 {
     MpegEncContext *s = &r->s;
@@ -996,7 +1006,12 @@ static int rv40_decode_mv(RV40DecContext *r, int block_type)
 
     return 0;
 }
+/** @} */ // mv group
 
+/**
+ * @defgroup recons Macroblock reconstruction functions
+ * @{
+ */
 /** Mapping of RV40 intra prediction types to standard H.264 types */
 static const int ittrans[9] = {
  DC_PRED, VERT_PRED, HOR_PRED, DIAG_DOWN_RIGHT_PRED, DIAG_DOWN_LEFT_PRED,
@@ -1133,7 +1148,10 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
     }
 }
 
+/** @} */ // recons group
+
 /**
+ * @addtogroup bitstream
  * Decode macroblock header and return CBP in case of success, -1 otherwise
  */
 static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
@@ -1199,6 +1217,10 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
     return rv40_decode_cbp(gb, r->cur_vlcs, r->is16);
 }
 
+/**
+ * @addtogroup recons
+ * @{
+ */
 /** Mask for retrieving all bits in coded block pattern
  * corresponding to one 8x8 block
  */
@@ -1340,8 +1362,7 @@ if(s->pict_type == B_TYPE){
     return 0;
 }
 
-/** @} */ //bitstream functions
-
+/** @} */ // recons group end
 
 /**
  * Initialize decoder
