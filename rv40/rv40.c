@@ -1050,7 +1050,7 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
 {
     MpegEncContext *s = &r->s;
     DSPContext *dsp = &s->dsp;
-    int i, j, x, y;
+    int i, j;
     uint8_t *Y, *YY, *U, *V;
     int no_up, no_left, no_topright, itype;
 
@@ -1142,7 +1142,6 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
     GetBitContext *gb = &s->gb;
     int mb_pos = s->mb_x + s->mb_y * s->mb_stride;
     int i, t;
-    int cbp;
 
     if(!r->prev_si.type){
         r->is16 = 0;
@@ -1228,7 +1227,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
-    int q, cbp, cbp2;
+    int cbp, cbp2;
     int i, blknum, blkoff;
     DCTELEM block16[64];
 
