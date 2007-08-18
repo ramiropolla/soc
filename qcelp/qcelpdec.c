@@ -544,23 +544,77 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
 }
 
 /**
+ * Linear convolution of two vectors, with max resultant
+ * vector dim = 12 -- just what we need. Result gets stored
+ * in vector_a so it must have enough room to hold d1+d2-1.
+ *
+ * WIP this is a heavily suboptimal implementation
+ *
+ * @param d1 real dimension of vector_a prior convolution
+ * @param d2 dimension of vector_b
+ *
+ */
+static void qcelp_convolve(float *vector_a, float *vector_b, int d1, int d2)
+{
+    float copy[12];
+    int i,j;
+
+    memcpy(copy, vector_a, sizeof(copy));
+
+    for(i=0;i<(d1+d2-1);i++)
+    {
+        vector_a[i]=0.0;
+        for(j=0;j<=i;j++)
+            vector_a[i]+=(i>=d1? 0:copy[i])*(j>=d2? 0:vector_b[j]);
+    }
+
+}
+
+/**
  * 2.4.3.3.5-1/2
  */
 static void qcelp_lsp2poly(float *lspf, float *pa, float *qa)
 {
-    int i,j;
+    int i;
+    float vector_a[12];
+    float vector_b[3];
+    int   a_limit[]={2,4,6,8,10};
+
+    vector_b[0]=1;
+    vector_b[2]=1;
+
+    /**
+     * Compute Pa coefs
+     */
+
+    vector_a[0]=1.0;
+    vector_a[1]=1.0;
 
     for(i=0; i<5; i++)
     {
-        pa[i]=1.0+1.0/(i+1);
-        qa[i]=1.0-1.0/(i+1);
-
-        for(j=0; j<5; j++)
-        {
-            pa[i]*=1.0-2*(1.0/(i+1))*cos(M_PI*lspf[2*j  ])+pow(i+1,-2);
-            qa[i]*=1.0-2*(1.0/(i+1))*cos(M_PI*lspf[2*j+1])+pow(i+1,-2);
-        }
+        vector_b[1]=-2*cos(M_PI*lspf[2*i]);
+        qcelp_convolve(vector_a, vector_b, a_limit[i], 3);
     }
+
+    for(i=0;i<5;i++)
+        pa[i]=vector_a[i+1];
+
+    /**
+     * Compute Qa coefs
+     */
+
+    vector_a[0]= 1.0;
+    vector_a[1]=-1.0;
+
+    for(i=0; i<5; i++)
+    {
+        vector_b[1]=-2*cos(M_PI*lspf[2*i+1]);
+        qcelp_convolve(vector_a, vector_b, a_limit[i], 3);
+    }
+
+    for(i=0;i<5;i++)
+        qa[i]=vector_a[i+1];
+
 }
 
 /**
@@ -578,22 +632,7 @@ static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
     for(i=5; i<10; i++)
             lpc[i]=-(pa[9-i]-qa[9-i])/2.0;
 
-    /**
-     * FIXME see 2.4.3.3.6-1, the scaling may be necesary at decoding too
-     *
-     * for(i=0; i<10; i++)
-     *    lpc[i]*=powf(0.9883, i+1);
-     */
-
-    av_log(avctx, AV_LOG_DEBUG,"-------- Interpolated lspf to lpc --------\n");
-    av_log(avctx, AV_LOG_DEBUG, "[LSPF] %f %f %f %f %f %f %f %f %f %f\n",
-           lspf[0], lpc[1], lpc[2], lpc[3], lpc[4],
-           lspf[5], lpc[6], lpc[7], lpc[8], lpc[9]);
-    av_log(avctx, AV_LOG_DEBUG, "[PA  ] %f %f %f %f %f\n",
-           pa[0], pa[1], pa[2], pa[3], pa[4]);
-    av_log(avctx, AV_LOG_DEBUG, "[QA  ] %f %f %f %f %f\n",
-           qa[0], qa[1], qa[2], qa[3], qa[4]);
-    av_log(avctx, AV_LOG_DEBUG, "[LPC ] %f %f %f %f %f %f %f %f %f %f\n",
+    av_log(avctx, AV_LOG_ERROR, "[LPC ] %f %f %f %f %f %f %f %f %f %f\n",
            lpc[0], lpc[1], lpc[2], lpc[3], lpc[4],
            lpc[5], lpc[6], lpc[7], lpc[8], lpc[9]);
 }
