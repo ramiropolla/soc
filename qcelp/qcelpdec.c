@@ -49,6 +49,7 @@ typedef struct {
     uint8_t       ifq_count;
     float         prev_lspf[10];
     float         pitchf_mem[144];
+    float         hammsinc_table[8];
     int           frame_num;
 } QCELPContext;
 
@@ -57,6 +58,14 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            int *data_size, uint8_t *buf, int buf_size);
 static int qcelp_decode_close(AVCodecContext *avctx);
 
+
+/**
+ * Computes hammsinc(x)
+ */
+static float qcelp_hammsinc(float i)
+{
+    return (sin(M_PI*i)/(M_PI*i))*(0.5+0.46*cos(M_PI*i/4));
+}
 
 static void qcelp_update_pitchf_mem(float *pitchf_mem, float last)
 {
@@ -88,6 +97,13 @@ static int qcelp_decode_init(AVCodecContext *avctx)
 
     for(i=0; i<144; i++)
         q->pitchf_mem[i]=0.0;
+
+    /**
+     * Fill hammsinc table
+     */
+
+    for(i=0; i<8; i++)
+        q->hammsinc_table[i]=qcelp_hammsinc(i-3.5);
 
     return 0;
 }
@@ -138,10 +154,6 @@ void qcelp_decode_lspf(AVCodecContext *avctx, const QCELPFrame *frame,
             lspf[8]=lspf[7]+qcelp_lspvq5[lspv[4]].x;
             lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y;
 
-            av_log(avctx, AV_LOG_DEBUG,
-                   "[LSPF] %7f %7f %7f %7f %7f %7f %7f %7f %7f %7f\n",
-                   lspf[0], lspf[1], lspf[2], lspf[3], lspf[4],
-                   lspf[5], lspf[6], lspf[7], lspf[8], lspf[9]);
             break;
         case RATE_OCTAVE:
             lspv=frame->data+QCELP_LSP0_POS;
@@ -307,14 +319,6 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
 }
 
 /**
- * Computes hammsinc(x), this will be replaced by a lookup table
- */
-static float qcelp_hammsinc(float i)
-{
-    return (sin(M_PI*i)/(M_PI*i))*(0.5+0.46*cos(M_PI*i/4));
-}
-
-/**
  * Computes energy of the subframeno-ith subvector, using equations
  * 2.4.8.3-2 and 2.4.3.8-3
  */
@@ -379,7 +383,7 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
  *
  */
 static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitchf_mem, int step,
-           float *pv)
+           float *pv, float *hammsinc_table)
 {
     int     i, j, tmp;
     uint8_t *pgain, *plag, *pfrac;
@@ -430,11 +434,11 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitchf_mem, int step,
                         tmp = i+j+0.5-lag[i/40];
 
                         if(tmp < 0)
-                            pv[i]+=gain[i/40]*qcelp_hammsinc(j+0.5)
+                            pv[i]+=gain[i/40]*hammsinc_table[j+4]
                                    * pitchf_mem[144+tmp];
                         else
-                            pv[i]+=gain[i/40]*qcelp_hammsinc(j+0.5)
-                                   *pv [tmp];
+                            pv[i]+=gain[i/40]*hammsinc_table[j+4]
+                                   * pv [tmp];
                     }
 
                 }else
@@ -800,7 +804,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         }
         /* pitch filter */
         if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchf_mem,
-                                          1, cdn_vector)))
+                                          1, cdn_vector, q->hammsinc_table)))
         {
             av_log(avctx, AV_LOG_ERROR,
                    "Error can't pitch filter cdn_vector[%d]\n",
@@ -811,7 +815,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         memcpy(ppf_vector, cdn_vector, 160*sizeof(float));
         /* pitch pre-filter */
         if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchf_mem,
-                                          2, ppf_vector)))
+                                          2, ppf_vector, q->hammsinc_table)))
         {
             av_log(avctx, AV_LOG_ERROR,
                    "Error can't pitch-pre filter ppf_vector[%d]\n",
