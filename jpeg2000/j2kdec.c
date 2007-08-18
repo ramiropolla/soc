@@ -100,6 +100,7 @@ typedef struct {
    int properties;
    int nlayers;
    int progression;
+   uint8_t mct;
 } J2kTile;
 
 typedef struct {
@@ -136,6 +137,8 @@ typedef struct {
     int nlayers;
 
     int csty[4]; ///< coding styles for components
+
+    uint8_t mct; ///< multiple component transformation
 
     J2kTile *tile;
 } J2kDecoderContext;
@@ -267,6 +270,7 @@ static void copy_defaults(J2kDecoderContext *s, J2kTile *tile)
     int compno;
 
     tile->nlayers = s->nlayers;
+    tile->mct = s->mct;
 
     for (compno = 0; compno < s->ncomponents; compno++){
         J2kComponent *comp = tile->comp + compno;
@@ -378,9 +382,8 @@ static int get_cod(J2kDecoderContext *s)
     }
 
     SETFIELD(nlayers, bytestream_get_be16(&s->buf));
-    if (bytestream_get_byte(&s->buf)){ ///< multiple component transformation
-        av_log(s->avctx, AV_LOG_ERROR, "MCT not supported\n");
-    }
+    SETFIELD(mct, bytestream_get_byte(&s->buf)); ///< multiple component transformation
+
     pos = s->buf;
     for (compno = 0; compno < s->ncomponents; compno++)
         if (!(GETFIELDC(properties) & HAD_COC)){
@@ -1001,6 +1004,34 @@ static int dwt_decode97(J2kDecoderContext *s, J2kComponent *comp, int nreslevels
     return 0;
 }
 
+static void mct_decode(J2kDecoderContext *s, J2kTile *tile)
+{
+    int i, *src[3], i0, i1, i2;
+
+    for (i = 0; i < 3; i++)
+        src[i] = tile->comp[i].data;
+
+    if (tile->comp[0].transform == J2K_DWT97){
+        for (i = 0; i < (tile->comp[0].y1 - tile->comp[0].y0) * (tile->comp[0].x1 - tile->comp[0].x0); i++){
+            i0 = *src[0] + (*src[2] * 46802 >> 16);
+            i1 = *src[0] - (*src[1] * 22553 + *src[2] * 46802 >> 16);
+            i2 = *src[0] + (116130 * *src[1] >> 16);
+            *src[0]++ = i0;
+            *src[1]++ = i1;
+            *src[2]++ = i2;
+        }
+    } else{
+        for (i = 0; i < (tile->comp[0].y1 - tile->comp[0].y0) * (tile->comp[0].x1 - tile->comp[0].x0); i++){
+            i1 = *src[0] - (*src[2] + *src[1] >> 2);
+            i0 = i1 + *src[2];
+            i2 = i1 + *src[1];
+            *src[0]++ = i0;
+            *src[1]++ = i1;
+            *src[2]++ = i2;
+        }
+    }
+}
+
 static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
 {
     int compno, reslevelno, bandno;
@@ -1068,6 +1099,8 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
             dwt_decode97(s, comp, comp->nreslevels);
         src[compno] = comp->data;
     }
+    if (tile->mct)
+        mct_decode(s, tile);
 
     y = tile->comp[0].y0 - s->Y0siz;
 
