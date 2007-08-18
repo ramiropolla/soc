@@ -587,12 +587,10 @@ static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
     av_log(avctx, AV_LOG_DEBUG, "[LSPF] %f %f %f %f %f %f %f %f %f %f\n",
            lspf[0], lpc[1], lpc[2], lpc[3], lpc[4],
            lspf[5], lpc[6], lpc[7], lpc[8], lpc[9]);
-    av_log(avctx, AV_LOG_DEBUG, "[PA  ] %f %f %f %f %f %f %f %f %f %f\n",
-           pa[0], pa[1], pa[2], pa[3], pa[4],
-           pa[5], pa[6], pa[7], pa[8], pa[9]);
-    av_log(avctx, AV_LOG_DEBUG, "[QA  ] %f %f %f %f %f %f %f %f %f %f\n",
-           qa[0], qa[1], qa[2], qa[3], qa[4],
-           qa[5], qa[6], qa[7], qa[8], qa[9]);
+    av_log(avctx, AV_LOG_DEBUG, "[PA  ] %f %f %f %f %f\n",
+           pa[0], pa[1], pa[2], pa[3], pa[4]);
+    av_log(avctx, AV_LOG_DEBUG, "[QA  ] %f %f %f %f %f\n",
+           qa[0], qa[1], qa[2], qa[3], qa[4]);
     av_log(avctx, AV_LOG_DEBUG, "[LPC ] %f %f %f %f %f %f %f %f %f %f\n",
            lpc[0], lpc[1], lpc[2], lpc[3], lpc[4],
            lpc[5], lpc[6], lpc[7], lpc[8], lpc[9]);
