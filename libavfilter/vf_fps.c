@@ -38,10 +38,10 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
 
     /* TODO: support framerates specified as decimals or fractions */
     if(args && sscanf(args, "%d", &framerate))
-        fps->timebase = 1000 / framerate;
+        fps->timebase = AV_TIME_BASE / framerate;
     else
         /* default to 25 fps */
-        fps->timebase = 1000 / 25;
+        fps->timebase = AV_TIME_BASE / 25;
 
     return 0;
 }

@@ -235,8 +235,8 @@ Index: ffplay.c
 -//                break;
 -        if (got_picture) {
 -            if (output_picture2(is, frame, pts) < 0)
-+        /* put pts into milliseconds */
-+        *pts = 1000 * (*pts) * is->video_st->time_base.num /
++        /* put pts into units of 1/AV_TIME_BASE */
++        *pts = AV_TIME_BASE * (*pts) * is->video_st->time_base.num /
 +                               is->video_st->time_base.den;
 +
 +        av_free_packet(pkt);
@@ -423,7 +423,7 @@ Index: ffplay.c
 +        while(get_video_frame(is, frame, &pts_int)) {
 +#endif
 +            pts  = pts_int;
-+            pts /= 1000.0;
++            pts /= AV_TIME_BASE;
 +            if(output_picture2(is, frame, pts) < 0)
                  goto the_end;
          }
