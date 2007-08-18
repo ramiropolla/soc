@@ -28,11 +28,6 @@
 
 #define LINESIZE    240             ///< maximum length of an input line
 
-#define strFilters  "[filters]"
-#define strLinks    "[links]"
-#define strInputs   "[inputs]"
-#define strOutputs  "[outputs]"
-
 typedef enum
 {
     SEC_NONE,
@@ -53,10 +48,18 @@ static inline int is_line_comment(char *line)
 
 static Section parse_section_name(char *line)
 {
-         if(!strncmp(line, strFilters, strlen(strFilters))) return SEC_FILTERS;
-    else if(!strncmp(line, strLinks,   strlen(strLinks)))   return SEC_LINKS;
-    else if(!strncmp(line, strInputs,  strlen(strInputs)))  return SEC_INPUTS;
-    else if(!strncmp(line, strOutputs, strlen(strOutputs))) return SEC_OUTPUTS;
+    struct {
+        char *str;
+        int section;
+    } *sec, sections[] = { { "[filters]", SEC_FILTERS },
+                           { "[links]",   SEC_LINKS   },
+                           { "[inputs]",  SEC_INPUTS  },
+                           { "[outputs]", SEC_OUTPUTS },
+                           { NULL, 0 } };
+
+    for(sec = sections; sec->str; sec ++)
+        if(!strncmp(line, sec->str, strlen(sec->str)))
+            return sec->section;
 
     av_log(NULL, AV_LOG_ERROR, "unknown section name in graph description\n");
     return SEC_NONE;
@@ -130,10 +133,10 @@ static AVFilterGraphDescExport *parse_export(char *line)
 AVFilterGraphDesc *avfilter_graph_load_desc(const char *filename)
 {
     AVFilterGraphDesc       *ret    = NULL;
-    AVFilterGraphDescFilter *filter = NULL;
-    AVFilterGraphDescLink   *link   = NULL;
-    AVFilterGraphDescExport *input  = NULL;
-    AVFilterGraphDescExport *output = NULL;
+    AVFilterGraphDescFilter **filterp = NULL;
+    AVFilterGraphDescLink   **linkp   = NULL;
+    AVFilterGraphDescExport **inputp  = NULL;
+    AVFilterGraphDescExport **outputp = NULL;
 
     Section section;
     char line[LINESIZE];
@@ -147,6 +150,11 @@ AVFilterGraphDesc *avfilter_graph_load_desc(const char *filename)
 
     if(!(ret = av_mallocz(sizeof(AVFilterGraphDesc))))
         goto fail;
+
+    filterp = &ret->filters;
+    linkp   = &ret->links;
+    inputp  = &ret->inputs;
+    outputp = &ret->outputs;
 
     /* loop through the input file */
     while(fgets(line, LINESIZE, in)) {
@@ -171,34 +179,26 @@ AVFilterGraphDesc *avfilter_graph_load_desc(const char *filename)
         case SEC_FILTERS:
             if(!(next = parse_filter(line)))
                 goto fail;
-            if(filter)
-                filter = filter->next = next;
-            else
-                ret->filters = filter = next;
+            *filterp = next;
+            filterp  = &(*filterp)->next;
             break;
         case SEC_LINKS:
             if(!(next = parse_link(line)))
                 goto fail;
-            if(link)
-                link = link->next = next;
-            else
-                ret->links = link = next;
+            *linkp = next;
+            linkp  = &(*linkp)->next;
             break;
         case SEC_INPUTS:
             if(!(next = parse_export(line)))
                 goto fail;
-            if(input)
-                input = input->next = next;
-            else
-                ret->inputs = input = next;
+            *inputp = next;
+            inputp  = &(*inputp)->next;
             break;
         case SEC_OUTPUTS:
             if(!(next = parse_export(line)))
                 goto fail;
-            if(output)
-                output = output->next = next;
-            else
-                ret->outputs = output = next;
+            *outputp = next;
+            outputp  = &(*outputp)->next;
             break;
         }
     }
