@@ -51,20 +51,23 @@ void ff_j2k_printu(uint8_t *tab, int l)
 /** allocate the memory for tag tree */
 J2kTgtNode *ff_j2k_tag_tree_init(int w, int h)
 {
-    int size = 2 << av_log2(w*h);
+    int size = 1, pw = w, ph = h;
     J2kTgtNode *res, *t, *t2;
 
-    if (size < w*h)
-        size *= 4;
-
+    while (pw > 1 || ph > 1){
+        size += pw*ph;
+        pw = (pw+1) >> 1;
+        ph = (ph+1) >> 1;
+    }
     t = res = av_mallocz(size*sizeof(J2kTgtNode));
 
     if (res == NULL)
         return NULL;
 
     while (w > 1 || h > 1){
-        int pw = w, ph = h;
         int i, j;
+        pw = w;
+        ph = h;
 
         w = (w+1) >> 1;
         h = (h+1) >> 1;
