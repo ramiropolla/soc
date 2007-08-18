@@ -49,6 +49,7 @@ typedef struct {
     uint8_t       ifq_count;
     float         prev_lspf[10];
     float         pitchf_mem[144];
+    float         pitchp_mem[144];
     float         hammsinc_table[8];
     int           frame_num;
 } QCELPContext;
@@ -96,7 +97,7 @@ static int qcelp_decode_init(AVCodecContext *avctx)
         q->prev_lspf[i]=0.0;
 
     for(i=0; i<144; i++)
-        q->pitchf_mem[i]=0.0;
+        q->pitchf_mem[i]=q->pitchp_mem[i]=0.0;
 
     /**
      * Fill hammsinc table
@@ -382,7 +383,7 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
  * @param step Mode, 1 for pitch filter or 2 for pitch pre-filter
  *
  */
-static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitchf_mem, int step,
+static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
            float *pv, float *hammsinc_table)
 {
     int     i, j, tmp;
@@ -814,7 +815,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
         memcpy(ppf_vector, cdn_vector, 160*sizeof(float));
         /* pitch pre-filter */
-        if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchf_mem,
+        if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchp_mem,
                                           2, ppf_vector, q->hammsinc_table)))
         {
             av_log(avctx, AV_LOG_ERROR,
