@@ -327,6 +327,12 @@ static int get_siz(J2kDecoderContext *s)
     s->avctx->width = s->Xsiz - s->X0siz;
     s->avctx->height = s->Ysiz - s->Y0siz;
 
+    switch(s->ncomponents){
+        case 1: s->avctx->pix_fmt = PIX_FMT_GRAY8; break;
+        case 3: s->avctx->pix_fmt = PIX_FMT_RGB24; break;
+        case 4: s->avctx->pix_fmt = PIX_FMT_BGRA; break;
+    }
+
     s->avctx->get_buffer(s->avctx, &s->picture);
 
     return 0;
@@ -1104,6 +1110,8 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
     y = tile->comp[0].y0 - s->Y0siz;
 
     line = s->picture.data[0] + y * s->picture.linesize[0];
+    if (s->avctx->pix_fmt == PIX_FMT_BGRA) /// RGBA -> BGRA
+        FFSWAP(int *, src[0], src[2]);
 
     for (; y < tile->comp[0].y1 - s->Y0siz; y++){
         uint8_t *dst;
