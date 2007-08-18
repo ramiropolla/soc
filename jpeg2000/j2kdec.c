@@ -714,9 +714,10 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
 
 static int decode_packets(J2kDecoderContext *s, J2kTile *tile)
 {
-    int layno, reslevelno, compno, precno, ok_reslevel = 1;
+    int layno, reslevelno, compno, precno, ok_reslevel;
     s->bit_index = 8;
     for (layno = 0; layno < tile->nlayers; layno++){
+        ok_reslevel = 1;
         for (reslevelno = 0; ok_reslevel; reslevelno++){
             ok_reslevel = 0;
             for (compno = 0; compno < s->ncomponents; compno++){
