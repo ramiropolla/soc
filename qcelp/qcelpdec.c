@@ -479,6 +479,13 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
  * Computes interpolated lsp frequencies for a given rate & pitch subframe
  *
  * For details see 2.4.3.3.4
+ *
+ * @param rate Frame rate
+ * @param prev_lspf Previous frame LSP freqs vector
+ * @param curr_lspf Current frame LSP freqs vector
+ * @param interpolated_lspf Float vector to put the resulting LSP freqs
+ * @param frame_num Frame number in decoded stream
+ *
  */
 void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
      float *curr_lspf, float *interpolated_lspf, int sample_num, int frame_num)
