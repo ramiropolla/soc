@@ -748,7 +748,7 @@ static int rv40_decode_mb_info(RV40DecContext *r)
 /** @} */ //bitstream functions
 
 /**
- * @defgroup mv Motion vectors related code (prediction, reconstruction, motion compensation)
+ * @defgroup mv motion vector related code (prediction, reconstruction, motion compensation)
  * @{
  */
 
@@ -941,7 +941,8 @@ static inline void rv40_mc(RV40DecContext *r, const int block_type,
 }
 
 /**
- * Decode motion vector differences and perform motion vector reconstruction and motion compensation
+ * Decode motion vector differences
+ * and perform motion vector reconstruction and motion compensation.
  */
 static int rv40_decode_mv(RV40DecContext *r, int block_type)
 {
@@ -1152,7 +1153,7 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
 
 /**
  * @addtogroup bitstream
- * Decode macroblock header and return CBP in case of success, -1 otherwise
+ * Decode macroblock header and return CBP in case of success, -1 otherwise.
  */
 static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
 {
@@ -1222,7 +1223,7 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
  * @{
  */
 /** Mask for retrieving all bits in coded block pattern
- * corresponding to one 8x8 block
+ * corresponding to one 8x8 block.
  */
 #define LUMA_CBP_BLOCK_MASK 0x303
 
