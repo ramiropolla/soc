@@ -23,8 +23,8 @@
 
 extern AVFilter vsrc_dummy;
 extern AVFilter vsrc_ppm;
-extern AVFilter vf_buffer;
 extern AVFilter vf_crop;
+extern AVFilter vf_fifo;
 extern AVFilter vf_fps;
 extern AVFilter vf_graph;
 extern AVFilter vf_graphdesc;

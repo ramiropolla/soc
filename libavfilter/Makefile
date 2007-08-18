@@ -10,8 +10,8 @@ OBJS = avfilter.o \
 # TODO: real conditional compilation
 OBJS-yes = vsrc_dummy.o \
            vsrc_ppm.o \
-           vf_buffer.o \
            vf_crop.o \
+           vf_fifo.o \
            vf_fps.o \
            vf_overlay.o \
            vf_passthrough.o \

@@ -1,5 +1,5 @@
 /*
- * Filter to buffer frames
+ * Frame FIFO
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.
@@ -115,9 +115,9 @@ static int request_frame(AVFilterLink *link)
     return 0;
 }
 
-AVFilter vf_buffer =
+AVFilter vf_fifo =
 {
-    .name      = "buffer",
+    .name      = "fifo",
     .author    = "Bobby Bingham",
 
     .init      = init,
