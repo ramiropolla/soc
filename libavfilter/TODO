@@ -15,9 +15,7 @@ FILTERS:
 - scaling (combine with conversion like mplayer?)
 - deslicify
 - decode order -> display order
-- fifo buffer to buffer previous frames needed for next filter context
 - spatial context providing filter
-- splitter, feeding a single input to multiple filters to test multiple outputs
 - decimate to test non 1:1 input:output ratios
 - naive temporal blur to test buffering of previous frames
 - naive spatial blur to test spatial context
