@@ -1,6 +1,6 @@
 /*
  * EAC3 decoder
- * Copyright (c) 2007 Bartlomiej Wolowiec
+ * Copyright (c) 2007 Bartlomiej Wolowiec <bartek.wolowiec@gmail.com>
  *
  * This file is part of FFmpeg.
  *
