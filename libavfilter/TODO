@@ -11,8 +11,6 @@ POSSIBLE FRAMEWORK IDEAS:
 
 FILTERS:
 - padding
-- colorspace conversion
-- scaling (combine with conversion like mplayer?)
 - deslicify
 - decode order -> display order
 - spatial context providing filter
