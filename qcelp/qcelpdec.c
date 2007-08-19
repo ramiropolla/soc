@@ -570,7 +570,8 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
  * @param d2 dimension of vector_b
  *
  */
-static void qcelp_convolve(float *vector_a, float *vector_b, int d1, int d2)
+static void qcelp_convolve(float *vector_a, const float *vector_b, int d1,
+            int d2)
 {
     float copy[12];
     int i,j;
