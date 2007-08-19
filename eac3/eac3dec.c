@@ -1273,56 +1273,18 @@ static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int
     }
 }
 
-static void do_imdct_256(EAC3Context *ctx, int ch)
-{
-    int k;
-    float x[128];
-    FFTComplex z[2][64];
-    float *o_ptr = ctx->tmp_output;
-    int i;
-
-    for(i=0; i<2; i++) {
-        /* de-interleave coefficients */
-        for(k=0; k<128; k++) {
-            x[k] = ctx->transform_coeffs[ch][2*k+i];
-        }
-
-        /* run standard IMDCT */
-        ctx->imdct_256.fft.imdct_calc(&ctx->imdct_256, o_ptr, x, ctx->tmp_imdct);
-
-        /* reverse the post-rotation & reordering from standard IMDCT */
-        for(k=0; k<32; k++) {
-            z[i][32+k].re = -o_ptr[128+2*k];
-            z[i][32+k].im = -o_ptr[2*k];
-            z[i][31-k].re =  o_ptr[2*k+1];
-            z[i][31-k].im =  o_ptr[128+2*k+1];
-        }
-    }
-
-    /* apply AC-3 post-rotation & reordering */
-    for(k=0; k<64; k++) {
-        o_ptr[    2*k  ] = -z[0][   k].im;
-        o_ptr[    2*k+1] =  z[0][63-k].re;
-        o_ptr[128+2*k  ] = -z[0][   k].re;
-        o_ptr[128+2*k+1] =  z[0][63-k].im;
-        o_ptr[256+2*k  ] = -z[1][   k].re;
-        o_ptr[256+2*k+1] =  z[1][63-k].im;
-        o_ptr[384+2*k  ] =  z[1][   k].im;
-        o_ptr[384+2*k+1] = -z[1][63-k].re;
-    }
-}
-
 /**
  * Performs Inverse MDCT transform
  */
-void ff_eac3_do_imdct(EAC3Context *ctx)
+static void do_imdct(EAC3Context *ctx)
 {
     int ch;
 
     for(ch=1; ch<=ctx->nfchans+ctx->lfeon; ch++) {
         if(ctx->blksw[ch]) {
             /* 256-point IMDCT */
-            do_imdct_256(ctx, ch);
+            ff_ac3_do_imdct_256(ctx->tmp_output, ctx->transform_coeffs[ch],
+                    &ctx->imdct_256, ctx->tmp_imdct);
         } else {
             /* 512-point IMDCT */
             ctx->imdct_512.fft.imdct_calc(&ctx->imdct_512, ctx->tmp_output,
@@ -1411,7 +1373,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             }
         }
 
-        ff_eac3_do_imdct(c);
+        do_imdct(c);
         //TODO downmix
 
 #ifdef DEBUG

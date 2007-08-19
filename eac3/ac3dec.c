@@ -651,41 +651,41 @@ void ff_ac3_do_rematrixing(float (*transform_coeffs)[256], int end, int nrematbn
 /**
  * Perform the 256-point IMDCT
  */
-static void do_imdct_256(AC3DecodeContext *ctx, int chindex)
+void ff_ac3_do_imdct_256(float *tmp_output, float *transform_coeffs,
+        MDCTContext *imdct_256, float *tmp_imdct)
 {
     int i, k;
     DECLARE_ALIGNED_16(float, x[128]);
     FFTComplex z[2][64];
-    float *o_ptr = ctx->tmp_output;
 
     for(i=0; i<2; i++) {
         /* de-interleave coefficients */
         for(k=0; k<128; k++) {
-            x[k] = ctx->transform_coeffs[chindex][2*k+i];
+            x[k] = transform_coeffs[2*k+i];
         }
 
         /* run standard IMDCT */
-        ctx->imdct_256.fft.imdct_calc(&ctx->imdct_256, o_ptr, x, ctx->tmp_imdct);
+        imdct_256->fft.imdct_calc(imdct_256, tmp_output, x, tmp_imdct);
 
         /* reverse the post-rotation & reordering from standard IMDCT */
         for(k=0; k<32; k++) {
-            z[i][32+k].re = -o_ptr[128+2*k];
-            z[i][32+k].im = -o_ptr[2*k];
-            z[i][31-k].re =  o_ptr[2*k+1];
-            z[i][31-k].im =  o_ptr[128+2*k+1];
+            z[i][32+k].re = -tmp_output[128+2*k];
+            z[i][32+k].im = -tmp_output[2*k];
+            z[i][31-k].re =  tmp_output[2*k+1];
+            z[i][31-k].im =  tmp_output[128+2*k+1];
         }
     }
 
     /* apply AC-3 post-rotation & reordering */
     for(k=0; k<64; k++) {
-        o_ptr[    2*k  ] = -z[0][   k].im;
-        o_ptr[    2*k+1] =  z[0][63-k].re;
-        o_ptr[128+2*k  ] = -z[0][   k].re;
-        o_ptr[128+2*k+1] =  z[0][63-k].im;
-        o_ptr[256+2*k  ] = -z[1][   k].re;
-        o_ptr[256+2*k+1] =  z[1][63-k].im;
-        o_ptr[384+2*k  ] =  z[1][   k].im;
-        o_ptr[384+2*k+1] = -z[1][63-k].re;
+        tmp_output[    2*k  ] = -z[0][   k].im;
+        tmp_output[    2*k+1] =  z[0][63-k].re;
+        tmp_output[128+2*k  ] = -z[0][   k].re;
+        tmp_output[128+2*k+1] =  z[0][63-k].im;
+        tmp_output[256+2*k  ] = -z[1][   k].re;
+        tmp_output[256+2*k+1] =  z[1][63-k].im;
+        tmp_output[384+2*k  ] =  z[1][   k].im;
+        tmp_output[384+2*k+1] = -z[1][63-k].re;
     }
 }
 
@@ -706,7 +706,8 @@ static inline void do_imdct(AC3DecodeContext *ctx)
 
     for (ch=1; ch<=nchans; ch++) {
         if (ctx->blksw[ch]) {
-            do_imdct_256(ctx, ch);
+            ff_ac3_do_imdct_256(ctx->tmp_output, ctx->transform_coeffs[ch],
+                    &ctx->imdct_256, ctx->tmp_imdct);
         } else {
             ctx->imdct_512.fft.imdct_calc(&ctx->imdct_512, ctx->tmp_output,
                                           ctx->transform_coeffs[ch],
