@@ -1517,6 +1517,9 @@ static void rv40_postprocess(RV40DecContext *r)
     int i, j;
     int no_up, no_left;
     uint8_t *Y, *U, *V;
+    const int alpha = rv40_alpha_tab[r->quant], beta = rv40_beta_tab[r->quant];
+    //XXX these are probably not correct
+    const int thr = r->quant, lim0 = rv40_filter_clip_tbl[1][r->quant], lim1 = rv40_filter_clip_tbl[2][r->quant];
 
     mb_pos = s->resync_mb_x + s->resync_mb_y * s->mb_stride;
     memset(r->intra_types_hist, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
@@ -1533,11 +1536,11 @@ static void rv40_postprocess(RV40DecContext *r)
                 for(i = 0; i < 4; i++){
                     Y = s->dest[0] + i*4 + j*4*s->linesize;
                     if(!j && !no_up)
-                        rv40_h_loop_filter(Y, s->linesize, i*4+j, 1, 1, 0x4B, 0x4, 0xC, 0, 1);
+                        rv40_h_loop_filter(Y, s->linesize, i*4+j, lim0, lim1, alpha, beta, thr, 0, 1);
                     if(j != 3)
-                        rv40_h_loop_filter(Y + 4*s->linesize, s->linesize, i*4+j, 1, 1, 0x4B, 0x4, 0xC, 0, 0);
+                        rv40_h_loop_filter(Y + 4*s->linesize, s->linesize, i*4+j, lim0, lim1, alpha, beta, thr, 0, 0);
                     if(i || !no_left)
-                        rv40_v_loop_filter(Y, s->linesize, i*4+j, 1, 1, 0x4B, 0x4, 0xC, 0, !i);
+                        rv40_v_loop_filter(Y, s->linesize, i*4+j, lim0, lim1, alpha, beta, thr, 0, !i);
                 }
             }
         }
