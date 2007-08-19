@@ -67,8 +67,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         s->strtmant[s->lfe_channel] = 0;
         s->endmant[s->lfe_channel] = 7;
         s->nchgrps[s->lfe_channel] = 2;
-
-        s->ntchans ++ ;
+        s->ntchans++;
     }
 
     GET_BITS(s->bsid, gbc, 5);
@@ -171,7 +170,6 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     if(s->infomdate){
         /* Informational metadata */
         GET_BITS(s->bsmod, gbc, 3);
-
         GET_BITS(s->copyrightb, gbc, 1);
         GET_BITS(s->origbs, gbc, 1);
         if(s->acmod == AC3_ACMOD_STEREO) /* if in 2/0 mode */{
@@ -215,7 +213,6 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
 
     return 0;
 } /* end of bsi */
-
 
 static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     int blk, ch;
@@ -270,7 +267,6 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         memset(s->cplinu, 0, sizeof(int) * ff_eac3_blocks[s->numblkscod]);
         s->ncplblks = 0;
     }
-
 
     /* Exponent strategy data */
     if(s->expstre){
@@ -406,8 +402,8 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             GET_BITS(s->dithflag[ch], gbc, 1);
         }
     }
-    /* Dynamic range control */
 
+    /* Dynamic range control */
     for(i = 0; i < (s->acmod?1:2); i++){
         GET_BITS(s->dynrnge[i], gbc, 1);
         if(s->dynrnge[i]){
@@ -491,7 +487,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }
         }
     }
-
 
     /* Spectral extension coordinates */
     if(s->spxinu){
@@ -623,7 +618,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     s->necplbnd -= s->ecplbndstrc[bnd];
                 }
 #endif
-
             } /* ecplinu[blk] */
         }else{
             /* !cplinu[blk] */
@@ -638,8 +632,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     } /* cplstre[blk] */
     /* Coupling coordinates */
     if(s->cplinu[blk]){
-        //        av_log(s->avctx, AV_LOG_INFO, "NOT TESTED CPLINU\n");
-
         if(!s->ecplinu){
             /* standard coupling in use */
             for(ch = 1; ch <= s->nfchans; ch++){
@@ -904,7 +896,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
     }
 
-
     /* Inclusion of unused dummy data */
     if(s->skipflde){
         if(get_bits1(gbc)){
@@ -942,8 +933,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     s->hebap[ch]);
     }
 
-
-
     got_cplchan = 0;
 
     // TODO only for debug
@@ -957,7 +946,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             get_eac3_transform_coeffs_ch(gbc, s, blk, CPL_CH, &m);
             got_cplchan = 1;
         }
-
     }
 
     if(s->cplinu[blk])
@@ -1088,8 +1076,6 @@ static void spectral_extension(EAC3Context *s){
     }
 #endif
 }
-
-
 
 static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
     //Now turned off, because there are no samples for testing it.
@@ -1300,12 +1286,9 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     GetBitContext gbc;
 
     *data_size = 0;
-
     c->gbc = &gbc;
     c->syncword = 0;
-
     init_get_bits(&gbc, buf, buf_size*8);
-
     GET_BITS(c->syncword, &gbc, 16);
 
     if(c->syncword != 0x0B77)
@@ -1320,15 +1303,13 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         avctx->sample_rate = ff_ac3_freqs[c->fscod];
     }
 
-
     avctx->bit_rate = (c->frmsiz * (avctx->sample_rate) * 16 / ( ff_eac3_blocks[c->numblkscod] * 256)) / 1000;
 #ifdef DEBUG
     av_log(NULL, AV_LOG_INFO, "bitrate = %i\n", avctx->bit_rate);
 #endif
     avctx->channels = c->nfchans + c->lfeon; // TODO lfe
 
-    for(blk = 0; blk < ff_eac3_blocks[c->numblkscod]; blk++)
-    {
+    for(blk = 0; blk < ff_eac3_blocks[c->numblkscod]; blk++){
         for(i=0; i<AC3_MAX_CHANNELS+1; i++){
             c->deltbae[i] = DBA_NONE;
             c->deltnseg[i] = 0;
@@ -1386,7 +1367,6 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             avctx->channels = c->nfchans + c->lfeon;
         }
 
-
         // convert float to 16-bit integer
        for(ch = 1; ch<=c->nfchans + c->lfeon; ch++) { // <- out_channels TODO
             for(i=0; i<AC3_BLOCK_SIZE; i++) {
@@ -1401,7 +1381,6 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
                 *(out_samples++) = c->int_output[i][k];
             }
         }
-
     }
 
 #ifdef DEBUG
