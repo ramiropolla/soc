@@ -33,8 +33,6 @@
 
 #include "qcelpdata.h"
 
-#define DEBUG 1
-
 typedef struct
 {
     qcelp_packet_rate rate;
@@ -121,8 +119,7 @@ static int qcelp_decode_close(AVCodecContext *avctx)
  *
  * WIP: implement I_F_Q handling?
  */
-void qcelp_decode_lspf(AVCodecContext *avctx, const QCELPFrame *frame,
-     float *lspf)
+void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
 {
     const uint8_t *lspv;
     int i;
@@ -133,11 +130,6 @@ void qcelp_decode_lspf(AVCodecContext *avctx, const QCELPFrame *frame,
         case RATE_HALF:
         case RATE_QUARTER:
             lspv=frame->data+QCELP_LSPV0_POS;
-
-            av_log(avctx, AV_LOG_DEBUG,
-                   "-------- Decoded values from frame --------\n");
-            av_log(avctx, AV_LOG_DEBUG, "[LSPV] %5d %5d %5d %5d %5d\n",
-                   lspv[0],lspv[1],lspv[2],lspv[3],lspv[4]);
 
             lspf[0]=        qcelp_lspvq1[lspv[0]].x;
             lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y;
@@ -199,12 +191,13 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
 
                 g1[i]=g0[i]+predictor;
 
-                /* *
+                /**
                  * FIXME
                  *
                  * This shouldn't but does happen quite a few
-                 * times during decoding, my guess would be an
-                 * error at predictor computation.
+                 * times during decoding, my guess is I have an
+                 * error at predictor computation somewhere but
+                 * can't find it yet.
                  */
 
                 if(g1[i]<0 || g1[i]>60)
@@ -395,7 +388,7 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
 }
 
 /**
- * pitch filters or pre-filters pv, returns 0 if everything goes
+ * Pitch filters or pre-filters pv, returns 0 if everything goes
  * well, otherwise it returns the index of the failing-to-be-pitched
  * element and -1 if an invalid (140.5, 141.5, 142.5) lag is found or
  * an invalid operation mode is requested.
@@ -699,7 +692,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     init_get_bits(&q->gb, buf, buf_size*8);
 
     /**
-     * figure out frame's rate by its size, set up a few utility vars
+     * Figure out frame's rate by its size, set up a few utility vars
      * and point 'order' to the rate's reference _slice_ inside the
      * big REFERENCE_FRAME array.
      */
@@ -763,9 +756,6 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         }
     }
 
-    av_log(avctx, AV_LOG_DEBUG, "Rate %d Size %d\n",
-           q->frame->rate, q->frame->bits);
-
     /**
      * reordering loop
      */
@@ -775,8 +765,6 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     {
         q->frame->data[ order[n].index ] |=
         get_bits1(&q->gb)<<order[n].bitpos;
-
-        /* FIXME Should rework this a bit */
 
         if(n<20)
         {
@@ -814,7 +802,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      * Preliminary decoding of frame's transmission codes
      */
 
-    qcelp_decode_lspf(avctx, q->frame, qtzd_lspf);
+    qcelp_decode_lspf(q->frame, qtzd_lspf);
     qcelp_decode_params(avctx, q->frame, g0, &cbseed, gain, index);
 
     /**
@@ -831,7 +819,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         {
             if(qtzd_lspf[9] <= .66 || qtzd_lspf[9] >= .985)
             {
-                av_log(avctx, AV_LOG_ERROR,
+                av_log(avctx, AV_LOG_WARNING,
                        "IFQ: 9th LSPF=%4f outside [.66,.985]\n", qtzd_lspf[9]);
                 is_ifq=1;
             }
@@ -840,7 +828,8 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             {
                 if(FFABS(qtzd_lspf[n]-qtzd_lspf[n-4]) < .0931)
                 {
-                    av_log(avctx, AV_LOG_ERROR, "Wrong data, outbound LSPFs\n");
+                    av_log(avctx, AV_LOG_WARNING,
+                           "Wrong data, outbound LSPFs\n");
                     is_ifq=1;
                 }
             }
@@ -874,77 +863,48 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     {
         qcelp_compute_svector(q->frame->rate, gain, index, cbseed, cdn_vector);
 
-        av_log(avctx, AV_LOG_DEBUG, "\n-------- Pre pitch filters --------\n");
-        av_log(avctx, AV_LOG_DEBUG, "[CDN_VECTOR]:\n");
-        for(i=0; i<160; i++)
-        {
-            av_log(avctx, AV_LOG_DEBUG, " %f", cdn_vector[i]);
-        }
-
-        /* pitch filter */
+        /**
+         * pitch filter
+         */
 
         if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchf_mem,
                                           1, cdn_vector, q->hammsinc_table)))
         {
-            av_log(avctx, AV_LOG_ERROR,
-                   "Error can't pitchfilter cdn_vector[%d]\n",
-                   is_ifq);
+            av_log(avctx, AV_LOG_WARNING,
+                   "Error can't pitchfilter cdn_vector[%d]\n", is_ifq);
             is_ifq=1;
         }
 
         memcpy(ppf_vector, cdn_vector, 160*sizeof(float));
 
-        /* pitch pre-filter */
+        /**
+         * pitch pre-filter
+         */
 
         if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchp_mem,
                                           2, ppf_vector, q->hammsinc_table)))
         {
-            av_log(avctx, AV_LOG_ERROR,
-                   "Error can't pitch-prefilter ppf_vector[%d]\n",
-                   is_ifq);
+            av_log(avctx, AV_LOG_WARNING,
+                   "Error can't pitch-prefilter ppf_vector[%d]\n", is_ifq);
             is_ifq=1;
         }
     }
 
-    av_log(avctx, AV_LOG_DEBUG, "-------- Post pitch filters --------\n");
-    av_log(avctx, AV_LOG_DEBUG, "[CDN_VECTOR]:\n");
-    for(i=0; i<160; i++)
-    {
-        av_log(avctx, AV_LOG_DEBUG, " %f", cdn_vector[i]);
-    }
-
-    av_log(avctx, AV_LOG_DEBUG, "[PPF_VECTOR]:\n");
-    for(i=0; i<160; i++)
-    {
-        av_log(avctx, AV_LOG_DEBUG, " %f", ppf_vector[i]);
-    }
-    av_log(avctx, AV_LOG_DEBUG, "\n");
-
-    /* pitch gain control */
+    /**
+     * pitch gain control
+     */
 
     qcelp_apply_gain_ctrl(0, cdn_vector, ppf_vector);
 
-    av_log(avctx, AV_LOG_DEBUG, "-------- Post Gain control --------\n");
-    av_log(avctx, AV_LOG_DEBUG, "[CDN_VECTOR]:\n");
+    /**
+     * Apply formant synthesis filter over the pitch pre-filter output.
+     */
+
     for(i=0; i<160; i++)
     {
-        av_log(avctx, AV_LOG_DEBUG, " %f", cdn_vector[i]);
-    }
-    av_log(avctx, AV_LOG_DEBUG, "\n");
-
-    av_log(avctx, AV_LOG_DEBUG, "[PPF_VECTOR]:\n");
-    for(i=0; i<160; i++)
-    {
-        av_log(avctx, AV_LOG_DEBUG, " %f", ppf_vector[i]);
-    }
-    av_log(avctx, AV_LOG_DEBUG, "\n");
-
-    /* Apply formant synthesis filter over the pitch pre-filter output. */
-
-    av_log(avctx, AV_LOG_DEBUG, "-------- Output --------\n");
-    for(i=0; i<160; i++)
-    {
-        /* interpolate lsp freqs */
+        /**
+         * interpolate lsp freqs
+         */
 
         if(i == 0 || i == 39  || i == 79 || i == 119)
         {
@@ -953,32 +913,31 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             qcelp_lsp2lpc(avctx, interpolated_lspf, lpc);
         }
 
-        /* formant */
+        /**
+         * Formant
+         */
 
         ppf_vector[i]=1.0/qcelp_prede_filter(lpc, ppf_vector[i]);
 
-        /* adaptive postfilter */
+        /**
+         * Adaptive postfilter
+         */
 
         ppf_vector[i]=qcelp_detilt(ppf_vector[i])*
                       qcelp_prede_filter(lpc, ppf_vector[i]/0.625)/
                       qcelp_prede_filter(lpc, ppf_vector[i]/0.775);
 
-        av_log(avctx, AV_LOG_DEBUG, " %f/", ppf_vector[i]);
-
-        /* output stage */
+        /**
+         * Output stage
+         */
 
         outbuffer[i]=av_clip_int16(lrintf(4*ppf_vector[i]));
-        av_log(avctx, AV_LOG_DEBUG, "%d", outbuffer[i]);
-
     }
-    av_log(avctx, AV_LOG_DEBUG, "\n");
 
     if(is_ifq)
     {
-        /**
-         * Insufficient frame quality (erasure) decoding
-         */
-
+        av_log(avctx, AV_LOG_WARNING, "IFQ Frame %d\n",
+               q->frame_num);
         q->ifq_count++;
 
     }
