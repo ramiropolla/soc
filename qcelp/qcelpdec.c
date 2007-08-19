@@ -265,7 +265,6 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
 /**
  * Computes the scaled codebook vector Cdn From INDEX and GAIN
  * For all rates
- *
  */
 static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
            const int *index, uint16_t cbseed, float *cdn_vector)
@@ -400,7 +399,6 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
  * WIP (but should work)
  *
  * @param step Mode, 1 for pitch filter or 2 for pitch pre-filter
- *
  */
 static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
            float *pv, float *hammsinc_table)
@@ -493,7 +491,6 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
  * @param curr_lspf Current frame LSP freqs vector
  * @param interpolated_lspf Float vector to put the resulting LSP freqs
  * @param frame_num Frame number in decoded stream
- *
  */
 void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
      float *curr_lspf, float *interpolated_lspf, int sample_num, int frame_num)
@@ -560,7 +557,6 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
  *
  * @param d1 real dimension of vector_a prior convolution
  * @param d2 dimension of vector_b
- *
  */
 static void qcelp_convolve(float *vector_a, const float *vector_b, int d1,
             int d2)
