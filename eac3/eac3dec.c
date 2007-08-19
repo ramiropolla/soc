@@ -67,6 +67,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         s->strtmant[s->lfe_channel] = 0;
         s->endmant[s->lfe_channel] = 7;
         s->nchgrps[s->lfe_channel] = 2;
+        s->chincpl[s->lfe_channel] = 0;
         s->ntchans++;
     }
 
@@ -553,7 +554,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     s->cplendf = s->spxbegf - 1;
                 }
 
-                av_log(s->avctx, AV_LOG_DEBUG, "cplbegf=%i cplendf=%i\n", s->cplbegf, s->cplendf);
                 s->strtmant[CPL_CH] = 37 + (12 * s->cplbegf);
                 s->endmant[CPL_CH] = 37 + (12 * s->cplendf);
                 if(s->strtmant[CPL_CH] > s->endmant[CPL_CH]){
@@ -674,8 +674,11 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     GET_BITS(s->phsflg[bnd], gbc, 1);
                 }
             }
+            s->nchgrps[CPL_CH] = (s->endmant[CPL_CH] - s->strtmant[CPL_CH]) /
+                (3 << (s->chexpstr[blk][CPL_CH] - 1));
         }else{
             /* enhanced coupling in use */
+            //TODO calc nchgrps[CPL_CH]
 #if 0
             s->firstchincpl = -1;
             GET_BITS(s->ecplangleintrp, gbc, 1);
@@ -759,55 +762,17 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             s->nchgrps[ch] = (s->endmant[ch] + grpsize - 4) / grpsize;
         }
     }
-
     /* Exponents */
-    if(s->cplinu[blk]){
-        /* exponents for the coupling channel */
-        if(s->chexpstr[blk][CPL_CH] != EXP_REUSE){
-            /* ncplgrps derived from cplbegf, ecplbegf, cplendf, ecplendf, and cplexpstr */
-            /* TODO add support for enhanced coupling */
-            switch(s->chexpstr[blk][CPL_CH]){
-                case EXP_D15:
-                    s->nchgrps[CPL_CH] = (s->endmant[CPL_CH] - s->strtmant[CPL_CH])/3;
-                    break;
-                case EXP_D25:
-                    s->nchgrps[CPL_CH] = (s->endmant[CPL_CH] - s->strtmant[CPL_CH])/6;
-                    break;
-                case EXP_D45:
-                    s->nchgrps[CPL_CH] = (s->endmant[CPL_CH] - s->strtmant[CPL_CH])/12;
-                    break;
-            }
-            GET_BITS(s->cplabsexp, gbc, 4);
-            /*            for(grp = 0; grp < s->nchgrps[CPL_CH]; grp++){
-                          GET_BITS(s->cplexps[grp], gbc, 7);
-                          }*/
-            ff_ac3_decode_exponents(gbc, s->chexpstr[blk][CPL_CH], s->nchgrps[CPL_CH],
-                    s->cplabsexp<<1, s->dexps[CPL_CH] + s->strtmant[CPL_CH]);
+    for(ch=!s->cplinu[blk]; ch<=s->ntchans; ch++){
+        if(s->chexpstr[blk][ch]!=EXP_REUSE){
+            s->dexps[ch][0] = get_bits(gbc, 4) << !ch;
+            ff_ac3_decode_exponents(gbc, s->chexpstr[blk][ch], s->nchgrps[ch],
+                    s->dexps[ch][0], s->dexps[ch]+s->strtmant[ch]+!!ch);
+            if(ch != CPL_CH && ch != s->lfe_channel)
+                skip_bits(gbc, 2); /* skip gainrng */
         }
     }
-    for(ch = 1; ch <= s->nfchans; ch++){
-        /* exponents for full bandwidth channels */
-        if(!blk && s->chexpstr[blk][ch] == EXP_REUSE){
-            av_log(s->avctx, AV_LOG_ERROR,  "no channel exponent strategy in first block");
-            return -1;
-        }
-        if(s->chexpstr[blk][ch] != EXP_REUSE){
-            GET_BITS(s->dexps[ch][0], gbc, 4);
 
-            ff_ac3_decode_exponents(gbc, s->chexpstr[blk][ch], s->nchgrps[ch], s->dexps[ch][0],
-                    s->dexps[ch] + 1);
-
-            GET_BITS(s->gainrng[ch], gbc, 2);
-        }
-    }
-    if(s->lfeon){
-        /* exponents for the low frequency effects channel */
-        if(s->chexpstr[blk][s->lfe_channel] != EXP_REUSE){
-            GET_BITS(s->dexps[s->lfe_channel][0], gbc, 4);
-            ff_ac3_decode_exponents(gbc, s->chexpstr[blk][s->lfe_channel], s->nchgrps[s->lfe_channel],
-                    s->dexps[s->lfe_channel][0], s->dexps[s->lfe_channel] + 1);
-        }
-    }
     /* Bit-allocation parametric information */
     if(s->bamode){
         GET_BITS(s->baie, gbc, 1);
@@ -940,7 +905,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         memset(s->transform_coeffs[ch], 0, 256*sizeof(float));
 
     /* Quantized mantissa values */
-    for(ch = 1; ch <= s->nfchans; ch++){
+    for(ch = 1; ch <= s->ntchans; ch++){
         get_eac3_transform_coeffs_ch(gbc, s, blk, ch, &m);
         if(s->cplinu[blk] && s->chincpl[ch] && !got_cplchan){
             get_eac3_transform_coeffs_ch(gbc, s, blk, CPL_CH, &m);
@@ -954,9 +919,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     //apply spectral extension
     if(s->spxinu)
         spectral_extension(s);
-
-    if(s->lfeon) /* mantissas of low frequency effects channel */
-        get_eac3_transform_coeffs_ch(gbc, s, blk, s->lfe_channel, &m);
 
     return 0;
 }

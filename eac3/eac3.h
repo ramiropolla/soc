@@ -161,7 +161,6 @@ typedef struct EAC3Context{
     int rematflg[4];                 ///< Rematrixing flag
     int cplabsexp;                   ///< Coupling absolute exponent
 
-    int gainrng[AC3_MAX_CHANNELS];   ///< Channel Gain range code
     int baie;                        ///< Bit allocation information exists
     int fgain[AC3_MAX_CHANNELS];     ///< Channel fast gain
     int convsnroffste;               ///< Converter SNR offset exists
