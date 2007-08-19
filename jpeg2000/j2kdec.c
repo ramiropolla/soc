@@ -338,7 +338,13 @@ static int get_siz(J2kDecoderContext *s)
         case 4: s->avctx->pix_fmt = PIX_FMT_BGRA; break;
     }
 
+    if (s->picture.data[0])
+        s->avctx->release_buffer(s->avctx, &s->picture);
+
     s->avctx->get_buffer(s->avctx, &s->picture);
+
+    s->picture.pict_type = FF_I_TYPE;
+    s->picture.key_frame = 1;
 
     return 0;
 }
@@ -1267,12 +1273,20 @@ static int decode_frame(AVCodecContext *avctx,
     return s->buf - s->buf_start;
 }
 
+static void j2kdec_init(AVCodecContext *avctx)
+{
+    J2kDecoderContext *s = avctx->priv_data;
+
+    avcodec_get_frame_defaults((AVFrame*)&s->picture);
+    avctx->coded_frame = (AVFrame*)&s->picture;
+}
+
 AVCodec jpeg2000_decoder = {
     "j2k",
     CODEC_TYPE_VIDEO,
     CODEC_ID_JPEG2000,
     sizeof(J2kDecoderContext),
-    NULL,
+    j2kdec_init,
     NULL,
     NULL,
     decode_frame,
