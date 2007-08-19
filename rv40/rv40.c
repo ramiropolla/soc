@@ -735,7 +735,22 @@ static int rv40_decode_mb_info(RV40DecContext *r)
         q = get_vlc2(gb, ptype_vlc[prev_type].table, PTYPE_VLC_BITS, 1);
         av_log(NULL,0,"Dquant for P-frame\n");
     }else{
-        prev_type = block_num_to_btype_vlc_num[0];
+        if(!s->first_slice_line){
+            blocks[r->mb_type[mb_pos - s->mb_stride]]++;
+            if(s->mb_x && !(s->mb_x == s->resync_mb_x && (s->mb_y-1) == s->resync_mb_y))
+                blocks[r->mb_type[mb_pos - s->mb_stride - 1]]++;
+            if(s->mb_x+1 < s->mb_width)
+                blocks[r->mb_type[mb_pos - s->mb_stride + 1]]++;
+        }
+        if(s->mb_x && !(s->first_slice_line && s->mb_x == s->resync_mb_x))
+            blocks[r->mb_type[mb_pos - 1]]++;
+        for(i = 0; i < RV40_MB_TYPES; i++){
+            if(blocks[i] > count){
+                count = blocks[i];
+                prev_type = i;
+            }
+        }
+        prev_type = block_num_to_btype_vlc_num[prev_type];
         q = get_vlc2(gb, btype_vlc[prev_type].table, BTYPE_VLC_BITS, 1);
         if(q < PBTYPE_ESCAPE)
             return q;
@@ -1181,7 +1196,11 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
     }else{
         r->block_type = rv40_decode_mb_info(r);
         s->current_picture_ptr->mb_type[mb_pos] = rv40_mb_type_to_lavc[r->block_type];
-        r->mb_type[mb_pos] = (r->block_type == RV40_MB_SKIP) ? RV40_MB_P_16x16 : r->block_type;
+        r->mb_type[mb_pos] = r->block_type;
+        if(s->pict_type == P_TYPE && r->block_type == RV40_MB_SKIP)
+            r->mb_type[mb_pos] = RV40_MB_P_16x16;
+        if(s->pict_type == B_TYPE && r->block_type == RV40_MB_SKIP)
+            r->mb_type[mb_pos] = RV40_MB_B_INTERP;
         r->is16 = !!IS_INTRA16x16(s->current_picture_ptr->mb_type[mb_pos]);
         rv40_decode_mv(r, r->block_type);
         if(r->block_type == RV40_MB_SKIP){
