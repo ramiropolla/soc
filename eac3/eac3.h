@@ -158,7 +158,6 @@ typedef struct EAC3Context{
     int ecplangle[AC3_MAX_CHANNELS][23]; ///< Enhanced coupling angle
     int ecplchaos[AC3_MAX_CHANNELS][23]; ///< Enhanced coupling chaos
     int ecpltrans[AC3_MAX_CHANNELS];     ///< Enhanced coupling transient present
-    int rematstr;                    ///< Rematrixing strategy
     int rematflg[4];                 ///< Rematrixing flag
     int cplabsexp;                   ///< Coupling absolute exponent
 

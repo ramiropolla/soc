@@ -40,12 +40,6 @@
 #include "ac3dec.h"
 
 /**
- * Table of bin locations for rematrixing bands
- * reference: Section 7.5.2 Rematrixing : Frequency Band Definitions
- */
-static const uint8_t rematrix_band_tbl[5] = { 13, 25, 37, 61, 253 };
-
-/**
  * table for exponent to scale_factor mapping
  * ff_ac3_scale_factors[i] = 2 ^ -i
  */
@@ -637,8 +631,8 @@ void ff_ac3_do_rematrixing(float (*transform_coeffs)[256], int end, int nrematbn
 
     for(bnd=0; bnd<nrematbnd; bnd++) {
         if(rematflg[bnd]) {
-            bndend = FFMIN(end, rematrix_band_tbl[bnd+1]);
-            for(i=rematrix_band_tbl[bnd]; i<bndend; i++) {
+            bndend = FFMIN(end, ff_ac3_rematrix_band_tbl[bnd+1]);
+            for(i=ff_ac3_rematrix_band_tbl[bnd]; i<bndend; i++) {
                 tmp0 = transform_coeffs[1][i];
                 tmp1 = transform_coeffs[2][i];
                 transform_coeffs[1][i] = tmp0 + tmp1;

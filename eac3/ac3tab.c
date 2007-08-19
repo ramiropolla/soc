@@ -1390,3 +1390,10 @@ const float ff_eac3_spxattentab[32][3] = {
     {0.238710401, 0.056982656, 0.013602353},
     {0.227930622, 0.051952369, 0.011841536}
 };
+
+/**
+ * Table of bin locations for rematrixing bands
+ * reference: Section 7.5.2 Rematrixing : Frequency Band Definitions
+ */
+const uint8_t ff_ac3_rematrix_band_tbl[5] = { 13, 25, 37, 61, 253 };
+

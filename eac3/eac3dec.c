@@ -117,7 +117,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 GET_BITS(s->lfemixlevcod, gbc, 5);
             }
         }
-        if(s->strmtyp == AC3_ACMOD_DUALMONO){
+        if(s->strmtyp == 0){
             /* if independent stream */
             for(i = 0; i < (s->acmod?1:2); i++){
                 if(get_bits1(gbc)){
@@ -726,9 +726,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* Rematrixing operation in the 2/0 mode */
     if(s->acmod == AC3_ACMOD_STEREO) /* if in 2/0 mode */{
         if (!blk || get_bits1(gbc)){
-            s->rematstr = 1;
-        }
-        if(s->rematstr){
             /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf
              * TODO XXX (code from AC-3) */
             s->nrematbnds = 4;
@@ -739,7 +736,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }
         }
     }
-    /* This field for channel bandwidth code */
+    /* Channel bandwidth code */
     for(ch = 1; ch <= s->nfchans; ch++){
         if(!blk && s->chexpstr[blk][ch]==EXP_REUSE){
             av_log(s->avctx, AV_LOG_ERROR,  "no channel exponent strategy in first block");
@@ -1323,7 +1320,6 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         return -1;
 
     if(c->fscod == 3){
-        assert(c->fscod != 3);
         avctx->sample_rate = ff_ac3_freqs[c->fscod2] / 2;
     }else{
         avctx->sample_rate = ff_ac3_freqs[c->fscod];

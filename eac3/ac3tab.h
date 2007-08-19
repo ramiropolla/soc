@@ -60,5 +60,6 @@ extern const uint8_t ff_eac3_defcplbndstrc[18];
 extern const uint8_t ff_eac3_defspxbndstrc[17];
 extern const float   ff_eac3_spxattentab[32][3];
 
+extern const uint8_t ff_ac3_rematrix_band_tbl[5];
 
 #endif /* AC3TAB_H */
