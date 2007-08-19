@@ -452,6 +452,11 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }else{
                 s->spxendf = s->spxendf * 2 + 3;
             }
+            for(ch = 1; ch <= s->nfchans; ch++){
+                if(s->chinspx[ch])
+                    s->endmant[ch] = 25 + 12 * s->spxbegf;
+            }
+
             GET_BITS(s->spxbndstrce, gbc, 1);
 
             if(s->spxbndstrce){
@@ -558,6 +563,10 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 if(s->strtmant[CPL_CH] > s->endmant[CPL_CH]){
                     av_log(s->avctx, AV_LOG_ERROR, "cplstrtmant > cplendmant [blk=%i]\n", blk);
                     return -1;
+                }
+                for(ch = 1; ch <= s->nfchans; ch++){
+                    if(s->chincpl[ch])
+                        s->endmant[ch] = s->strtmant[CPL_CH];
                 }
 
                 GET_BITS(s->cplbndstrce, gbc, 1);
@@ -726,14 +735,14 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* Rematrixing operation in the 2/0 mode */
     if(s->acmod == AC3_ACMOD_STEREO) /* if in 2/0 mode */{
         if (!blk || get_bits1(gbc)){
-            /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf
-             * TODO XXX (code from AC-3) */
-            s->nrematbnds = 4;
-            if(s->cplinu[blk] && s->cplbegf <= 2)
-                s->nrematbnds -= 1 + (s->cplbegf == 0);
-            for(bnd = 0; bnd < s->nrematbnds; bnd++){
+            /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf */
+            // TODO spx in one channel
+            int end = (s->cplinu[blk] || s->spxinu) ?
+                FFMIN(s->endmant[1], s->endmant[2]) : (ff_ac3_rematrix_band_tbl[4]-1);
+            for(bnd = 0; ff_ac3_rematrix_band_tbl[bnd] <= end; bnd++){
                 GET_BITS(s->rematflg[bnd], gbc, 1);
             }
+            s->nrematbnds = bnd;
         }
     }
     /* Channel bandwidth code */
@@ -745,11 +754,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         if(s->chexpstr[blk][ch] != EXP_REUSE){
             grpsize = 3 << (s->chexpstr[blk][ch] - 1);
             s->strtmant[ch] = 0;
-            if(s->chincpl[ch]){
-                s->endmant[ch] = s->strtmant[CPL_CH]; /* channel is coupled */
-            }else if(s->chinspx[ch]){
-                s->endmant[ch] = 25 + 12 * s->spxbegf;
-            }else{
+            if((!s->chincpl[ch]) && (!s->chinspx[ch])){
                 GET_BITS(chbwcod, gbc, 6);
                 if(chbwcod > 60){
                     av_log(s->avctx, AV_LOG_ERROR, "chbwcod > 60\n");
