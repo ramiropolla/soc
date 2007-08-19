@@ -1,6 +1,6 @@
 include ../config.mak
 
-CFLAGS+=-I$(SRC_PATH)/libavcodec
+CFLAGS+=-I$(SRC_PATH)/libavcodec -I$(SRC_PATH)/libswscale
 
 OBJS = avfilter.o \
        avfiltergraph.o \
@@ -16,6 +16,7 @@ OBJS-yes = vsrc_dummy.o \
            vf_overlay.o \
            vf_passthrough.o \
            vf_rgb2bgr.o \
+           vf_scale.o \
            vf_slicify.o \
            vf_split.o \
            vf_vflip.o \

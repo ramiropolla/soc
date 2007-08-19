@@ -32,6 +32,7 @@ extern AVFilter avfilter_vf_graphfile;
 extern AVFilter avfilter_vf_overlay;
 extern AVFilter avfilter_vf_passthrough;
 extern AVFilter avfilter_vf_rgb2bgr;
+extern AVFilter avfilter_vf_scale;
 extern AVFilter avfilter_vf_slicify;
 extern AVFilter avfilter_vf_split;
 extern AVFilter avfilter_vf_vflip;
