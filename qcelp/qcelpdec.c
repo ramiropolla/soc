@@ -945,7 +945,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     memcpy(q->prev_lspf, qtzd_lspf, 10*sizeof(float));
 
     q->frame_num++;
-    *data_size=160;
+    *data_size=160*2;
 
     return *data_size;
 }
