@@ -794,6 +794,7 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
         if(subblock_no & 2) no_B = 0;
         no_C |= (subblock_no == 3);
         if(subblock_no == 2) no_C = 0;
+        if(!subblock_no) no_C = no_B;
         if(!no_C){
             C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][0];
             C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][1];
