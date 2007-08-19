@@ -29,7 +29,7 @@
 
 void ff_aec_init_contexts(AecState *aec)
 {
-    memset(aec->contexts, 0, 19*sizeof(AecContext));
+    memset(aec->contexts, 0, sizeof(aec->contexts));
     aec->contexts[AEC_CX_UNI].state = 46;
     aec->contexts[AEC_CX_RL].state = 3;
     aec->contexts[0].state = 4;

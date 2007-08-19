@@ -66,8 +66,8 @@ static int exchange(AecState *aec, int lps)
     do{
         if (!aec->ct)
             bytein(aec);
-        aec->a = aec->a << 1;
-        aec->c = aec->c << 1;
+        aec->a += aec->a;
+        aec->c += aec->c;
         aec->ct--;
     } while (!(aec->a & 0x8000));
     return d;
