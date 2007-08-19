@@ -26,7 +26,6 @@
  */
 
 /* arithmetic entropy coder context */
-//TODO: optimize [nice solution in openjpeg]
 
 #ifndef AEC_H
 #define AEC_H
