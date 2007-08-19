@@ -266,9 +266,6 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
  * Computes the scaled codebook vector Cdn From INDEX and GAIN
  * For all rates
  *
- * FIXME:
- * - Needs outbound reading checks and error propagation if weirdness
- *   is detected :-).
  */
 static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
            const int *index, uint16_t cbseed, float *cdn_vector)
