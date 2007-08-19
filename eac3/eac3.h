@@ -79,21 +79,7 @@ typedef struct EAC3Context{
     int blkmixcfginfo[6];            ///< Block mixing configuration information
     int infomdate;                   ///< Informational meta-data exists
     int bsmod;                       ///< Bit stream mode
-    int copyrightb;                  ///< Copyright bit
-    int origbs;                      ///< Original bit stream
-    int dsurmod;                     ///< Dolby surround mode
-    int dheadphonmod;                ///< Dolby headphone mode
-    int dsurexmod;                   ///< Dolby surround EX mode
-    int audprodie[2];                ///< Audio production information exists
-    int mixlevel[2];                 ///< Mix level
-    int roomtyp[2];                  ///< Room type
-    int adconvtyp[2];                ///< A/D converter type
-    int audprodi2e;                  ///< Audio production information exists ch2
     int sourcefscod;                 ///< Source sample rate code
-    int frmsizecod;                  ///< Frame size code
-    int addbsie;                     ///< Additional bit stream information exists
-    int addbsil;                     ///< Additional bit stream information length
-    int addbsi[64];                  ///< Additional bit stream information
 ///@}
 ///@name Audio Frame
 ///@{
@@ -112,7 +98,6 @@ typedef struct EAC3Context{
     int cplinu[MAX_BLOCKS];          ///< Coupling in use
     int cplstre[MAX_BLOCKS];         ///< Coupling strategy exists
     int chexpstr[MAX_BLOCKS][AC3_MAX_CHANNELS];  ///< Channel exponent strategy
-    int convexpstr[AC3_MAX_CHANNELS];    ///< Converter channel exponent strategy
     int chahtinu[AC3_MAX_CHANNELS];      ///< Channel AHT in use
     int chintransproc[AC3_MAX_CHANNELS]; ///< Channel in transient pre-noise processing
     int transprocloc[AC3_MAX_CHANNELS];  ///< Transient location relative to start of frame
@@ -127,8 +112,7 @@ typedef struct EAC3Context{
 ///@{
     int blksw[AC3_MAX_CHANNELS];     ///< Block switch flag
     int dithflag[AC3_MAX_CHANNELS];  ///< Dither flag
-    int dynrnge[2];                  ///< Dynamic range gain word exists
-    int dynrng[2];                   ///< Dynamic range gain word
+    float dynrng[2];                 ///< Dynamic range gain word
     int spxinu;                      ///< spectral extension in use
     int chinspx[AC3_MAX_CHANNELS];   ///< Channel in spectral extension
     int spxstrtf;                    ///< Spectral extension start copy frequency code
@@ -161,18 +145,9 @@ typedef struct EAC3Context{
     int rematflg[4];                 ///< Rematrixing flag
     int cplabsexp;                   ///< Coupling absolute exponent
 
-    int baie;                        ///< Bit allocation information exists
     int fgain[AC3_MAX_CHANNELS];     ///< Channel fast gain
-    int convsnroffste;               ///< Converter SNR offset exists
-    int convsnroffst;                ///< Converter SNR offset
     int cplleake;                    ///< Coupling leak initialization exists
-    int deltbaie;                    ///< Delta bit allocation information exists
-    int cpldeltbae;                  ///< Coupling delta bit allocation exists
     uint8_t deltbae[AC3_MAX_CHANNELS];   ///< Delta bit allocation exists
-    int cpldeltnseg;                 ///< Coupling delta bit allocation number of segments
-    int cpldeltoffst[9];             ///< Coupling bit allocation offset
-    int cpldeltlen[9];               ///< Coupling delta bit allocation length
-    int cpldeltba[9];                ///< Coupling delta bit allocation
     uint8_t deltnseg[AC3_MAX_CHANNELS];  ///< Channel delta bit allocation number of segments
     uint8_t deltoffst[AC3_MAX_CHANNELS][9]; ///< Channel delta bit allocation offset
     uint8_t deltlen[AC3_MAX_CHANNELS][9];   ///< Channel delta bit allocation length

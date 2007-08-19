@@ -171,22 +171,17 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     if(s->infomdate){
         /* Informational metadata */
         GET_BITS(s->bsmod, gbc, 3);
-        GET_BITS(s->copyrightb, gbc, 1);
-        GET_BITS(s->origbs, gbc, 1);
+        skip_bits(gbc, 2); //skip copyright bit and original bitstream bit
         if(s->acmod == AC3_ACMOD_STEREO) /* if in 2/0 mode */{
-            GET_BITS(s->dsurmod, gbc, 2);
-            GET_BITS(s->dheadphonmod, gbc, 2);
+            skip_bits(gbc, 4); //skip Dolby surround and headphone mode
         }
         if(s->acmod >= 0x6){
             /* if both surround channels exist */
-            GET_BITS(s->dsurexmod, gbc, 2);
+            skip_bits(gbc, 2); //skip Dolby surround EX mode
         }
         for(i = 0; i < (s->acmod?1:2); i++){
-            GET_BITS(s->audprodie[i], gbc, 1);
-            if(s->audprodie[i]){
-                GET_BITS(s->mixlevel[i], gbc, 5);
-                GET_BITS(s->roomtyp[i], gbc, 2);
-                GET_BITS(s->adconvtyp[i], gbc, 1);
+            if(get_bits1(gbc)){
+                skip_bits(gbc, 8); //skip Mix level, Room type and A/D converter type
             }
         }
         if(s->fscod < 0x3){
@@ -201,14 +196,13 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         /* if bit stream converted from AC-3 */
         if(s->numblkscod == 0x3 || get_bits1(gbc)){
             /* 6 blocks per frame */
-            GET_BITS(s->frmsizecod, gbc, 6);
+            skip_bits(gbc, 6); // skip Frame size code
         }
     }
-    GET_BITS(s->addbsie, gbc, 1);
-    if(s->addbsie){
-        GET_BITS(s->addbsil, gbc, 6);
-        for(i=0; i<s->addbsil+1; i++){
-            GET_BITS(s->addbsi[i], gbc, 8);
+    if(get_bits1(gbc)){
+        int addbsil = get_bits(gbc, 6);
+        for(i=0; i<addbsil+1; i++){
+            skip_bits(gbc, 8); // Additional bit stream information
         }
     }
 
@@ -298,7 +292,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     if(s->strmtyp == 0x0){
         if(s->numblkscod == 0x3 || get_bits1(gbc)){
             for(ch = 1; ch <= s->nfchans; ch++){
-                GET_BITS(s->convexpstr[ch], gbc, 5);
+                skip_bits(gbc, 5); //skip Converter channel exponent strategy
             }
         }
     }
@@ -406,12 +400,11 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     /* Dynamic range control */
     for(i = 0; i < (s->acmod?1:2); i++){
-        GET_BITS(s->dynrnge[i], gbc, 1);
-        if(s->dynrnge[i]){
-            GET_BITS(s->dynrng[i], gbc, 8);
+        if(get_bits1(gbc)){
+            s->dynrng[i] = ff_ac3_dynrng_tbl[get_bits(gbc, 8)];
         }else{
             if(blk==0){
-                s->dynrng[i] = 0;
+                s->dynrng[i] = 1.0f;
             }
         }
     }
@@ -775,17 +768,17 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     /* Bit-allocation parametric information */
     if(s->bamode){
-        GET_BITS(s->baie, gbc, 1);
-        if(!blk && !s->baie){
-            av_log(s->avctx, AV_LOG_ERROR, "no bit allocation information in first block\n");
-            return -1;
-        }
-        if(s->baie){
+        if(get_bits1(gbc)){
             s->bit_alloc_params.sdecay = ff_sdecaytab[get_bits(gbc, 2)];   /* Table 7.6 */
             s->bit_alloc_params.fdecay = ff_fdecaytab[get_bits(gbc, 2)];   /* Table 7.7 */
             s->bit_alloc_params.sgain  = ff_sgaintab [get_bits(gbc, 2)];   /* Table 7.8 */
             s->bit_alloc_params.dbknee = ff_dbkneetab[get_bits(gbc, 2)];   /* Table 7.9 */
             s->bit_alloc_params.floor  = ff_floortab [get_bits(gbc, 3)];   /* Table 7.10 */
+        }else{
+            if(!blk){
+                av_log(s->avctx, AV_LOG_ERROR, "no bit allocation information in first block\n");
+                return -1;
+            }
         }
     }else{
         s->bit_alloc_params.sdecay = ff_sdecaytab[0x2];   /* Table 7.6 */
@@ -820,9 +813,8 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
     }
     if(s->strmtyp == 0x0){
-        GET_BITS(s->convsnroffste, gbc, 1);
-        if(s->convsnroffste){
-            GET_BITS(s->convsnroffst, gbc, 10);
+        if(get_bits1(gbc)){
+            skip_bits(gbc, 10); //Converter SNR offset
         }
     }
     if(s->cplinu[blk]){
@@ -1298,9 +1290,9 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         for(ch=1; ch<=c->nfchans + c->lfeon; ch++) {
             float gain=2.0f;
             if(c->acmod == AC3_ACMOD_DUALMONO) {
-                gain *= c->dialnorm[ch-1] * ff_ac3_dynrng_tbl[c->dynrng[ch-1]];
+                gain *= c->dialnorm[ch-1] * c->dynrng[ch-1];
             } else {
-                gain *= c->dialnorm[0] * ff_ac3_dynrng_tbl[c->dynrng[0]];
+                gain *= c->dialnorm[0] * c->dynrng[0];
             }
             for(i=0; i<c->endmant[ch]; i++) {
                 c->transform_coeffs[ch][i] *= gain;
