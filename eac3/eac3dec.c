@@ -37,6 +37,7 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
 static void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk);
 static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
         int ch, mant_groups *m);
+static void uncouple_channels(EAC3Context *s);
 
 static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     int i, blk;
@@ -959,40 +960,8 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     }
 
-    if(s->cplinu[blk]){
-        // uncouple_channels(ctx);
-        {
-            //TODO (form ac3)
-            int i, j, ch, bnd, subbnd;
-
-            subbnd = s->cplbegf+1;
-            i = s->strtmant[CPL_CH];
-            av_log(NULL, AV_LOG_DEBUG, "strtmant=%i endmant=%i\n", s->strtmant[CPL_CH], s->endmant[CPL_CH]);
-            av_log(NULL, AV_LOG_DEBUG, "ncplbnd=%i ncplsubbnd=%i\n", s->ncplbnd, s->ncplsubnd);
-            /*
-               for(bnd=0; bnd<256; bnd++){
-               av_log(NULL, AV_LOG_INFO, "%i: %f\n", bnd, transform_coeffs[CPL_CH][bnd]);
-               }*/
-            for(bnd=0; bnd<s->ncplbnd; bnd++){
-                do {
-                    for(j=0; j<12; j++){
-                        for(ch=1; ch<=s->nfchans; ch++){
-                            if(s->chincpl[ch]){
-                                s->transform_coeffs[ch][i] =
-                                    s->transform_coeffs[CPL_CH][i] *
-                                    s->cplco[ch][bnd] * 8.0f;
-                            }
-                        }
-                        av_log(NULL, AV_LOG_DEBUG, "%i ", i);
-                        i++;
-                    }
-                    av_log(NULL, AV_LOG_DEBUG, "cplbndstrc[%i] = %i bnd=%i\n ", subbnd,
-                            s->cplbndstrc[subbnd], bnd);
-                } while(s->cplbndstrc[subbnd++] && subbnd<=s->cplendf);
-            }
-            av_log(NULL, AV_LOG_DEBUG, "\n");
-        }
-    }
+    if(s->cplinu[blk])
+        uncouple_channels(s);
 
     //apply spectral extension
     if(s->spxinu)
@@ -1272,6 +1241,27 @@ static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int
     }
     if(s->chahtinu[ch] != 0){
         dct_transform_coeffs_ch(s, ch, blk);
+    }
+}
+
+static void uncouple_channels(EAC3Context *s){
+    int i, j, ch, bnd, subbnd;
+
+    subbnd = s->cplbegf+1;
+    i = s->strtmant[CPL_CH];
+    for(bnd=0; bnd<s->ncplbnd; bnd++){
+        do {
+            for(j=0; j<12; j++){
+                for(ch=1; ch<=s->nfchans; ch++){
+                    if(s->chincpl[ch]){
+                        s->transform_coeffs[ch][i] =
+                            s->transform_coeffs[CPL_CH][i] *
+                            s->cplco[ch][bnd] * 8.0f;
+                    }
+                }
+                i++;
+            }
+        } while(s->cplbndstrc[subbnd++] && subbnd<=s->cplendf);
     }
 }
 
