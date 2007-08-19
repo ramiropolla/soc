@@ -36,27 +36,17 @@
 #define AEC_CX_UNI 17
 #define AEC_CX_RL  18
 
-typedef struct {
-        uint16_t qe;
-        uint8_t  nmps;
-        uint8_t  nlps;
-        uint8_t  sw;
-} AecCxState;
-
-extern const AecCxState cx_states[47];
-
-typedef struct {
-    unsigned int state;
-    unsigned int mps;
-} AecContext;
+extern uint16_t  ff_aec_qe[2*47];
+extern uint8_t ff_aec_nlps[2*47];
+extern uint8_t ff_aec_nmps[2*47];
 
 typedef struct {
     uint8_t *bp, *bpstart;
     unsigned int a;
     unsigned int c;
     unsigned int ct;
-    AecContext contexts[19];
-    AecContext *curctx;
+    uint8_t cx_states[19];
+    uint8_t *curcxstate;
 } AecState;
 
 /** encoder */

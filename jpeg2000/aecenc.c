@@ -79,16 +79,16 @@ void ff_aec_encode(AecState *aec, int cx, int d)
 {
     int qe;
 
-    aec->curctx = aec->contexts + cx;
-    qe = cx_states[aec->curctx->state].qe;
+    aec->curcxstate = aec->cx_states + cx;
+    qe = ff_aec_qe[*aec->curcxstate];
     aec->a -= qe;
-    if (aec->curctx->mps == d){
+    if (*aec->curcxstate & 1 == d){
         if (!(aec->a & 0x8000)){
             if (aec->a < qe)
                 aec->a = qe;
             else
                 aec->c += qe;
-            aec->curctx->state = cx_states[aec->curctx->state].nmps;
+            *aec->curcxstate = ff_aec_nmps[*aec->curcxstate];
             renorme(aec);
         } else
             aec->c += qe;
@@ -97,8 +97,7 @@ void ff_aec_encode(AecState *aec, int cx, int d)
             aec->c += qe;
         else
             aec->a = qe;
-        aec->curctx->mps ^= cx_states[aec->curctx->state].sw;
-        aec->curctx->state = cx_states[aec->curctx->state].nlps;
+        *aec->curcxstate = ff_aec_nlps[*aec->curcxstate];
         renorme(aec);
     }
 }

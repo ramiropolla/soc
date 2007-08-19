@@ -27,7 +27,14 @@
 
 #include "aec.h"
 
-const AecCxState cx_states[47] = {
+typedef struct {
+        uint16_t qe;
+        uint8_t  nmps;
+        uint8_t  nlps;
+        uint8_t  sw;
+} AecCxState;
+
+const static AecCxState cx_states[47] = {
     {0x5601,  1,  1, 1},
     {0x3401,  2,  6, 0},
     {0x1801,  3,  9, 0},
@@ -77,11 +84,26 @@ const AecCxState cx_states[47] = {
     {0x5601, 46, 46, 0}
 };
 
+uint16_t ff_aec_qe [2*47];
+uint8_t ff_aec_nlps[2*47];
+uint8_t ff_aec_nmps[2*47];
+
 void ff_aec_init_contexts(AecState *aec)
 {
-    memset(aec->contexts, 0, sizeof(aec->contexts));
-    aec->contexts[AEC_CX_UNI].state = 46;
-    aec->contexts[AEC_CX_RL].state = 3;
-    aec->contexts[0].state = 4;
-    aec->curctx = aec->contexts;
+    int i;
+    memset(aec->cx_states, 0, sizeof(aec->cx_states));
+    aec->cx_states[AEC_CX_UNI] = 2 * 46;
+    aec->cx_states[AEC_CX_RL] = 2 * 3;
+    aec->cx_states[0] = 2 * 4;
+    aec->curcxstate = aec->cx_states;
+
+    for (i = 0; i < 47; i++){
+        ff_aec_qe[2*i  ] =
+        ff_aec_qe[2*i+1] = cx_states[i].qe;
+
+        ff_aec_nlps[2*i  ] = 2*cx_states[i].nlps + cx_states[i].sw;
+        ff_aec_nlps[2*i+1] = 2*cx_states[i].nlps + 1 - cx_states[i].sw;
+        ff_aec_nmps[2*i  ] = 2*cx_states[i].nmps;
+        ff_aec_nmps[2*i+1] = 2*cx_states[i].nmps + 1;
+    }
 }
