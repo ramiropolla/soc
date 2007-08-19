@@ -115,7 +115,7 @@ static int qcelp_decode_close(AVCodecContext *avctx)
  * Decodes the 10 quantized LSP frequencies from the LSPV/LSP
  * transsmision codes of any frame rate.
  *
- * For details see TIA/EIA/IS-733 2.4.3.2.6.2-2
+ * TIA/EIA/IS-733 2.4.3.2.6.2-2
  *
  * WIP: implement I_F_Q handling?
  */
@@ -155,6 +155,7 @@ void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
 /**
  * Converts codebook transmission codes to GAIN and INDEX
  * (and cbseed for rate 1/4)
+ *
  * TIA/EIA/IS-733 2.4.6.2
  */
 void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
@@ -225,7 +226,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
 
             /**
              * 5->8 Interpolation to 'Provide smoothing of the energy
-             * of the unvoiced excitation' 2.4.6.2
+             * of the unvoiced excitation' TIA/EIA/IS-733 2.4.6.2
              */
 
             gain[0]=    ga[0];
@@ -339,8 +340,9 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
 }
 
 /**
- * Computes energy of the subframeno-ith subvector, using equations
- * 2.4.8.3-2 and 2.4.3.8-3
+ * Computes energy of the subframeno-ith subvector.
+ *
+ * TIA/EIA/IS-733 2.4.8.3-2/3
  */
 static float qcelp_compute_subframe_energy(const float *vector, int subframeno)
 {
@@ -372,7 +374,7 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
 
     qcelp_get_gain_scalefactors(in, out, scalefactors);
 
-    /* 2.4.8.6-6 */
+    /* TIA/EIA/IS-733 2.4.8.6-6 */
 
     if(do_iirf)
     {
@@ -396,7 +398,7 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
  * This function implements both, the pitch filter and the pitch pre-filter
  * whose results gets stored in pv.
  *
- * For details see 2.4.5.2
+ * TIA/EIA/IS-733 2.4.5.2
  *
  * WIP (but should work)
  *
@@ -487,7 +489,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
 /**
  * Computes interpolated lsp frequencies for a given rate & pitch subframe
  *
- * For details see 2.4.3.3.4
+ * TIA/EIA/IS-733 2.4.3.3.4
  *
  * @param rate Frame rate
  * @param prev_lspf Previous frame LSP freqs vector
@@ -581,7 +583,9 @@ static void qcelp_convolve(float *vector_a, const float *vector_b, int d1,
 }
 
 /**
- * 2.4.3.3.5-1/2
+ * Computes the Pa and Qa coeficients needed at LSP to LPC conversion.
+ *
+ * TIA/EIA/IS-733 2.4.3.3.5-1/2
  */
 static void qcelp_lsp2poly(float *lspf, float *pa, float *qa)
 {
@@ -628,9 +632,11 @@ static void qcelp_lsp2poly(float *lspf, float *pa, float *qa)
 }
 
 /**
- * 2.4.3.3.5
+ * Reconstructs LPC coeficients from the line spectral pairs frequencies
+ *
+ * TIA/EIA/IS-733 2.4.3.3.5
  */
-static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
+static void qcelp_lsp2lpc(float *lspf, float *lpc)
 {
     float pa[5],qa[5];
     int   i;
@@ -641,17 +647,13 @@ static void qcelp_lsp2lpc(AVCodecContext *avctx, float *lspf, float *lpc)
             lpc[i]=-(pa[i]+qa[i])/2.0;
     for(i=5; i<10; i++)
             lpc[i]=-(pa[9-i]-qa[9-i])/2.0;
-
-    av_log(avctx, AV_LOG_DEBUG, "[LPC ] %f %f %f %f %f %f %f %f %f %f\n",
-           lpc[0], lpc[1], lpc[2], lpc[3], lpc[4],
-           lpc[5], lpc[6], lpc[7], lpc[8], lpc[9]);
 }
 
 /**
- * 2.4.3.1
+ * 10th order predictor error filter, reciprocal * of the formant synthesis
+ * filter.
  *
- * This is the 10th order predictor error filter -- the reciprocal
- * of the formant synthesis filter.
+ * TIA/EIA/IS-733 2.4.3.1
  */
 static float qcelp_prede_filter(float *lpc, float z)
 {
@@ -665,8 +667,9 @@ static float qcelp_prede_filter(float *lpc, float z)
 }
 
 /**
- * 2.4.8.6-2
- * Used in the adaptive postfilter at sample generation stage.
+ * Detilt filter used in the adaptive postfilter at sample generation stage.
+ *
+ * TIA/EIA/IS-733 2.4.8.6-2
  */
 static float qcelp_detilt(float z)
 {
@@ -910,7 +913,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         {
             qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf,
                                       interpolated_lspf, i, q->frame_num);
-            qcelp_lsp2lpc(avctx, interpolated_lspf, lpc);
+            qcelp_lsp2lpc(interpolated_lspf, lpc);
         }
 
         /**
