@@ -273,17 +273,6 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
     uint16_t new_cbseed;
     float    rnd[160];
 
-    av_log(NULL, AV_LOG_ERROR,
-           "[ GAIN ] %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f\n",
-           gain[0],gain[1],gain[2],gain[3],gain[4],gain[5],gain[6],gain[7],
-           gain[8],gain[9],gain[10],gain[11],gain[12],gain[13],gain[14],
-           gain[15],gain[16]);
-    av_log(NULL, AV_LOG_ERROR,
-           "[ INDEX] %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n",
-           index[0],index[1],index[2],index[3],index[4],index[5],index[6],
-           index[7],index[8],index[9],index[10],index[11],index[12],index[13],
-           index[14], index[15],index[16]);
-    av_log(NULL, AV_LOG_ERROR, "[  CDN]");
 
     switch(rate)
     {
