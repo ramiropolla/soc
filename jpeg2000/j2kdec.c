@@ -1181,33 +1181,8 @@ static void cleanup(J2kDecoderContext *s)
     av_free(s->tile);
 }
 
-static int decode_frame(AVCodecContext *avctx,
-                        void *data, int *data_size,
-                        uint8_t *buf, int buf_size)
+static int decode_codestream(J2kDecoderContext *s)
 {
-    J2kDecoderContext *s = avctx->priv_data;
-    AVFrame *picture = data;
-    int tileno;
-
-    s->avctx = avctx;
-    av_log(s->avctx, AV_LOG_DEBUG, "start\n");
-
-    /// init
-    s->buf = s->buf_start = buf;
-    s->buf_end = buf + buf_size;
-    s->curtileno = -1;
-
-    avcodec_get_frame_defaults((AVFrame*)&s->picture);
-    avctx->coded_frame = (AVFrame*)&s->picture;
-
-    s->ppx = s->ppy = 15;
-
-    ff_j2k_init_tier1_luts();
-
-    if (bytestream_get_be16(&s->buf) != J2K_SOC){
-        av_log(avctx, AV_LOG_ERROR, "SOC marker not present\n");
-        return -1;
-    }
     for (;;){
         int marker = bytestream_get_be16(&s->buf), len, ret = 0;
         uint8_t *oldbuf = s->buf;
@@ -1241,14 +1216,44 @@ static int decode_frame(AVCodecContext *avctx,
                 /// the comment is ignored
                 s->buf += len - 2; break;
             default:
-                av_log(avctx, AV_LOG_ERROR, "unsupported marker 0x%.4X at pos 0x%x\n", marker, s->buf - s->buf_start - 4);
+                av_log(s->avctx, AV_LOG_ERROR, "unsupported marker 0x%.4X at pos 0x%x\n", marker, s->buf - s->buf_start - 4);
                 return -1;
         }
         if (s->buf - oldbuf != len || ret){
-            av_log(avctx, AV_LOG_ERROR, "error during processing marker segment %.4x\n", marker);
+            av_log(s->avctx, AV_LOG_ERROR, "error during processing marker segment %.4x\n", marker);
             return -1;
         }
     }
+    return 0;
+}
+
+static int decode_frame(AVCodecContext *avctx,
+                        void *data, int *data_size,
+                        uint8_t *buf, int buf_size)
+{
+    J2kDecoderContext *s = avctx->priv_data;
+    AVFrame *picture = data;
+    int tileno;
+
+    s->avctx = avctx;
+    av_log(s->avctx, AV_LOG_DEBUG, "start\n");
+
+    /// init
+    s->buf = s->buf_start = buf;
+    s->buf_end = buf + buf_size;
+    s->curtileno = -1;
+
+    s->ppx = s->ppy = 15;
+
+    ff_j2k_init_tier1_luts();
+
+    if (bytestream_get_be16(&s->buf) != J2K_SOC){
+        av_log(avctx, AV_LOG_ERROR, "SOC marker not present\n");
+        return -1;
+    }
+    if (decode_codestream(s))
+        return -1;
+
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++)
         if (decode_tile(s, s->tile + tileno))
             return -1;
