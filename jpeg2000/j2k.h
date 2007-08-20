@@ -53,12 +53,12 @@ enum J2kMarkers{
     J2K_EOC = 0xffd9,
 };
 
-enum J2kTransform{
+enum J2kTransform{ ///< type of wavelet transform
     J2K_DWT97,
     J2K_DWT53
 };
 
-enum J2kQuantsty{
+enum J2kQuantsty{ ///< quantization style
     J2K_QSTY_NONE, ///< no quantization
     J2K_QSTY_SI,   ///< scalar derived
     J2K_QSTY_SE    ///< scalar expoounded
@@ -101,7 +101,7 @@ typedef struct J2kTgtNode {
     struct J2kTgtNode *parent;
 } J2kTgtNode;
 
-/** debug routines */
+/* debug routines */
 #if 0
 #undef fprintf
 #undef printf
@@ -109,7 +109,7 @@ void ff_j2k_printv(int *tab, int l);
 void ff_j2k_printu(uint8_t *tab, int l);
 #endif
 
-/** misc tools */
+/* misc tools */
 static inline int ff_j2k_ceildivpow2(int a, int b)
 {
     return (a + (1 << b) - 1)>> b;
@@ -120,10 +120,10 @@ static inline int ff_j2k_ceildiv(int a, int b)
     return (a + b - 1) / b;
 }
 
-/** tag tree routines */
+/* tag tree routines */
 J2kTgtNode *ff_j2k_tag_tree_init(int w, int h);
 
-/** TIER-1 routines */
+/* TIER-1 routines */
 void ff_j2k_init_tier1_luts();
 
 void ff_j2k_set_significant(J2kT1Context *t1, int x, int y);

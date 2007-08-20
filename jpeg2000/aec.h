@@ -25,8 +25,6 @@
  * @author Kamil Nowosad
  */
 
-/* arithmetic entropy coder context */
-
 #ifndef AEC_H
 #define AEC_H
 
@@ -47,7 +45,7 @@ typedef struct {
     uint8_t cx_states[19];
 } AecState;
 
-/** encoder */
+/* encoder */
 
 /** initialize the encoder */
 void ff_aec_initenc(AecState *aec, uint8_t *bp);
@@ -61,7 +59,7 @@ int ff_aec_length(AecState *aec);
 /** flush the encoder [returns number of bytes encoded] */
 int ff_aec_flush(AecState *aec);
 
-/** decoder */
+/* decoder */
 
 /** initialize the decoder */
 void ff_aec_initdec(AecState *aec, uint8_t *bp);
@@ -69,7 +67,7 @@ void ff_aec_initdec(AecState *aec, uint8_t *bp);
 /** returns decoded bit with context cx */
 int ff_aec_decode(AecState *aec, uint8_t *cxstate);
 
-/** common */
+/* common */
 
 /** initialize the contexts */
 void ff_aec_init_contexts(AecState *aec);

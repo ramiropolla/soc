@@ -287,24 +287,25 @@ static void copy_defaults(J2kDecoderContext *s, J2kTile *tile)
     }
 }
 
-/** marker segments */
+/* marker segments */
+/** get sizes and offsets of image, tiles; number of components */
 static int get_siz(J2kDecoderContext *s)
 {
     int i;
 
-    bytestream_get_be16(&s->buf); ///< Rsiz (skipped)
-    s->width = bytestream_get_be32(&s->buf); ///< width
-    s->height = bytestream_get_be32(&s->buf); ///< height
-    s->image_offset_x = bytestream_get_be32(&s->buf); ///< X0Siz
-    s->image_offset_y = bytestream_get_be32(&s->buf); ///< Y0Siz
+                        bytestream_get_be16(&s->buf); // Rsiz (skipped)
+             s->width = bytestream_get_be32(&s->buf); // width
+            s->height = bytestream_get_be32(&s->buf); // height
+    s->image_offset_x = bytestream_get_be32(&s->buf); // X0Siz
+    s->image_offset_y = bytestream_get_be32(&s->buf); // Y0Siz
 
-    s->tile_width = bytestream_get_be32(&s->buf); ///< XTSiz
-    s->tile_height = bytestream_get_be32(&s->buf); ///< YTSiz
-    s->tile_offset_x = bytestream_get_be32(&s->buf); ///< XT0Siz
-    s->tile_offset_y = bytestream_get_be32(&s->buf); ///< YT0Siz
-    s->ncomponents = bytestream_get_be16(&s->buf); ///< CSiz
+        s->tile_width = bytestream_get_be32(&s->buf); // XTSiz
+       s->tile_height = bytestream_get_be32(&s->buf); // YTSiz
+     s->tile_offset_x = bytestream_get_be32(&s->buf); // XT0Siz
+     s->tile_offset_y = bytestream_get_be32(&s->buf); // YT0Siz
+       s->ncomponents = bytestream_get_be16(&s->buf); // CSiz
 
-    for (i = 0; i < s->ncomponents; i++){ ///< Ssiz_i XRsiz_i, YRsiz_i
+    for (i = 0; i < s->ncomponents; i++){ // Ssiz_i XRsiz_i, YRsiz_i
         uint8_t x = bytestream_get_byte(&s->buf);
         s->cbps[i] = (x & 0x7f) + 1;
         s->sgnd[i] = (x & 0x80) == 1;
@@ -367,19 +368,21 @@ static int get_siz(J2kDecoderContext *s)
 #define GETFIELDC(field)\
     (s->curtileno == -1 ? s->field[compno] : s->tile[s->curtileno].comp[compno].field)
 
+/** get common part for COD and COC segments */
 static int get_cox(J2kDecoderContext *s, int compno)
 {
-    SETFIELDC(nreslevels, bytestream_get_byte(&s->buf) + 1); ///< num of resolution levels - 1
-    SETFIELDC(log2_cblk_width, bytestream_get_byte(&s->buf) + 2); ///< cblk width
-    SETFIELDC(log2_cblk_height, bytestream_get_byte(&s->buf) + 2); ///< cblk height
-    if (bytestream_get_byte(&s->buf) != 0){ ///< cblk style
+    SETFIELDC(nreslevels, bytestream_get_byte(&s->buf) + 1); // num of resolution levels - 1
+    SETFIELDC(log2_cblk_width, bytestream_get_byte(&s->buf) + 2); // cblk width
+    SETFIELDC(log2_cblk_height, bytestream_get_byte(&s->buf) + 2); // cblk height
+    if (bytestream_get_byte(&s->buf) != 0){ // cblk style
         av_log(s->avctx, AV_LOG_ERROR, "no extra cblk styles supported\n");
         return -1;
     }
-    SETFIELDC(transform, bytestream_get_byte(&s->buf)); ///< transformation
+    SETFIELDC(transform, bytestream_get_byte(&s->buf)); // transformation
     return 0;
 }
 
+/** get coding parameters for a particular tile or whole image*/
 static int get_cod(J2kDecoderContext *s)
 {
     uint8_t *pos;
@@ -388,16 +391,16 @@ static int get_cod(J2kDecoderContext *s)
     csty = bytestream_get_byte(&s->buf);
     for (compno = 0; compno < s->ncomponents; compno++)
         if (!(GETFIELDC(properties) & HAD_COC)){
-            SETFIELDC(csty, csty); ///< Scod
+            SETFIELDC(csty, csty); // Scod
         }
 
-    if (bytestream_get_byte(&s->buf)){ ///< progression level
+    if (bytestream_get_byte(&s->buf)){ // progression level
         av_log(s->avctx, AV_LOG_ERROR, "only LRCP progression supported\n");
         return -1;
     }
 
     SETFIELD(nlayers, bytestream_get_be16(&s->buf));
-    SETFIELD(mct, bytestream_get_byte(&s->buf)); ///< multiple component transformation
+    SETFIELD(mct, bytestream_get_byte(&s->buf)); // multiple component transformation
 
     pos = s->buf;
     for (compno = 0; compno < s->ncomponents; compno++)
@@ -408,6 +411,7 @@ static int get_cod(J2kDecoderContext *s)
     return 0;
 }
 
+/** get coding parameters for a component in the whole image on a particular tile */
 static int get_coc(J2kDecoderContext *s)
 {
     int compno = bytestream_get_byte(&s->buf);
@@ -421,10 +425,11 @@ static int get_coc(J2kDecoderContext *s)
     return 0;
 }
 
+/** get common part for QCD and QCC segments */
 static int get_qcx(J2kDecoderContext *s, int n, int compno)
 {
     int i, x, qst, nguardbits;
-    x = bytestream_get_byte(&s->buf); ///< Sqcd
+    x = bytestream_get_byte(&s->buf); // Sqcd
     nguardbits = x >> 5;
 
     qst = x & 0x1f;
@@ -458,6 +463,7 @@ static int get_qcx(J2kDecoderContext *s, int n, int compno)
     return 0;
 }
 
+/** get quantization parameters for a particular tile or a whole image */
 static int get_qcd(J2kDecoderContext *s, int n)
 {
     uint8_t *pos = s->buf;
@@ -471,6 +477,7 @@ static int get_qcd(J2kDecoderContext *s, int n)
     return 0;
 }
 
+/** get quantization paramteres for a component in the whole image on in a particular tile */
 static int get_qcc(J2kDecoderContext *s, int n)
 {
     int compno = bytestream_get_byte(&s->buf);
@@ -481,6 +488,7 @@ static int get_qcc(J2kDecoderContext *s, int n)
     return get_qcx(s, n-1, compno);
 }
 
+/** get start of tile segment */
 static uint8_t get_sot(J2kDecoderContext *s)
 {
     s->curtileno = bytestream_get_be16(&s->buf); ///< Isot
@@ -511,7 +519,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
         return -1;
     for (compno = 0; compno < s->ncomponents; compno++){
         J2kComponent *comp = tile->comp + compno;
-        int gbandno = 0; ///< global bandno
+        int gbandno = 0; // global bandno
 
         comp->x0 = FFMAX(p * s->tile_width + s->tile_offset_x, s->image_offset_x);
         comp->x1 = FFMIN((p+1)*s->tile_width + s->tile_offset_x, s->width);
@@ -753,7 +761,7 @@ static int decode_packets(J2kDecoderContext *s, J2kTile *tile)
     return 0;
 }
 
-/** TIER-1 routines */
+/* TIER-1 routines */
 static void decode_sigpass(J2kT1Context *t1, int width, int height, int bpno, int bandno)
 {
     int mask = 3 << (bpno - 1), y0, x, y;
@@ -866,7 +874,7 @@ static int decode_cblk(J2kDecoderContext *s, J2kT1Context *t1, J2kCblk *cblk, in
     return 0;
 }
 
-/** inverse discrete wavelet transform routines */
+/* inverse discrete wavelet transform routines */
 static void sr_1d53(int *p, int i0, int i1)
 {
     int i;
@@ -928,10 +936,10 @@ static int dwt_decode53(J2kDecoderContext *s, J2kComponent *comp, int nreslevels
             v1 = comp->reslevel[i].y1,
             u = u0, v = v0;
 
-        /// HOR_SD
+        // HOR_SD
         while (v < v1){
             int i, j;
-            /// copy with interleaving
+            // copy with interleaving
             for (i = u0 + (u0 & 1), j = 0; i < u1; i+=2, j++){
                 pu[i] = t[w*(v-v0) + j];
             }
@@ -946,10 +954,10 @@ static int dwt_decode53(J2kDecoderContext *s, J2kComponent *comp, int nreslevels
 
             v++;
         }
-        /// VER_SD
+        // VER_SD
         while (u < u1){
             int i, j;
-            /// copy with interleaving
+            // copy with interleaving
             for (i = v0 + (v0 & 1), j = 0; i < v1; i+=2, j++){
                 pv[i] = t[w*j + u-u0];
             }
@@ -987,10 +995,10 @@ static int dwt_decode97(J2kDecoderContext *s, J2kComponent *comp, int nreslevels
             v1 = comp->reslevel[i].y1,
             u = u0, v = v0;
 
-        /// HOR_SD
+        // HOR_SD
         while (v < v1){
             int i, j;
-            /// copy with interleaving
+            // copy with interleaving
             for (i = u0 + (u0 & 1), j = 0; i < u1; i+=2, j++){
                 pu[i] = t[w*(v-v0) + j];
             }
@@ -1005,10 +1013,10 @@ static int dwt_decode97(J2kDecoderContext *s, J2kComponent *comp, int nreslevels
 
             v++;
         }
-        /// VER_SD
+        // VER_SD
         while (u < u1){
             int i, j;
-            /// copy with interleaving
+            // copy with interleaving
             for (i = v0 + (v0 & 1), j = 0; i < v1; i+=2, j++){
                 pv[i] = t[w*j + u-u0];
             }
@@ -1133,7 +1141,7 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
     y = tile->comp[0].y0 - s->image_offset_y;
 
     line = s->picture.data[0] + y * s->picture.linesize[0];
-    if (s->avctx->pix_fmt == PIX_FMT_BGRA) /// RGBA -> BGRA
+    if (s->avctx->pix_fmt == PIX_FMT_BGRA) // RGBA -> BGRA
         FFSWAP(int *, src[0], src[2]);
 
     for (; y < tile->comp[0].y1 - s->image_offset_y; y++){
@@ -1219,7 +1227,7 @@ static int decode_codestream(J2kDecoderContext *s)
             case J2K_SOT:
                 ret = get_sot(s); break;
             case J2K_COM:
-                /// the comment is ignored
+                // the comment is ignored
                 s->buf += len - 2; break;
             default:
                 av_log(s->avctx, AV_LOG_ERROR, "unsupported marker 0x%.4X at pos 0x%x\n", marker, s->buf - s->buf_start - 4);
@@ -1244,7 +1252,7 @@ static int decode_frame(AVCodecContext *avctx,
     s->avctx = avctx;
     av_log(s->avctx, AV_LOG_DEBUG, "start\n");
 
-    /// init
+    // init
     s->buf = s->buf_start = buf;
     s->buf_end = buf + buf_size;
     s->curtileno = -1;

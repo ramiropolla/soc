@@ -41,8 +41,6 @@ static int lut_nmsedec_ref [1<<NMSEDEC_BITS],
            lut_nmsedec_sig [1<<NMSEDEC_BITS],
            lut_nmsedec_sig0[1<<NMSEDEC_BITS];
 
-// TODO: doxygen-compatible comments
-
 typedef struct {
     uint16_t rate;
     int64_t disto;
@@ -50,16 +48,16 @@ typedef struct {
 
 typedef struct {
     uint8_t npasses;
-    uint8_t ninclpasses; // number of passes included in codestream
+    uint8_t ninclpasses; ///< number coding of passes included in codestream
     uint8_t nonzerobits;
     uint8_t zero;
     uint8_t data[8192];
     J2kPass passes[30];
-} J2kCblk; // code block
+} J2kCblk; ///< code block
 
 typedef struct {
-    uint16_t xi0, xi1, yi0, yi1; /// indices of codeblocks ([xi0, xi1))
-} J2kPrec; // precinct
+    uint16_t xi0, xi1, yi0, yi1; ///< indices of codeblocks ([xi0, xi1))
+} J2kPrec; ///< precinct
 
 typedef struct {
     uint16_t x0, x1, y0, y1;
@@ -67,14 +65,14 @@ typedef struct {
     uint16_t cblknx, cblkny;
     J2kPrec *prec;
     J2kCblk *cblk;
-} J2kBand; // subband
+} J2kBand; ///< subband
 
 typedef struct {
     uint16_t x0, x1, y0, y1;
     uint8_t nbands;
-    uint16_t num_precincts_x, num_precincts_y;
+    uint16_t num_precincts_x, num_precincts_y; ///< number of precincts in x/y direction
     J2kBand *band;
-} J2kResLevel; // resolution level
+} J2kResLevel; ///< resolution level
 
 typedef struct {
    J2kResLevel *reslevel;
@@ -82,7 +80,7 @@ typedef struct {
    uint16_t x0, x1, y0, y1;
 } J2kComponent;
 
-typedef struct { // flatten with context
+typedef struct {
    J2kComponent *comp;
 } J2kTile;
 
@@ -90,20 +88,19 @@ typedef struct {
     AVCodecContext *avctx;
     AVFrame *picture;
 
-    int width, height; // image width and height
-    uint8_t cbps[4]; // numbps in components
-    uint8_t bbps[4][32][3]; // numbps in bands
-    uint8_t expn[4][32][3]; // quantization exponents
+    int width, height; ///< image width and height
+    uint8_t cbps[4]; ///< numbps in components
+    uint8_t bbps[4][32][3]; ///< numbps in bands
+    uint8_t expn[4][32][3]; ///< quantization exponents
     int ncomponents;
-    int log2_prec_width, log2_prec_height; // exponent of the precinct size [global]
-    int log2_cblk_width, log2_cblk_height; // exponent of the code block size
-    int tile_width, tile_height; // tile size
+    int log2_prec_width, log2_prec_height; ///< exponent of the precinct size [global]
+    int log2_cblk_width, log2_cblk_height; ///< exponent of the code block size
+    int tile_width, tile_height; ///< tile size
     int numXtiles, numYtiles;
 
     int nguardbits;
 
-//    int *samples[3];
-    int nreslevels; // number of resolution levels
+    int nreslevels; ///< number of resolution levels
     uint8_t *buf_start;
     uint8_t *buf;
     uint8_t *buf_end;
@@ -203,7 +200,7 @@ static void dump(J2kEncoderContext *s, FILE *fd)
 
 /* bitstream routines */
 
-/* put n times val bit */
+/** put n times val bit */
 static void put_bits(J2kEncoderContext *s, int val, int n) // TODO: optimize
 {
     while (n-- > 0){
@@ -216,14 +213,14 @@ static void put_bits(J2kEncoderContext *s, int val, int n) // TODO: optimize
     }
 }
 
-/* put n least significant bits of a number num */
+/** put n least significant bits of a number num */
 static void put_num(J2kEncoderContext *s, int num, int n)
 {
     while(--n >= 0)
         put_bits(s, (num >> n) & 1, 1);
 }
 
-/* flush the bitstream */
+/** flush the bitstream */
 static void j2k_flush(J2kEncoderContext *s)
 {
     if (s->bit_index){
@@ -233,7 +230,8 @@ static void j2k_flush(J2kEncoderContext *s)
 }
 
 /* tag tree routines */
-/* code the value stored in node */
+
+/** code the value stored in node */
 static void tag_tree_code(J2kEncoderContext *s, J2kTgtNode *node, int threshold)
 {
     J2kTgtNode *stack[30];
@@ -261,7 +259,7 @@ static void tag_tree_code(J2kEncoderContext *s, J2kTgtNode *node, int threshold)
     }
 }
 
-/* update the value in node */
+/** update the value in node */
 static void tag_tree_update(J2kTgtNode *node)
 {
     int lev = 0;
@@ -274,7 +272,7 @@ static void tag_tree_update(J2kTgtNode *node)
     }
 }
 
-/* marker segments */
+/** marker segments */
 static void put_marker(J2kEncoderContext *s, uint16_t marker)
 {
     bytestream_put_be16(&s->buf, marker);
@@ -355,7 +353,8 @@ static uint8_t *put_sot(J2kEncoderContext *s, int tileno)
     return psotptr;
 }
 
-/* compute the sizes of tiles, resolution levels, bands, etc.
+/**
+ * compute the sizes of tiles, resolution levels, bands, etc.
  * allocate memory for them
  * divide the input image into tile-components
  */
@@ -367,7 +366,7 @@ static int init_tiles(J2kEncoderContext *s)
     s->numYtiles = ff_j2k_ceildiv(s->height, s->tile_height);
 
     s->tile = av_malloc(s->numXtiles * s->numYtiles * sizeof(J2kTile));
-    if (s->tile)
+    if (!s->tile)
         return -1;
     for (tno = 0; tno < s->numXtiles * s->numYtiles; tno++){
         J2kTile *tile = s->tile + tno;
@@ -375,7 +374,7 @@ static int init_tiles(J2kEncoderContext *s)
         int q = tno / s->numXtiles;
 
         tile->comp = av_malloc(s->ncomponents * sizeof(J2kComponent));
-        if (tile->comp)
+        if (!tile->comp)
             return -1;
         for (compno = 0; compno < s->ncomponents; compno++){
             J2kComponent *comp = tile->comp + compno;
@@ -384,12 +383,11 @@ static int init_tiles(J2kEncoderContext *s)
             comp->x1 = FFMIN((p+1)*s->tile_width, s->width);
             comp->y0 = q * s->tile_height;
             comp->y1 = FFMIN((q+1)*s->tile_height, s->height);
-
             comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
-            if (comp->data)
+            if (!comp->data)
                 return -1;
             comp->reslevel = av_malloc(s->nreslevels * sizeof(J2kResLevel));
-            if (comp->reslevel)
+            if (!comp->reslevel)
                 return -1;
             for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
                 int n = s->nreslevels - reslevelno;
@@ -414,9 +412,8 @@ static int init_tiles(J2kEncoderContext *s)
                     reslevel->num_precincts_y = 0;
                 else
                     reslevel->num_precincts_y = ff_j2k_ceildivpow2(reslevel->y1, s->log2_prec_height) - reslevel->y0 / (1<<s->log2_prec_height);
-
                 reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
-                if (reslevel->band)
+                if (!reslevel->band)
                     return -1;
                 for (bandno = 0; bandno < reslevel->nbands; bandno++){
                     J2kBand *band = reslevel->band + bandno;
@@ -448,10 +445,10 @@ static int init_tiles(J2kEncoderContext *s)
                     band->cblkny = ff_j2k_ceildiv(band->y1, band->codeblock_height) - band->y0 / band->codeblock_height;
 
                     band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
-                    if (band->cblk)
+                    if (!band->cblk)
                         return -1;
                     band->prec = av_malloc(reslevel->num_precincts_x * reslevel->num_precincts_y * sizeof(J2kPrec));
-                    if (band->prec)
+                    if (!band->prec)
                         return -1;
 
                     for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
@@ -751,6 +748,7 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
 
     for (passno = 0; bpno >= 0; passno++){
         nmsedec=0;
+
         switch(pass_t){
             case 0: encode_sigpass(t1, width, height, bandpos, &nmsedec, bpno);
                     break;
@@ -1073,7 +1071,7 @@ static int encode_frame(AVCodecContext *avctx,
         s->ncomponents = 1;
     }
     else{
-        av_log(avctx, AV_LOG_ERROR, "only rgb24 supported\n");
+        av_log(avctx, AV_LOG_ERROR, "only rgb24 and gray8 supported\n");
         return -1;
     }
 
