@@ -124,11 +124,29 @@ static inline int ff_j2k_ceildiv(int a, int b)
 J2kTgtNode *ff_j2k_tag_tree_init(int w, int h);
 
 /** TIER-1 routines */
-int ff_j2k_getnbctxno(int flag, int bandno);
-int ff_j2k_getrefctxno(int flag);
-int ff_j2k_getsgnctxno(int flag, int *xorbit);
 void ff_j2k_init_tier1_luts();
 
 void ff_j2k_set_significant(J2kT1Context *t1, int x, int y);
+
+extern uint8_t ff_j2k_nbctxno_lut[256][4];
+
+static inline int ff_j2k_getnbctxno(int flag, int bandno)
+{
+    return ff_j2k_nbctxno_lut[flag&255][bandno];
+}
+
+static inline int ff_j2k_getrefctxno(int flag)
+{
+    static const uint8_t refctxno_lut[2][2] = {{14, 15}, {16, 16}};
+    return refctxno_lut[flag>>14][(flag & 255) != 0];
+}
+
+extern uint8_t ff_j2k_sgnctxno_lut[16][16], ff_j2k_xorbit_lut[16][16];
+
+static inline int ff_j2k_getsgnctxno(int flag, int *xorbit)
+{
+    *xorbit = ff_j2k_xorbit_lut[flag&15][(flag>>8)&15];
+    return  ff_j2k_sgnctxno_lut[flag&15][(flag>>8)&15];
+}
 
 #endif

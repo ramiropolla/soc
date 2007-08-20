@@ -83,12 +83,7 @@ J2kTgtNode *ff_j2k_tag_tree_init(int w, int h)
     return res;
 }
 
-static uint8_t nbctxno_lut[256][4];
-
-int ff_j2k_getnbctxno(int flag, int bandno)
-{
-    return nbctxno_lut[flag&255][bandno];
-}
+uint8_t ff_j2k_nbctxno_lut[256][4];
 
 static int getnbctxno(int flag, int bandno)
 {
@@ -146,19 +141,7 @@ static int getnbctxno(int flag, int bandno)
     assert(0);
 }
 
-int ff_j2k_getrefctxno(int flag)
-{
-    static const uint8_t refctxno_lut[2][2] = {{14, 15}, {16, 16}};
-    return refctxno_lut[flag>>14][(flag & 255) != 0];
-}
-
-static uint8_t sgnctxno_lut[16][16], xorbit_lut[16][16];
-
-int ff_j2k_getsgnctxno(int flag, int *xorbit)
-{
-    *xorbit = xorbit_lut[flag&15][(flag>>8)&15];
-    return  sgnctxno_lut[flag&15][(flag>>8)&15];
-}
+uint8_t ff_j2k_sgnctxno_lut[16][16], ff_j2k_xorbit_lut[16][16];
 
 static int getsgnctxno(int flag, uint8_t *xorbit)
 {
@@ -180,10 +163,10 @@ void ff_j2k_init_tier1_luts()
     int i, j;
     for (i = 0; i < 256; i++)
         for (j = 0; j < 4; j++)
-            nbctxno_lut[i][j] = getnbctxno(i, j);
+            ff_j2k_nbctxno_lut[i][j] = getnbctxno(i, j);
     for (i = 0; i < 16; i++)
         for (j = 0; j < 16; j++)
-            sgnctxno_lut[i][j] = getsgnctxno(i + (j << 8), &xorbit_lut[i][j]);
+            ff_j2k_sgnctxno_lut[i][j] = getsgnctxno(i + (j << 8), &ff_j2k_xorbit_lut[i][j]);
 }
 
 void ff_j2k_set_significant(J2kT1Context *t1, int x, int y)
