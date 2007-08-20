@@ -90,7 +90,7 @@ typedef struct {
     AVCodecContext *avctx;
     AVFrame *picture;
 
-    int Xsiz, Ysiz; // image width and height
+    int width, height; // image width and height
     uint8_t cbps[4]; // numbps in components
     uint8_t bbps[4][32][3]; // numbps in bands
     uint8_t expn[4][32][3]; // quantization exponents
@@ -154,7 +154,7 @@ static void dump(J2kEncoderContext *s, FILE *fd)
     fprintf(fd, "XSiz = %d, YSiz = %d, XTsiz = %d, YTsiz = %d\n"
                 "numXtiles = %d, numYtiles = %d, ncomponents = %d\n"
                 "tiles:\n",
-            s->Xsiz, s->Ysiz, s->XTsiz, s->YTsiz,
+            s->width, s->height, s->XTsiz, s->YTsiz,
             s->numXtiles, s->numYtiles, s->ncomponents);
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         J2kTile *tile = s->tile + tileno;
@@ -292,8 +292,8 @@ static void put_siz(J2kEncoderContext *s)
     put_marker(s, J2K_SIZ);
     bytestream_put_be16(&s->buf, 38 + 3 * s->ncomponents); // Lsiz
     bytestream_put_be16(&s->buf, 0); // Rsiz
-    bytestream_put_be32(&s->buf, s->Xsiz); // Xsiz
-    bytestream_put_be32(&s->buf, s->Ysiz); // Ysiz
+    bytestream_put_be32(&s->buf, s->width); // width
+    bytestream_put_be32(&s->buf, s->height); // height
     bytestream_put_be32(&s->buf, 0); // X0Siz
     bytestream_put_be32(&s->buf, 0); // Y0Siz
 
@@ -363,8 +363,8 @@ static int init_tiles(J2kEncoderContext *s)
 {
     int y, x, tno, compno, reslevelno, bandno, i;
 
-    s->numXtiles = ff_j2k_ceildiv(s->Xsiz, s->XTsiz);
-    s->numYtiles = ff_j2k_ceildiv(s->Ysiz, s->YTsiz);
+    s->numXtiles = ff_j2k_ceildiv(s->width, s->XTsiz);
+    s->numYtiles = ff_j2k_ceildiv(s->height, s->YTsiz);
 
     s->tile = av_malloc(s->numXtiles * s->numYtiles * sizeof(J2kTile));
     if (s->tile == NULL)
@@ -381,9 +381,9 @@ static int init_tiles(J2kEncoderContext *s)
             J2kComponent *comp = tile->comp + compno;
 
             comp->x0 = p * s->XTsiz;
-            comp->x1 = FFMIN((p+1)*s->XTsiz, s->Xsiz);
+            comp->x1 = FFMIN((p+1)*s->XTsiz, s->width);
             comp->y0 = q * s->YTsiz;
-            comp->y1 = FFMIN((q+1)*s->YTsiz, s->Ysiz);
+            comp->y1 = FFMIN((q+1)*s->YTsiz, s->height);
 
             comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
             if (comp->data == NULL)
@@ -1055,8 +1055,8 @@ static int encode_frame(AVCodecContext *avctx,
     // init:
     s->buf = s->buf_start = buf;
     s->buf_end = buf + buf_size;
-    s->Xsiz = avctx->width;
-    s->Ysiz = avctx->height;
+    s->width = avctx->width;
+    s->height = avctx->height;
 
     s->nguardbits = 1;
     s->lambda = s->picture->quality * LAMBDA_SCALE;

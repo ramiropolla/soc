@@ -107,7 +107,7 @@ typedef struct {
     AVCodecContext *avctx;
     AVFrame picture;
 
-    int Xsiz, Ysiz; ///< image width and height
+    int width, height; ///< image width and height
     int X0siz, Y0siz;
     int XT0siz, YT0siz;
     uint8_t cbps[4]; ///< numbps in components
@@ -184,7 +184,7 @@ static void dump(J2kDecoderContext *s, FILE *fd)
     fprintf(fd, "XSiz = %d, YSiz = %d, XTsiz = %d, YTsiz = %d\n"
                 "numXtiles = %d, numYtiles = %d, ncomponents = %d\n"
                 "tiles:\n",
-            s->Xsiz, s->Ysiz, s->XTsiz, s->YTsiz,
+            s->width, s->height, s->XTsiz, s->YTsiz,
             s->numXtiles, s->numYtiles, s->ncomponents);
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         J2kTile *tile = s->tile + tileno;
@@ -293,8 +293,8 @@ static int get_siz(J2kDecoderContext *s)
     int i;
 
     bytestream_get_be16(&s->buf); ///< Rsiz (skipped)
-    s->Xsiz = bytestream_get_be32(&s->buf); ///< Xsiz
-    s->Ysiz = bytestream_get_be32(&s->buf); ///< Ysiz
+    s->width = bytestream_get_be32(&s->buf); ///< width
+    s->height = bytestream_get_be32(&s->buf); ///< height
     s->X0siz = bytestream_get_be32(&s->buf); ///< X0Siz
     s->Y0siz = bytestream_get_be32(&s->buf); ///< Y0Siz
 
@@ -314,8 +314,8 @@ static int get_siz(J2kDecoderContext *s)
             return -1;
     }
 
-    s->numXtiles = ff_j2k_ceildiv(s->Xsiz - s->XT0siz, s->XTsiz);
-    s->numYtiles = ff_j2k_ceildiv(s->Ysiz - s->YT0siz, s->YTsiz);
+    s->numXtiles = ff_j2k_ceildiv(s->width - s->XT0siz, s->XTsiz);
+    s->numYtiles = ff_j2k_ceildiv(s->height - s->YT0siz, s->YTsiz);
 
     s->tile = av_mallocz(s->numXtiles * s->numYtiles * sizeof(J2kTile));
     if (!s->tile)
@@ -329,8 +329,8 @@ static int get_siz(J2kDecoderContext *s)
             return -1;
     }
 
-    s->avctx->width = s->Xsiz - s->X0siz;
-    s->avctx->height = s->Ysiz - s->Y0siz;
+    s->avctx->width = s->width - s->X0siz;
+    s->avctx->height = s->height - s->Y0siz;
 
     switch(s->ncomponents){
         case 1: s->avctx->pix_fmt = PIX_FMT_GRAY8; break;
@@ -514,9 +514,9 @@ static int init_tile(J2kDecoderContext *s, int tileno)
         int gbandno = 0; ///< global bandno
 
         comp->x0 = FFMAX(p * s->XTsiz + s->XT0siz, s->X0siz);
-        comp->x1 = FFMIN((p+1)*s->XTsiz + s->XT0siz, s->Xsiz);
+        comp->x1 = FFMIN((p+1)*s->XTsiz + s->XT0siz, s->width);
         comp->y0 = FFMAX(q * s->YTsiz + s->YT0siz, s->Y0siz);
-        comp->y1 = FFMIN((q+1)*s->YTsiz + s->YT0siz, s->Ysiz);
+        comp->y1 = FFMIN((q+1)*s->YTsiz + s->YT0siz, s->height);
 
         comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
         if (comp->data == NULL)
