@@ -349,7 +349,7 @@ static uint8_t *put_sot(J2kEncoderContext *s, int tileno)
  */
 static int init_tiles(J2kEncoderContext *s)
 {
-    int y, x, tno, compno, reslevelno, bandno, i;
+    int y, x, tileno, tilex, tiley, compno, reslevelno, bandno, i;
 
     s->numXtiles = ff_j2k_ceildiv(s->width, s->tile_width);
     s->numYtiles = ff_j2k_ceildiv(s->height, s->tile_height);
@@ -357,10 +357,9 @@ static int init_tiles(J2kEncoderContext *s)
     s->tile = av_malloc(s->numXtiles * s->numYtiles * sizeof(J2kTile));
     if (!s->tile)
         return AVERROR(ENOMEM);
-    for (tno = 0; tno < s->numXtiles * s->numYtiles; tno++){
-        J2kTile *tile = s->tile + tno;
-        int p = tno % s->numXtiles;
-        int q = tno / s->numXtiles;
+    for (tileno = 0, tiley = 0; tiley < s->numYtiles; tiley++)
+    for (tilex = 0; tilex < s->numXtiles; tilex++, tileno++){
+        J2kTile *tile = s->tile + tileno;
 
         tile->comp = av_malloc(s->ncomponents * sizeof(J2kComponent));
         if (!tile->comp)
@@ -368,10 +367,10 @@ static int init_tiles(J2kEncoderContext *s)
         for (compno = 0; compno < s->ncomponents; compno++){
             J2kComponent *comp = tile->comp + compno;
 
-            comp->x0 = p * s->tile_width;
-            comp->x1 = FFMIN((p+1)*s->tile_width, s->width);
-            comp->y0 = q * s->tile_height;
-            comp->y1 = FFMIN((q+1)*s->tile_height, s->height);
+            comp->x0 = tilex * s->tile_width;
+            comp->x1 = FFMIN((tilex+1)*s->tile_width, s->width);
+            comp->y0 = tiley * s->tile_height;
+            comp->y1 = FFMIN((tiley+1)*s->tile_height, s->height);
             comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
             if (!comp->data)
                 return AVERROR(ENOMEM);
@@ -478,8 +477,8 @@ static int init_tiles(J2kEncoderContext *s)
             }
         }
     }
-    for (tno = 0; tno < s->numXtiles * s->numYtiles; tno++){
-        J2kTile *tile = s->tile + tno;
+    for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
+        J2kTile *tile = s->tile + tileno;
         uint8_t *line = s->picture->data[0] + tile->comp[0].y0 * s->picture->linesize[0] + tile->comp[0].x0 * s->ncomponents;
 
         i = 0;
