@@ -45,20 +45,20 @@ static void bytein(AecState *aec)
     }
 }
 
-static int exchange(AecState *aec, int lps)
+static int exchange(AecState *aec, uint8_t *cxstate, int lps)
 {
     int d;
-    if ((aec->a < ff_aec_qe[*aec->curcxstate]) ^ (!lps)){
+    if ((aec->a < ff_aec_qe[*cxstate]) ^ (!lps)){
         if (lps)
-            aec->a = ff_aec_qe[*aec->curcxstate];
-        d = *aec->curcxstate & 1;
-        *aec->curcxstate = ff_aec_nmps[*aec->curcxstate];
+            aec->a = ff_aec_qe[*cxstate];
+        d = *cxstate & 1;
+        *cxstate = ff_aec_nmps[*cxstate];
     }
     else{
         if (lps)
-            aec->a = ff_aec_qe[*aec->curcxstate];
-        d = 1 - (*aec->curcxstate & 1);
-        *aec->curcxstate = ff_aec_nlps[*aec->curcxstate];
+            aec->a = ff_aec_qe[*cxstate];
+        d = 1 - (*cxstate & 1);
+        *cxstate = ff_aec_nlps[*cxstate];
     }
     // renormd:
     do{
@@ -82,17 +82,16 @@ void ff_aec_initdec(AecState *aec, uint8_t *bp)
     aec->a = 0x8000;
 }
 
-int ff_aec_decode(AecState *aec, int cx)
+int ff_aec_decode(AecState *aec, uint8_t *cxstate)
 {
-    aec->curcxstate = aec->cx_states + cx;
-    aec->a -= ff_aec_qe[*aec->curcxstate];
+    aec->a -= ff_aec_qe[*cxstate];
     if ((aec->c >> 16) < aec->a){
         if (aec->a & 0x8000)
-            return *aec->curcxstate & 1;
+            return *cxstate & 1;
         else
-            return exchange(aec, 0);
+            return exchange(aec, cxstate, 0);
     } else {
         aec->c -= aec->a << 16;
-        return exchange(aec, 1);
+        return exchange(aec, cxstate, 1);
     }
 }

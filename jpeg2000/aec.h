@@ -45,7 +45,6 @@ typedef struct {
     unsigned int c;
     unsigned int ct;
     uint8_t cx_states[19];
-    uint8_t *curcxstate;
 } AecState;
 
 /** encoder */
@@ -54,7 +53,7 @@ typedef struct {
 void ff_aec_initenc(AecState *aec, uint8_t *bp);
 
 /** code bit d with context cx */
-void ff_aec_encode(AecState *aec, int cx, int d);
+void ff_aec_encode(AecState *aec, uint8_t *cxstate, int d);
 
 /** number of encoded bytes */
 int ff_aec_length(AecState *aec);
@@ -68,7 +67,7 @@ int ff_aec_flush(AecState *aec);
 void ff_aec_initdec(AecState *aec, uint8_t *bp);
 
 /** returns decoded bit with context cx */
-int ff_aec_decode(AecState *aec, int cx);
+int ff_aec_decode(AecState *aec, uint8_t *cxstate);
 
 /** common */
 

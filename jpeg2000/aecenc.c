@@ -75,20 +75,19 @@ void ff_aec_initenc(AecState *aec, uint8_t *bp)
     aec->ct = 12 + (*aec->bp == 0xff);
 }
 
-void ff_aec_encode(AecState *aec, int cx, int d)
+void ff_aec_encode(AecState *aec, uint8_t *cxstate, int d)
 {
     int qe;
 
-    aec->curcxstate = aec->cx_states + cx;
-    qe = ff_aec_qe[*aec->curcxstate];
+    qe = ff_aec_qe[*cxstate];
     aec->a -= qe;
-    if ((*aec->curcxstate & 1) == d){
+    if ((*cxstate & 1) == d){
         if (!(aec->a & 0x8000)){
             if (aec->a < qe)
                 aec->a = qe;
             else
                 aec->c += qe;
-            *aec->curcxstate = ff_aec_nmps[*aec->curcxstate];
+            *cxstate = ff_aec_nmps[*cxstate];
             renorme(aec);
         } else
             aec->c += qe;
@@ -97,7 +96,7 @@ void ff_aec_encode(AecState *aec, int cx, int d)
             aec->c += qe;
         else
             aec->a = qe;
-        *aec->curcxstate = ff_aec_nlps[*aec->curcxstate];
+        *cxstate = ff_aec_nlps[*cxstate];
         renorme(aec);
     }
 }
