@@ -148,7 +148,7 @@ static int getnbctxno(int flag, int bandno)
 
 int ff_j2k_getrefctxno(int flag)
 {
-    const uint8_t refctxno_lut[2][2] = {{14, 15}, {16, 16}};
+    static const uint8_t refctxno_lut[2][2] = {{14, 15}, {16, 16}};
     return refctxno_lut[flag>>14][(flag & 255) != 0];
 }
 
@@ -163,9 +163,9 @@ int ff_j2k_getsgnctxno(int flag, int *xorbit)
 static int getsgnctxno(int flag, uint8_t *xorbit)
 {
     int vcontrib, hcontrib;
-    const int contribtab[3][3] = {{0, -1, 1}, {-1, -1, 0}, {1, 0, 1}};
-    const int ctxlbltab[3][3] = {{13, 12, 11}, {10, 9, 10}, {11, 12, 13}};
-    const int xorbittab[3][3] = {{1, 1, 1,}, {1, 0, 0}, {0, 0, 0}};
+    static const int contribtab[3][3] = {{0, -1, 1}, {-1, -1, 0}, {1, 0, 1}};
+    static const int ctxlbltab[3][3] = {{13, 12, 11}, {10, 9, 10}, {11, 12, 13}};
+    static const int xorbittab[3][3] = {{1, 1, 1,}, {1, 0, 0}, {0, 0, 0}};
 
     hcontrib = contribtab[flag & J2K_T1_SIG_E ? flag & J2K_T1_SGN_E ? 1:2:0]
                          [flag & J2K_T1_SIG_W ? flag & J2K_T1_SGN_W ? 1:2:0]+1;
