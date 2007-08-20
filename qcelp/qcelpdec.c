@@ -276,13 +276,13 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
              for(i=0; i<160; i++)
              {
                 cdn_vector[i]=
-                gain[i/10]*qcelp_fullrate_ccodebook[(i+1-index[i/10]) & 127];
+                gain[i/10]*qcelp_fullrate_ccodebook[(i-index[i/10]) & 127];
              }
              break;
         case RATE_HALF:
              for(i=0; i<160; i++)
                 cdn_vector[i]=
-                gain[i/40]*qcelp_halfrate_ccodebook[(i+1-index[i/40]) & 127];
+                gain[i/40]*qcelp_halfrate_ccodebook[(i-index[i/40]) & 127];
              break;
         case RATE_QUARTER:
             for(i=0; i<160; i++)
