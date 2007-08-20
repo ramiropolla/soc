@@ -1,0 +1,100 @@
+This is the libavfilter SoC project!
+
+Here's what you do to try it out:
+
+1) download current ffmpeg SVN
+2) put the directory containing this README file under the newly checked out
+   ffmpeg source tree as libavfilter
+3) apply the patches under libavfilter/diffs to the main ffmpeg source tree
+   in sequential order
+4) run configure with --enable-avfilter
+5) make
+6) run it!
+
+WRITING FILTERS:
+
+There is some documentation on writing basic filters over at the multimedia
+wiki.  See http://wiki.multimedia.cx/index.php?title=FFmpeg_filter_howto
+
+RUNNING IT:
+
+Currently, only ffplay has been modified to make use of libavfilter.  The
+command line syntax for specifying filters is similar to that of mplayer.
+For example, to vertically flip a video, you would do:
+
+./ffplay -vfilters vflip input_video.avi
+
+The argument to -vfilters lists the video filters to load.  A comma separates
+sequential filters.  For example, this command:
+
+./ffplay -vfilters vflip,vflip input_video.avi
+
+will run the video through two instances of the vflip filter, which should
+result in the original, unflipped video.
+
+Some filters accept parameters, which can be specified in the same way as
+would be done for mplayer.  For example, to scale a video to 640x480, you
+could use this command:
+
+./ffplay -vfilters scale=640:480 input_video.avi
+
+Be aware that some filters, notably the crop filter, interpret the parameters
+differently than mplayer does.  There's currently no documentation about this
+except the source of those particular filters.  Sorry.  Play around with some
+of the filters.
+
+One of the interesting features of libavfilter is the ability for filters to
+have multiple inputs and multiple outputs.  Unfortunately, ffplay cannot feed
+multiple video streams to the filter system, and cannot handle multiple output
+streams.  To illustrate the sorts of things that are possible, however, we can
+use a complex filter graph.  For example, the following graph:
+
+input --> split ---> fifo ----------------------> overlay --> output
+            |                                        ^
+            |------> fifo --> crop --> vflip --------|
+
+splits the stream into two streams, sends one stream through the crop filter
+and the vflip filter before merging is back with the other stream by overlaying
+it on top.  If you put the following text into a file graph.desc:
+
+;-----------------------------------------------------------------------
+[filters]
+split=split
+buf0=fifo
+buf1=fifo
+crop=crop=0:0:-1:240
+vflip=vflip
+overlay=overlay=0:240
+
+[links]
+split:0=buf0:0
+buf0:0=overlay:0
+split:1=buf1:0
+buf1:0=crop:0
+crop:0=vflip:0
+vflip:0=overlay:1
+
+[inputs]
+default=split:0
+
+[outputs]
+default=overlay:0
+;-----------------------------------------------------------------------
+
+and run the following command:
+
+./ffplay -vfilters graph_file=graph.desc input_video.avi
+
+where input_video.avi has a vertical resolution of 480 pixels, the result
+should be that ffplay mirrors the top half of the video onto the bottom half.
+
+KNOWN ISSUES:
+- if ffplay finishes playing the video, when you hit 'q' to quit, it will sit
+  and eat 100% CPU
+- colorspace negotiation needs work.  currently, it may do more conversions
+  than necessary.
+- if for some reason the filter chain cannot be setup (due to an unknown
+  filter, basd parameters to a filter, or for some reason two filters cannot
+  be linked together successfully, for example), ffplay will not display any
+  video.  It is also somewhat lacking in error messages to tell you what the
+  problem was.
