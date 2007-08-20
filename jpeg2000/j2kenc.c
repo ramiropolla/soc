@@ -356,7 +356,7 @@ static int init_tiles(J2kEncoderContext *s)
 
     s->tile = av_malloc(s->numXtiles * s->numYtiles * sizeof(J2kTile));
     if (!s->tile)
-        return -1;
+        return AVERROR(ENOMEM);
     for (tno = 0; tno < s->numXtiles * s->numYtiles; tno++){
         J2kTile *tile = s->tile + tno;
         int p = tno % s->numXtiles;
@@ -364,7 +364,7 @@ static int init_tiles(J2kEncoderContext *s)
 
         tile->comp = av_malloc(s->ncomponents * sizeof(J2kComponent));
         if (!tile->comp)
-            return -1;
+            return AVERROR(ENOMEM);
         for (compno = 0; compno < s->ncomponents; compno++){
             J2kComponent *comp = tile->comp + compno;
 
@@ -374,10 +374,10 @@ static int init_tiles(J2kEncoderContext *s)
             comp->y1 = FFMIN((q+1)*s->tile_height, s->height);
             comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
             if (!comp->data)
-                return -1;
+                return AVERROR(ENOMEM);
             comp->reslevel = av_malloc(s->nreslevels * sizeof(J2kResLevel));
             if (!comp->reslevel)
-                return -1;
+                return AVERROR(ENOMEM);
             for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
                 int n = s->nreslevels - reslevelno;
                 J2kResLevel *reslevel = comp->reslevel + reslevelno;
@@ -403,7 +403,7 @@ static int init_tiles(J2kEncoderContext *s)
                     reslevel->num_precincts_y = ff_j2k_ceildivpow2(reslevel->y1, s->log2_prec_height) - reslevel->y0 / (1<<s->log2_prec_height);
                 reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
                 if (!reslevel->band)
-                    return -1;
+                    return AVERROR(ENOMEM);
                 for (bandno = 0; bandno < reslevel->nbands; bandno++){
                     J2kBand *band = reslevel->band + bandno;
                     int cblkno, precx, precy, precno;
@@ -435,10 +435,10 @@ static int init_tiles(J2kEncoderContext *s)
 
                     band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
                     if (!band->cblk)
-                        return -1;
+                        return AVERROR(ENOMEM);
                     band->prec = av_malloc(reslevel->num_precincts_x * reslevel->num_precincts_y * sizeof(J2kPrec));
                     if (!band->prec)
-                        return -1;
+                        return AVERROR(ENOMEM);
 
                     for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
                         band->cblk[cblkno].zero = 0;
@@ -1024,7 +1024,7 @@ static int encode_frame(AVCodecContext *avctx,
                         uint8_t *buf, int buf_size,
                         void *data)
 {
-    int tileno, i;
+    int tileno, i, ret;
     J2kEncoderContext *s = avctx->priv_data;
 
     s->avctx = avctx;
@@ -1065,7 +1065,8 @@ static int encode_frame(AVCodecContext *avctx,
     }
 
     av_log(s->avctx, AV_LOG_DEBUG, "init\n");
-    init_tiles(s);
+    if (ret=init_tiles(s))
+        return ret;
     init_luts();
     av_log(s->avctx, AV_LOG_DEBUG, "after init\n");
 
