@@ -31,26 +31,26 @@
 #include "aec.h"
 
 enum J2kMarkers{
-    J2K_SOC = 0xff4f,
-    J2K_SIZ = 0xff51,
-    J2K_COD,
-    J2K_COC,
-    J2K_TLM = 0xff55,
-    J2K_PLM = 0xff57,
-    J2K_PLT,
-    J2K_QCD = 0xff5c,
-    J2K_QCC,
-    J2K_RGN,
-    J2K_POC,
-    J2K_PPM,
-    J2K_PPT,
-    J2K_CRG = 0xff63,
-    J2K_COM,
-    J2K_SOT = 0xff90,
-    J2K_SOP,
-    J2K_EPH,
-    J2K_SOD,
-    J2K_EOC = 0xffd9,
+    J2K_SOC = 0xff4f, ///< start of codestream
+    J2K_SIZ = 0xff51, ///< image and tile size
+    J2K_COD,          ///< coding style default
+    J2K_COC,          ///< coding style component
+    J2K_TLM = 0xff55, ///< packed packet headers, tile-part header
+    J2K_PLM = 0xff57, ///< tile-part lengths
+    J2K_PLT,          ///< packet length, main header
+    J2K_QCD = 0xff5c, ///< quantization default
+    J2K_QCC,          ///< quantization component
+    J2K_RGN,          ///< region of interest
+    J2K_POC,          ///< progression order change
+    J2K_PPM,          ///< packet length, tile-part header
+    J2K_PPT,          ///< packed packet headers, main header
+    J2K_CRG = 0xff63, ///< component registration
+    J2K_COM,          ///< comment
+    J2K_SOT = 0xff90, ///< start of tile-part
+    J2K_SOP,          ///< start of packet
+    J2K_EPH,          ///< end of packet header
+    J2K_SOD,          ///< start of data
+    J2K_EOC = 0xffd9, ///< end of codestream
 };
 
 enum J2kTransform{ ///< type of wavelet transform
