@@ -1,0 +1,123 @@
+Index: configure
+===================================================================
+--- configure	(revision 10118)
++++ configure	(working copy)
+@@ -70,6 +70,7 @@
+   echo "                           and ffmpeg will be under GPL [default=no]"
+   echo "  --enable-pp              enable GPLed postprocessing support [default=no]"
+   echo "  --enable-swscaler        software scaler support [default=no]"
++  echo "  --enable-avfilter        video filter support (replaces vhook) [default=no]"
+   echo "  --enable-beosthreads     use BeOS threads [default=no]"
+   echo "  --enable-pthreads        use pthreads [default=no]"
+   echo "  --enable-w32threads      use Win32 threads [default=no]"
+@@ -570,6 +571,7 @@
+ CONFIG_LIST='
+     audio_beos
+     audio_oss
++    avfilter
+     avisynth
+     beos_netserver
+     bktr
+@@ -1837,6 +1839,7 @@
+ echo "shared                    ${shared-no}"
+ echo "postprocessing support    ${pp-no}"
+ echo "software scaler enabled   ${swscaler-no}"
++echo "new filter support        ${avfilter-no}"
+ echo "video hooking             ${vhook-no}"
+ if enabled vhook; then
+     echo "Imlib2 support            ${imlib2-no}"
+@@ -2115,3 +2118,8 @@
+   apply libswscale.pc sed s/^Libs:.*$/Libs:/
+   apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
+ fi
++
++if enabled avfilter; then
++  pkgconfig_generate libavfilter "FFmpeg video filtering library" "$avfilter_version" "-lavfilter $extralibs" "$pkg_requires libavutil = $lavu=version" ffmpeg
++  pkgconfig_generate_uninstalled libavfilter "FFmpeg video filtering library" "$avfilter_version" "$extralibs" "$pkg_requires libavutil = $libavu_version"
++fi
+Index: Makefile
+===================================================================
+--- Makefile	(revision 10118)
++++ Makefile	(working copy)
+@@ -8,6 +8,7 @@
+ 
+ CFLAGS=$(OPTFLAGS) -I$(BUILD_ROOT) -I$(SRC_PATH) -I$(SRC_PATH)/libavutil \
+        -I$(SRC_PATH)/libavcodec -I$(SRC_PATH)/libavformat -I$(SRC_PATH)/libswscale \
++	   -I$(SRC_PATH)/libavfilter \
+        -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_ISOC9X_SOURCE -DHAVE_AV_CONFIG_H
+ LDFLAGS+= -g
+ 
+@@ -65,6 +66,11 @@
+ EXTRALIBS+=-lswscale$(BUILDSUF)
+ endif
+ 
++ifeq ($(CONFIG_AVFILTER),yes)
++LDFLAGS+=-L$(BUILD_ROOT)/libavfilter
++EXTRALIBS+=-lavfilter$(BUILDSUF)
++endif
++
+ all: lib $(PROGS) $(ALL_TARGETS-yes)
+ 
+ lib:
+@@ -76,7 +82,10 @@
+ endif
+ ifeq ($(CONFIG_SWSCALER),yes)
+ 	$(MAKE) -C libswscale  all
++ifeq ($(CONFIG_AVFILTER),yes)
++	$(MAKE) -C libavfilter all
+ endif
++endif
+ 
+ ffmpeg_g$(EXESUF): ffmpeg.o cmdutils.o .libs
+ 	$(CC) $(LDFLAGS) -o $@ ffmpeg.o cmdutils.o $(EXTRALIBS)
+@@ -181,6 +190,9 @@
+ 	$(MAKE) -C libpostproc install-headers
+ endif
+ 	$(MAKE) -C libswscale  install-headers
++ifeq ($(CONFIG_AVFILTER),yes)
++	$(MAKE) -C libavfilter install-headers
++endif
+ 
+ uninstall: uninstall-progs uninstall-libs uninstall-headers uninstall-man uninstall-vhook
+ 
+@@ -199,12 +211,14 @@
+ 	$(MAKE) -C libavcodec  uninstall-libs
+ 	$(MAKE) -C libavformat uninstall-libs
+ 	$(MAKE) -C libpostproc uninstall-libs
++	$(MAKE) -C libavfilter uninstall-libs
+ 
+ uninstall-headers:
+ 	$(MAKE) -C libavutil   uninstall-headers
+ 	$(MAKE) -C libavcodec  uninstall-headers
+ 	$(MAKE) -C libavformat uninstall-headers
+ 	$(MAKE) -C libpostproc uninstall-headers
++	$(MAKE) -C libavfilter uninstall-headers
+ 	-rmdir "$(INCDIR)"
+ 
+ depend dep: .depend .vhookdep
+@@ -217,6 +231,9 @@
+ ifeq ($(CONFIG_SWSCALER),yes)
+ 	$(MAKE) -C libswscale  depend
+ endif
++ifeq ($(CONFIG_AVFILTER),yes)
++	$(MAKE) -C libavfilter depend
++endif
+ 
+ .depend: $(SRCS) version.h
+ 	$(CC) -MM $(CFLAGS) $(SDL_CFLAGS) $(filter-out %.h,$^) 1>.depend
+@@ -236,6 +253,7 @@
+ 	$(MAKE) -C libavformat clean
+ 	$(MAKE) -C libpostproc clean
+ 	$(MAKE) -C libswscale  clean
++	$(MAKE) -C libavfilter clean
+ 	rm -f *.o *~ .libs gmon.out TAGS $(ALLPROGS) $(ALLPROGS_G) \
+ 	   output_example$(EXESUF) qt-faststart$(EXESUF) cws2fws$(EXESUF)
+ 	rm -f doc/*.html doc/*.pod doc/*.1
+@@ -249,6 +267,7 @@
+ 	$(MAKE) -C libavformat distclean
+ 	$(MAKE) -C libpostproc distclean
+ 	$(MAKE) -C libswscale  distclean
++	$(MAKE) -C libavfilter distclean
+ 	rm -f .depend version.h config.* *.pc
+ 
+ TAGS:

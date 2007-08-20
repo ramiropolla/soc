@@ -1,0 +1,18 @@
+These diff files, applied in sequence, will allow ffplay to use libavfilter:
+
+00_build.diff:
+    build system changes
+
+01_ffplay_get_video_frame.diff:
+    separate a function to get the next video frame out from the main video
+    thread function.  this will make it easier to replace it with a version
+    which returns the frame after being filtered.
+
+02_ffplay_VideoPicture_vars.diff:
+    changes the code to use the image dimensions and pixel format stored in
+    the VideoPicture structure, rather than assuming the codec is right.  if
+    we filter the video, the codec may not accurately represent the filtered
+    output.
+
+03_ffplay_filters.diff:
+    enables filtering

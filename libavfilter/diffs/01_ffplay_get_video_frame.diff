@@ -1,0 +1,87 @@
+Index: ffplay.c
+===================================================================
+--- ffplay.c	(revision 10134)
++++ ffplay.c	(working copy)
+@@ -1338,21 +1338,12 @@
+     avcodec_default_release_buffer(c, pic);
+ }
+ 
+-static int video_thread(void *arg)
++static int get_video_frame(VideoState *is, AVFrame *frame, uint64_t *pts)
+ {
+-    VideoState *is = arg;
+     AVPacket pkt1, *pkt = &pkt1;
+-    int len1, got_picture;
+-    AVFrame *frame= avcodec_alloc_frame();
+-    double pts;
++    int got_picture;
+ 
+-    for(;;) {
+-        while (is->paused && !is->videoq.abort_request) {
+-            SDL_Delay(10);
+-        }
+-        if (packet_queue_get(&is->videoq, pkt, 1) < 0)
+-            break;
+-
++    while (packet_queue_get(&is->videoq, pkt, 1) >= 0) {
+         if(pkt->data == flush_pkt.data){
+             avcodec_flush_buffers(is->video_st->codec);
+             continue;
+@@ -1361,26 +1352,45 @@
+         /* NOTE: ipts is the PTS of the _first_ picture beginning in
+            this packet, if any */
+         global_video_pkt_pts= pkt->pts;
+-        len1 = avcodec_decode_video(is->video_st->codec,
+-                                    frame, &got_picture,
+-                                    pkt->data, pkt->size);
++        avcodec_decode_video(is->video_st->codec,
++                             frame, &got_picture,
++                             pkt->data, pkt->size);
+ 
+         if(   (decoder_reorder_pts || pkt->dts == AV_NOPTS_VALUE)
+            && frame->opaque && *(uint64_t*)frame->opaque != AV_NOPTS_VALUE)
+-            pts= *(uint64_t*)frame->opaque;
++            *pts= *(uint64_t*)frame->opaque;
+         else if(pkt->dts != AV_NOPTS_VALUE)
+-            pts= pkt->dts;
++            *pts= pkt->dts;
+         else
+-            pts= 0;
+-        pts *= av_q2d(is->video_st->time_base);
++            *pts= 0;
+ 
+-//            if (len1 < 0)
+-//                break;
+-        if (got_picture) {
+-            if (output_picture2(is, frame, pts) < 0)
++        /* put pts into units of 1/AV_TIME_BASE */
++        *pts = AV_TIME_BASE * (*pts) * is->video_st->time_base.num /
++                               is->video_st->time_base.den;
++
++        av_free_packet(pkt);
++        if(got_picture)
++            return 1;
++    }
++    return 0;
++}
++
++static int video_thread(void *arg)
++{
++    VideoState *is = arg;
++    AVFrame *frame= avcodec_alloc_frame();
++    uint64_t pts_int;
++    double pts;
++
++    for(;;) {
++        while (is->paused && !is->videoq.abort_request)
++            SDL_Delay(10);
++        while(get_video_frame(is, frame, &pts_int)) {
++            pts  = pts_int;
++            pts /= AV_TIME_BASE;
++            if(output_picture2(is, frame, pts) < 0)
+                 goto the_end;
+         }
+-        av_free_packet(pkt);
+         if (step)
+             if (cur_stream)
+                 stream_pause(cur_stream);
