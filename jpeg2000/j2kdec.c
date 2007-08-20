@@ -67,7 +67,7 @@ typedef struct {
     uint16_t x0, x1, y0, y1;
     uint8_t nbands;
     uint16_t nprecw, nprech;
-    uint8_t ppx, ppy; ///< exponent of precinct size
+    uint8_t log2_prec_width, log2_prec_height; ///< exponent of precinct size
     J2kBand *band;
 } J2kResLevel;
 
@@ -83,7 +83,7 @@ typedef struct {
    int xcb, ycb; ///< exponent of codeblock size
    uint8_t transform; ///< DWT type
    int csty; ///< coding style
-   int ppx, ppy;
+   int log2_prec_width, log2_prec_height;
 
    /// QCx fields
    uint8_t expn[32 * 3]; ///< quantization exponent
@@ -126,7 +126,7 @@ typedef struct {
     int nreslevels[4]; ///< number of resolution levels
     int xcb[4], ycb[4]; ///< exponent of the code block size
     uint8_t transform[4]; ///< type of DWT
-    int ppx, ppy; ///< exponent of the precinct size
+    int log2_prec_width, log2_prec_height; ///< exponent of the precinct size
 
     uint8_t *buf_start;
     uint8_t *buf;
@@ -541,12 +541,12 @@ static int init_tile(J2kDecoderContext *s, int tileno)
             if (reslevel->x1 == reslevel->x0)
                 reslevel->nprecw = 0;
             else
-                reslevel->nprecw = ff_j2k_ceildivpow2(reslevel->x1, s->ppx) - reslevel->x0 / (1<<s->ppx);
+                reslevel->nprecw = ff_j2k_ceildivpow2(reslevel->x1, s->log2_prec_width) - reslevel->x0 / (1<<s->log2_prec_width);
 
             if (reslevel->y1 == reslevel->y0)
                 reslevel->nprech = 0;
             else
-                reslevel->nprech = ff_j2k_ceildivpow2(reslevel->y1, s->ppy) - reslevel->y0 / (1<<s->ppy);
+                reslevel->nprech = ff_j2k_ceildivpow2(reslevel->y1, s->log2_prec_height) - reslevel->y0 / (1<<s->log2_prec_height);
 
             reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
             if (reslevel->band == NULL)
@@ -569,8 +569,8 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                     band->stepsize = 1 << 13;
 
                 if (reslevelno == 0){  // the same everywhere
-                    band->cblkw = 1 << FFMIN(comp->xcb, s->ppx-1);
-                    band->cblkh = 1 << FFMIN(comp->ycb, s->ppy-1);
+                    band->cblkw = 1 << FFMIN(comp->xcb, s->log2_prec_width-1);
+                    band->cblkh = 1 << FFMIN(comp->ycb, s->log2_prec_height-1);
 
                     band->x0 = ff_j2k_ceildivpow2(comp->x0, n-1);
                     band->x1 = ff_j2k_ceildivpow2(comp->x1, n-1);
@@ -578,8 +578,8 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                     band->y1 = ff_j2k_ceildivpow2(comp->y1, n-1);
                 }
                 else{
-                    band->cblkw = 1 << FFMIN(comp->xcb, s->ppx);
-                    band->cblkh = 1 << FFMIN(comp->ycb, s->ppy);
+                    band->cblkw = 1 << FFMIN(comp->xcb, s->log2_prec_width);
+                    band->cblkh = 1 << FFMIN(comp->ycb, s->log2_prec_height);
 
                     band->x0 = ff_j2k_ceildivpow2(comp->x0 - (1 << (n-1)) * ((bandno+1)&1), n);
                     band->x1 = ff_j2k_ceildivpow2(comp->x1 - (1 << (n-1)) * ((bandno+1)&1), n);
@@ -607,11 +607,11 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                 }
 
                 y0 = band->y0;
-                y1 = (band->y0 + (1<<s->ppy))/(1<<s->ppy)*(1<<s->ppy) - band->y0;
+                y1 = (band->y0 + (1<<s->log2_prec_height))/(1<<s->log2_prec_height)*(1<<s->log2_prec_height) - band->y0;
                 yi0 = 0;
                 yi1 = ff_j2k_ceildiv(y1 - y0, 1<<comp->ycb) * (1<<comp->ycb);
                 yi1 = FFMIN(yi1, band->cblkny);
-                cblkperprech = 1<<(s->ppy - comp->ycb);
+                cblkperprech = 1<<(s->log2_prec_height - comp->ycb);
                 for (precy = 0, precno = 0; precy < reslevel->nprech; precy++){
                     for (precx = 0; precx < reslevel->nprecw; precx++, precno++){
                         band->prec[precno].yi0 = yi0;
@@ -622,12 +622,12 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                     yi1 = FFMIN(yi1, band->cblkny);
                 }
                 x0 = band->x0;
-                x1 = (band->x0 + (1<<s->ppx))/(1<<s->ppx)*(1<<s->ppx) - band->x0;
+                x1 = (band->x0 + (1<<s->log2_prec_width))/(1<<s->log2_prec_width)*(1<<s->log2_prec_width) - band->x0;
                 xi0 = 0;
                 xi1 = ff_j2k_ceildiv(x1 - x0, 1<<comp->xcb) * (1<<comp->xcb);
                 xi1 = FFMIN(xi1, band->cblknx);
 
-                cblkperprecw = 1<<(s->ppx - comp->xcb);
+                cblkperprecw = 1<<(s->log2_prec_width - comp->xcb);
                 for (precx = 0, precno = 0; precx < reslevel->nprecw; precx++){
                     for (precy = 0; precy < reslevel->nprech; precy++, precno = 0){
                         J2kPrec *prec = band->prec + precno;
@@ -1249,7 +1249,7 @@ static int decode_frame(AVCodecContext *avctx,
     s->buf_end = buf + buf_size;
     s->curtileno = -1;
 
-    s->ppx = s->ppy = 15;
+    s->log2_prec_width = s->log2_prec_height = 15;
 
     ff_j2k_init_tier1_luts();
 

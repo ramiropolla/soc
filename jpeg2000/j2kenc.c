@@ -95,7 +95,7 @@ typedef struct {
     uint8_t bbps[4][32][3]; // numbps in bands
     uint8_t expn[4][32][3]; // quantization exponents
     int ncomponents;
-    int ppx, ppy; // exponent of the precinct size [global]
+    int log2_prec_width, log2_prec_height; // exponent of the precinct size [global]
     int xcb, ycb; // exponent of the code block size
     int XTsiz, YTsiz; // tile size
     int numXtiles, numYtiles;
@@ -408,12 +408,12 @@ static int init_tiles(J2kEncoderContext *s)
                 if (reslevel->x1 == reslevel->x0)
                     reslevel->nprecw = 0;
                 else
-                    reslevel->nprecw = ff_j2k_ceildivpow2(reslevel->x1, s->ppx) - reslevel->x0 / (1<<s->ppx);
+                    reslevel->nprecw = ff_j2k_ceildivpow2(reslevel->x1, s->log2_prec_width) - reslevel->x0 / (1<<s->log2_prec_width);
 
                 if (reslevel->y1 == reslevel->y0)
                     reslevel->nprech = 0;
                 else
-                    reslevel->nprech = ff_j2k_ceildivpow2(reslevel->y1, s->ppy) - reslevel->y0 / (1<<s->ppy);
+                    reslevel->nprech = ff_j2k_ceildivpow2(reslevel->y1, s->log2_prec_height) - reslevel->y0 / (1<<s->log2_prec_height);
 
                 reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
                 if (reslevel->band == NULL)
@@ -426,8 +426,8 @@ static int init_tiles(J2kEncoderContext *s)
                     int cblkperprecw, cblkperprech;
 
                     if (reslevelno == 0){  // the same everywhere
-                        band->cblkw = 1 << FFMIN(s->xcb, s->ppx-1);
-                        band->cblkh = 1 << FFMIN(s->ycb, s->ppy-1);
+                        band->cblkw = 1 << FFMIN(s->xcb, s->log2_prec_width-1);
+                        band->cblkh = 1 << FFMIN(s->ycb, s->log2_prec_height-1);
 
                         band->x0 = ff_j2k_ceildivpow2(comp->x0, n-1);
                         band->x1 = ff_j2k_ceildivpow2(comp->x1, n-1);
@@ -435,8 +435,8 @@ static int init_tiles(J2kEncoderContext *s)
                         band->y1 = ff_j2k_ceildivpow2(comp->y1, n-1);
                     }
                     else{
-                        band->cblkw = 1 << FFMIN(s->xcb, s->ppx);
-                        band->cblkh = 1 << FFMIN(s->ycb, s->ppy);
+                        band->cblkw = 1 << FFMIN(s->xcb, s->log2_prec_width);
+                        band->cblkh = 1 << FFMIN(s->ycb, s->log2_prec_height);
 
                         band->x0 = ff_j2k_ceildivpow2(comp->x0 - (1 << (n-1)) * ((bandno+1)&1), n);
                         band->x1 = ff_j2k_ceildivpow2(comp->x1 - (1 << (n-1)) * ((bandno+1)&1), n);
@@ -459,11 +459,11 @@ static int init_tiles(J2kEncoderContext *s)
                     }
 
                     y0 = band->y0;
-                    y1 = (band->y0 + (1<<s->ppy))/(1<<s->ppy)*(1<<s->ppy) - band->y0;
+                    y1 = (band->y0 + (1<<s->log2_prec_height))/(1<<s->log2_prec_height)*(1<<s->log2_prec_height) - band->y0;
                     yi0 = 0;
                     yi1 = ff_j2k_ceildiv(y1 - y0, 1<<s->ycb) * (1<<s->ycb);
                     yi1 = FFMIN(yi1, band->cblkny);
-                    cblkperprech = 1<<(s->ppy - s->ycb);
+                    cblkperprech = 1<<(s->log2_prec_height - s->ycb);
                     for (precy = 0, precno = 0; precy < reslevel->nprech; precy++){
                         for (precx = 0; precx < reslevel->nprecw; precx++, precno++){
                             band->prec[precno].yi0 = yi0;
@@ -474,11 +474,11 @@ static int init_tiles(J2kEncoderContext *s)
                         yi1 = FFMIN(yi1, band->cblkny);
                     }
                     x0 = band->x0;
-                    x1 = (band->x0 + (1<<s->ppx))/(1<<s->ppx)*(1<<s->ppx) - band->x0;
+                    x1 = (band->x0 + (1<<s->log2_prec_width))/(1<<s->log2_prec_width)*(1<<s->log2_prec_width) - band->x0;
                     xi0 = 0;
                     xi1 = ff_j2k_ceildiv(x1 - x0, 1<<s->xcb) * (1<<s->xcb);
                     xi1 = FFMIN(xi1, band->cblknx);
-                    cblkperprecw = 1<<(s->ppx - s->xcb);
+                    cblkperprecw = 1<<(s->log2_prec_width - s->xcb);
                     for (precx = 0, precno = 0; precx < reslevel->nprecw; precx++){
                         for (precy = 0; precy < reslevel->nprech; precy++, precno = 0){
                             band->prec[precno].xi0 = xi0;
@@ -1046,7 +1046,7 @@ static int encode_frame(AVCodecContext *avctx,
 
     // defaults:
     // TODO: implement setting non-standard precinct size
-    s->ppx = 15; s->ppy = 15;
+    s->log2_prec_width = 15; s->log2_prec_height = 15;
 
     s->XTsiz = 256; s->YTsiz = 256;
     s->nreslevels = 7;
