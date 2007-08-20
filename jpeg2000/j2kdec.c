@@ -35,7 +35,7 @@
 
 /** code block */
 typedef struct {
-    uint8_t npassess;  ///< number of coding passess
+    uint8_t npasses;  ///< number of coding passes
     uint8_t nonzerobits;
     uint16_t lengthinc;
     uint16_t length;
@@ -55,7 +55,7 @@ typedef struct {
 /** subband */
 typedef struct {
     uint16_t x0, x1, y0, y1;
-    uint16_t cblkw, cblkh;
+    uint16_t codeblock_width, codeblock_height;
     uint16_t cblknx, cblkny;
     uint32_t stepsize; ///< quantization stepsize (* 2^13)
     J2kPrec *prec;
@@ -66,7 +66,7 @@ typedef struct {
 typedef struct {
     uint16_t x0, x1, y0, y1;
     uint8_t nbands;
-    uint16_t nprecw, nprech;
+    uint16_t num_precincts_x, num_precincts_y;
     uint8_t log2_prec_width, log2_prec_height; ///< exponent of precinct size
     J2kBand *band;
 } J2kResLevel;
@@ -108,8 +108,8 @@ typedef struct {
     AVFrame picture;
 
     int width, height; ///< image width and height
-    int X0siz, Y0siz;
-    int XT0siz, YT0siz;
+    int image_offset_x, image_offset_y;
+    int tile_offset_x, tile_offset_y;
     uint8_t cbps[4]; ///< numbps in components
     uint8_t sgnd[4]; ///< if a component is signed
     uint8_t bbps[3 * 32][4]; ///< numbps in bands
@@ -119,7 +119,7 @@ typedef struct {
     int properties[4];
 
     int ncomponents;
-    int XTsiz, YTsiz; ///< tile size
+    int tile_width, tile_height; ///< tile size
     int numXtiles, numYtiles;
     int maxtilelen;
 
@@ -181,10 +181,10 @@ static void nspaces(FILE *fd, int n)
 static void dump(J2kDecoderContext *s, FILE *fd)
 {
     int tileno, compno, reslevelno, bandno, precno;
-    fprintf(fd, "XSiz = %d, YSiz = %d, XTsiz = %d, YTsiz = %d\n"
+    fprintf(fd, "XSiz = %d, YSiz = %d, tile_width = %d, tile_height = %d\n"
                 "numXtiles = %d, numYtiles = %d, ncomponents = %d\n"
                 "tiles:\n",
-            s->width, s->height, s->XTsiz, s->YTsiz,
+            s->width, s->height, s->tile_width, s->tile_height,
             s->numXtiles, s->numYtiles, s->ncomponents);
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         J2kTile *tile = s->tile + tileno;
@@ -211,12 +211,12 @@ static void dump(J2kDecoderContext *s, FILE *fd)
                     fprintf(fd, "band %d:\n", bandno);
                     nspaces(fd, 8);
                     fprintf(fd, "x0 = %d, x1 = %d, y0 = %d, y1 = %d,"
-                                "cblkw = %d, cblkh = %d cblknx = %d cblkny = %d\n",
+                                "codeblock_width = %d, codeblock_height = %d cblknx = %d cblkny = %d\n",
                                 band->x0, band->x1,
                                 band->y0, band->y1,
-                                band->cblkw, band->cblkh,
+                                band->codeblock_width, band->codeblock_height,
                                 band->cblknx, band->cblkny);
-                    for (precno = 0; precno < reslevel->nprecw * reslevel->nprech; precno++){
+                    for (precno = 0; precno < reslevel->num_precincts_x * reslevel->num_precincts_y; precno++){
                         J2kPrec *prec = band->prec + precno;
                         nspaces(fd, 10);
                         fprintf(fd, "prec %d:\n", precno);
@@ -295,13 +295,13 @@ static int get_siz(J2kDecoderContext *s)
     bytestream_get_be16(&s->buf); ///< Rsiz (skipped)
     s->width = bytestream_get_be32(&s->buf); ///< width
     s->height = bytestream_get_be32(&s->buf); ///< height
-    s->X0siz = bytestream_get_be32(&s->buf); ///< X0Siz
-    s->Y0siz = bytestream_get_be32(&s->buf); ///< Y0Siz
+    s->image_offset_x = bytestream_get_be32(&s->buf); ///< X0Siz
+    s->image_offset_y = bytestream_get_be32(&s->buf); ///< Y0Siz
 
-    s->XTsiz = bytestream_get_be32(&s->buf); ///< XTSiz
-    s->YTsiz = bytestream_get_be32(&s->buf); ///< YTSiz
-    s->XT0siz = bytestream_get_be32(&s->buf); ///< XT0Siz
-    s->YT0siz = bytestream_get_be32(&s->buf); ///< YT0Siz
+    s->tile_width = bytestream_get_be32(&s->buf); ///< XTSiz
+    s->tile_height = bytestream_get_be32(&s->buf); ///< YTSiz
+    s->tile_offset_x = bytestream_get_be32(&s->buf); ///< XT0Siz
+    s->tile_offset_y = bytestream_get_be32(&s->buf); ///< YT0Siz
     s->ncomponents = bytestream_get_be16(&s->buf); ///< CSiz
 
     for (i = 0; i < s->ncomponents; i++){ ///< Ssiz_i XRsiz_i, YRsiz_i
@@ -314,8 +314,8 @@ static int get_siz(J2kDecoderContext *s)
             return -1;
     }
 
-    s->numXtiles = ff_j2k_ceildiv(s->width - s->XT0siz, s->XTsiz);
-    s->numYtiles = ff_j2k_ceildiv(s->height - s->YT0siz, s->YTsiz);
+    s->numXtiles = ff_j2k_ceildiv(s->width - s->tile_offset_x, s->tile_width);
+    s->numYtiles = ff_j2k_ceildiv(s->height - s->tile_offset_y, s->tile_height);
 
     s->tile = av_mallocz(s->numXtiles * s->numYtiles * sizeof(J2kTile));
     if (!s->tile)
@@ -329,8 +329,8 @@ static int get_siz(J2kDecoderContext *s)
             return -1;
     }
 
-    s->avctx->width = s->width - s->X0siz;
-    s->avctx->height = s->height - s->Y0siz;
+    s->avctx->width = s->width - s->image_offset_x;
+    s->avctx->height = s->height - s->image_offset_y;
 
     switch(s->ncomponents){
         case 1: s->avctx->pix_fmt = PIX_FMT_GRAY8; break;
@@ -513,10 +513,10 @@ static int init_tile(J2kDecoderContext *s, int tileno)
         J2kComponent *comp = tile->comp + compno;
         int gbandno = 0; ///< global bandno
 
-        comp->x0 = FFMAX(p * s->XTsiz + s->XT0siz, s->X0siz);
-        comp->x1 = FFMIN((p+1)*s->XTsiz + s->XT0siz, s->width);
-        comp->y0 = FFMAX(q * s->YTsiz + s->YT0siz, s->Y0siz);
-        comp->y1 = FFMIN((q+1)*s->YTsiz + s->YT0siz, s->height);
+        comp->x0 = FFMAX(p * s->tile_width + s->tile_offset_x, s->image_offset_x);
+        comp->x1 = FFMIN((p+1)*s->tile_width + s->tile_offset_x, s->width);
+        comp->y0 = FFMAX(q * s->tile_height + s->tile_offset_y, s->image_offset_y);
+        comp->y1 = FFMIN((q+1)*s->tile_height + s->tile_offset_y, s->height);
 
         comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
         if (comp->data == NULL)
@@ -539,14 +539,14 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                 reslevel->nbands = 3;
 
             if (reslevel->x1 == reslevel->x0)
-                reslevel->nprecw = 0;
+                reslevel->num_precincts_x = 0;
             else
-                reslevel->nprecw = ff_j2k_ceildivpow2(reslevel->x1, s->log2_prec_width) - reslevel->x0 / (1<<s->log2_prec_width);
+                reslevel->num_precincts_x = ff_j2k_ceildivpow2(reslevel->x1, s->log2_prec_width) - reslevel->x0 / (1<<s->log2_prec_width);
 
             if (reslevel->y1 == reslevel->y0)
-                reslevel->nprech = 0;
+                reslevel->num_precincts_y = 0;
             else
-                reslevel->nprech = ff_j2k_ceildivpow2(reslevel->y1, s->log2_prec_height) - reslevel->y0 / (1<<s->log2_prec_height);
+                reslevel->num_precincts_y = ff_j2k_ceildivpow2(reslevel->y1, s->log2_prec_height) - reslevel->y0 / (1<<s->log2_prec_height);
 
             reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
             if (reslevel->band == NULL)
@@ -569,8 +569,8 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                     band->stepsize = 1 << 13;
 
                 if (reslevelno == 0){  // the same everywhere
-                    band->cblkw = 1 << FFMIN(comp->log2_cblk_width, s->log2_prec_width-1);
-                    band->cblkh = 1 << FFMIN(comp->log2_cblk_height, s->log2_prec_height-1);
+                    band->codeblock_width = 1 << FFMIN(comp->log2_cblk_width, s->log2_prec_width-1);
+                    band->codeblock_height = 1 << FFMIN(comp->log2_cblk_height, s->log2_prec_height-1);
 
                     band->x0 = ff_j2k_ceildivpow2(comp->x0, n-1);
                     band->x1 = ff_j2k_ceildivpow2(comp->x1, n-1);
@@ -578,21 +578,21 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                     band->y1 = ff_j2k_ceildivpow2(comp->y1, n-1);
                 }
                 else{
-                    band->cblkw = 1 << FFMIN(comp->log2_cblk_width, s->log2_prec_width);
-                    band->cblkh = 1 << FFMIN(comp->log2_cblk_height, s->log2_prec_height);
+                    band->codeblock_width = 1 << FFMIN(comp->log2_cblk_width, s->log2_prec_width);
+                    band->codeblock_height = 1 << FFMIN(comp->log2_cblk_height, s->log2_prec_height);
 
                     band->x0 = ff_j2k_ceildivpow2(comp->x0 - (1 << (n-1)) * ((bandno+1)&1), n);
                     band->x1 = ff_j2k_ceildivpow2(comp->x1 - (1 << (n-1)) * ((bandno+1)&1), n);
                     band->y0 = ff_j2k_ceildivpow2(comp->y0 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
                     band->y1 = ff_j2k_ceildivpow2(comp->y1 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
                 }
-                band->cblknx = ff_j2k_ceildiv(band->x1, band->cblkw) - band->x0 / band->cblkw;
-                band->cblkny = ff_j2k_ceildiv(band->y1, band->cblkh) - band->y0 / band->cblkh;
+                band->cblknx = ff_j2k_ceildiv(band->x1, band->codeblock_width) - band->x0 / band->codeblock_width;
+                band->cblkny = ff_j2k_ceildiv(band->y1, band->codeblock_height) - band->y0 / band->codeblock_height;
 
                 band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
                 if (band->cblk == NULL)
                     return -1;
-                band->prec = av_malloc(reslevel->nprecw * reslevel->nprech * sizeof(J2kPrec));
+                band->prec = av_malloc(reslevel->num_precincts_x * reslevel->num_precincts_y * sizeof(J2kPrec));
                 if (band->prec == NULL)
                     return -1;
 
@@ -602,7 +602,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                     cblk->lblock = 3;
                     cblk->length = 0;
                     cblk->lengthinc = 0;
-                    cblk->npassess = 0;
+                    cblk->npasses = 0;
                     cblk->included = 0;
                 }
 
@@ -612,8 +612,8 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                 yi1 = ff_j2k_ceildiv(y1 - y0, 1<<comp->log2_cblk_height) * (1<<comp->log2_cblk_height);
                 yi1 = FFMIN(yi1, band->cblkny);
                 cblkperprech = 1<<(s->log2_prec_height - comp->log2_cblk_height);
-                for (precy = 0, precno = 0; precy < reslevel->nprech; precy++){
-                    for (precx = 0; precx < reslevel->nprecw; precx++, precno++){
+                for (precy = 0, precno = 0; precy < reslevel->num_precincts_y; precy++){
+                    for (precx = 0; precx < reslevel->num_precincts_x; precx++, precno++){
                         band->prec[precno].yi0 = yi0;
                         band->prec[precno].yi1 = yi1;
                     }
@@ -628,8 +628,8 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                 xi1 = FFMIN(xi1, band->cblknx);
 
                 cblkperprecw = 1<<(s->log2_prec_width - comp->log2_cblk_width);
-                for (precx = 0, precno = 0; precx < reslevel->nprecw; precx++){
-                    for (precy = 0; precy < reslevel->nprech; precy++, precno = 0){
+                for (precx = 0, precno = 0; precx < reslevel->num_precincts_x; precx++){
+                    for (precy = 0; precy < reslevel->num_precincts_y; precy++, precno = 0){
                         J2kPrec *prec = band->prec + precno;
                         prec->xi0 = xi0;
                         prec->xi1 = xi1;
@@ -651,8 +651,8 @@ static int init_tile(J2kDecoderContext *s, int tileno)
     return 0;
 }
 
-/** read the number of coding passess */
-static int getnpassess(J2kDecoderContext *s)
+/** read the number of coding passes */
+static int getnpasses(J2kDecoderContext *s)
 {
     int num;
     if (!get_bits(s, 1))
@@ -690,7 +690,7 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
         for (cblkny = prec->yi0; cblkny < prec->yi1; cblkny++)
             for(cblknx = prec->xi0, cblkno = cblkny * band->cblknx + cblknx; cblknx < prec->xi1; cblknx++, cblkno++, pos++){
                 J2kCblk *cblk = band->cblk + cblkno;
-                int incl, newpassess, llen;
+                int incl, newpasses, llen;
 
                 if (cblk->included)
                     incl = get_bits(s, 1);
@@ -704,11 +704,11 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
                     cblk->included++;
                     cblk->nonzerobits = bandbps[bandno] - tag_tree_decode(s, prec->zerobits + pos, 100);
                 }
-                newpassess = getnpassess(s);
+                newpasses = getnpasses(s);
                 llen = getlblockinc(s);
                 cblk->lblock += llen;
-                cblk->lengthinc = get_bits(s, av_log2(newpassess) + cblk->lblock);
-                cblk->npassess += newpassess;
+                cblk->lengthinc = get_bits(s, av_log2(newpasses) + cblk->lblock);
+                cblk->npasses += newpasses;
             }
     }
     j2k_flush(s);
@@ -742,7 +742,7 @@ static int decode_packets(J2kDecoderContext *s, J2kTile *tile)
                 if (reslevelno < comp->nreslevels){
                     J2kResLevel *rlevel = tile->comp[compno].reslevel + reslevelno;
                     ok_reslevel = 1;
-                    for (precno = 0; precno < rlevel->nprecw * rlevel->nprech; precno++){
+                    for (precno = 0; precno < rlevel->num_precincts_x * rlevel->num_precincts_y; precno++){
                         if (decode_packet(s, rlevel, precno, layno, comp->bbps + (reslevelno ? 3*(reslevelno-1)+1 : 0)))
                             return -1;
                     }
@@ -835,7 +835,7 @@ static void decode_clnpass(J2kT1Context *t1, int width, int height, int bpno, in
 
 static int decode_cblk(J2kDecoderContext *s, J2kT1Context *t1, J2kCblk *cblk, int width, int height, int bandpos)
 {
-    int passno = cblk->npassess, pass_t = 2, bpno = cblk->nonzerobits - 1, i;
+    int passno = cblk->npasses, pass_t = 2, bpno = cblk->nonzerobits - 1, i;
 
     for (i = 0; i < height+2; i++)
         memset(t1->flags[i], 0, (width+2)*sizeof(int));
@@ -1077,7 +1077,7 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
 
                 yy0 = bandno == 0 ? 0 : comp->reslevel[reslevelno-1].y1 - comp->reslevel[reslevelno-1].y0;
                 y0 = yy0;
-                yy1 = FFMIN(ff_j2k_ceildiv(band->y0 + 1, band->cblkh) * band->cblkh, band->y1) - band->y0 + yy0;
+                yy1 = FFMIN(ff_j2k_ceildiv(band->y0 + 1, band->codeblock_height) * band->codeblock_height, band->y1) - band->y0 + yy0;
 
                 if (band->x0 == band->x1 || band->y0 == band->y1)
                     continue;
@@ -1088,7 +1088,7 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                     else
                         xx0 = comp->reslevel[reslevelno-1].x1 - comp->reslevel[reslevelno-1].x0;
                     x0 = xx0;
-                    xx1 = FFMIN(ff_j2k_ceildiv(band->x0 + 1, band->cblkw) * band->cblkw, band->x1) - band->x0 + xx0;
+                    xx1 = FFMIN(ff_j2k_ceildiv(band->x0 + 1, band->codeblock_width) * band->codeblock_width, band->x1) - band->x0 + xx0;
 
                     for (cblkx = 0; cblkx < band->cblknx; cblkx++, cblkno++){
                         int y, x;
@@ -1111,10 +1111,10 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                             }
                         }
                         xx0 = xx1;
-                        xx1 = FFMIN(xx1 + band->cblkw, band->x1 - band->x0 + x0);
+                        xx1 = FFMIN(xx1 + band->codeblock_width, band->x1 - band->x0 + x0);
                     }
                     yy0 = yy1;
-                    yy1 = FFMIN(yy1 + band->cblkh, band->y1 - band->y0 + y0);
+                    yy1 = FFMIN(yy1 + band->codeblock_height, band->y1 - band->y0 + y0);
                 }
             }
         }
@@ -1130,19 +1130,19 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
     if (tile->mct)
         mct_decode(s, tile);
 
-    y = tile->comp[0].y0 - s->Y0siz;
+    y = tile->comp[0].y0 - s->image_offset_y;
 
     line = s->picture.data[0] + y * s->picture.linesize[0];
     if (s->avctx->pix_fmt == PIX_FMT_BGRA) /// RGBA -> BGRA
         FFSWAP(int *, src[0], src[2]);
 
-    for (; y < tile->comp[0].y1 - s->Y0siz; y++){
+    for (; y < tile->comp[0].y1 - s->image_offset_y; y++){
         uint8_t *dst;
 
-        x = tile->comp[0].x0 - s->X0siz;
+        x = tile->comp[0].x0 - s->image_offset_x;
         dst = line + x * s->ncomponents;
 
-        for (; x < tile->comp[0].x1 - s->X0siz; x++)
+        for (; x < tile->comp[0].x1 - s->image_offset_x; x++)
             for (compno = 0; compno < s->ncomponents; compno++){
                 *src[compno] += 1 << (s->cbps[compno]-1);
                 if (*src[compno] < 0)
@@ -1170,7 +1170,7 @@ static void cleanup(J2kDecoderContext *s)
                 for (bandno = 0; bandno < reslevel->nbands ; bandno++){
                     J2kBand *band = reslevel->band + bandno;
 
-                    for (precno = 0; precno < reslevel->nprecw * reslevel->nprech; precno++){
+                    for (precno = 0; precno < reslevel->num_precincts_x * reslevel->num_precincts_y; precno++){
                         J2kPrec *prec = band->prec + precno;
                         av_free(prec->zerobits);
                         av_free(prec->cblkincl);
