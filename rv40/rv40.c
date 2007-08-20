@@ -879,6 +879,160 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
 }
 
 /**
+ * Predict motion vector for B-frame macroblock.
+ */
+static inline void rv40_pred_b_vector(int A[2], int B[2], int C[2], int no_A, int no_B, int no_C, int *mx, int *my)
+{
+    switch(no_A + no_B + no_C){
+    case 0:
+        *mx = mid_pred(A[0], B[0], C[0]);
+        *my = mid_pred(A[1], B[1], C[1]);
+        break;
+    case 1:
+        if(no_A){
+            *mx = (B[0] + C[0]) / 2;
+            *my = (B[1] + C[1]) / 2;
+        }else if(no_B){
+            *mx = (A[0] + C[0]) / 2;
+            *my = (A[1] + C[1]) / 2;
+        }else{
+            *mx = (A[0] + B[0]) / 2;
+            *my = (A[1] + B[1]) / 2;
+        }
+        break;
+    case 2:
+        if(!no_A){
+            *mx = A[0];
+            *my = A[1];
+        }else if(!no_B){
+            *mx = B[0];
+            *my = B[1];
+        }else{
+            *mx = C[0];
+            *my = C[1];
+        }
+        break;
+    default:
+        *mx = *my = 0;
+        break;
+    }
+}
+
+/**
+ * Motion vector prediction for B-frames.
+ */
+static void rv40_pred_mv_b(RV40DecContext *r, int block_type)
+{
+    MpegEncContext *s = &r->s;
+    int mb_pos = s->mb_x + s->mb_y * s->mb_stride;
+    int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride;
+    int A[2][2], B[2][2], C[2][2];
+    int no_A[2], no_B[2], no_C[2];
+    int c_mv_pos;
+    int mx[2], my[2];
+    int i, j;
+
+    memset(A, 0, sizeof(A));
+    memset(B, 0, sizeof(B));
+    memset(C, 0, sizeof(C));
+    memset(mx, 0, sizeof(mx));
+    memset(my, 0, sizeof(my));
+    if(!s->mb_x)
+        no_A[0] = no_A[1] = 1;
+    else{
+        no_A[0] = no_A[1] = s->first_slice_line && s->mb_x == s->resync_mb_x;
+        if(r->mb_type[mb_pos - 1] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - 1] != RV40_MB_B_DIRECT)
+            no_A[0] = 1;
+        if(r->mb_type[mb_pos - 1] != RV40_MB_B_BACKWARD && r->mb_type[mb_pos - 1] != RV40_MB_B_DIRECT)
+            no_A[1] = 1;
+        if(!no_A[0]){
+            A[0][0] = s->current_picture_ptr->motion_val[0][mv_pos - 1][0];
+            A[0][1] = s->current_picture_ptr->motion_val[0][mv_pos - 1][1];
+        }
+        if(!no_A[1]){
+            A[1][0] = s->current_picture_ptr->motion_val[1][mv_pos - 1][0];
+            A[1][1] = s->current_picture_ptr->motion_val[1][mv_pos - 1][1];
+        }
+    }
+    if(s->first_slice_line){
+        no_B[0] = no_B[1] = 1;
+    }else{
+        no_B[0] = no_B[1] = 0;
+        if(r->mb_type[mb_pos - s->mb_stride] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride] != RV40_MB_B_DIRECT)
+            no_B[0] = 1;
+        if(r->mb_type[mb_pos - s->mb_stride] != RV40_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride] != RV40_MB_B_DIRECT)
+            no_B[1] = 1;
+        if(!no_B[0]){
+            B[0][0] = s->current_picture_ptr->motion_val[0][mv_pos - s->b8_stride][0];
+            B[0][1] = s->current_picture_ptr->motion_val[0][mv_pos - s->b8_stride][1];
+        }
+        if(!no_B[1]){
+            B[1][0] = s->current_picture_ptr->motion_val[1][mv_pos - s->b8_stride][0];
+            B[1][1] = s->current_picture_ptr->motion_val[1][mv_pos - s->b8_stride][1];
+        }
+    }
+    if(s->mb_x+1 != s->mb_width && !s->first_slice_line){
+        no_C[0] = no_C[1] = 0;
+        if(r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_DIRECT)
+            no_C[0] = 1;
+        if(r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_DIRECT)
+            no_C[1] = 1;
+        c_mv_pos = mv_pos - s->b8_stride + 2;
+    }else if(s->mb_x+1 == s->mb_width && !s->first_slice_line){
+        no_C[0] = no_C[1] = 0;
+        if(r->mb_type[mb_pos - s->mb_stride - 1] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride - 1] != RV40_MB_B_DIRECT)
+            no_C[0] = 1;
+        if(r->mb_type[mb_pos - s->mb_stride - 1] != RV40_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride - 1] != RV40_MB_B_DIRECT)
+            no_C[1] = 1;
+        c_mv_pos = mv_pos - s->b8_stride - 1;
+    }else{
+        no_C[0] = no_C[1] = 1;
+        c_mv_pos = 0;
+    }
+    if(!no_C[0]){
+        C[0][0] = s->current_picture_ptr->motion_val[0][c_mv_pos][0];
+        C[0][1] = s->current_picture_ptr->motion_val[0][c_mv_pos][1];
+    }
+    if(!no_C[1]){
+        C[1][0] = s->current_picture_ptr->motion_val[1][c_mv_pos][0];
+        C[1][1] = s->current_picture_ptr->motion_val[1][c_mv_pos][1];
+    }
+    switch(block_type){
+    case RV40_MB_B_FORWARD:
+        rv40_pred_b_vector(A[0], B[0], C[0], no_A[0], no_B[0], no_C[0], &mx[0], &my[0]);
+        r->dmv[1][0] = 0;
+        r->dmv[1][1] = 0;
+        break;
+    case RV40_MB_B_BACKWARD:
+        r->dmv[1][0] = r->dmv[0][0];
+        r->dmv[1][1] = r->dmv[0][1];
+        r->dmv[0][0] = 0;
+        r->dmv[0][1] = 0;
+        rv40_pred_b_vector(A[1], B[1], C[1], no_A[1], no_B[1], no_C[1], &mx[1], &my[1]);
+        break;
+    case RV40_MB_B_DIRECT:
+        rv40_pred_b_vector(A[0], B[0], C[0], no_A[0], no_B[0], no_C[0], &mx[0], &my[0]);
+        rv40_pred_b_vector(A[1], B[1], C[1], no_A[1], no_B[1], no_C[1], &mx[1], &my[1]);
+        break;
+    default:
+        no_A[0] = no_A[1] = no_B[0] = no_B[1] = no_C[0] = no_C[1] = 1;
+    }
+
+    mx[0] += r->dmv[0][0];
+    my[0] += r->dmv[0][1];
+    mx[1] += r->dmv[1][0];
+    my[1] += r->dmv[1][1];
+    for(j = 0; j < 2; j++){
+        for(i = 0; i < 2; i++){
+            s->current_picture_ptr->motion_val[0][mv_pos + i + j*s->b8_stride][0] = mx[0];
+            s->current_picture_ptr->motion_val[0][mv_pos + i + j*s->b8_stride][1] = my[0];
+            s->current_picture_ptr->motion_val[1][mv_pos + i + j*s->b8_stride][0] = mx[1];
+            s->current_picture_ptr->motion_val[1][mv_pos + i + j*s->b8_stride][1] = my[1];
+        }
+    }
+}
+
+/**
  * Generic motion compensation function - hopefully compiler will optimize it for each case
  *
  * @param r decoder context
@@ -957,6 +1111,111 @@ static inline void rv40_mc(RV40DecContext *r, const int block_type,
 }
 
 /**
+ * B-frame specific motion compensation function
+ *
+ * @param r decoder context
+ * @param block_type type of the current block
+ */
+static inline void rv40_mc_b(RV40DecContext *r, const int block_type)
+{
+    MpegEncContext *s = &r->s;
+    uint8_t *srcY, *srcU, *srcV;
+    int dxy, mx, my, uvmx, uvmy, src_x, src_y, uvsrc_x, uvsrc_y;
+    int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride;
+
+    if(block_type != RV40_MB_B_BACKWARD){
+        mx = s->current_picture_ptr->motion_val[0][mv_pos][0];
+        my = s->current_picture_ptr->motion_val[0][mv_pos][1];
+        srcY = s->last_picture_ptr->data[0];
+        srcU = s->last_picture_ptr->data[1];
+        srcV = s->last_picture_ptr->data[2];
+    }else{
+        mx = s->current_picture_ptr->motion_val[1][mv_pos][0];
+        my = s->current_picture_ptr->motion_val[1][mv_pos][1];
+        srcY = s->next_picture_ptr->data[0];
+        srcU = s->next_picture_ptr->data[1];
+        srcV = s->next_picture_ptr->data[2];
+    }
+    src_x = s->mb_x * 16 + (mx >> 2);
+    src_y = s->mb_y * 16 + (my >> 2);
+    uvsrc_x = s->mb_x * 8 + (mx >> 3);
+    uvsrc_y = s->mb_y * 8 + (my >> 3);
+    srcY += src_y * s->linesize + src_x;
+    srcU += uvsrc_y * s->uvlinesize + uvsrc_x;
+    srcV += uvsrc_y * s->uvlinesize + uvsrc_x;
+    if(   (unsigned)(src_x - !!(mx&3)*2) > s->h_edge_pos - !!(mx&3)*2 - 16 - 3
+       || (unsigned)(src_y - !!(my&3)*2) > s->v_edge_pos - !!(my&3)*2 - 16 - 3){
+        uint8_t *uvbuf= s->edge_emu_buffer + 20 * s->linesize;
+
+        srcY -= 2 + 2*s->linesize;
+        ff_emulated_edge_mc(s->edge_emu_buffer, srcY, s->linesize, 16+4, 16+4,
+                            src_x - 2, src_y - 2, s->h_edge_pos, s->v_edge_pos);
+        srcY = s->edge_emu_buffer + 2 + 2*s->linesize;
+        ff_emulated_edge_mc(uvbuf     , srcU, s->uvlinesize, 8+1, 8+1,
+                            uvsrc_x, uvsrc_y, s->h_edge_pos >> 1, s->v_edge_pos >> 1);
+        ff_emulated_edge_mc(uvbuf + 16, srcV, s->uvlinesize, 8+1, 8+1,
+                            uvsrc_x, uvsrc_y, s->h_edge_pos >> 1, s->v_edge_pos >> 1);
+        srcU = uvbuf;
+        srcV = uvbuf + 16;
+    }
+    dxy = ((my & 3) << 2) | (mx & 3);
+    uvmx = mx & 6;
+    uvmy = my & 6;
+    s->dsp.put_h264_qpel_pixels_tab[0][dxy](s->dest[0], srcY, s->linesize);
+    s->dsp.put_h264_chroma_pixels_tab[0]   (s->dest[1], srcU, s->uvlinesize, 8, uvmx, uvmy);
+    s->dsp.put_h264_chroma_pixels_tab[0]   (s->dest[2], srcV, s->uvlinesize, 8, uvmx, uvmy);
+}
+
+/**
+ * B-frame specific motion compensation function - for direct/interpolated blocks
+ *
+ * @param r decoder context
+ * @param block_type type of the current block
+ */
+static inline void rv40_mc_b_interp(RV40DecContext *r, const int block_type)
+{
+    MpegEncContext *s = &r->s;
+    uint8_t *srcY, *srcU, *srcV;
+    int dxy, mx, my, uvmx, uvmy, src_x, src_y, uvsrc_x, uvsrc_y;
+    int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride;
+
+    mx = s->current_picture_ptr->motion_val[1][mv_pos][0];
+    my = s->current_picture_ptr->motion_val[1][mv_pos][1];
+    srcY = s->next_picture_ptr->data[0];
+    srcU = s->next_picture_ptr->data[1];
+    srcV = s->next_picture_ptr->data[2];
+
+    src_x = s->mb_x * 16 + (mx >> 2);
+    src_y = s->mb_y * 16 + (my >> 2);
+    uvsrc_x = s->mb_x * 8 + (mx >> 3);
+    uvsrc_y = s->mb_y * 8 + (my >> 3);
+    srcY += src_y * s->linesize + src_x;
+    srcU += uvsrc_y * s->uvlinesize + uvsrc_x;
+    srcV += uvsrc_y * s->uvlinesize + uvsrc_x;
+    if(   (unsigned)(src_x - !!(mx&3)*2) > s->h_edge_pos - !!(mx&3)*2 - 16 - 3
+       || (unsigned)(src_y - !!(my&3)*2) > s->v_edge_pos - !!(my&3)*2 - 16 - 3){
+        uint8_t *uvbuf= s->edge_emu_buffer + 20 * s->linesize;
+
+        srcY -= 2 + 2*s->linesize;
+        ff_emulated_edge_mc(s->edge_emu_buffer, srcY, s->linesize, 16+4, 16+4,
+                            src_x - 2, src_y - 2, s->h_edge_pos, s->v_edge_pos);
+        srcY = s->edge_emu_buffer + 2 + 2*s->linesize;
+        ff_emulated_edge_mc(uvbuf     , srcU, s->uvlinesize, 8+1, 8+1,
+                            uvsrc_x, uvsrc_y, s->h_edge_pos >> 1, s->v_edge_pos >> 1);
+        ff_emulated_edge_mc(uvbuf + 16, srcV, s->uvlinesize, 8+1, 8+1,
+                            uvsrc_x, uvsrc_y, s->h_edge_pos >> 1, s->v_edge_pos >> 1);
+        srcU = uvbuf;
+        srcV = uvbuf + 16;
+    }
+    dxy = ((my & 3) << 2) | (mx & 3);
+    uvmx = mx & 6;
+    uvmy = my & 6;
+    s->dsp.avg_h264_qpel_pixels_tab[0][dxy](s->dest[0], srcY, s->linesize);
+    s->dsp.avg_h264_chroma_pixels_tab[0]   (s->dest[1], srcU, s->uvlinesize, 8, uvmx, uvmy);
+    s->dsp.avg_h264_chroma_pixels_tab[0]   (s->dest[2], srcV, s->uvlinesize, 8, uvmx, uvmy);
+}
+
+/**
  * Decode motion vector differences
  * and perform motion vector reconstruction and motion compensation.
  */
@@ -983,15 +1242,27 @@ static int rv40_decode_mv(RV40DecContext *r, int block_type)
         rv40_mc(r, block_type, 0, 0, 0, 2, 2);
         break;
     case RV40_MB_B_INTERP:
+        r->dmv[0][0] = 0;
+        r->dmv[0][1] = 0;
+        r->dmv[1][0] = 0;
+        r->dmv[1][1] = 0;
+        rv40_pred_mv_b  (r, block_type);
+        rv40_mc_b       (r, block_type);
+        rv40_mc_b_interp(r, block_type);
         break;
     case RV40_MB_P_16x16:
-    case RV40_MB_B_FORWARD:
-    case RV40_MB_B_BACKWARD:
     case RV40_MB_P_MIX16x16:
         r->dmv[0][0] = get_omega_signed(gb);
         r->dmv[0][1] = get_omega_signed(gb);
         rv40_pred_mv(r, block_type, 0);
         rv40_mc(r, block_type, 0, 0, 0, 2, 2);
+        break;
+    case RV40_MB_B_FORWARD:
+    case RV40_MB_B_BACKWARD:
+        r->dmv[0][0] = get_omega_signed(gb);
+        r->dmv[0][1] = get_omega_signed(gb);
+        rv40_pred_mv_b  (r, block_type);
+        rv40_mc_b       (r, block_type);
         break;
     case RV40_MB_P_16x8:
     case RV40_MB_P_8x16:
@@ -1009,6 +1280,11 @@ static int rv40_decode_mv(RV40DecContext *r, int block_type)
         if(block_type == RV40_MB_P_8x16){
             rv40_mc(r, block_type, 0, 0, 0, 1, 2);
             rv40_mc(r, block_type, 8, 0, 1, 1, 2);
+        }
+        if(block_type == RV40_MB_B_DIRECT){
+            rv40_pred_mv_b  (r, block_type);
+            rv40_mc_b       (r, block_type);
+            rv40_mc_b_interp(r, block_type);
         }
         break;
     case RV40_MB_P_8x8:
@@ -1599,6 +1875,7 @@ static int rv40_decode_init(AVCodecContext *avctx)
     avctx->flags |= CODEC_FLAG_EMU_EDGE;
     r->s.flags |= CODEC_FLAG_EMU_EDGE;
     avctx->pix_fmt = PIX_FMT_YUV420P;
+    avctx->max_b_frames = 8;
     avctx->has_b_frames = 1;
     s->low_delay = 0;
 
