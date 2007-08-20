@@ -272,22 +272,11 @@ static void tag_tree_update(J2kTgtNode *node)
     }
 }
 
-/** marker segments */
-static void put_marker(J2kEncoderContext *s, uint16_t marker)
-{
-    bytestream_put_be16(&s->buf, marker);
-}
-
-static void put_soc(J2kEncoderContext *s)
-{
-    put_marker(s, J2K_SOC);
-}
-
 static void put_siz(J2kEncoderContext *s)
 {
     int i;
 
-    put_marker(s, J2K_SIZ);
+    bytestream_put_be16(&s->buf, J2K_SIZ);
     bytestream_put_be16(&s->buf, 38 + 3 * s->ncomponents); // Lsiz
     bytestream_put_be16(&s->buf, 0); // Rsiz
     bytestream_put_be32(&s->buf, s->width); // width
@@ -310,7 +299,7 @@ static void put_siz(J2kEncoderContext *s)
 
 static void put_cod(J2kEncoderContext *s)
 {
-    put_marker(s, J2K_COD);
+    bytestream_put_be16(&s->buf, J2K_COD);
     bytestream_put_be16(&s->buf, 12); // Lcod
     bytestream_put_byte(&s->buf, 0);  // Scod
     // SGcod
@@ -328,7 +317,7 @@ static void put_cod(J2kEncoderContext *s)
 static void put_qcd(J2kEncoderContext *s, int compno)
 {
     int reslevelno;
-    put_marker(s, J2K_QCD);
+    bytestream_put_be16(&s->buf, J2K_QCD);
     bytestream_put_be16(&s->buf, 4+3*(s->nreslevels-1));  // LQcd
     bytestream_put_byte(&s->buf, s->nguardbits << 5);  // Sqcd
     for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
@@ -341,7 +330,7 @@ static void put_qcd(J2kEncoderContext *s, int compno)
 static uint8_t *put_sot(J2kEncoderContext *s, int tileno)
 {
     uint8_t *psotptr;
-    put_marker(s, J2K_SOT);
+    bytestream_put_be16(&s->buf, J2K_SOT);
     bytestream_put_be16(&s->buf, 10); // Lsot
     bytestream_put_be16(&s->buf, tileno); // Isot
 
@@ -1080,7 +1069,7 @@ static int encode_frame(AVCodecContext *avctx,
     init_luts();
     av_log(s->avctx, AV_LOG_DEBUG, "after init\n");
 
-    put_soc(s);
+    bytestream_put_be16(&s->buf, J2K_SOC);
     put_siz(s);
     put_cod(s);
     put_qcd(s, 0);
@@ -1088,11 +1077,11 @@ static int encode_frame(AVCodecContext *avctx,
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         uint8_t *psotptr;
         psotptr = put_sot(s, tileno);
-        put_marker(s, J2K_SOD);
+        bytestream_put_be16(&s->buf, J2K_SOD);
         encode_tile(s, s->tile + tileno, tileno);
         bytestream_put_be32(&psotptr, s->buf - psotptr + 6);
     }
-    put_marker(s, J2K_EOC);
+    bytestream_put_be16(&s->buf, J2K_EOC);
 
     cleanup(s);
     av_log(s->avctx, AV_LOG_DEBUG, "end\n");
