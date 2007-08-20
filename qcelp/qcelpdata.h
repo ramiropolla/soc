@@ -46,8 +46,7 @@
  *
  * The reason for this mistake seems to be the fact they forget to tell you
  * have to do this calculations per codebook subframe and adjust given equation
- * values accordingly -- If not were by the obvious 'counting till 10' detail,
- * the given formula is simply not clear enough without this missing info.
+ * values accordingly.
  */
 
 #define QCELP_FIX_SPEC_MISSING_CLAMP(n) ((n<9)? n+1:0)
