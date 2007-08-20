@@ -185,7 +185,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
 
                 /**
                  * Spec has errors on the predictor determination formula
-                 * it needs 6 to be sustracted from it to give RI results.
+                 * it needs 6 to be subtracted from it to give RI results.
                  */
 
                 if(frame->rate == RATE_FULL && i > 0 && !((i+1) & 3))
@@ -671,7 +671,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     init_get_bits(&q->gb, buf, buf_size*8);
 
     /**
-     * Figure out frame's rate by its size, set up a few utility vars
+     * Figure out framerate by its size, set up a few utility vars
      * and point 'order' to the rate's reference _slice_ inside the
      * big REFERENCE_FRAME array.
      */
