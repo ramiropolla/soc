@@ -38,16 +38,21 @@ static void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk);
 static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
         int ch, mant_groups *m);
 static void uncouple_channels(EAC3Context *s);
+static void log_missing_feature(AVCodecContext *avctx, const char *log);
 
 static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     int i, blk;
 
     GET_BITS(s->strmtyp, gbc, 2);
+    if(s->strmtyp){
+        log_missing_feature(s->avctx, "Dependent substream");
+        return -1;
+    }
     GET_BITS(s->substreamid, gbc, 3);
     GET_BITS(s->frmsiz, gbc, 11);
     GET_BITS(s->fscod, gbc, 2);
     if(s->fscod == 0x3){
-        av_log(s->avctx, AV_LOG_ERROR, "Reduced Sampling Rates NOT IMPLEMENTED");
+        log_missing_feature(s->avctx, "Reduced Sampling Rates");
         return -1;
 #if 0
         GET_BITS(s->fscod2, gbc, 2);
@@ -73,7 +78,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
 
     GET_BITS(s->bsid, gbc, 5);
     if(s->bsid < 11 || s->bsid > 16){
-        av_log(s->avctx, AV_LOG_ERROR, "bsid should be between 11 and 16");
+        av_log(s->avctx, AV_LOG_ERROR, "bsid should be between 11 and 16\n");
         return -1;
     }
 
@@ -297,7 +302,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     /* AHT data */
     if(s->ahte){
         //Now turned off, because there are no samples for testing it.
-        av_log(s->avctx, AV_LOG_ERROR, "AHT NOT IMPLEMENTED");
+        log_missing_feature(s->avctx, "Adaptive Hybrid Transform");
         return -1;
 #if 0
         {
@@ -410,7 +415,9 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     if((!blk) || get_bits1(gbc)){
         GET_BITS(s->spxinu, gbc, 1);
         if(s->spxinu){
-            av_log(s->avctx, AV_LOG_INFO, "Spectral extension in use\n");
+            log_missing_feature(s->avctx, "Spectral extension");
+            return -1;
+#if 0
             if(s->acmod == AC3_ACMOD_MONO){
                 s->chinspx[1] = 1;
             }else{
@@ -464,10 +471,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     s->spxbndsztab[s->nspxbnds - 1] += 12;
                 }
             }
-            if(s->nspxbnds >= MAX_SPX_CODES){
-                av_log(s->avctx, AV_LOG_ERROR, "s->nspxbnds >= MAX_SPX_CODES");
-                return -1;
-            }
+#endif
         }else{
             /* !spxinu */
             for(ch = 1; ch <= s->nfchans; ch++){
@@ -489,7 +493,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     GET_BITS(s->spxcoe[ch], gbc, 1);
                 }
                 if(!blk && !s->spxcoe[ch]){
-                    av_log(s->avctx, AV_LOG_ERROR, "no spectral extension coordinates in first block");
+                    av_log(s->avctx, AV_LOG_ERROR, "no spectral extension coordinates in first block\n");
                     return -1;
                 }
 
@@ -567,7 +571,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 }
             }else{
                 /* enhanced coupling in use */
-                av_log(s->avctx, AV_LOG_ERROR,  "enhanced coupling NOT IMPLEMENTED");
+                log_missing_feature(s->avctx, "Enhanced coupling");
                 return -1;
 #if 0
                 GET_BITS(s->ecplbegf, gbc, 4);
@@ -650,7 +654,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     } /* cplcoe[ch] */
                     else{
                         if(!blk){
-                            av_log(s->avctx, AV_LOG_ERROR,  "no coupling coordinates in first block");
+                            av_log(s->avctx, AV_LOG_ERROR,  "no coupling coordinates in first block\n");
                             return -1;
                         }
                     }
@@ -734,7 +738,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* Channel bandwidth code */
     for(ch = 1; ch <= s->nfchans; ch++){
         if(!blk && s->chexpstr[blk][ch]==EXP_REUSE){
-            av_log(s->avctx, AV_LOG_ERROR,  "no channel exponent strategy in first block");
+            av_log(s->avctx, AV_LOG_ERROR,  "no channel exponent strategy in first block\n");
             return -1;
         }
         if(s->chexpstr[blk][ch] != EXP_REUSE){
@@ -1035,7 +1039,7 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
     int bg, g, bits, pre_chmant, remap;
     float mant;
 
-    av_log(s->avctx, AV_LOG_INFO,  "AHT NOT TESTED");
+    av_log(s->avctx, AV_LOG_INFO,  "AHT NOT TESTED\n");
 
     GET_BITS(s->chgaqmod[ch], gbc, 2);
 
@@ -1200,6 +1204,16 @@ static void uncouple_channels(EAC3Context *s){
             }
         } while(s->cplbndstrc[subbnd++] && subbnd<=s->cplendf);
     }
+}
+
+static void log_missing_feature(AVCodecContext *avctx, const char *log){
+    av_log(avctx, AV_LOG_ERROR, "%s is not implemented. If you want to help, "
+            "update your FFmpeg version to the newest one from SVN. If the "
+            "problem still occurs, it means that your file has extension "
+            "which has not been tested due to a lack of samples exhibiting "
+            "this feature. Upload a sample of the audio from this file to "
+            "ftp://upload.mplayerhq.hu/incoming and contact the ffmpeg-devel "
+            "mailing list.\n", log);
 }
 
 /**
