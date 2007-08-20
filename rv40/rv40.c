@@ -1238,17 +1238,19 @@ static int rv40_decode_mv(RV40DecContext *r, int block_type)
     case RV40_MB_SKIP:
         r->dmv[0][0] = 0;
         r->dmv[0][1] = 0;
-        rv40_pred_mv(r, block_type, 0);
-        rv40_mc(r, block_type, 0, 0, 0, 2, 2);
-        break;
+        if(s->pict_type == P_TYPE){
+            rv40_pred_mv(r, block_type, 0);
+            rv40_mc(r, block_type, 0, 0, 0, 2, 2);
+            break;
+        }
     case RV40_MB_B_INTERP:
         r->dmv[0][0] = 0;
         r->dmv[0][1] = 0;
         r->dmv[1][0] = 0;
         r->dmv[1][1] = 0;
-        rv40_pred_mv_b  (r, block_type);
-        rv40_mc_b       (r, block_type);
-        rv40_mc_b_interp(r, block_type);
+        rv40_pred_mv_b  (r, RV40_MB_B_INTERP);
+        rv40_mc_b       (r, RV40_MB_B_INTERP);
+        rv40_mc_b_interp(r, RV40_MB_B_INTERP);
         break;
     case RV40_MB_P_16x16:
     case RV40_MB_P_MIX16x16:
