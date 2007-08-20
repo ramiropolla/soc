@@ -1362,7 +1362,7 @@ if(s->pict_type == B_TYPE){
     s->resync_mb_x= s->mb_x;
     s->resync_mb_y= s->mb_y;
     ff_init_block_index(s);
-    while(s->mb_num_left--) {
+    while(s->mb_num_left-- && s->mb_y < s->mb_height) {
         ff_update_block_index(s);
         s->dsp.clear_blocks(s->block[0]);
 
