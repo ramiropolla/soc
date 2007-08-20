@@ -111,6 +111,20 @@ static int config_props(AVFilterLink *link)
     return !scale->sws;
 }
 
+static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
+{
+    AVFilterLink *out = link->dst->outputs[0];
+
+    out->outpic      = avfilter_get_video_buffer(out, AV_PERM_WRITE);
+    out->outpic->pts = picref->pts;
+
+    out->outpic->pixel_aspect.num = picref->pixel_aspect.num * out->h;
+    out->outpic->pixel_aspect.den = picref->pixel_aspect.den * out->w;
+
+    avfilter_start_frame(out, avfilter_ref_pic(out->outpic, ~0));
+}
+
+
 /* TODO: figure out the swscale API well enough to scale slice at a time */
 static void end_frame(AVFilterLink *link)
 {
@@ -142,6 +156,7 @@ AVFilter avfilter_vf_scale =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
+                                    .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .end_frame       = end_frame,
                                     .query_formats   = query_formats,

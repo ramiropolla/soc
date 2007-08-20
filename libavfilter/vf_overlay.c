@@ -192,9 +192,11 @@ static int request_frame(AVFilterLink *link)
 
     /* we draw the output frame */
     pic = avfilter_get_video_buffer(link, AV_PERM_WRITE);
-    if(over->pics[0][0])
+    if(over->pics[0][0]) {
+        pic->pixel_aspect = over->pics[0][0]->pixel_aspect;
         copy_image(pic, 0, 0, over->pics[0][0], link->w, link->h,
                    over->bpp, over->hsub, over->vsub);
+    }
     x = FFMIN(over->x, link->w-1);
     y = FFMIN(over->y, link->h-1);
     w = FFMIN(link->w-x, over->pics[1][0]->w);
