@@ -241,7 +241,7 @@ static void tag_tree_code(J2kEncoderContext *s, J2kTgtNode *node, int threshold)
     stack[0] = node;
 
     node = node->parent;
-    while(node != NULL){
+    while(node){
         if (node->vis){
             curval = node->val;
             break;
@@ -265,7 +265,7 @@ static void tag_tree_code(J2kEncoderContext *s, J2kTgtNode *node, int threshold)
 static void tag_tree_update(J2kTgtNode *node)
 {
     int lev = 0;
-    while (node->parent != NULL){
+    while (node->parent){
         if (node->parent->val <= node->val)
             break;
         node->parent->val = node->val;
@@ -367,7 +367,7 @@ static int init_tiles(J2kEncoderContext *s)
     s->numYtiles = ff_j2k_ceildiv(s->height, s->tile_height);
 
     s->tile = av_malloc(s->numXtiles * s->numYtiles * sizeof(J2kTile));
-    if (s->tile == NULL)
+    if (s->tile)
         return -1;
     for (tno = 0; tno < s->numXtiles * s->numYtiles; tno++){
         J2kTile *tile = s->tile + tno;
@@ -375,7 +375,7 @@ static int init_tiles(J2kEncoderContext *s)
         int q = tno / s->numXtiles;
 
         tile->comp = av_malloc(s->ncomponents * sizeof(J2kComponent));
-        if (tile->comp == NULL)
+        if (tile->comp)
             return -1;
         for (compno = 0; compno < s->ncomponents; compno++){
             J2kComponent *comp = tile->comp + compno;
@@ -386,10 +386,10 @@ static int init_tiles(J2kEncoderContext *s)
             comp->y1 = FFMIN((q+1)*s->tile_height, s->height);
 
             comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
-            if (comp->data == NULL)
+            if (comp->data)
                 return -1;
             comp->reslevel = av_malloc(s->nreslevels * sizeof(J2kResLevel));
-            if (comp->reslevel == NULL)
+            if (comp->reslevel)
                 return -1;
             for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
                 int n = s->nreslevels - reslevelno;
@@ -416,7 +416,7 @@ static int init_tiles(J2kEncoderContext *s)
                     reslevel->num_precincts_y = ff_j2k_ceildivpow2(reslevel->y1, s->log2_prec_height) - reslevel->y0 / (1<<s->log2_prec_height);
 
                 reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
-                if (reslevel->band == NULL)
+                if (reslevel->band)
                     return -1;
                 for (bandno = 0; bandno < reslevel->nbands; bandno++){
                     J2kBand *band = reslevel->band + bandno;
@@ -448,10 +448,10 @@ static int init_tiles(J2kEncoderContext *s)
                     band->cblkny = ff_j2k_ceildiv(band->y1, band->codeblock_height) - band->y0 / band->codeblock_height;
 
                     band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
-                    if (band->cblk == NULL)
+                    if (band->cblk)
                         return -1;
                     band->prec = av_malloc(reslevel->num_precincts_x * reslevel->num_precincts_y * sizeof(J2kPrec));
-                    if (band->prec == NULL)
+                    if (band->prec)
                         return -1;
 
                     for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){

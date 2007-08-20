@@ -507,7 +507,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
     p = tileno % s->numXtiles;
     q = tileno / s->numXtiles;
 
-    if (tile->comp == NULL)
+    if (!tile->comp)
         return -1;
     for (compno = 0; compno < s->ncomponents; compno++){
         J2kComponent *comp = tile->comp + compno;
@@ -519,10 +519,10 @@ static int init_tile(J2kDecoderContext *s, int tileno)
         comp->y1 = FFMIN((q+1)*s->tile_height + s->tile_offset_y, s->height);
 
         comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
-        if (comp->data == NULL)
+        if (!comp->data)
             return -1;
         comp->reslevel = av_malloc(comp->nreslevels * sizeof(J2kResLevel));
-        if (comp->reslevel == NULL)
+        if (!comp->reslevel)
             return -1;
         for (reslevelno = 0; reslevelno < comp->nreslevels; reslevelno++){
             int n = comp->nreslevels - reslevelno;
@@ -549,7 +549,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                 reslevel->num_precincts_y = ff_j2k_ceildivpow2(reslevel->y1, s->log2_prec_height) - reslevel->y0 / (1<<s->log2_prec_height);
 
             reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
-            if (reslevel->band == NULL)
+            if (!reslevel->band)
                 return -1;
             for (bandno = 0; bandno < reslevel->nbands; bandno++, gbandno++){
                 J2kBand *band = reslevel->band + bandno;
@@ -590,10 +590,10 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                 band->cblkny = ff_j2k_ceildiv(band->y1, band->codeblock_height) - band->y0 / band->codeblock_height;
 
                 band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
-                if (band->cblk == NULL)
+                if (!band->cblk)
                     return -1;
                 band->prec = av_malloc(reslevel->num_precincts_x * reslevel->num_precincts_y * sizeof(J2kPrec));
-                if (band->prec == NULL)
+                if (!band->prec)
                     return -1;
 
                 for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
