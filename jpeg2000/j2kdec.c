@@ -756,21 +756,21 @@ static int decode_packets(J2kDecoderContext *s, J2kTile *tile)
 /** TIER-1 routines */
 static void decode_sigpass(J2kT1Context *t1, int width, int height, int bpno, int bandno)
 {
-    int mask = 3 << (bpno - 1), i, j, k;
+    int mask = 3 << (bpno - 1), y0, x, y;
 
-    for (i = 0; i < height; i += 4)
-        for (j = 0; j < width; j++)
-            for (k = i; k < height && k < i+4; k++){
-                if ((t1->flags[k+1][j+1] & J2K_T1_SIG_NB)
-                && !(t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS))){
-                    if (ff_aec_decode(&t1->aec, t1->aec.cx_states + ff_j2k_getnbctxno(t1->flags[k+1][j+1], bandno))){
-                        int xorbit, ctxno = ff_j2k_getsgnctxno(t1->flags[k+1][j+1], &xorbit);
+    for (y0 = 0; y0 < height; y0 += 4)
+        for (x = 0; x < width; x++)
+            for (y = y0; y < height && y < y0+4; y++){
+                if ((t1->flags[y+1][x+1] & J2K_T1_SIG_NB)
+                && !(t1->flags[y+1][x+1] & (J2K_T1_SIG | J2K_T1_VIS))){
+                    if (ff_aec_decode(&t1->aec, t1->aec.cx_states + ff_j2k_getnbctxno(t1->flags[y+1][x+1], bandno))){
+                        int xorbit, ctxno = ff_j2k_getsgnctxno(t1->flags[y+1][x+1], &xorbit);
 
-                        t1->data[k][j] = (ff_aec_decode(&t1->aec, t1->aec.cx_states + ctxno) ^ xorbit) ? -mask : mask;
+                        t1->data[y][x] = (ff_aec_decode(&t1->aec, t1->aec.cx_states + ctxno) ^ xorbit) ? -mask : mask;
 
-                        ff_j2k_set_significant(t1, j, k);
+                        ff_j2k_set_significant(t1, x, y);
                     }
-                    t1->flags[k+1][j+1] |= J2K_T1_VIS;
+                    t1->flags[y+1][x+1] |= J2K_T1_VIS;
                 }
             }
 }
@@ -778,34 +778,34 @@ static void decode_sigpass(J2kT1Context *t1, int width, int height, int bpno, in
 static void decode_refpass(J2kT1Context *t1, int width, int height, int bpno)
 {
     int phalf, nhalf;
-    int i, j, k;
+    int y0, x, y;
 
     phalf = 1 << (bpno - 1);
     nhalf = -phalf;
 
-    for (i = 0; i < height; i += 4)
-        for (j = 0; j < width; j++)
-            for (k = i; k < height && k < i+4; k++){
-                if ((t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS)) == J2K_T1_SIG){
-                    int ctxno = ff_j2k_getrefctxno(t1->flags[k+1][j+1]);
+    for (y0 = 0; y0 < height; y0 += 4)
+        for (x = 0; x < width; x++)
+            for (y = y0; y < height && y < y0+4; y++){
+                if ((t1->flags[y+1][x+1] & (J2K_T1_SIG | J2K_T1_VIS)) == J2K_T1_SIG){
+                    int ctxno = ff_j2k_getrefctxno(t1->flags[y+1][x+1]);
                     int r = ff_aec_decode(&t1->aec, t1->aec.cx_states + ctxno) ? phalf : nhalf;
-                    t1->data[k][j] += t1->data[k][j] < 0 ? -r : r;
-                    t1->flags[k+1][j+1] |= J2K_T1_REF;
+                    t1->data[y][x] += t1->data[y][x] < 0 ? -r : r;
+                    t1->flags[y+1][x+1] |= J2K_T1_REF;
                 }
             }
 }
 
 static void decode_clnpass(J2kT1Context *t1, int width, int height, int bpno, int bandno)
 {
-    int mask = 3 << (bpno - 1), i, j, k, runlen, dec;
+    int mask = 3 << (bpno - 1), y0, x, y, runlen, dec;
 
-    for (i = 0; i < height; i += 4)
-        for (j = 0; j < width; j++){
-            if (i + 3 < height && !(
-            (t1->flags[i+1][j+1] & (J2K_T1_SIG_NB | J2K_T1_VIS | J2K_T1_SIG)) ||
-            (t1->flags[i+2][j+1] & (J2K_T1_SIG_NB | J2K_T1_VIS | J2K_T1_SIG)) ||
-            (t1->flags[i+3][j+1] & (J2K_T1_SIG_NB | J2K_T1_VIS | J2K_T1_SIG)) ||
-            (t1->flags[i+4][j+1] & (J2K_T1_SIG_NB | J2K_T1_VIS | J2K_T1_SIG)))){
+    for (y0 = 0; y0 < height; y0 += 4)
+        for (x = 0; x < width; x++){
+            if (y0 + 3 < height && !(
+            (t1->flags[y0+1][x+1] & (J2K_T1_SIG_NB | J2K_T1_VIS | J2K_T1_SIG)) ||
+            (t1->flags[y0+2][x+1] & (J2K_T1_SIG_NB | J2K_T1_VIS | J2K_T1_SIG)) ||
+            (t1->flags[y0+3][x+1] & (J2K_T1_SIG_NB | J2K_T1_VIS | J2K_T1_SIG)) ||
+            (t1->flags[y0+4][x+1] & (J2K_T1_SIG_NB | J2K_T1_VIS | J2K_T1_SIG)))){
                 if (!ff_aec_decode(&t1->aec, t1->aec.cx_states + AEC_CX_RL))
                     continue;
                 runlen = ff_aec_decode(&t1->aec, t1->aec.cx_states + AEC_CX_UNI);
@@ -817,31 +817,31 @@ static void decode_clnpass(J2kT1Context *t1, int width, int height, int bpno, in
                 dec = 0;
             }
 
-            for (k = i + runlen; k < i + 4 && k < height; k++){
+            for (y = y0 + runlen; y < y0 + 4 && y < height; y++){
                 if (!dec){
-                    if (!(t1->flags[k+1][j+1] & (J2K_T1_SIG | J2K_T1_VIS)))
-                        dec = ff_aec_decode(&t1->aec, t1->aec.cx_states + ff_j2k_getnbctxno(t1->flags[k+1][j+1], bandno));
+                    if (!(t1->flags[y+1][x+1] & (J2K_T1_SIG | J2K_T1_VIS)))
+                        dec = ff_aec_decode(&t1->aec, t1->aec.cx_states + ff_j2k_getnbctxno(t1->flags[y+1][x+1], bandno));
                 }
                 if (dec){
-                    int xorbit, ctxno = ff_j2k_getsgnctxno(t1->flags[k+1][j+1], &xorbit);
-                    t1->data[k][j] = (ff_aec_decode(&t1->aec, t1->aec.cx_states + ctxno) ^ xorbit) ? -mask : mask;
-                    ff_j2k_set_significant(t1, j, k);
+                    int xorbit, ctxno = ff_j2k_getsgnctxno(t1->flags[y+1][x+1], &xorbit);
+                    t1->data[y][x] = (ff_aec_decode(&t1->aec, t1->aec.cx_states + ctxno) ^ xorbit) ? -mask : mask;
+                    ff_j2k_set_significant(t1, x, y);
                 }
                 dec = 0;
-                t1->flags[k+1][j+1] &= ~J2K_T1_VIS;
+                t1->flags[y+1][x+1] &= ~J2K_T1_VIS;
             }
         }
 }
 
 static int decode_cblk(J2kDecoderContext *s, J2kT1Context *t1, J2kCblk *cblk, int width, int height, int bandpos)
 {
-    int passno = cblk->npasses, pass_t = 2, bpno = cblk->nonzerobits - 1, i;
+    int passno = cblk->npasses, pass_t = 2, bpno = cblk->nonzerobits - 1, y;
 
-    for (i = 0; i < height+2; i++)
-        memset(t1->flags[i], 0, (width+2)*sizeof(int));
+    for (y = 0; y < height+2; y++)
+        memset(t1->flags[y], 0, (width+2)*sizeof(int));
 
-    for (i = 0; i < height; i++)
-        memset(t1->data[i], 0, width*sizeof(int));
+    for (y = 0; y < height; y++)
+        memset(t1->data[y], 0, width*sizeof(int));
 
     ff_aec_initdec(&t1->aec, cblk->data);
     cblk->data[cblk->length] = 0xff;
