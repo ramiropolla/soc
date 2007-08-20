@@ -722,8 +722,7 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
     j2k_flush(s);
     for (bandno = 0; bandno < rlevel->nbands; bandno++){
         J2kBand *band = rlevel->band + bandno;
-        int cblknw, yi;
-        cblknw = band->prec[precno].xi1 - band->prec[precno].xi0;
+        int yi, cblknw = band->prec[precno].xi1 - band->prec[precno].xi0;
         for (yi = band->prec[precno].yi0; yi < band->prec[precno].yi1; yi++){
             int xi;
             for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++){
