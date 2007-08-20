@@ -358,125 +358,125 @@ static int init_tiles(J2kEncoderContext *s)
     if (!s->tile)
         return AVERROR(ENOMEM);
     for (tileno = 0, tiley = 0; tiley < s->numYtiles; tiley++)
-    for (tilex = 0; tilex < s->numXtiles; tilex++, tileno++){
-        J2kTile *tile = s->tile + tileno;
+        for (tilex = 0; tilex < s->numXtiles; tilex++, tileno++){
+            J2kTile *tile = s->tile + tileno;
 
-        tile->comp = av_malloc(s->ncomponents * sizeof(J2kComponent));
-        if (!tile->comp)
-            return AVERROR(ENOMEM);
-        for (compno = 0; compno < s->ncomponents; compno++){
-            J2kComponent *comp = tile->comp + compno;
-
-            comp->x0 = tilex * s->tile_width;
-            comp->x1 = FFMIN((tilex+1)*s->tile_width, s->width);
-            comp->y0 = tiley * s->tile_height;
-            comp->y1 = FFMIN((tiley+1)*s->tile_height, s->height);
-            comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
-            if (!comp->data)
+            tile->comp = av_malloc(s->ncomponents * sizeof(J2kComponent));
+            if (!tile->comp)
                 return AVERROR(ENOMEM);
-            comp->reslevel = av_malloc(s->nreslevels * sizeof(J2kResLevel));
-            if (!comp->reslevel)
-                return AVERROR(ENOMEM);
-            for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
-                int n = s->nreslevels - reslevelno;
-                J2kResLevel *reslevel = comp->reslevel + reslevelno;
+            for (compno = 0; compno < s->ncomponents; compno++){
+                J2kComponent *comp = tile->comp + compno;
 
-                reslevel->x0 = ff_j2k_ceildivpow2(comp->x0, s->nreslevels - reslevelno - 1);
-                reslevel->x1 = ff_j2k_ceildivpow2(comp->x1, s->nreslevels - reslevelno - 1);
-                reslevel->y0 = ff_j2k_ceildivpow2(comp->y0, s->nreslevels - reslevelno - 1);
-                reslevel->y1 = ff_j2k_ceildivpow2(comp->y1, s->nreslevels - reslevelno - 1);
-
-                if (reslevelno == 0)
-                    reslevel->nbands = 1;
-                else
-                    reslevel->nbands = 3;
-
-                if (reslevel->x1 == reslevel->x0)
-                    reslevel->num_precincts_x = 0;
-                else
-                    reslevel->num_precincts_x = ff_j2k_ceildivpow2(reslevel->x1, s->log2_prec_width) - reslevel->x0 / (1<<s->log2_prec_width);
-
-                if (reslevel->y1 == reslevel->y0)
-                    reslevel->num_precincts_y = 0;
-                else
-                    reslevel->num_precincts_y = ff_j2k_ceildivpow2(reslevel->y1, s->log2_prec_height) - reslevel->y0 / (1<<s->log2_prec_height);
-                reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
-                if (!reslevel->band)
+                comp->x0 = tilex * s->tile_width;
+                comp->x1 = FFMIN((tilex+1)*s->tile_width, s->width);
+                comp->y0 = tiley * s->tile_height;
+                comp->y1 = FFMIN((tiley+1)*s->tile_height, s->height);
+                comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
+                if (!comp->data)
                     return AVERROR(ENOMEM);
-                for (bandno = 0; bandno < reslevel->nbands; bandno++){
-                    J2kBand *band = reslevel->band + bandno;
-                    int cblkno, precx, precy, precno;
-                    int x0, y0, x1, y1;
-                    int xi0, yi0, xi1, yi1;
-                    int cblkperprecw, cblkperprech;
+                comp->reslevel = av_malloc(s->nreslevels * sizeof(J2kResLevel));
+                if (!comp->reslevel)
+                    return AVERROR(ENOMEM);
+                for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
+                    int n = s->nreslevels - reslevelno;
+                    J2kResLevel *reslevel = comp->reslevel + reslevelno;
 
-                    if (reslevelno == 0){  // the same everywhere
-                        band->codeblock_width = 1 << FFMIN(s->log2_cblk_width, s->log2_prec_width-1);
-                        band->codeblock_height = 1 << FFMIN(s->log2_cblk_height, s->log2_prec_height-1);
+                    reslevel->x0 = ff_j2k_ceildivpow2(comp->x0, s->nreslevels - reslevelno - 1);
+                    reslevel->x1 = ff_j2k_ceildivpow2(comp->x1, s->nreslevels - reslevelno - 1);
+                    reslevel->y0 = ff_j2k_ceildivpow2(comp->y0, s->nreslevels - reslevelno - 1);
+                    reslevel->y1 = ff_j2k_ceildivpow2(comp->y1, s->nreslevels - reslevelno - 1);
 
-                        band->x0 = ff_j2k_ceildivpow2(comp->x0, n-1);
-                        band->x1 = ff_j2k_ceildivpow2(comp->x1, n-1);
-                        band->y0 = ff_j2k_ceildivpow2(comp->y0, n-1);
-                        band->y1 = ff_j2k_ceildivpow2(comp->y1, n-1);
-                    }
-                    else{
-                        band->codeblock_width = 1 << FFMIN(s->log2_cblk_width, s->log2_prec_width);
-                        band->codeblock_height = 1 << FFMIN(s->log2_cblk_height, s->log2_prec_height);
+                    if (reslevelno == 0)
+                        reslevel->nbands = 1;
+                    else
+                        reslevel->nbands = 3;
 
-                        band->x0 = ff_j2k_ceildivpow2(comp->x0 - (1 << (n-1)) * ((bandno+1)&1), n);
-                        band->x1 = ff_j2k_ceildivpow2(comp->x1 - (1 << (n-1)) * ((bandno+1)&1), n);
-                        band->y0 = ff_j2k_ceildivpow2(comp->y0 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
-                        band->y1 = ff_j2k_ceildivpow2(comp->y1 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
-                    }
+                    if (reslevel->x1 == reslevel->x0)
+                        reslevel->num_precincts_x = 0;
+                    else
+                        reslevel->num_precincts_x = ff_j2k_ceildivpow2(reslevel->x1, s->log2_prec_width) - reslevel->x0 / (1<<s->log2_prec_width);
 
-                    band->cblknx = ff_j2k_ceildiv(band->x1, band->codeblock_width) - band->x0 / band->codeblock_width;
-                    band->cblkny = ff_j2k_ceildiv(band->y1, band->codeblock_height) - band->y0 / band->codeblock_height;
-
-                    band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
-                    if (!band->cblk)
+                    if (reslevel->y1 == reslevel->y0)
+                        reslevel->num_precincts_y = 0;
+                    else
+                        reslevel->num_precincts_y = ff_j2k_ceildivpow2(reslevel->y1, s->log2_prec_height) - reslevel->y0 / (1<<s->log2_prec_height);
+                    reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
+                    if (!reslevel->band)
                         return AVERROR(ENOMEM);
-                    band->prec = av_malloc(reslevel->num_precincts_x * reslevel->num_precincts_y * sizeof(J2kPrec));
-                    if (!band->prec)
-                        return AVERROR(ENOMEM);
+                    for (bandno = 0; bandno < reslevel->nbands; bandno++){
+                        J2kBand *band = reslevel->band + bandno;
+                        int cblkno, precx, precy, precno;
+                        int x0, y0, x1, y1;
+                        int xi0, yi0, xi1, yi1;
+                        int cblkperprecw, cblkperprech;
 
-                    for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
-                        band->cblk[cblkno].zero = 0;
-                    }
+                        if (reslevelno == 0){  // the same everywhere
+                            band->codeblock_width = 1 << FFMIN(s->log2_cblk_width, s->log2_prec_width-1);
+                            band->codeblock_height = 1 << FFMIN(s->log2_cblk_height, s->log2_prec_height-1);
 
-                    y0 = band->y0;
-                    y1 = (band->y0 + (1<<s->log2_prec_height))/(1<<s->log2_prec_height)*(1<<s->log2_prec_height) - band->y0;
-                    yi0 = 0;
-                    yi1 = ff_j2k_ceildiv(y1 - y0, 1<<s->log2_cblk_height) * (1<<s->log2_cblk_height);
-                    yi1 = FFMIN(yi1, band->cblkny);
-                    cblkperprech = 1<<(s->log2_prec_height - s->log2_cblk_height);
-                    for (precy = 0, precno = 0; precy < reslevel->num_precincts_y; precy++){
-                        for (precx = 0; precx < reslevel->num_precincts_x; precx++, precno++){
-                            band->prec[precno].yi0 = yi0;
-                            band->prec[precno].yi1 = yi1;
+                            band->x0 = ff_j2k_ceildivpow2(comp->x0, n-1);
+                            band->x1 = ff_j2k_ceildivpow2(comp->x1, n-1);
+                            band->y0 = ff_j2k_ceildivpow2(comp->y0, n-1);
+                            band->y1 = ff_j2k_ceildivpow2(comp->y1, n-1);
                         }
-                        yi1 += cblkperprech;
-                        yi0 = yi1 - cblkperprech;
+                        else{
+                            band->codeblock_width = 1 << FFMIN(s->log2_cblk_width, s->log2_prec_width);
+                            band->codeblock_height = 1 << FFMIN(s->log2_cblk_height, s->log2_prec_height);
+
+                            band->x0 = ff_j2k_ceildivpow2(comp->x0 - (1 << (n-1)) * ((bandno+1)&1), n);
+                            band->x1 = ff_j2k_ceildivpow2(comp->x1 - (1 << (n-1)) * ((bandno+1)&1), n);
+                            band->y0 = ff_j2k_ceildivpow2(comp->y0 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
+                            band->y1 = ff_j2k_ceildivpow2(comp->y1 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
+                        }
+
+                        band->cblknx = ff_j2k_ceildiv(band->x1, band->codeblock_width) - band->x0 / band->codeblock_width;
+                        band->cblkny = ff_j2k_ceildiv(band->y1, band->codeblock_height) - band->y0 / band->codeblock_height;
+
+                        band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
+                        if (!band->cblk)
+                            return AVERROR(ENOMEM);
+                        band->prec = av_malloc(reslevel->num_precincts_x * reslevel->num_precincts_y * sizeof(J2kPrec));
+                        if (!band->prec)
+                            return AVERROR(ENOMEM);
+
+                        for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
+                            band->cblk[cblkno].zero = 0;
+                        }
+
+                        y0 = band->y0;
+                        y1 = (band->y0 + (1<<s->log2_prec_height))/(1<<s->log2_prec_height)*(1<<s->log2_prec_height) - band->y0;
+                        yi0 = 0;
+                        yi1 = ff_j2k_ceildiv(y1 - y0, 1<<s->log2_cblk_height) * (1<<s->log2_cblk_height);
                         yi1 = FFMIN(yi1, band->cblkny);
-                    }
-                    x0 = band->x0;
-                    x1 = (band->x0 + (1<<s->log2_prec_width))/(1<<s->log2_prec_width)*(1<<s->log2_prec_width) - band->x0;
-                    xi0 = 0;
-                    xi1 = ff_j2k_ceildiv(x1 - x0, 1<<s->log2_cblk_width) * (1<<s->log2_cblk_width);
-                    xi1 = FFMIN(xi1, band->cblknx);
-                    cblkperprecw = 1<<(s->log2_prec_width - s->log2_cblk_width);
-                    for (precx = 0, precno = 0; precx < reslevel->num_precincts_x; precx++){
-                        for (precy = 0; precy < reslevel->num_precincts_y; precy++, precno = 0){
-                            band->prec[precno].xi0 = xi0;
-                            band->prec[precno].xi1 = xi1;
+                        cblkperprech = 1<<(s->log2_prec_height - s->log2_cblk_height);
+                        for (precy = 0, precno = 0; precy < reslevel->num_precincts_y; precy++){
+                            for (precx = 0; precx < reslevel->num_precincts_x; precx++, precno++){
+                                band->prec[precno].yi0 = yi0;
+                                band->prec[precno].yi1 = yi1;
+                            }
+                            yi1 += cblkperprech;
+                            yi0 = yi1 - cblkperprech;
+                            yi1 = FFMIN(yi1, band->cblkny);
                         }
-                        xi1 += cblkperprecw;
-                        xi0 = xi1 - cblkperprecw;
+                        x0 = band->x0;
+                        x1 = (band->x0 + (1<<s->log2_prec_width))/(1<<s->log2_prec_width)*(1<<s->log2_prec_width) - band->x0;
+                        xi0 = 0;
+                        xi1 = ff_j2k_ceildiv(x1 - x0, 1<<s->log2_cblk_width) * (1<<s->log2_cblk_width);
                         xi1 = FFMIN(xi1, band->cblknx);
+                        cblkperprecw = 1<<(s->log2_prec_width - s->log2_cblk_width);
+                        for (precx = 0, precno = 0; precx < reslevel->num_precincts_x; precx++){
+                            for (precy = 0; precy < reslevel->num_precincts_y; precy++, precno = 0){
+                                band->prec[precno].xi0 = xi0;
+                                band->prec[precno].xi1 = xi1;
+                            }
+                            xi1 += cblkperprecw;
+                            xi0 = xi1 - cblkperprecw;
+                            xi1 = FFMIN(xi1, band->cblknx);
+                        }
                     }
                 }
             }
         }
-    }
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         J2kTile *tile = s->tile + tileno;
         uint8_t *line = s->picture->data[0] + tile->comp[0].y0 * s->picture->linesize[0] + tile->comp[0].x0 * s->ncomponents;
