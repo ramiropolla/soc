@@ -320,14 +320,14 @@ static int get_siz(J2kDecoderContext *s)
 
     s->tile = av_mallocz(s->numXtiles * s->numYtiles * sizeof(J2kTile));
     if (!s->tile)
-        return -1;
+        return AVERROR(ENOMEM);
 
     for (i = 0; i < s->numXtiles * s->numYtiles; i++){
         J2kTile *tile = s->tile + i;
 
         tile->comp = av_mallocz(s->ncomponents * sizeof(J2kComponent));
         if (!tile->comp)
-            return -1;
+            return AVERROR(ENOMEM);
     }
 
     s->avctx->width = s->width - s->image_offset_x;
@@ -516,7 +516,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
     q = tileno / s->numXtiles;
 
     if (!tile->comp)
-        return -1;
+        return AVERROR(ENOMEM);
     for (compno = 0; compno < s->ncomponents; compno++){
         J2kComponent *comp = tile->comp + compno;
         int gbandno = 0; // global bandno
@@ -528,10 +528,10 @@ static int init_tile(J2kDecoderContext *s, int tileno)
 
         comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
         if (!comp->data)
-            return -1;
+            return AVERROR(ENOMEM);
         comp->reslevel = av_malloc(comp->nreslevels * sizeof(J2kResLevel));
         if (!comp->reslevel)
-            return -1;
+            return AVERROR(ENOMEM);
         for (reslevelno = 0; reslevelno < comp->nreslevels; reslevelno++){
             int n = comp->nreslevels - reslevelno;
             J2kResLevel *reslevel = comp->reslevel + reslevelno;
@@ -558,7 +558,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
 
             reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
             if (!reslevel->band)
-                return -1;
+                return AVERROR(ENOMEM);
             for (bandno = 0; bandno < reslevel->nbands; bandno++, gbandno++){
                 J2kBand *band = reslevel->band + bandno;
                 int cblkno, precx, precy, precno;
@@ -599,10 +599,10 @@ static int init_tile(J2kDecoderContext *s, int tileno)
 
                 band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
                 if (!band->cblk)
-                    return -1;
+                    return AVERROR(ENOMEM);
                 band->prec = av_malloc(reslevel->num_precincts_x * reslevel->num_precincts_y * sizeof(J2kPrec));
                 if (!band->prec)
-                    return -1;
+                    return AVERROR(ENOMEM);
 
                 for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
                     J2kCblk *cblk = band->cblk + cblkno;
@@ -646,7 +646,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                         prec->zerobits = ff_j2k_tag_tree_init(prec->xi1 - prec->xi0,
                                                               prec->yi1 - prec->yi0);
                         if (!prec->cblkincl || !prec->zerobits)
-                            return -1;
+                            return AVERROR(ENOMEM);
 
                     }
                     xi1 += cblkperprecw;
@@ -1203,10 +1203,10 @@ static int decode_codestream(J2kDecoderContext *s)
 
         if (marker == J2K_SOD){
             J2kTile *tile = s->tile + s->curtileno;
-            if (init_tile(s, s->curtileno))
-                return -1;
-            if (decode_packets(s, tile))
-                return -1;
+            if (ret = init_tile(s, s->curtileno))
+                return ret;
+            if (ret = decode_packets(s, tile))
+                return ret;
             continue;
         }
         if (marker == J2K_EOC)
@@ -1235,7 +1235,7 @@ static int decode_codestream(J2kDecoderContext *s)
         }
         if (s->buf - oldbuf != len || ret){
             av_log(s->avctx, AV_LOG_ERROR, "error during processing marker segment %.4x\n", marker);
-            return -1;
+            return ret ? ret : -1;
         }
     }
     return 0;
@@ -1247,7 +1247,7 @@ static int decode_frame(AVCodecContext *avctx,
 {
     J2kDecoderContext *s = avctx->priv_data;
     AVFrame *picture = data;
-    int tileno;
+    int tileno, ret;
 
     s->avctx = avctx;
     av_log(s->avctx, AV_LOG_DEBUG, "start\n");
@@ -1265,12 +1265,12 @@ static int decode_frame(AVCodecContext *avctx,
         av_log(avctx, AV_LOG_ERROR, "SOC marker not present\n");
         return -1;
     }
-    if (decode_codestream(s))
-        return -1;
+    if (ret = decode_codestream(s))
+        return ret;
 
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++)
-        if (decode_tile(s, s->tile + tileno))
-            return -1;
+        if (ret = decode_tile(s, s->tile + tileno))
+            return ret;
 
     cleanup(s);
     av_log(s->avctx, AV_LOG_DEBUG, "end\n");
