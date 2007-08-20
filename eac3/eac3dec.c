@@ -80,11 +80,8 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     for(i = 0; i < (s->acmod?1:2); i++){
         s->dialnorm[i] = ff_ac3_dialnorm_tbl[get_bits(gbc, 5)];
         if(get_bits1(gbc)){
-            GET_BITS(s->compr[i], gbc, 8);
-        }else{
-            //TODO default compr
+            skip_bits(gbc, 8); //skip Compression gain word
         }
-    }
     if(s->strmtyp == 0x1){
         /* if dependent stream */
         if(get_bits1(gbc)){
@@ -170,7 +167,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     GET_BITS(s->infomdate, gbc, 1);
     if(s->infomdate){
         /* Informational metadata */
-        GET_BITS(s->bsmod, gbc, 3);
+        skip_bits(gbc, 3); //skip Bit stream mode
         skip_bits(gbc, 2); //skip copyright bit and original bitstream bit
         if(s->acmod == AC3_ACMOD_STEREO) /* if in 2/0 mode */{
             skip_bits(gbc, 4); //skip Dolby surround and headphone mode
@@ -186,7 +183,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         }
         if(s->fscod < 0x3){
             /* if not half sample rate */
-            GET_BITS(s->sourcefscod, gbc, 1); // TODO
+            skip_bits1(gbc); //skip Source sample rate code
         }
     }
     if((s->strmtyp == 0x0) && (s->numblkscod != 0x3) ){
@@ -447,10 +444,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 if(s->chinspx[ch])
                     s->endmant[ch] = 25 + 12 * s->spxbegf;
             }
-
-            GET_BITS(s->spxbndstrce, gbc, 1);
-
-            if(s->spxbndstrce){
+            if(get_bits1(gbc)){
                 for(bnd = s->spxbegf+1; bnd < s->spxendf; bnd++){
                     GET_BITS(s->spxbndstrc[bnd], gbc, 1);
                 }
@@ -557,9 +551,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     if(s->chincpl[ch])
                         s->endmant[ch] = s->strtmant[CPL_CH];
                 }
-
-                GET_BITS(s->cplbndstrce, gbc, 1);
-                if(s->cplbndstrce){
+                if(get_bits1(gbc)){
                     for(bnd = s->cplbegf+1; bnd < s->cplendf; bnd++){
                         GET_BITS(s->cplbndstrc[bnd], gbc, 1);
                     }
@@ -597,11 +589,15 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                         s->ecpl_end_subbnd = s->spxbegf * 2;
                     }
                 }
-                GET_BITS(s->ecplbndstrce, gbc, 1);
-                if (s->ecplbndstrce){
+                if (get_bits1(gbc)){
                     for(sbnd = FFMAX(9, s->ecpl_start_subbnd+1);
                             sbnd < s->ecpl_end_subbnd; sbnd++){
                         GET_BITS(s->ecplbndstrc[sbnd], gbc, 1);
+                    }
+                }else{
+                    if(!blk){
+                        for(sbnd = 0; sbnd < 22; sbnd++)
+                            s->ecplbndstrc[sbnd] = ff_eac3_defecplbndstrc[sbnd]
                     }
                 }
                 //necplbnd = ecpl_end_subbnd - ecpl_start_subbnd;

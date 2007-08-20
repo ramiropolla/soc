@@ -60,7 +60,6 @@ typedef struct EAC3Context{
     int lfeon;                       ///< Low frequency effect channel on
     int bsid;                        ///< Bit stream identification
     float dialnorm[2];               ///< Dialogue normalization
-    int compr[2];                    ///< Compression gain word
     int chanmap;                     ///< Custom channel map
     int mixmdate;                    ///< Mixing meta-data exists
     int dmixmod;                     ///< Preferred stereo downmix mode
@@ -78,8 +77,6 @@ typedef struct EAC3Context{
     int frmmixcfginfoe;              ///< Frame mixing configuration information exists
     int blkmixcfginfo[6];            ///< Block mixing configuration information
     int infomdate;                   ///< Informational meta-data exists
-    int bsmod;                       ///< Bit stream mode
-    int sourcefscod;                 ///< Source sample rate code
 ///@}
 ///@name Audio Frame
 ///@{
@@ -118,7 +115,6 @@ typedef struct EAC3Context{
     int spxstrtf;                    ///< Spectral extension start copy frequency code
     int spxbegf;                     ///< Spectral extension begin frequency code
     int spxendf;                     ///< Spectral extension end frequency code
-    int spxbndstrce;                 ///< Spectral extension band structure exists
     int spxbndstrc[MAX_SPX_CODES];   ///< Spectral extension band structure
     int spxcoe[AC3_MAX_CHANNELS];    ///< Spectral extension coordinates exists
     int spxblnd[AC3_MAX_CHANNELS];   ///< Spectral extension blend
@@ -127,11 +123,9 @@ typedef struct EAC3Context{
     int phsflginu;                   ///< Phase flag in use
     int cplbegf;                     ///< Coupling begin frequency code
     int cplendf;                     ///< Coupling end frequency code
-    int cplbndstrce;                 ///< Coupling band structure exists
     int cplbndstrc[19];              ///< Coupling band structure
     int ecplbegf;                    ///< Enhanced coupling begin frequency code
     int ecplendf;                    ///< Enhanced coupling end frequency code
-    int ecplbndstrce;                ///< Enhanced coupling band structure exists
     int ecplbndstrc[23];             ///< Enhanced coupling band structure
     int cplcoe[AC3_MAX_CHANNELS];    ///< Coupling coordinates exists
     int phsflg[18];                  ///< Phase flag

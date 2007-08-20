@@ -1354,6 +1354,14 @@ const uint8_t ff_eac3_defspxbndstrc[17] =
 { 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
 
 /**
+ * Table E2.17 Default Enhanced Coupling Banding Structure
+ */
+
+const uint8_t ff_eac3_defecplbndstrc[22] =
+{0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1};
+
+
+/**
  * Table E3.14 Spectral Extension Attenuation Table
  */
 const float ff_eac3_spxattentab[32][3] = {
