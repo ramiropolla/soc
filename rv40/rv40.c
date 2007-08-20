@@ -1628,13 +1628,6 @@ static int rv40_decode_slice(RV40DecContext *r)
         ff_er_frame_start(s);
         s->current_picture_ptr = &s->current_picture;
     }
-if(s->pict_type == B_TYPE){
-    memcpy(s->current_picture_ptr->data[0], s->last_picture_ptr->data[0], s->linesize*s->avctx->height);
-    memcpy(s->current_picture_ptr->data[1], s->last_picture_ptr->data[1], s->uvlinesize*s->avctx->height/2);
-    memcpy(s->current_picture_ptr->data[2], s->last_picture_ptr->data[2], s->uvlinesize*s->avctx->height/2);
-    ff_er_add_slice(s, 0, 0, s->mb_width-1, s->mb_height-1, AC_END|DC_END|MV_END);
-    return 0;
-}
 
     r->skip_blocks = 0;
     mb_pos = s->mb_x + s->mb_y * s->mb_width;
