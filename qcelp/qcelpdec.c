@@ -189,7 +189,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
                  */
 
                 if(frame->rate == RATE_FULL && i > 0 && !((i+1) & 3))
-                    predictor=FIX_SPEC_PREDICTOR
+                    predictor=QCELP_FIX_SPEC_PREDICTOR
                               (av_clip(floor((g1[i-1]+g1[i-2]+g1[i-3])/3.0), 6,
                               38));
                 else
@@ -271,12 +271,11 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
 
 
     /**
-     * TIA/EIA/IS-733 Has some missing info on the scaled codebook vector
-     * computation formula. Briefly:
+     * Spec has some missing info here:
      *
      * 'j' should go from 0 to 9 emulating a per codebook-subframe computation.
-     * For a longer explanation see FIX_SPEC_MISSING_CLAMP macro definition
-     * at the qcelpdata.h header in this software distribution.
+     * For a longer explanation see QCELP_FIX_SPEC_MISSING_CLAMP macro
+     * definition at the qcelpdata.h header in this software distribution.
      */
 
     j=0;
@@ -290,7 +289,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
                 cdn_vector[i]=
                 gain[i/10]*qcelp_fullrate_ccodebook[(j-index[i/10]) & 127];
 
-                j=FIX_SPEC_MISSING_CLAMP(j);
+                j=QCELP_FIX_SPEC_MISSING_CLAMP(j);
             }
             break;
         case RATE_HALF:
@@ -300,7 +299,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
                 cdn_vector[i]=
                 gain[i/40]*qcelp_halfrate_ccodebook[(j-index[i/40]) & 127];
 
-                j=FIX_SPEC_MISSING_CLAMP(j);
+                j=QCELP_FIX_SPEC_MISSING_CLAMP(j);
             }
             break;
         case RATE_QUARTER:

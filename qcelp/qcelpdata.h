@@ -24,7 +24,7 @@
  * QCELP decoder
  */
 
-#define FXQ(v)  (roundf(16384.0*v)/16384.0)
+#define QCELP_FXQ(v)  (roundf(16384.0*v)/16384.0)
 
 /**
  * TIA/EIA/IS-733 Spec has errors on the predictor determination formula
@@ -34,7 +34,7 @@
  * different quantizer table.
  */
 
-#define FIX_SPEC_PREDICTOR(p) (p-6)
+#define QCELP_FIX_SPEC_PREDICTOR(p) (p-6)
 
 /**
  * TIA/EIA/IS-733 Spec has an omission on the codebook index determination
@@ -50,7 +50,7 @@
  * the given formula is simply not clear enough without this missing info.
  */
 
-#define FIX_SPEC_MISSING_CLAMP(n) ((n<9)? n+1:0)
+#define QCELP_FIX_SPEC_MISSING_CLAMP(n) ((n<9)? n+1:0)
 
 typedef enum
 {
