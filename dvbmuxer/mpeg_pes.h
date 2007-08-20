@@ -131,6 +131,7 @@ int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
  * Mux streams into a PES packet.
  * @param [in]      ctx            the AVFormatContext which contains streams
  * @param [in]      stream_index   the stream index to write
+ * @param [in]      pes_buffer     PES payload data
  * @param [in]      pts            packet presentation timestamp
  * @param [in]      dts            packet decoding timestamp
  * @param [in]      id             stream ID
@@ -141,7 +142,7 @@ int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
  * @param [in]      stuffing_size  packet stuffing size
  * @return   bytes written to PES stream.
  */
-int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
+int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buffer,
           int64_t pts,int64_t dts, int  id, int startcode,
           uint8_t* pes_content, int pes_content_len,
           int header_len, int packet_size, int payload_size, int stuffing_size);
