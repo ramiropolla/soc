@@ -29,6 +29,7 @@ extern AVFilter avfilter_vf_fps;
 extern AVFilter avfilter_vf_graph;
 extern AVFilter avfilter_vf_graphdesc;
 extern AVFilter avfilter_vf_graphfile;
+extern AVFilter avfilter_vf_negate;
 extern AVFilter avfilter_vf_overlay;
 extern AVFilter avfilter_vf_passthrough;
 extern AVFilter avfilter_vf_rgb2bgr;
