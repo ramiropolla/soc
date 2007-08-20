@@ -183,23 +183,19 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
                 gs[i]=QCELP_CBSIGN2GS(cbsign[i]);
                 g0[i]=QCELP_CBGAIN2G0(cbgain[i]);
 
-                /* FIXME this needs to be further examinated */
+                /**
+                 * Spec has errors on the predictor determination formula
+                 * it needs 6 to be sustracted from it to give RI results.
+                 */
+
                 if(frame->rate == RATE_FULL && i > 0 && !((i+1) & 3))
-                    predictor=av_clip(floor((g1[i-1]+g1[i-2]+g1[i-3])/3), 6,
-                                      38);
+                    predictor=FIX_SPEC_PREDICTOR
+                              (av_clip(floor((g1[i-1]+g1[i-2]+g1[i-3])/3.0), 6,
+                              38));
                 else
                     predictor=0;
 
                 g1[i]=g0[i]+predictor;
-
-                /**
-                 * FIXME
-                 *
-                 * This shouldn't but does happen quite a few
-                 * times during decoding, my guess is I have an
-                 * error at predictor computation somewhere but
-                 * can't find it yet.
-                 */
 
                 if(g1[i]<0 || g1[i]>60)
                 {
@@ -281,9 +277,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
              {
                 cdn_vector[i]=
                 gain[i/10]*qcelp_fullrate_ccodebook[(i+1-index[i/10]) & 127];
-                av_log(NULL, AV_LOG_ERROR, " %f", cdn_vector[i]);
              }
-             av_log(NULL, AV_LOG_ERROR, "\n");
              break;
         case RATE_HALF:
              for(i=0; i<160; i++)

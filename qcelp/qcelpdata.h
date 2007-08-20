@@ -26,6 +26,16 @@
 
 #define FXQ(v)  (roundf(16384.0*v)/16384.0)
 
+/**
+ * TIA/EIA/IS-733 Spec has errors on the predictor determination formula
+ * at equation 2.4.6.1-4 -- The predictor there needs 6 to be sustracted
+ * from it to give RI compliants results. The problem is it ignores the
+ * fact that codebook subframes 4,8,12 and 16 on a FULL_RATE frame use a
+ * different quantizer table.
+ */
+
+#define FIX_SPEC_PREDICTOR(p) (p-6)
+
 typedef enum
 {
     RATE_FULL   = 0,
