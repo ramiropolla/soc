@@ -883,38 +883,16 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
  */
 static inline void rv40_pred_b_vector(int A[2], int B[2], int C[2], int no_A, int no_B, int no_C, int *mx, int *my)
 {
-    switch(no_A + no_B + no_C){
-    case 0:
+    if(no_A + no_B + no_C){
+        *mx = A[0] + B[0] + C[0];
+        *my = A[1] + B[1] + C[1];
+        if(no_A + no_B + no_C == 1){
+            *mx /= 2;
+            *my /= 2;
+        }
+    }else{
         *mx = mid_pred(A[0], B[0], C[0]);
         *my = mid_pred(A[1], B[1], C[1]);
-        break;
-    case 1:
-        if(no_A){
-            *mx = (B[0] + C[0]) / 2;
-            *my = (B[1] + C[1]) / 2;
-        }else if(no_B){
-            *mx = (A[0] + C[0]) / 2;
-            *my = (A[1] + C[1]) / 2;
-        }else{
-            *mx = (A[0] + B[0]) / 2;
-            *my = (A[1] + B[1]) / 2;
-        }
-        break;
-    case 2:
-        if(!no_A){
-            *mx = A[0];
-            *my = A[1];
-        }else if(!no_B){
-            *mx = B[0];
-            *my = B[1];
-        }else{
-            *mx = C[0];
-            *my = C[1];
-        }
-        break;
-    default:
-        *mx = *my = 0;
-        break;
     }
 }
 
