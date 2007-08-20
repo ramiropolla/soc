@@ -97,9 +97,9 @@ static int getnbctxno(int flag, int bandno)
         ((flag & J2K_T1_SIG_NW) ? 1:0)+
         ((flag & J2K_T1_SIG_SE) ? 1:0)+
         ((flag & J2K_T1_SIG_SW) ? 1:0);
-    switch(bandno){
-        case 0: // LL || LH
-        case 2:
+    if (bandno < 3){
+            if (bandno == 1)
+                FFSWAP(int, h, v);
             if (h == 2) return 8;
             if (h == 1){
                 if (v >= 1) return 7;
@@ -111,19 +111,7 @@ static int getnbctxno(int flag, int bandno)
             if (d >= 2) return 2;
             if (d == 1) return 1;
             return 0;
-        case 1: // HL
-            if (v == 2) return 8;
-            if (v == 1){
-                if (h >= 1) return 7;
-                if (d >= 1) return 6;
-                return 5;
-            }
-            if (h == 2) return 4;
-            if (h == 1) return 3;
-            if (d >= 2) return 2;
-            if (d >= 1) return 1;
-            return 0;
-        case 3:
+    } else{
             if (d >= 3) return 8;
             if (d == 2){
                 if (h+v >= 1) return 7;
