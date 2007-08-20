@@ -270,20 +270,39 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
     float    rnd[160];
 
 
+    /**
+     * TIA/EIA/IS-733 Has some missing info on the scaled codebook vector
+     * computation formula. Briefly:
+     *
+     * 'j' should go from 0 to 9 emulating a per codebook-subframe computation.
+     * For a longer explanation see FIX_SPEC_MISSING_CLAMP macro definition
+     * at the qcelpdata.h header in this software distribution.
+     */
+
+    j=0;
+
     switch(rate)
     {
         case RATE_FULL:
-             for(i=0; i<160; i++)
-             {
+
+            for(i=0; i<160; i++)
+            {
                 cdn_vector[i]=
-                gain[i/10]*qcelp_fullrate_ccodebook[(i-index[i/10]) & 127];
-             }
-             break;
+                gain[i/10]*qcelp_fullrate_ccodebook[(j-index[i/10]) & 127];
+
+                j=FIX_SPEC_MISSING_CLAMP(j);
+            }
+            break;
         case RATE_HALF:
-             for(i=0; i<160; i++)
+
+            for(i=0; i<160; i++)
+            {
                 cdn_vector[i]=
-                gain[i/40]*qcelp_halfrate_ccodebook[(i-index[i/40]) & 127];
-             break;
+                gain[i/40]*qcelp_halfrate_ccodebook[(j-index[i/40]) & 127];
+
+                j=FIX_SPEC_MISSING_CLAMP(j);
+            }
+            break;
         case RATE_QUARTER:
             for(i=0; i<160; i++)
             {

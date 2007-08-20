@@ -36,6 +36,22 @@
 
 #define FIX_SPEC_PREDICTOR(p) (p-6)
 
+/**
+ * TIA/EIA/IS-733 Spec has an omission on the codebook index determination
+ * formula for RATE_FULL and RATE_HALF frames at section 2.4.8.1.1. It says
+ * you have to subtract the decoded index parameter to the given scaled
+ * codebook vector index 'n' to get the desired circular codebook index but
+ * It doesn't tell you have to clamp 'n' to [0-9] in order to get RI complaint
+ * results.
+ *
+ * The reason for this mistake seems to be the fact they forget to tell you
+ * have to do this calculations per codebook subframe and adjust given equation
+ * values accordingly -- If not were by the obvious 'counting till 10' detail,
+ * the given formula is simply not clear enough without this missing info.
+ */
+
+#define FIX_SPEC_MISSING_CLAMP(n) ((n<9)? n+1:0)
+
 typedef enum
 {
     RATE_FULL   = 0,
