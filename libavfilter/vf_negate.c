@@ -88,6 +88,8 @@ static void draw_slice(AVFilterLink *link, int y, int h)
             outrow += out->linesize[plane];
         }
     }
+
+    avfilter_draw_slice(link->dst->outputs[0], y, h);
 }
 
 AVFilter avfilter_vf_negate =
