@@ -21,6 +21,7 @@
  */
 
 #include "mpeg_pes.h"
+#include "bytestream.h"
 
 int ff_pes_muxer_init(AVFormatContext *ctx)
 {
@@ -74,6 +75,16 @@ void ff_insert_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
     put_be16(pb, (uint16_t)((((timestamp) & 0x7fff) << 1) | 1));
 }
 
+static inline void insert_timestamp(uint8_t** p, int id, int64_t timestamp)
+{
+    bytestream_put_byte(p,
+        (id << 4) |
+        (((timestamp >> 30) & 0x07) << 1) |
+        1);
+    bytestream_put_be16(p, (uint16_t)((((timestamp >> 15) & 0x7fff) << 1) | 1));
+    bytestream_put_be16(p, (uint16_t)((((timestamp) & 0x7fff) << 1) | 1));
+}
+
 int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
     int nb_frames=0;
     PacketDesc *pkt_desc= stream->premux_packet;
@@ -88,7 +99,7 @@ int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
     return nb_frames;
 }
 
-int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
+int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t* pes_buffer,
     int64_t pts,int64_t dts, int  id, int startcode,
     uint8_t* pes_content, int pes_content_len,
     int header_len, int packet_size, int payload_size, int stuffing_size)
@@ -97,11 +108,12 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
     PESContext *context = ctx->priv_data;
     int pes_flags, i;
     int data_size = payload_size - stuffing_size;
+    uint8_t *q = pes_buffer;
 
-        put_be32(&ctx->pb, startcode);
+    bytestream_put_be32(&q, startcode);
 
-        put_be16(&ctx->pb, packet_size);
-    put_byte(&ctx->pb, 0x80); /* mpeg2 id */
+    bytestream_put_be16(&q, packet_size);
+    bytestream_put_byte(&q, 0x80); /* mpeg2 id */
 
             pes_flags=0;
 
@@ -118,37 +130,38 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index,
             if (context->packet_number == 0 && context->muxer_type == PESMUXER_PS)
                 pes_flags |= 0x01;
 
-            put_byte(&ctx->pb, pes_flags); /* flags */
-            put_byte(&ctx->pb, header_len - 3 + stuffing_size);
+            bytestream_put_byte(&q, pes_flags); /* flags */
+            bytestream_put_byte(&q, header_len - 3 + stuffing_size);
 
             if (pes_flags & 0x80)  /*write pts*/
-                ff_insert_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
+                insert_timestamp(&q, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
             if (pes_flags & 0x40)  /*write dts*/
-                ff_insert_timestamp(&ctx->pb, 0x01, dts);
+                insert_timestamp(&q, 0x01, dts);
 
             if (pes_flags & 0x01) {  /*write pes extension*/
-                put_byte(&ctx->pb, 0x10); /* flags */
+                bytestream_put_byte(&q, 0x10); /* flags */
 
                 /* P-STD buffer info */
                 if (id == AUDIO_ID)
-                    put_be16(&ctx->pb, 0x4000 | stream->max_buffer_size/128);
+                    bytestream_put_be16(&q, 0x4000 | stream->max_buffer_size/128);
                 else
-                    put_be16(&ctx->pb, 0x6000 | stream->max_buffer_size/1024);
-    }
+                    bytestream_put_be16(&q, 0x6000 | stream->max_buffer_size/1024);
+            }
 
             /* special stuffing byte that is always written
                to prevent accidental generation of startcodes. */
-            put_byte(&ctx->pb, 0xff);
+            bytestream_put_byte(&q, 0xff);
 
             for(i=0;i<stuffing_size;i++)
-                put_byte(&ctx->pb, 0xff);
+                bytestream_put_byte(&q, 0xff);
 
-             put_buffer(&ctx->pb, pes_content, pes_content_len);
+            if(pes_content != NULL)
+                bytestream_put_buffer(&q, pes_content, pes_content_len);
 
     /* output data */
-    if(av_fifo_generic_read(&stream->fifo, data_size, &put_buffer, &ctx->pb) < 0)
+    if(av_fifo_read(&stream->fifo, q, data_size) < 0)
         return -1;
-    return data_size;
+    return (q - pes_buffer + data_size);
 }
 
 int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
@@ -249,7 +262,6 @@ retry:
     return 1;
 }
 
-
 void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 {
     int stream_index= pkt->stream_index;
@@ -283,7 +295,6 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
     av_fifo_realloc(&stream->fifo, av_fifo_size(&stream->fifo) + size + 1);
     av_fifo_write(&stream->fifo, buf, size);
 }
-
 
 void ff_pes_muxer_end(AVFormatContext *ctx)
 {
