@@ -82,7 +82,7 @@ void ff_aec_encode(AecState *aec, int cx, int d)
     aec->curcxstate = aec->cx_states + cx;
     qe = ff_aec_qe[*aec->curcxstate];
     aec->a -= qe;
-    if (*aec->curcxstate & 1 == d){
+    if ((*aec->curcxstate & 1) == d){
         if (!(aec->a & 0x8000)){
             if (aec->a < qe)
                 aec->a = qe;
