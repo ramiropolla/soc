@@ -31,17 +31,15 @@ static void bytein(AecState *aec)
 {
     if (*aec->bp == 0xff){
         if (*(aec->bp+1) > 0x8f)
-            aec->ct = 8;
+            aec->c++;
         else{
             aec->bp++;
-            aec->c += 0xfe00 - (*aec->bp << 9);
-            aec->ct = 7;
+            aec->c += 2 + 0xfe00 - (*aec->bp << 9);
         }
     }
     else{
         aec->bp++;
-        aec->c += 0xff00 - (*aec->bp << 8);
-        aec->ct = 8;
+        aec->c += 1 + 0xff00 - (*aec->bp << 8);
     }
 }
 
@@ -62,11 +60,12 @@ static int exchange(AecState *aec, uint8_t *cxstate, int lps)
     }
     // renormd:
     do{
-        if (!aec->ct)
+        if (!(aec->c & 0xff)){
+            aec->c -= 0x100;
             bytein(aec);
+        }
         aec->a += aec->a;
         aec->c += aec->c;
-        aec->ct--;
     } while (!(aec->a & 0x8000));
     return d;
 }
@@ -78,7 +77,6 @@ void ff_aec_initdec(AecState *aec, uint8_t *bp)
     aec->c = (*aec->bp ^ 0xff) << 16;
     bytein(aec);
     aec->c = aec->c << 7;
-    aec->ct -= 7;
     aec->a = 0x8000;
 }
 
