@@ -82,6 +82,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         if(get_bits1(gbc)){
             skip_bits(gbc, 8); //skip Compression gain word
         }
+    }
     if(s->strmtyp == 0x1){
         /* if dependent stream */
         if(get_bits1(gbc)){
