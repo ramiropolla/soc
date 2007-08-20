@@ -21,8 +21,6 @@
 
 #include "avfilter.h"
 
-extern AVFilter avfilter_vsrc_dummy;
-extern AVFilter avfilter_vsrc_ppm;
 extern AVFilter avfilter_vf_crop;
 extern AVFilter avfilter_vf_fifo;
 extern AVFilter avfilter_vf_fps;
@@ -32,7 +30,6 @@ extern AVFilter avfilter_vf_graphfile;
 extern AVFilter avfilter_vf_negate;
 extern AVFilter avfilter_vf_overlay;
 extern AVFilter avfilter_vf_passthrough;
-extern AVFilter avfilter_vf_rgb2bgr;
 extern AVFilter avfilter_vf_scale;
 extern AVFilter avfilter_vf_slicify;
 extern AVFilter avfilter_vf_split;
