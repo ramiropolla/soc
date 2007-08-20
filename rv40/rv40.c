@@ -1136,6 +1136,10 @@ static inline void rv40_mc_b(RV40DecContext *r, const int block_type)
         srcU = s->next_picture_ptr->data[1];
         srcV = s->next_picture_ptr->data[2];
     }
+    if(block_type == RV40_MB_B_INTERP){
+        mx += (s->next_picture_ptr->motion_val[0][mv_pos][0] + 1) >> 1;
+        my += (s->next_picture_ptr->motion_val[0][mv_pos][1] + 1) >> 1;
+    }
     src_x = s->mb_x * 16 + (mx >> 2);
     src_y = s->mb_y * 16 + (my >> 2);
     uvsrc_x = s->mb_x * 8 + (mx >> 3);
@@ -1181,6 +1185,10 @@ static inline void rv40_mc_b_interp(RV40DecContext *r, const int block_type)
 
     mx = s->current_picture_ptr->motion_val[1][mv_pos][0];
     my = s->current_picture_ptr->motion_val[1][mv_pos][1];
+    if(block_type == RV40_MB_B_INTERP){
+        mx -= s->next_picture_ptr->motion_val[0][mv_pos][0] >> 1;
+        my -= s->next_picture_ptr->motion_val[0][mv_pos][1] >> 1;
+    }
     srcY = s->next_picture_ptr->data[0];
     srcU = s->next_picture_ptr->data[1];
     srcV = s->next_picture_ptr->data[2];
