@@ -1274,20 +1274,20 @@ static void do_imdct(EAC3Context *ctx)
         } else {
             /* 512-point IMDCT */
             ctx->imdct_512.fft.imdct_calc(&ctx->imdct_512, ctx->tmp_output,
-                                          ctx->transform_coeffs[ch],
-                                          ctx->tmp_imdct);
+                    ctx->transform_coeffs[ch],
+                    ctx->tmp_imdct);
         }
         /* apply window function, overlap/add output, save delay */
         ctx->dsp.vector_fmul_add_add(ctx->output[ch-1], ctx->tmp_output,
-                                     ctx->window, ctx->delay[ch-1], 0,
-                                     AC3_BLOCK_SIZE, 1);
+                ctx->window, ctx->delay[ch-1], 0,
+                AC3_BLOCK_SIZE, 1);
         ctx->dsp.vector_fmul_reverse(ctx->delay[ch-1], ctx->tmp_output+256,
-                                     ctx->window, AC3_BLOCK_SIZE);
+                ctx->window, AC3_BLOCK_SIZE);
     }
 }
 
 static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
-                                            uint8_t *buf, int buf_size){
+        uint8_t *buf, int buf_size){
     int16_t *out_samples = (int16_t *)data;
     EAC3Context *c = (EAC3Context *)avctx->priv_data;
     int k, i, blk, ch;
@@ -1318,12 +1318,12 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         avctx->channels = c->ntchans;
     } else if(c->ntchans < avctx->channels) {
         av_log(avctx, AV_LOG_ERROR, "Cannot upmix EAC3 from %d to %d channels.\n",
-               c->ntchans, avctx->channels);
+                c->ntchans, avctx->channels);
         return -1;
     }
     if(avctx->channels > 2 && avctx->channels != c->ntchans) {
         av_log(avctx, AV_LOG_ERROR, "Cannot downmix EAC3 from %d to %d channels.\n",
-               c->ntchans, avctx->channels);
+                c->ntchans, avctx->channels);
         return -1;
     }
 
@@ -1337,11 +1337,11 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             return -1;
         }
 
-    /* recover coefficients if rematrixing is in use */
-    if(c->acmod == AC3_ACMOD_STEREO)
-        ff_ac3_do_rematrixing(c->transform_coeffs,
-                FFMIN(c->endmant[1], c->endmant[2]),
-                c->nrematbnds, c->rematflg);
+        /* recover coefficients if rematrixing is in use */
+        if(c->acmod == AC3_ACMOD_STEREO)
+            ff_ac3_do_rematrixing(c->transform_coeffs,
+                    FFMIN(c->endmant[1], c->endmant[2]),
+                    c->nrematbnds, c->rematflg);
 
         /* apply scaling to coefficients (dialnorm, dynrng) */
         for(ch=1; ch<=c->nfchans + c->lfeon; ch++) {
@@ -1363,7 +1363,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         }
 
         // convert float to 16-bit integer
-       for(ch = 0; ch<avctx->channels; ch++) {
+        for(ch = 0; ch<avctx->channels; ch++) {
             for(i=0; i<AC3_BLOCK_SIZE; i++) {
                 c->output[ch][i] = c->output[ch][i] * c->mul_bias +
                     c->add_bias;
