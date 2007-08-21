@@ -1930,7 +1930,6 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         rv40_decode_slice(r);
         s->mb_num_left = r->prev_si.end - r->prev_si.start;
         //rv40_postprocess(r);
-        r->slice_data = NULL;
     }
     if(!avctx->slice_count)
         av_free(slice_offset);
@@ -1948,7 +1947,6 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         ff_print_debug_info(s, pict);
     }
     s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
-    s->mb_x = s->mb_y = 0;
     return buf_size;
 }
 
