@@ -1958,7 +1958,6 @@ static int rv40_decode_end(AVCodecContext *avctx)
 
     av_freep(&r->intra_types_hist);
     r->intra_types = NULL;
-    av_freep(&r->slice_data);
     av_freep(&r->mb_type);
 
     return 0;
