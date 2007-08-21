@@ -67,6 +67,15 @@ Index: libavcodec/aac_ac3_parser.c
                                &samples);
                  if (len == 0) {
                      /* no sync found : move by one byte (inefficient, but simple!) */
+@@ -59,7 +59,7 @@
+                     /* update codec info */
+                     avctx->sample_rate = sample_rate;
+                     /* set channels,except if the user explicitly requests 1 or 2 channels, XXX/FIXME this is a bit ugly */
+-                    if(avctx->codec_id == CODEC_ID_AC3){
++                    if(avctx->codec_id == CODEC_ID_AC3 || avctx->codec_id == CODEC_ID_EAC3){
+                         if(avctx->channels!=1 && avctx->channels!=2){
+                             avctx->channels = channels;
+                         }
 Index: libavcodec/aac_ac3_parser.h
 ===================================================================
 --- libavcodec/aac_ac3_parser.h	(wersja 10118)
@@ -183,3 +192,15 @@ Index: libavcodec/ac3enc.c
              frame_bits += compute_mantissa_size(s, bap[i][ch],
                                                   s->nb_coefs[ch]);
          }
+Index: ffmpeg.c
+===================================================================
+--- ffmpeg.c	(wersja 10118)
++++ ffmpeg.c	(kopia robocza)
+@@ -1569,6 +1569,7 @@
+                 } else {
+                     if (codec->channels != icodec->channels &&
+                         (icodec->codec_id == CODEC_ID_AC3 ||
++                         icodec->codec_id == CODEC_ID_EAC3 ||
+                          icodec->codec_id == CODEC_ID_DTS)) {
+                         /* Special case for 5:1 AC3 and DTS input */
+                         /* and mono or stereo output      */

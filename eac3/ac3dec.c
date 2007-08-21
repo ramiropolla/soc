@@ -721,7 +721,7 @@ static inline void do_imdct(AC3DecodeContext *ctx)
 /**
  * Downmix the output to mono or stereo.
  */
-static void ac3_downmix(float samples[AC3_MAX_CHANNELS][256], int nfchans,
+void ff_ac3_downmix(float samples[AC3_MAX_CHANNELS][256], int nfchans,
                         int output_mode, float coef[AC3_MAX_CHANNELS][2])
 {
     int i, j;
@@ -1041,7 +1041,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
     /* downmix output if needed */
     if(ctx->nchans != ctx->out_channels && !((ctx->output_mode & AC3_OUTPUT_LFEON) &&
             ctx->nfchans == ctx->out_channels)) {
-        ac3_downmix(ctx->output, ctx->nfchans, ctx->output_mode,
+        ff_ac3_downmix(ctx->output, ctx->nfchans, ctx->output_mode,
                     ctx->downmix_coeffs);
     }
 

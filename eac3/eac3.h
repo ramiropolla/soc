@@ -37,14 +37,6 @@
 #define MAX_BLOCKS 6
 #define MAX_SPX_CODES 18
 
-// TODO use new downmixing
-/** output configurations. */
-#define AC3_OUTPUT_UNMODIFIED 0x01
-#define AC3_OUTPUT_MONO       0x02
-#define AC3_OUTPUT_STEREO     0x04
-#define AC3_OUTPUT_DOLBY      0x08
-#define AC3_OUTPUT_LFEON      0x10
-
 typedef struct EAC3Context{
     AVCodecContext *avctx;           ///< Parent context
     int syncword;
@@ -63,10 +55,6 @@ typedef struct EAC3Context{
     int chanmap;                     ///< Custom channel map
     int mixmdate;                    ///< Mixing meta-data exists
     int dmixmod;                     ///< Preferred stereo downmix mode
-    int ltrtcmixlev;                 ///< Lt/Rt center mix level
-    int lorocmixlev;                 ///< Lo/Ro center mix level
-    int ltrtsurmixlev;               ///< Lt/Rt surround mix level
-    int lorosurmixlev;               ///< Lo/Ro surround mix level
     int lfemixlevcode;               ///< lfe mix level code exists
     int lfemixlevcod;                ///< lfe mix level code
     int pgmscl[2];                   ///< Program scale factor
@@ -110,6 +98,7 @@ typedef struct EAC3Context{
     int blksw[AC3_MAX_CHANNELS];     ///< Block switch flag
     int dithflag[AC3_MAX_CHANNELS];  ///< Dither flag
     float dynrng[2];                 ///< Dynamic range gain word
+    float downmix_coeffs[AC3_MAX_CHANNELS][2];  ///< stereo downmix coefficients
     int spxinu;                      ///< spectral extension in use
     int chinspx[AC3_MAX_CHANNELS];   ///< Channel in spectral extension
     int spxstrtf;                    ///< Spectral extension start copy frequency code
@@ -214,8 +203,6 @@ typedef struct EAC3Context{
 
     float add_bias;                  ///< offset for float_to_int16 conversion
     float mul_bias;                  ///< scaling for float_to_int16 conversion
-
-    AC3ChannelMode  blkoutput;
 }EAC3Context;
 
 /** Channel gain adaptive quantization mode */

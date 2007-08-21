@@ -40,6 +40,33 @@ static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int
 static void uncouple_channels(EAC3Context *s);
 static void log_missing_feature(AVCodecContext *avctx, const char *log);
 
+/**
+ * Table for default stereo downmixing coefficients
+ * reference: Section 7.8.2 Downmixing Into Two Channels
+ */
+static const uint8_t eac3_default_coeffs[8][5][2] = {
+    { { 2, 7 }, { 7, 2 },                               },
+    { { 4, 4 },                                         },
+    { { 2, 7 }, { 7, 2 },                               },
+    { { 2, 7 }, { 5, 5 }, { 7, 2 },                     },
+    { { 2, 7 }, { 7, 2 }, { 6, 6 },                     },
+    { { 2, 7 }, { 5, 5 }, { 7, 2 }, { 8, 8 },           },
+    { { 2, 7 }, { 7, 2 }, { 6, 7 }, { 7, 6 },           },
+    { { 2, 7 }, { 5, 5 }, { 7, 2 }, { 6, 7 }, { 7, 6 }, },
+};
+
+static const float mixlevels[9] = {
+    LEVEL_PLUS_3DB,
+    LEVEL_PLUS_1POINT5DB,
+    LEVEL_ONE,
+    LEVEL_MINUS_1POINT5DB,
+    LEVEL_MINUS_3DB,
+    LEVEL_MINUS_4POINT5DB,
+    LEVEL_MINUS_6DB,
+    LEVEL_ZERO,
+    LEVEL_MINUS_9DB
+};
+
 static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     int i, blk;
 
@@ -96,6 +123,14 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             //TODO default channel map based on acmod and lfeon
         }
     }
+
+    /* set stereo downmixing coefficients
+       reference: Section 7.8.2 Downmixing Into Two Channels */
+    for(i=0; i<s->nfchans; i++) {
+        s->downmix_coeffs[i][0] = mixlevels[eac3_default_coeffs[s->acmod][i][0]];
+        s->downmix_coeffs[i][1] = mixlevels[eac3_default_coeffs[s->acmod][i][1]];
+    }
+
     GET_BITS(s->mixmdate, gbc, 1);
     if(s->mixmdate){
         /* Mixing metadata */
@@ -105,14 +140,22 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         }
         if((s->acmod & 0x1) && (s->acmod > 0x2)){
             /* if three front channels exist */
-            GET_BITS(s->ltrtcmixlev, gbc, 3);
-            GET_BITS(s->lorocmixlev, gbc, 3);
+            skip_bits(gbc, 3); //skip Lt/Rt center mix level
+            s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = mixlevels[get_bits(gbc, 3)];
         }
         if(s->acmod & 0x4){
             /* if a surround channel exists */
-
-            GET_BITS(s->ltrtsurmixlev, gbc, 3);
-            GET_BITS(s->lorosurmixlev, gbc, 3);
+            float surmixlev;
+            skip_bits(gbc, 3); //skip Lt/Rt surround mix level
+            surmixlev = mixlevels[get_bits(gbc, 3)];
+            if(s->acmod & 0x2){
+                //two surround channels
+                s->downmix_coeffs[s->acmod-4][0] = s->downmix_coeffs[s->acmod-3][1] =
+                    surmixlev;
+            }else{
+                s->downmix_coeffs[s->acmod-2][0] = s->downmix_coeffs[s->acmod-2][1] =
+                    surmixlev * LEVEL_MINUS_3DB;
+            }
         }
         if(s->lfeon){
             /* if the LFE channel exists */
@@ -1235,10 +1278,10 @@ static void do_imdct(EAC3Context *ctx)
                                           ctx->tmp_imdct);
         }
         /* apply window function, overlap/add output, save delay */
-        ctx->dsp.vector_fmul_add_add(ctx->output[ch], ctx->tmp_output,
-                                     ctx->window, ctx->delay[ch], 0,
+        ctx->dsp.vector_fmul_add_add(ctx->output[ch-1], ctx->tmp_output,
+                                     ctx->window, ctx->delay[ch-1], 0,
                                      AC3_BLOCK_SIZE, 1);
-        ctx->dsp.vector_fmul_reverse(ctx->delay[ch], ctx->tmp_output+256,
+        ctx->dsp.vector_fmul_reverse(ctx->delay[ch-1], ctx->tmp_output+256,
                                      ctx->window, AC3_BLOCK_SIZE);
     }
 }
@@ -1272,7 +1315,20 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 #ifdef DEBUG
     av_log(NULL, AV_LOG_INFO, "bitrate = %i\n", avctx->bit_rate);
 #endif
-    avctx->channels = c->nfchans + c->lfeon; // TODO lfe
+
+    /* channel config */
+    if (avctx->channels == 0) {
+        avctx->channels = c->ntchans;
+    } else if(c->ntchans < avctx->channels) {
+        av_log(avctx, AV_LOG_ERROR, "Cannot upmix EAC3 from %d to %d channels.\n",
+               c->ntchans, avctx->channels);
+        return -1;
+    }
+    if(avctx->channels > 2 && avctx->channels != c->ntchans) {
+        av_log(avctx, AV_LOG_ERROR, "Cannot downmix EAC3 from %d to %d channels.\n",
+               c->ntchans, avctx->channels);
+        return -1;
+    }
 
     for(blk = 0; blk < ff_eac3_blocks[c->numblkscod]; blk++){
         for(i=0; i<AC3_MAX_CHANNELS+1; i++){
@@ -1295,7 +1351,6 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         ff_ac3_do_rematrixing(c->transform_coeffs,
                 FFMIN(c->endmant[1], c->endmant[2]),
                 c->nrematbnds, c->rematflg);
-        //TODO downmix_scaling...
 
         /* apply scaling to coefficients (dialnorm, dynrng) */
         for(ch=1; ch<=c->nfchans + c->lfeon; ch++) {
@@ -1311,29 +1366,13 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         }
 
         do_imdct(c);
-        //TODO downmix
 
-#ifdef DEBUG
-        av_log(avctx, AV_LOG_INFO, "channels = %i\n", avctx->channels);
-#endif
-
-        // set output mode
-        c->blkoutput = 0;
-        if (avctx->channels == 1) {
-            c->blkoutput |= AC3_OUTPUT_MONO;
-        } else if (avctx->channels == 2) {
-            c->blkoutput |= AC3_OUTPUT_STEREO;
-        } else {
-            if (avctx->channels && avctx->channels < c->nfchans + c->lfeon )
-                av_log(avctx, AV_LOG_INFO, "ac3_decoder: E-AC3 Source Channels Are Less Then Specified %d: Output to %d Channels\n",avctx->channels, c->nfchans + c->lfeon);
-            c->blkoutput |= AC3_OUTPUT_UNMODIFIED;
-            if (c->lfeon)
-                c->blkoutput |= AC3_OUTPUT_LFEON;
-            avctx->channels = c->nfchans + c->lfeon;
+        if(avctx->channels != c->ntchans){
+            ff_ac3_downmix(c->output, c->nfchans, avctx->channels, c->downmix_coeffs);
         }
 
         // convert float to 16-bit integer
-       for(ch = 1; ch<=c->nfchans + c->lfeon; ch++) { // <- out_channels TODO
+       for(ch = 0; ch<avctx->channels; ch++) {
             for(i=0; i<AC3_BLOCK_SIZE; i++) {
                 c->output[ch][i] = c->output[ch][i] * c->mul_bias +
                     c->add_bias;
@@ -1342,7 +1381,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
                     AC3_BLOCK_SIZE);
         }
         for (k = 0; k < AC3_BLOCK_SIZE; k++) {
-            for (i = 1; i <= avctx->channels; i++) {
+            for (i = 0; i < avctx->channels; i++) {
                 *(out_samples++) = c->int_output[i][k];
             }
         }

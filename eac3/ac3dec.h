@@ -85,7 +85,13 @@ void ff_ac3_do_rematrixing(float (*transform_coeffs)[256], int end, int nrematbn
 void ff_ac3_do_imdct_256(float *tmp_output, float *transform_coeffs,
         MDCTContext *imdct_256, float *tmp_imdct);
 
+void ff_ac3_downmix(float samples[AC3_MAX_CHANNELS][256], int nfchans,
+                        int output_mode, float coef[AC3_MAX_CHANNELS][2]);
+
 /** Adjustments in dB gain */
+#define LEVEL_PLUS_3DB          1.4142135623730950
+#define LEVEL_PLUS_1POINT5DB    1.1892071150027209
+#define LEVEL_MINUS_1POINT5DB   0.8408964152537145
 #define LEVEL_MINUS_3DB         0.7071067811865476
 #define LEVEL_MINUS_4POINT5DB   0.5946035575013605
 #define LEVEL_MINUS_6DB         0.5000000000000000
