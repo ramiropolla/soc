@@ -433,8 +433,15 @@ static int init_tiles(J2kEncoderContext *s)
                         cblkperprecw = 1<<(s->log2_prec_width - s->log2_cblk_width);
                         for (precx = 0, precno = 0; precx < reslevel->num_precincts_x; precx++){
                             for (precy = 0; precy < reslevel->num_precincts_y; precy++, precno = 0){
-                                band->prec[precno].xi0 = xi0;
-                                band->prec[precno].xi1 = xi1;
+                                J2kPrec *prec = band->prec + precno;
+
+                                prec->xi0 = xi0;
+                                prec->xi1 = xi1;
+
+                                prec->cblkincl = ff_j2k_tag_tree_init(prec->xi1 - prec->xi0,
+                                                                      prec->yi1 - prec->yi0);
+                                prec->zerobits = ff_j2k_tag_tree_init(prec->xi1 - prec->xi0,
+                                                                      prec->yi1 - prec->yi0);
                             }
                             xi1 += cblkperprecw;
                             xi0 = xi1 - cblkperprecw;
@@ -773,34 +780,31 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
 
     for (bandno = 0; bandno < rlevel->nbands; bandno++){
         J2kBand *band = rlevel->band + bandno;
-        J2kTgtNode *cblkincl, *zerobits;
+        J2kPrec *prec = band->prec + precno;
         int yi, xi, pos;
-        int cblknw = band->prec[precno].xi1 - band->prec[precno].xi0,
-            cblknh = band->prec[precno].yi1 - band->prec[precno].yi0;
+        int cblknw = prec->xi1 - prec->xi0,
+            cblknh = prec->yi1 - prec->yi0;
 
-        cblkincl = ff_j2k_tag_tree_init(cblknw, cblknh);
-        zerobits = ff_j2k_tag_tree_init(cblknw, cblknh);
-
-        for (pos=0, yi = band->prec[precno].yi0; yi < band->prec[precno].yi1; yi++){
-            for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++, pos++){
-                cblkincl[pos].val = band->cblk[yi * cblknw + xi].ninclpasses == 0;
-                tag_tree_update(cblkincl + pos);
-                zerobits[pos].val = s->bbps[compno][rlevelno][bandno] - band->cblk[yi * cblknw + xi].nonzerobits;
-                tag_tree_update(zerobits + pos);
+        for (pos=0, yi = prec->yi0; yi < prec->yi1; yi++){
+            for (xi = prec->xi0; xi < prec->xi1; xi++, pos++){
+                prec->cblkincl[pos].val = band->cblk[yi * cblknw + xi].ninclpasses == 0;
+                tag_tree_update(prec->cblkincl + pos);
+                prec->zerobits[pos].val = s->bbps[compno][rlevelno][bandno] - band->cblk[yi * cblknw + xi].nonzerobits;
+                tag_tree_update(prec->zerobits + pos);
             }
         }
 
-        for (pos=0, yi = band->prec[precno].yi0; yi < band->prec[precno].yi1; yi++){
-            for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++, pos++){
+        for (pos=0, yi = prec->yi0; yi < prec->yi1; yi++){
+            for (xi = prec->xi0; xi < prec->xi1; xi++, pos++){
                 int pad = 0, llen, length;
                 J2kCblk *cblk = band->cblk + yi * cblknw + xi;
 
                 // inclusion information
-                tag_tree_code(s, cblkincl + pos, 1);
+                tag_tree_code(s, prec->cblkincl + pos, 1);
                 if (!cblk->ninclpasses)
                     continue;
                 // zerobits information
-                tag_tree_code(s, zerobits + pos, 100);
+                tag_tree_code(s, prec->zerobits + pos, 100);
                 // number of passes
                 putnumpasses(s, cblk->ninclpasses);
 
@@ -816,17 +820,15 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
                 put_num(s, length, av_log2(length)+1+pad);
             }
         }
-
-        av_free(cblkincl);
-        av_free(zerobits);
     }
     j2k_flush(s);
     for (bandno = 0; bandno < rlevel->nbands; bandno++){
         J2kBand *band = rlevel->band + bandno;
-        int yi, cblknw = band->prec[precno].xi1 - band->prec[precno].xi0;
-        for (yi = band->prec[precno].yi0; yi < band->prec[precno].yi1; yi++){
+        J2kPrec *prec = band->prec + precno;
+        int yi, cblknw = prec->xi1 - prec->xi0;
+        for (yi = prec->yi0; yi < prec->yi1; yi++){
             int xi;
-            for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++){
+            for (xi = prec->xi0; xi < prec->xi1; xi++){
                 J2kCblk *cblk = band->cblk + yi * cblknw + xi;
                 if (cblk->ninclpasses)
                     bytestream_put_buffer(&s->buf, cblk->data, cblk->passes[cblk->ninclpasses-1].rate);
@@ -962,7 +964,7 @@ static void encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
 
 void cleanup(J2kEncoderContext *s)
 {
-    int tileno, compno, reslevelno, bandno;
+    int tileno, compno, reslevelno, bandno, precno;
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         for (compno = 0; compno < s->ncomponents; compno++){
             J2kComponent *comp = s->tile[tileno].comp + compno;
@@ -972,6 +974,11 @@ void cleanup(J2kEncoderContext *s)
 
                 for (bandno = 0; bandno < reslevel->nbands ; bandno++){
                     J2kBand *band = reslevel->band + bandno;
+                        for (precno = 0; precno < reslevel->num_precincts_x * reslevel->num_precincts_y; precno++){
+                            J2kPrec *prec = band->prec + precno;
+                            av_free(prec->zerobits);
+                            av_free(prec->cblkincl);
+                        }
                         av_free(band->cblk);
                         av_free(band->prec);
                     }
