@@ -1846,6 +1846,30 @@ static int rv40_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
+/** These bits of slice header should be the same for all slices in one frame */
+#define KEY_MASK 0xE0CFFF80
+
+/**
+ * Find slice offsets and return them in array.
+ */
+static int* find_slice_offsets(uint8_t *buf, int buf_size, int *slices)
+{
+    int *offsets;
+    int i;
+    int hdr = AV_RB32(buf) & KEY_MASK;
+
+    offsets = av_malloc(sizeof(int)*12);//just to avoid unnecessary reallocs
+    offsets[0] = 0;
+    *slices = 1;
+    for(i = 4; i < buf_size; i += 4){
+        if((AV_RB32(buf + i) & KEY_MASK) == hdr){
+            (*slices)++;
+            offsets = av_realloc(offsets, *slices * sizeof(int));
+            offsets[*slices - 1] = i;
+        }
+    }
+    return offsets;
+}
 
 static int rv40_decode_frame(AVCodecContext *avctx,
                             void *data, int *data_size,
@@ -1856,6 +1880,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     AVFrame *pict = data;
     SliceInfo si;
     int i;
+    int slice_count, *slice_offset;
 
     /* no supplementary picture */
     if (buf_size == 0) {
@@ -1869,22 +1894,28 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     }
 
     if(avctx->slice_count){
-        for(i=0; i<avctx->slice_count; i++){
-            int offset= avctx->slice_offset[i];
+        slice_count = avctx->slice_count;
+        slice_offset = avctx->slice_offset;
+    }else{
+        slice_offset = find_slice_offsets(buf, buf_size, &slice_count);
+    }
+
+    for(i=0; i<slice_count; i++){
+            int offset= slice_offset[i];
             int size;
 
-            if(i+1 == avctx->slice_count)
+            if(i+1 == slice_count)
                 size= buf_size - offset;
             else
-                size= avctx->slice_offset[i+1] - offset;
+                size= slice_offset[i+1] - offset;
 
             init_get_bits(&s->gb, buf + offset, size * 8);
             rv40_parse_slice_header(r, &r->s.gb, &r->prev_si);
             if(r->prev_si.type == -1) continue;
             r->prev_si.size = size * 8;
             r->prev_si.end = s->mb_width * s->mb_height;
-            if(i+1 < avctx->slice_count){
-                init_get_bits(&s->gb, buf+avctx->slice_offset[i+1], (buf_size-avctx->slice_offset[i+1])*8);
+            if(i+1 < slice_count){
+                init_get_bits(&s->gb, buf+slice_offset[i+1], (buf_size-slice_offset[i+1])*8);
                 rv40_parse_slice_header(r, &r->s.gb, &si);
                 if(si.type != -1)
                     r->prev_si.end = si.start;
@@ -1900,7 +1931,10 @@ static int rv40_decode_frame(AVCodecContext *avctx,
             s->mb_num_left = r->prev_si.end - r->prev_si.start;
             //rv40_postprocess(r);
             r->slice_data = NULL;
-        }
+    }
+    if(!avctx->slice_count)
+        av_free(slice_offset);
+
         ff_er_frame_end(s);
         MPV_frame_end(s);
         if (s->pict_type == B_TYPE || s->low_delay) {
@@ -1915,50 +1949,6 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         }
         s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
         s->mb_x = s->mb_y = 0;
-        return buf_size;
-    }
-
-    init_get_bits(&s->gb, buf, buf_size*8);
-    rv40_parse_slice_header(r, &r->s.gb, &si);
-    si.size = buf_size * 8;
-    si.end = s->mb_width * s->mb_height;
-
-    if(si.start > r->prev_si.start && si.type == r->prev_si.type) r->prev_si.end = si.start;
-    if(r->has_slice){
-        //XXX: Take it directly from slice info
-        r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, r->prev_si.type);
-        r->quant = r->prev_si.quant;
-        r->bits = r->prev_si.size;
-        r->block_start = r->prev_si.start;
-        s->mb_num_left = r->prev_si.end - r->prev_si.start;
-        s->pict_type = r->prev_si.type ? r->prev_si.type : I_TYPE;
-        rv40_decode_slice(r);
-        s->mb_num_left = r->prev_si.end - r->prev_si.start;
-        //rv40_postprocess(r);
-    }
-
-    if(r->has_slice && (si.start < r->prev_si.start || si.type != r->prev_si.type)){ // output complete frame
-        ff_er_frame_end(s);
-        MPV_frame_end(s);
-        if (s->pict_type == B_TYPE || s->low_delay) {
-            *pict= *(AVFrame*)s->current_picture_ptr;
-        } else if (s->last_picture_ptr != NULL) {
-            *pict= *(AVFrame*)s->last_picture_ptr;
-        }
-
-        if(s->last_picture_ptr || s->low_delay){
-            *data_size = sizeof(AVFrame);
-            ff_print_debug_info(s, pict);
-        }
-        s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
-        s->mb_x = s->mb_y = 0;
-    }
-    //save slice for future decoding
-    r->slice_data = av_realloc(r->slice_data, buf_size + FF_INPUT_BUFFER_PADDING_SIZE);
-    memcpy(r->slice_data, buf, buf_size);
-    r->prev_si = si;
-    r->has_slice = si.type != -1;
-
     return buf_size;
 }
 
