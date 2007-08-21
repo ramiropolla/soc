@@ -853,17 +853,12 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
         B[1] = A[1];
     }
     if(no_C){
-        if(no_B){
+        if(no_B || no_A){
             C[0] = A[0];
             C[1] = A[1];
         }else{
-            if(!no_A){
-                C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][0];
-                C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][1];
-            }else{
-                C[0] = A[0];
-                C[1] = A[1];
-            }
+            C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][0];
+            C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][1];
         }
     }
     mx = mid_pred(A[0], B[0], C[0]);
