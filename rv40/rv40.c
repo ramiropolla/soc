@@ -501,7 +501,7 @@ static inline int decode210(GetBitContext *gb){
  * If the width/height is the standard one then it's coded as 3-bit index.
  * Otherwise it is coded as escaped 8-bit portions.
  */
-static inline int get_dimension(GetBitContext *gb, const int *dim1, const int *dim2)
+static int get_dimension(GetBitContext *gb, const int *dim1, const int *dim2)
 {
     int val, t;
 
