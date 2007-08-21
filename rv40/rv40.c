@@ -1900,6 +1900,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         slice_offset = find_slice_offsets(buf, buf_size, &slice_count);
     }
 
+    s->current_picture_ptr= NULL;
     for(i=0; i<slice_count; i++){
         int offset= slice_offset[i];
         int size;
@@ -1934,6 +1935,10 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     if(!avctx->slice_count)
         av_free(slice_offset);
 
+    if(!s->current_picture_ptr){
+        av_log(avctx, AV_LOG_ERROR, "No decodable slices\n");
+        return -1;
+    }
     ff_er_frame_end(s);
     MPV_frame_end(s);
     if (s->pict_type == B_TYPE || s->low_delay) {
