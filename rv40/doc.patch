@@ -1,0 +1,36 @@
+Index: Changelog
+===================================================================
+--- Changelog
++++ Changelog
+@@ -92,6 +92,7 @@
+ - OS/2 support removed
+ - AC-3 decoder
+ - NUT muxer (since r10052)
++- RealVideo 4 decoder
+ 
+ version 0.4.9-pre1:
+ 
+Index: doc/ffmpeg-doc.texi
+===================================================================
+--- doc/ffmpeg-doc.texi
++++ doc/ffmpeg-doc.texi
+@@ -1004,6 +1004,7 @@
+ @item H.264                  @tab     @tab  X
+ @item RealVideo 1.0          @tab  X  @tab  X
+ @item RealVideo 2.0          @tab  X  @tab  X
++@item RealVideo 4.0          @tab     @tab  X @tab not completely working
+ @item MJPEG                  @tab  X  @tab  X
+ @item lossless MJPEG         @tab  X  @tab  X
+ @item JPEG-LS                @tab  X  @tab  X @tab fourcc: MJLS, lossless and near-lossless is supported
+Index: MAINTAINERS
+===================================================================
+--- MAINTAINERS
++++ MAINTAINERS
+@@ -162,6 +162,7 @@
+   rpza.c                                Roberto Togni
+   rtjpeg.c, rtjpeg.h                    Reimar Doeffinger
+   rv10.c                                Michael Niedermayer
++  rv40.c                                Kostya Shishkov
+   s3tc*                                 Ivo van Poorten
+   smc.c                                 Mike Melanson
+   snow.c                                Michael Niedermayer, Loren Merritt
