@@ -33,44 +33,6 @@
 
 #define SHL(a, n) ((n)>=0 ? (a) << (n) : (a) >> -(n))
 
-/** code block */
-typedef struct {
-    uint8_t npasses;  ///< number of coding passes
-    uint8_t nonzerobits;
-    uint16_t lengthinc;
-    uint16_t length;
-    uint8_t lblock;
-    uint8_t zero;
-    uint8_t data[8192];
-    uint8_t included;
-} J2kCblk;
-
-/** precinct */
-typedef struct {
-    uint16_t xi0, xi1, yi0, yi1; ///< indices of codeblocks included
-    J2kTgtNode *zerobits;
-    J2kTgtNode *cblkincl;
-} J2kPrec;
-
-/** subband */
-typedef struct {
-    uint16_t x0, x1, y0, y1;
-    uint16_t codeblock_width, codeblock_height;
-    uint16_t cblknx, cblkny;
-    uint32_t stepsize; ///< quantization stepsize (* 2^13)
-    J2kPrec *prec;
-    J2kCblk *cblk;
-} J2kBand;
-
-/** resolution level */
-typedef struct {
-    uint16_t x0, x1, y0, y1;
-    uint8_t nbands;
-    uint16_t num_precincts_x, num_precincts_y;
-    uint8_t log2_prec_width, log2_prec_height; ///< exponent of precinct size
-    J2kBand *band;
-} J2kResLevel;
-
 typedef struct {
    J2kResLevel *reslevel;
    int *data;
@@ -611,7 +573,6 @@ static int init_tile(J2kDecoderContext *s, int tileno)
                     cblk->length = 0;
                     cblk->lengthinc = 0;
                     cblk->npasses = 0;
-                    cblk->included = 0;
                 }
 
                 y0 = band->y0;
@@ -700,7 +661,7 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
                 J2kCblk *cblk = band->cblk + cblkno;
                 int incl, newpasses, llen;
 
-                if (cblk->included)
+                if (cblk->npasses)
                     incl = get_bits(s, 1);
                 else{
                     incl = tag_tree_decode(s, prec->cblkincl + pos, layno+1) == layno;
@@ -708,10 +669,8 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
                 if (!incl){
                     continue;
                 }
-                if (!cblk->included){
-                    cblk->included++;
+                if (!cblk->npasses)
                     cblk->nonzerobits = bandbps[bandno] - tag_tree_decode(s, prec->zerobits + pos, 100);
-                }
                 newpasses = getnpasses(s);
                 llen = getlblockinc(s);
                 cblk->lblock += llen;

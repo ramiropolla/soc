@@ -42,39 +42,6 @@ static int lut_nmsedec_ref [1<<NMSEDEC_BITS],
            lut_nmsedec_sig0[1<<NMSEDEC_BITS];
 
 typedef struct {
-    uint16_t rate;
-    int64_t disto;
-} J2kPass;
-
-typedef struct {
-    uint8_t npasses;
-    uint8_t ninclpasses; ///< number coding of passes included in codestream
-    uint8_t nonzerobits;
-    uint8_t zero;
-    uint8_t data[8192];
-    J2kPass passes[30];
-} J2kCblk; ///< code block
-
-typedef struct {
-    uint16_t xi0, xi1, yi0, yi1; ///< indices of codeblocks ([xi0, xi1))
-} J2kPrec; ///< precinct
-
-typedef struct {
-    uint16_t x0, x1, y0, y1;
-    uint16_t codeblock_width, codeblock_height;
-    uint16_t cblknx, cblkny;
-    J2kPrec *prec;
-    J2kCblk *cblk;
-} J2kBand; ///< subband
-
-typedef struct {
-    uint16_t x0, x1, y0, y1;
-    uint8_t nbands;
-    uint16_t num_precincts_x, num_precincts_y; ///< number of precincts in x/y direction
-    J2kBand *band;
-} J2kResLevel; ///< resolution level
-
-typedef struct {
    J2kResLevel *reslevel;
    int *data;
    uint16_t x0, x1, y0, y1;
