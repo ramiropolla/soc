@@ -65,16 +65,6 @@ int ff_pes_muxer_init(AVFormatContext *ctx)
     return 0;
 }
 
-void ff_insert_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
-{
-    put_byte(pb,
-             (id << 4) |
-             (((timestamp >> 30) & 0x07) << 1) |
-             1);
-    put_be16(pb, (uint16_t)((((timestamp >> 15) & 0x7fff) << 1) | 1));
-    put_be16(pb, (uint16_t)((((timestamp) & 0x7fff) << 1) | 1));
-}
-
 static inline void insert_timestamp(uint8_t** p, int id, int64_t timestamp)
 {
     bytestream_put_byte(p,

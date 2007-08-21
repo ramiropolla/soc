@@ -155,13 +155,4 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buff
  */
 int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
 
-/**
- * Insert a timestamp into the ByteIOContext.
- * @param[in] pb        the ByteIOContext to be written to
- * @param[in] id        stream ID
- * @param[in] timestamp the timestamp
- * @return  NULL
- */
-void ff_insert_timestamp(ByteIOContext *pb, int id, int64_t timestamp);
-
 #endif/* AVFORMAT_MPEG_PES_H */
