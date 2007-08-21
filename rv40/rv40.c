@@ -768,10 +768,10 @@ static int rv40_decode_mb_info(RV40DecContext *r)
  */
 
 /** Macroblock partition width in 8x8 blocks */
-const int part_sizes_w[RV40_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 2, 1, 2, 2 };
+static const uint8_t part_sizes_w[RV40_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 2, 1, 2, 2 };
 
 /** Macroblock partition height in 8x8 blocks */
-const int part_sizes_h[RV40_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2 };
+static const uint8_t part_sizes_h[RV40_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2 };
 
 /**
  * Motion vectors prediction
