@@ -661,13 +661,12 @@ static inline int rv40_decode_dquant(GetBitContext *gb, int quant)
  */
 static inline int get_omega(GetBitContext *gb)
 {
-    int bits = 0, code = 1, t, tb;
+    int code = 1, t, tb;
 
     for(;;){
         t = get_vlc2(gb, mbinfo_vlc.table, MBINFO_BITS, 1);
         tb = t >> 5;
         code = (code << tb) | (t & 0xF);
-        bits += tb;
         if(t & 0x10) break;
     }
     return code;
