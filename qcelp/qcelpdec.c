@@ -364,14 +364,15 @@ static void qcelp_get_gain_scalefactors(const float *in, const float *out,
                                qcelp_compute_subframe_energy(out, i));
 }
 
+/**
+ * TIA/EIA/IS-733 2.4.8.6-6
+ */
 static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
 {
     int i;
     float scalefactors[4];
 
     qcelp_get_gain_scalefactors(in, out, scalefactors);
-
-    /* TIA/EIA/IS-733 2.4.8.6-6 */
 
     if(do_iirf)
     {
@@ -732,9 +733,10 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             order = NULL;
             break;
         default:
-            q->frame->rate = RATE_UNKNOWN;
-            q->frame->bits = 0;
-            av_log(avctx, AV_LOG_ERROR, "UNKNOWN PACKET RATE\n");
+            av_log(avctx, AV_LOG_ERROR, "Error decoding frame"
+                   " -- Unknown framerate, unsupported size: %d\n",
+                   buf_size);
+            return -1;
     }
 
     if(is_codecframe_fmt)
@@ -747,7 +749,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            (claimed_rate ==  3 && q->frame->rate != RATE_HALF   ) ||
            (claimed_rate ==  4 && q->frame->rate != RATE_FULL   ))
         {
-           av_log(avctx, AV_LOG_ERROR,
+           av_log(avctx, AV_LOG_WARNING,
                   "Claimed rate and buffer size missmatch\n");
            is_ifq=1;
         }
