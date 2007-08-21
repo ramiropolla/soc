@@ -1374,19 +1374,11 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
             for(i = 0; i < 2; i++, cbp >>= 1, no_left = 0){
                 no_topright = no_up || (i && j) || (i && !j && (s->mb_x-1) == s->mb_width);
                 rv40_pred_4x4_block(r, U + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, no_topright);
-                if(!(cbp & 1)) continue;
-                rv40_add_4x4_block(U + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[4], i*4+j*32);
-            }
-            no_up = 0;
-        }
-        no_up = s->first_slice_line;
-        for(j = 0; j < 2; j++){
-            no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
-            for(i = 0; i < 2; i++, cbp >>= 1, no_left = 0){
-                no_topright = no_up || (i && j) || (i && !j && (s->mb_x-1) == s->mb_width);
                 rv40_pred_4x4_block(r, V + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, no_topright);
-                if(!(cbp & 1)) continue;
-                rv40_add_4x4_block(V + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[5], i*4+j*32);
+                if(cbp & 0x01)
+                    rv40_add_4x4_block(U + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[4], i*4+j*32);
+                if(cbp & 0x10)
+                    rv40_add_4x4_block(V + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[5], i*4+j*32);
             }
             no_up = 0;
         }
