@@ -1901,54 +1901,54 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     }
 
     for(i=0; i<slice_count; i++){
-            int offset= slice_offset[i];
-            int size;
+        int offset= slice_offset[i];
+        int size;
 
-            if(i+1 == slice_count)
-                size= buf_size - offset;
-            else
-                size= slice_offset[i+1] - offset;
+        if(i+1 == slice_count)
+            size= buf_size - offset;
+        else
+            size= slice_offset[i+1] - offset;
 
-            init_get_bits(&s->gb, buf + offset, size * 8);
-            rv40_parse_slice_header(r, &r->s.gb, &r->prev_si);
-            if(r->prev_si.type == -1) continue;
-            r->prev_si.size = size * 8;
-            r->prev_si.end = s->mb_width * s->mb_height;
-            if(i+1 < slice_count){
-                init_get_bits(&s->gb, buf+slice_offset[i+1], (buf_size-slice_offset[i+1])*8);
-                rv40_parse_slice_header(r, &r->s.gb, &si);
-                if(si.type != -1)
-                    r->prev_si.end = si.start;
-            }
-            r->slice_data = buf + offset;
-            r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, r->prev_si.type);
-            r->quant = r->prev_si.quant;
-            r->bits = r->prev_si.size;
-            r->block_start = r->prev_si.start;
-            s->mb_num_left = r->prev_si.end - r->prev_si.start;
-            s->pict_type = r->prev_si.type ? r->prev_si.type : I_TYPE;
-            rv40_decode_slice(r);
-            s->mb_num_left = r->prev_si.end - r->prev_si.start;
-            //rv40_postprocess(r);
-            r->slice_data = NULL;
+        init_get_bits(&s->gb, buf + offset, size * 8);
+        rv40_parse_slice_header(r, &r->s.gb, &r->prev_si);
+        if(r->prev_si.type == -1) continue;
+        r->prev_si.size = size * 8;
+        r->prev_si.end = s->mb_width * s->mb_height;
+        if(i+1 < slice_count){
+            init_get_bits(&s->gb, buf+slice_offset[i+1], (buf_size-slice_offset[i+1])*8);
+            rv40_parse_slice_header(r, &r->s.gb, &si);
+            if(si.type != -1)
+                r->prev_si.end = si.start;
+        }
+        r->slice_data = buf + offset;
+        r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, r->prev_si.type);
+        r->quant = r->prev_si.quant;
+        r->bits = r->prev_si.size;
+        r->block_start = r->prev_si.start;
+        s->mb_num_left = r->prev_si.end - r->prev_si.start;
+        s->pict_type = r->prev_si.type ? r->prev_si.type : I_TYPE;
+        rv40_decode_slice(r);
+        s->mb_num_left = r->prev_si.end - r->prev_si.start;
+        //rv40_postprocess(r);
+        r->slice_data = NULL;
     }
     if(!avctx->slice_count)
         av_free(slice_offset);
 
-        ff_er_frame_end(s);
-        MPV_frame_end(s);
-        if (s->pict_type == B_TYPE || s->low_delay) {
-            *pict= *(AVFrame*)s->current_picture_ptr;
-        } else if (s->last_picture_ptr != NULL) {
-            *pict= *(AVFrame*)s->last_picture_ptr;
-        }
+    ff_er_frame_end(s);
+    MPV_frame_end(s);
+    if (s->pict_type == B_TYPE || s->low_delay) {
+        *pict= *(AVFrame*)s->current_picture_ptr;
+    } else if (s->last_picture_ptr != NULL) {
+        *pict= *(AVFrame*)s->last_picture_ptr;
+    }
 
-        if(s->last_picture_ptr || s->low_delay){
-            *data_size = sizeof(AVFrame);
-            ff_print_debug_info(s, pict);
-        }
-        s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
-        s->mb_x = s->mb_y = 0;
+    if(s->last_picture_ptr || s->low_delay){
+        *data_size = sizeof(AVFrame);
+        ff_print_debug_info(s, pict);
+    }
+    s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
+    s->mb_x = s->mb_y = 0;
     return buf_size;
 }
 
