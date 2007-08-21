@@ -711,22 +711,22 @@ static int rv40_decode_mb_info(RV40DecContext *r)
          return RV40_MB_SKIP;
 
     memset(blocks, 0, sizeof(blocks));
+    if(!s->first_slice_line){
+        blocks[r->mb_type[mb_pos - s->mb_stride]]++;
+        if(s->mb_x && !(s->mb_x == s->resync_mb_x && (s->mb_y-1) == s->resync_mb_y))
+            blocks[r->mb_type[mb_pos - s->mb_stride - 1]]++;
+        if(s->mb_x+1 < s->mb_width)
+            blocks[r->mb_type[mb_pos - s->mb_stride + 1]]++;
+    }
+    if(s->mb_x && !(s->first_slice_line && s->mb_x == s->resync_mb_x))
+        blocks[r->mb_type[mb_pos - 1]]++;
+    for(i = 0; i < RV40_MB_TYPES; i++){
+        if(blocks[i] > count){
+            count = blocks[i];
+            prev_type = i;
+        }
+    }
     if(s->pict_type == P_TYPE){
-        if(!s->first_slice_line){
-            blocks[r->mb_type[mb_pos - s->mb_stride]]++;
-            if(s->mb_x && !(s->mb_x == s->resync_mb_x && (s->mb_y-1) == s->resync_mb_y))
-                blocks[r->mb_type[mb_pos - s->mb_stride - 1]]++;
-            if(s->mb_x+1 < s->mb_width)
-                blocks[r->mb_type[mb_pos - s->mb_stride + 1]]++;
-        }
-        if(s->mb_x && !(s->first_slice_line && s->mb_x == s->resync_mb_x))
-            blocks[r->mb_type[mb_pos - 1]]++;
-        for(i = 0; i < RV40_MB_TYPES; i++){
-            if(blocks[i] > count){
-                count = blocks[i];
-                prev_type = i;
-            }
-        }
         if(prev_type == RV40_MB_SKIP) prev_type = RV40_MB_P_16x16;
         prev_type = block_num_to_ptype_vlc_num[prev_type];
         q = get_vlc2(gb, ptype_vlc[prev_type].table, PTYPE_VLC_BITS, 1);
@@ -735,21 +735,6 @@ static int rv40_decode_mb_info(RV40DecContext *r)
         q = get_vlc2(gb, ptype_vlc[prev_type].table, PTYPE_VLC_BITS, 1);
         av_log(NULL,0,"Dquant for P-frame\n");
     }else{
-        if(!s->first_slice_line){
-            blocks[r->mb_type[mb_pos - s->mb_stride]]++;
-            if(s->mb_x && !(s->mb_x == s->resync_mb_x && (s->mb_y-1) == s->resync_mb_y))
-                blocks[r->mb_type[mb_pos - s->mb_stride - 1]]++;
-            if(s->mb_x+1 < s->mb_width)
-                blocks[r->mb_type[mb_pos - s->mb_stride + 1]]++;
-        }
-        if(s->mb_x && !(s->first_slice_line && s->mb_x == s->resync_mb_x))
-            blocks[r->mb_type[mb_pos - 1]]++;
-        for(i = 0; i < RV40_MB_TYPES; i++){
-            if(blocks[i] > count){
-                count = blocks[i];
-                prev_type = i;
-            }
-        }
         prev_type = block_num_to_btype_vlc_num[prev_type];
         q = get_vlc2(gb, btype_vlc[prev_type].table, BTYPE_VLC_BITS, 1);
         if(q < PBTYPE_ESCAPE)
