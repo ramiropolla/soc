@@ -559,15 +559,15 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
  * @param d1 real dimension of v1 prior convolution
  * @param d2 dimension of v2
  */
-static void qcelp_convolve(float *v1, const float *v2, int d1,
-            int d2)
+static void qcelp_convolve(float *v1, const float *v2, int d1, int d2)
 {
     float copy[12];
-    int i,j;
+    int   i,j,dim;
 
     memcpy(copy, v1, sizeof(copy));
+    dim=d1+d2-1;
 
-    for(i=0;i<(d1+d2-1);i++)
+    for(i=0;i<dim;i++)
     {
         v1[i]=0.0;
         for(j=0;j<=i;j++)
