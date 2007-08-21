@@ -170,12 +170,12 @@ static const int8_t rv40_dquant_tab[] = {
 
 /**
  * Maximum number of macroblocks for each of the possible slice offset sizes
- * @fixme this is the same as ff_mba_max, maybe use it instead
+ * @todo this is the same as ff_mba_max, maybe use it instead
  */
 static const uint16_t rv40_mb_max_sizes[6] = { 0x2F, 0x68, 0x18B, 0x62F, 0x18BF, 0x23FF };
 /**
  * Bits needed to code slice offset for the given size
- * @fixme this is the same as ff_mba_length, maybe use it instead
+ * @todo this is the same as ff_mba_length, maybe use it instead
  */
 static const uint8_t rv40_mb_bits_sizes[6] = { 6, 7, 9, 11, 13, 14 };
 
