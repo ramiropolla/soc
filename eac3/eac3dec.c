@@ -1312,9 +1312,6 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     }
 
     avctx->bit_rate = (c->frmsiz * (avctx->sample_rate) * 16 / ( ff_eac3_blocks[c->numblkscod] * 256)) / 1000;
-#ifdef DEBUG
-    av_log(NULL, AV_LOG_INFO, "bitrate = %i\n", avctx->bit_rate);
-#endif
 
     /* channel config */
     if (avctx->channels == 0) {
@@ -1335,16 +1332,10 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             c->deltbae[i] = DBA_NONE;
             c->deltnseg[i] = 0;
         }
-#ifdef DEBUG
-    av_log(NULL, AV_LOG_INFO, "-------START BLK-------\n");
-#endif
         if(parse_audblk(&gbc, c, blk)){
             av_log(c->avctx, AV_LOG_ERROR, "Error in parse_audblk\n");
             return -1;
         }
-#ifdef DEBUG
-    av_log(NULL, AV_LOG_INFO, "-------END BLK-------\n");
-#endif
 
     /* recover coefficients if rematrixing is in use */
     if(c->acmod == AC3_ACMOD_STEREO)
@@ -1386,10 +1377,6 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             }
         }
     }
-
-#ifdef DEBUG
-    av_log(NULL, AV_LOG_INFO, "--------------------------------------------------------------------------\n");
-#endif
 
     *data_size = ff_eac3_blocks[c->numblkscod] * 256 * avctx->channels * sizeof (int16_t); // TODO is ok?
 
