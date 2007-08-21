@@ -1328,10 +1328,6 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     }
 
     for(blk = 0; blk < ff_eac3_blocks[c->numblkscod]; blk++){
-        for(i=0; i<AC3_MAX_CHANNELS+1; i++){
-            c->deltbae[i] = DBA_NONE;
-            c->deltnseg[i] = 0;
-        }
         if(parse_audblk(&gbc, c, blk)){
             av_log(c->avctx, AV_LOG_ERROR, "Error in parse_audblk\n");
             return -1;
