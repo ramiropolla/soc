@@ -552,26 +552,26 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
 /**
  * Linear convolution of two vectors, with max resultant
  * vector dim = 12 -- just what we need. Result gets stored
- * in vector_a so it must have enough room to hold d1+d2-1.
+ * in v1 so it must have enough room to hold d1+d2-1.
  *
  * WIP this is a heavily suboptimal implementation
  *
- * @param d1 real dimension of vector_a prior convolution
- * @param d2 dimension of vector_b
+ * @param d1 real dimension of v1 prior convolution
+ * @param d2 dimension of v2
  */
-static void qcelp_convolve(float *vector_a, const float *vector_b, int d1,
+static void qcelp_convolve(float *v1, const float *v2, int d1,
             int d2)
 {
     float copy[12];
     int i,j;
 
-    memcpy(copy, vector_a, sizeof(copy));
+    memcpy(copy, v1, sizeof(copy));
 
     for(i=0;i<(d1+d2-1);i++)
     {
-        vector_a[i]=0.0;
+        v1[i]=0.0;
         for(j=0;j<=i;j++)
-            vector_a[i]+=(((i-j)>=d1 || (i-j)<0)? 0:copy[i-j])*(j>=d2? 0:vector_b[j]);
+            v1[i]+=(((i-j)>=d1 || (i-j)<0)? 0:copy[i-j])*(j>=d2? 0:v2[j]);
     }
 
 }
@@ -584,44 +584,44 @@ static void qcelp_convolve(float *vector_a, const float *vector_b, int d1,
 static void qcelp_lsp2poly(float *lspf, float *pa, float *qa)
 {
     int i;
-    float vector_a[12];
-    float vector_b[3];
-    int   a_limit[]={2,4,6,8,10};
+    float v1[12];
+    float v2[3];
+    int   limit[]={2,4,6,8,10};
 
-    vector_b[0]=1;
-    vector_b[2]=1;
+    v2[0]=1;
+    v2[2]=1;
 
     /**
      * Compute Pa coefs
      */
 
-    vector_a[0]=1.0;
-    vector_a[1]=1.0;
+    v1[0]=1.0;
+    v1[1]=1.0;
 
     for(i=0; i<5; i++)
     {
-        vector_b[1]=-2*cos(M_PI*lspf[2*i]);
-        qcelp_convolve(vector_a, vector_b, a_limit[i], 3);
+        v2[1]=-2*cos(M_PI*lspf[2*i]);
+        qcelp_convolve(v1, v2, limit[i], 3);
     }
 
     for(i=0;i<5;i++)
-        pa[i]=vector_a[i+1];
+        pa[i]=v1[i+1];
 
     /**
      * Compute Qa coefs
      */
 
-    vector_a[0]= 1.0;
-    vector_a[1]=-1.0;
+    v1[0]= 1.0;
+    v1[1]=-1.0;
 
     for(i=0; i<5; i++)
     {
-        vector_b[1]=-2*cos(M_PI*lspf[2*i+1]);
-        qcelp_convolve(vector_a, vector_b, a_limit[i], 3);
+        v2[1]=-2*cos(M_PI*lspf[2*i+1]);
+        qcelp_convolve(v1, v2, limit[i], 3);
     }
 
     for(i=0;i<5;i++)
-        qa[i]=vector_a[i+1];
+        qa[i]=v1[i+1];
 
 }
 
