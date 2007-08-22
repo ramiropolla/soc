@@ -101,6 +101,7 @@ typedef struct RV40DecContext{
     RV40VLC *cur_vlcs;       ///< VLC set used for current frame decoding
     int bits;                ///< slice size in bits
     H264PredContext h;       ///< functions for 4x4 and 16x16 intra block prediction
+    SliceInfo si;            ///< current slice information
     SliceInfo prev_si;       ///< info for the saved slice
     uint8_t *slice_data;     ///< saved slice data
     int has_slice;           ///< has previously saved slice
@@ -1410,7 +1411,7 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
     int mb_pos = s->mb_x + s->mb_y * s->mb_stride;
     int i, t;
 
-    if(!r->prev_si.type){
+    if(!r->si.type){
         r->is16 = 0;
         switch(decode210(gb)){
         case 0: // 16x16 block
@@ -1455,16 +1456,16 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
             r->chroma_vlc = 0;
             r->luma_vlc   = 2;
         }
-        r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, 0);
+        r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, 0);
     }else{
         for(i = 0; i < 16; i++)
             intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = 0;
-        r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, 1);
+        r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, 1);
         if(r->mb_type[mb_pos] == RV40_MB_P_MIX16x16){
             r->is16 = 1;
             r->chroma_vlc = 1;
             r->luma_vlc   = 2;
-            r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, 0);
+            r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, 0);
         }
     }
     return rv40_decode_cbp(gb, r->cur_vlcs, r->is16);
@@ -1511,7 +1512,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     if(r->is16){
         memset(block16, 0, sizeof(block16));
         rv40_decode_block(block16, gb, r->cur_vlcs, 3, 0);
-        rv40_dequant4x4_16x16(block16, 0, rv40_qscale_tab[rv40_luma_quant[r->prev_si.type>>1][r->quant]],rv40_qscale_tab[r->quant]);
+        rv40_dequant4x4_16x16(block16, 0, rv40_qscale_tab[rv40_luma_quant[r->si.type>>1][r->quant]],rv40_qscale_tab[r->quant]);
         rv40_intra_inv_transform_noround(block16, 0);
     }
 
@@ -1522,14 +1523,14 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         if(cbp & 1)
             rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, r->luma_vlc, 0);
         if((cbp & 1) || r->is16){
-            rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[rv40_luma_quant[r->prev_si.type>>1][r->quant]],rv40_qscale_tab[r->quant]);
+            rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[rv40_luma_quant[r->si.type>>1][r->quant]],rv40_qscale_tab[r->quant]);
             if(r->is16) //FIXME: optimize
                 s->block[blknum][blkoff] = block16[(i & 3) | ((i & 0xC) << 1)];
             rv40_intra_inv_transform(s->block[blknum], blkoff);
         }
     }
     if(r->block_type == RV40_MB_P_MIX16x16)
-        r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, 1);
+        r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, 1);
     for(; i < 24; i++, cbp >>= 1){
         if(!(cbp & 1)) continue;
         blknum = ((i & 4) >> 2) + 4;
@@ -1564,11 +1565,11 @@ static int rv40_decode_slice(RV40DecContext *r)
     MpegEncContext *s = &r->s;
     int mb_pos;
 
-    init_get_bits(&r->s.gb, r->slice_data, r->prev_si.size);
-    skip_bits(&r->s.gb, r->prev_si.header_size);
+    init_get_bits(&r->s.gb, r->slice_data, r->si.size);
+    skip_bits(&r->s.gb, r->si.header_size);
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
-        if(r->prev_si.width) s->avctx->coded_width  = r->prev_si.width;
-        if(r->prev_si.height)s->avctx->coded_height = r->prev_si.height;
+        if(r->si.width) s->avctx->coded_width  = r->si.width;
+        if(r->si.height)s->avctx->coded_height = r->si.height;
         if(MPV_frame_start(s, s->avctx) < 0)
             return -1;
         ff_er_frame_start(s);
@@ -1911,25 +1912,25 @@ static int rv40_decode_frame(AVCodecContext *avctx,
             size= slice_offset[i+1] - offset;
 
         init_get_bits(&s->gb, buf + offset, size * 8);
-        rv40_parse_slice_header(r, &r->s.gb, &r->prev_si);
-        if(r->prev_si.type == -1) continue;
-        r->prev_si.size = size * 8;
-        r->prev_si.end = s->mb_width * s->mb_height;
+        rv40_parse_slice_header(r, &r->s.gb, &r->si);
+        if(r->si.type == -1) continue;
+        r->si.size = size * 8;
+        r->si.end = s->mb_width * s->mb_height;
         if(i+1 < slice_count){
             init_get_bits(&s->gb, buf+slice_offset[i+1], (buf_size-slice_offset[i+1])*8);
             rv40_parse_slice_header(r, &r->s.gb, &si);
             if(si.type != -1)
-                r->prev_si.end = si.start;
+                r->si.end = si.start;
         }
         r->slice_data = buf + offset;
-        r->cur_vlcs = choose_vlc_set(r->prev_si.quant, r->prev_si.vlc_set, r->prev_si.type);
-        r->quant = r->prev_si.quant;
-        r->bits = r->prev_si.size;
-        r->block_start = r->prev_si.start;
-        s->mb_num_left = r->prev_si.end - r->prev_si.start;
-        s->pict_type = r->prev_si.type ? r->prev_si.type : I_TYPE;
+        r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, r->si.type);
+        r->quant = r->si.quant;
+        r->bits = r->si.size;
+        r->block_start = r->si.start;
+        s->mb_num_left = r->si.end - r->si.start;
+        s->pict_type = r->si.type ? r->si.type : I_TYPE;
         rv40_decode_slice(r);
-        s->mb_num_left = r->prev_si.end - r->prev_si.start;
+        s->mb_num_left = r->si.end - r->si.start;
         //rv40_postprocess(r);
     }
     if(!avctx->slice_count)
