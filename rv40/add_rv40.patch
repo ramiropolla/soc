@@ -10,14 +10,6 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_SGI_DECODER)             += sgidec.o
  OBJS-$(CONFIG_SGI_ENCODER)             += sgienc.o rle.o
  OBJS-$(CONFIG_SHORTEN_DECODER)         += shorten.o golomb.o
-@@ -315,6 +316,7 @@
- OBJS-$(CONFIG_MPEGAUDIO_PARSER)        += mpegaudio_parser.o mpegaudiodecheader.o mpegaudiodata.o
- OBJS-$(CONFIG_MPEGVIDEO_PARSER)        += mpegvideo_parser.o
- OBJS-$(CONFIG_PNM_PARSER)              += pnm_parser.o pnm.o
-+OBJS-$(CONFIG_RV40_PARSER)             += rv40_parser.o
- OBJS-$(CONFIG_VC1_PARSER)              += vc1_parser.o
- 
- OBJS-$(CONFIG_DUMP_EXTRADATA_BSF)      += dump_extradata_bsf.o
 Index: libavcodec/allcodecs.c
 ===================================================================
 --- libavcodec/allcodecs.c
@@ -30,36 +22,3 @@ Index: libavcodec/allcodecs.c
      REGISTER_ENCDEC (SGI, sgi);
      REGISTER_DECODER(SMACKER, smacker);
      REGISTER_DECODER(SMC, smc);
-@@ -272,6 +273,7 @@
-     REGISTER_PARSER (MPEGAUDIO, mpegaudio);
-     REGISTER_PARSER (MPEGVIDEO, mpegvideo);
-     REGISTER_PARSER (PNM, pnm);
-+    REGISTER_PARSER (RV40, rv40);
-     REGISTER_PARSER (VC1, vc1);
- 
-     /* bitstream filters */
-Index: libavcodec/avcodec.h
-===================================================================
---- libavcodec/avcodec.h
-+++ libavcodec/avcodec.h
-@@ -2777,6 +2777,7 @@
- extern AVCodecParser mpegaudio_parser;
- extern AVCodecParser mpegvideo_parser;
- extern AVCodecParser pnm_parser;
-+extern AVCodecParser rv40_parser;
- extern AVCodecParser vc1_parser;
- 
- 
-Index: libavformat/rmdec.c
-===================================================================
---- libavformat/rmdec.c	(revision 9713)
-+++ libavformat/rmdec.c	(working copy)
-@@ -331,7 +331,7 @@
-                 case 1: st->codec->codec_id = CODEC_ID_RV10; break;
-                 case 2: st->codec->codec_id = CODEC_ID_RV20; break;
-                 case 3: st->codec->codec_id = CODEC_ID_RV30; break;
--                case 4: st->codec->codec_id = CODEC_ID_RV40; break;
-+                case 4: st->codec->codec_id = CODEC_ID_RV40; st->need_parsing = 1; break;
-                 default: goto fail1;
-                 }
-             }
