@@ -1958,20 +1958,20 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     }
 
     if(s->mb_y >= s->mb_height || last){
-    r->prev_si.type = -1;
-    ff_er_frame_end(s);
-    MPV_frame_end(s);
-    if (s->pict_type == B_TYPE || s->low_delay) {
-        *pict= *(AVFrame*)s->current_picture_ptr;
-    } else if (s->last_picture_ptr != NULL) {
-        *pict= *(AVFrame*)s->last_picture_ptr;
-    }
+        r->prev_si.type = -1;
+        ff_er_frame_end(s);
+        MPV_frame_end(s);
+        if (s->pict_type == B_TYPE || s->low_delay) {
+            *pict= *(AVFrame*)s->current_picture_ptr;
+        } else if (s->last_picture_ptr != NULL) {
+            *pict= *(AVFrame*)s->last_picture_ptr;
+        }
 
-    if(s->last_picture_ptr || s->low_delay){
-        *data_size = sizeof(AVFrame);
-        ff_print_debug_info(s, pict);
-    }
-    s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
+        if(s->last_picture_ptr || s->low_delay){
+            *data_size = sizeof(AVFrame);
+            ff_print_debug_info(s, pict);
+        }
+        s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
     }
     return buf_size;
 }
