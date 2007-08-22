@@ -1954,7 +1954,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         //rv40_postprocess(r);
     }
 
-    if(s->mb_y >= s->mb_height || last){
+    if(last){
         r->prev_si.type = -1;
         ff_er_frame_end(s);
         MPV_frame_end(s);
