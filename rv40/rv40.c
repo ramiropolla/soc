@@ -557,10 +557,8 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     if(get_bits1(gb))
         return -1;
     t = get_bits(gb, 13); /// ???
-    if(!si->type)
+    if(!si->type || !get_bits1(gb))
         rv40_parse_picture_size(gb, &w, &h);
-    else
-        get_bits1(gb);
     si->width  = w;
     si->height = h;
     mb_size = ((w + 15) >> 4) * ((h + 15) >> 4);
