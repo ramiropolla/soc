@@ -1629,9 +1629,6 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
         *last = 1;
     if(r->bits > get_bits_count(gb) && show_bits(gb, r->bits-get_bits_count(gb)))
         *last = 1;
-    // XXX: this is needed to handle incorrectly parsed B-frames
-    if(r->bits == get_bits_count(gb) && r->si.type == 3 && r->slice_data[r->bits/8 - 1]&1)
-        *last = 1;
 
     return 0;
 }
