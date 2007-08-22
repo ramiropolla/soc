@@ -142,30 +142,6 @@ Index: libavcodec/avcodec.h
  extern AVCodecParser h261_parser;
  extern AVCodecParser h263_parser;
  extern AVCodecParser h264_parser;
-Index: libavformat/raw.c
-===================================================================
---- libavformat/raw.c	(wersja 10118)
-+++ libavformat/raw.c	(kopia robocza)
-@@ -489,6 +489,19 @@
-     .extensions = "ac3",
- };
- #endif
-+#ifdef CONFIG_EAC3_DEMUXER
-+AVInputFormat eac3_demuxer = {
-+    "eac3",
-+    "raw ac3",
-+    0,
-+    ac3_probe,
-+    ac3_read_header,
-+    raw_read_partial_packet,
-+    raw_read_close,
-+    .flags= AVFMT_GENERIC_INDEX,
-+    .extensions = "ac3",
-+};
-+#endif
- 
- #ifdef CONFIG_MUXERS
- AVOutputFormat ac3_muxer = {
 Index: libavcodec/allcodecs.h
 ===================================================================
 --- libavcodec/allcodecs.h	(wersja 10118)
