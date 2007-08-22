@@ -1569,6 +1569,7 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
     init_get_bits(&r->s.gb, r->slice_data, r->si.size);
     if(rv40_parse_slice_header(r, gb, &r->si) < 0){
         av_log(s->avctx, AV_LOG_ERROR, "Error parsing slice header\n");
+        *last = 0;
         return -1;
     }
     if(r->prev_si.type != -1 && (r->si.type != r->prev_si.type || r->si.start <= r->prev_si.start || r->si.width != r->prev_si.width || r->si.height != r->prev_si.height)){
