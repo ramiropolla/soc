@@ -1586,7 +1586,7 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
     }
 
     r->si.size = size;
-    r->si.end = s->mb_width * s->mb_height;
+    r->si.end = end;
     r->quant = r->si.quant;
     r->bits = r->si.size;
     r->block_start = r->si.start;
