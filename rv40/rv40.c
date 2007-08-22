@@ -1568,6 +1568,7 @@ static int rv40_decode_slice(RV40DecContext *r)
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
         if(r->si.width) s->avctx->coded_width  = r->si.width;
         if(r->si.height)s->avctx->coded_height = r->si.height;
+        s->pict_type = r->si.type ? r->si.type : I_TYPE;
         if(MPV_frame_start(s, s->avctx) < 0)
             return -1;
         ff_er_frame_start(s);
@@ -1578,7 +1579,6 @@ static int rv40_decode_slice(RV40DecContext *r)
     r->bits = r->si.size;
     r->block_start = r->si.start;
     s->mb_num_left = r->si.end - r->si.start;
-    s->pict_type = r->si.type ? r->si.type : I_TYPE;
     r->skip_blocks = 0;
 
     mb_pos = s->mb_x + s->mb_y * s->mb_width;
