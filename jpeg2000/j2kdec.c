@@ -1195,12 +1195,13 @@ static int decode_frame(AVCodecContext *avctx,
     return s->buf - s->buf_start;
 }
 
-static void j2kdec_init(AVCodecContext *avctx)
+static int j2kdec_init(AVCodecContext *avctx)
 {
     J2kDecoderContext *s = avctx->priv_data;
 
     avcodec_get_frame_defaults((AVFrame*)&s->picture);
     avctx->coded_frame = (AVFrame*)&s->picture;
+    return 0;
 }
 
 AVCodec jpeg2000_decoder = {
