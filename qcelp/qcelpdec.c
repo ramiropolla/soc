@@ -46,8 +46,8 @@ typedef struct {
     uint8_t       erasure_count;
     uint8_t       ifq_count;
     float         prev_lspf[10];
-    float         pitchf_mem[144];
-    float         pitchp_mem[144];
+    float         pitchf_mem[150];
+    float         pitchp_mem[150];
     float         hammsinc_table[8];
     int           frame_num;
 } QCELPContext;
@@ -60,16 +60,16 @@ static int qcelp_decode_close(AVCodecContext *avctx);
 
 static float qcelp_hammsinc(float i)
 {
-    return (sin(M_PI*i)/(M_PI*i))*(0.5+0.46*cos(M_PI*i/4));
+    return (sin(M_PI*i)/(M_PI*i))*(0.5+0.46*cos(M_PI*i/4.0));
 }
 
-static void qcelp_update_pitchf_mem(float *pitchf_mem, float last)
+static void qcelp_update_pitchf_mem(float *pitchf_mem, float *last)
 {
-    float tmp[144];
+    float tmp[150];
 
-    memcpy(tmp, pitchf_mem+1, 143*sizeof(float));
-    pitchf_mem[143]=last;
-    memcpy(pitchf_mem, tmp, 143*sizeof(float));
+    memcpy(tmp, pitchf_mem+40, 110*sizeof(float));
+    memcpy(tmp+110, last, 40*sizeof(float));
+    memcpy(pitchf_mem, tmp, 150*sizeof(float));
 }
 
 static int qcelp_decode_init(AVCodecContext *avctx)
@@ -405,9 +405,9 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
 static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
            float *pv, float *hammsinc_table)
 {
-    int     i, j, tmp;
+    int     i, j, k, tmp;
     uint8_t *pgain, *plag, *pfrac;
-    float   gain[4], lag[4];
+    float   gain[4], lag[4], hamm_tmp;
 
     if(step != 1 && step != 2)
         return -1;
@@ -422,7 +422,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
             pfrac=frame->data+QCELP_PFRAC0_POS;
 
             /**
-             * Compute Gain & Lag
+             * Compute Gain & Lag for the whole frame
              */
 
             for(i=0; i<4; i++)
@@ -432,7 +432,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
                 if(step == 2) /* become pitch pre-filter */
                     gain[i]=0.5*FFMIN(gain[i],1.0);
 
-                lag[i]  =plag[i]+16;
+                lag[i]=plag[i]+16;
 
                 if(pfrac[i])
                     lag[i]+=0.5;
@@ -443,35 +443,54 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
 
             /**
              * Apply filter
+             *
+             * TIA/EIA/IS-733 2.4.5.2-2/3 equations aren't clear enough to assume
+             * this filter had to be applied in pitch-subframe steps. Experimentation
+             * was needed.
              */
 
+            k=0;
             for(i=0; i<160; i++)
             {
                 if(pfrac[i/40]) /* if is a fractional lag... */
                 {
+                    hamm_tmp=0.0;
+
                     for(j=-4; j<4; j++)
                     {
-                        tmp = i+j+0.5-lag[i/40];
+                        tmp = k+j+0.5-lag[i/40];
 
                         if(tmp < 0)
-                            pv[i]+=gain[i/40]*hammsinc_table[j+4]
-                                   * pitch_mem[144+tmp];
+                            hamm_tmp+=hammsinc_table[j+4]
+                                   * pitch_mem[150+tmp];
                         else
-                            pv[i]+=gain[i/40]*hammsinc_table[j+4]
+                            hamm_tmp+=hammsinc_table[j+4]
                                    * pv [tmp];
                     }
 
+                    pv[i]+=gain[i/40]*hamm_tmp;
+
                 }else
                 {
-                    tmp=i-lag[i/40];
+                    tmp=k-lag[i/40];
 
                     if(tmp < 0)
-                        pv[i]+=gain[i/40]*pitch_mem[144+tmp];
+                        pv[i]+=lrintf(gain[i/40]*pitch_mem[150+tmp]);
                     else
-                        pv[i]+=gain[i/40]*pv[i - lrintf(lag[i/40])];
+                        pv[i]+=lrintf(gain[i/40]*pv[i - lrintf(lag[i/40])]);
                 }
 
-                qcelp_update_pitchf_mem(pitch_mem, pv[i]);
+                /**
+                 * If we are done with the pitch subframe we have to
+                 * update the filter memory.
+                 */
+
+                if(k==39)
+                {
+                    qcelp_update_pitchf_mem(pitch_mem, &pv[i-k]);
+                }
+
+                k=(k<39)? k+1:0;
             }
 
             break;
