@@ -1547,15 +1547,13 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     return 0;
 }
 
-static int check_slice_end(RV40DecContext *r, GetBitContext *gb, MpegEncContext *s)
+static int check_slice_end(RV40DecContext *r, MpegEncContext *s)
 {
     int bits;
     if(s->mb_y >= s->mb_height)
         return 1;
     bits = r->bits - get_bits_count(&s->gb);
-    if(bits < 2)
-        return 1;
-    if(bits < 8 && (show_bits(gb, bits) == 0))
+    if(bits < 0 || (bits < 8 && !show_bits(&s->gb, bits)))
         return 1;
     return 0;
 }
