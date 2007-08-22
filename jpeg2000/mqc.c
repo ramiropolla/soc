@@ -1,5 +1,5 @@
 /*
- * Arithmetic entropy encoder and decoder common functions
+ * MQ-coder encoder and decoder common functions
  * Copyright (c) 2007 Kamil Nowosad
  *
  * This file is part of FFmpeg.
@@ -20,21 +20,21 @@
  */
 
 /**
- * Arithmetic entropy coder and decoder common functions
- * @file aec.c
+ * MQ-coder ecoder and decoder common functions
+ * @file mqc.c
  * @author Kamil Nowosad
  */
 
-#include "aec.h"
+#include "mqc.h"
 
 typedef struct {
         uint16_t qe;
         uint8_t  nmps;
         uint8_t  nlps;
         uint8_t  sw;
-} AecCxState;
+} MqcCxState;
 
-const static AecCxState cx_states[47] = {
+const static MqcCxState cx_states[47] = {
     {0x5601,  1,  1, 1},
     {0x3401,  2,  6, 0},
     {0x1801,  3,  9, 0},
@@ -84,25 +84,25 @@ const static AecCxState cx_states[47] = {
     {0x5601, 46, 46, 0}
 };
 
-uint16_t ff_aec_qe [2*47];
-uint8_t ff_aec_nlps[2*47];
-uint8_t ff_aec_nmps[2*47];
+uint16_t ff_mqc_qe [2*47];
+uint8_t ff_mqc_nlps[2*47];
+uint8_t ff_mqc_nmps[2*47];
 
-void ff_aec_init_contexts(AecState *aec)
+void ff_mqc_init_contexts(MqcState *mqc)
 {
     int i;
-    memset(aec->cx_states, 0, sizeof(aec->cx_states));
-    aec->cx_states[AEC_CX_UNI] = 2 * 46;
-    aec->cx_states[AEC_CX_RL] = 2 * 3;
-    aec->cx_states[0] = 2 * 4;
+    memset(mqc->cx_states, 0, sizeof(mqc->cx_states));
+    mqc->cx_states[MQC_CX_UNI] = 2 * 46;
+    mqc->cx_states[MQC_CX_RL] = 2 * 3;
+    mqc->cx_states[0] = 2 * 4;
 
     for (i = 0; i < 47; i++){
-        ff_aec_qe[2*i  ] =
-        ff_aec_qe[2*i+1] = cx_states[i].qe;
+        ff_mqc_qe[2*i  ] =
+        ff_mqc_qe[2*i+1] = cx_states[i].qe;
 
-        ff_aec_nlps[2*i  ] = 2*cx_states[i].nlps + cx_states[i].sw;
-        ff_aec_nlps[2*i+1] = 2*cx_states[i].nlps + 1 - cx_states[i].sw;
-        ff_aec_nmps[2*i  ] = 2*cx_states[i].nmps;
-        ff_aec_nmps[2*i+1] = 2*cx_states[i].nmps + 1;
+        ff_mqc_nlps[2*i  ] = 2*cx_states[i].nlps + cx_states[i].sw;
+        ff_mqc_nlps[2*i+1] = 2*cx_states[i].nlps + 1 - cx_states[i].sw;
+        ff_mqc_nmps[2*i  ] = 2*cx_states[i].nmps;
+        ff_mqc_nmps[2*i+1] = 2*cx_states[i].nmps + 1;
     }
 }

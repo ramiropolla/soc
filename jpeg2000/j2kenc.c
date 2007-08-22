@@ -600,11 +600,11 @@ static void encode_sigpass(J2kT1Context *t1, int width, int height, int bandno, 
                 if (!(t1->flags[y+1][x+1] & J2K_T1_SIG) && (t1->flags[y+1][x+1] & J2K_T1_SIG_NB)){
                     int ctxno = ff_j2k_getnbctxno(t1->flags[y+1][x+1], bandno),
                         bit = abs(t1->data[y][x]) & mask ? 1 : 0;
-                    ff_aec_encode(&t1->aec, t1->aec.cx_states + ctxno, bit);
+                    ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, bit);
                     if (bit){
                         int xorbit;
                         int ctxno = ff_j2k_getsgnctxno(t1->flags[y+1][x+1], &xorbit);
-                        ff_aec_encode(&t1->aec, t1->aec.cx_states + ctxno, (t1->data[y][x] < 0) ^ xorbit);
+                        ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, (t1->data[y][x] < 0) ^ xorbit);
                         *nmsedec += getnmsedec_sig(abs(t1->data[y][x]), bpno + NMSEDEC_FRACBITS);
                         ff_j2k_set_significant(t1, x, y);
                     }
@@ -622,7 +622,7 @@ static void encode_refpass(J2kT1Context *t1, int width, int height, int *nmsedec
                 if ((t1->flags[y+1][x+1] & (J2K_T1_SIG | J2K_T1_VIS)) == J2K_T1_SIG){
                     int ctxno = ff_j2k_getrefctxno(t1->flags[y+1][x+1]);
                     *nmsedec += getnmsedec_ref(abs(t1->data[y][x]), bpno + NMSEDEC_FRACBITS);
-                    ff_aec_encode(&t1->aec, t1->aec.cx_states + ctxno, abs(t1->data[y][x]) & mask ? 1:0);
+                    ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, abs(t1->data[y][x]) & mask ? 1:0);
                     t1->flags[y+1][x+1] |= J2K_T1_REF;
                 }
 }
@@ -643,21 +643,21 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int bandno, 
                 for (rlen = 0; rlen < 4; rlen++)
                     if (abs(t1->data[y0+rlen][x]) & mask)
                         break;
-                ff_aec_encode(&t1->aec, t1->aec.cx_states + AEC_CX_RL, rlen != 4);
+                ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + MQC_CX_RL, rlen != 4);
                 if (rlen == 4)
                     continue;
-                ff_aec_encode(&t1->aec, t1->aec.cx_states + AEC_CX_UNI, rlen >> 1);
-                ff_aec_encode(&t1->aec, t1->aec.cx_states + AEC_CX_UNI, rlen & 1);
+                ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + MQC_CX_UNI, rlen >> 1);
+                ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + MQC_CX_UNI, rlen & 1);
                 for (y = y0 + rlen; y < y0 + 4; y++){
                     if (!(t1->flags[y+1][x+1] & (J2K_T1_SIG | J2K_T1_VIS))){
                         int ctxno = ff_j2k_getnbctxno(t1->flags[y+1][x+1], bandno);
                         if (y > y0 + rlen)
-                            ff_aec_encode(&t1->aec, t1->aec.cx_states + ctxno, abs(t1->data[y][x]) & mask ? 1:0);
+                            ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, abs(t1->data[y][x]) & mask ? 1:0);
                         if (abs(t1->data[y][x]) & mask){ // newly significant
                             int xorbit;
                             int ctxno = ff_j2k_getsgnctxno(t1->flags[y+1][x+1], &xorbit);
                             *nmsedec += getnmsedec_sig(abs(t1->data[y][x]), bpno + NMSEDEC_FRACBITS);
-                            ff_aec_encode(&t1->aec, t1->aec.cx_states + ctxno, (t1->data[y][x] < 0) ^ xorbit);
+                            ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, (t1->data[y][x] < 0) ^ xorbit);
                             ff_j2k_set_significant(t1, x, y);
                         }
                     }
@@ -668,12 +668,12 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int bandno, 
                 for (y = y0; y < y0 + 4 && y < height; y++){
                     if (!(t1->flags[y+1][x+1] & (J2K_T1_SIG | J2K_T1_VIS))){
                         int ctxno = ff_j2k_getnbctxno(t1->flags[y+1][x+1], bandno);
-                        ff_aec_encode(&t1->aec, t1->aec.cx_states + ctxno, abs(t1->data[y][x]) & mask ? 1:0);
+                        ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, abs(t1->data[y][x]) & mask ? 1:0);
                         if (abs(t1->data[y][x]) & mask){ // newly significant
                             int xorbit;
                             int ctxno = ff_j2k_getsgnctxno(t1->flags[y+1][x+1], &xorbit);
                             *nmsedec += getnmsedec_sig(abs(t1->data[y][x]), bpno + NMSEDEC_FRACBITS);
-                            ff_aec_encode(&t1->aec, t1->aec.cx_states + ctxno, (t1->data[y][x] < 0) ^ xorbit);
+                            ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, (t1->data[y][x] < 0) ^ xorbit);
                             ff_j2k_set_significant(t1, x, y);
                         }
                     }
@@ -706,7 +706,7 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
         bpno = cblk->nonzerobits - 1;
     }
 
-    ff_aec_initenc(&t1->aec, cblk->data);
+    ff_mqc_initenc(&t1->mqc, cblk->data);
 
     for (passno = 0; bpno >= 0; passno++){
         nmsedec=0;
@@ -720,7 +720,7 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
                     break;
         }
 
-        cblk->passes[passno].rate = 3 + ff_aec_length(&t1->aec);
+        cblk->passes[passno].rate = 3 + ff_mqc_length(&t1->mqc);
         wmsedec += (int64_t)nmsedec << (2*bpno);
         cblk->passes[passno].disto = wmsedec;
 
@@ -733,7 +733,7 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
     cblk->ninclpasses = passno;
 
     // TODO: optional flush on each pass
-    cblk->passes[passno-1].rate = ff_aec_flush(&t1->aec);
+    cblk->passes[passno-1].rate = ff_mqc_flush(&t1->mqc);
 }
 
 /* tier-2 routines: */

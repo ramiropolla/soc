@@ -28,7 +28,7 @@
 #ifndef J2K_H
 #define J2K_H
 
-#include "aec.h"
+#include "mqc.h"
 
 enum J2kMarkers{
     J2K_SOC = 0xff4f, ///< start of codestream
@@ -92,7 +92,7 @@ enum J2kQuantsty{ ///< quantization style
 typedef struct {
     int data[J2K_MAX_CBLKW][J2K_MAX_CBLKH];
     int flags[J2K_MAX_CBLKW+2][J2K_MAX_CBLKH+2];
-    AecState aec;
+    MqcState mqc;
 } J2kT1Context;
 
 typedef struct J2kTgtNode {

@@ -1,5 +1,5 @@
 /*
- * Arithmetic entropy coder
+ * MQ-coder
  * Copyright (c) 2007 Kamil Nowosad
  *
  * This file is part of FFmpeg.
@@ -20,22 +20,22 @@
  */
 
 /**
- * Arithmetic entropy coder
- * @file aec.h
+ * MQ-coder
+ * @file mqc.h
  * @author Kamil Nowosad
  */
 
-#ifndef AEC_H
-#define AEC_H
+#ifndef MQC_H
+#define MQC_H
 
 #include "avcodec.h"
 
-#define AEC_CX_UNI 17
-#define AEC_CX_RL  18
+#define MQC_CX_UNI 17
+#define MQC_CX_RL  18
 
-extern uint16_t  ff_aec_qe[2*47];
-extern uint8_t ff_aec_nlps[2*47];
-extern uint8_t ff_aec_nmps[2*47];
+extern uint16_t  ff_mqc_qe[2*47];
+extern uint8_t ff_mqc_nlps[2*47];
+extern uint8_t ff_mqc_nmps[2*47];
 
 typedef struct {
     uint8_t *bp, *bpstart;
@@ -43,33 +43,33 @@ typedef struct {
     unsigned int c;
     unsigned int ct;
     uint8_t cx_states[19];
-} AecState;
+} MqcState;
 
 /* encoder */
 
 /** initialize the encoder */
-void ff_aec_initenc(AecState *aec, uint8_t *bp);
+void ff_mqc_initenc(MqcState *mqc, uint8_t *bp);
 
 /** code bit d with context cx */
-void ff_aec_encode(AecState *aec, uint8_t *cxstate, int d);
+void ff_mqc_encode(MqcState *mqc, uint8_t *cxstate, int d);
 
 /** number of encoded bytes */
-int ff_aec_length(AecState *aec);
+int ff_mqc_length(MqcState *mqc);
 
 /** flush the encoder [returns number of bytes encoded] */
-int ff_aec_flush(AecState *aec);
+int ff_mqc_flush(MqcState *mqc);
 
 /* decoder */
 
 /** initialize the decoder */
-void ff_aec_initdec(AecState *aec, uint8_t *bp);
+void ff_mqc_initdec(MqcState *mqc, uint8_t *bp);
 
 /** returns decoded bit with context cx */
-int ff_aec_decode(AecState *aec, uint8_t *cxstate);
+int ff_mqc_decode(MqcState *mqc, uint8_t *cxstate);
 
 /* common */
 
 /** initialize the contexts */
-void ff_aec_init_contexts(AecState *aec);
+void ff_mqc_init_contexts(MqcState *mqc);
 
 #endif
