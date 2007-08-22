@@ -1573,6 +1573,7 @@ static int rv40_decode_slice(RV40DecContext *r)
             return -1;
         ff_er_frame_start(s);
         s->current_picture_ptr = &s->current_picture;
+        s->mb_x = s->mb_y = 0;
     }
 
     r->quant = r->si.quant;
