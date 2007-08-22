@@ -1558,13 +1558,22 @@ static int check_slice_end(RV40DecContext *r, MpegEncContext *s)
     return 0;
 }
 
-static int rv40_decode_slice(RV40DecContext *r)
+static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
 {
     MpegEncContext *s = &r->s;
+    GetBitContext *gb = &s->gb;
     int mb_pos;
+    int mb_w = s->mb_width, mb_h = s->mb_height;
+    *last = 1;
 
     init_get_bits(&r->s.gb, r->slice_data, r->si.size);
-    skip_bits(&r->s.gb, r->si.header_size);
+    if(rv40_parse_slice_header(r, gb, &r->si) < 0){
+        av_log(s->avctx, AV_LOG_ERROR, "Error parsing slice header\n");
+        return -1;
+    }
+    if(r->prev_si.type != -1 && (r->si.type != r->prev_si.type || r->si.start <= r->prev_si.start || r->si.width != r->prev_si.width || r->si.height != r->prev_si.height)){
+        av_log(s->avctx, AV_LOG_ERROR, "Slice headers mismatch\n");
+    }
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
         if(r->si.width) s->avctx->coded_width  = r->si.width;
         if(r->si.height)s->avctx->coded_height = r->si.height;
@@ -1576,11 +1585,15 @@ static int rv40_decode_slice(RV40DecContext *r)
         s->mb_x = s->mb_y = 0;
     }
 
+    r->si.size = size;
+    r->si.end = s->mb_width * s->mb_height;
     r->quant = r->si.quant;
     r->bits = r->si.size;
     r->block_start = r->si.start;
     s->mb_num_left = r->si.end - r->si.start;
     r->skip_blocks = 0;
+
+    r->prev_si = r->si;
 
     mb_pos = s->mb_x + s->mb_y * s->mb_width;
     if(r->block_start != mb_pos){
@@ -1593,11 +1606,12 @@ static int rv40_decode_slice(RV40DecContext *r)
     s->resync_mb_x= s->mb_x;
     s->resync_mb_y= s->mb_y;
     ff_init_block_index(s);
-    while(s->mb_num_left-- && s->mb_y < s->mb_height) {
+    while(!check_slice_end(r, s) && s->mb_num_left-- && s->mb_y < s->mb_height) {
         ff_update_block_index(s);
         s->dsp.clear_blocks(s->block[0]);
 
-        rv40_decode_macroblock(r, r->intra_types + (s->mb_x + 1) * 4);
+        if(rv40_decode_macroblock(r, r->intra_types + (s->mb_x + 1) * 4) < 0)
+            break;
         if (++s->mb_x == s->mb_width) {
             s->mb_x = 0;
             s->mb_y++;
@@ -1610,6 +1624,14 @@ static int rv40_decode_slice(RV40DecContext *r)
             s->first_slice_line=0;
     }
     ff_er_add_slice(s, s->resync_mb_x, s->resync_mb_y, s->mb_x-1, s->mb_y, AC_END|DC_END|MV_END);
+    *last = 0;
+    if(s->mb_y >= s->mb_height || r->bits < get_bits_count(gb))
+        *last = 1;
+    if(r->bits > get_bits_count(gb) && show_bits(gb, r->bits-get_bits_count(gb)))
+        *last = 1;
+    // XXX: this is needed to handle incorrectly parsed B-frames
+    if(r->bits == get_bits_count(gb) && r->si.type == 3 && r->slice_data[r->bits/8 - 1]&1)
+        *last = 1;
 
     return 0;
 }
@@ -1849,6 +1871,7 @@ static int rv40_decode_init(AVCodecContext *avctx)
         rv40_init_tables();
         tables_done = 1;
     }
+    r->prev_si.type = -1;
     return 0;
 }
 
@@ -1887,6 +1910,8 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     SliceInfo si;
     int i;
     int slice_count, *slice_offset;
+    int zero_offset = {0};
+    int last;
 
     /* no supplementary picture */
     if (buf_size == 0) {
@@ -1903,10 +1928,10 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         slice_count = avctx->slice_count;
         slice_offset = avctx->slice_offset;
     }else{
-        slice_offset = find_slice_offsets(buf, buf_size, &slice_count);
+        slice_count = 1;
+        slice_offset = &zero_offset;
     }
 
-    s->current_picture_ptr= NULL;
     for(i=0; i<slice_count; i++){
         int offset= slice_offset[i];
         int size;
@@ -1916,9 +1941,6 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         else
             size= slice_offset[i+1] - offset;
 
-        init_get_bits(&s->gb, buf + offset, size * 8);
-        rv40_parse_slice_header(r, &r->s.gb, &r->si);
-        if(r->si.type == -1) continue;
         r->si.size = size * 8;
         r->si.end = s->mb_width * s->mb_height;
         if(i+1 < slice_count){
@@ -1928,17 +1950,15 @@ static int rv40_decode_frame(AVCodecContext *avctx,
                 r->si.end = si.start;
         }
         r->slice_data = buf + offset;
-        rv40_decode_slice(r);
+        rv40_decode_slice(r, r->si.size, r->si.end, &last);
+        if(last)
+            break;
         s->mb_num_left = r->si.end - r->si.start;
         //rv40_postprocess(r);
     }
-    if(!avctx->slice_count)
-        av_free(slice_offset);
 
-    if(!s->current_picture_ptr){
-        av_log(avctx, AV_LOG_ERROR, "No decodable slices\n");
-        return -1;
-    }
+    if(s->mb_y >= s->mb_height || last){
+    r->prev_si.type = -1;
     ff_er_frame_end(s);
     MPV_frame_end(s);
     if (s->pict_type == B_TYPE || s->low_delay) {
@@ -1952,6 +1972,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         ff_print_debug_info(s, pict);
     }
     s->current_picture_ptr= NULL; //so we can detect if frame_end wasnt called (find some nicer solution...)
+    }
     return buf_size;
 }
 
