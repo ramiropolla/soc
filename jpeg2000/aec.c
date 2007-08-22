@@ -95,7 +95,6 @@ void ff_aec_init_contexts(AecState *aec)
     aec->cx_states[AEC_CX_UNI] = 2 * 46;
     aec->cx_states[AEC_CX_RL] = 2 * 3;
     aec->cx_states[0] = 2 * 4;
-    aec->curcxstate = aec->cx_states;
 
     for (i = 0; i < 47; i++){
         ff_aec_qe[2*i  ] =
