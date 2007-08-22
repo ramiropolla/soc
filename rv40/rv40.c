@@ -1576,7 +1576,13 @@ static int rv40_decode_slice(RV40DecContext *r)
         s->current_picture_ptr = &s->current_picture;
     }
 
+    r->quant = r->si.quant;
+    r->bits = r->si.size;
+    r->block_start = r->si.start;
+    s->mb_num_left = r->si.end - r->si.start;
+    s->pict_type = r->si.type ? r->si.type : I_TYPE;
     r->skip_blocks = 0;
+
     mb_pos = s->mb_x + s->mb_y * s->mb_width;
     if(r->block_start != mb_pos){
         av_log(s->avctx, AV_LOG_ERROR, "Slice indicates MB offset %d, got %d\n", r->block_start, mb_pos);
@@ -1923,12 +1929,6 @@ static int rv40_decode_frame(AVCodecContext *avctx,
                 r->si.end = si.start;
         }
         r->slice_data = buf + offset;
-        r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, r->si.type);
-        r->quant = r->si.quant;
-        r->bits = r->si.size;
-        r->block_start = r->si.start;
-        s->mb_num_left = r->si.end - r->si.start;
-        s->pict_type = r->si.type ? r->si.type : I_TYPE;
         rv40_decode_slice(r);
         s->mb_num_left = r->si.end - r->si.start;
         //rv40_postprocess(r);
