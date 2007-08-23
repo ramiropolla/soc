@@ -86,6 +86,14 @@ typedef struct SliceInfo{
     int height;            ///< coded height
 }SliceInfo;
 
+/** Slice information saved for truncated slices */
+typedef struct SavedSliceInfo{
+    uint8_t *data;         ///< bitstream data
+    int data_size;         ///< data size
+    int bits_used;         ///< bits used up to last decoded block
+    int mb_x, mb_y;        ///< coordinates of the last decoded block
+}SavedSliceInfo;
+
 /** Decoder context */
 typedef struct RV40DecContext{
     MpegEncContext s;
@@ -113,6 +121,9 @@ typedef struct RV40DecContext{
     int chroma_vlc;          ///< which VLC set will be used for chroma blocks decoding
     int is16;                ///< current block has additional 16x16 specific features or not
     int dmv[4][2];           ///< differential motion vectors for the current macroblock
+
+    int truncated;           ///< flag signalling that slice ended prematurely
+    SavedSliceInfo ssi;      ///< data for truncated slice
 }RV40DecContext;
 
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
@@ -1568,11 +1579,26 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
 
     init_get_bits(&r->s.gb, r->slice_data, r->si.size);
     if(rv40_parse_slice_header(r, gb, &r->si) < 0){
-        av_log(s->avctx, AV_LOG_ERROR, "Error parsing slice header\n");
-        *last = 0;
-        return -1;
-    }
-    if(r->prev_si.type != -1 && (r->si.type != r->prev_si.type || r->si.start <= r->prev_si.start || r->si.width != r->prev_si.width || r->si.height != r->prev_si.height)){
+        if(!r->truncated){
+            av_log(s->avctx, AV_LOG_ERROR, "Error parsing slice header\n");
+            *last = 0;
+            return -1;
+        }else{
+            r->ssi.data = av_realloc(r->ssi.data, r->ssi.data_size + (size>>3));
+            memcpy(r->ssi.data + r->ssi.data_size, r->slice_data, size >> 3);
+            r->ssi.data_size += size >> 3; // XXX: overflow check?
+            size = r->ssi.data_size * 8;
+            init_get_bits(&r->s.gb, r->ssi.data, r->ssi.data_size * 8);
+            r->si = r->prev_si;
+            skip_bits(gb, r->ssi.bits_used);
+            s->mb_x = r->ssi.mb_x;
+            s->mb_y = r->ssi.mb_y;
+            r->si.start = s->mb_x + s->mb_y * s->mb_width;
+        }
+    }else
+        r->truncated = 0;
+
+    if(!r->truncated && r->prev_si.type != -1 && (r->si.type != r->prev_si.type || r->si.start <= r->prev_si.start || r->si.width != r->prev_si.width || r->si.height != r->prev_si.height)){
         av_log(s->avctx, AV_LOG_ERROR, "Slice headers mismatch\n");
     }
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
@@ -1584,6 +1610,7 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
         ff_er_frame_start(s);
         s->current_picture_ptr = &s->current_picture;
         s->mb_x = s->mb_y = 0;
+        r->truncated = 0;
     }
 
     r->si.size = size;
@@ -1597,19 +1624,28 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
     r->prev_si = r->si;
 
     mb_pos = s->mb_x + s->mb_y * s->mb_width;
-    if(r->block_start != mb_pos){
+    if(!r->truncated && r->block_start != mb_pos){
         av_log(s->avctx, AV_LOG_ERROR, "Slice indicates MB offset %d, got %d\n", r->block_start, mb_pos);
         s->mb_x = r->block_start % s->mb_width;
         s->mb_y = r->block_start / s->mb_width;
     }
-    memset(r->intra_types_hist, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
-    s->first_slice_line = 1;
-    s->resync_mb_x= s->mb_x;
-    s->resync_mb_y= s->mb_y;
+    if(!r->truncated){
+        memset(r->intra_types_hist, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
+        s->first_slice_line = 1;
+        s->resync_mb_x= s->mb_x;
+        s->resync_mb_y= s->mb_y;
+    }
     ff_init_block_index(s);
     while(!check_slice_end(r, s) && s->mb_num_left-- && s->mb_y < s->mb_height) {
         ff_update_block_index(s);
         s->dsp.clear_blocks(s->block[0]);
+
+        /* save information about decoded position in case of truncated slice */
+        if(r->bits > get_bits_count(gb)){
+            r->ssi.bits_used = get_bits_count(gb);
+            r->ssi.mb_x = s->mb_x;
+            r->ssi.mb_y = s->mb_y;
+        }
 
         if(rv40_decode_macroblock(r, r->intra_types + (s->mb_x + 1) * 4) < 0)
             break;
@@ -1624,6 +1660,7 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
         if(s->mb_x == s->resync_mb_x)
             s->first_slice_line=0;
     }
+    r->truncated = 0;
     ff_er_add_slice(s, s->resync_mb_x, s->resync_mb_y, s->mb_x-1, s->mb_y, AC_END|DC_END|MV_END);
     *last = 0;
     if(s->mb_y >= s->mb_height || r->bits < get_bits_count(gb))
@@ -1631,6 +1668,12 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
     if(r->bits > get_bits_count(gb) && show_bits(gb, r->bits-get_bits_count(gb)))
         *last = 1;
 
+    if(r->bits < get_bits_count(gb)){
+        r->truncated = 1;
+        r->ssi.data = av_realloc(r->ssi.data, r->bits >> 3);
+        memcpy(r->ssi.data, r->slice_data, r->bits >> 3);
+        *last = 0;
+    }
     return 0;
 }
 
@@ -1943,8 +1986,13 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         r->si.end = s->mb_width * s->mb_height;
         if(i+1 < slice_count){
             init_get_bits(&s->gb, buf+slice_offset[i+1], (buf_size-slice_offset[i+1])*8);
-            rv40_parse_slice_header(r, &r->s.gb, &si);
-            if(si.type != -1)
+            if(rv40_parse_slice_header(r, &r->s.gb, &si) < 0){
+                if(i+2 < slice_count)
+                    size = slice_offset[i+2] - offset;
+                else
+                    size = buf_size - offset;
+                r->si.size = size * 8;
+            }else
                 r->si.end = si.start;
         }
         r->slice_data = buf + offset;
@@ -1983,6 +2031,7 @@ static int rv40_decode_end(AVCodecContext *avctx)
     av_freep(&r->intra_types_hist);
     r->intra_types = NULL;
     av_freep(&r->mb_type);
+    av_freep(&r->ssi.data);
 
     return 0;
 }
