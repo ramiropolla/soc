@@ -259,7 +259,14 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
 
 /**
  * Computes the scaled codebook vector Cdn From INDEX and GAIN
- * For all rates
+ * For all rates.
+ *
+ * @param rate Rate of the current frame/packet
+ * @param gain Array holding the 4 pitch subframe gain values
+ * @param index Array holding the 4 pitch subfrane index values
+ * @param cbseed Seed needed for scaled codebook vector generation on rates
+ * other than RATE_FULL or RATE_HALF
+ * @param cnd_vector Array where to put the generated scaled codebook vector
  */
 static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
            const int *index, uint16_t cbseed, float *cdn_vector)
@@ -336,7 +343,11 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
 }
 
 /**
- * Computes energy of the subframeno-ith subvector.
+ * Computes energy of the subframeno-ith subvector. This values are
+ * used to generate the scalefactors for the gain control stages.
+ *
+ * @param vector Vector from where to measure the subframe's energy
+ * @param subframeno Size 40 subframe number that should be measured
  *
  * TIA/EIA/IS-733 2.4.8.3-2/3
  */
@@ -353,6 +364,11 @@ static float qcelp_compute_subframe_energy(const float *vector, int subframeno)
     return energy;
 }
 
+/**
+ * Computes scalefactors needed to gain-control 'in' and 'out' vectors.
+ *
+ * @param scalefactors array to place the resulting four scalecators
+ */
 static void qcelp_get_gain_scalefactors(const float *in, const float *out,
             float *scalefactors)
 {
@@ -364,7 +380,13 @@ static void qcelp_get_gain_scalefactors(const float *in, const float *out,
 }
 
 /**
- * TIA/EIA/IS-733 2.4.8.6-6
+ * Generic gain control stage to implement TIA/EIA/IS-733 2.4.8.6-6 and
+ * FIXME_MISSINGSPECSECTION.
+ *
+ * @param do_iirf Were to or not to apply harcoded coef infinite impulse
+ * response filter
+ * @param in Vector to control gain off
+ * @param out Gain controled output vector
  */
 static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
 {
@@ -396,8 +418,6 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
  * whose results gets stored in pv.
  *
  * TIA/EIA/IS-733 2.4.5.2
- *
- * WIP (but should work)
  *
  * @param step Mode, 1 for pitch filter or 2 for pitch pre-filter
  */
