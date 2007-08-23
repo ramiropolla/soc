@@ -833,10 +833,6 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     }
 
-    /* skip padding byte if codec_frame_fmt */
-
-    skip_bits(&q->gb, 8*(buf_size - is_codecframe_fmt) - q->frame->bits);
-
     /**
      * check for erasures/blanks on rates 1, 1/4 and 1/8
      */
