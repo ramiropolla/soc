@@ -48,6 +48,7 @@ typedef struct {
     float         prev_lspf[10];
     float         pitchf_mem[150];
     float         pitchp_mem[150];
+    float         formant_mem[10];
     float         hammsinc_table[8];
     int           frame_num;
 } QCELPContext;
@@ -86,11 +87,16 @@ static int qcelp_decode_init(AVCodecContext *avctx)
     if(q->frame == NULL)
         return -1;
 
+    /**
+     * Enter start decoding state
+     */
+
     q->frame_num=0;
 
-    memset(q->prev_lspf , 0, sizeof(q->prev_lspf ));
-    memset(q->pitchf_mem, 0, sizeof(q->pitchf_mem));
-    memset(q->pitchp_mem, 0, sizeof(q->pitchp_mem));
+    memset(q->prev_lspf  , 0, sizeof(q->prev_lspf  ));
+    memset(q->pitchf_mem , 0, sizeof(q->pitchf_mem ));
+    memset(q->pitchp_mem , 0, sizeof(q->pitchp_mem ));
+    memset(q->formant_mem, 0, sizeof(q->formant_mem));
 
     /**
      * Fill hammsinc table
@@ -537,15 +543,15 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
                             curr_weight=0.25;
                             prev_weight=0.75;
                             break;
-                        case 39:
+                        case 40:
                             curr_weight=0.5;
                             prev_weight=0.5;
                             break;
-                        case 79:
+                        case 80:
                             curr_weight=0.75;
                             prev_weight=0.25;
                             break;
-                        case 119:
+                        case 120:
                             curr_weight=1.0;
                             prev_weight=0;
                     }
@@ -664,20 +670,41 @@ static void qcelp_lsp2lpc(float *lspf, float *lpc)
 }
 
 /**
- * 10th order predictor error filter, reciprocal * of the formant synthesis
- * filter.
+ * Formant sythesis filter
  *
- * TIA/EIA/IS-733 2.4.3.1
+ * TIA/EIA/IS-733 2.4.3.1 (NOOOOT)
  */
-static float qcelp_prede_filter(float *lpc, float z)
+static void qcelp_do_formant(float *in, float *out, float *lpc_coefs, float *memory)
 {
-    int   i;
-    float tmp=0.0;
+    float tmp[50];
+    int i,j;
 
-    for(i=0; i<10; i++)
-       tmp+=lpc[i]*1.0/z;
+    /**
+     * Copy over previous ten samples generated
+     */
 
-    return(1.0-tmp);
+    memcpy(tmp, memory, 10*sizeof(float));
+    memcpy(tmp+10, in, 40*sizeof(float));
+
+    for(i=10;i<50;i++)
+    {
+        for(j=1;j<11;j++)
+        {
+            tmp[i]+=tmp[i-j]*lpc_coefs[j-1];
+        }
+    }
+
+    /**
+     * Update memory for next pitch subframe
+     */
+
+    memcpy(memory, tmp+40, 10*sizeof(float));
+
+    /**
+     * Write filtered samples to *out
+     */
+
+    memcpy(out, tmp+10, 40*sizeof(float));
 }
 
 /**
@@ -918,38 +945,39 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
      * Apply formant synthesis filter over the pitch pre-filter output.
      */
 
-    for(i=0; i<160; i++)
+    for(i=0; i<4; i++)
     {
         /**
          * interpolate lsp freqs
          */
 
-        if(i == 0 || i == 39  || i == 79 || i == 119)
-        {
-            qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf,
-                                      interpolated_lspf, i, q->frame_num);
-            qcelp_lsp2lpc(interpolated_lspf, lpc);
-        }
+        qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf,
+                                  interpolated_lspf, i*40, q->frame_num);
+        qcelp_lsp2lpc(interpolated_lspf, lpc);
 
         /**
          * Formant
          */
 
-        ppf_vector[i]=1.0/qcelp_prede_filter(lpc, ppf_vector[i]);
+        qcelp_do_formant(ppf_vector+i*40, cdn_vector+i*40, lpc, q->formant_mem);
 
         /**
-         * Adaptive postfilter
+         * WIP Adaptive postfilter should be here
          */
 
-        ppf_vector[i]=qcelp_detilt(ppf_vector[i])*
-                      qcelp_prede_filter(lpc, ppf_vector[i]/0.625)/
-                      qcelp_prede_filter(lpc, ppf_vector[i]/0.775);
+    }
 
-        /**
-         * Output stage
-         */
+    /**
+     * WIP Final gain control stage should be here
+     */
 
-        outbuffer[i]=av_clip_int16(lrintf(4*ppf_vector[i]));
+    /**
+     * Write samples out
+     */
+
+    for(i=0; i<160; i++)
+    {
+        outbuffer[i]=av_clip_int16(lrintf(4*cdn_vector[i]));
     }
 
     if(is_ifq)

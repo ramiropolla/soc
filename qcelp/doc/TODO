@@ -1,6 +1,6 @@
 Clear
 
-- Make it work / Sample smashing
+- Sample smashing, test rates other than RATE_FULL
 - Hook final gain control stage using qcelp_apply_gain_ctrl()
 - Rework IFQ handling & decoding glue code in general.
 
