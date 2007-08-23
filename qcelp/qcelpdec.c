@@ -53,12 +53,6 @@ typedef struct {
     int           frame_num;
 } QCELPContext;
 
-static int qcelp_decode_init(AVCodecContext *avctx);
-static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
-           int *data_size, uint8_t *buf, int buf_size);
-static int qcelp_decode_close(AVCodecContext *avctx);
-
-
 static float qcelp_hammsinc(float i)
 {
     return (sin(M_PI*i)/(M_PI*i))*(0.5+0.46*cos(M_PI*i/4.0));
