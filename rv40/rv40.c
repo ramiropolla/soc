@@ -1909,7 +1909,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     int i;
     int slice_count, *slice_offset;
     int zero_offset = {0};
-    int last;
+    int last = 0;
 
     /* no supplementary picture */
     if (buf_size == 0) {
