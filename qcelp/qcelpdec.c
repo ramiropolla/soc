@@ -172,7 +172,6 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
     float         ga[16];
 
     /* FIXME need to get rid of g0, sanity checks should be done here */
-    /* WIP this is almost verbatim from spec, seeking workability first */
 
     cbsign=frame->data+QCELP_CBSIGN0_POS;
     cbgain=frame->data+QCELP_CBGAIN0_POS;
@@ -450,9 +449,8 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
             /**
              * Apply filter
              *
-             * TIA/EIA/IS-733 2.4.5.2-2/3 equations aren't clear enough to assume
-             * this filter had to be applied in pitch-subframe steps. Experimentation
-             * was needed.
+             * TIA/EIA/IS-733 2.4.5.2-2/3 equations aren't clear enough but
+             * we know this filter has to be applied in pitch-subframe steps.
              */
 
             k=0;
@@ -487,8 +485,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
                 }
 
                 /**
-                 * If we are done with the pitch subframe we have to
-                 * update the filter memory.
+                 * Done with the pitch subframe -- update filter memory.
                  */
 
                 if(k==39)
@@ -674,7 +671,8 @@ static void qcelp_lsp2lpc(float *lspf, float *lpc)
  *
  * TIA/EIA/IS-733 2.4.3.1 (NOOOOT)
  */
-static void qcelp_do_formant(float *in, float *out, float *lpc_coefs, float *memory)
+static void qcelp_do_formant(float *in, float *out, float *lpc_coefs,
+            float *memory)
 {
     float tmp[50];
     int i,j;
@@ -948,7 +946,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     for(i=0; i<4; i++)
     {
         /**
-         * interpolate lsp freqs
+         * Interpolate lsp freqs
          */
 
         qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf,
