@@ -1376,7 +1376,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
     *data_size = ff_eac3_blocks[c->numblkscod] * 256 * avctx->channels * sizeof (int16_t); // TODO is ok?
 
-    return buf_size;
+    return (c->frmsiz+1)*2;
 }
 
 static int eac3_decode_init(AVCodecContext *avctx){
