@@ -809,7 +809,6 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         {
            av_log(avctx, AV_LOG_WARNING,
                   "Claimed rate and buffer size missmatch\n");
-           is_ifq=1;
         }
     }
 
