@@ -53,11 +53,6 @@ enum J2kMarkers{
     J2K_EOC = 0xffd9, ///< end of codestream
 };
 
-enum J2kTransform{ ///< type of wavelet transform
-    J2K_DWT97,
-    J2K_DWT53
-};
-
 enum J2kQuantsty{ ///< quantization style
     J2K_QSTY_NONE, ///< no quantization
     J2K_QSTY_SI,   ///< scalar derived

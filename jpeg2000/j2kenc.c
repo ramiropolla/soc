@@ -30,6 +30,7 @@
 #include "bytestream.h"
 #include "j2k.h"
 #include "common.h"
+#include "dwt.h"
 
 #define NMSEDEC_BITS 7
 #define NMSEDEC_FRACBITS (NMSEDEC_BITS-1)
@@ -43,6 +44,7 @@ static int lut_nmsedec_ref [1<<NMSEDEC_BITS],
 
 typedef struct {
    J2kResLevel *reslevel;
+   DWTContext dwt;
    int *data;
    uint16_t x0, x1, y0, y1;
 } J2kComponent;
@@ -333,11 +335,18 @@ static int init_tiles(J2kEncoderContext *s)
                 return AVERROR(ENOMEM);
             for (compno = 0; compno < s->ncomponents; compno++){
                 J2kComponent *comp = tile->comp + compno;
+                int ret;
 
                 comp->x0 = tilex * s->tile_width;
                 comp->x1 = FFMIN((tilex+1)*s->tile_width, s->width);
                 comp->y0 = tiley * s->tile_height;
                 comp->y1 = FFMIN((tiley+1)*s->tile_height, s->height);
+
+                if (ret=ff_dwt_init(&comp->dwt,
+                                    (uint16_t[2][2]){{comp->x0, comp->x1}, {comp->y0, comp->y1}}, // will be changed soon
+                                    s->nreslevels-1, 1))
+                    return ret;
+
                 comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
                 if (!comp->data)
                     return AVERROR(ENOMEM);
@@ -501,79 +510,6 @@ static void init_luts()
         lut_nmsedec_ref[i]  = FFMAX((int) (floor((u*u - v*v) * pfr + 0.5) / pfr * 8192.0), 0);
         lut_nmsedec_ref0[i] = FFMAX((int) (floor((u*u) * pfr + 0.5) / pfr * 8192.0), 0);
     }
-}
-
-/* discrete wavelet transform routines */
-static void sd_1d(int *p, int i0, int i1)
-{
-    int i;
-
-    if (i1 == i0 + 1)
-        return;
-
-    p[i0 - 1] = p[i0 + 1];
-    p[i1    ] = p[i1 - 2];
-    p[i0 - 2] = p[i0 + 2];
-    p[i1 + 1] = p[i1 - 3];
-
-    for (i = (i0+1)/2 - 1; i < (i1+1)/2; i++){
-        p[2*i+1] -= (p[2*i] + p[2*i+2]) >> 1;
-    }
-    for (i = (i0+1)/2; i < (i1+1)/2; i++){
-        p[2*i] += (p[2*i-1] + p[2*i+1] + 2) >> 2;
-    }
-}
-
-static void dwt_encode53(J2kEncoderContext *s, J2kComponent *comp)
-{
-    int lev = s->nreslevels,
-        *t = comp->data, w = comp->x1 - comp->x0;
-    int *ppv = av_malloc((comp->reslevel[lev-1].y1 + 4)*sizeof(int)), *pv = ppv+2;
-    int *ppu = av_malloc((comp->reslevel[lev-1].x1 + 4)*sizeof(int)), *pu = ppu+2;
-
-    while (--lev){
-        int u0 = comp->reslevel[lev].x0,
-            u1 = comp->reslevel[lev].x1,
-            v0 = comp->reslevel[lev].y0,
-            v1 = comp->reslevel[lev].y1,
-            u = u0, v = v0;
-
-        //VER_SD
-        while (u < u1){
-            int i, j;
-            for (i = v0; i < v1; i++)
-                pv[i] = t[w*(i-v0) + u-u0];
-            sd_1d(pv, v0, v1);
-
-            // copy back and deinterleave
-            for (i = v0+v0%2, j = 0; i < v1; i+=2, j++){
-                t[w*j + u-u0] = pv[i];
-            }
-            for (i = v0+1-v0%2; i < v1; i+=2, j++){
-                t[w*j + u-u0] = pv[i];
-            }
-            u++;
-        }
-
-        //HOR_SD
-        while (v < v1){
-            int i, j;
-            for (i = u0; i < u1; i++)
-                pu[i] = t[w*(v-v0) + i-u0];
-            sd_1d(pu, u0, u1);
-
-            // copy back and deinterleave
-            for (i = u0+u0%2, j = 0; i < u1; i+=2, j++){
-                t[w*(v-v0) + j] = pu[i];
-            }
-            for (i = u0+1-u0%2; i < u1; i+=2, j++){
-                t[w*(v-v0) + j] = pu[i];
-            }
-            v++;
-        }
-    }
-    av_free(ppv);
-    av_free(ppu);
 }
 
 /* tier-1 routines */
@@ -909,7 +845,7 @@ static void encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
         J2kComponent *comp = s->tile[tileno].comp + compno;
 
         av_log(s->avctx, AV_LOG_DEBUG,"dwt\n");
-        dwt_encode53(s, &s->tile[tileno].comp[compno]);
+        ff_dwt_encode(&comp->dwt, comp->data);
         av_log(s->avctx, AV_LOG_DEBUG,"after dwt -> tier1\n");
 
         for (reslevelno = 0; reslevelno < s->nreslevels; reslevelno++){
@@ -984,6 +920,7 @@ void cleanup(J2kEncoderContext *s)
                     }
                 av_free(reslevel->band);
             }
+            ff_dwt_destroy(&comp->dwt);
             av_free(comp->reslevel);
         }
         av_free(s->tile[tileno].comp);

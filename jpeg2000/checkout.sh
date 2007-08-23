@@ -14,4 +14,6 @@ ln -s ../../mqcenc.c mqcenc.c
 ln -s ../../mqc.h mqc.h
 ln -s ../../mqc.c mqc.c
 ln -s ../../mqcdec.c mqcdec.c
+ln -s ../../dwt.h dwt.h
+ln -s ../../dwt.c dwt.c
 echo "Done, now just do a regular configure and make to build."

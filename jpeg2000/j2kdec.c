@@ -30,6 +30,7 @@
 #include "bytestream.h"
 #include "j2k.h"
 #include "common.h"
+#include "dwt.h"
 
 #define SHL(a, n) ((n)>=0 ? (a) << (n) : (a) >> -(n))
 
@@ -54,6 +55,7 @@ typedef struct {
 
 typedef struct {
    J2kResLevel *reslevel;
+   DWTContext dwt;
    int *data;
    uint16_t x0, x1, y0, y1;
 } J2kComponent;
@@ -425,12 +427,17 @@ static int init_tile(J2kDecoderContext *s, int tileno)
         J2kComponent *comp = tile->comp + compno;
         J2kCodingStyle *codsty = tile->codsty + compno;
         J2kQuantStyle  *qntsty = tile->qntsty + compno;
-        int gbandno = 0; // global bandno
+        int gbandno = 0, ret; // global bandno
 
         comp->x0 = FFMAX(p * s->tile_width + s->tile_offset_x, s->image_offset_x);
         comp->x1 = FFMIN((p+1)*s->tile_width + s->tile_offset_x, s->width);
         comp->y0 = FFMAX(q * s->tile_height + s->tile_offset_y, s->image_offset_y);
         comp->y1 = FFMIN((q+1)*s->tile_height + s->tile_offset_y, s->height);
+
+        if (ret=ff_dwt_init(&comp->dwt,
+                    (uint16_t[2][2]){{comp->x0, comp->x1}, {comp->y0, comp->y1}}, // will be changed soon
+                        codsty->nreslevels-1, codsty->transform))
+            return ret;
 
         comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
         if (!comp->data)
@@ -779,169 +786,6 @@ static int decode_cblk(J2kDecoderContext *s, J2kT1Context *t1, J2kCblk *cblk, in
     return 0;
 }
 
-/* inverse discrete wavelet transform routines */
-static void sr_1d53(int *p, int i0, int i1)
-{
-    int i;
-
-    if (i1 == i0 + 1)
-        return;
-
-    p[i0 - 1] = p[i0 + 1];
-    p[i1    ] = p[i1 - 2];
-    p[i0 - 2] = p[i0 + 2];
-    p[i1 + 1] = p[i1 - 3];
-
-    for (i = i0/2; i < i1/2 + 1; i++)
-        p[2*i] -= (p[2*i-1] + p[2*i+1] + 2) >> 2;
-    for (i = i0/2; i < i1/2; i++)
-        p[2*i+1] += (p[2*i] + p[2*i+2]) >> 1;
-}
-
-static void sr_1d97(float *p, int i0, int i1)
-{
-    int i;
-
-    if (i1 == i0 + 1)
-        return;
-
-    for (i = 1; i <= 4; i++){
-        p[i0 - i] = p[i0 + i];
-        p[i1 + i - 1] = p[i1 - i - 1];
-    }
-
-    for (i = i0/2 - 1; i < i1/2 + 2; i++)
-        p[2*i] *= 1.230174;
-    for (i = i0/2 - 2; i < i1/2 + 2; i++)
-        p[2*i+1] *= 1.625786;
-    for (i = i0/2 - 1; i < i1/2 + 2; i++)
-        p[2*i] -= 0.443506 * (p[2*i-1] + p[2*i+1]);
-    for (i = i0/2 - 1; i < i1/2 + 1; i++)
-        p[2*i+1] -= 0.882911 * (p[2*i] + p[2*i+2]);
-    for (i = i0/2; i < i1/2 + 1; i++)
-        p[2*i] += 0.052980 * (p[2*i-1] + p[2*i+1]);
-    for (i = i0/2; i < i1/2; i++)
-        p[2*i+1] += 1.586134 * (p[2*i] + p[2*i+2]);
-}
-
-static int dwt_decode53(J2kDecoderContext *s, J2kComponent *comp, int nreslevels)
-{
-    int lev = nreslevels, i,
-        *t = comp->data, w = comp->x1 - comp->x0;
-    int *ppv = av_malloc((comp->reslevel[lev-1].y1 + 4)*sizeof(int)), *pv = ppv+2;
-    int *ppu = av_malloc((comp->reslevel[lev-1].x1 + 4)*sizeof(int)), *pu = ppu+2;
-
-    if (!ppv || !ppu)
-        return -1;
-
-    for (i = 1; i < lev; i++){
-        int u0 = comp->reslevel[i].x0,
-            u1 = comp->reslevel[i].x1,
-            v0 = comp->reslevel[i].y0,
-            v1 = comp->reslevel[i].y1,
-            u = u0, v = v0;
-
-        // HOR_SD
-        while (v < v1){
-            int i, j;
-            // copy with interleaving
-            for (i = u0 + (u0 & 1), j = 0; i < u1; i+=2, j++){
-                pu[i] = t[w*(v-v0) + j];
-            }
-            for (i = u0 + 1 - (u0 % 2); i < u1; i+=2, j++){
-                pu[i] = t[w*(v-v0) + j];
-            }
-
-            sr_1d53(pu, u0, u1);
-
-            for (i = u0; i < u1; i++)
-                t[w*(v-v0) + i-u0] = pu[i];
-
-            v++;
-        }
-        // VER_SD
-        while (u < u1){
-            int i, j;
-            // copy with interleaving
-            for (i = v0 + (v0 & 1), j = 0; i < v1; i+=2, j++){
-                pv[i] = t[w*j + u-u0];
-            }
-            for (i = v0 + 1 - (v0 % 2); i < v1; i+=2, j++){
-                pv[i] = t[w*j + u-u0];
-            }
-
-            sr_1d53(pv, v0, v1);
-
-            for (i = v0; i < v1; i++)
-                t[w*(i-v0) + u-u0] = pv[i];
-
-            u++;
-        }
-    }
-    av_free(ppv);
-    av_free(ppu);
-    return 0;
-}
-
-static int dwt_decode97(J2kDecoderContext *s, J2kComponent *comp, int nreslevels)
-{
-    int lev = nreslevels, i,
-        *t = comp->data, w = comp->x1 - comp->x0;
-    float *ppv = av_malloc((comp->reslevel[lev-1].y1 + 8)*sizeof(float)), *pv = ppv+4;
-    float *ppu = av_malloc((comp->reslevel[lev-1].x1 + 8)*sizeof(float)), *pu = ppu+4;
-
-    if (!ppv || !ppu)
-        return -1;
-
-    for (i = 1; i < lev; i++){
-        int u0 = comp->reslevel[i].x0,
-            u1 = comp->reslevel[i].x1,
-            v0 = comp->reslevel[i].y0,
-            v1 = comp->reslevel[i].y1,
-            u = u0, v = v0;
-
-        // HOR_SD
-        while (v < v1){
-            int i, j;
-            // copy with interleaving
-            for (i = u0 + (u0 & 1), j = 0; i < u1; i+=2, j++){
-                pu[i] = t[w*(v-v0) + j];
-            }
-            for (i = u0 + 1 - (u0 % 2); i < u1; i+=2, j++){
-                pu[i] = t[w*(v-v0) + j];
-            }
-
-            sr_1d97(pu, u0, u1);
-
-            for (i = u0; i < u1; i++)
-                t[w*(v-v0) + i-u0] = pu[i];
-
-            v++;
-        }
-        // VER_SD
-        while (u < u1){
-            int i, j;
-            // copy with interleaving
-            for (i = v0 + (v0 & 1), j = 0; i < v1; i+=2, j++){
-                pv[i] = t[w*j + u-u0];
-            }
-            for (i = v0 + 1 - (v0 % 2); i < v1; i+=2, j++){
-                pv[i] = t[w*j + u-u0];
-            }
-
-            sr_1d97(pv, v0, v1);
-
-            for (i = v0; i < v1; i++)
-                t[w*(i-v0) + u-u0] = pv[i];
-
-            u++;
-        }
-    }
-    av_free(ppv);
-    av_free(ppu);
-    return 0;
-}
-
 static void mct_decode(J2kDecoderContext *s, J2kTile *tile)
 {
     int i, *src[3], i0, i1, i2;
@@ -949,7 +793,7 @@ static void mct_decode(J2kDecoderContext *s, J2kTile *tile)
     for (i = 0; i < 3; i++)
         src[i] = tile->comp[i].data;
 
-    if (tile->codsty[0].transform == J2K_DWT97){
+    if (tile->codsty[0].transform == FF_DWT97){
         for (i = 0; i < (tile->comp[0].y1 - tile->comp[0].y0) * (tile->comp[0].x1 - tile->comp[0].x0); i++){
             i0 = *src[0] + (*src[2] * 46802 >> 16);
             i1 = *src[0] - (*src[1] * 22553 + *src[2] * 46802 >> 16);
@@ -1007,7 +851,7 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                     for (cblkx = 0; cblkx < band->cblknx; cblkx++, cblkno++){
                         int y, x;
                         decode_cblk(s, &t1, band->cblk + cblkno, xx1 - xx0, yy1 - yy0, bandpos);
-                        if (codsty->transform == J2K_DWT53){
+                        if (codsty->transform == FF_DWT53){
                             for (y = yy0; y < yy1; y++){
                                 int *ptr = t1.data[y-yy0];
                                 for (x = xx0; x < xx1; x++){
@@ -1032,13 +876,7 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                 }
             }
         }
-        if (codsty->transform == J2K_DWT53){
-            if (dwt_decode53(s, comp, codsty->nreslevels))
-                return -1;
-        } else{
-            if (dwt_decode97(s, comp, codsty->nreslevels))
-                return -1;
-        }
+        ff_dwt_decode(&comp->dwt, comp->data);
         src[compno] = comp->data;
     }
     if (tile->codsty[0].mct)
@@ -1096,6 +934,7 @@ static void cleanup(J2kDecoderContext *s)
                 av_free(reslevel->band);
             }
             av_free(comp->reslevel);
+            ff_dwt_destroy(&comp->dwt);
         }
         av_free(s->tile[tileno].comp);
     }
