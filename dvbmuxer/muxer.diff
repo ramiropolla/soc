@@ -12,7 +12,7 @@ Index: mpeg_pes_enc.c
   *
   * This file is part of FFmpeg.
   *
-@@ -19,347 +20,27 @@
+@@ -19,347 +20,32 @@
   * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
   */
  
@@ -78,6 +78,11 @@ Index: mpeg_pes_enc.c
 -
 -static int put_pack_header(AVFormatContext *ctx,
 -                           uint8_t *buf, int64_t timestamp)
++/**
++ * Initialization of PES muxer.
++ * @param[in] ctx the AVFormatContext which contains streams
++ * @return  On error a negative value is returned, on success zero.
++ */
 +int ff_pes_muxer_init(AVFormatContext *ctx)
  {
 -    MpegMuxContext *s = ctx->priv_data;
@@ -366,7 +371,7 @@ Index: mpeg_pes_enc.c
  #if 0
                  /* see VCD standard, p. IV-7*/
                  stream->max_buffer_size = 46 * 1024;
-@@ -368,10 +49,12 @@
+@@ -368,10 +54,12 @@
                     Right now it is also used for everything else.*/
                  stream->max_buffer_size = 230 * 1024;
  #endif
@@ -381,7 +386,7 @@ Index: mpeg_pes_enc.c
              stream->max_buffer_size = 16 * 1024;
              break;
          default:
-@@ -379,245 +62,20 @@
+@@ -379,245 +67,27 @@
          }
          av_fifo_init(&stream->fifo, 16);
      }
@@ -631,17 +636,39 @@ Index: mpeg_pes_enc.c
 -}
 -
 -static int get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len){
++/**
++ * Get total number of frames that have been muxed.
++ * @param[in] ctx    the AVFormatContext
++ * @param[in] stream the PES stream
++ * @param[in] len    PES packet size
++ * @return  the frame number to be muxed
++ */
 +int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
      int nb_frames=0;
      PacketDesc *pkt_desc= stream->premux_packet;
  
-@@ -631,212 +89,22 @@
+@@ -631,365 +101,99 @@
      return nb_frames;
  }
  
 -/* flush the packet on stream stream_index */
 -static int flush_packet(AVFormatContext *ctx, int stream_index,
 -                         int64_t pts, int64_t dts, int64_t scr, int trailer_size)
++/**
++ * Mux streams into a PES packet.
++ * @param [in]      ctx            the AVFormatContext which contains streams
++ * @param [in]      stream_index   the stream index to write
++ * @param [in]      pes_buffer     PES payload data
++ * @param [in]      pts            packet presentation timestamp
++ * @param [in]      dts            packet decoding timestamp
++ * @param [in]      id             stream ID
++ * @param [in]      start_code     PES packet start code
++ * @param [in]      header_len     PES header size
++ * @param [in]      packet_size    total packet size
++ * @param [in]      payload_size   packet payload size
++ * @param [in]      stuffing_size  packet stuffing size
++ * @return   bytes written to PES stream.
++ */
 +int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t* pes_buffer,
 +    int64_t pts,int64_t dts, int  id, int startcode,
 +    uint8_t* pes_content, int pes_content_len,
@@ -675,7 +702,8 @@ Index: mpeg_pes_enc.c
 +    bytestream_put_byte(&q, 0x80); /* mpeg2 id */
  
 -    buf_ptr = buffer;
--
++    pes_flags=0;
+ 
 -    if ((s->packet_number % s->pack_header_freq) == 0 || s->last_scr != scr) {
 -        /* output pack and systems header if needed */
 -        size = put_pack_header(ctx, buf_ptr, scr);
@@ -739,17 +767,29 @@ Index: mpeg_pes_enc.c
 -                buf_ptr += size;
 -            }
 -        }
--    }
++    if (pts != AV_NOPTS_VALUE) {
++        pes_flags |= 0x80;
++        if (dts != pts)
++           pes_flags |= 0x40;
+     }
 -    size = buf_ptr - buffer;
 -    put_buffer(&ctx->pb, buffer, size);
--
+ 
 -    packet_size = s->packet_size - size;
--
++    /* Both the MPEG-2 and the SVCD standards demand that the
++       P-STD_buffer_size field be included in the first packet of
++       every stream. (see SVCD standard p. 26 V.2.3.1 and V.2.3.2
++       and MPEG-2 standard 2.7.7) */
++    if (context->packet_number == 0 && context->muxer_type == PESMUXER_PS)
++        pes_flags |= 0x01;
+ 
 -    if (s->is_vcd && id == AUDIO_ID)
 -        /* The VCD standard demands that 20 zero bytes follow
 -           each audio pack (see standard p. IV-8).*/
 -        zero_trail_bytes += 20;
--
++    bytestream_put_byte(&q, pes_flags); /* flags */
++    bytestream_put_byte(&q, header_len - 3 + stuffing_size);
+ 
 -    if ((s->is_vcd && stream->packet_number==0)
 -        || (s->is_svcd && s->packet_number==0)) {
 -        /* for VCD the first pack of each stream contains only the pack header,
@@ -762,9 +802,15 @@ Index: mpeg_pes_enc.c
 -            general_pack = 1;    /* the system header refers to both streams and no stream data*/
 -        pad_packet_bytes = packet_size - zero_trail_bytes;
 -    }
--
++    if (pes_flags & 0x80)  /*write pts*/
++        insert_timestamp(&q, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
++    if (pes_flags & 0x40)  /*write dts*/
++        insert_timestamp(&q, 0x01, dts);
+ 
 -    packet_size -= pad_packet_bytes + zero_trail_bytes;
--
++    if (pes_flags & 0x01) {  /*write pes extension*/
++        bytestream_put_byte(&q, 0x10); /* flags */
+ 
 -    if (packet_size > 0) {
 -
 -        /* packet header size */
@@ -857,42 +903,39 @@ Index: mpeg_pes_enc.c
 -        if (s->is_mpeg2) {
 -            put_byte(&ctx->pb, 0x80); /* mpeg2 id */
 -
-             pes_flags=0;
- 
-             if (pts != AV_NOPTS_VALUE) {
-@@ -849,147 +117,50 @@
-                P-STD_buffer_size field be included in the first packet of
-                every stream. (see SVCD standard p. 26 V.2.3.1 and V.2.3.2
-                and MPEG-2 standard 2.7.7) */
+-            pes_flags=0;
+-
+-            if (pts != AV_NOPTS_VALUE) {
+-                pes_flags |= 0x80;
+-                if (dts != pts)
+-                    pes_flags |= 0x40;
+-            }
+-
+-            /* Both the MPEG-2 and the SVCD standards demand that the
+-               P-STD_buffer_size field be included in the first packet of
+-               every stream. (see SVCD standard p. 26 V.2.3.1 and V.2.3.2
+-               and MPEG-2 standard 2.7.7) */
 -            if (stream->packet_number == 0)
-+            if (context->packet_number == 0 && context->muxer_type == PESMUXER_PS)
-                 pes_flags |= 0x01;
- 
+-                pes_flags |= 0x01;
+-
 -            put_byte(&ctx->pb, pes_flags); /* flags */
 -            put_byte(&ctx->pb, header_len - 3 + stuffing_size);
-+            bytestream_put_byte(&q, pes_flags); /* flags */
-+            bytestream_put_byte(&q, header_len - 3 + stuffing_size);
- 
-             if (pes_flags & 0x80)  /*write pts*/
+-
+-            if (pes_flags & 0x80)  /*write pts*/
 -                put_timestamp(&ctx->pb, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
-+                insert_timestamp(&q, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
-             if (pes_flags & 0x40)  /*write dts*/
+-            if (pes_flags & 0x40)  /*write dts*/
 -                put_timestamp(&ctx->pb, 0x01, dts);
-+                insert_timestamp(&q, 0x01, dts);
- 
-             if (pes_flags & 0x01) {  /*write pes extension*/
+-
+-            if (pes_flags & 0x01) {  /*write pes extension*/
 -                put_byte(&ctx->pb, 0x10); /* flags */
-+                bytestream_put_byte(&q, 0x10); /* flags */
- 
-                 /* P-STD buffer info */
-                 if (id == AUDIO_ID)
+-
+-                /* P-STD buffer info */
+-                if (id == AUDIO_ID)
 -                    put_be16(&ctx->pb, 0x4000 | stream->max_buffer_size/128);
-+                    bytestream_put_be16(&q, 0x4000 | stream->max_buffer_size/128);
-                 else
+-                else
 -                    put_be16(&ctx->pb, 0x6000 | stream->max_buffer_size/1024);
-+                    bytestream_put_be16(&q, 0x6000 | stream->max_buffer_size/1024);
-             }
- 
+-            }
+-
 -        } else {
 -            if (pts != AV_NOPTS_VALUE) {
 -                if (dts != pts) {
@@ -907,17 +950,14 @@ Index: mpeg_pes_enc.c
 -        }
 -
 -        if (s->is_mpeg2) {
-             /* special stuffing byte that is always written
+-            /* special stuffing byte that is always written
 -               to prevent accidental generation of start codes. */
 -            put_byte(&ctx->pb, 0xff);
-+               to prevent accidental generation of startcodes. */
-+            bytestream_put_byte(&q, 0xff);
- 
-             for(i=0;i<stuffing_size;i++)
+-
+-            for(i=0;i<stuffing_size;i++)
 -                put_byte(&ctx->pb, 0xff);
 -        }
-+                bytestream_put_byte(&q, 0xff);
- 
+-
 -        if (startcode == PRIVATE_STREAM_1) {
 -            put_byte(&ctx->pb, id);
 -            if (id >= 0xa0) {
@@ -933,9 +973,7 @@ Index: mpeg_pes_enc.c
 -                put_be16(&ctx->pb, trailer_size+1);
 -            }
 -        }
-+            if(pes_content != NULL)
-+                bytestream_put_buffer(&q, pes_content, pes_content_len);
- 
+-
 -        /* output data */
 -        if(av_fifo_generic_read(&stream->fifo, payload_size - stuffing_size, &put_buffer, &ctx->pb) < 0)
 -            return -1;
@@ -943,16 +981,28 @@ Index: mpeg_pes_enc.c
 -    }else{
 -        payload_size=
 -        stuffing_size= 0;
--    }
--
++        /* P-STD buffer info */
++        if (id == AUDIO_ID)
++            bytestream_put_be16(&q, 0x4000 | stream->max_buffer_size/128);
++        else
++            bytestream_put_be16(&q, 0x6000 | stream->max_buffer_size/1024);
+     }
+ 
 -    if (pad_packet_bytes > 0)
 -        put_padding_packet(ctx,&ctx->pb, pad_packet_bytes);
--
++    /* special stuffing byte that is always written
++       to prevent accidental generation of startcodes. */
++    bytestream_put_byte(&q, 0xff);
+ 
 -    for(i=0;i<zero_trail_bytes;i++)
 -        put_byte(&ctx->pb, 0x00);
--
++    for(i=0;i<stuffing_size;i++)
++        bytestream_put_byte(&q, 0xff);
+ 
 -    put_flush_packet(&ctx->pb);
--
++    if(pes_content != NULL)
++        bytestream_put_buffer(&q, pes_content, pes_content_len);
+ 
 -    s->packet_number++;
 -
 -    /* only increase the stream packet number if this pack actually contains
@@ -969,6 +1019,12 @@ Index: mpeg_pes_enc.c
  }
  
 -static void put_vcd_padding_sector(AVFormatContext *ctx)
++/**
++ * Remove decoded packets of each stream.
++ * @param[in] ctx  the AVFormatContext
++ * @param[in] scr  System Clock Reference of PES stream
++ * @return  On error a negative or zero value is returned, on success 1 is returned.
++ */
 +int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
  {
 -    /* There are two ways to do this padding: writing a sector/pack
@@ -1027,7 +1083,7 @@ Index: mpeg_pes_enc.c
          PacketDesc *pkt_desc;
  
          while((pkt_desc= stream->predecode_packet)
-@@ -1011,22 +182,18 @@
+@@ -1011,22 +215,25 @@
      return 0;
  }
  
@@ -1037,7 +1093,14 @@ Index: mpeg_pes_enc.c
 -    StreamInfo *stream;
 -    int i, avail_space, es_size, trailer_size;
 -    int best_i= -1;
-+
++/**
++ * Find the stream to mux into the PES stream.
++ * @param[in] ctx          the AVFormatContext
++ * @param[in] packet_size  PES stream packet size
++ * @param[in] flush        Flush after every single subtitle packet.
++ * @param[out] best_i      index of stream to be muxed
++ * @return  On error a negative or zero value is returned, on success 1 is returned.
++ */
 +int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int* best_i)
 +{
 +    int i, avail_space;
@@ -1055,7 +1118,7 @@ Index: mpeg_pes_enc.c
          const int avail_data=  av_fifo_size(&stream->fifo);
          const int space= stream->max_buffer_size - stream->buffer_index;
          int rel_space= 1024*space / stream->max_buffer_size;
-@@ -1034,32 +201,32 @@
+@@ -1034,32 +241,32 @@
  
          /* for subtitle, a single PES packet must be generated,
             so we flush after every single subtitle packet */
@@ -1094,7 +1157,7 @@ Index: mpeg_pes_enc.c
              PacketDesc *pkt_desc= stream->predecode_packet;
              if(pkt_desc && pkt_desc->dts < best_dts)
                  best_dts= pkt_desc->dts;
-@@ -1072,80 +239,29 @@
+@@ -1072,80 +279,35 @@
          if(best_dts == INT64_MAX)
              return 0;
  
@@ -1165,6 +1228,12 @@ Index: mpeg_pes_enc.c
  }
  
 -static int mpeg_mux_write_packet(AVFormatContext *ctx, AVPacket *pkt)
++/**
++ * Write packet into PES FIFO.
++ * @param [in] ctx  the AVFormatContext which contains streams.
++ * @param [in] pkt  the packet to write.
++ * @return  NULL
++ */
 +void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
  {
 -    MpegMuxContext *s = ctx->priv_data;
@@ -1181,7 +1250,7 @@ Index: mpeg_pes_enc.c
  
      pts= pkt->pts;
      dts= pkt->dts;
-@@ -1167,124 +283,18 @@
+@@ -1167,124 +329,23 @@
      stream->next_packet= &pkt_desc->next;
  
      av_fifo_realloc(&stream->fifo, av_fifo_size(&stream->fifo) + size + 1);
@@ -1204,6 +1273,11 @@ Index: mpeg_pes_enc.c
  }
  
 -static int mpeg_mux_end(AVFormatContext *ctx)
++/**
++ * Finalization of PES muxer.
++ * @param [in] ctx the AVFormatContext which contains streams.
++ * @return  NULL
++ */
 +void ff_pes_muxer_end(AVFormatContext *ctx)
  {
 -//    MpegMuxContext *s = ctx->priv_data;
@@ -1310,7 +1384,7 @@ Index: mpeg_pes_enc.c
 -#endif
 Index: Makefile
 ===================================================================
---- Makefile	(revision 10168)
+--- Makefile	(revision 10200)
 +++ Makefile	(working copy)
 @@ -84,17 +84,17 @@
  OBJS-$(CONFIG_MP3_MUXER)                 += mp3.o
@@ -1338,7 +1412,7 @@ Index: Makefile
  OBJS-$(CONFIG_MTV_DEMUXER)               += mtv.o
 Index: mpeg.c
 ===================================================================
---- mpeg.c	(revision 10168)
+--- mpeg.c	(revision 10200)
 +++ mpeg.c	(working copy)
 @@ -30,6 +30,7 @@
  /*********************************************/
@@ -1359,7 +1433,7 @@ Index: mpeg.c
      }
 Index: mpeg.h
 ===================================================================
---- mpeg.h	(revision 10168)
+--- mpeg.h	(revision 10200)
 +++ mpeg.h	(working copy)
 @@ -55,6 +55,5 @@
  #define STREAM_TYPE_AUDIO_AC3       0x81
@@ -1370,7 +1444,7 @@ Index: mpeg.h
  #endif /* AVFORMAT_MPEG_H */
 Index: mpegenc.c
 ===================================================================
---- mpegenc.c	(revision 10168)
+--- mpegenc.c	(revision 10200)
 +++ mpegenc.c	(working copy)
 @@ -22,8 +22,10 @@
  #include "avformat.h"
@@ -1934,7 +2008,7 @@ Index: mpegenc.c
  
 Index: mpegtsenc.c
 ===================================================================
---- mpegtsenc.c	(revision 10168)
+--- mpegtsenc.c	(revision 10200)
 +++ mpegtsenc.c	(working copy)
 @@ -21,6 +21,8 @@
  #include "avformat.h"
