@@ -720,7 +720,8 @@ static void qcelp_do_formant(float *in, float *out, float *lpc_coefs,
 }
 
 /**
- * Detilt filter used in the adaptive postfilter at sample generation stage.
+ * Detilt used in the adaptive postfilter after the formant synthesis
+ * filter.
  *
  * TIA/EIA/IS-733 2.4.8.6-2
  */
@@ -813,7 +814,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     }
 
     /**
-     * reordering loop
+     * data reordering loop
      */
 
     memset(q->frame->data, 0, 76);
@@ -930,7 +931,14 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         memcpy(ppf_vector, cdn_vector, 160*sizeof(float));
 
         /**
-         * pitch pre-filter
+         * Pitch pre-filter
+         *
+         * The specification makes this filter mandatory but one can go
+         * without it with an small degradation of the output perseived
+         * quality.
+         *
+         * WIP: Making this runtime selectable might be a good speed-wise
+         * compromise.
          */
 
         if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchp_mem,
@@ -949,29 +957,21 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     qcelp_apply_gain_ctrl(0, cdn_vector, ppf_vector);
 
     /**
-     * Apply formant synthesis filter over the pitch pre-filter output.
+     * Interpolate LSP frequencies and apply formant synthesis filter.
      */
 
     for(i=0; i<4; i++)
     {
-        /**
-         * Interpolate lsp freqs
-         */
-
         qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf,
                                   interpolated_lspf, i*40, q->frame_num);
-        qcelp_lsp2lpc(interpolated_lspf, lpc);
 
-        /**
-         * Formant
-         */
+        qcelp_lsp2lpc(interpolated_lspf, lpc);
 
         qcelp_do_formant(ppf_vector+i*40, cdn_vector+i*40, lpc, q->formant_mem);
 
         /**
          * WIP Adaptive postfilter should be here
          */
-
     }
 
     /**
