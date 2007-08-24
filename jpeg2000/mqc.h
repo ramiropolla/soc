@@ -72,4 +72,4 @@ int ff_mqc_decode(MqcState *mqc, uint8_t *cxstate);
 /** initialize the contexts */
 void ff_mqc_init_contexts(MqcState *mqc);
 
-#endif
+#endif /* MQC_H */

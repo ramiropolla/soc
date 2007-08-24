@@ -60,4 +60,4 @@ int ff_dwt_decode(DWTContext *s, int *t);
 
 void ff_dwt_destroy(DWTContext *s);
 
-#endif
+#endif /* DWT_H */
