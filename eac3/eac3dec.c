@@ -34,7 +34,7 @@
 
 static void spectral_extension(EAC3Context *s);
 static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch);
-static void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk);
+static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk);
 static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
         int ch, mant_groups *m);
 static void uncouple_channels(EAC3Context *s);
@@ -344,10 +344,6 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
     /* AHT data */
     if(s->ahte){
-        //Now turned off, because there are no samples for testing it.
-        log_missing_feature(s->avctx, "Adaptive Hybrid Transform");
-        return -1;
-#if 0
         {
             /* AHT is only available in 6 block mode (numblkscod ==0x3) */
             /* coupling can use AHT only when coupling in use for all blocks */
@@ -361,7 +357,6 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
                 s->chahtinu[ch] = (nchregs == 1) && get_bits1(gbc);
             }
         }
-#endif
     }else{
         for(ch=0; ch<=s->ntchans; ch++)
             s->chahtinu[ch] = 0;
@@ -1076,13 +1071,9 @@ static void spectral_extension(EAC3Context *s){
 }
 
 static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
-    //Now turned off, because there are no samples for testing it.
-#if 0
     int endbap, bin, n, m;
     int bg, g, bits, pre_chmant, remap;
     float mant;
-
-    av_log(s->avctx, AV_LOG_INFO,  "AHT NOT TESTED\n");
 
     GET_BITS(s->chgaqmod[ch], gbc, 2);
 
@@ -1121,7 +1112,7 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
     }
 
     if((s->chgaqmod[ch] > 0x0) && (s->chgaqmod[ch] < 0x3) ){
-        for(n = 0; n < s->chgaqsections[ch]; n++){ // TODO chgaqsections ?
+        for(n = 0; n < s->chgaqsections[ch]; n++){
             GET_BITS(s->chgaqgain[ch][n], gbc, 1);
         }
     }else if(s->chgaqmod[ch] == 0x3){
@@ -1134,10 +1125,8 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
         }
     }
 
-    // TODO test VQ and GAQ
     m=0;
-    ///TODO calculate nchmant
-    for(bin = 0; bin < s->nchmant[ch]; bin++){
+    for(bin = s->strtmant[ch]; bin < s->endmant[ch]; bin++){
         if(s->chgaqbin[ch][bin]!=0){
             // GAQ (E3.3.4.2)
             // XXX what about gaqmod = 0 ?
@@ -1154,7 +1143,7 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
             for(n = 0; n < 6; n++){
                 // pre_chmant[n][ch][bin]
                 GET_SBITS(pre_chmant, gbc, bits-bg);
-                if(s->chgaqbin[ch][bin]>0 && bg && pre_chmant == -(1<<(bits-bg-1))){
+                if(bg && pre_chmant == -(1<<(bits-bg-1))){
                     // large mantissa
                     GET_SBITS(pre_chmant, gbc, bits - ((bg==1)?1:0));
                     mant = (float) pre_chmant / (1<<(bits - ((bg==1)?2:1)));
@@ -1169,17 +1158,10 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
 
                 //TODO when remap needed ?
                 if(remap){
-                    if(mant>=0){
-                        mant = (float)
-                            ((ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][0] + 1.0f)
-                             * mant / (1<<g) +
-                             ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][1]) / 32768.0f;
-                    }else{
-                        mant = (float)
-                            ((ff_eac3_gaq_remap[s->hebap[ch][bin]-8][1][g][0] + 1.0f)
-                             * mant / (1<<g) +
-                             ff_eac3_gaq_remap[s->hebap[ch][bin]-8][1][g][1]) / 32768.0f;
-                    }
+                    mant = (float)
+                        ((ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][0] + 32768.0f)
+                         * mant / (1<<g) +
+                         ff_eac3_gaq_remap[s->hebap[ch][bin]-8][mant<0][g][1]) / 32768.0f;
                 }
                 s->pre_chmant[n][ch][bin] = mant;
             }
@@ -1188,7 +1170,8 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
             if(s->hebap[ch][bin]){
                 GET_BITS(pre_chmant, gbc, ff_bits_vs_hebap[s->hebap[ch][bin]]);
                 for(n = 0; n < 6; n++){
-                    s->pre_chmant[n][ch][bin] = ff_vq_hebap[s->hebap[ch][bin]][pre_chmant][n];
+                    s->pre_chmant[n][ch][bin] =
+                        ff_vq_hebap[s->hebap[ch][bin]][pre_chmant][n] / 32768.0f;
                 }
             }else{
                 for(n = 0; n < 6; n++){
@@ -1197,19 +1180,18 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
             }
         }
     }
-#endif
 }
 
-static void dct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
-    // TODO fast DCT
+static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
+    // TODO fast IDCT
     int bin, i;
     float tmp;
-    for(bin=0; bin<s->nchmant[ch]; bin++){
+    for(bin=s->strtmant[ch]; bin<s->endmant[ch]; bin++){
         tmp = 0;
         for(i=0; i<6; i++){
             tmp += (i?sqrt(2):1) * s->pre_chmant[i][ch][bin] * cos(M_PI*i*(2*blk + 1)/12);
         }
-        s->transform_coeffs[ch][bin] = tmp;
+        s->transform_coeffs[ch][bin] = tmp * ff_ac3_scale_factors[s->dexps[ch][bin]];
     }
 }
 
@@ -1224,7 +1206,7 @@ static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int
         s->chahtinu[ch] = -1; /* AHT info for this frame has been read - do not read again */
     }
     if(s->chahtinu[ch] != 0){
-        dct_transform_coeffs_ch(s, ch, blk);
+        idct_transform_coeffs_ch(s, ch, blk);
     }
 }
 

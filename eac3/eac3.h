@@ -152,7 +152,6 @@ typedef struct EAC3Context{
     int chactivegaqbins[AC3_MAX_CHANNELS];
 
     int nrematbnds;                    ///< Number of rematrixing bands
-    int nchmant[AC3_MAX_CHANNELS];     ///< Number of fbw channel mantissas
     int ncplsubnd;                     ///< Number of coupling sub-bands
     int ncplbnd;                       ///< Number of structured coupled bands
 
