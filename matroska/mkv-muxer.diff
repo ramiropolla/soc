@@ -1,3 +1,28 @@
+diff --git a/Changelog b/Changelog
+index 51feb54..c6243d6 100644
+--- a/Changelog
++++ b/Changelog
+@@ -92,6 +92,7 @@ version <next>
+ - OS/2 support removed
+ - AC-3 decoder
+ - NUT muxer (since r10052)
++- Matroska muxer
+ 
+ version 0.4.9-pre1:
+ 
+diff --git a/doc/ffmpeg-doc.texi b/doc/ffmpeg-doc.texi
+index 7f65afa..5795d52 100644
+--- a/doc/ffmpeg-doc.texi
++++ b/doc/ffmpeg-doc.texi
+@@ -928,7 +928,7 @@ library:
+ @tab Used in Sierra CD-ROM games.
+ @item Sierra Online    @tab    @tab X
+ @tab .sol files used in Sierra Online games.
+-@item Matroska         @tab    @tab X
++@item Matroska         @tab X  @tab X
+ @item Electronic Arts Multimedia    @tab    @tab X
+ @tab Used in various EA games; files have extensions like WVE and UV2.
+ @item Nullsoft Video (NSV) format @tab    @tab X
 diff --git a/libavformat/Makefile b/libavformat/Makefile
 index 794d212..7bbd0e2 100644
 --- a/libavformat/Makefile
@@ -13,12 +38,12 @@ index 794d212..7bbd0e2 100644
  OBJS-$(CONFIG_MJPEG_MUXER)               += raw.o
  OBJS-$(CONFIG_MM_DEMUXER)                += mm.o
 diff --git a/libavformat/allformats.c b/libavformat/allformats.c
-index a71f1bf..60c2cae 100644
+index 468dd3e..b4a8e5b 100644
 --- a/libavformat/allformats.c
 +++ b/libavformat/allformats.c
 @@ -91,7 +91,8 @@ void av_register_all(void)
      if (!ENABLE_NUT_DEMUXER) REGISTER_DEMUXER (LIBNUT, libnut);
-     REGISTER_MUXER   (LIBNUT, libnut);
+     if (!ENABLE_NUT_MUXER)   REGISTER_MUXER   (LIBNUT, libnut);
      REGISTER_MUXDEMUX(M4V, m4v);
 -    REGISTER_DEMUXER (MATROSKA, matroska);
 +    REGISTER_MUXDEMUX(MATROSKA, matroska);
