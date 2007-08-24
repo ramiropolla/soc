@@ -344,18 +344,16 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
     /* AHT data */
     if(s->ahte){
-        {
-            /* AHT is only available in 6 block mode (numblkscod ==0x3) */
-            /* coupling can use AHT only when coupling in use for all blocks */
-            /* ncplregs derived from cplstre and cplexpstr - see Section E3.3.2 */
-            int nchregs;
-            s->chahtinu[CPL_CH]=0;
-            for(ch = (s->ncplblks!=6); ch <= s->ntchans; ch++){
-                nchregs = 0;
-                for(blk = 0; blk < 6; blk++)
-                    nchregs += (s->chexpstr[blk][ch] != EXP_REUSE);
-                s->chahtinu[ch] = (nchregs == 1) && get_bits1(gbc);
-            }
+        /* AHT is only available in 6 block mode (numblkscod ==0x3) */
+        /* coupling can use AHT only when coupling in use for all blocks */
+        /* ncplregs derived from cplstre and cplexpstr - see Section E3.3.2 */
+        int nchregs;
+        s->chahtinu[CPL_CH]=0;
+        for(ch = (s->ncplblks!=6); ch <= s->ntchans; ch++){
+            nchregs = 0;
+            for(blk = 0; blk < 6; blk++)
+                nchregs += (s->chexpstr[blk][ch] != EXP_REUSE);
+            s->chahtinu[ch] = (nchregs == 1) && get_bits1(gbc);
         }
     }else{
         for(ch=0; ch<=s->ntchans; ch++)
