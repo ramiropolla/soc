@@ -1294,17 +1294,20 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     avctx->bit_rate = (c->frmsiz * (avctx->sample_rate) * 16 / ( ff_eac3_blocks[c->numblkscod] * 256)) / 1000;
 
     /* channel config */
-    if (avctx->channels == 0) {
-        avctx->channels = c->ntchans;
-    } else if(c->ntchans < avctx->channels) {
+    if (avctx->request_channels == 0) {
+        if(avctx->channels == 0)
+            avctx->channels = c->ntchans;
+    } else if(c->ntchans < avctx->request_channels) {
         av_log(avctx, AV_LOG_ERROR, "Cannot upmix EAC3 from %d to %d channels.\n",
-                c->ntchans, avctx->channels);
+                c->ntchans, avctx->request_channels);
         return -1;
-    }
-    if(avctx->channels > 2 && avctx->channels != c->ntchans) {
-        av_log(avctx, AV_LOG_ERROR, "Cannot downmix EAC3 from %d to %d channels.\n",
-                c->ntchans, avctx->channels);
-        return -1;
+    } else {
+        if(avctx->request_channels > 2 && avctx->request_channels != c->ntchans) {
+            av_log(avctx, AV_LOG_ERROR, "Cannot downmix EAC3 from %d to %d channels.\n",
+                    c->ntchans, avctx->request_channels);
+            return -1;
+        }
+        avctx->channels = avctx->request_channels;
     }
 
     for(blk = 0; blk < ff_eac3_blocks[c->numblkscod]; blk++){
