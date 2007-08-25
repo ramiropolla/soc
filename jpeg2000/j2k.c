@@ -319,4 +319,5 @@ int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantSt
             }
         }
     }
+    return 0;
 }
