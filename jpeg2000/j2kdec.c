@@ -30,35 +30,8 @@
 #include "bytestream.h"
 #include "j2k.h"
 #include "common.h"
-#include "dwt.h"
 
 #define SHL(a, n) ((n)>=0 ? (a) << (n) : (a) >> -(n))
-
-typedef struct {
-    uint8_t nreslevels;       ///< number of resolution levels
-    uint8_t log2_cblk_width,
-            log2_cblk_height; ///< exponent of codeblock size
-    uint8_t transform;        ///< DWT type
-    uint8_t csty;             ///< coding style
-    uint8_t log2_prec_width,
-            log2_prec_height; ///< precinct size
-    uint8_t nlayers;          ///< number of layers
-    uint8_t mct;              ///< multiple component transformation
-} J2kCodingStyle;
-
-typedef struct {
-    uint8_t  expn[32 * 3]; ///< quantization exponent
-    uint16_t mant[32 * 3]; ///< quantization mantissa
-    uint8_t  quantsty;     ///< quantization style
-    uint8_t  nguardbits;   ///< number of guard bits
-} J2kQuantStyle;
-
-typedef struct {
-   J2kResLevel *reslevel;
-   DWTContext dwt;
-   int *data;
-   uint16_t x0, x1, y0, y1;
-} J2kComponent;
 
 #define HAD_COC 0x01
 #define HAD_QCC 0x02

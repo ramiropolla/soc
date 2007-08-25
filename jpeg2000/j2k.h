@@ -29,6 +29,7 @@
 #define J2K_H
 
 #include "mqc.h"
+#include "dwt.h"
 
 enum J2kMarkers{
     J2K_SOC = 0xff4f, ///< start of codestream
@@ -97,6 +98,25 @@ typedef struct J2kTgtNode {
 } J2kTgtNode;
 
 typedef struct {
+    uint8_t nreslevels;       ///< number of resolution levels
+    uint8_t log2_cblk_width,
+            log2_cblk_height; ///< exponent of codeblock size
+    uint8_t transform;        ///< DWT type
+    uint8_t csty;             ///< coding style
+    uint8_t log2_prec_width,
+            log2_prec_height; ///< precinct size
+    uint8_t nlayers;          ///< number of layers
+    uint8_t mct;              ///< multiple component transformation
+} J2kCodingStyle;
+
+typedef struct {
+    uint8_t  expn[32 * 3]; ///< quantization exponent
+    uint16_t mant[32 * 3]; ///< quantization mantissa
+    uint8_t  quantsty;     ///< quantization style
+    uint8_t  nguardbits;   ///< number of guard bits
+} J2kQuantStyle;
+
+typedef struct {
     uint16_t rate;
     int64_t disto;
 } J2kPass;
@@ -135,6 +155,13 @@ typedef struct {
     uint8_t log2_prec_width, log2_prec_height; ///< exponent of precinct size
     J2kBand *band;
 } J2kResLevel; ///< resolution level
+
+typedef struct {
+   J2kResLevel *reslevel;
+   DWTContext dwt;
+   int *data;
+   uint16_t x0, x1, y0, y1;
+} J2kComponent;
 
 /* debug routines */
 #if 0
