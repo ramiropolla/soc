@@ -79,8 +79,8 @@ echo "Copying needed files and patching synced sources: "
 cd trunk
 patch -p0 < ../qcelp_glue.diff
 cp ../qcelpdec.c libavcodec/
-cp ../qcelpdata.h libavcodec
-
+cp ../qcelpdata.h libavcodec/
+cp ../qcelp_parser.c libavcodec/
 cd ..
 
 echo "Finished"
