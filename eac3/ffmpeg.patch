@@ -1,6 +1,6 @@
 Index: libavcodec/ac3_parser.c
 ===================================================================
---- libavcodec/ac3_parser.c	(wersja 10118)
+--- libavcodec/ac3_parser.c	(wersja 10220)
 +++ libavcodec/ac3_parser.c	(kopia robocza)
 @@ -84,7 +84,7 @@
      return 0;
@@ -44,7 +44,7 @@ Index: libavcodec/ac3_parser.c
      { CODEC_ID_AC3 },
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(wersja 10118)
+--- libavcodec/Makefile	(wersja 10220)
 +++ libavcodec/Makefile	(kopia robocza)
 @@ -63,6 +63,7 @@
  OBJS-$(CONFIG_DVVIDEO_DECODER)         += dv.o
@@ -56,7 +56,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_FFV1_ENCODER)            += ffv1.o rangecoder.o
 Index: libavcodec/aac_ac3_parser.c
 ===================================================================
---- libavcodec/aac_ac3_parser.c	(wersja 10118)
+--- libavcodec/aac_ac3_parser.c	(wersja 10220)
 +++ libavcodec/aac_ac3_parser.c	(kopia robocza)
 @@ -48,7 +48,7 @@
              s->inbuf_ptr += len;
@@ -78,7 +78,7 @@ Index: libavcodec/aac_ac3_parser.c
                          }
 Index: libavcodec/aac_ac3_parser.h
 ===================================================================
---- libavcodec/aac_ac3_parser.h	(wersja 10118)
+--- libavcodec/aac_ac3_parser.h	(wersja 10220)
 +++ libavcodec/aac_ac3_parser.h	(kopia robocza)
 @@ -30,7 +30,7 @@
      uint8_t *inbuf_ptr;
@@ -91,7 +91,7 @@ Index: libavcodec/aac_ac3_parser.h
  } AACAC3ParseContext;
 Index: libavcodec/aac_parser.c
 ===================================================================
---- libavcodec/aac_parser.c	(wersja 10118)
+--- libavcodec/aac_parser.c	(wersja 10220)
 +++ libavcodec/aac_parser.c	(kopia robocza)
 @@ -38,7 +38,7 @@
  };
@@ -104,7 +104,7 @@ Index: libavcodec/aac_parser.c
      GetBitContext bits;
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(wersja 10118)
+--- libavcodec/allcodecs.c	(wersja 10220)
 +++ libavcodec/allcodecs.c	(kopia robocza)
 @@ -172,6 +172,7 @@
      REGISTER_DECODER(COOK, cook);
@@ -124,7 +124,7 @@ Index: libavcodec/allcodecs.c
      REGISTER_PARSER (H264, h264);
 Index: libavcodec/avcodec.h
 ===================================================================
---- libavcodec/avcodec.h	(wersja 10118)
+--- libavcodec/avcodec.h	(wersja 10220)
 +++ libavcodec/avcodec.h	(kopia robocza)
 @@ -260,6 +260,7 @@
      CODEC_ID_GSM_MS, /* as found in WAV */
@@ -134,17 +134,9 @@ Index: libavcodec/avcodec.h
  
      /* subtitle codecs */
      CODEC_ID_DVD_SUBTITLE= 0x17000,
-@@ -2780,6 +2781,7 @@
- extern AVCodecParser dca_parser;
- extern AVCodecParser dvbsub_parser;
- extern AVCodecParser dvdsub_parser;
-+extern AVCodecParser eac3_parser;
- extern AVCodecParser h261_parser;
- extern AVCodecParser h263_parser;
- extern AVCodecParser h264_parser;
 Index: libavcodec/allcodecs.h
 ===================================================================
---- libavcodec/allcodecs.h	(wersja 10118)
+--- libavcodec/allcodecs.h	(wersja 10220)
 +++ libavcodec/allcodecs.h	(kopia robocza)
 @@ -98,6 +98,7 @@
  extern AVCodec dsicinvideo_decoder;
@@ -154,9 +146,17 @@ Index: libavcodec/allcodecs.h
  extern AVCodec eightbps_decoder;
  extern AVCodec ffv1_decoder;
  extern AVCodec ffvhuff_decoder;
+@@ -295,6 +296,7 @@
+ extern AVCodecParser dca_parser;
+ extern AVCodecParser dvbsub_parser;
+ extern AVCodecParser dvdsub_parser;
++extern AVCodecParser eac3_parser;
+ extern AVCodecParser h261_parser;
+ extern AVCodecParser h263_parser;
+ extern AVCodecParser h264_parser;
 Index: libavcodec/ac3enc.c
 ===================================================================
---- libavcodec/ac3enc.c	(wersja 10118)
+--- libavcodec/ac3enc.c	(wersja 10220)
 +++ libavcodec/ac3enc.c	(kopia robocza)
 @@ -479,7 +479,8 @@
          for(ch=0;ch<s->nb_all_channels;ch++) {
@@ -170,9 +170,9 @@ Index: libavcodec/ac3enc.c
          }
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(wersja 10118)
+--- ffmpeg.c	(wersja 10220)
 +++ ffmpeg.c	(kopia robocza)
-@@ -1569,6 +1569,7 @@
+@@ -1577,6 +1577,7 @@
                  } else {
                      if (codec->channels != icodec->channels &&
                          (icodec->codec_id == CODEC_ID_AC3 ||
