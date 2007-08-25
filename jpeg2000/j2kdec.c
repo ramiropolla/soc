@@ -386,11 +386,10 @@ static uint8_t get_sot(J2kDecoderContext *s)
 
 static int init_tile(J2kDecoderContext *s, int tileno)
 {
-    int compno, p, q;
+    int compno,
+        tilex = tileno % s->numXtiles,
+        tiley = tileno / s->numXtiles;
     J2kTile *tile = s->tile + tileno;
-
-    p = tileno % s->numXtiles;
-    q = tileno / s->numXtiles;
 
     if (!tile->comp)
         return AVERROR(ENOMEM);
@@ -400,10 +399,10 @@ static int init_tile(J2kDecoderContext *s, int tileno)
         J2kQuantStyle  *qntsty = tile->qntsty + compno;
         int gbandno = 0, ret; // global bandno
 
-        comp->x0 = FFMAX(p * s->tile_width + s->tile_offset_x, s->image_offset_x);
-        comp->x1 = FFMIN((p+1)*s->tile_width + s->tile_offset_x, s->width);
-        comp->y0 = FFMAX(q * s->tile_height + s->tile_offset_y, s->image_offset_y);
-        comp->y1 = FFMIN((q+1)*s->tile_height + s->tile_offset_y, s->height);
+        comp->x0 = FFMAX(tilex * s->tile_width + s->tile_offset_x, s->image_offset_x);
+        comp->x1 = FFMIN((tilex+1)*s->tile_width + s->tile_offset_x, s->width);
+        comp->y0 = FFMAX(tiley * s->tile_height + s->tile_offset_y, s->image_offset_y);
+        comp->y1 = FFMIN((tiley+1)*s->tile_height + s->tile_offset_y, s->height);
 
         if (ret = ff_j2k_init_component(comp, codsty, qntsty, s->cbps[compno]))
             return ret;
