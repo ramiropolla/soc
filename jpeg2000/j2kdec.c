@@ -73,6 +73,8 @@ typedef struct {
 static int get_bits(J2kDecoderContext *s, int n)
 {
     int res = 0;
+    if (s->buf_end - s->buf < (n - s->bit_index >> 8))
+        return AVERROR(EINVAL);
     while (--n >= 0){
         res <<= 1;
         if (s->bit_index == 0){
@@ -178,11 +180,14 @@ static int tag_tree_decode(J2kDecoderContext *s, J2kTgtNode *node, int threshold
         if (curval < stack[sp]->val)
             curval = stack[sp]->val;
         while (curval < threshold){
-            if (get_bits(s, 1)){
+            int ret;
+            if ((ret = get_bits(s, 1)) > 0){
                 stack[sp]->vis++;
                 break;
-            } else
+            } else if (!ret)
                 curval++;
+            else
+                return ret;
         }
         stack[sp]->val = curval;
         sp--;
@@ -196,6 +201,9 @@ static int get_siz(J2kDecoderContext *s)
 {
     int i;
 
+    if (s->buf_end - s->buf < 36)
+        return AVERROR(EINVAL);
+
                         bytestream_get_be16(&s->buf); // Rsiz (skipped)
              s->width = bytestream_get_be32(&s->buf); // width
             s->height = bytestream_get_be32(&s->buf); // height
@@ -207,6 +215,9 @@ static int get_siz(J2kDecoderContext *s)
      s->tile_offset_x = bytestream_get_be32(&s->buf); // XT0Siz
      s->tile_offset_y = bytestream_get_be32(&s->buf); // YT0Siz
        s->ncomponents = bytestream_get_be16(&s->buf); // CSiz
+
+    if (s->buf_end - s->buf < 2 * s->ncomponents)
+        return AVERROR(EINVAL);
 
     for (i = 0; i < s->ncomponents; i++){ // Ssiz_i XRsiz_i, YRsiz_i
         uint8_t x = bytestream_get_byte(&s->buf);
@@ -256,6 +267,8 @@ static int get_siz(J2kDecoderContext *s)
 /** get common part for COD and COC segments */
 static int get_cox(J2kDecoderContext *s, J2kCodingStyle *c)
 {
+    if (s->buf_end - s->buf < 5)
+        return AVERROR(EINVAL);
           c->nreslevels = bytestream_get_byte(&s->buf) + 1; // num of resolution levels - 1
      c->log2_cblk_width = bytestream_get_byte(&s->buf) + 2; // cblk width
     c->log2_cblk_height = bytestream_get_byte(&s->buf) + 2; // cblk height
@@ -273,6 +286,9 @@ static int get_cod(J2kDecoderContext *s, J2kCodingStyle *c, uint8_t *properties)
 {
     J2kCodingStyle tmp;
     int compno;
+
+    if (s->buf_end - s->buf < 5)
+        return AVERROR(EINVAL);
 
     tmp.log2_prec_width  =
     tmp.log2_prec_height = 15;
@@ -298,7 +314,12 @@ static int get_cod(J2kDecoderContext *s, J2kCodingStyle *c, uint8_t *properties)
 /** get coding parameters for a component in the whole image on a particular tile */
 static int get_coc(J2kDecoderContext *s, J2kCodingStyle *c, uint8_t *properties)
 {
-    int compno = bytestream_get_byte(&s->buf);
+    int compno;
+
+    if (s->buf_end - s->buf < 2)
+        return AVERROR(EINVAL);
+
+    compno = bytestream_get_byte(&s->buf);
 
     c += compno;
     c->csty = bytestream_get_byte(&s->buf);
@@ -312,6 +333,10 @@ static int get_coc(J2kDecoderContext *s, J2kCodingStyle *c, uint8_t *properties)
 static int get_qcx(J2kDecoderContext *s, int n, J2kQuantStyle *q)
 {
     int i, x;
+
+    if (s->buf_end - s->buf < 1)
+        return AVERROR(EINVAL);
+
     x = bytestream_get_byte(&s->buf); // Sqcd
 
     q->nguardbits = x >> 5;
@@ -319,10 +344,14 @@ static int get_qcx(J2kDecoderContext *s, int n, J2kQuantStyle *q)
 
     if (q->quantsty == J2K_QSTY_NONE){
         n -= 3;
+        if (s->buf_end - s->buf < n)
+            return AVERROR(EINVAL);
         for (i = 0; i < n; i++)
             q->expn[i] = bytestream_get_byte(&s->buf) >> 3;
     }
     else if (q->quantsty == J2K_QSTY_SI){
+        if (s->buf_end - s->buf < 2)
+            return AVERROR(EINVAL);
         x = bytestream_get_be16(&s->buf);
         q->expn[0] = x >> 11;
         q->mant[0] = x & 0x7ff;
@@ -334,6 +363,8 @@ static int get_qcx(J2kDecoderContext *s, int n, J2kQuantStyle *q)
     }
     else{
         n = (n - 3) >> 1;
+        if (s->buf_end - s->buf < n)
+            return AVERROR(EINVAL);
         for (i = 0; i < n; i++){
             x = bytestream_get_be16(&s->buf);
             q->expn[i] = x >> 11;
@@ -360,7 +391,12 @@ static int get_qcd(J2kDecoderContext *s, int n, J2kQuantStyle *q, uint8_t *prope
 /** get quantization paramteres for a component in the whole image on in a particular tile */
 static int get_qcc(J2kDecoderContext *s, int n, J2kQuantStyle *q, uint8_t *properties)
 {
-    int compno = bytestream_get_byte(&s->buf);
+    int compno;
+
+    if (s->buf_end - s->buf < 1)
+        return AVERROR(EINVAL);
+
+    compno = bytestream_get_byte(&s->buf);
     properties[compno] |= HAD_QCC;
     return get_qcx(s, n-1, q+compno);
 }
@@ -368,6 +404,9 @@ static int get_qcc(J2kDecoderContext *s, int n, J2kQuantStyle *q, uint8_t *prope
 /** get start of tile segment */
 static uint8_t get_sot(J2kDecoderContext *s)
 {
+    if (s->buf_end - s->buf < 4)
+        return AVERROR(EINVAL);
+
     s->curtileno = bytestream_get_be16(&s->buf); ///< Isot
 
     s->buf += 4; ///< Psot (ignored)
@@ -419,28 +458,35 @@ static int getnpasses(J2kDecoderContext *s)
     if (!get_bits(s, 1))
         return 2;
     if ((num = get_bits(s, 2)) != 3)
-        return 3 + num;
+        return num < 0 ? num : 3 + num;
     if ((num = get_bits(s, 5)) != 31)
-        return 6 + num;
-    return 37 + get_bits(s, 7);
+        return num < 0 ? num : 6 + num;
+    num = get_bits(s, 7);
+    return num < 0 ? num : 37 + num;
 }
 
 static int getlblockinc(J2kDecoderContext *s)
 {
-    int res = 0;
-    while (get_bits(s, 1))
+    int res = 0, ret;
+    while (ret = get_bits(s, 1)){
+        if (ret < 0)
+            return ret;
         res++;
+    }
     return res;
 }
 
 static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, int layno, uint8_t *expn, int numgbits)
 {
-    int bandno, cblkny, cblknx, cblkno;
+    int bandno, cblkny, cblknx, cblkno, ret;
 
-    if (!get_bits(s, 1)){
+    if (!(ret = get_bits(s, 1))){
         j2k_flush(s);
         return 0;
     }
+    else if (ret < 0)
+        return ret;
+
     for (bandno = 0; bandno < rlevel->nbands; bandno++){
         J2kBand *band = rlevel->band + bandno;
         J2kPrec *prec = band->prec + precno;
@@ -456,15 +502,20 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
                 else{
                     incl = tag_tree_decode(s, prec->cblkincl + pos, layno+1) == layno;
                 }
-                if (!incl){
+                if (!incl)
                     continue;
-                }
+                else if (incl < 0)
+                    return incl;
+
                 if (!cblk->npasses)
                     cblk->nonzerobits = expn[bandno] + numgbits - 1 - tag_tree_decode(s, prec->zerobits + pos, 100);
-                newpasses = getnpasses(s);
-                llen = getlblockinc(s);
+                if ((newpasses = getnpasses(s)) < 0)
+                    return newpasses;
+                if ((llen = getlblockinc(s)) < 0)
+                    return llen;
                 cblk->lblock += llen;
-                cblk->lengthinc = get_bits(s, av_log2(newpasses) + cblk->lblock);
+                if ((cblk->lengthinc = get_bits(s, av_log2(newpasses) + cblk->lblock)) < 0)
+                    return cblk->lengthinc;
                 cblk->npasses += newpasses;
             }
     }
@@ -476,6 +527,8 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
             int xi;
             for (xi = band->prec[precno].xi0; xi < band->prec[precno].xi1; xi++){
                 J2kCblk *cblk = band->cblk + yi * cblknw + xi;
+                if (s->buf_end - s->buf < cblk->lengthinc)
+                    return AVERROR(EINVAL);
                 bytestream_get_buffer(&s->buf, cblk->data, cblk->lengthinc);
                 cblk->length += cblk->lengthinc;
                 cblk->lengthinc = 0;
@@ -786,8 +839,14 @@ static int decode_codestream(J2kDecoderContext *s)
     uint8_t *properties = s->properties;
 
     for (;;){
-        int marker = bytestream_get_be16(&s->buf), len, ret = 0;
-        uint8_t *oldbuf = s->buf;
+        int marker, len, ret = 0;
+        uint8_t *oldbuf;
+
+        if (s->buf_end - s->buf < 2)
+            return AVERROR(EINVAL);
+
+        marker = bytestream_get_be16(&s->buf);
+        oldbuf = s->buf;
 
         if (marker == J2K_SOD){
             J2kTile *tile = s->tile + s->curtileno;
@@ -800,6 +859,8 @@ static int decode_codestream(J2kDecoderContext *s)
         if (marker == J2K_EOC)
             break;
 
+        if (s->buf_end - s->buf < 2)
+            return AVERROR(EINVAL);
         len = bytestream_get_be16(&s->buf);
         switch(marker){
             case J2K_SIZ:
@@ -852,6 +913,8 @@ static int decode_frame(AVCodecContext *avctx,
 
     ff_j2k_init_tier1_luts();
 
+    if (s->buf_end - s->buf < 2)
+        return AVERROR(EINVAL);
     if (bytestream_get_be16(&s->buf) != J2K_SOC){
         av_log(avctx, AV_LOG_ERROR, "SOC marker not present\n");
         return -1;

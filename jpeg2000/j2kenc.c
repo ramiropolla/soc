@@ -229,9 +229,12 @@ static void tag_tree_update(J2kTgtNode *node)
     }
 }
 
-static void put_siz(J2kEncoderContext *s)
+static int put_siz(J2kEncoderContext *s)
 {
     int i;
+
+    if (s->buf_end - s->buf < 40 + 3 * s->ncomponents)
+        return -1;
 
     bytestream_put_be16(&s->buf, J2K_SIZ);
     bytestream_put_be16(&s->buf, 38 + 3 * s->ncomponents); // Lsiz
@@ -252,11 +255,15 @@ static void put_siz(J2kEncoderContext *s)
         bytestream_put_byte(&s->buf, 1);
         bytestream_put_byte(&s->buf, 1);
     }
+    return 0;
 }
 
-static void put_cod(J2kEncoderContext *s)
+static int put_cod(J2kEncoderContext *s)
 {
     J2kCodingStyle *codsty = &s->codsty;
+
+    if (s->buf_end - s->buf < 14)
+        return -1;
 
     bytestream_put_be16(&s->buf, J2K_COD);
     bytestream_put_be16(&s->buf, 12); // Lcod
@@ -271,24 +278,33 @@ static void put_cod(J2kEncoderContext *s)
     bytestream_put_byte(&s->buf, codsty->log2_cblk_height-2); // cblk height
     bytestream_put_byte(&s->buf, 0); // cblk style
     bytestream_put_byte(&s->buf, 1); // transformation
+    return 0;
 }
 
-static void put_qcd(J2kEncoderContext *s, int compno)
+static int put_qcd(J2kEncoderContext *s, int compno)
 {
     int i;
     J2kCodingStyle *codsty = &s->codsty;
     J2kQuantStyle  *qntsty = &s->qntsty;
+
+    if (s->buf_end - s->buf < 6 + 3*(codsty->nreslevels - 1))
+        return -1;
 
     bytestream_put_be16(&s->buf, J2K_QCD);
     bytestream_put_be16(&s->buf, 4+3*(codsty->nreslevels-1));  // LQcd
     bytestream_put_byte(&s->buf, qntsty->nguardbits << 5);  // Sqcd
     for (i = 0; i < codsty->nreslevels * 3 - 2; i++)
         bytestream_put_byte(&s->buf, qntsty->expn[i] << 3);
+    return 0;
 }
 
 static uint8_t *put_sot(J2kEncoderContext *s, int tileno)
 {
     uint8_t *psotptr;
+
+    if (s->buf_end - s->buf < 12)
+        return -1;
+
     bytestream_put_be16(&s->buf, J2K_SOT);
     bytestream_put_be16(&s->buf, 10); // Lsot
     bytestream_put_be16(&s->buf, tileno); // Isot
@@ -567,7 +583,7 @@ static void putnumpasses(J2kEncoderContext *s, int n)
 }
 
 
-static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
+static int encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
                           uint8_t *expn, int numgbits)
 {
     int bandno, empty = 1;
@@ -614,6 +630,9 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
                 int pad = 0, llen, length;
                 J2kCblk *cblk = band->cblk + yi * cblknw + xi;
 
+                if (s->buf_end - s->buf < 20) // approximately
+                    return -1;
+
                 // inclusion information
                 tag_tree_code(s, prec->cblkincl + pos, 1);
                 if (!cblk->ninclpasses)
@@ -645,16 +664,20 @@ static void encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
             int xi;
             for (xi = prec->xi0; xi < prec->xi1; xi++){
                 J2kCblk *cblk = band->cblk + yi * cblknw + xi;
-                if (cblk->ninclpasses)
+                if (cblk->ninclpasses){
+                    if (s->buf_end - s->buf < cblk->passes[cblk->ninclpasses-1].rate)
+                        return -1;
                     bytestream_put_buffer(&s->buf, cblk->data, cblk->passes[cblk->ninclpasses-1].rate);
+                }
             }
         }
     }
+    return 0;
 }
 
-static void encode_packets(J2kEncoderContext *s, J2kTile *tile, int tileno)
+static int encode_packets(J2kEncoderContext *s, J2kTile *tile, int tileno)
 {
-    int compno, reslevelno;
+    int compno, reslevelno, ret;
     J2kCodingStyle *codsty = &s->codsty;
     J2kQuantStyle  *qntsty = &s->qntsty;
 
@@ -665,12 +688,14 @@ static void encode_packets(J2kEncoderContext *s, J2kTile *tile, int tileno)
             int precno;
             J2kResLevel *reslevel = s->tile[tileno].comp[compno].reslevel + reslevelno;
             for (precno = 0; precno < reslevel->num_precincts_x * reslevel->num_precincts_y; precno++){
-                encode_packet(s, reslevel, precno, qntsty->expn + (reslevelno ? 3*reslevelno-2 : 0),
-                              qntsty->nguardbits);
+                if (ret = encode_packet(s, reslevel, precno, qntsty->expn + (reslevelno ? 3*reslevelno-2 : 0),
+                              qntsty->nguardbits))
+                    return ret;
             }
         }
     }
     av_log(s->avctx, AV_LOG_DEBUG, "after tier2\n");
+    return 0;
 }
 
 static int getcut(J2kCblk *cblk, int64_t lambda, int dwt_norm)
@@ -721,16 +746,17 @@ static void truncpasses(J2kEncoderContext *s, J2kTile *tile)
     }
 }
 
-static void encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
+static int encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
 {
-    int compno, reslevelno, bandno;
+    int compno, reslevelno, bandno, ret;
     J2kT1Context t1;
     J2kCodingStyle *codsty = &s->codsty;
     for (compno = 0; compno < s->ncomponents; compno++){
         J2kComponent *comp = s->tile[tileno].comp + compno;
 
         av_log(s->avctx, AV_LOG_DEBUG,"dwt\n");
-        ff_dwt_encode(&comp->dwt, comp->data);
+        if (ret = ff_dwt_encode(&comp->dwt, comp->data))
+            return ret;
         av_log(s->avctx, AV_LOG_DEBUG,"after dwt -> tier1\n");
 
         for (reslevelno = 0; reslevelno < codsty->nreslevels; reslevelno++){
@@ -779,8 +805,10 @@ static void encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
 
     av_log(s->avctx, AV_LOG_DEBUG, "rate control\n");
     truncpasses(s, tile);
-    encode_packets(s, tile, tileno);
+    if (ret = encode_packets(s, tile, tileno))
+        return ret;
     av_log(s->avctx, AV_LOG_DEBUG, "after rate control\n");
+    return 0;
 }
 
 void cleanup(J2kEncoderContext *s)
@@ -873,18 +901,29 @@ static int encode_frame(AVCodecContext *avctx,
     init_luts();
     av_log(s->avctx, AV_LOG_DEBUG, "after init\n");
 
+    if (s->buf_end - s->buf < 2)
+        return -1;
     bytestream_put_be16(&s->buf, J2K_SOC);
-    put_siz(s);
-    put_cod(s);
-    put_qcd(s, 0);
+    if (ret = put_siz(s))
+        return ret;
+    if (ret = put_cod(s))
+        return ret;
+    if (ret = put_qcd(s, 0))
+        return ret;
 
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         uint8_t *psotptr;
-        psotptr = put_sot(s, tileno);
+        if ((psotptr = put_sot(s, tileno)) < 0)
+            return psotptr;
+        if (s->buf_end - s->buf < 2)
+            return -1;
         bytestream_put_be16(&s->buf, J2K_SOD);
-        encode_tile(s, s->tile + tileno, tileno);
+        if (ret = encode_tile(s, s->tile + tileno, tileno))
+            return ret;
         bytestream_put_be32(&psotptr, s->buf - psotptr + 6);
     }
+    if (s->buf_end - s->buf < 2)
+        return -1;
     bytestream_put_be16(&s->buf, J2K_EOC);
 
     cleanup(s);
