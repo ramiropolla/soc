@@ -22,6 +22,7 @@
 /**
  * @file qcelpdata.h
  * QCELP decoder
+ * @author Reynaldo H. Verdejo Pinochet
  */
 
 #define QCELP_FXQ(v)  (roundf(16384.0*v)/16384.0)

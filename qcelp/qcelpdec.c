@@ -22,6 +22,7 @@
 /**
  * @file qcelpdec.c
  * QCELP decoder
+ * @author Reynaldo H. Verdejo Pinochet
  */
 
 #include <math.h>

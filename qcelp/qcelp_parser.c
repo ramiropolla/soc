@@ -30,28 +30,44 @@
 
 
 /**
- * finds the end of the current frame in the bitstream.
+ * Finds the end of the current frame in the bitstream.
+ *
  * @return the position of the first byte of the next frame, or -1
  */
 
 static int qcelp_find_frame_end(ParseContext *pc, const uint8_t *buf,
        int buf_size)
 {
-    if(buf_size < 3)
-        return END_NOT_FOUND;
+
+    av_log(pc, AV_LOG_ERROR, "buf_size:%d buf[0]:%d\n", buf_size, buf[0]);
+
+    /**
+     * Lest try and see if this packet holds exactly one frame
+     */
 
     switch(buf_size)
     {
-        case 35:
-        case 34:
-        case 17:
-        case 16:
-        case  8:
-        case  7:
-        case  4:
-        case  3:
+        case 35:             // RATE_FULL in 'codec frame' fmt
+        case 34:             // RATE_FULL
+        case 17:             // RATE_HALF in 'codec frame' fmt
+        case 16:             // RATE_HALF
+        case  8:             // RATE_QUARTER in 'codec frame' fmt
+        case  7:             // RATE_QUARTER
+        case  4:             // RATE_OCTAVE in 'codec frame' fmt
+        case  3:             // RATE_OCTAVE
             return buf_size;
     }
+
+    /**
+     * If we reach this point it means the packet holds a multiset of
+     * frames, each one of them in codec frame format, all of the same
+     * rate, as described in:
+     *
+     * http://tools.ietf.org/html/draft-mckay-qcelp-02
+     */
+
+    if(buf_size < 3)
+        return END_NOT_FOUND;
 
     switch(buf[0])
     {
@@ -81,9 +97,9 @@ static int qcelp_parse(AVCodecParserContext *s, AVCodecContext *avctx,
     start_found=1;
 
     if(s->flags & PARSER_FLAG_COMPLETE_FRAMES)
-    {
         next=buf_size;
-    }else{
+    else
+    {
         next=qcelp_find_frame_end(pc, buf, buf_size);
 
         if (ff_combine_frame(pc, next, &buf, &buf_size) < 0)
