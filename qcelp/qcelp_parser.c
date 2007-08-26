@@ -38,11 +38,8 @@
 static int qcelp_find_frame_end(ParseContext *pc, const uint8_t *buf,
        int buf_size)
 {
-
-    av_log(pc, AV_LOG_ERROR, "buf_size:%d buf[0]:%d\n", buf_size, buf[0]);
-
     /**
-     * Lest try and see if this packet holds exactly one frame
+     * Lets try and see if this packet holds exactly one frame
      */
 
     switch(buf_size)
