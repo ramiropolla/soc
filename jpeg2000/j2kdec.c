@@ -199,7 +199,7 @@ static int tag_tree_decode(J2kDecoderContext *s, J2kTgtNode *node, int threshold
 /** get sizes and offsets of image, tiles; number of components */
 static int get_siz(J2kDecoderContext *s)
 {
-    int i;
+    int i, ret;
 
     if (s->buf_end - s->buf < 36)
         return AVERROR(EINVAL);
@@ -256,7 +256,8 @@ static int get_siz(J2kDecoderContext *s)
     if (s->picture.data[0])
         s->avctx->release_buffer(s->avctx, &s->picture);
 
-    s->avctx->get_buffer(s->avctx, &s->picture);
+    if ((ret = s->avctx->get_buffer(s->avctx, &s->picture)) < 0)
+        return ret;
 
     s->picture.pict_type = FF_I_TYPE;
     s->picture.key_frame = 1;
