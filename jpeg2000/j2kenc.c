@@ -614,8 +614,7 @@ static int encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
         J2kBand *band = rlevel->band + bandno;
         J2kPrec *prec = band->prec + precno;
         int yi, xi, pos;
-        int cblknw = prec->xi1 - prec->xi0,
-            cblknh = prec->yi1 - prec->yi0;
+        int cblknw = prec->xi1 - prec->xi0;
 
         for (pos=0, yi = prec->yi0; yi < prec->yi1; yi++){
             for (xi = prec->xi0; xi < prec->xi1; xi++, pos++){

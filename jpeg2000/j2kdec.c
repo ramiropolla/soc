@@ -436,7 +436,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
         J2kComponent *comp = tile->comp + compno;
         J2kCodingStyle *codsty = tile->codsty + compno;
         J2kQuantStyle  *qntsty = tile->qntsty + compno;
-        int gbandno = 0, ret; // global bandno
+        int ret; // global bandno
 
         comp->coord[0][0] = FFMAX(tilex * s->tile_width + s->tile_offset_x, s->image_offset_x);
         comp->coord[0][1] = FFMIN((tilex+1)*s->tile_width + s->tile_offset_x, s->width);
@@ -514,8 +514,9 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
                 if ((llen = getlblockinc(s)) < 0)
                     return llen;
                 cblk->lblock += llen;
-                if ((cblk->lengthinc = get_bits(s, av_log2(newpasses) + cblk->lblock)) < 0)
-                    return cblk->lengthinc;
+                if ((ret = get_bits(s, av_log2(newpasses) + cblk->lblock)) < 0)
+                    return ret;
+                cblk->lengthinc = ret;
                 cblk->npasses += newpasses;
             }
     }
@@ -679,7 +680,7 @@ static int decode_cblk(J2kDecoderContext *s, J2kT1Context *t1, J2kCblk *cblk, in
 
 static void mct_decode(J2kDecoderContext *s, J2kTile *tile)
 {
-    int i, j, *src[3], i0, i1, i2, csize = 1;
+    int i, *src[3], i0, i1, i2, csize = 1;
 
     for (i = 0; i < 3; i++)
         src[i] = tile->comp[i].data;
