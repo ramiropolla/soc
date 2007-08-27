@@ -345,10 +345,10 @@ static int init_tiles(J2kEncoderContext *s)
                 J2kComponent *comp = tile->comp + compno;
                 int ret;
 
-                comp->x0 = tilex * s->tile_width;
-                comp->x1 = FFMIN((tilex+1)*s->tile_width, s->width);
-                comp->y0 = tiley * s->tile_height;
-                comp->y1 = FFMIN((tiley+1)*s->tile_height, s->height);
+                comp->coord[0][0] = tilex * s->tile_width;
+                comp->coord[0][1] = FFMIN((tilex+1)*s->tile_width, s->width);
+                comp->coord[1][0] = tiley * s->tile_height;
+                comp->coord[1][1] = FFMIN((tiley+1)*s->tile_height, s->height);
 
                 if (ret = ff_j2k_init_component(comp, codsty, qntsty, s->cbps[compno]))
                     return ret;
@@ -356,12 +356,13 @@ static int init_tiles(J2kEncoderContext *s)
         }
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         J2kTile *tile = s->tile + tileno;
-        uint8_t *line = s->picture->data[0] + tile->comp[0].y0 * s->picture->linesize[0] + tile->comp[0].x0 * s->ncomponents;
+        uint8_t *line = s->picture->data[0] + tile->comp[0].coord[1][0] * s->picture->linesize[0]
+                        + tile->comp[0].coord[0][0] * s->ncomponents;
 
         i = 0;
-        for (y = tile->comp[0].y0; y < tile->comp[0].y1; y++){
+        for (y = tile->comp[0].coord[1][0]; y < tile->comp[0].coord[1][1]; y++){
             uint8_t *ptr = line;
-            for (x = tile->comp[0].x0; x < tile->comp[0].x1; x++, i++){
+            for (x = tile->comp[0].coord[0][0]; x < tile->comp[0].coord[0][1]; x++, i++){
                 for (compno = 0; compno < s->ncomponents; compno++){
                     tile->comp[compno].data[i] = *ptr++  - (1 << 7);
                 }
@@ -596,8 +597,8 @@ static int encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
 
     // is the packet empty?
     for (bandno = 0; bandno < rlevel->nbands; bandno++){
-        if (rlevel->band[bandno].x0 < rlevel->band[bandno].x1
-        &&  rlevel->band[bandno].y0 < rlevel->band[bandno].y1){
+        if (rlevel->band[bandno].coord[0][0] < rlevel->band[bandno].coord[0][1]
+        &&  rlevel->band[bandno].coord[1][0] < rlevel->band[bandno].coord[1][1]){
             empty = 0;
             break;
         }
@@ -765,11 +766,12 @@ static int encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
             for (bandno = 0; bandno < reslevel->nbands ; bandno++){
                 J2kBand *band = reslevel->band + bandno;
                 int cblkx, cblky, cblkno=0, xx0, x0, xx1, y0, yy0, yy1, bandpos;
-                yy0 = bandno == 0 ? 0 : comp->reslevel[reslevelno-1].y1 - comp->reslevel[reslevelno-1].y0;
+                yy0 = bandno == 0 ? 0 : comp->reslevel[reslevelno-1].coord[1][1] - comp->reslevel[reslevelno-1].coord[1][0];
                 y0 = yy0;
-                yy1 = FFMIN(ff_j2k_ceildiv(band->y0 + 1, band->codeblock_height) * band->codeblock_height, band->y1) - band->y0 + yy0;
+                yy1 = FFMIN(ff_j2k_ceildiv(band->coord[1][0] + 1, band->codeblock_height) * band->codeblock_height,
+                            band->coord[1][1]) - band->coord[1][0] + yy0;
 
-                if (band->x0 == band->x1 || band->y0 == band->y1)
+                if (band->coord[0][0] == band->coord[0][1] || band->coord[1][0] == band->coord[1][1])
                     continue;
 
                 bandpos = bandno + (reslevelno > 0);
@@ -778,24 +780,25 @@ static int encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
                     if (reslevelno == 0 || bandno == 1)
                         xx0 = 0;
                     else
-                        xx0 = comp->reslevel[reslevelno-1].x1 - comp->reslevel[reslevelno-1].x0;
+                        xx0 = comp->reslevel[reslevelno-1].coord[0][1] - comp->reslevel[reslevelno-1].coord[0][0];
                     x0 = xx0;
-                    xx1 = FFMIN(ff_j2k_ceildiv(band->x0 + 1, band->codeblock_width) * band->codeblock_width, band->x1) - band->x0 + xx0;
+                    xx1 = FFMIN(ff_j2k_ceildiv(band->coord[0][0] + 1, band->codeblock_width) * band->codeblock_width,
+                                band->coord[0][1]) - band->coord[0][0] + xx0;
 
                     for (cblkx = 0; cblkx < band->cblknx; cblkx++, cblkno++){
                         int y, x;
                         for (y = yy0; y < yy1; y++){
                             int *ptr = t1.data[y-yy0];
                             for (x = xx0; x < xx1; x++)
-                                *ptr++ = comp->data[(comp->x1 - comp->x0) * y + x] << NMSEDEC_FRACBITS;
+                                *ptr++ = comp->data[(comp->coord[0][1] - comp->coord[0][0]) * y + x] << NMSEDEC_FRACBITS;
                         }
                         encode_cblk(s, &t1, band->cblk + cblkno, tile, xx1 - xx0, yy1 - yy0,
                                     bandpos, codsty->nreslevels - reslevelno - 1);
                         xx0 = xx1;
-                        xx1 = FFMIN(xx1 + band->codeblock_width, band->x1 - band->x0 + x0);
+                        xx1 = FFMIN(xx1 + band->codeblock_width, band->coord[0][1] - band->coord[0][0] + x0);
                     }
                     yy0 = yy1;
-                    yy1 = FFMIN(yy1 + band->codeblock_height, band->y1 - band->y0 + y0);
+                    yy1 = FFMIN(yy1 + band->codeblock_height, band->coord[1][1] - band->coord[1][0] + y0);
                 }
             }
         }

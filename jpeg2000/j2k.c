@@ -183,14 +183,14 @@ void ff_j2k_set_significant(J2kT1Context *t1, int x, int y)
 
 int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantStyle *qntsty, int cbps)
 {
-    int reslevelno, bandno, gbandno = 0, ret;
+    int reslevelno, bandno, gbandno = 0, ret, i, j, csize = 1;
 
-    if (ret=ff_dwt_init(&comp->dwt,
-                (uint16_t[2][2]){{comp->x0, comp->x1}, {comp->y0, comp->y1}}, // will be changed soon
-                    codsty->nreslevels-1, codsty->transform))
+    if (ret=ff_dwt_init(&comp->dwt, comp->coord, codsty->nreslevels-1, codsty->transform))
         return ret;
+    for (i = 0; i < 2; i++)
+        csize *= comp->coord[i][1] - comp->coord[i][0];
 
-    comp->data = av_malloc((comp->y1 - comp->y0) * (comp->x1 -comp->x0) * sizeof(int));
+    comp->data = av_malloc(csize * sizeof(int));
     if (!comp->data)
         return AVERROR(ENOMEM);
     comp->reslevel = av_malloc(codsty->nreslevels * sizeof(J2kResLevel));
@@ -198,28 +198,30 @@ int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantSt
     if (!comp->reslevel)
         return AVERROR(ENOMEM);
     for (reslevelno = 0; reslevelno < codsty->nreslevels; reslevelno++){
-        int n = codsty->nreslevels - reslevelno;
+        int declvl = codsty->nreslevels - reslevelno;
         J2kResLevel *reslevel = comp->reslevel + reslevelno;
 
-        reslevel->x0 = ff_j2k_ceildivpow2(comp->x0, codsty->nreslevels - reslevelno - 1);
-        reslevel->x1 = ff_j2k_ceildivpow2(comp->x1, codsty->nreslevels - reslevelno - 1);
-        reslevel->y0 = ff_j2k_ceildivpow2(comp->y0, codsty->nreslevels - reslevelno - 1);
-        reslevel->y1 = ff_j2k_ceildivpow2(comp->y1, codsty->nreslevels - reslevelno - 1);
+        for (i = 0; i < 2; i++)
+            for (j = 0; j < 2; j++)
+                reslevel->coord[i][j] =
+                    ff_j2k_ceildivpow2(comp->coord[i][j], declvl - 1);
 
         if (reslevelno == 0)
             reslevel->nbands = 1;
         else
             reslevel->nbands = 3;
 
-        if (reslevel->x1 == reslevel->x0)
+        if (reslevel->coord[0][1] == reslevel->coord[0][0])
             reslevel->num_precincts_x = 0;
         else
-            reslevel->num_precincts_x = ff_j2k_ceildivpow2(reslevel->x1, codsty->log2_prec_width) - reslevel->x0 / (1<<codsty->log2_prec_width);
+            reslevel->num_precincts_x = ff_j2k_ceildivpow2(reslevel->coord[0][1], codsty->log2_prec_width)
+                                        - (reslevel->coord[0][0] >> codsty->log2_prec_width);
 
-        if (reslevel->y1 == reslevel->y0)
+        if (reslevel->coord[1][1] == reslevel->coord[1][0])
             reslevel->num_precincts_y = 0;
         else
-            reslevel->num_precincts_y = ff_j2k_ceildivpow2(reslevel->y1, codsty->log2_prec_height) - reslevel->y0 / (1<<codsty->log2_prec_height);
+            reslevel->num_precincts_y = ff_j2k_ceildivpow2(reslevel->coord[1][1], codsty->log2_prec_height)
+                                        - (reslevel->coord[1][0] >> codsty->log2_prec_height);
 
         reslevel->band = av_malloc(reslevel->nbands * sizeof(J2kBand));
         if (!reslevel->band)
@@ -244,23 +246,20 @@ int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantSt
             if (reslevelno == 0){  // the same everywhere
                 band->codeblock_width = 1 << FFMIN(codsty->log2_cblk_width, codsty->log2_prec_width-1);
                 band->codeblock_height = 1 << FFMIN(codsty->log2_cblk_height, codsty->log2_prec_height-1);
-
-                band->x0 = ff_j2k_ceildivpow2(comp->x0, n-1);
-                band->x1 = ff_j2k_ceildivpow2(comp->x1, n-1);
-                band->y0 = ff_j2k_ceildivpow2(comp->y0, n-1);
-                band->y1 = ff_j2k_ceildivpow2(comp->y1, n-1);
+                for (i = 0; i < 2; i++)
+                    for (j = 0; j < 2; j++)
+                        band->coord[i][j] = ff_j2k_ceildivpow2(comp->coord[i][j], declvl-1);
             }
             else{
                 band->codeblock_width = 1 << FFMIN(codsty->log2_cblk_width, codsty->log2_prec_width);
                 band->codeblock_height = 1 << FFMIN(codsty->log2_cblk_height, codsty->log2_prec_height);
 
-                band->x0 = ff_j2k_ceildivpow2(comp->x0 - (1 << (n-1)) * ((bandno+1)&1), n);
-                band->x1 = ff_j2k_ceildivpow2(comp->x1 - (1 << (n-1)) * ((bandno+1)&1), n);
-                band->y0 = ff_j2k_ceildivpow2(comp->y0 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
-                band->y1 = ff_j2k_ceildivpow2(comp->y1 - (1 << (n-1)) * (((bandno+1)&2)>>1), n);
+                for (i = 0; i < 2; i++)
+                    for (j = 0; j < 2; j++)
+                        band->coord[i][j] = ff_j2k_ceildivpow2(comp->coord[i][j] - (((bandno+1>>i)&1) << declvl-1), declvl);
             }
-            band->cblknx = ff_j2k_ceildiv(band->x1, band->codeblock_width) - band->x0 / band->codeblock_width;
-            band->cblkny = ff_j2k_ceildiv(band->y1, band->codeblock_height) - band->y0 / band->codeblock_height;
+            band->cblknx = ff_j2k_ceildiv(band->coord[0][1], band->codeblock_width)  - band->coord[0][0] / band->codeblock_width;
+            band->cblkny = ff_j2k_ceildiv(band->coord[1][1], band->codeblock_height) - band->coord[1][0] / band->codeblock_height;
 
             band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
             if (!band->cblk)
@@ -278,10 +277,10 @@ int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantSt
                 cblk->npasses = 0;
             }
 
-            y0 = band->y0;
-            y1 = (band->y0 + (1<<codsty->log2_prec_height))/(1<<codsty->log2_prec_height)*(1<<codsty->log2_prec_height) - band->y0;
+            y0 = band->coord[1][0];
+            y1 = ((band->coord[1][0] + (1<<codsty->log2_prec_height)) & ~((1<<codsty->log2_prec_height)-1)) - y0;
             yi0 = 0;
-            yi1 = ff_j2k_ceildiv(y1 - y0, 1<<codsty->log2_cblk_height) * (1<<codsty->log2_cblk_height);
+            yi1 = ff_j2k_ceildivpow2(y1 - y0, codsty->log2_cblk_height) << codsty->log2_cblk_height;
             yi1 = FFMIN(yi1, band->cblkny);
             cblkperprech = 1<<(codsty->log2_prec_height - codsty->log2_cblk_height);
             for (precy = 0, precno = 0; precy < reslevel->num_precincts_y; precy++){
@@ -293,10 +292,10 @@ int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantSt
                 yi0 = yi1 - cblkperprech;
                 yi1 = FFMIN(yi1, band->cblkny);
             }
-            x0 = band->x0;
-            x1 = (band->x0 + (1<<codsty->log2_prec_width))/(1<<codsty->log2_prec_width)*(1<<codsty->log2_prec_width) - band->x0;
+            x0 = band->coord[0][0];
+            x1 = ((band->coord[0][0] + (1<<codsty->log2_prec_width)) & ~((1<<codsty->log2_prec_width)-1)) - x0;
             xi0 = 0;
-            xi1 = ff_j2k_ceildiv(x1 - x0, 1<<codsty->log2_cblk_width) * (1<<codsty->log2_cblk_width);
+            xi1 = ff_j2k_ceildivpow2(x1 - x0, codsty->log2_cblk_width) << codsty->log2_cblk_width;
             xi1 = FFMIN(xi1, band->cblknx);
 
             cblkperprecw = 1<<(codsty->log2_prec_width - codsty->log2_cblk_width);

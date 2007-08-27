@@ -438,10 +438,10 @@ static int init_tile(J2kDecoderContext *s, int tileno)
         J2kQuantStyle  *qntsty = tile->qntsty + compno;
         int gbandno = 0, ret; // global bandno
 
-        comp->x0 = FFMAX(tilex * s->tile_width + s->tile_offset_x, s->image_offset_x);
-        comp->x1 = FFMIN((tilex+1)*s->tile_width + s->tile_offset_x, s->width);
-        comp->y0 = FFMAX(tiley * s->tile_height + s->tile_offset_y, s->image_offset_y);
-        comp->y1 = FFMIN((tiley+1)*s->tile_height + s->tile_offset_y, s->height);
+        comp->coord[0][0] = FFMAX(tilex * s->tile_width + s->tile_offset_x, s->image_offset_x);
+        comp->coord[0][1] = FFMIN((tilex+1)*s->tile_width + s->tile_offset_x, s->width);
+        comp->coord[1][0] = FFMAX(tiley * s->tile_height + s->tile_offset_y, s->image_offset_y);
+        comp->coord[1][1] = FFMIN((tiley+1)*s->tile_height + s->tile_offset_y, s->height);
 
         if (ret = ff_j2k_init_component(comp, codsty, qntsty, s->cbps[compno]))
             return ret;
@@ -679,13 +679,16 @@ static int decode_cblk(J2kDecoderContext *s, J2kT1Context *t1, J2kCblk *cblk, in
 
 static void mct_decode(J2kDecoderContext *s, J2kTile *tile)
 {
-    int i, *src[3], i0, i1, i2;
+    int i, j, *src[3], i0, i1, i2, csize = 1;
 
     for (i = 0; i < 3; i++)
         src[i] = tile->comp[i].data;
 
+    for (i = 0; i < 2; i++)
+        csize *= tile->comp[0].coord[i][1] - tile->comp[0].coord[i][0];
+
     if (tile->codsty[0].transform == FF_DWT97){
-        for (i = 0; i < (tile->comp[0].y1 - tile->comp[0].y0) * (tile->comp[0].x1 - tile->comp[0].x0); i++){
+        for (i = 0; i < csize; i++){
             i0 = *src[0] + (*src[2] * 46802 >> 16);
             i1 = *src[0] - (*src[1] * 22553 + *src[2] * 46802 >> 16);
             i2 = *src[0] + (116130 * *src[1] >> 16);
@@ -694,7 +697,7 @@ static void mct_decode(J2kDecoderContext *s, J2kTile *tile)
             *src[2]++ = i2;
         }
     } else{
-        for (i = 0; i < (tile->comp[0].y1 - tile->comp[0].y0) * (tile->comp[0].x1 - tile->comp[0].x0); i++){
+        for (i = 0; i < csize; i++){
             i1 = *src[0] - (*src[2] + *src[1] >> 2);
             i0 = i1 + *src[2];
             i2 = i1 + *src[1];
@@ -724,20 +727,22 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
 
                 bandpos = bandno + (reslevelno > 0);
 
-                yy0 = bandno == 0 ? 0 : comp->reslevel[reslevelno-1].y1 - comp->reslevel[reslevelno-1].y0;
+                yy0 = bandno == 0 ? 0 : comp->reslevel[reslevelno-1].coord[1][1] - comp->reslevel[reslevelno-1].coord[1][0];
                 y0 = yy0;
-                yy1 = FFMIN(ff_j2k_ceildiv(band->y0 + 1, band->codeblock_height) * band->codeblock_height, band->y1) - band->y0 + yy0;
+                yy1 = FFMIN(ff_j2k_ceildiv(band->coord[1][0] + 1, band->codeblock_height) * band->codeblock_height,
+                            band->coord[1][1]) - band->coord[1][0] + yy0;
 
-                if (band->x0 == band->x1 || band->y0 == band->y1)
+                if (band->coord[0][0] == band->coord[0][1] || band->coord[1][0] == band->coord[1][1])
                     continue;
 
                 for (cblky = 0; cblky < band->cblkny; cblky++){
                     if (reslevelno == 0 || bandno == 1)
                         xx0 = 0;
                     else
-                        xx0 = comp->reslevel[reslevelno-1].x1 - comp->reslevel[reslevelno-1].x0;
+                        xx0 = comp->reslevel[reslevelno-1].coord[0][1] - comp->reslevel[reslevelno-1].coord[0][0];
                     x0 = xx0;
-                    xx1 = FFMIN(ff_j2k_ceildiv(band->x0 + 1, band->codeblock_width) * band->codeblock_width, band->x1) - band->x0 + xx0;
+                    xx1 = FFMIN(ff_j2k_ceildiv(band->coord[0][0] + 1, band->codeblock_width) * band->codeblock_width,
+                                band->coord[0][1]) - band->coord[0][0] + xx0;
 
                     for (cblkx = 0; cblkx < band->cblknx; cblkx++, cblkno++){
                         int y, x;
@@ -746,7 +751,7 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                             for (y = yy0; y < yy1; y++){
                                 int *ptr = t1.data[y-yy0];
                                 for (x = xx0; x < xx1; x++){
-                                    comp->data[(comp->x1 - comp->x0) * y + x] = *ptr++ >> 1;
+                                    comp->data[(comp->coord[0][1] - comp->coord[0][0]) * y + x] = *ptr++ >> 1;
                                 }
                             }
                         } else{
@@ -755,15 +760,15 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                                 for (x = xx0; x < xx1; x++){
                                     int tmp = ((int64_t)*ptr++) * ((int64_t)band->stepsize) >> 13, tmp2;
                                     tmp2 = FFABS(tmp>>1) + FFABS(tmp&1);
-                                    comp->data[(comp->x1 - comp->x0) * y + x] = tmp < 0 ? -tmp2 : tmp2;
+                                    comp->data[(comp->coord[0][1] - comp->coord[0][0]) * y + x] = tmp < 0 ? -tmp2 : tmp2;
                                 }
                             }
                         }
                         xx0 = xx1;
-                        xx1 = FFMIN(xx1 + band->codeblock_width, band->x1 - band->x0 + x0);
+                        xx1 = FFMIN(xx1 + band->codeblock_width, band->coord[0][1] - band->coord[0][0] + x0);
                     }
                     yy0 = yy1;
-                    yy1 = FFMIN(yy1 + band->codeblock_height, band->y1 - band->y0 + y0);
+                    yy1 = FFMIN(yy1 + band->codeblock_height, band->coord[1][1] - band->coord[1][0] + y0);
                 }
             }
         }
@@ -773,19 +778,19 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
     if (tile->codsty[0].mct)
         mct_decode(s, tile);
 
-    y = tile->comp[0].y0 - s->image_offset_y;
+    y = tile->comp[0].coord[1][0] - s->image_offset_y;
 
     line = s->picture.data[0] + y * s->picture.linesize[0];
     if (s->avctx->pix_fmt == PIX_FMT_BGRA) // RGBA -> BGRA
         FFSWAP(int *, src[0], src[2]);
 
-    for (; y < tile->comp[0].y1 - s->image_offset_y; y++){
+    for (; y < tile->comp[0].coord[1][1] - s->image_offset_y; y++){
         uint8_t *dst;
 
-        x = tile->comp[0].x0 - s->image_offset_x;
+        x = tile->comp[0].coord[0][0] - s->image_offset_x;
         dst = line + x * s->ncomponents;
 
-        for (; x < tile->comp[0].x1 - s->image_offset_x; x++)
+        for (; x < tile->comp[0].coord[0][1] - s->image_offset_x; x++)
             for (compno = 0; compno < s->ncomponents; compno++){
                 *src[compno] += 1 << (s->cbps[compno]-1);
                 if (*src[compno] < 0)

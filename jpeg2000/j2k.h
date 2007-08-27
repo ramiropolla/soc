@@ -140,7 +140,7 @@ typedef struct {
 } J2kPrec; ///< precinct
 
 typedef struct {
-    uint16_t x0, x1, y0, y1;
+    uint16_t coord[2][2]; ///< border coordinates {{x0, x1}, {y0, y1}}
     uint16_t codeblock_width, codeblock_height;
     uint16_t cblknx, cblkny;
     uint32_t stepsize; ///< quantization stepsize (* 2^13)
@@ -149,8 +149,8 @@ typedef struct {
 } J2kBand; ///< subband
 
 typedef struct {
-    uint16_t x0, x1, y0, y1;
     uint8_t nbands;
+    uint16_t coord[2][2]; ///< border coordinates {{x0, x1}, {y0, y1}}
     uint16_t num_precincts_x, num_precincts_y; ///< number of precincts in x/y direction
     uint8_t log2_prec_width, log2_prec_height; ///< exponent of precinct size
     J2kBand *band;
@@ -160,7 +160,7 @@ typedef struct {
    J2kResLevel *reslevel;
    DWTContext dwt;
    int *data;
-   uint16_t x0, x1, y0, y1;
+   uint16_t coord[2][2]; ///< border coordinates {{x0, x1}, {y0, y1}}
 } J2kComponent;
 
 /* debug routines */
