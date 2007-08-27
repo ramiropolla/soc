@@ -318,20 +318,25 @@ static void dwt_decode97(DWTContext *s, int *t)
 
 int ff_dwt_init(DWTContext *s, uint16_t border[2][2], int decomp_levels, int type)
 {
-    int i, j, lev = decomp_levels, maxlen;
+    int i, j, lev = decomp_levels, maxlen,
+        b[2][2];
 
     s->ndeclevels = decomp_levels;
     s->type = type;
 
-    maxlen = FFMAX(border[0][1] - border[0][0],
-                   border[1][1] - border[1][0]);
+    for (i = 0; i < 2; i++)
+        for(j = 0; j < 2; j++)
+            b[i][j] = border[i][j];
+
+    maxlen = FFMAX(b[0][1] - b[0][0],
+                   b[1][1] - b[1][0]);
 
     while(--lev >= 0){
         for (i = 0; i < 2; i++){
-            s->linelen[lev][i] = border[i][1] - border[i][0];
-            s->mod[lev][i] = border[i][0] & 1;
+            s->linelen[lev][i] = b[i][1] - b[i][0];
+            s->mod[lev][i] = b[i][0] & 1;
             for (j = 0; j < 2; j++)
-                border[i][j] = (border[i][j] + 1) >> 1;
+                b[i][j] = (b[i][j] + 1) >> 1;
         }
     }
     if (type == FF_DWT97)
