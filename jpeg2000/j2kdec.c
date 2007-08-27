@@ -581,7 +581,7 @@ static void decode_sigpass(J2kT1Context *t1, int width, int height, int bpno, in
 
                         t1->data[y][x] = (ff_mqc_decode(&t1->mqc, t1->mqc.cx_states + ctxno) ^ xorbit) ? -mask : mask;
 
-                        ff_j2k_set_significant(t1, x, y);
+                        ff_j2k_set_significant(t1, x, y, t1->data[y][x] < 0);
                     }
                     t1->flags[y+1][x+1] |= J2K_T1_VIS;
                 }
@@ -638,7 +638,7 @@ static void decode_clnpass(J2kT1Context *t1, int width, int height, int bpno, in
                 if (dec){
                     int xorbit, ctxno = ff_j2k_getsgnctxno(t1->flags[y+1][x+1], &xorbit);
                     t1->data[y][x] = (ff_mqc_decode(&t1->mqc, t1->mqc.cx_states + ctxno) ^ xorbit) ? -mask : mask;
-                    ff_j2k_set_significant(t1, x, y);
+                    ff_j2k_set_significant(t1, x, y, t1->data[y][x] < 0);
                 }
                 dec = 0;
                 t1->flags[y+1][x+1] &= ~J2K_T1_VIS;

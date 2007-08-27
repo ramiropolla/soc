@@ -85,6 +85,8 @@ enum J2kQuantsty{ ///< quantization style
 #define J2K_T1_SIG    0x2000
 #define J2K_T1_REF    0x4000
 
+#define J2K_T1_SGN    0x8000
+
 typedef struct {
     int data[J2K_MAX_CBLKW][J2K_MAX_CBLKH];
     int flags[J2K_MAX_CBLKW+2][J2K_MAX_CBLKH+2];
@@ -188,7 +190,7 @@ J2kTgtNode *ff_j2k_tag_tree_init(int w, int h);
 /* TIER-1 routines */
 void ff_j2k_init_tier1_luts();
 
-void ff_j2k_set_significant(J2kT1Context *t1, int x, int y);
+void ff_j2k_set_significant(J2kT1Context *t1, int x, int y, int negative);
 
 extern uint8_t ff_j2k_nbctxno_lut[256][4];
 
@@ -200,7 +202,7 @@ static inline int ff_j2k_getnbctxno(int flag, int bandno)
 static inline int ff_j2k_getrefctxno(int flag)
 {
     static const uint8_t refctxno_lut[2][2] = {{14, 15}, {16, 16}};
-    return refctxno_lut[flag>>14][(flag & 255) != 0];
+    return refctxno_lut[(flag>>14)&1][(flag & 255) != 0];
 }
 
 extern uint8_t ff_j2k_sgnctxno_lut[16][16], ff_j2k_xorbit_lut[16][16];

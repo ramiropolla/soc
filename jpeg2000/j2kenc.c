@@ -442,14 +442,14 @@ static void encode_sigpass(J2kT1Context *t1, int width, int height, int bandno, 
             for (y = y0; y < height && y < y0+4; y++){
                 if (!(t1->flags[y+1][x+1] & J2K_T1_SIG) && (t1->flags[y+1][x+1] & J2K_T1_SIG_NB)){
                     int ctxno = ff_j2k_getnbctxno(t1->flags[y+1][x+1], bandno),
-                        bit = abs(t1->data[y][x]) & mask ? 1 : 0;
+                        bit = t1->data[y][x] & mask ? 1 : 0;
                     ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, bit);
                     if (bit){
                         int xorbit;
                         int ctxno = ff_j2k_getsgnctxno(t1->flags[y+1][x+1], &xorbit);
-                        ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, (t1->data[y][x] < 0) ^ xorbit);
-                        *nmsedec += getnmsedec_sig(abs(t1->data[y][x]), bpno + NMSEDEC_FRACBITS);
-                        ff_j2k_set_significant(t1, x, y);
+                        ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, (t1->flags[y+1][x+1] >> 15) ^ xorbit);
+                        *nmsedec += getnmsedec_sig(t1->data[y][x], bpno + NMSEDEC_FRACBITS);
+                        ff_j2k_set_significant(t1, x, y, t1->flags[y+1][x+1] >> 15);
                     }
                     t1->flags[y+1][x+1] |= J2K_T1_VIS;
                 }
@@ -464,8 +464,8 @@ static void encode_refpass(J2kT1Context *t1, int width, int height, int *nmsedec
             for (y = y0; y < height && y < y0+4; y++)
                 if ((t1->flags[y+1][x+1] & (J2K_T1_SIG | J2K_T1_VIS)) == J2K_T1_SIG){
                     int ctxno = ff_j2k_getrefctxno(t1->flags[y+1][x+1]);
-                    *nmsedec += getnmsedec_ref(abs(t1->data[y][x]), bpno + NMSEDEC_FRACBITS);
-                    ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, abs(t1->data[y][x]) & mask ? 1:0);
+                    *nmsedec += getnmsedec_ref(t1->data[y][x], bpno + NMSEDEC_FRACBITS);
+                    ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, t1->data[y][x] & mask ? 1:0);
                     t1->flags[y+1][x+1] |= J2K_T1_REF;
                 }
 }
@@ -484,7 +484,7 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int bandno, 
                 // aggregation mode
                 int rlen;
                 for (rlen = 0; rlen < 4; rlen++)
-                    if (abs(t1->data[y0+rlen][x]) & mask)
+                    if (t1->data[y0+rlen][x] & mask)
                         break;
                 ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + MQC_CX_RL, rlen != 4);
                 if (rlen == 4)
@@ -495,13 +495,13 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int bandno, 
                     if (!(t1->flags[y+1][x+1] & (J2K_T1_SIG | J2K_T1_VIS))){
                         int ctxno = ff_j2k_getnbctxno(t1->flags[y+1][x+1], bandno);
                         if (y > y0 + rlen)
-                            ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, abs(t1->data[y][x]) & mask ? 1:0);
-                        if (abs(t1->data[y][x]) & mask){ // newly significant
+                            ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, t1->data[y][x] & mask ? 1:0);
+                        if (t1->data[y][x] & mask){ // newly significant
                             int xorbit;
                             int ctxno = ff_j2k_getsgnctxno(t1->flags[y+1][x+1], &xorbit);
-                            *nmsedec += getnmsedec_sig(abs(t1->data[y][x]), bpno + NMSEDEC_FRACBITS);
-                            ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, (t1->data[y][x] < 0) ^ xorbit);
-                            ff_j2k_set_significant(t1, x, y);
+                            *nmsedec += getnmsedec_sig(t1->data[y][x], bpno + NMSEDEC_FRACBITS);
+                            ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, (t1->flags[y+1][x+1] >> 15) ^ xorbit);
+                            ff_j2k_set_significant(t1, x, y, t1->flags[y+1][x+1] >> 15);
                         }
                     }
                     t1->flags[y+1][x+1] &= ~J2K_T1_VIS;
@@ -511,13 +511,13 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int bandno, 
                 for (y = y0; y < y0 + 4 && y < height; y++){
                     if (!(t1->flags[y+1][x+1] & (J2K_T1_SIG | J2K_T1_VIS))){
                         int ctxno = ff_j2k_getnbctxno(t1->flags[y+1][x+1], bandno);
-                        ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, abs(t1->data[y][x]) & mask ? 1:0);
-                        if (abs(t1->data[y][x]) & mask){ // newly significant
+                        ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, t1->data[y][x] & mask ? 1:0);
+                        if (t1->data[y][x] & mask){ // newly significant
                             int xorbit;
                             int ctxno = ff_j2k_getsgnctxno(t1->flags[y+1][x+1], &xorbit);
-                            *nmsedec += getnmsedec_sig(abs(t1->data[y][x]), bpno + NMSEDEC_FRACBITS);
-                            ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, (t1->data[y][x] < 0) ^ xorbit);
-                            ff_j2k_set_significant(t1, x, y);
+                            *nmsedec += getnmsedec_sig(t1->data[y][x], bpno + NMSEDEC_FRACBITS);
+                            ff_mqc_encode(&t1->mqc, t1->mqc.cx_states + ctxno, (t1->flags[y+1][x+1] >> 15) ^ xorbit);
+                            ff_j2k_set_significant(t1, x, y, t1->flags[y+1][x+1] >> 15);
                         }
                     }
                     t1->flags[y+1][x+1] &= ~J2K_T1_VIS;
@@ -536,8 +536,13 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
         memset(t1->flags[y], 0, (width+2)*sizeof(int));
 
     for (y = 0; y < height; y++){
-        for (x = 0; x < width; x++)
-            max = FFMAX(max, abs(t1->data[y][x]));
+        for (x = 0; x < width; x++){
+            if (t1->data[y][x] < 0){
+                t1->flags[y+1][x+1] |= J2K_T1_SGN;
+                t1->data[y][x] = -t1->data[y][x];
+            }
+            max = FFMAX(max, t1->data[y][x]);
+        }
     }
 
     if (max == 0){

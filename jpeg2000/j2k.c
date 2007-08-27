@@ -176,11 +176,11 @@ void ff_j2k_init_tier1_luts()
             ff_j2k_sgnctxno_lut[i][j] = getsgnctxno(i + (j << 8), &ff_j2k_xorbit_lut[i][j]);
 }
 
-void ff_j2k_set_significant(J2kT1Context *t1, int x, int y)
+void ff_j2k_set_significant(J2kT1Context *t1, int x, int y, int negative)
 {
     x++; y++;
     t1->flags[y][x] |= J2K_T1_SIG;
-    if (t1->data[y-1][x-1] < 0){
+    if (negative){
         t1->flags[y][x+1] |= J2K_T1_SIG_W | J2K_T1_SGN_W;
         t1->flags[y][x-1] |= J2K_T1_SIG_E | J2K_T1_SGN_E;
         t1->flags[y+1][x] |= J2K_T1_SIG_N | J2K_T1_SGN_N;
