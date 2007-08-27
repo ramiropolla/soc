@@ -803,7 +803,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
                 bytestream_put_byte(&p, stream->lpcm_header[2]);
             } else if (id >= 0x40) {
                 /* AC3 */
-                nb_frames= ff_get_nb_frames(ctx, stream, payload_size - stuffing_size);
+                nb_frames= ff_pes_get_nb_frames(ctx, stream, payload_size - stuffing_size);
                 bytestream_put_byte(&p, nb_frames);
                 bytestream_put_be16(&p, trailer_size+1);
             }

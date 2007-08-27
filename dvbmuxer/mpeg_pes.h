@@ -125,7 +125,7 @@ int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int
  * @param[in] len    PES packet size
  * @return  the frame number to be muxed
  */
-int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
+int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
 
 /**
  * Mux streams into a PES packet.
