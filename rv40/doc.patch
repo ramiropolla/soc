@@ -6,7 +6,7 @@ Index: Changelog
  - OS/2 support removed
  - AC-3 decoder
  - NUT muxer (since r10052)
-+- RealVideo 4 decoder
++- RealVideo 3 and 4 decoder
  
  version 0.4.9-pre1:
  
@@ -14,10 +14,11 @@ Index: doc/ffmpeg-doc.texi
 ===================================================================
 --- doc/ffmpeg-doc.texi
 +++ doc/ffmpeg-doc.texi
-@@ -1004,6 +1004,7 @@
+@@ -1004,6 +1004,8 @@
  @item H.264                  @tab     @tab  X
  @item RealVideo 1.0          @tab  X  @tab  X
  @item RealVideo 2.0          @tab  X  @tab  X
++@item RealVideo 3.0          @tab     @tab  X @tab not completely working
 +@item RealVideo 4.0          @tab     @tab  X @tab not completely working
  @item MJPEG                  @tab  X  @tab  X
  @item lossless MJPEG         @tab  X  @tab  X
