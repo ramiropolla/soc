@@ -826,35 +826,17 @@ static int encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
 
 void cleanup(J2kEncoderContext *s)
 {
-    int tileno, compno, reslevelno, bandno, precno;
+    int tileno, compno;
     J2kCodingStyle *codsty = &s->codsty;
 
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         for (compno = 0; compno < s->ncomponents; compno++){
             J2kComponent *comp = s->tile[tileno].comp + compno;
-
-            for (reslevelno = 0; reslevelno < codsty->nreslevels; reslevelno++){
-                J2kResLevel *reslevel = comp->reslevel + reslevelno;
-
-                for (bandno = 0; bandno < reslevel->nbands ; bandno++){
-                    J2kBand *band = reslevel->band + bandno;
-                        for (precno = 0; precno < reslevel->num_precincts_x * reslevel->num_precincts_y; precno++){
-                            J2kPrec *prec = band->prec + precno;
-                            av_free(prec->zerobits);
-                            av_free(prec->cblkincl);
-                        }
-                        av_free(band->cblk);
-                        av_free(band->prec);
-                    }
-                av_free(reslevel->band);
-            }
-            ff_dwt_destroy(&comp->dwt);
-            av_free(comp->reslevel);
-            av_free(comp->data);
+            ff_j2k_cleanup(comp, codsty);
         }
-        av_free(s->tile[tileno].comp);
+        av_freep(&s->tile[tileno].comp);
     }
-    av_free(s->tile);
+    av_freep(&s->tile);
 }
 
 static void reinit(J2kEncoderContext *s)

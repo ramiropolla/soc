@@ -358,3 +358,27 @@ void ff_j2k_reinit(J2kComponent *comp, J2kCodingStyle *codsty)
         }
     }
 }
+
+void ff_j2k_cleanup(J2kComponent *comp, J2kCodingStyle *codsty)
+{
+    int reslevelno, bandno, precno;
+    for (reslevelno = 0; reslevelno < codsty->nreslevels; reslevelno++){
+        J2kResLevel *reslevel = comp->reslevel + reslevelno;
+
+        for (bandno = 0; bandno < reslevel->nbands ; bandno++){
+            J2kBand *band = reslevel->band + bandno;
+                for (precno = 0; precno < reslevel->num_precincts_x * reslevel->num_precincts_y; precno++){
+                    J2kPrec *prec = band->prec + precno;
+                    av_freep(&prec->zerobits);
+                    av_freep(&prec->cblkincl);
+                }
+                av_freep(&band->cblk);
+                av_freep(&band->prec);
+            }
+        av_freep(&reslevel->band);
+    }
+
+    ff_dwt_destroy(&comp->dwt);
+    av_freep(&comp->reslevel);
+    av_freep(&comp->data);
+}
