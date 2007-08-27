@@ -607,7 +607,7 @@ static int encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
     put_bits(s, !empty, 1);
     if (empty){
         j2k_flush(s);
-        return;
+        return 0;
     }
 
     for (bandno = 0; bandno < rlevel->nbands; bandno++){
