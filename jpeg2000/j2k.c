@@ -51,17 +51,24 @@ void ff_j2k_printu(uint8_t *tab, int l)
 /* tag tree routines */
 
 /** allocate the memory for tag tree */
+
+static int tag_tree_size(int w, int h)
+{
+    int res = 0;
+    while (w > 1 || h > 1){
+        res += w * h;
+        w = (w+1) >> 1;
+        h = (h+1) >> 1;
+    }
+    return res + 1;
+}
+
 J2kTgtNode *ff_j2k_tag_tree_init(int w, int h)
 {
-    int size = 1, pw = w, ph = h;
+    int pw = w, ph = h;
     J2kTgtNode *res, *t, *t2;
 
-    while (pw > 1 || ph > 1){
-        size += pw*ph;
-        pw = (pw+1) >> 1;
-        ph = (ph+1) >> 1;
-    }
-    t = res = av_mallocz(size*sizeof(J2kTgtNode));
+    t = res = av_mallocz(tag_tree_size(w, h)*sizeof(J2kTgtNode));
 
     if (res == NULL)
         return NULL;
@@ -83,6 +90,16 @@ J2kTgtNode *ff_j2k_tag_tree_init(int w, int h)
     }
     t[0].parent = NULL;
     return res;
+}
+
+static void tag_tree_zero(J2kTgtNode *t, int w, int h)
+{
+    int i, siz = tag_tree_size(w, h);
+
+    for (i = 0; i < siz; i++){
+        t[i].val = 0;
+        t[i].vis = 0;
+    }
 }
 
 uint8_t ff_j2k_nbctxno_lut[256][4];
@@ -319,4 +336,25 @@ int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantSt
         }
     }
     return 0;
+}
+
+void ff_j2k_reinit(J2kComponent *comp, J2kCodingStyle *codsty)
+{
+    int reslevelno, bandno, cblkno, precno;
+    for (reslevelno = 0; reslevelno < codsty->nreslevels; reslevelno++){
+        J2kResLevel *rlevel = comp->reslevel + reslevelno;
+        for (bandno = 0; bandno < rlevel->nbands; bandno++){
+            J2kBand *band = rlevel->band + bandno;
+            for(precno = 0; precno < rlevel->num_precincts_x * rlevel->num_precincts_y; precno++){
+                J2kPrec *prec = band->prec + precno;
+                tag_tree_zero(prec->zerobits, prec->xi1 - prec->xi0, prec->yi1 - prec->yi0);
+                tag_tree_zero(prec->cblkincl, prec->xi1 - prec->xi0, prec->yi1 - prec->yi0);
+            }
+            for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
+                J2kCblk *cblk = band->cblk + cblkno;
+                cblk->length = 0;
+                cblk->lblock = 3;
+            }
+        }
+    }
 }

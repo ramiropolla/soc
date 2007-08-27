@@ -212,5 +212,6 @@ static inline int ff_j2k_getsgnctxno(int flag, int *xorbit)
 }
 
 int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantStyle *qntsty, int cbps);
+void ff_j2k_reinit(J2kComponent *comp, J2kCodingStyle *codsty);
 
 #endif /* J2K_H */

@@ -324,7 +324,7 @@ static uint8_t *put_sot(J2kEncoderContext *s, int tileno)
  */
 static int init_tiles(J2kEncoderContext *s)
 {
-    int y, x, tileno, tilex, tiley, compno, reslevelno, bandno, i;
+    int tileno, tilex, tiley, compno;
     J2kCodingStyle *codsty = &s->codsty;
     J2kQuantStyle  *qntsty = &s->qntsty;
 
@@ -354,6 +354,12 @@ static int init_tiles(J2kEncoderContext *s)
                     return ret;
             }
         }
+    return 0;
+}
+
+static void copy_frame(J2kEncoderContext *s)
+{
+    int tileno, compno, i, y, x;
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         J2kTile *tile = s->tile + tileno;
         uint8_t *line = s->picture->data[0] + tile->comp[0].coord[1][0] * s->picture->linesize[0]
@@ -370,7 +376,14 @@ static int init_tiles(J2kEncoderContext *s)
             line += s->picture->linesize[0];
         }
     }
-    // calculate band bps and exponents
+}
+
+static void init_quantization(J2kEncoderContext *s)
+{
+    int compno, reslevelno, bandno;
+    J2kQuantStyle  *qntsty = &s->qntsty;
+    J2kCodingStyle *codsty = &s->codsty;
+
     for (compno = 0; compno < s->ncomponents; compno++){
         int gbandno = 0;
         for (reslevelno = 0; reslevelno < codsty->nreslevels; reslevelno++){
@@ -384,7 +397,6 @@ static int init_tiles(J2kEncoderContext *s)
             }
         }
     }
-    return 0;
 }
 
 static void init_luts()
@@ -801,7 +813,6 @@ static int encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
                 }
             }
         }
-        av_free(comp->data);
         av_log(s->avctx, AV_LOG_DEBUG, "after tier1\n");
     }
 
@@ -839,69 +850,41 @@ void cleanup(J2kEncoderContext *s)
             }
             ff_dwt_destroy(&comp->dwt);
             av_free(comp->reslevel);
+            av_free(comp->data);
         }
         av_free(s->tile[tileno].comp);
     }
     av_free(s->tile);
 }
 
+static void reinit(J2kEncoderContext *s)
+{
+    int tileno, compno;
+    for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
+        J2kTile *tile = s->tile + tileno;
+        for (compno = 0; compno < s->ncomponents; compno++)
+            ff_j2k_reinit(tile->comp + compno, &s->codsty);
+    }
+}
+
 static int encode_frame(AVCodecContext *avctx,
                         uint8_t *buf, int buf_size,
                         void *data)
 {
-    int tileno, i, ret;
+    int tileno, ret;
     J2kEncoderContext *s = avctx->priv_data;
-    J2kCodingStyle *codsty = &s->codsty;
-    J2kQuantStyle  *qntsty = &s->qntsty;
-
-    s->avctx = avctx;
-    av_log(s->avctx, AV_LOG_DEBUG, "start\n");
-    s->picture = data;
-
-    // defaults:
-    // TODO: implement setting non-standard precinct size
-    codsty->log2_prec_width  = 15;
-    codsty->log2_prec_height = 15;
-    codsty->nreslevels       = 7;
-    codsty->log2_cblk_width  = 4;
-    codsty->log2_cblk_height = 4;
-    codsty->transform        = 1;
-
-    qntsty->nguardbits       = 1;
-    qntsty->quantsty         = J2K_QSTY_NONE;
-
-    s->tile_width            = 256;
-    s->tile_height           = 256;
 
     // init:
     s->buf = s->buf_start = buf;
     s->buf_end = buf + buf_size;
-    s->width = avctx->width;
-    s->height = avctx->height;
+
+    s->picture = data;
 
     s->lambda = s->picture->quality * LAMBDA_SCALE;
 
-    ff_j2k_init_tier1_luts();
-
-    // TODO: other pixel formats
-    for (i = 0; i < 3; i++)
-        s->cbps[i] = 8;
-
-    if (avctx->pix_fmt == PIX_FMT_RGB24){
-        s->ncomponents = 3;
-    } else if (avctx->pix_fmt == PIX_FMT_GRAY8){
-        s->ncomponents = 1;
-    }
-    else{
-        av_log(avctx, AV_LOG_ERROR, "only rgb24 and gray8 supported\n");
-        return -1;
-    }
-
-    av_log(s->avctx, AV_LOG_DEBUG, "init\n");
-    if (ret=init_tiles(s))
-        return ret;
-    init_luts();
-    av_log(s->avctx, AV_LOG_DEBUG, "after init\n");
+    init_quantization(s);
+    copy_frame(s);
+    reinit(s);
 
     if (s->buf_end - s->buf < 2)
         return -1;
@@ -928,9 +911,70 @@ static int encode_frame(AVCodecContext *avctx,
         return -1;
     bytestream_put_be16(&s->buf, J2K_EOC);
 
-    cleanup(s);
     av_log(s->avctx, AV_LOG_DEBUG, "end\n");
     return s->buf - s->buf_start;
+}
+
+static int j2kenc_init(AVCodecContext *avctx)
+{
+    int i, ret;
+    J2kEncoderContext *s = avctx->priv_data;
+    J2kCodingStyle *codsty = &s->codsty;
+    J2kQuantStyle  *qntsty = &s->qntsty;
+
+    s->avctx = avctx;
+    av_log(s->avctx, AV_LOG_DEBUG, "init\n");
+
+    // defaults:
+    // TODO: implement setting non-standard precinct size
+    codsty->log2_prec_width  = 15;
+    codsty->log2_prec_height = 15;
+    codsty->nreslevels       = 7;
+    codsty->log2_cblk_width  = 4;
+    codsty->log2_cblk_height = 4;
+    codsty->transform        = 1;
+
+    qntsty->nguardbits       = 1;
+    qntsty->quantsty         = J2K_QSTY_NONE;
+
+    s->tile_width            = 256;
+    s->tile_height           = 256;
+
+    s->width = avctx->width;
+    s->height = avctx->height;
+
+    // TODO: other pixel formats
+    for (i = 0; i < 3; i++)
+        s->cbps[i] = 8;
+
+    if (avctx->pix_fmt == PIX_FMT_RGB24){
+        s->ncomponents = 3;
+    } else if (avctx->pix_fmt == PIX_FMT_GRAY8){
+        s->ncomponents = 1;
+    }
+    else{
+        av_log(avctx, AV_LOG_ERROR, "only rgb24 and gray8 supported\n");
+        return -1;
+    }
+
+    ff_j2k_init_tier1_luts();
+
+    init_luts();
+
+    if (ret=init_tiles(s))
+        return ret;
+
+    av_log(s->avctx, AV_LOG_DEBUG, "after init\n");
+
+    return 0;
+}
+
+static int j2kenc_destroy(AVCodecContext *avctx)
+{
+    J2kEncoderContext *s = avctx->priv_data;
+
+    cleanup(s);
+    return 0;
 }
 
 AVCodec jpeg2000_encoder = {
@@ -938,9 +982,9 @@ AVCodec jpeg2000_encoder = {
     CODEC_TYPE_VIDEO,
     CODEC_ID_JPEG2000,
     sizeof(J2kEncoderContext),
-    NULL,
+    j2kenc_init,
     encode_frame,
-    NULL,
+    j2kenc_destroy,
     NULL,
     0,
     .pix_fmts =
