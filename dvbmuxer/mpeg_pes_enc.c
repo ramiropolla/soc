@@ -87,7 +87,7 @@ static inline void insert_timestamp(uint8_t** p, int id, int64_t timestamp)
  * @param[in] len    PES packet size
  * @return  the frame number to be muxed
  */
-int ff_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
+int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
     int nb_frames=0;
     PacketDesc *pkt_desc= stream->premux_packet;
 
