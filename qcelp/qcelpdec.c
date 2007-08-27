@@ -117,8 +117,6 @@ static int qcelp_decode_close(AVCodecContext *avctx)
  * transsmision codes of any frame rate.
  *
  * TIA/EIA/IS-733 2.4.3.2.6.2-2
- *
- * WIP: implement I_F_Q handling?
  */
 void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
 {
