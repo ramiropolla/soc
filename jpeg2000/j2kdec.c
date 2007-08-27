@@ -48,7 +48,7 @@ typedef struct {
     int width, height; ///< image width and height
     int image_offset_x, image_offset_y;
     int tile_offset_x, tile_offset_y;
-    uint8_t cbps[4]; ///< numbps in components
+    uint8_t cbps[4]; ///< bits per sample in particular components
     uint8_t sgnd[4]; ///< if a component is signed
     uint8_t properties[4];
 

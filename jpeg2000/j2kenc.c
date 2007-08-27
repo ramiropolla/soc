@@ -50,7 +50,7 @@ typedef struct {
     AVFrame *picture;
 
     int width, height; ///< image width and height
-    uint8_t cbps[4]; ///< numbps in components
+    uint8_t cbps[4]; ///< bits per sample in particular components
     int ncomponents;
     int tile_width, tile_height; ///< tile size
     int numXtiles, numYtiles;
