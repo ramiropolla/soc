@@ -39,7 +39,7 @@ static int qcelp_find_frame_end(ParseContext *pc, const uint8_t *buf,
        int buf_size)
 {
     /**
-     * Lets try and see if this packet holds exactly one frame
+     * Let's try and see if this packet holds exactly one frame
      */
 
     switch(buf_size)
@@ -57,8 +57,8 @@ static int qcelp_find_frame_end(ParseContext *pc, const uint8_t *buf,
 
     /**
      * If we reach this point it means the packet holds a multiset of
-     * frames, each one of them in codec frame format, all of the same
-     * rate, as described in:
+     * frames, each one of them in codec frame format, all with the same
+     * framerate, as described in:
      *
      * http://tools.ietf.org/html/draft-mckay-qcelp-02
      */
