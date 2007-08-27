@@ -73,6 +73,15 @@ static int qcelp_decode_init(AVCodecContext *avctx)
     QCELPContext *q = (QCELPContext *) avctx->priv_data;
     int i;
 
+    if(avctx->sample_rate != 8000)
+        av_log(avctx, AV_LOG_WARNING,
+               "Unsupported samplerate %d, resampling.", avctx->sample_rate);
+
+    if(avctx->channels != 1)
+        av_log(avctx, AV_LOG_WARNING,
+               "QCELP doesn't allow %d channels. Trying mono.\n",
+               avctx->channels);
+
     avctx->sample_rate = 8000;
     avctx->channels = 1;
 
