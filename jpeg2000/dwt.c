@@ -380,5 +380,5 @@ int ff_dwt_decode(DWTContext *s, int *t)
 
 void ff_dwt_destroy(DWTContext *s)
 {
-    av_free(s->linebuf);
+    av_freep(&s->linebuf);
 }
