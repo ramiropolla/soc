@@ -185,8 +185,7 @@ void ff_j2k_set_significant(J2kT1Context *t1, int x, int y, int negative)
         t1->flags[y][x-1] |= J2K_T1_SIG_E | J2K_T1_SGN_E;
         t1->flags[y+1][x] |= J2K_T1_SIG_N | J2K_T1_SGN_N;
         t1->flags[y-1][x] |= J2K_T1_SIG_S | J2K_T1_SGN_S;
-    }
-    else{
+    } else{
         t1->flags[y][x+1] |= J2K_T1_SIG_W;
         t1->flags[y][x-1] |= J2K_T1_SIG_E;
         t1->flags[y+1][x] |= J2K_T1_SIG_N;
@@ -256,8 +255,7 @@ int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantSt
 
                 numbps = cbps + lut_gain[codsty->transform][bandno + reslevelno>0];
                 band->stepsize = SHL(2048 + qntsty->mant[gbandno], 2 + numbps - qntsty->expn[gbandno]);
-            }
-            else
+            } else
                 band->stepsize = 1 << 13;
 
             if (reslevelno == 0){  // the same everywhere
@@ -266,8 +264,7 @@ int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantSt
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 2; j++)
                         band->coord[i][j] = ff_j2k_ceildivpow2(comp->coord[i][j], declvl-1);
-            }
-            else{
+            } else{
                 band->codeblock_width = 1 << FFMIN(codsty->log2_cblk_width, codsty->log2_prec_width);
                 band->codeblock_height = 1 << FFMIN(codsty->log2_cblk_height, codsty->log2_prec_height);
 

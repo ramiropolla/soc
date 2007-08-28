@@ -526,8 +526,7 @@ static void encode_clnpass(J2kT1Context *t1, int width, int height, int bandno, 
                     }
                     t1->flags[y+1][x+1] &= ~J2K_T1_VIS;
                 }
-            }
-            else{
+            } else{
                 for (y = y0; y < y0 + 4 && y < height; y++){
                     if (!(t1->flags[y+1][x+1] & (J2K_T1_SIG | J2K_T1_VIS))){
                         int ctxno = ff_j2k_getnbctxno(t1->flags[y+1][x+1], bandno);
@@ -568,8 +567,7 @@ static void encode_cblk(J2kEncoderContext *s, J2kT1Context *t1, J2kCblk *cblk, J
     if (max == 0){
         cblk->nonzerobits = 0;
         bpno = 0;
-    }
-    else{
+    } else{
         cblk->nonzerobits = av_log2(max) + 1 - NMSEDEC_FRACBITS;
         bpno = cblk->nonzerobits - 1;
     }

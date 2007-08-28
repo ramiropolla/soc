@@ -36,8 +36,7 @@ static void bytein(MqcState *mqc)
             mqc->bp++;
             mqc->c += 2 + 0xfe00 - (*mqc->bp << 9);
         }
-    }
-    else{
+    } else{
         mqc->bp++;
         mqc->c += 1 + 0xff00 - (*mqc->bp << 8);
     }
@@ -51,8 +50,7 @@ static int exchange(MqcState *mqc, uint8_t *cxstate, int lps)
             mqc->a = ff_mqc_qe[*cxstate];
         d = *cxstate & 1;
         *cxstate = ff_mqc_nmps[*cxstate];
-    }
-    else{
+    } else{
         if (lps)
             mqc->a = ff_mqc_qe[*cxstate];
         d = 1 - (*cxstate & 1);

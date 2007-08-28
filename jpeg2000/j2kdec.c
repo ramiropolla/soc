@@ -349,8 +349,7 @@ static int get_qcx(J2kDecoderContext *s, int n, J2kQuantStyle *q)
             return AVERROR(EINVAL);
         for (i = 0; i < n; i++)
             q->expn[i] = bytestream_get_byte(&s->buf) >> 3;
-    }
-    else if (q->quantsty == J2K_QSTY_SI){
+    } else if (q->quantsty == J2K_QSTY_SI){
         if (s->buf_end - s->buf < 2)
             return AVERROR(EINVAL);
         x = bytestream_get_be16(&s->buf);
@@ -361,8 +360,7 @@ static int get_qcx(J2kDecoderContext *s, int n, J2kQuantStyle *q)
             q->expn[i] = curexpn;
             q->mant[i] = q->mant[0];
         }
-    }
-    else{
+    } else{
         n = (n - 3) >> 1;
         if (s->buf_end - s->buf < n)
             return AVERROR(EINVAL);
@@ -484,8 +482,7 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
     if (!(ret = get_bits(s, 1))){
         j2k_flush(s);
         return 0;
-    }
-    else if (ret < 0)
+    } else if (ret < 0)
         return ret;
 
     for (bandno = 0; bandno < rlevel->nbands; bandno++){
@@ -500,9 +497,8 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
 
                 if (cblk->npasses)
                     incl = get_bits(s, 1);
-                else{
+                else
                     incl = tag_tree_decode(s, prec->cblkincl + pos, layno+1) == layno;
-                }
                 if (!incl)
                     continue;
                 else if (incl < 0)
@@ -624,8 +620,7 @@ static void decode_clnpass(J2kT1Context *t1, int width, int height, int bpno, in
                 runlen = ff_mqc_decode(&t1->mqc, t1->mqc.cx_states + MQC_CX_UNI);
                 runlen = (runlen << 1) | ff_mqc_decode(&t1->mqc, t1->mqc.cx_states + MQC_CX_UNI);
                 dec = 1;
-            }
-            else{
+            } else{
                 runlen = 0;
                 dec = 0;
             }
