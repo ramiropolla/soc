@@ -1683,7 +1683,7 @@ static int rv30_decode_slice(RV40DecContext *r, int size, int end, int *last)
         s->current_picture_ptr = &s->current_picture;
         s->mb_x = s->mb_y = 0;
     }
-if(s->pict_type == B_TYPE)return -1;
+
     r->si.size = size;
     r->si.end = end;
     r->quant = r->si.quant;
