@@ -1144,22 +1144,34 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
                 if(bg && pre_chmant == -(1<<(bits-bg-1))){
                     // large mantissa
                     GET_SBITS(pre_chmant, gbc, bits - ((bg==1)?1:0));
-                    mant = (float) pre_chmant / (1<<(bits - ((bg==1)?2:1)));
+                    if(bg==1)
+                        //Gk = 2
+                        mant = pre_chmant/((1<<bits-1)-1);
+                    else
+                        //Gk = 4
+                        mant = pre_chamnt*3.0f/((1<<bits+1)-2);
+
                     g = 0;
                     remap = 1;
                 }else{
                     // small mantissa
-                    mant = (float) pre_chmant / (1<<(bits-bg-1));
+                    if(bg)
+                        //Gk = 2 or 4
+                        mant = pre_chmant/((1<<bits-1)-1);
+                    else
+                        //Gk = 1
+                        mant = pre_chmant*2.0f/((1<<bits)-1); ///XXX
+
                     g = bg;
-                    remap = bg?0:1;
+                    remap = (!bg) && (s->chgaqbin[ch][bin]>0);
                 }
 
                 //TODO when remap needed ?
                 if(remap){
                     mant = (float)
-                        ((ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][0] + 32768.0f)
+                        (ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][0]/32768.0f + 1.0f)
                          * mant / (1<<g) +
-                         ff_eac3_gaq_remap[s->hebap[ch][bin]-8][mant<0][g][1]) / 32768.0f;
+                         (ff_eac3_gaq_remap[s->hebap[ch][bin]-8][mant<0][g][1]) / 32768.0f;
                 }
                 s->pre_chmant[n][ch][bin] = mant;
             }
