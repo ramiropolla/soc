@@ -401,21 +401,18 @@ static void init_quantization(J2kEncoderContext *s)
 
 static void init_luts()
 {
-    int i;
-    double u, v, t, pfr;
+    int i, a,
+        mask = ~((1<<NMSEDEC_FRACBITS)-1);
 
-    pfr = pow(2, NMSEDEC_FRACBITS);
     for (i = 0; i < (1 << NMSEDEC_BITS); i++){
-        t = i / pfr;
-        u = t;
-        v = t - 1.5;
-        lut_nmsedec_sig[i]  = FFMAX((int) (floor((u*u - v*v) * pfr + 0.5) / pfr * 8192.0), 0);
-        lut_nmsedec_sig0[i] = FFMAX((int) (floor((u*u) * pfr + 0.5) / pfr * 8192.0), 0);
+        lut_nmsedec_sig[i]  = FFMAX(6*i - (9<<NMSEDEC_FRACBITS-1) << 12-NMSEDEC_FRACBITS, 0);
+        lut_nmsedec_sig0[i] = FFMAX((i*i + (1<<NMSEDEC_FRACBITS-1) & mask) << 1, 0);
 
-        u = t - 1.0;
-        v = t - ((i & (1<<(NMSEDEC_BITS-1))) ? 1.5 : 0.5);
-        lut_nmsedec_ref[i]  = FFMAX((int) (floor((u*u - v*v) * pfr + 0.5) / pfr * 8192.0), 0);
-        lut_nmsedec_ref0[i] = FFMAX((int) (floor((u*u) * pfr + 0.5) / pfr * 8192.0), 0);
+        a = (i >> (NMSEDEC_BITS-2)&2) + 1;
+        lut_nmsedec_ref[i]  = FFMAX((-2*i + (1<<NMSEDEC_FRACBITS) + a*i - (a*a<<NMSEDEC_FRACBITS-2))
+                                    << 13-NMSEDEC_FRACBITS, 0);
+        lut_nmsedec_ref0[i] = FFMAX(((i*i + (1-4*i << NMSEDEC_FRACBITS-1) + (1<<2*NMSEDEC_FRACBITS)) & mask)
+                                    << 1, 0);
     }
 }
 
