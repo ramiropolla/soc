@@ -759,7 +759,7 @@ static inline int get_omega_signed(GetBitContext *gb)
 static int rv30_decode_mb_info(RV40DecContext *r)
 {
     static const int rv30_p_types[6] = { RV40_MB_SKIP, RV40_MB_P_16x16, RV40_MB_P_8x8, -1, RV40_MB_TYPE_INTRA, RV40_MB_TYPE_INTRA16x16 };
-    static const int rv30_b_types[6] = { RV40_MB_SKIP, RV40_MB_B_FORWARD, RV40_MB_B_BACKWARD, RV40_MB_TYPE_INTRA, RV40_MB_TYPE_INTRA16x16, -1 };
+    static const int rv30_b_types[6] = { RV40_MB_SKIP, RV40_MB_B_INTERP, RV40_MB_B_FORWARD, RV40_MB_B_BACKWARD, RV40_MB_TYPE_INTRA, RV40_MB_TYPE_INTRA16x16 };
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
     int code;
