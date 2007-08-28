@@ -1,0 +1,24 @@
+Index: Changelog
+===================================================================
+--- Changelog	(wersja 9451)
++++ Changelog	(kopia robocza)
+@@ -88,6 +88,7 @@
+ - sws_flags command line option
+ - codebook generator
+ - RoQ video encoder
++- JPEG2000 encoder and decoder
+ 
+ version 0.4.9-pre1:
+ 
+Index: doc/ffmpeg-doc.texi
+===================================================================
+--- doc/ffmpeg-doc.texi	(wersja 9451)
++++ doc/ffmpeg-doc.texi	(kopia robocza)
+@@ -978,6 +978,7 @@
+ @item TIFF         @tab X @tab X @tab YUV, JPEG and some extension is not supported yet.
+ @item SGI          @tab X @tab X @tab SGI RGB image format
+ @item PTX          @tab   @tab X @tab V.Flash PTX format
++@item JPEG2000     @tab X @tab X
+ @end multitable
+ 
+ @code{X} means that encoding (resp. decoding) is supported.

@@ -1,7 +1,9 @@
 echo "checking out ffmpeg svn"
 svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg
 echo "patching ffmpeg"
-cd ffmpeg/libavformat ;
+cd ffmpeg ;
+patch -p0 < ../doc.patch
+cd libavformat ;
 patch -p0 <../../avformat.patch
 cd ../libavcodec ;
 patch -p0 <../../ffmpeg.patch
