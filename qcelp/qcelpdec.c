@@ -37,11 +37,12 @@
 typedef struct
 {
     qcelp_packet_rate rate;
-    uint8_t data[76];       /*!< data from a _parsed_ frame */
+    uint8_t data[76];       /*!< Data from a _parsed_ frame */
     int     bits;
 } QCELPFrame;
 
-typedef struct {
+typedef struct
+{
     GetBitContext gb;
     QCELPFrame    *frame;
     uint8_t       erasure_count;
@@ -84,9 +85,7 @@ static int qcelp_decode_init(AVCodecContext *avctx)
     if(q->frame == NULL)
         return -1;
 
-    /**
-     * Enter start decoding state
-     */
+    // Enter start decoding state
 
     q->frame_num=0;
 
@@ -159,7 +158,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
     const uint8_t *cbgain, *cbsign, *cindex, *data;
     float         ga[16];
 
-    /* FIXME need to get rid of g0, sanity checks should be done here */
+    // FIXME need to get rid of g0, sanity checks should be done here
 
     cbsign=frame->data+QCELP_CBSIGN0_POS;
     cbgain=frame->data+QCELP_CBGAIN0_POS;
@@ -176,7 +175,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
                 gs[i]=QCELP_CBSIGN2GS(cbsign[i]);
                 g0[i]=QCELP_CBGAIN2G0(cbgain[i]);
 
-                /**
+                /*
                  * Spec has errors on the predictor determination formula
                  * it needs 6 to be subtracted from it to give RI results.
                  */
@@ -213,7 +212,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
                 ga[i]=qcelp_g12ga[g1[i]];
             }
 
-            /**
+            /*
              * 5->8 Interpolation to 'Provide smoothing of the energy
              * of the unvoiced excitation' TIA/EIA/IS-733 2.4.6.2
              */
@@ -227,9 +226,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
             gain[7]=0.4*ga[3]+0.6*ga[4];
             gain[7]=    ga[4];
 
-            /**
-             * Build random* seed needed to make Cdn
-             */
+            // Build random* seed needed to make Cdn
 
             data=frame->data;
             *cbseed=(0x0003 & data[QCELP_LSPV0_POS+4])<<14 |
@@ -247,7 +244,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
                 case 3: gain[0]= 2; break;
             }
             gs[0]=1;
-            /* WIP finish rate 1/8 calculations, spec is kind of fuzzy here */
+            // WIP finish rate 1/8 calculations, spec is kind of fuzzy here
     }
 }
 
@@ -270,7 +267,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
     float    rnd[160];
 
 
-    /**
+    /*
      * Spec has some missing info here:
      *
      * 'j' should go from 0 to 9 emulating a per codebook-subframe computation.
@@ -309,7 +306,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
                 cbseed=rnd[i]=
                 QCELP_SQRT1887*(((new_cbseed+32768) & 65535)-32768)/32768.0;
 
-                /* FIR filter */
+                // FIR filter
 
                 cdn_vector[i]=qcelp_rnd_fir_coefs[1]*rnd[i];
                 for(j=1; j<22 && !(i-j+1); j++)
@@ -317,7 +314,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
                     cdn_vector[i]+=qcelp_rnd_fir_coefs[j]*rnd[i-j];
                 }
 
-                /* final scaling */
+                // Final scaling
 
                 cdn_vector[i]*=gain[i/20];
             }
@@ -434,15 +431,13 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
             plag =frame->data+QCELP_PLAG0_POS;
             pfrac=frame->data+QCELP_PFRAC0_POS;
 
-            /**
-             * Compute Gain & Lag for the whole frame
-             */
+            // Compute Gain & Lag for the whole frame
 
             for(i=0; i<4; i++)
             {
                 gain[i]=plag[i]? (pgain[i]+1)/4.0 : 0.0;
 
-                if(step == 2) /* become pitch pre-filter */
+                if(step == 2) // Become pitch pre-filter
                     gain[i]=0.5*FFMIN(gain[i],1.0);
 
                 lag[i]=plag[i]+16;
@@ -454,7 +449,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
                     return -1;
             }
 
-            /**
+            /*
              * Apply filter
              *
              * TIA/EIA/IS-733 2.4.5.2-2/3 equations aren't clear enough but
@@ -464,7 +459,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
             k=0;
             for(i=0; i<160; i++)
             {
-                if(pfrac[i/40]) /* if is a fractional lag... */
+                if(pfrac[i/40]) // If is a fractional lag...
                 {
                     hamm_tmp=0.0;
 
@@ -492,9 +487,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
                         pv[i]+=lrintf(gain[i/40]*pv[i - lrintf(lag[i/40])]);
                 }
 
-                /**
-                 * Done with the pitch subframe -- update filter memory.
-                 */
+                // Done with the pitch subframe -- update filter memory.
 
                 if(k==39)
                 {
@@ -622,9 +615,7 @@ static void qcelp_lsp2poly(float *lspf, float *pa, float *qa)
     v2[0]=1;
     v2[2]=1;
 
-    /**
-     * Compute Pa coefs
-     */
+    // Compute Pa coefs
 
     v1[0]=1.0;
     v1[1]=1.0;
@@ -638,9 +629,7 @@ static void qcelp_lsp2poly(float *lspf, float *pa, float *qa)
     for(i=0;i<5;i++)
         pa[i]=v1[i+1];
 
-    /**
-     * Compute Qa coefs
-     */
+    // Compute Qa coefs
 
     v1[0]= 1.0;
     v1[1]=-1.0;
@@ -685,9 +674,7 @@ static void qcelp_do_formant(float *in, float *out, float *lpc_coefs,
     float tmp[50];
     int i,j;
 
-    /**
-     * Copy over previous ten samples generated
-     */
+    // Copy over previous ten samples generated
 
     memcpy(tmp, memory, 10*sizeof(float));
     memcpy(tmp+10, in, 40*sizeof(float));
@@ -700,15 +687,11 @@ static void qcelp_do_formant(float *in, float *out, float *lpc_coefs,
         }
     }
 
-    /**
-     * Update memory for next pitch subframe
-     */
+    // Update memory for next pitch subframe
 
     memcpy(memory, tmp+40, 10*sizeof(float));
 
-    /**
-     * Write filtered samples to *out
-     */
+    // Write filtered samples to *out
 
     memcpy(out, tmp+10, 40*sizeof(float));
 }
@@ -742,7 +725,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     init_get_bits(&q->gb, buf, buf_size*8);
 
-    /**
+    /*
      * Figure out framerate by its size, set up a few utility vars
      * and point 'order' to the rate's reference _slice_ inside the
      * big REFERENCE_FRAME array.
@@ -807,9 +790,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         }
     }
 
-    /**
-     * data reordering loop
-     */
+    // Data reordering loop
 
     memset(q->frame->data, 0, 76);
     for(n=0; n < q->frame->bits; n++)
@@ -819,17 +800,15 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
         if(n<20)
         {
-            if(n>3)  /* this is the random seed for rate 1/8 frames */
+            if(n>3)  // This is the random seed for rate 1/8 frames
                 cbseed |= q->frame->data[ order[n].index ]>>n;
-            if(n<16) /* this is for a rate 1/8 only sanity check */
+            if(n<16) // This is for a rate 1/8 only sanity check
                 first16 |= q->frame->data[ order[n].index ]>>n;
         }
 
     }
 
-    /**
-     * check for erasures/blanks on rates 1, 1/4 and 1/8
-     */
+    // Check for erasures/blanks on rates 1, 1/4 and 1/8
 
     if(q->frame->rate != RATE_HALF && q->frame->data[QCELP_RSRVD_POS])
     {
@@ -845,22 +824,17 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         is_ifq=1;
     }
 
-    /**
-     * Preliminary decoding of frame's transmission codes
-     */
+    // Preliminary decoding of frame's transmission codes
 
     qcelp_decode_lspf(q->frame, qtzd_lspf);
     qcelp_decode_params(avctx, q->frame, g0, &cbseed, gain, index);
 
-    /**
-     * Check for badly received packets
-     * TIA/EIA/IS-733 2.4.8.7.3
-     */
+    // Check for badly received packets TIA/EIA/IS-733 2.4.8.7.3
 
     if(q->frame->rate != RATE_OCTAVE)
     {
 
-        /* check for outbound LSP freqs and codebook gain params */
+        // Check for outbound LSP freqs and codebook gain params
 
         if(q->frame->rate != RATE_QUARTER)
         {
@@ -891,7 +865,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
                     is_ifq=1;
             }
 
-            /* FIXME This should be implemented into qcelp_decode_params() */
+            // FIXME This should be implemented into qcelp_decode_params()
 
             for(n=0; !is_ifq && n<4; n++)
             {
@@ -902,17 +876,13 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         }
     }
 
-    /**
-     * decode loop glue code. WIP - mean it, WIP. :-)
-     */
+    // Decode loop glue code. WIP - mean it, WIP. :-)
 
     if(!is_ifq)
     {
         qcelp_compute_svector(q->frame->rate, gain, index, cbseed, cdn_vector);
 
-        /**
-         * pitch filter
-         */
+        // Pitch filter
 
         if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchf_mem,
                                           1, cdn_vector)))
@@ -924,7 +894,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
         memcpy(ppf_vector, cdn_vector, 160*sizeof(float));
 
-        /**
+        /*
          * Pitch pre-filter
          *
          * The specification makes this filter mandatory but one can do
@@ -944,15 +914,11 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         }
     }
 
-    /**
-     * pitch gain control
-     */
+    // Pitch gain control
 
     qcelp_apply_gain_ctrl(0, cdn_vector, ppf_vector);
 
-    /**
-     * Interpolate LSP frequencies and apply formant synthesis filter.
-     */
+    // Interpolate LSP frequencies and apply formant synthesis filter.
 
     for(i=0; i<4; i++)
     {
@@ -963,18 +929,10 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
         qcelp_do_formant(ppf_vector+i*40, cdn_vector+i*40, lpc, q->formant_mem);
 
-        /**
-         * WIP Adaptive postfilter should be here
-         */
+        // WIP Adaptive postfilter should be here
     }
 
-    /**
-     * WIP Final gain control stage should be here
-     */
-
-    /**
-     * Write samples out
-     */
+    // WIP Final gain control stage should be here
 
     for(i=0; i<160; i++)
     {
@@ -989,9 +947,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     }
 
-    /**
-     * Copy current lspf freqs over to prev_lspf
-     */
+    // Copy current lspf freqs over to prev_lspf
 
     memcpy(q->prev_lspf, qtzd_lspf, 10*sizeof(float));
 

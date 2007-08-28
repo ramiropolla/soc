@@ -68,9 +68,10 @@ static const float    qcelp_hammsinc_table[]={-0.006822, 0.041249,-0.143459,
                                                0.588863, 0.588863,-0.143459,
                                                0.041249,-0.006822};
 
-typedef struct {
-    int index;  /*!< index into the reference frame */
-    int bitpos; /*!< bit position in the value's byte */
+typedef struct
+{
+    int index;  /*!< Index into the reference frame */
+    int bitpos; /*!< Bit position in the value's byte */
 } QCELPBitmap;
 
 
@@ -206,11 +207,12 @@ static const QCELPBitmap QCELP_REFERENCE_FRAME[]={QCELP_RATE_FULL_BITMAP,
 #define QCELP_PFRAC0_POS  52
 #define QCELP_PGAIN0_POS  56
 #define QCELP_LSPV0_POS   60
-#define QCELP_RSRVD_POS   65    /*!< on all but rate 1/2 packets */
-#define QCELP_LSP0_POS    66    /*!< only in rate 1/8 packets    */
-#define QCELP_CBSEED_POS  76    /*!< only in rate 1/8 packets    */
+#define QCELP_RSRVD_POS   65    /*!< On all but rate 1/2 packets */
+#define QCELP_LSP0_POS    66    /*!< Only in rate 1/8 packets    */
+#define QCELP_CBSEED_POS  76    /*!< Only in rate 1/8 packets    */
 
-typedef struct {
+typedef struct
+{
     float x;
     float y;
 } qcelp_fvector;
@@ -408,4 +410,4 @@ static const double qcelp_rnd_fir_coefs[]=
   3.749518e-2,-9.918777e-2, 3.501983e-2,-9.251384e-2,
   3.041388e-2,-8.210701e-2, 2.434368e-2,-6.905826e-2,
   1.735384e-2,-1.344519e-1
-}; /*!< start reading from [1] */
+}; /*!< Start reading from [1] */
