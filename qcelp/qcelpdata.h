@@ -64,6 +64,9 @@ typedef enum
 } qcelp_packet_rate;
 
 static const uint16_t qcelp_bits_per_rate[]={266,124,54,20};
+static const float    qcelp_hammsinc_table[]={-0.006822, 0.041249,-0.143459,
+                                               0.588863, 0.588863,-0.143459,
+                                               0.041249,-0.006822};
 
 typedef struct {
     int index;  /*!< index into the reference frame */
