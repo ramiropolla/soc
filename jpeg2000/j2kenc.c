@@ -51,6 +51,8 @@ typedef struct {
 
     int width, height; ///< image width and height
     uint8_t cbps[4]; ///< bits per sample in particular components
+    int chroma_shift[2];
+    uint8_t planar;
     int ncomponents;
     int tile_width, tile_height; ///< tile size
     int numXtiles, numYtiles;
@@ -252,8 +254,8 @@ static int put_siz(J2kEncoderContext *s)
 
     for (i = 0; i < s->ncomponents; i++){ // Ssiz_i XRsiz_i, YRsiz_i
         bytestream_put_byte(&s->buf, 7);
-        bytestream_put_byte(&s->buf, 1);
-        bytestream_put_byte(&s->buf, 1);
+        bytestream_put_byte(&s->buf, i?1<<s->chroma_shift[0]:1);
+        bytestream_put_byte(&s->buf, i?1<<s->chroma_shift[1]:1);
     }
     return 0;
 }
@@ -343,12 +345,16 @@ static int init_tiles(J2kEncoderContext *s)
                 return AVERROR(ENOMEM);
             for (compno = 0; compno < s->ncomponents; compno++){
                 J2kComponent *comp = tile->comp + compno;
-                int ret;
+                int ret, i, j;
 
                 comp->coord[0][0] = tilex * s->tile_width;
                 comp->coord[0][1] = FFMIN((tilex+1)*s->tile_width, s->width);
                 comp->coord[1][0] = tiley * s->tile_height;
                 comp->coord[1][1] = FFMIN((tiley+1)*s->tile_height, s->height);
+                if (compno > 0)
+                    for (i = 0; i < 2; i++)
+                        for (j = 0; j < 2; j++)
+                            comp->coord[i][j] = ff_j2k_ceildivpow2(comp->coord[i][j], s->chroma_shift[i]);
 
                 if (ret = ff_j2k_init_component(comp, codsty, qntsty, s->cbps[compno]))
                     return ret;
@@ -360,10 +366,26 @@ static int init_tiles(J2kEncoderContext *s)
 static void copy_frame(J2kEncoderContext *s)
 {
     int tileno, compno, i, y, x;
+    uint8_t *line;
     for (tileno = 0; tileno < s->numXtiles * s->numYtiles; tileno++){
         J2kTile *tile = s->tile + tileno;
-        uint8_t *line = s->picture->data[0] + tile->comp[0].coord[1][0] * s->picture->linesize[0]
-                        + tile->comp[0].coord[0][0] * s->ncomponents;
+        if (s->planar){
+            for (compno = 0; compno < s->ncomponents; compno++){
+                J2kComponent *comp = tile->comp + compno;
+                int *dst = comp->data;
+                line = s->picture->data[compno]
+                       + comp->coord[1][0] * s->picture->linesize[compno]
+                       + comp->coord[0][0];
+                for (y = comp->coord[1][0]; y < comp->coord[1][1]; y++){
+                    uint8_t *ptr = line;
+                    for (x = comp->coord[0][0]; x < comp->coord[0][1]; x++)
+                        *dst++ = *ptr++ - (1 << 7);
+                    line += s->picture->linesize[compno];
+                }
+            }
+        } else{
+        line = s->picture->data[0] + tile->comp[0].coord[1][0] * s->picture->linesize[0]
+               + tile->comp[0].coord[0][0] * s->ncomponents;
 
         i = 0;
         for (y = tile->comp[0].coord[1][0]; y < tile->comp[0].coord[1][1]; y++){
@@ -374,6 +396,7 @@ static void copy_frame(J2kEncoderContext *s)
                 }
             }
             line += s->picture->linesize[0];
+        }
         }
     }
 }
@@ -927,7 +950,6 @@ static int j2kenc_init(AVCodecContext *avctx)
     s->width = avctx->width;
     s->height = avctx->height;
 
-    // TODO: other pixel formats
     for (i = 0; i < 3; i++)
         s->cbps[i] = 8;
 
@@ -935,10 +957,11 @@ static int j2kenc_init(AVCodecContext *avctx)
         s->ncomponents = 3;
     } else if (avctx->pix_fmt == PIX_FMT_GRAY8){
         s->ncomponents = 1;
-    }
-    else{
-        av_log(avctx, AV_LOG_ERROR, "only rgb24 and gray8 supported\n");
-        return -1;
+    } else{ // planar YUV
+        s->planar = 1;
+        s->ncomponents = 3;
+        avcodec_get_chroma_sub_sample(avctx->pix_fmt,
+                s->chroma_shift, s->chroma_shift + 1);
     }
 
     ff_j2k_init_tier1_luts();
@@ -972,5 +995,8 @@ AVCodec jpeg2000_encoder = {
     NULL,
     0,
     .pix_fmts =
-        (enum PixelFormat[]) {PIX_FMT_GRAY8, PIX_FMT_RGB24, -1}
+        (enum PixelFormat[]) {PIX_FMT_GRAY8, PIX_FMT_RGB24,
+                              PIX_FMT_YUV422P, PIX_FMT_YUV444P,
+                              PIX_FMT_YUV410P, PIX_FMT_YUV411P,
+                              -1}
 };
