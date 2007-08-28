@@ -384,19 +384,19 @@ static void copy_frame(J2kEncoderContext *s)
                 }
             }
         } else{
-        line = s->picture->data[0] + tile->comp[0].coord[1][0] * s->picture->linesize[0]
-               + tile->comp[0].coord[0][0] * s->ncomponents;
+            line = s->picture->data[0] + tile->comp[0].coord[1][0] * s->picture->linesize[0]
+                   + tile->comp[0].coord[0][0] * s->ncomponents;
 
-        i = 0;
-        for (y = tile->comp[0].coord[1][0]; y < tile->comp[0].coord[1][1]; y++){
-            uint8_t *ptr = line;
-            for (x = tile->comp[0].coord[0][0]; x < tile->comp[0].coord[0][1]; x++, i++){
-                for (compno = 0; compno < s->ncomponents; compno++){
-                    tile->comp[compno].data[i] = *ptr++  - (1 << 7);
+            i = 0;
+            for (y = tile->comp[0].coord[1][0]; y < tile->comp[0].coord[1][1]; y++){
+                uint8_t *ptr = line;
+                for (x = tile->comp[0].coord[0][0]; x < tile->comp[0].coord[0][1]; x++, i++){
+                    for (compno = 0; compno < s->ncomponents; compno++){
+                        tile->comp[compno].data[i] = *ptr++  - (1 << 7);
+                    }
                 }
+                line += s->picture->linesize[0];
             }
-            line += s->picture->linesize[0];
-        }
         }
     }
 }
