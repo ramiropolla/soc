@@ -110,31 +110,27 @@ static void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
     const uint8_t *lspv;
     int i;
 
-    switch(frame->rate)
+    if(frame->rate == RATE_OCTAVE)
     {
-        case RATE_FULL:
-        case RATE_HALF:
-        case RATE_QUARTER:
-            lspv=frame->data+QCELP_LSPV0_POS;
+        lspv=frame->data+QCELP_LSP0_POS;
+        for(i=0; i<10; i++)
+        {
+            lspf[i]=lspv[i]? 0.02:-0.02; /* 2.4.3.3.1-1 */
+        }
+    }else
+    {
+        lspv=frame->data+QCELP_LSPV0_POS;
 
-            lspf[0]=        qcelp_lspvq1[lspv[0]].x;
-            lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y;
-            lspf[2]=lspf[1]+qcelp_lspvq2[lspv[1]].x;
-            lspf[3]=lspf[2]+qcelp_lspvq2[lspv[1]].y;
-            lspf[4]=lspf[3]+qcelp_lspvq3[lspv[2]].x;
-            lspf[5]=lspf[4]+qcelp_lspvq3[lspv[2]].y;
-            lspf[6]=lspf[5]+qcelp_lspvq4[lspv[3]].x;
-            lspf[7]=lspf[6]+qcelp_lspvq4[lspv[3]].y;
-            lspf[8]=lspf[7]+qcelp_lspvq5[lspv[4]].x;
-            lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y;
-
-            break;
-        case RATE_OCTAVE:
-            lspv=frame->data+QCELP_LSP0_POS;
-            for(i=0; i<10; i++)
-            {
-                lspf[i]=lspv[i]? 0.02:-0.02; /* 2.4.3.3.1-1 */
-            }
+        lspf[0]=        qcelp_lspvq1[lspv[0]].x;
+        lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y;
+        lspf[2]=lspf[1]+qcelp_lspvq2[lspv[1]].x;
+        lspf[3]=lspf[2]+qcelp_lspvq2[lspv[1]].y;
+        lspf[4]=lspf[3]+qcelp_lspvq3[lspv[2]].x;
+        lspf[5]=lspf[4]+qcelp_lspvq3[lspv[2]].y;
+        lspf[6]=lspf[5]+qcelp_lspvq4[lspv[3]].x;
+        lspf[7]=lspf[6]+qcelp_lspvq4[lspv[3]].y;
+        lspf[8]=lspf[7]+qcelp_lspvq5[lspv[4]].x;
+        lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y;
     }
 }
 
