@@ -25,8 +25,6 @@
  * @author Reynaldo H. Verdejo Pinochet
  */
 
-#define QCELP_FXQ(v)  (roundf(16384.0*v)/16384.0)
-
 /**
  * TIA/EIA/IS-733 Spec has errors on the predictor determination formula
  * at equation 2.4.6.1-4 -- The predictor there needs 6 to be subtracted
