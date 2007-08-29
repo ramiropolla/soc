@@ -567,7 +567,20 @@ static int rv30_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     si->quant = get_bits(gb, 5);
     get_bits1(gb);
     t = get_bits(gb, 13);
-    get_bits(gb, 2);
+    switch(r->s.avctx->extradata_size){
+    case 16:
+       get_bits(gb, 3);
+       break;
+    case 14:
+       get_bits(gb, 2);
+       break;
+    case 12:
+       get_bits(gb, 2);
+       break;
+    case 10:
+       get_bits(gb, 1);
+       break;
+    }
     si->vlc_set = 0;
     mb_size = ((w + 15) >> 4) * ((h + 15) >> 4);
     for(i = 0; i < 5; i++)
