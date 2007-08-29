@@ -2194,13 +2194,15 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         r->si.end = s->mb_width * s->mb_height;
         if(i+1 < slice_count){
             init_get_bits(&s->gb, buf+slice_offset[i+1], (buf_size-slice_offset[i+1])*8);
-            if(rv40_parse_slice_header(r, &r->s.gb, &si) < 0){
+            if(!r->rv30 && rv40_parse_slice_header(r, &r->s.gb, &si) < 0){
                 if(i+2 < slice_count)
                     size = slice_offset[i+2] - offset;
                 else
                     size = buf_size - offset;
                 r->si.size = size * 8;
-            }else
+            }else if(!r->rv30)
+                r->si.end = si.start;
+            if(r->rv30 && rv30_parse_slice_header(r, &r->s.gb, &si) >= 0)
                 r->si.end = si.start;
         }
         r->slice_data = buf + offset;
