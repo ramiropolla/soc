@@ -892,7 +892,7 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
     memset(C, 0, sizeof(C));
     no_A = s->mb_x < 1 || (s->first_slice_line && s->mb_x == s->resync_mb_x);
     no_B = s->first_slice_line;
-    no_C = s->first_slice_line || (s->mb_x + 1) == s->mb_width;
+    no_C = (s->first_slice_line && (s->mb_x + 1) != s->resync_mb_x) || (s->mb_x + 1) == s->mb_width;
     switch(block_type){
     case RV40_MB_P_16x16:
     case RV40_MB_P_MIX16x16:
@@ -951,7 +951,7 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
         B[1] = A[1];
     }
     if(no_C){
-        if(no_B || no_A){
+        if(no_B || (no_A && !r->rv30)){
             C[0] = A[0];
             C[1] = A[1];
         }else{
