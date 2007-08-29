@@ -105,7 +105,7 @@ static int qcelp_decode_close(AVCodecContext *avctx)
  *
  * TIA/EIA/IS-733 2.4.3.2.6.2-2
  */
-void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
+static void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
 {
     const uint8_t *lspv;
     int i;
