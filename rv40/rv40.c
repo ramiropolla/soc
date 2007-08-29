@@ -630,12 +630,24 @@ static int rv30_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *ds
         ptr = dst;
         for(j = 0; j < 4; j+= 2){
             code = (get_omega(gb) - 1) << 1;
+            if(code >= 81*2){
+                av_log(r->s.avctx, AV_LOG_ERROR, "Incorrect intra prediction code\n");
+                return -1;
+            }
             A = ptr[-r->intra_types_stride] + 1;
             B = ptr[-1] + 1;
             *ptr++ = rv30_itype_from_context[A * 90 + B * 9 + rv30_itype_code[code + 0]];
+            if(ptr[-1] == 9){
+                av_log(r->s.avctx, AV_LOG_ERROR, "Incorrect intra prediction mode\n");
+                return -1;
+            }
             A = ptr[-r->intra_types_stride] + 1;
             B = ptr[-1] + 1;
             *ptr++ = rv30_itype_from_context[A * 90 + B * 9 + rv30_itype_code[code + 1]];
+            if(ptr[-1] == 9){
+                av_log(r->s.avctx, AV_LOG_ERROR, "Incorrect intra prediction mode\n");
+                return -1;
+            }
         }
     }
     return 0;
@@ -765,6 +777,10 @@ static int rv30_decode_mb_info(RV40DecContext *r)
     int code;
 
     code = get_omega(gb) - 1;
+    if(code > 11){
+        av_log(s->avctx, AV_LOG_ERROR, "Incorrect MB type code\n");
+        return -1;
+    }
     if(code > 5){
         av_log(NULL,0, "dquant needed\n");
         code -= 6;
@@ -1521,6 +1537,8 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
         r->block_type = r->is16 ? RV40_MB_TYPE_INTRA16x16 : RV40_MB_TYPE_INTRA;
     }else{
         r->block_type = r->rv30 ? rv30_decode_mb_info(r) : rv40_decode_mb_info(r);
+        if(r->block_type == -1)
+            return -1;
         s->current_picture_ptr->mb_type[mb_pos] = rv40_mb_type_to_lavc[r->block_type];
         r->mb_type[mb_pos] = r->block_type;
         if(s->pict_type == P_TYPE && r->block_type == RV40_MB_SKIP)
@@ -1539,10 +1557,13 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
     }
     if(IS_INTRA(s->current_picture_ptr->mb_type[mb_pos])){
         if(!r->is16){
-            if(r->rv30)
-                rv30_decode_intra_types(r, gb, intra_types);
-            else
-                rv40_decode_intra_types(r, gb, intra_types);
+            if(r->rv30){
+                if(rv30_decode_intra_types(r, gb, intra_types) < 0)
+                    return -1;
+            }else{
+                if(rv40_decode_intra_types(r, gb, intra_types) < 0)
+                    return -1;
+            }
             r->chroma_vlc = 0;
             r->luma_vlc   = 1;
         }else{
@@ -1604,6 +1625,9 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     DCTELEM block16[64];
 
     cbp = cbp2 = rv40_decode_mb_header(r, intra_types);
+
+    if(cbp == -1)
+        return -1;
 
     if(r->is16){
         memset(block16, 0, sizeof(block16));
