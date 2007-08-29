@@ -531,8 +531,7 @@ static void retransmit_si_info(AVFormatContext *s)
 }
 
 static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
-                             const uint8_t *payload, int payload_size,
-                             int64_t pts, int64_t dts)
+                             const uint8_t *payload, int payload_size, int64_t dts)
 {
     MpegTSWrite *ts = s->priv_data;
     uint8_t buf[TS_PACKET_SIZE];
@@ -707,7 +706,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     for(i=0;i<zero_trail_bytes;i++)
         bytestream_put_byte(&q, 0x00);
 
-    mpegts_write_pes(ctx, stream, stream->payload, q - stream->payload, pts, dts);
+    mpegts_write_pes(ctx, stream, stream->payload, q - stream->payload, dts);
     put_flush_packet(&ctx->pb);
 
     s->packet_number++;
