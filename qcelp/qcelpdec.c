@@ -395,8 +395,7 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
 /**
  * Pitch filters or pre-filters pv, returns 0 if everything goes
  * well, otherwise it returns the index of the failing-to-be-pitched
- * element and -1 if an invalid (140.5, 141.5, 142.5) lag is found or
- * an invalid operation mode is requested.
+ * element or -1 if an invalid (140.5, 141.5, 142.5) lag is found.
  *
  * This function implements both, the pitch filter and the pitch pre-filter
  * whose results gets stored in pv.
@@ -412,8 +411,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
     uint8_t *pgain, *plag, *pfrac;
     float   gain[4], lag[4], hamm_tmp;
 
-    if(step != 1 && step != 2)
-        return -1;
+    assert(step == 1 || step == 2);
 
     switch(frame->rate)
     {
