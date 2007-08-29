@@ -937,7 +937,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     // Copy current lspf freqs over to prev_lspf
 
-    memcpy(q->prev_lspf, qtzd_lspf, 10*sizeof(float));
+    memcpy(q->prev_lspf, qtzd_lspf, sizeof(q->prev_lspf));
 
     q->frame_num++;
     *data_size=160*2;
