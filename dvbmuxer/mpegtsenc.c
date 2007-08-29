@@ -541,12 +541,10 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
     int64_t pcr = -1; /* avoid warning */
 
     int offset = 0;
-    static int p = 0;
     is_start = 1;
     while (payload_size > 0) {
         retransmit_si_info(s);
 
-        p++;
         write_pcr = 0;
         if (ts_st->pid == ts_st->service->pcr_pid) {
             ts_st->service->pcr_packet_count++;
