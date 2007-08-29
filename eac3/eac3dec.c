@@ -1146,10 +1146,10 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
                     GET_SBITS(pre_chmant, gbc, bits - ((bg==1)?1:0));
                     if(bg==1)
                         //Gk = 2
-                        mant = pre_chmant/((1<<bits-1)-1);
+                        mant = pre_chmant/((1<<(bits-1))-1);
                     else
                         //Gk = 4
-                        mant = pre_chamnt*3.0f/((1<<bits+1)-2);
+                        mant = pre_chmant*3.0f/((1<<(bits+1))-2);
 
                     g = 0;
                     remap = 1;
@@ -1157,7 +1157,7 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
                     // small mantissa
                     if(bg)
                         //Gk = 2 or 4
-                        mant = pre_chmant/((1<<bits-1)-1);
+                        mant = pre_chmant/((1<<(bits-1))-1);
                     else
                         //Gk = 1
                         mant = pre_chmant*2.0f/((1<<bits)-1); ///XXX
