@@ -611,6 +611,8 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
         payload_size -= len;
         put_buffer(&s->pb, buf, TS_PACKET_SIZE);
     }
+    if(pcr != -1)
+        ts->last_pcr = pcr;
     put_flush_packet(&s->pb);
 }
 
