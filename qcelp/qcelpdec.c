@@ -85,8 +85,6 @@ static int qcelp_decode_init(AVCodecContext *avctx)
     if(q->frame == NULL)
         return -1;
 
-    q->frame_num=0;
-
     return 0;
 }
 
