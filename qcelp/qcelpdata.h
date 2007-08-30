@@ -68,8 +68,8 @@ static const float    qcelp_hammsinc_table[]={-0.006822, 0.041249,-0.143459,
 
 typedef struct
 {
-    int index;  /*!< Index into the reference frame */
-    int bitpos; /*!< Bit position in the value's byte */
+    uint8_t index;  /*!< Index into the reference frame */
+    uint8_t bitpos; /*!< Bit position in the value's byte */
 } QCELPBitmap;
 
 
