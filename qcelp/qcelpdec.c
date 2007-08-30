@@ -119,16 +119,16 @@ static void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
     {
         lspv=frame->data+QCELP_LSPV0_POS;
 
-        lspf[0]=        qcelp_lspvq1[lspv[0]].x;
-        lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y;
-        lspf[2]=lspf[1]+qcelp_lspvq2[lspv[1]].x;
-        lspf[3]=lspf[2]+qcelp_lspvq2[lspv[1]].y;
-        lspf[4]=lspf[3]+qcelp_lspvq3[lspv[2]].x;
-        lspf[5]=lspf[4]+qcelp_lspvq3[lspv[2]].y;
-        lspf[6]=lspf[5]+qcelp_lspvq4[lspv[3]].x;
-        lspf[7]=lspf[6]+qcelp_lspvq4[lspv[3]].y;
-        lspf[8]=lspf[7]+qcelp_lspvq5[lspv[4]].x;
-        lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y;
+        lspf[0]=        qcelp_lspvq1[lspv[0]].x / 10000.0;
+        lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y / 10000.0;
+        lspf[2]=lspf[1]+qcelp_lspvq2[lspv[1]].x / 10000.0;
+        lspf[3]=lspf[2]+qcelp_lspvq2[lspv[1]].y / 10000.0;
+        lspf[4]=lspf[3]+qcelp_lspvq3[lspv[2]].x / 10000.0;
+        lspf[5]=lspf[4]+qcelp_lspvq3[lspv[2]].y / 10000.0;
+        lspf[6]=lspf[5]+qcelp_lspvq4[lspv[3]].x / 10000.0;
+        lspf[7]=lspf[6]+qcelp_lspvq4[lspv[3]].y / 10000.0;
+        lspf[8]=lspf[7]+qcelp_lspvq5[lspv[4]].x / 10000.0;
+        lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y / 10000.0;
     }
 }
 
