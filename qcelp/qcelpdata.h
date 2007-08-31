@@ -344,12 +344,10 @@ static const qcelp_vector qcelp_lspvq5[]={
 { 539,1564},{1142, 533},{ 984, 391},{2130,1089}};
 
 /**
- * Gain parameters
- * TIA/EIA/IS-733 2.4.6.2.1-(1 through 3)
+ * Table for computing Ga (Decoded linear codebook gain magnitude).
+ *
+ * TIA/EIA/IS-733 2.4.6.2.1-3
  */
-
-#define QCELP_CBSIGN2GS(a) ((a) == 0? 1:-1)
-#define QCELP_CBGAIN2G0(a) (a*4)
 
 static const float qcelp_g12ga[]={
    1.000,   1.125,   1.250,   1.375,   1.625,  1.750,  2.000,  2.250,

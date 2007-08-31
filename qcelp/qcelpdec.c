@@ -159,8 +159,8 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
             {
                 if(frame->rate == RATE_HALF && i>=4) break;
 
-                gs[i]=QCELP_CBSIGN2GS(cbsign[i]);
-                g0[i]=QCELP_CBGAIN2G0(cbgain[i]);
+                gs[i]=cbsign[i]? -1:1;
+                g0[i]=4*cbgain[i];
 
                 /*
                  * Spec has errors on the predictor determination formula
@@ -194,7 +194,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
         case RATE_QUARTER:
             for(i=0; i<5; i++)
             {
-                g0[i]=g1[i]=QCELP_CBGAIN2G0(cbgain[i]);
+                g0[i]=g1[i]=4*cbgain[i];
                 gs[i]=1;
                 ga[i]=qcelp_g12ga[g1[i]];
             }
