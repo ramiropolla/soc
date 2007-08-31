@@ -139,6 +139,7 @@ static int mpegts_write_section1(MpegTSSection *s, int tid, int id,
 #define SDT_RETRANS_TIME 500
 #define PAT_RETRANS_TIME 100
 #define PCR_RETRANS_TIME 20
+#define MAX_DELTA_PCR 4500 /**< 90000 / PCR_RETRANS_TIME */
 
 
 /**
@@ -190,7 +191,8 @@ typedef struct MpegTSWrite {
     int onid;
     int tsid;
     int packet_number;
-    int64_t last_pcr; /* current programme clock reference */
+    int64_t last_pcr; /* last programme clock reference */
+    int64_t cur_pcr; /* current programme clock reference */
     int mux_rate;
     int packet_size;
 } MpegTSWrite;
@@ -479,7 +481,7 @@ static int mpegts_write_header(AVFormatContext *s)
                    100 * 16;                                        /* PAT size */
         ts->mux_rate = bitrate;
     }
-    ts->last_pcr = 0;
+    ts->last_pcr = ts->cur_pcr = 0;
 
     service->pcr_packet_freq = (ts->mux_rate * PCR_RETRANS_TIME) /
         (TS_PACKET_SIZE * 8 * 1000);
@@ -544,15 +546,15 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
     is_start = 1;
     while (payload_size > 0) {
         retransmit_si_info(s);
-
         write_pcr = 0;
         if (ts_st->pid == ts_st->service->pcr_pid) {
             ts_st->service->pcr_packet_count++;
             if (ts_st->service->pcr_packet_count >=
-                ts_st->service->pcr_packet_freq && dts != AV_NOPTS_VALUE) {
+                ts_st->service->pcr_packet_freq || ts->cur_pcr - ts->last_pcr > MAX_DELTA_PCR) {
+                pcr = ts->cur_pcr + offset* 8*90000LL / ts->mux_rate;
                 ts_st->service->pcr_packet_count = 0;
                 write_pcr = 1;
-                pcr = ts->last_pcr + offset* 8*90000LL / ts->mux_rate;
+                ts->last_pcr = pcr;
             }
         }
 
@@ -612,7 +614,7 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
         put_buffer(&s->pb, buf, TS_PACKET_SIZE);
     }
     if(pcr != -1)
-        ts->last_pcr = pcr;
+        ts->cur_pcr = pcr;
     put_flush_packet(&s->pb);
 }
 
@@ -737,13 +739,17 @@ static int output_packet(AVFormatContext *ctx, int flush){
     int es_size, trailer_size;
     int result;
     int best_i= -1;
-    int64_t pcr = s->last_pcr;
+    int64_t pcr = s->cur_pcr;
+    MpegTSWriteStream *ts_st;
     PacketDesc *timestamp_packet;
 
     if((result = ff_pes_find_beststream(ctx, s->packet_size, flush, &pcr, &best_i)) <= 0)
         return result;
 
-    s->last_pcr = pcr;
+    ts_st = ctx->streams[best_i]->priv_data;
+    if (ts_st->pid == ts_st->service->pcr_pid) {
+        s->cur_pcr = pcr;
+    }
     assert(best_i >= 0);
 
     st = ctx->streams[best_i];
