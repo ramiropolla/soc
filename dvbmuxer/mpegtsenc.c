@@ -793,9 +793,6 @@ static int mpegts_write_packet(AVFormatContext *ctx, AVPacket *pkt)
     PESStream *pes_stream = &stream->pes_stream;
     int64_t pts;
 
-    /* add a preload value to avoid negative dts*/
-    pkt->pts += 10000;
-    pkt->dts += 10000;
     total_size += size;
     ff_pes_write_packet(ctx, pkt);
     pts= pes_stream->predecode_packet->pts;
