@@ -54,13 +54,10 @@ typedef struct
     int           frame_num;
 } QCELPContext;
 
-static void qcelp_update_pitchf_mem(float *pitchf_mem, float *last)
+static void qcelp_update_pitchf_mem(float *pitchf_mem, const float *last)
 {
-    float tmp[150];
-
-    memcpy(tmp, pitchf_mem+40, 110*sizeof(float));
-    memcpy(tmp+110, last, 40*sizeof(float));
-    memcpy(pitchf_mem, tmp, 150*sizeof(float));
+    memmove(pitchf_mem, pitchf_mem+40, 110*sizeof(float));
+    memmove(pitchf_mem+110, last, 40*sizeof(float));
 }
 
 static int qcelp_decode_init(AVCodecContext *avctx)
