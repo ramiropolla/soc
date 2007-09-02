@@ -26,16 +26,6 @@
  */
 
 /**
- * TIA/EIA/IS-733 Spec has errors on the predictor determination formula
- * at equation 2.4.6.1-4 -- The predictor there needs 6 to be subtracted
- * from it to give RI compliants results. The problem is it ignores the
- * fact that codebook subframes 4,8,12 and 16 on a FULL_RATE frame use a
- * different quantizer table.
- */
-
-#define QCELP_FIX_SPEC_PREDICTOR(p) (p-6)
-
-/**
  * TIA/EIA/IS-733 Spec has an omission on the codebook index determination
  * formula for RATE_FULL and RATE_HALF frames at section 2.4.8.1.1. It says
  * you have to subtract the decoded index parameter to the given scaled

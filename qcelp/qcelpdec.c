@@ -160,14 +160,17 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
                 g0[i]=4*cbgain[i];
 
                 /*
-                 * Spec has errors on the predictor determination formula
-                 * it needs 6 to be subtracted from it to give RI results.
+                 * TIA/EIA/IS-733 Spec has errors on the predictor determination
+                 * formula at equation 2.4.6.1-4 -- The predictor there needs 6
+                 * to be subtracted from it to give RI compliants results. The
+                 * problem is it ignores the fact that codebook subframes 4, 8,
+                 * 12 and 16 on a FULL_RATE frame use a different quantizer
+                 * table.
                  */
 
                 if(frame->rate == RATE_FULL && i > 0 && !((i+1) & 3))
-                    predictor=QCELP_FIX_SPEC_PREDICTOR
-                              (av_clip(floor((g1[i-1]+g1[i-2]+g1[i-3])/3.0), 6,
-                              38));
+                    predictor=av_clip(floor((g1[i-1]+g1[i-2]+g1[i-3])/3.0), 6,
+                              38)-6;
                 else
                     predictor=0;
 
