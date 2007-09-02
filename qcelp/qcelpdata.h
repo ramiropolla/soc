@@ -25,21 +25,6 @@
  * @author Reynaldo H. Verdejo Pinochet
  */
 
-/**
- * TIA/EIA/IS-733 Spec has an omission on the codebook index determination
- * formula for RATE_FULL and RATE_HALF frames at section 2.4.8.1.1. It says
- * you have to subtract the decoded index parameter to the given scaled
- * codebook vector index 'n' to get the desired circular codebook index, but
- * it does not mention that you have to clamp 'n' to [0-9] in order to get RI
- * compliant results.
- *
- * The reason for this mistake seems to be the fact they forget to tell you
- * have to do these calculations per codebook subframe and adjust given equation
- * values accordingly.
- */
-
-#define QCELP_FIX_SPEC_MISSING_CLAMP(n) ((n<9)? n+1:0)
-
 typedef enum
 {
     RATE_FULL   = 0,

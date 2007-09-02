@@ -254,13 +254,20 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
     float    rnd[160];
 
 
-    /*
-     * Spec has some missing info here:
-     *
-     * 'j' should go from 0 to 9 emulating a per codebook-subframe computation.
-     * For a longer explanation see QCELP_FIX_SPEC_MISSING_CLAMP macro
-     * definition at the qcelpdata.h header in this software distribution.
-     */
+   /*
+    * Spec has some missing info here.
+    *
+    * TIA/EIA/IS-733 Spec has an omission on the codebook index determination
+    * formula for RATE_FULL and RATE_HALF frames at section 2.4.8.1.1. It says
+    * you have to subtract the decoded index parameter to the given scaled
+    * codebook vector index 'n' to get the desired circular codebook index, but
+    * it does not mention that you have to clamp 'n' to [0-9] in order to get RI
+    * compliant results.
+    *
+    * The reason for this mistake seems to be the fact they forget to tell you
+    * have to do these calculations per codebook subframe and adjust given
+    * equation values accordingly.
+    */
 
     j=0;
 
@@ -273,7 +280,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
                 cdn_vector[i]=
                 gain[i/10]*qcelp_fullrate_ccodebook[(j-index[i/10]) & 127];
 
-                j=QCELP_FIX_SPEC_MISSING_CLAMP(j);
+                j=j<9? j+1:0;  // See comment above
             }
             break;
         case RATE_HALF:
@@ -283,7 +290,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
                 cdn_vector[i]=
                 gain[i/40]*qcelp_halfrate_ccodebook[(j-index[i/40]) & 127];
 
-                j=QCELP_FIX_SPEC_MISSING_CLAMP(j);
+                j=j<9? j+1:0;  // See comment above
             }
             break;
         case RATE_QUARTER:
