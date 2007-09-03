@@ -127,6 +127,7 @@ typedef struct RV40DecContext{
     SavedSliceInfo ssi;      ///< data for truncated slice
 
     int rv30;                ///< indicates which RV variasnt is currently decoded
+    int rpr;                 ///< one field size in RV30 slice header
 }RV40DecContext;
 
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
@@ -567,20 +568,7 @@ static int rv30_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     si->quant = get_bits(gb, 5);
     get_bits1(gb);
     t = get_bits(gb, 13);
-    switch(r->s.avctx->extradata_size){
-    case 16:
-       get_bits(gb, 3);
-       break;
-    case 14:
-       get_bits(gb, 2);
-       break;
-    case 12:
-       get_bits(gb, 2);
-       break;
-    case 10:
-       get_bits(gb, 1);
-       break;
-    }
+    skip_bits(gb, r->rpr);
     si->vlc_set = 0;
     mb_size = ((w + 15) >> 4) * ((h + 15) >> 4);
     for(i = 0; i < 5; i++)
@@ -2121,6 +2109,14 @@ static int rv40_decode_init(AVCodecContext *avctx)
         tables_done = 1;
     }
     r->prev_si.type = -1;
+    if(r->rv30){
+        if(avctx->extradata_size < 2){
+            av_log(avctx, AV_LOG_ERROR, "Extradata is too small\n");
+            return -1;
+        }
+        r->rpr = (avctx->extradata[1] & 7) >> 1;
+        r->rpr = FFMIN(r->rpr + 1, 3);
+    }
     return 0;
 }
 
