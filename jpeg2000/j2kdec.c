@@ -490,6 +490,10 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
         J2kPrec *prec = band->prec + precno;
         int pos = 0;
 
+        if (band->coord[0][0] == band->coord[0][1]
+        ||  band->coord[1][0] == band->coord[1][1])
+            continue;
+
         for (cblkny = prec->yi0; cblkny < prec->yi1; cblkny++)
             for(cblknx = prec->xi0, cblkno = cblkny * band->cblknx + cblknx; cblknx < prec->xi1; cblknx++, cblkno++, pos++){
                 J2kCblk *cblk = band->cblk + cblkno;

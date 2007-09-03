@@ -651,6 +651,10 @@ static int encode_packet(J2kEncoderContext *s, J2kResLevel *rlevel, int precno,
         int yi, xi, pos;
         int cblknw = prec->xi1 - prec->xi0;
 
+        if (band->coord[0][0] == band->coord[0][1]
+        ||  band->coord[1][0] == band->coord[1][1])
+            continue;
+
         for (pos=0, yi = prec->yi0; yi < prec->yi1; yi++){
             for (xi = prec->xi0; xi < prec->xi1; xi++, pos++){
                 prec->cblkincl[pos].val = band->cblk[yi * cblknw + xi].ninclpasses == 0;
