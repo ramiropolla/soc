@@ -94,7 +94,7 @@ static int amrnb_decode_init(AVCodecContext *avctx) {
     }
 
     // allocate and zero the sample buffer
-    p->sample_buffer = av_mallocz(sizeof(int16_t)*160);
+    p->sample_buffer = av_mallocz(sizeof(int16_t)*AMR_BLOCK_SIZE);
     // allocate and zero the amr parameters
     p->amr_prms = av_mallocz(sizeof(int16_t)*PRMS_MODE_122);
     // allocate and zero the decoder state
@@ -747,7 +747,7 @@ static void reconstruct_fixed_code(int *fixed_code, int *pulse_position, int sig
     int i;
 
     // reset the code
-    memset(fixed_code, 0, 160);
+    memset(fixed_code, 0, AMR_BLOCK_SIZE);
 
     // assign the pulse values (+/-1) to their appropriate positions
     for(i=0; i<nr_pulses; i++)
