@@ -409,9 +409,9 @@ static void decode_lsf2lsp_5(AVCodecContext *avctx) {
  * The ref source description of how to find the polynomials was as follows:
  *    Find the polynomial F1(z) or F2(z) from the LSPs.
  *
- *    F1(z) = product ( 1 - 2 lsp[i] z^-1 + z^-2 )
+ *    F1(z) = product ( 1 - 2 * lsp[i] * z^-1 + z^-2 )
  *             i=0,2,4,6,8
- *    F2(z) = product   ( 1 - 2 lsp[i] z^-1 + z^-2 )
+ *    F2(z) = product ( 1 - 2 * lsp[i] * z^-1 + z^-2 )
  *             i=1,3,5,7,9
  *
  * @param lsp               vector of lsps
