@@ -38,7 +38,7 @@
 typedef struct AMRContext {
 
     GetBitContext                        gb;
-    float                    *sample_buffer;
+    int16_t                  *sample_buffer;
 
     int16_t                       *amr_prms; // pointer to the decoded amr parameters (lsf coefficients, codebook indices, etc)
     int                 bad_frame_indicator; // bad frame ? 1 : 0
@@ -94,7 +94,7 @@ static int amrnb_decode_init(AVCodecContext *avctx) {
     }
 
     // allocate and zero the sample buffer
-    p->sample_buffer = av_mallocz(sizeof(float)*1024);
+    p->sample_buffer = av_mallocz(sizeof(int16_t)*160);
     // allocate and zero the amr parameters
     p->amr_prms = av_mallocz(sizeof(int16_t)*PRMS_MODE_122);
     // allocate and zero the decoder state
