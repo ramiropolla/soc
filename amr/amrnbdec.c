@@ -40,37 +40,37 @@ typedef struct AMRContext {
     GetBitContext                        gb;
     int16_t                  *sample_buffer;
 
-    int16_t                       *amr_prms; // pointer to the decoded amr parameters (lsf coefficients, codebook indices, etc)
-    int                 bad_frame_indicator; // bad frame ? 1 : 0
+    int16_t                       *amr_prms; ///< pointer to the decoded amr parameters (lsf coefficients, codebook indices, etc)
+    int                 bad_frame_indicator; ///< bad frame ? 1 : 0
 
-    int                   prev_frame_homing; // previous frame was a homing frame ? 1 : 0
-    enum RXFrameType        prev_frame_type; // frame type of previous frame
-    enum Mode               prev_frame_mode; // mode of previous frame
+    int                   prev_frame_homing; ///< previous frame was a homing frame ? 1 : 0
+    enum RXFrameType        prev_frame_type; ///< frame type of previous frame
+    enum Mode               prev_frame_mode; ///< mode of previous frame
 
-    int                        *prev_lsf_dq; // previous dequantised lsfs
-    int                    *prev_residual_q; // previous quantised residual
+    int                        *prev_lsf_dq; ///< previous dequantised lsfs
+    int                    *prev_residual_q; ///< previous quantised residual
 
-    int             lsp1_q[LP_FILTER_ORDER]; // vector of quantised lsps
-    int             lsp2_q[LP_FILTER_ORDER]; // vector of quantised lsps
+    int             lsp1_q[LP_FILTER_ORDER]; ///< vector of quantised lsps
+    int             lsp2_q[LP_FILTER_ORDER]; ///< vector of quantised lsps
 
-    int                    cur_frame_homing; // current frame homing ? 1 : 0
-    enum RXFrameType         cur_frame_type; // current frame type
-    enum Mode                cur_frame_mode; // current frame mode
+    int                    cur_frame_homing; ///< current frame homing ? 1 : 0
+    enum RXFrameType         cur_frame_type; ///< current frame type
+    enum Mode                cur_frame_mode; ///< current frame mode
 
-    int    lpc_coeffs[4][LP_FILTER_ORDER+1]; // lpc coefficients, A(z), for all four subframes
-    int      prev_lsp_sub4[LP_FILTER_ORDER]; // vector of lsps from subframe 4 of the previous frame
-    int       cur_lsp_sub2[LP_FILTER_ORDER]; // vector of lsps from subframe 2 of the current frame
-    int       cur_lsp_sub4[LP_FILTER_ORDER]; // vector of lsps from subframe 4 of the current frame
+    int    lpc_coeffs[4][LP_FILTER_ORDER+1]; ///< lpc coefficients, A(z), for all four subframes
+    int      prev_lsp_sub4[LP_FILTER_ORDER]; ///< vector of lsps from subframe 4 of the previous frame
+    int       cur_lsp_sub2[LP_FILTER_ORDER]; ///< vector of lsps from subframe 2 of the current frame
+    int       cur_lsp_sub4[LP_FILTER_ORDER]; ///< vector of lsps from subframe 4 of the current frame
 
-    int                        cur_subframe; // subframe number (1-4)
-    int                    search_range_min; // minimum of search range
-    int                    search_range_max; // maximum of search range
-    int                  prev_pitch_lag_int; // integer pitch lag from previous subframe (used in 2nd and 4th subframes)
-    int                   cur_pitch_lag_int; // integer part of pitch lag from current subframe
-    int                  cur_pitch_lag_frac; // fractional part of pitch lag from current subframe
-    int                         *excitation; // excitation buffer
+    int                        cur_subframe; ///< subframe number (1-4)
+    int                    search_range_min; ///< minimum of search range
+    int                    search_range_max; ///< maximum of search range
+    int                  prev_pitch_lag_int; ///< integer pitch lag from previous subframe (used in 2nd and 4th subframes)
+    int                   cur_pitch_lag_int; ///< integer part of pitch lag from current subframe
+    int                  cur_pitch_lag_frac; ///< fractional part of pitch lag from current subframe
+    int                         *excitation; ///< excitation buffer
 
-    AMRDecoderState                  *state; // current decoder state
+    AMRDecoderState                  *state; ///< current decoder state
 
 } AMRContext;
 
