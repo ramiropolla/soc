@@ -33,6 +33,7 @@
 
 #include "avcodec.h"
 #include "bitstream.h"
+#include "common.h"
 #include "amrdata.h"
 
 typedef struct AMRContext {
@@ -677,10 +678,8 @@ static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitc
     // subframe 2 or 4
     }else {
         // find the search range
-        p->search_range_min = *pitch_lag_int - 5; // FIXME - set pitch_lag_int = 0 before each frame
-        if(p->search_range_min < PITCH_LAG_MIN_MODE_122) {
-            p->search_range_min = PITCH_LAG_MIN_MODE_122;
-        }
+        // FIXME - set pitch_lag_int = 0 before each frame
+        p->search_range_min = FFMAX(*pitch_lag_int - 5, PITCH_LAG_MIN_MODE_122);
         p->search_range_max = p->search_range_min + 9;
         if(p->search_range_max > PITCH_LAG_MAX) {
             p->search_range_max = PITCH_LAG_MAX;
