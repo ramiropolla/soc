@@ -541,6 +541,7 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
     int val, is_start, len, header_len, write_pcr;
     int afc_len, stuffing_len;
     int64_t pcr = -1; /* avoid warning */
+    int64_t delta_pcr;
 
     int offset = 0;
     is_start = 1;
@@ -549,9 +550,11 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
         write_pcr = 0;
         if (ts_st->pid == ts_st->service->pcr_pid) {
             ts_st->service->pcr_packet_count++;
+            delta_pcr = ts->cur_pcr - ts->last_pcr;
             if (ts_st->service->pcr_packet_count >=
-                ts_st->service->pcr_packet_freq || ts->cur_pcr - ts->last_pcr > MAX_DELTA_PCR) {
-                pcr = ts->cur_pcr + offset* 8*90000LL / ts->mux_rate;
+                ts_st->service->pcr_packet_freq || delta_pcr > MAX_DELTA_PCR) {
+                pcr = delta_pcr > MAX_DELTA_PCR ? ts->last_pcr + MAX_DELTA_PCR : ts->cur_pcr;
+                pcr += offset* 8*90000LL / ts->mux_rate;
                 ts_st->service->pcr_packet_count = 0;
                 write_pcr = 1;
                 ts->last_pcr = pcr;
@@ -758,8 +761,8 @@ static int output_packet(AVFormatContext *ctx, int flush){
     assert(av_fifo_size(&stream->fifo) > 0);
 
     timestamp_packet= stream->premux_packet;
-    if(s->last_pcr == 0)
-        s->last_pcr = timestamp_packet->dts;
+    if(s->cur_pcr == 0)
+        s->cur_pcr = timestamp_packet->dts;
     if(timestamp_packet->unwritten_size == timestamp_packet->size){
         trailer_size= 0;
     }else{
