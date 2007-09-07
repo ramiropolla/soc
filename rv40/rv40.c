@@ -1780,7 +1780,6 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
     int mb_pos;
-    int mb_w = s->mb_width, mb_h = s->mb_height;
     *last = 1;
 
     init_get_bits(&r->s.gb, r->slice_data, r->si.size);
@@ -1806,10 +1805,6 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
 
     if(!r->truncated && r->prev_si.type != -1 && (r->si.type != r->prev_si.type || r->si.start <= r->prev_si.start || r->si.width != r->prev_si.width || r->si.height != r->prev_si.height)){
         av_log(s->avctx, AV_LOG_ERROR, "Slice headers mismatch\n");
-    }
-    if(!avcodec_check_dimensions(s->avctx, r->si.width, r->si.height)){
-        mb_w = (r->si.width  + 15) >> 4;
-        mb_h = (r->si.height + 15) >> 4;
     }
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
         if(s->width != r->si.width || s->height != r->si.height /*&& avcodec_check_dimensions(s->avctx, r->si.width, r->si.height) >= 0 */){
