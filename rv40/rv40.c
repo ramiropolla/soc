@@ -128,6 +128,8 @@ typedef struct RV40DecContext{
 
     int rv30;                ///< indicates which RV variasnt is currently decoded
     int rpr;                 ///< one field size in RV30 slice header
+
+    int avail[4];            ///< whether left, top, top rights and top left MBs are available
 }RV40DecContext;
 
 static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
@@ -812,15 +814,15 @@ static int rv40_decode_mb_info(RV40DecContext *r)
          return RV40_MB_SKIP;
 
     memset(blocks, 0, sizeof(blocks));
-    if(!s->first_slice_line){
-        blocks[r->mb_type[mb_pos - s->mb_stride]]++;
-        if(s->mb_x && !(s->mb_x == s->resync_mb_x && (s->mb_y-1) == s->resync_mb_y))
-            blocks[r->mb_type[mb_pos - s->mb_stride - 1]]++;
-        if(s->mb_x+1 < s->mb_width)
-            blocks[r->mb_type[mb_pos - s->mb_stride + 1]]++;
-    }
-    if(s->mb_x && !(s->first_slice_line && s->mb_x == s->resync_mb_x))
+    if(r->avail[0])
         blocks[r->mb_type[mb_pos - 1]]++;
+    if(r->avail[1])
+        blocks[r->mb_type[mb_pos - s->mb_stride]]++;
+    if(r->avail[1] && r->avail[2])
+        blocks[r->mb_type[mb_pos - s->mb_stride + 1]]++;
+    if(r->avail[1] && r->avail[3])
+        blocks[r->mb_type[mb_pos - s->mb_stride - 1]]++;
+
     for(i = 0; i < RV40_MB_TYPES; i++){
         if(blocks[i] > count){
             count = blocks[i];
@@ -878,9 +880,9 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
     memset(A, 0, sizeof(A));
     memset(B, 0, sizeof(B));
     memset(C, 0, sizeof(C));
-    no_A = s->mb_x < 1 || (s->first_slice_line && s->mb_x == s->resync_mb_x);
-    no_B = s->first_slice_line;
-    no_C = (s->first_slice_line && (s->mb_x + 1) != s->resync_mb_x) || (s->mb_x + 1) == s->mb_width;
+    no_A = !r->avail[0];
+    no_B = !r->avail[1];
+    no_C = !r->avail[2];
     switch(block_type){
     case RV40_MB_P_16x16:
     case RV40_MB_P_MIX16x16:
@@ -996,10 +998,10 @@ static void rv40_pred_mv_b(RV40DecContext *r, int block_type)
     memset(C, 0, sizeof(C));
     memset(mx, 0, sizeof(mx));
     memset(my, 0, sizeof(my));
-    if(!s->mb_x)
+    if(!r->avail[0])
         no_A[0] = no_A[1] = 1;
     else{
-        no_A[0] = no_A[1] = s->first_slice_line && s->mb_x == s->resync_mb_x;
+        no_A[0] = no_A[1] = 0;
         if(r->mb_type[mb_pos - 1] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - 1] != RV40_MB_B_DIRECT)
             no_A[0] = 1;
         if(r->mb_type[mb_pos - 1] != RV40_MB_B_BACKWARD && r->mb_type[mb_pos - 1] != RV40_MB_B_DIRECT)
@@ -1013,7 +1015,7 @@ static void rv40_pred_mv_b(RV40DecContext *r, int block_type)
             A[1][1] = s->current_picture_ptr->motion_val[1][mv_pos - 1][1];
         }
     }
-    if(s->first_slice_line){
+    if(!r->avail[1]){
         no_B[0] = no_B[1] = 1;
     }else{
         no_B[0] = no_B[1] = 0;
@@ -1030,14 +1032,14 @@ static void rv40_pred_mv_b(RV40DecContext *r, int block_type)
             B[1][1] = s->current_picture_ptr->motion_val[1][mv_pos - s->b8_stride][1];
         }
     }
-    if(s->mb_x+1 != s->mb_width && !s->first_slice_line){
+    if(r->avail[2]){
         no_C[0] = no_C[1] = 0;
         if(r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_DIRECT)
             no_C[0] = 1;
         if(r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_DIRECT)
             no_C[1] = 1;
         c_mv_pos = mv_pos - s->b8_stride + 2;
-    }else if(s->mb_x+1 == s->mb_width && !s->first_slice_line){
+    }else if(r->avail[3]){
         no_C[0] = no_C[1] = 0;
         if(r->mb_type[mb_pos - s->mb_stride - 1] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride - 1] != RV40_MB_B_DIRECT)
             no_C[0] = 1;
@@ -1431,13 +1433,13 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
     uint8_t *Y, *YY, *U, *V;
     int no_up, no_left, no_topright, itype;
 
-    no_up = s->first_slice_line;
+    no_up = !r->avail[1];
     Y = s->dest[0];
     U = s->dest[1];
     V = s->dest[2];
     if(!is16){
         for(j = 0; j < 4; j++){
-            no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
+            no_left = !r->avail[0];
             YY = Y;
             for(i = 0; i < 4; i++, cbp >>= 1, YY += 4){
                 no_topright = no_up || (i==3 && j) || (i==3 && !j && (s->mb_x-1) == s->mb_width);
@@ -1451,9 +1453,9 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
             intra_types += r->intra_types_stride;
         }
         intra_types -= r->intra_types_stride * 4;
-        no_up = s->first_slice_line;
+        no_up = !r->avail[1];
         for(j = 0; j < 2; j++){
-            no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
+            no_left = !r->avail[0];
             for(i = 0; i < 2; i++, cbp >>= 1, no_left = 0){
                 no_topright = no_up || (i && j) || (i && !j && (s->mb_x-1) == s->mb_width);
                 rv40_pred_4x4_block(r, U + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, no_topright);
@@ -1466,7 +1468,7 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
             no_up = 0;
         }
     }else{
-        no_left = !s->mb_x || (s->mb_x == s->resync_mb_x && s->first_slice_line);
+        no_left = !r->avail[0];
         itype = ittrans16[intra_types[0]];
         if(no_up && no_left)
             itype = DC_128_PRED8x8;
@@ -1624,6 +1626,17 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     int cbp, cbp2;
     int i, blknum, blkoff;
     DCTELEM block16[64];
+
+    // calculate which neighbours are available
+    memset(r->avail, 0, sizeof(r->avail));
+    if(s->mb_x && !(s->first_slice_line && s->mb_x == s->resync_mb_x))
+        r->avail[0] = 1;
+    if(!s->first_slice_line)
+        r->avail[1] = 1;
+    if((s->mb_x+1) < s->mb_width && (!s->first_slice_line || (s->first_slice_line && (s->mb_x+1) == s->resync_mb_x)))
+        r->avail[2] = 1;
+    if(s->mb_x && !s->first_slice_line && !((s->mb_y-1)==s->resync_mb_y && s->mb_x == s->resync_mb_x))
+        r->avail[3] = 1;
 
     cbp = cbp2 = rv40_decode_mb_header(r, intra_types);
 
