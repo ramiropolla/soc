@@ -565,6 +565,7 @@ static int rv30_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     si->type = -1;
     get_bits(gb, 3);
     si->type = get_bits(gb, 2);
+    if(si->type == 1) si->type = 0;
     if(get_bits1(gb))
         return -1;
     si->quant = get_bits(gb, 5);
