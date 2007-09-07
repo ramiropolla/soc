@@ -558,7 +558,7 @@ static inline RV40VLC* choose_vlc_set(int quant, int mod, int type)
 static int rv30_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceInfo *si)
 {
     int t, mb_bits;
-    int w = r->s.avctx->coded_width, h = r->s.avctx->coded_height;
+    int w = r->s.width, h = r->s.height;
     int i, mb_size;
 
     memset(si, 0, sizeof(SliceInfo));
@@ -586,7 +586,7 @@ static int rv30_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
 static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceInfo *si)
 {
     int t, mb_bits;
-    int w = r->s.avctx->coded_width, h = r->s.avctx->coded_height;
+    int w = r->s.width, h = r->s.height;
     int i, mb_size;
 
     memset(si, 0, sizeof(SliceInfo));
@@ -599,8 +599,7 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     if(get_bits(gb, 2))
         return -1;
     si->vlc_set = get_bits(gb, 2);
-    if(get_bits1(gb))
-        return -1;
+    get_bits1(gb);
     t = get_bits(gb, 13); /// ???
     if(!si->type || !get_bits1(gb))
         rv40_parse_picture_size(gb, &w, &h);
@@ -1712,8 +1711,6 @@ static int rv30_decode_slice(RV40DecContext *r, int size, int end, int *last)
         av_log(s->avctx, AV_LOG_ERROR, "Slice headers mismatch\n");
     }
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
-        if(r->si.width) s->avctx->coded_width  = r->si.width;
-        if(r->si.height)s->avctx->coded_height = r->si.height;
         s->pict_type = r->si.type ? r->si.type : I_TYPE;
         if(MPV_frame_start(s, s->avctx) < 0)
             return -1;
@@ -1809,9 +1806,19 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
     if(!r->truncated && r->prev_si.type != -1 && (r->si.type != r->prev_si.type || r->si.start <= r->prev_si.start || r->si.width != r->prev_si.width || r->si.height != r->prev_si.height)){
         av_log(s->avctx, AV_LOG_ERROR, "Slice headers mismatch\n");
     }
+    if(!avcodec_check_dimensions(s->avctx, r->si.width, r->si.height)){
+        mb_w = (r->si.width  + 15) >> 4;
+        mb_h = (r->si.height + 15) >> 4;
+    }
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
-        if(r->si.width) s->avctx->coded_width  = r->si.width;
-        if(r->si.height)s->avctx->coded_height = r->si.height;
+        if(s->width != r->si.width || s->height != r->si.height /*&& avcodec_check_dimensions(s->avctx, r->si.width, r->si.height) >= 0 */){
+            av_log(s->avctx, AV_LOG_DEBUG, "Changing dimensions to %dx%d\n", r->si.width,r->si.height);
+            MPV_common_end(s);
+            s->width  = r->si.width;
+            s->height = r->si.height;
+            if(MPV_common_init(s) < 0)
+                return -1;
+        }
         s->pict_type = r->si.type ? r->si.type : I_TYPE;
         if(MPV_frame_start(s, s->avctx) < 0)
             return -1;
