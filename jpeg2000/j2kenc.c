@@ -41,6 +41,18 @@ static int lut_nmsedec_ref [1<<NMSEDEC_BITS],
            lut_nmsedec_sig [1<<NMSEDEC_BITS],
            lut_nmsedec_sig0[1<<NMSEDEC_BITS];
 
+static const int dwt_norms[2][4][10] = { // [dwt_type][band][rlevel] (multiplied by 10000)
+    {{10000, 19650, 41770,  84030, 169000, 338400,  676900, 1353000, 2706000, 5409000},
+     {20220, 39890, 83550, 170400, 342700, 686300, 1373000, 2746000, 5490000},
+     {20220, 39890, 83550, 170400, 342700, 686300, 1373000, 2746000, 5490000},
+     {20800, 38650, 83070, 171800, 347100, 695900, 1393000, 2786000, 5572000}},
+
+    {{10000, 15000, 27500, 53750, 106800, 213400, 426700, 853300, 1707000, 3413000},
+     {10380, 15920, 29190, 57030, 113300, 226400, 452500, 904800, 1809000},
+     {10380, 15920, 29190, 57030, 113300, 226400, 452500, 904800, 1809000},
+     { 7186,  9218, 15860, 30430,  60190, 120100, 240000, 479700,  959300}}
+};
+
 typedef struct {
    J2kComponent *comp;
 } J2kTile;
@@ -279,24 +291,33 @@ static int put_cod(J2kEncoderContext *s)
     bytestream_put_byte(&s->buf, codsty->log2_cblk_width-2); // cblk width
     bytestream_put_byte(&s->buf, codsty->log2_cblk_height-2); // cblk height
     bytestream_put_byte(&s->buf, 0); // cblk style
-    bytestream_put_byte(&s->buf, 1); // transformation
+    bytestream_put_byte(&s->buf, codsty->transform); // transformation
     return 0;
 }
 
 static int put_qcd(J2kEncoderContext *s, int compno)
 {
-    int i;
+    int i, size;
     J2kCodingStyle *codsty = &s->codsty;
     J2kQuantStyle  *qntsty = &s->qntsty;
 
-    if (s->buf_end - s->buf < 6 + 3*(codsty->nreslevels - 1))
+    if (qntsty->quantsty == J2K_QSTY_NONE)
+        size = 4 + 3 * (codsty->nreslevels-1);
+    else // QSTY_SE
+        size = 5 + 6 * (codsty->nreslevels-1);
+
+    if (s->buf_end - s->buf < size + 2)
         return -1;
 
     bytestream_put_be16(&s->buf, J2K_QCD);
-    bytestream_put_be16(&s->buf, 4+3*(codsty->nreslevels-1));  // LQcd
-    bytestream_put_byte(&s->buf, qntsty->nguardbits << 5);  // Sqcd
-    for (i = 0; i < codsty->nreslevels * 3 - 2; i++)
-        bytestream_put_byte(&s->buf, qntsty->expn[i] << 3);
+    bytestream_put_be16(&s->buf, size);  // LQcd
+    bytestream_put_byte(&s->buf, (qntsty->nguardbits << 5) | qntsty->quantsty);  // Sqcd
+    if (qntsty->quantsty == J2K_QSTY_NONE)
+        for (i = 0; i < codsty->nreslevels * 3 - 2; i++)
+            bytestream_put_byte(&s->buf, qntsty->expn[i] << 3);
+    else // QSTY_SE
+        for (i = 0; i < codsty->nreslevels * 3 - 2; i++)
+            bytestream_put_be16(&s->buf, (qntsty->expn[i] << 11) | qntsty->mant[i]);
     return 0;
 }
 
@@ -410,13 +431,22 @@ static void init_quantization(J2kEncoderContext *s)
     for (compno = 0; compno < s->ncomponents; compno++){
         int gbandno = 0;
         for (reslevelno = 0; reslevelno < codsty->nreslevels; reslevelno++){
-            int nbands;
+            int nbands, lev = codsty->nreslevels - reslevelno - 1;
             nbands = reslevelno ? 3 : 1;
             for (bandno = 0; bandno < nbands; bandno++, gbandno++){
-                int expn;
+                int expn, mant;
 
-                expn = ((bandno&2)>>1) + (reslevelno>0) + s->cbps[compno];
+                if (codsty->transform == FF_DWT97){
+                    int bandpos = bandno + (reslevelno>0),
+                        ss = 81920000 / dwt_norms[0][bandpos][lev],
+                        log = av_log2(ss);
+                    mant = (11 - log < 0 ? ss >> log - 11 : ss << 11 - log) & 0x7ff;
+                    expn = s->cbps[compno] - log + 13;
+                } else
+                    expn = ((bandno&2)>>1) + (reslevelno>0) + s->cbps[compno];
+
                 qntsty->expn[gbandno] = expn;
+                qntsty->mant[gbandno] = mant;
             }
         }
     }
@@ -757,11 +787,6 @@ static int getcut(J2kCblk *cblk, int64_t lambda, int dwt_norm)
 
 static void truncpasses(J2kEncoderContext *s, J2kTile *tile)
 {
-    static const int dwt_norms[4][10] = { // multiplied by 10000
-        {10000, 15000, 27500, 53750, 106800, 213400, 426700, 853300, 1707000, 3413000},
-        {10380, 15920, 29190, 57030, 113300, 226400, 452500, 904800, 1809000},
-        {10380, 15920, 29190, 57030, 113300, 226400, 452500, 904800, 1809000},
-        { 7186,  9218, 15860, 30430,  60190, 120100, 240000, 479700,  959300}};
     int compno, reslevelno, bandno, cblkno, lev;
     J2kCodingStyle *codsty = &s->codsty;
 
@@ -778,7 +803,8 @@ static void truncpasses(J2kEncoderContext *s, J2kTile *tile)
                 for (cblkno = 0; cblkno < band->cblknx * band->cblkny; cblkno++){
                     J2kCblk *cblk = band->cblk + cblkno;
 
-                    cblk->ninclpasses = getcut(cblk, s->lambda, dwt_norms[bandpos][lev]);
+                    cblk->ninclpasses = getcut(cblk, s->lambda,
+                            (int64_t)dwt_norms[codsty->transform][bandpos][lev] * (int64_t)band->stepsize >> 13);
                 }
             }
         }
@@ -825,10 +851,21 @@ static int encode_tile(J2kEncoderContext *s, J2kTile *tile, int tileno)
 
                     for (cblkx = 0; cblkx < band->cblknx; cblkx++, cblkno++){
                         int y, x;
-                        for (y = yy0; y < yy1; y++){
-                            int *ptr = t1.data[y-yy0];
-                            for (x = xx0; x < xx1; x++)
-                                *ptr++ = comp->data[(comp->coord[0][1] - comp->coord[0][0]) * y + x] << NMSEDEC_FRACBITS;
+                        if (codsty->transform == FF_DWT53){
+                            for (y = yy0; y < yy1; y++){
+                                int *ptr = t1.data[y-yy0];
+                                for (x = xx0; x < xx1; x++){
+                                    *ptr++ = comp->data[(comp->coord[0][1] - comp->coord[0][0]) * y + x] << NMSEDEC_FRACBITS;
+                                }
+                            }
+                        } else{
+                            for (y = yy0; y < yy1; y++){
+                                int *ptr = t1.data[y-yy0];
+                                for (x = xx0; x < xx1; x++){
+                                    *ptr = (comp->data[(comp->coord[0][1] - comp->coord[0][0]) * y + x]);
+                                    *ptr++ = (int64_t)*ptr * (int64_t)(8192 * 8192 / band->stepsize) >> 13 - NMSEDEC_FRACBITS;
+                                }
+                            }
                         }
                         encode_cblk(s, &t1, band->cblk + cblkno, tile, xx1 - xx0, yy1 - yy0,
                                     bandpos, codsty->nreslevels - reslevelno - 1);
@@ -891,7 +928,6 @@ static int encode_frame(AVCodecContext *avctx,
 
     s->lambda = s->picture->quality * LAMBDA_SCALE;
 
-    init_quantization(s);
     copy_frame(s);
     reinit(s);
 
@@ -944,10 +980,14 @@ static int j2kenc_init(AVCodecContext *avctx)
     codsty->transform        = 1;
 
     qntsty->nguardbits       = 1;
-    qntsty->quantsty         = J2K_QSTY_NONE;
 
     s->tile_width            = 256;
     s->tile_height           = 256;
+
+    if (codsty->transform == FF_DWT53)
+        qntsty->quantsty = J2K_QSTY_NONE;
+    else
+        qntsty->quantsty = J2K_QSTY_SE;
 
     s->width = avctx->width;
     s->height = avctx->height;
@@ -970,6 +1010,7 @@ static int j2kenc_init(AVCodecContext *avctx)
 
     init_luts();
 
+    init_quantization(s);
     if (ret=init_tiles(s))
         return ret;
 

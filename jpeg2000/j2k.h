@@ -132,7 +132,7 @@ typedef struct {
     uint8_t lblock;
     uint8_t zero;
     uint8_t data[8192];
-    J2kPass passes[30];
+    J2kPass passes[100];
 } J2kCblk; ///< code block
 
 typedef struct {
