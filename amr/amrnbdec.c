@@ -661,6 +661,7 @@ static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index, int *pitc
 
 static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac) {
     AMRContext *p = avctx->priv_data;
+    int temp;
 
     // FIXME - find out where these constants come from and add appropriate comments
     // such that people reading the code can understand why these particular values
@@ -686,8 +687,9 @@ static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitc
             p->search_range_min = p->search_range_max - 9;
         }
         // calculate the pitch lag
-        *pitch_lag_int = (pitch_index + 5) + p->search_range_min - 1;
-        *pitch_lag_frac = -2;
+        temp = (pitch_index + 5)/6 - 1;
+        *pitch_lag_int = temp + p->search_range_min;
+        *pitch_lag_frac = (pitch_index - 3) - temp*6;
     }
 }
 
