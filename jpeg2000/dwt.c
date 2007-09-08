@@ -160,9 +160,9 @@ static void dwt_encode97(DWTContext *s, int *t)
 
             // copy back and deinterleave
             for (i =   mh; i < lh; i+=2, j++)
-                t[w*lp + j] = scale97[mh] * l[i];
+                t[w*lp + j] = scale97[mh] * l[i] / 2;
             for (i = 1-mh; i < lh; i+=2, j++)
-                t[w*lp + j] = scale97[mh] * l[i];
+                t[w*lp + j] = scale97[mh] * l[i] / 2;
         }
 
         // VER_SD
@@ -177,9 +177,9 @@ static void dwt_encode97(DWTContext *s, int *t)
 
             // copy back and deinterleave
             for (i =   mv; i < lv; i+=2, j++)
-                t[w*j + lp] = scale97[mv] * l[i];
+                t[w*j + lp] = scale97[mv] * l[i] / 2;
             for (i = 1-mv; i < lv; i+=2, j++)
-                t[w*j + lp] = scale97[mv] * l[i];
+                t[w*j + lp] = scale97[mv] * l[i] / 2;
         }
     }
 }
