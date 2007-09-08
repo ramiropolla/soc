@@ -668,7 +668,7 @@ static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitc
     // are used
 
     // subframe 1 or 3
-    if((p->cur_subframe == 1) || (p->cur_subframe == 3)) {
+    if(p->cur_subframe & 1) {
         if(pitch_index < 463){
             *pitch_lag_int = (pitch_index + 5)/6 + 17;
             *pitch_lag_frac = pitch_index - *pitch_lag_int*6 + 105;
