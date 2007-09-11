@@ -24,14 +24,6 @@
 #include "ac3dec.h"
 #include "ac3.h"
 
-#ifdef DEBUG
-#define GET_BITS(a, gbc, n) {a = get_bits(gbc, n); av_log(NULL, AV_LOG_INFO, "%s: %i\n", __STRING(a), a);}
-#define GET_SBITS(a, gbc, n) {a = get_sbits(gbc, n); av_log(NULL, AV_LOG_INFO, "%s: %i\n", __STRING(a), a);}
-#else
-#define GET_BITS(a, gbc, n) a = get_bits(gbc, n)
-#define GET_SBITS(a, gbc, n) a = get_sbits(gbc, n)
-#endif //DEBUG
-
 static void spectral_extension(EAC3Context *s);
 static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch);
 static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk);
@@ -70,26 +62,26 @@ static const float mixlevels[9] = {
 static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     int i, blk;
 
-    GET_BITS(s->strmtyp, gbc, 2);
+    s->strmtyp = get_bits(gbc, 2);
     if(s->strmtyp){
         log_missing_feature(s->avctx, "Dependent substream");
         return -1;
     }
-    GET_BITS(s->substreamid, gbc, 3);
-    GET_BITS(s->frmsiz, gbc, 11);
-    GET_BITS(s->fscod, gbc, 2);
+    s->substreamid = get_bits(gbc, 3);
+    s->frmsiz = get_bits(gbc, 11);
+    s->fscod = get_bits(gbc, 2);
     if(s->fscod == 0x3){
         log_missing_feature(s->avctx, "Reduced Sampling Rates");
         return -1;
 #if 0
-        GET_BITS(s->fscod2, gbc, 2);
+        s->fscod2 = get_bits(gbc, 2);
         s->numblkscod = 0x3; /* six blocks per frame */
 #endif
     }else{
-        GET_BITS(s->numblkscod, gbc, 2);
+        s->numblkscod = get_bits(gbc, 2);
     }
-    GET_BITS(s->acmod, gbc, 3);
-    GET_BITS(s->lfeon, gbc, 1);
+    s->acmod = get_bits(gbc, 3);
+    s->lfeon = get_bits1(gbc);
 
     // calculate number of channels
     s->nfchans = ff_ac3_channels[s->acmod];
@@ -103,7 +95,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         s->ntchans++;
     }
 
-    GET_BITS(s->bsid, gbc, 5);
+    s->bsid = get_bits(gbc, 5);
     if(s->bsid < 11 || s->bsid > 16){
         av_log(s->avctx, AV_LOG_ERROR, "bsid should be between 11 and 16\n");
         return -1;
@@ -118,7 +110,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     if(s->strmtyp == 0x1){
         /* if dependent stream */
         if(get_bits1(gbc)){
-            GET_BITS(s->chanmap, gbc, 16);
+            s->chanmap = get_bits(gbc, 16);
         }else{
             //TODO default channel map based on acmod and lfeon
         }
@@ -131,12 +123,12 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         s->downmix_coeffs[i][1] = mixlevels[eac3_default_coeffs[s->acmod][i][1]];
     }
 
-    GET_BITS(s->mixmdate, gbc, 1);
+    s->mixmdate = get_bits1(gbc);
     if(s->mixmdate){
         /* Mixing metadata */
         if(s->acmod > 0x2){
             /* if more than 2 channels */
-            GET_BITS(s->dmixmod, gbc, 2);
+            s->dmixmod = get_bits(gbc, 2);
         }
         if((s->acmod & 0x1) && (s->acmod > 0x2)){
             /* if three front channels exist */
@@ -159,24 +151,24 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         }
         if(s->lfeon){
             /* if the LFE channel exists */
-            GET_BITS(s->lfemixlevcode, gbc, 1);
+            s->lfemixlevcode = get_bits1(gbc);
             if(s->lfemixlevcode){
-                GET_BITS(s->lfemixlevcod, gbc, 5);
+                s->lfemixlevcod = get_bits(gbc, 5);
             }
         }
         if(s->strmtyp == 0){
             /* if independent stream */
             for(i = 0; i < (s->acmod?1:2); i++){
                 if(get_bits1(gbc)){
-                    GET_BITS(s->pgmscl[i], gbc, 6);
+                    s->pgmscl[i] = get_bits(gbc, 6);
                 }else{
                     //TODO program scale factor = 0dB
                 }
             }
             if(get_bits1(gbc)){
-                GET_BITS(s->extpgmscl, gbc, 6);
+                s->extpgmscl = get_bits(gbc, 6);
             }
-            GET_BITS(s->mixdef, gbc, 2);
+            s->mixdef = get_bits(gbc, 2);
             if(s->mixdef == 0x1){
                 /* mixing option 2 */
                 skip_bits(gbc, 5);
@@ -185,35 +177,35 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 skip_bits(gbc, 12);
             }else if(s->mixdef == 0x3){
                 /* mixing option 4 */
-                GET_BITS(s->mixdeflen, gbc, 5);
+                s->mixdeflen = get_bits(gbc, 5);
                 skip_bits(gbc, 8*(s->mixdeflen+2));
             }
             if(s->acmod < 0x2){
                 /* if mono or dual mono source */
                 for(i = 0; i < (s->acmod?1:2); i++){
                     if(get_bits1(gbc)){
-                        GET_BITS(s->paninfo[i], gbc, 14);
+                        s->paninfo[i] = get_bits(gbc, 14);
                     }else{
                         //TODO default = center
                     }
                 }
             }
-            GET_BITS(s->frmmixcfginfoe, gbc, 1);
+            s->frmmixcfginfoe = get_bits1(gbc);
             if(s->frmmixcfginfoe){
                 /* mixing configuration information */
                 if(s->numblkscod == 0x0){
-                    GET_BITS(s->blkmixcfginfo[0], gbc, 5);
+                    s->blkmixcfginfo[0] = get_bits(gbc, 5);
                 }else{
                     for(blk = 0; blk < ff_eac3_blocks[s->numblkscod]; blk++){
                         if(get_bits1(gbc)){
-                            GET_BITS(s->blkmixcfginfo[blk], gbc, 5);
+                            s->blkmixcfginfo[blk] = get_bits(gbc, 5);
                         }
                     }
                 }
             }
         }
     }
-    GET_BITS(s->infomdate, gbc, 1);
+    s->infomdate = get_bits1(gbc);
     if(s->infomdate){
         /* Informational metadata */
         skip_bits(gbc, 3); //skip Bit stream mode
@@ -262,21 +254,21 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     if(s->numblkscod == 0x3){
         /* six blocks per frame */
         /* LUT-based exponent strategy syntax */
-        GET_BITS(s->expstre, gbc, 1);
-        GET_BITS(s->ahte, gbc, 1);
+        s->expstre = get_bits1(gbc);
+        s->ahte = get_bits1(gbc);
     }else{
         /* AC-3 style exponent strategy syntax */
         s->expstre = 1;
         s->ahte = 0;
     }
-    GET_BITS(s->snroffststr, gbc, 2);
-    GET_BITS(s->transproce, gbc, 1);
-    GET_BITS(s->blkswe, gbc, 1);
+    s->snroffststr = get_bits(gbc, 2);
+    s->transproce = get_bits1(gbc);
+    s->blkswe = get_bits1(gbc);
     if(!s->blkswe){
         for(ch = 1; ch <= s->nfchans; ch++)
             s->blksw[ch] = 0;
     }
-    GET_BITS(s->dithflage, gbc, 1);
+    s->dithflage = get_bits1(gbc);
     if(!s->dithflage){
         for(ch = 1; ch <= s->nfchans; ch++)
             s->dithflag[ch] = 1; /* dither on */
@@ -284,21 +276,21 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     s->dithflag[CPL_CH] = s->dithflag[s->lfe_channel] = 0;
 
     /* frame-based syntax flags */
-    GET_BITS(s->bamode, gbc, 1);
-    GET_BITS(s->frmfgaincode, gbc, 1);
-    GET_BITS(s->dbaflde, gbc, 1);
-    GET_BITS(s->skipflde, gbc, 1);
-    GET_BITS(s->spxattene, gbc, 1);
+    s->bamode = get_bits1(gbc);
+    s->frmfgaincode = get_bits1(gbc);
+    s->dbaflde = get_bits1(gbc);
+    s->skipflde = get_bits1(gbc);
+    s->spxattene = get_bits1(gbc);
     /* Coupling data */
     if(s->acmod > 0x1){
         s->cplstre[0] = 1;
-        GET_BITS(s->cplinu[0], gbc, 1);
+        s->cplinu[0] = get_bits1(gbc);
         s->ncplblks = s->cplinu[0];
         for(blk = 1; blk < ff_eac3_blocks[s->numblkscod]; blk++){
-            GET_BITS(s->cplstre[blk], gbc, 1);
+            s->cplstre[blk] = get_bits1(gbc);
 
             if(s->cplstre[blk]){
-                GET_BITS(s->cplinu[blk], gbc, 1);
+                s->cplinu[blk] = get_bits1(gbc);
             }else{
                 s->cplinu[blk] = s->cplinu[blk-1];
             }
@@ -314,7 +306,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         /* AC-3 style exponent strategy syntax */
         for(blk = 0; blk < ff_eac3_blocks[s->numblkscod]; blk++){
             for(ch = !s->cplinu[blk]; ch <= s->nfchans; ch++){
-                GET_BITS(s->chexpstr[blk][ch], gbc, 2);
+                s->chexpstr[blk][ch] = get_bits(gbc, 2);
             }
         }
     }else{
@@ -322,7 +314,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         int frmchexpstr;
         /* cplexpstr[blk] and chexpstr[blk][ch] derived from table lookups. see Table E2.14 */
         for(ch = !((s->acmod > 0x1) && (s->ncplblks > 0)); ch <= s->nfchans; ch++){
-            GET_BITS(frmchexpstr, gbc, 5);
+            frmchexpstr = get_bits(gbc, 5);
             for(blk=0; blk<6; blk++){
                 s->chexpstr[blk][ch] = ff_eac3_frm_expstr[frmchexpstr][blk];
             }
@@ -331,7 +323,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     /* LFE exponent strategy */
     if(s->lfeon){
         for(blk = 0; blk < ff_eac3_blocks[s->numblkscod]; blk++){
-            GET_BITS(s->chexpstr[blk][s->lfe_channel], gbc, 1);
+            s->chexpstr[blk][s->lfe_channel] = get_bits1(gbc);
         }
     }
     /* Converter exponent strategy data */
@@ -372,10 +364,10 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         return -1;
 #if 0
         for(ch = 1; ch <= s->nfchans; ch++){
-            GET_BITS(s->chintransproc[ch], gbc, 1);
+            s->chintransproc[ch] = get_bits1(gbc);
             if(s->chintransproc[ch]){
-                GET_BITS(s->transprocloc[ch], gbc, 10);
-                GET_BITS(s->transproclen[ch], gbc, 8);
+                s->transprocloc[ch] = get_bits(gbc, 10);
+                s->transproclen[ch] = get_bits(gbc, 8);
             }
         }
 #endif
@@ -383,9 +375,9 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     /* Spectral extension attenuation data */
     if(s->spxattene){
         for(ch = 1; ch <= s->nfchans; ch++){
-            GET_BITS(s->chinspxatten[ch], gbc, 1);
+            s->chinspxatten[ch] = get_bits1(gbc);
             if(s->chinspxatten[ch]){
-                GET_BITS(s->spxattencod[ch], gbc, 5);
+                s->spxattencod[ch] = get_bits(gbc, 5);
             }
         }
     }else{
@@ -394,7 +386,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
     /* Block start information */
     if (s->numblkscod != 0x0){
-        GET_BITS(s->blkstrtinfoe, gbc, 1);
+        s->blkstrtinfoe = get_bits1(gbc);
     }else{
         s->blkstrtinfoe = 0;
     }
@@ -405,7 +397,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         // words_per_frame = frmsiz + 1
         int nblkstrtbits = (ff_eac3_blocks[s->numblkscod]-1) * (4 + (av_log2(s->frmsiz-1)+1) );
         av_log(s->avctx, AV_LOG_INFO, "nblkstrtbits = %i\n", nblkstrtbits);
-        GET_BITS(s->blkstrtinfo, gbc, nblkstrtbits);
+        s->blkstrtinfo = get_bits(gbc, nblkstrtbits);
     }
     /* Syntax state initialization */
     for(ch = 1; ch <= s->nfchans; ch++){
@@ -428,12 +420,12 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* Block switch and dither flags */
     if(s->blkswe){
         for(ch = 1; ch <= s->nfchans; ch++){
-            GET_BITS(s->blksw[ch], gbc, 1);
+            s->blksw[ch] = get_bits1(gbc);
         }
     }
     if(s->dithflage){
         for(ch = 1; ch <= s->nfchans; ch++){
-            GET_BITS(s->dithflag[ch], gbc, 1);
+            s->dithflag[ch] = get_bits1(gbc);
         }
     }
 
@@ -449,7 +441,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     }
     /* Spectral extension strategy information */
     if((!blk) || get_bits1(gbc)){
-        GET_BITS(s->spxinu, gbc, 1);
+        s->spxinu = get_bits1(gbc);
         if(s->spxinu){
             log_missing_feature(s->avctx, "Spectral extension");
             return -1;
@@ -458,7 +450,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 s->chinspx[1] = 1;
             }else{
                 for(ch = 1; ch <= s->nfchans; ch++){
-                    GET_BITS(s->chinspx[ch], gbc, 1);
+                    s->chinspx[ch] = get_bits1(gbc);
                 }
             }
 #if 0
@@ -471,9 +463,9 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     av_log(s->avctx, AV_LOG_INFO, "No channels in spectral extension\n");
             }
 #endif
-            GET_BITS(s->spxstrtf, gbc, 2);
-            GET_BITS(s->spxbegf, gbc, 3);
-            GET_BITS(s->spxendf, gbc, 3);
+            s->spxstrtf = get_bits(gbc, 2);
+            s->spxbegf = get_bits(gbc, 3);
+            s->spxendf = get_bits(gbc, 3);
             if(s->spxbegf < 6){
                 s->spxbegf += 2;
             }else{
@@ -490,7 +482,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }
             if(get_bits1(gbc)){
                 for(bnd = s->spxbegf+1; bnd < s->spxendf; bnd++){
-                    GET_BITS(s->spxbndstrc[bnd], gbc, 1);
+                    s->spxbndstrc[bnd] = get_bits1(gbc);
                 }
             }else if(!blk){
                 for(bnd = 0; bnd < 17; bnd++)
@@ -526,7 +518,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     s->firstspxcos[ch] = 0;
                 }else{
                     /* !firstspxcos[ch] */
-                    GET_BITS(s->spxcoe[ch], gbc, 1);
+                    s->spxcoe[ch] = get_bits1(gbc);
                 }
                 if(!blk && !s->spxcoe[ch]){
                     av_log(s->avctx, AV_LOG_ERROR, "no spectral extension coordinates in first block\n");
@@ -535,13 +527,13 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
                 if(s->spxcoe[ch]){
                     int spxcoexp, spxcomant, mstrspxco;
-                    GET_BITS(s->spxblnd[ch], gbc, 5);
-                    GET_BITS(mstrspxco, gbc, 2);
+                    s->spxblnd[ch] = get_bits(gbc, 5);
+                    mstrspxco = get_bits(gbc, 2);
                     mstrspxco*=3;
                     /* nspxbnds determined from spxbegf, spxendf, and spxbndstrc[ ] */
                     for(bnd = 0; bnd < s->nspxbnds; bnd++){
-                        GET_BITS(spxcoexp, gbc, 4);
-                        GET_BITS(spxcomant, gbc, 2);
+                        spxcoexp = get_bits(gbc, 4);
+                        spxcomant = get_bits(gbc, 2);
                         if(spxcoexp==15)
                             s->spxco[ch][bnd] = spxcomant / 4.0f;
                         else
@@ -558,24 +550,24 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* Coupling strategy and enhanced coupling strategy information */
     if(s->cplstre[blk]){
         if (s->cplinu[blk]){
-            GET_BITS(s->ecplinu, gbc, 1);
+            s->ecplinu = get_bits1(gbc);
             if (s->acmod == AC3_ACMOD_STEREO){
                 s->chincpl[1] = 1;
                 s->chincpl[2] = 1;
             }else{
                 for(ch = 1; ch <= s->nfchans; ch++){
-                    GET_BITS(s->chincpl[ch], gbc, 1);
+                    s->chincpl[ch] = get_bits1(gbc);
                 }
             }
             if (!s->ecplinu){
                 /* standard coupling in use */
                 if(s->acmod == AC3_ACMOD_STEREO) /* if in 2/0 mode */ {
-                    GET_BITS(s->phsflginu, gbc, 1);
+                    s->phsflginu = get_bits1(gbc);
                 }
-                GET_BITS(s->cplbegf, gbc, 4);
+                s->cplbegf = get_bits(gbc, 4);
                 if (!s->spxinu){
                     /* if SPX not in use */
-                    GET_BITS(s->cplendf, gbc, 4);
+                    s->cplendf = get_bits(gbc, 4);
                     s->cplendf += 3;
                 }else{
                     /* SPX in use */
@@ -594,7 +586,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 }
                 if(get_bits1(gbc)){
                     for(bnd = s->cplbegf+1; bnd < s->cplendf; bnd++){
-                        GET_BITS(s->cplbndstrc[bnd], gbc, 1);
+                        s->cplbndstrc[bnd] = get_bits1(gbc);
                     }
                 }else if(!blk){
                     for(bnd = 0; bnd < 18; bnd++)
@@ -610,7 +602,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 log_missing_feature(s->avctx, "Enhanced coupling");
                 return -1;
 #if 0
-                GET_BITS(s->ecplbegf, gbc, 4);
+                s->ecplbegf = get_bits(gbc, 4);
                 if(s->ecplbegf < 3){
                     s->ecpl_start_subbnd = s->ecplbegf * 2;
                 }else if(s->ecplbegf < 13){
@@ -620,7 +612,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 }
                 if (!s->spxinu){
                     /* if SPX not in use */
-                    GET_BITS(s->ecplendf, gbc, 4);
+                    s->ecplendf = get_bits(gbc, 4);
                     s->ecpl_end_subbnd = s->ecplendf + 7;
                 }else{
                     /* SPX in use */
@@ -633,7 +625,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 if (get_bits1(gbc)){
                     for(sbnd = FFMAX(9, s->ecpl_start_subbnd+1);
                             sbnd < s->ecpl_end_subbnd; sbnd++){
-                        GET_BITS(s->ecplbndstrc[sbnd], gbc, 1);
+                        s->ecplbndstrc[sbnd] = get_bits1(gbc);
                     }
                 }else{
                     if(!blk){
@@ -671,16 +663,16 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                         s->firstcplcos[ch] = 0;
                     }else{
                         /* !firstcplcos[ch] */
-                        GET_BITS(s->cplcoe[ch], gbc, 1);
+                        s->cplcoe[ch] = get_bits1(gbc);
                     }
                     if(s->cplcoe[ch]){
                         int cplcoexp, cplcomant, mstrcplco;
-                        GET_BITS(mstrcplco, gbc, 2);
+                        mstrcplco = get_bits(gbc, 2);
                         mstrcplco = 3 * mstrcplco;
                         /* ncplbnd derived from cplbegf, cplendf, and cplbndstrc */
                         for(bnd = 0; bnd < s->ncplbnd; bnd++){
-                            GET_BITS(cplcoexp, gbc, 4);
-                            GET_BITS(cplcomant, gbc, 4);
+                            cplcoexp = get_bits(gbc, 4);
+                            cplcomant = get_bits(gbc, 4);
                             if(cplcoexp==15)
                                 s->cplco[ch][bnd] = cplcomant / 16.0f;
                             else
@@ -701,7 +693,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             } /* ch */
             if((s->acmod == AC3_ACMOD_STEREO) && s->phsflginu && (s->cplcoe[1] || s->cplcoe[2])){
                 for(bnd = 0; bnd < s->ncplbnd; bnd++){
-                    GET_BITS(s->phsflg[bnd], gbc, 1);
+                    s->phsflg[bnd] = get_bits1(gbc);
                 }
             }
             s->nchgrps[CPL_CH] = (s->endmant[CPL_CH] - s->strtmant[CPL_CH]) /
@@ -711,7 +703,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             //TODO calc nchgrps[CPL_CH]
 #if 0
             s->firstchincpl = -1;
-            GET_BITS(s->ecplangleintrp, gbc, 1);
+            s->ecplangleintrp = get_bits1(gbc);
             for(ch = 1; ch <= s->nfchans; ch++){
                 if(s->chincpl[ch]){
                     if(s->firstchincpl == -1){
@@ -727,9 +719,9 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                         s->firstcplcos[ch] = 0;
                     }else{
                         /* !firstcplcos[ch] */
-                        GET_BITS(s->ecplparam1e[ch], gbc, 1);
+                        s->ecplparam1e[ch] = get_bits1(gbc);
                         if(ch > s->firstchincpl){
-                            GET_BITS(s->ecplparam2e[ch], gbc, 1);
+                            s->ecplparam2e[ch] = get_bits1(gbc);
                         }else{
                             s->ecplparam2e[ch] = 0;
                         }
@@ -737,18 +729,18 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     if(s->ecplparam1e[ch]){
                         /* necplbnd derived from ecpl_start_subbnd, ecpl_end_subbnd, and ecplbndstrc */
                         for(bnd = 0; bnd < s->necplbnd; bnd++){
-                            GET_BITS(s->ecplamp[ch][bnd], gbc, 5);
+                            s->ecplamp[ch][bnd] = get_bits(gbc, 5);
                         }
                     }
                     if(s->ecplparam2e[ch]){
                         /* necplbnd derived from ecpl_start_subbnd, ecpl_end_subbnd, and ecplbndstrc */
                         for(bnd = 0; bnd < s->necplbnd; bnd++){
-                            GET_BITS(s->ecplangle[ch][bnd], gbc, 6);
-                            GET_BITS(s->ecplchaos[ch][bnd], gbc, 3);
+                            s->ecplangle[ch][bnd] = get_bits(gbc, 6);
+                            s->ecplchaos[ch][bnd] = get_bits(gbc, 3);
                         }
                     }
                     if(ch > s->firstchincpl){
-                        GET_BITS(s->ecpltrans[ch], gbc, 1);
+                        s->ecpltrans[ch] = get_bits1(gbc);
                     }
                 }else{
                     /* !chincpl[ch] */
@@ -766,7 +758,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             int end = (s->cplinu[blk] || s->spxinu) ?
                 FFMIN(s->endmant[1], s->endmant[2]) : (ff_ac3_rematrix_band_tbl[4]-1);
             for(bnd = 0; ff_ac3_rematrix_band_tbl[bnd] <= end; bnd++){
-                GET_BITS(s->rematflg[bnd], gbc, 1);
+                s->rematflg[bnd] = get_bits1(gbc);
             }
             s->nrematbnds = bnd;
         }
@@ -781,7 +773,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             grpsize = 3 << (s->chexpstr[blk][ch] - 1);
             s->strtmant[ch] = 0;
             if((!s->chincpl[ch]) && (!s->chinspx[ch])){
-                GET_BITS(chbwcod, gbc, 6);
+                chbwcod = get_bits(gbc, 6);
                 if(chbwcod > 60){
                     av_log(s->avctx, AV_LOG_ERROR, "chbwcod > 60\n");
                     return -1;
@@ -860,25 +852,25 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             s->firstcplleak = 0;
         }else{
             /* !firstcplleak */
-            GET_BITS(s->cplleake, gbc, 1);
+            s->cplleake = get_bits1(gbc);
         }
         if(s->cplleake){
-            GET_BITS(s->bit_alloc_params.cplfleak, gbc, 3);
-            GET_BITS(s->bit_alloc_params.cplsleak, gbc, 3);
+            s->bit_alloc_params.cplfleak = get_bits(gbc, 3);
+            s->bit_alloc_params.cplsleak = get_bits(gbc, 3);
         }
     }
     /* Delta bit allocation information */
     if(s->dbaflde && get_bits1(gbc)){
         for(ch = !s->cplinu[blk]; ch <= s->nfchans; ch++){
-            GET_BITS(s->deltbae[ch], gbc, 2);
+            s->deltbae[ch] = get_bits(gbc, 2);
         }
         for(ch = !s->cplinu[blk]; ch <= s->nfchans; ch++){
             if(s->deltbae[ch]==DBA_NEW){
-                GET_BITS(s->deltnseg[ch], gbc, 3);
+                s->deltnseg[ch] = get_bits(gbc, 3);
                 for(seg = 0; seg <= s->deltnseg[ch]; seg++){
-                    GET_BITS(s->deltoffst[ch][seg], gbc, 5);
-                    GET_BITS(s->deltlen[ch][seg], gbc, 4);
-                    GET_BITS(s->deltba[ch][seg], gbc, 3);
+                    s->deltoffst[ch][seg] = get_bits(gbc, 5);
+                    s->deltlen[ch][seg] = get_bits(gbc, 4);
+                    s->deltba[ch][seg] = get_bits(gbc, 3);
                 }
             }
         }
@@ -1073,7 +1065,7 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
     int bg, g, bits, pre_chmant, remap, chgaqsections, chgaqmod;
     float mant;
 
-    GET_BITS(chgaqmod, gbc, 2);
+    chgaqmod = get_bits(gbc, 2);
 
     endbap = chgaqmod<2?12:17;
 
@@ -1085,13 +1077,13 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
 
     if(chgaqmod == EAC3_GAQ_12 || chgaqmod == EAC3_GAQ_14){
         for(n = 0; n < chgaqsections; n++){
-            GET_BITS(s->chgaqgain[n], gbc, 1);
+            s->chgaqgain[n] = get_bits1(gbc);
         }
     }else if(chgaqmod == EAC3_GAQ_124){
         int grpgain;
         chgaqsections = (chgaqsections+2)/3;
         for(n = 0; n < chgaqsections; n++){
-            GET_BITS(grpgain, gbc, 5);
+            grpgain = get_bits(gbc, 5);
             s->chgaqgain[3*n]   = grpgain/9;
             s->chgaqgain[3*n+1] = (grpgain%9)/3;
             s->chgaqgain[3*n+2] = grpgain%3;
@@ -1115,10 +1107,10 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
 
             for(n = 0; n < 6; n++){
                 // pre_chmant[n][ch][bin]
-                GET_SBITS(pre_chmant, gbc, bits-bg);
+                pre_chmant = get_sbits(gbc, bits-bg);
                 if(bg && pre_chmant == -(1<<(bits-bg-1))){
                     // large mantissa
-                    GET_SBITS(pre_chmant, gbc, bits - ((bg==1)?1:0));
+                    pre_chmant = get_sbits(gbc, bits - ((bg==1)?1:0));
                     if(bg==1)
                         //Gk = 2
                         mant = (float)pre_chmant/((1<<(bits-1))-1);
@@ -1153,7 +1145,7 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
         }else{
             // hebap = 0 or VQ
             if(s->hebap[ch][bin]){
-                GET_BITS(pre_chmant, gbc, ff_bits_vs_hebap[s->hebap[ch][bin]]);
+                pre_chmant = get_bits(gbc, ff_bits_vs_hebap[s->hebap[ch][bin]]);
                 for(n = 0; n < 6; n++){
                     s->pre_chmant[n][ch][bin] =
                         ff_vq_hebap[s->hebap[ch][bin]][pre_chmant][n] / 32768.0f;
@@ -1264,7 +1256,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     c->gbc = &gbc;
     c->syncword = 0;
     init_get_bits(&gbc, buf, buf_size*8);
-    GET_BITS(c->syncword, &gbc, 16);
+    c->syncword = get_bits(&gbc, 16);
 
     if(c->syncword != 0x0B77)
         return -1;
