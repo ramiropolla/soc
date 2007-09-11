@@ -1125,7 +1125,7 @@ static const int16_t lsf_5_5[64][4] = {
 };
 
 // b60 FIR filter coefficients (based on Hamming windowed sinc function)
-static const int16_t inter6[61] = {
+static const int16_t b60[61] = {
 29443, 28346, 25207, 20449, 14701,  8693,  3143, -1352,
 -4402, -5865, -5850, -4673, -2783,  -672,  1211,  2536,
  3130,  2991,  2259,  1170,     0, -1001, -1652, -1868,

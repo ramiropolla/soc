@@ -725,8 +725,8 @@ static void decode_pitch_vector(AVCodecContext *avctx, int *excitation) {
         // reset temp
         temp = 0;
         for(j=0; j<10; j++) {
-            temp += excitation_temp[i-j  ] * inter6[ j   *6 + p->cur_pitch_lag_frac];
-            temp += excitation_temp[i+j+1] * inter6[(j+1)*6 - p->cur_pitch_lag_frac];
+            temp += excitation_temp[i-j  ] * b60[ j   *6 + p->cur_pitch_lag_frac];
+            temp += excitation_temp[i+j+1] * b60[(j+1)*6 - p->cur_pitch_lag_frac];
         }
         excitation[i] = (temp + 0x4000)>>15;
     }
