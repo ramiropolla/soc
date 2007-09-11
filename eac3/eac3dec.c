@@ -24,14 +24,6 @@
 #include "ac3dec.h"
 #include "ac3.h"
 
-static void spectral_extension(EAC3Context *s);
-static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch);
-static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk);
-static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
-        int ch, mant_groups *m);
-static void uncouple_channels(EAC3Context *s);
-static void log_missing_feature(AVCodecContext *avctx, const char *log);
-
 /**
  * Table for default stereo downmixing coefficients
  * reference: Section 7.8.2 Downmixing Into Two Channels
@@ -58,6 +50,280 @@ static const float mixlevels[9] = {
     LEVEL_ZERO,
     LEVEL_MINUS_9DB
 };
+
+static void log_missing_feature(AVCodecContext *avctx, const char *log){
+    av_log(avctx, AV_LOG_ERROR, "%s is not implemented. If you want to help, "
+            "update your FFmpeg version to the newest one from SVN. If the "
+            "problem still occurs, it means that your file has extension "
+            "which has not been tested due to a lack of samples exhibiting "
+            "this feature. Upload a sample of the audio from this file to "
+            "ftp://upload.mplayerhq.hu/incoming and contact the ffmpeg-devel "
+            "mailing list.\n", log);
+}
+
+static void uncouple_channels(EAC3Context *s){
+    int i, j, ch, bnd, subbnd;
+
+    subbnd = s->cplbegf+1;
+    i = s->strtmant[CPL_CH];
+    for(bnd=0; bnd<s->ncplbnd; bnd++){
+        do {
+            for(j=0; j<12; j++){
+                for(ch=1; ch<=s->nfchans; ch++){
+                    if(s->chincpl[ch]){
+                        s->transform_coeffs[ch][i] =
+                            s->transform_coeffs[CPL_CH][i] *
+                            s->cplco[ch][bnd] * 8.0f;
+                    }
+                }
+                i++;
+            }
+        } while(s->cplbndstrc[subbnd++] && subbnd<=s->cplendf);
+    }
+}
+
+static void spectral_extension(EAC3Context *s){
+    //Now turned off, because there are no samples for testing it.
+#if 0
+    int copystartmant, copyendmant, copyindex, insertindex;
+    int wrapflag[18];
+    int bandsize, bnd, bin, spxmant, filtbin, ch;
+    float nratio, accum, nscale, sscale, spxcotemp;
+    float noffset[AC3_MAX_CHANNELS], nblendfact[AC3_MAX_CHANNELS][18], sblendfact[AC3_MAX_CHANNELS][18];
+    float rmsenergy[AC3_MAX_CHANNELS][18];
+
+    //XXX spxbandtable[bnd] = 25 + 12 * bnd ?
+
+    copystartmant = spxbandtable[s->spxstrtf];
+    copyendmant = spxbandtable[s->spxbegf];
+
+    for(ch = 1; ch <= s->nfchans; ch++){
+        if(!s->chinspx[ch])
+            continue;
+
+        copyindex = copystartmant;
+        insertindex = copyendmant;
+
+        for (bnd = 0; bnd < s->nspxbnds; bnd++){
+            bandsize = s->spxbndsztab[bnd];
+            if ((copyindex + bandsize) > copyendmant){
+                copyindex = copystartmant;
+                wrapflag[bnd] = 1;
+            }else
+                wrapflag[bnd] = 0;
+            for (bin = 0; bin < bandsize; bin++){
+                if (copyindex == copyendmant)
+                    copyindex = copystartmant;
+                s->transform_coeffs[ch][insertindex++] = s->transform_coeffs[ch][copyindex++];
+            }
+        }
+
+        noffset[ch] = s->spxblnd[ch] / 32.0;
+        spxmant = spxbandtable[s->spxbegf];
+        if (s->spxcoe[ch]){
+            for (bnd = 0; bnd < s->nspxbnds; bnd++){
+                bandsize = s->spxbndsztab[bnd];
+                nratio = ((spxmant + 0.5*bandsize) / spxbandtable[s->spxendf]) - noffset[ch];
+                if (nratio < 0.0)
+                    nratio = 0.0;
+                else if (nratio > 1.0)
+                    nratio = 1.0;
+                nblendfact[ch][bnd] = sqrt(nratio);
+                sblendfact[ch][bnd] = sqrt(1 - nratio);
+                spxmant += bandsize;
+            }
+        }
+
+        spxmant = spxbandtable[s->spxbegf];
+        for (bnd = 0; bnd < s->nspxbnds; bnd++){
+            bandsize = s->spxbndsztab[bnd];
+            accum = 0;
+            for (bin = 0; bin < bandsize; bin++){
+                accum += (s->transform_coeffs[ch][spxmant] * s->transform_coeffs[ch][spxmant]);
+                spxmant++;
+            }
+            rmsenergy[ch][bnd] = sqrt(accum / bandsize);
+        }
+
+        if (s->chinspxatten[ch]){
+            /* apply notch filter at baseband / extension region border */
+            filtbin = spxbandtable[s->spxbegf] - 2;
+            for (bin = 0; bin < 3; bin++){
+                s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
+                filtbin++;
+            }
+            for (bin = 1; bin >= 0; bin--){
+                s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
+                filtbin++;
+            }
+            filtbin += s->spxbndsztab[0];
+            /* apply notch at all other wrap points */
+            for (bnd = 1; bnd < s->nspxbnds; bnd++){
+                if (wrapflag[bnd]){
+                    filtbin = filtbin - 5;
+                    for (bin = 0; bin < 3; bin++){
+                        s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
+                        filtbin++;
+                    }
+                    for (bin = 1; bin >= 0; bin--){
+                        s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
+                        filtbin++;
+                    }
+                }
+                filtbin += s->spxbndsztab[bnd];
+            }
+        }
+
+        spxmant = spxbandtable[s->spxbegf];
+        for (bnd = 0; bnd < s->nspxbnds; bnd++){
+            nscale = rmsenergy[ch][bnd] * nblendfact[ch][bnd];
+            sscale = sblendfact[ch][bnd];
+            for (bin = 0; bin < s->spxbndsztab[bnd]; bin++){
+                //TODO generate noise()
+                s->transform_coeffs[ch][spxmant] =
+                    s->transform_coeffs[ch][spxmant] * sscale + noise() * nscale;
+                spxmant++;
+            }
+        }
+
+        spxmant = spxbandtable[s->spxbegf];
+        for (bnd = 0; bnd < s->nspxbnds; bnd++){
+            spxcotemp = s->spxco[ch][bnd];
+            for (bin = 0; bin < s->spxbndsztab[bnd]; bin++){
+                s->transform_coeffs[ch][spxmant] *= spxcotemp * 32;
+                spxmant++;
+            }
+        }
+    }
+#endif
+}
+
+static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
+    int endbap, bin, n, m;
+    int bg, g, bits, pre_chmant, remap, chgaqsections, chgaqmod;
+    float mant;
+
+    chgaqmod = get_bits(gbc, 2);
+
+    endbap = chgaqmod<2?12:17;
+
+    chgaqsections = 0;
+    for(bin = 0; bin < s->endmant[ch]; bin++){
+        if(s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < endbap)
+            chgaqsections++;
+    }
+
+    if(chgaqmod == EAC3_GAQ_12 || chgaqmod == EAC3_GAQ_14){
+        for(n = 0; n < chgaqsections; n++){
+            s->chgaqgain[n] = get_bits1(gbc);
+        }
+    }else if(chgaqmod == EAC3_GAQ_124){
+        int grpgain;
+        chgaqsections = (chgaqsections+2)/3;
+        for(n = 0; n < chgaqsections; n++){
+            grpgain = get_bits(gbc, 5);
+            s->chgaqgain[3*n]   = grpgain/9;
+            s->chgaqgain[3*n+1] = (grpgain%9)/3;
+            s->chgaqgain[3*n+2] = grpgain%3;
+        }
+    }
+
+    m=0;
+    for(bin = s->strtmant[ch]; bin < s->endmant[ch]; bin++){
+        if(s->hebap[ch][bin]>7){
+            // GAQ (E3.3.4.2)
+            // XXX what about gaqmod = 0 ?
+            // difference between Gk=1 and gaqmod=0 ?
+            if(s->hebap[ch][bin] < endbap){
+                // hebap in active range
+                // Gk = 1<<bg
+                bg = ff_gaq_gk[chgaqmod][s->chgaqgain[m++]];
+            }else{
+                bg = 0;
+            }
+            bits = ff_bits_vs_hebap[s->hebap[ch][bin]];
+
+            for(n = 0; n < 6; n++){
+                // pre_chmant[n][ch][bin]
+                pre_chmant = get_sbits(gbc, bits-bg);
+                if(bg && pre_chmant == -(1<<(bits-bg-1))){
+                    // large mantissa
+                    pre_chmant = get_sbits(gbc, bits - ((bg==1)?1:0));
+                    if(bg==1)
+                        //Gk = 2
+                        mant = (float)pre_chmant/((1<<(bits-1))-1);
+                    else
+                        //Gk = 4
+                        mant = (float)pre_chmant*3.0f/((1<<(bits+1))-2);
+
+                    g = 0;
+                    remap = 1;
+                }else{
+                    // small mantissa
+                    if(bg)
+                        //Gk = 2 or 4
+                        mant = (float)pre_chmant/((1<<(bits-1))-1);
+                    else
+                        //Gk = 1
+                        mant = (float)pre_chmant*2.0f/((1<<bits)-1); ///XXX
+
+                    g = bg;
+                    remap = (!bg) && (s->hebap[ch][bin] < endbap);
+                }
+
+                //TODO when remap needed ?
+                if(remap){
+                    mant = (float)
+                        (ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][0]/32768.0f + 1.0f)
+                         * mant / (1<<g) +
+                         (ff_eac3_gaq_remap[s->hebap[ch][bin]-8][mant<0][g][1]) / 32768.0f;
+                }
+                s->pre_chmant[n][ch][bin] = mant;
+            }
+        }else{
+            // hebap = 0 or VQ
+            if(s->hebap[ch][bin]){
+                pre_chmant = get_bits(gbc, ff_bits_vs_hebap[s->hebap[ch][bin]]);
+                for(n = 0; n < 6; n++){
+                    s->pre_chmant[n][ch][bin] =
+                        ff_vq_hebap[s->hebap[ch][bin]][pre_chmant][n] / 32768.0f;
+                }
+            }else{
+                for(n = 0; n < 6; n++){
+                    s->pre_chmant[n][ch][bin] = 0;
+                }
+            }
+        }
+    }
+}
+
+static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
+    // TODO fast IDCT
+    int bin, i;
+    float tmp;
+    for(bin=s->strtmant[ch]; bin<s->endmant[ch]; bin++){
+        tmp = 0;
+        for(i=0; i<6; i++){
+            tmp += (i?sqrt(2):1) * s->pre_chmant[i][ch][bin] * cos(M_PI*i*(2*blk + 1)/12);
+        }
+        s->transform_coeffs[ch][bin] = tmp * ff_ac3_scale_factors[s->dexps[ch][bin]];
+    }
+}
+
+static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
+        int ch, mant_groups *m){
+    if(s->chahtinu[ch] == 0){
+        ff_ac3_get_transform_coeffs_ch(m, gbc, s->dexps[ch], s->bap[ch],
+                s->transform_coeffs[ch], s->strtmant[ch], s->endmant[ch],
+                &s->dith_state);
+    }else if(s->chahtinu[ch] == 1){
+        get_transform_coeffs_aht_ch(gbc, s, ch);
+        s->chahtinu[ch] = -1; /* AHT info for this frame has been read - do not read again */
+    }
+    if(s->chahtinu[ch] != 0){
+        idct_transform_coeffs_ch(s, ch, blk);
+    }
+}
 
 static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     int i, blk;
@@ -942,280 +1208,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         spectral_extension(s);
 
     return 0;
-}
-
-static void spectral_extension(EAC3Context *s){
-    //Now turned off, because there are no samples for testing it.
-#if 0
-    int copystartmant, copyendmant, copyindex, insertindex;
-    int wrapflag[18];
-    int bandsize, bnd, bin, spxmant, filtbin, ch;
-    float nratio, accum, nscale, sscale, spxcotemp;
-    float noffset[AC3_MAX_CHANNELS], nblendfact[AC3_MAX_CHANNELS][18], sblendfact[AC3_MAX_CHANNELS][18];
-    float rmsenergy[AC3_MAX_CHANNELS][18];
-
-    //XXX spxbandtable[bnd] = 25 + 12 * bnd ?
-
-    copystartmant = spxbandtable[s->spxstrtf];
-    copyendmant = spxbandtable[s->spxbegf];
-
-    for(ch = 1; ch <= s->nfchans; ch++){
-        if(!s->chinspx[ch])
-            continue;
-
-        copyindex = copystartmant;
-        insertindex = copyendmant;
-
-        for (bnd = 0; bnd < s->nspxbnds; bnd++){
-            bandsize = s->spxbndsztab[bnd];
-            if ((copyindex + bandsize) > copyendmant){
-                copyindex = copystartmant;
-                wrapflag[bnd] = 1;
-            }else
-                wrapflag[bnd] = 0;
-            for (bin = 0; bin < bandsize; bin++){
-                if (copyindex == copyendmant)
-                    copyindex = copystartmant;
-                s->transform_coeffs[ch][insertindex++] = s->transform_coeffs[ch][copyindex++];
-            }
-        }
-
-        noffset[ch] = s->spxblnd[ch] / 32.0;
-        spxmant = spxbandtable[s->spxbegf];
-        if (s->spxcoe[ch]){
-            for (bnd = 0; bnd < s->nspxbnds; bnd++){
-                bandsize = s->spxbndsztab[bnd];
-                nratio = ((spxmant + 0.5*bandsize) / spxbandtable[s->spxendf]) - noffset[ch];
-                if (nratio < 0.0)
-                    nratio = 0.0;
-                else if (nratio > 1.0)
-                    nratio = 1.0;
-                nblendfact[ch][bnd] = sqrt(nratio);
-                sblendfact[ch][bnd] = sqrt(1 - nratio);
-                spxmant += bandsize;
-            }
-        }
-
-        spxmant = spxbandtable[s->spxbegf];
-        for (bnd = 0; bnd < s->nspxbnds; bnd++){
-            bandsize = s->spxbndsztab[bnd];
-            accum = 0;
-            for (bin = 0; bin < bandsize; bin++){
-                accum += (s->transform_coeffs[ch][spxmant] * s->transform_coeffs[ch][spxmant]);
-                spxmant++;
-            }
-            rmsenergy[ch][bnd] = sqrt(accum / bandsize);
-        }
-
-        if (s->chinspxatten[ch]){
-            /* apply notch filter at baseband / extension region border */
-            filtbin = spxbandtable[s->spxbegf] - 2;
-            for (bin = 0; bin < 3; bin++){
-                s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
-                filtbin++;
-            }
-            for (bin = 1; bin >= 0; bin--){
-                s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
-                filtbin++;
-            }
-            filtbin += s->spxbndsztab[0];
-            /* apply notch at all other wrap points */
-            for (bnd = 1; bnd < s->nspxbnds; bnd++){
-                if (wrapflag[bnd]){
-                    filtbin = filtbin - 5;
-                    for (bin = 0; bin < 3; bin++){
-                        s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
-                        filtbin++;
-                    }
-                    for (bin = 1; bin >= 0; bin--){
-                        s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
-                        filtbin++;
-                    }
-                }
-                filtbin += s->spxbndsztab[bnd];
-            }
-        }
-
-        spxmant = spxbandtable[s->spxbegf];
-        for (bnd = 0; bnd < s->nspxbnds; bnd++){
-            nscale = rmsenergy[ch][bnd] * nblendfact[ch][bnd];
-            sscale = sblendfact[ch][bnd];
-            for (bin = 0; bin < s->spxbndsztab[bnd]; bin++){
-                //TODO generate noise()
-                s->transform_coeffs[ch][spxmant] =
-                    s->transform_coeffs[ch][spxmant] * sscale + noise() * nscale;
-                spxmant++;
-            }
-        }
-
-        spxmant = spxbandtable[s->spxbegf];
-        for (bnd = 0; bnd < s->nspxbnds; bnd++){
-            spxcotemp = s->spxco[ch][bnd];
-            for (bin = 0; bin < s->spxbndsztab[bnd]; bin++){
-                s->transform_coeffs[ch][spxmant] *= spxcotemp * 32;
-                spxmant++;
-            }
-        }
-    }
-#endif
-}
-
-static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
-    int endbap, bin, n, m;
-    int bg, g, bits, pre_chmant, remap, chgaqsections, chgaqmod;
-    float mant;
-
-    chgaqmod = get_bits(gbc, 2);
-
-    endbap = chgaqmod<2?12:17;
-
-    chgaqsections = 0;
-    for(bin = 0; bin < s->endmant[ch]; bin++){
-        if(s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < endbap)
-            chgaqsections++;
-    }
-
-    if(chgaqmod == EAC3_GAQ_12 || chgaqmod == EAC3_GAQ_14){
-        for(n = 0; n < chgaqsections; n++){
-            s->chgaqgain[n] = get_bits1(gbc);
-        }
-    }else if(chgaqmod == EAC3_GAQ_124){
-        int grpgain;
-        chgaqsections = (chgaqsections+2)/3;
-        for(n = 0; n < chgaqsections; n++){
-            grpgain = get_bits(gbc, 5);
-            s->chgaqgain[3*n]   = grpgain/9;
-            s->chgaqgain[3*n+1] = (grpgain%9)/3;
-            s->chgaqgain[3*n+2] = grpgain%3;
-        }
-    }
-
-    m=0;
-    for(bin = s->strtmant[ch]; bin < s->endmant[ch]; bin++){
-        if(s->hebap[ch][bin]>7){
-            // GAQ (E3.3.4.2)
-            // XXX what about gaqmod = 0 ?
-            // difference between Gk=1 and gaqmod=0 ?
-            if(s->hebap[ch][bin] < endbap){
-                // hebap in active range
-                // Gk = 1<<bg
-                bg = ff_gaq_gk[chgaqmod][s->chgaqgain[m++]];
-            }else{
-                bg = 0;
-            }
-            bits = ff_bits_vs_hebap[s->hebap[ch][bin]];
-
-            for(n = 0; n < 6; n++){
-                // pre_chmant[n][ch][bin]
-                pre_chmant = get_sbits(gbc, bits-bg);
-                if(bg && pre_chmant == -(1<<(bits-bg-1))){
-                    // large mantissa
-                    pre_chmant = get_sbits(gbc, bits - ((bg==1)?1:0));
-                    if(bg==1)
-                        //Gk = 2
-                        mant = (float)pre_chmant/((1<<(bits-1))-1);
-                    else
-                        //Gk = 4
-                        mant = (float)pre_chmant*3.0f/((1<<(bits+1))-2);
-
-                    g = 0;
-                    remap = 1;
-                }else{
-                    // small mantissa
-                    if(bg)
-                        //Gk = 2 or 4
-                        mant = (float)pre_chmant/((1<<(bits-1))-1);
-                    else
-                        //Gk = 1
-                        mant = (float)pre_chmant*2.0f/((1<<bits)-1); ///XXX
-
-                    g = bg;
-                    remap = (!bg) && (s->hebap[ch][bin] < endbap);
-                }
-
-                //TODO when remap needed ?
-                if(remap){
-                    mant = (float)
-                        (ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][0]/32768.0f + 1.0f)
-                         * mant / (1<<g) +
-                         (ff_eac3_gaq_remap[s->hebap[ch][bin]-8][mant<0][g][1]) / 32768.0f;
-                }
-                s->pre_chmant[n][ch][bin] = mant;
-            }
-        }else{
-            // hebap = 0 or VQ
-            if(s->hebap[ch][bin]){
-                pre_chmant = get_bits(gbc, ff_bits_vs_hebap[s->hebap[ch][bin]]);
-                for(n = 0; n < 6; n++){
-                    s->pre_chmant[n][ch][bin] =
-                        ff_vq_hebap[s->hebap[ch][bin]][pre_chmant][n] / 32768.0f;
-                }
-            }else{
-                for(n = 0; n < 6; n++){
-                    s->pre_chmant[n][ch][bin] = 0;
-                }
-            }
-        }
-    }
-}
-
-static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
-    // TODO fast IDCT
-    int bin, i;
-    float tmp;
-    for(bin=s->strtmant[ch]; bin<s->endmant[ch]; bin++){
-        tmp = 0;
-        for(i=0; i<6; i++){
-            tmp += (i?sqrt(2):1) * s->pre_chmant[i][ch][bin] * cos(M_PI*i*(2*blk + 1)/12);
-        }
-        s->transform_coeffs[ch][bin] = tmp * ff_ac3_scale_factors[s->dexps[ch][bin]];
-    }
-}
-
-static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
-        int ch, mant_groups *m){
-    if(s->chahtinu[ch] == 0){
-        ff_ac3_get_transform_coeffs_ch(m, gbc, s->dexps[ch], s->bap[ch],
-                s->transform_coeffs[ch], s->strtmant[ch], s->endmant[ch],
-                &s->dith_state);
-    }else if(s->chahtinu[ch] == 1){
-        get_transform_coeffs_aht_ch(gbc, s, ch);
-        s->chahtinu[ch] = -1; /* AHT info for this frame has been read - do not read again */
-    }
-    if(s->chahtinu[ch] != 0){
-        idct_transform_coeffs_ch(s, ch, blk);
-    }
-}
-
-static void uncouple_channels(EAC3Context *s){
-    int i, j, ch, bnd, subbnd;
-
-    subbnd = s->cplbegf+1;
-    i = s->strtmant[CPL_CH];
-    for(bnd=0; bnd<s->ncplbnd; bnd++){
-        do {
-            for(j=0; j<12; j++){
-                for(ch=1; ch<=s->nfchans; ch++){
-                    if(s->chincpl[ch]){
-                        s->transform_coeffs[ch][i] =
-                            s->transform_coeffs[CPL_CH][i] *
-                            s->cplco[ch][bnd] * 8.0f;
-                    }
-                }
-                i++;
-            }
-        } while(s->cplbndstrc[subbnd++] && subbnd<=s->cplendf);
-    }
-}
-
-static void log_missing_feature(AVCodecContext *avctx, const char *log){
-    av_log(avctx, AV_LOG_ERROR, "%s is not implemented. If you want to help, "
-            "update your FFmpeg version to the newest one from SVN. If the "
-            "problem still occurs, it means that your file has extension "
-            "which has not been tested due to a lack of samples exhibiting "
-            "this feature. Upload a sample of the audio from this file to "
-            "ftp://upload.mplayerhq.hu/incoming and contact the ffmpeg-devel "
-            "mailing list.\n", log);
 }
 
 /**
