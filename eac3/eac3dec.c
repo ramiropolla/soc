@@ -1070,69 +1070,44 @@ static void spectral_extension(EAC3Context *s){
 
 static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
     int endbap, bin, n, m;
-    int bg, g, bits, pre_chmant, remap;
+    int bg, g, bits, pre_chmant, remap, chgaqsections, chgaqmod;
     float mant;
 
-    GET_BITS(s->chgaqmod[ch], gbc, 2);
+    GET_BITS(chgaqmod, gbc, 2);
 
-    if (s->chgaqmod[ch] < 2){
-        endbap = 12;
-    }else{
-        endbap = 17;
-    }
+    endbap = chgaqmod<2?12:17;
 
-    s->chactivegaqbins[ch] = 0;
+    chgaqsections = 0;
     for(bin = 0; bin < s->endmant[ch]; bin++){
-        if(s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < endbap){
-            s->chgaqbin[ch][bin] = 1; /* Gain word is present */
-            s->chactivegaqbins[ch]++;
-        }else if (s->hebap[ch][bin] >= endbap){
-            s->chgaqbin[ch][bin] = -1;/* Gain word not present */
-        }else{
-            s->chgaqbin[ch][bin] = 0;
-        }
+        if(s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < endbap)
+            chgaqsections++;
     }
 
-
-    switch(s->chgaqmod[ch]){
-        case EAC3_GAQ_NO: /* No GAQ gains present */
-            s->chgaqsections[ch] = 0;
-            break;
-        case EAC3_GAQ_12: /* GAQ gains 1 and 2 */
-        case EAC3_GAQ_14: /* GAQ gains 1 and 4 */
-            s->chgaqsections[ch] = s->chactivegaqbins[ch];
-            /* chactivegaqbins[ch] was computed earlier */
-            break;
-        case EAC3_GAQ_124: /* GAQ gains 1, 2, and 4 */
-            s->chgaqsections[ch] = s->chactivegaqbins[ch] / 3;
-            if (s->chactivegaqbins[ch] % 3) s->chgaqsections[ch]++;
-            break;
-    }
-
-    if((s->chgaqmod[ch] > 0x0) && (s->chgaqmod[ch] < 0x3) ){
-        for(n = 0; n < s->chgaqsections[ch]; n++){
-            GET_BITS(s->chgaqgain[ch][n], gbc, 1);
+    if(chgaqmod == EAC3_GAQ_12 || chgaqmod == EAC3_GAQ_14){
+        for(n = 0; n < chgaqsections; n++){
+            GET_BITS(s->chgaqgain[n], gbc, 1);
         }
-    }else if(s->chgaqmod[ch] == 0x3){
+    }else if(chgaqmod == EAC3_GAQ_124){
         int grpgain;
-        for(n = 0; n < s->chgaqsections[ch]; n++){
+        chgaqsections = (chgaqsections+2)/3;
+        for(n = 0; n < chgaqsections; n++){
             GET_BITS(grpgain, gbc, 5);
-            s->chgaqgain[ch][3*n]   = grpgain/9;
-            s->chgaqgain[ch][3*n+1] = (grpgain%9)/3;
-            s->chgaqgain[ch][3*n+2] = grpgain%3;
+            s->chgaqgain[3*n]   = grpgain/9;
+            s->chgaqgain[3*n+1] = (grpgain%9)/3;
+            s->chgaqgain[3*n+2] = grpgain%3;
         }
     }
 
     m=0;
     for(bin = s->strtmant[ch]; bin < s->endmant[ch]; bin++){
-        if(s->chgaqbin[ch][bin]!=0){
+        if(s->hebap[ch][bin]>7){
             // GAQ (E3.3.4.2)
             // XXX what about gaqmod = 0 ?
             // difference between Gk=1 and gaqmod=0 ?
-            if(s->chgaqbin[ch][bin]>0){
+            if(s->hebap[ch][bin] < endbap){
                 // hebap in active range
                 // Gk = 1<<bg
-                bg = ff_gaq_gk[s->chgaqmod[ch]][s->chgaqgain[ch][m++]];
+                bg = ff_gaq_gk[chgaqmod][s->chgaqgain[m++]];
             }else{
                 bg = 0;
             }
@@ -1163,7 +1138,7 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
                         mant = (float)pre_chmant*2.0f/((1<<bits)-1); ///XXX
 
                     g = bg;
-                    remap = (!bg) && (s->chgaqbin[ch][bin]>0);
+                    remap = (!bg) && (s->hebap[ch][bin] < endbap);
                 }
 
                 //TODO when remap needed ?

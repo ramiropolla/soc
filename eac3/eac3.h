@@ -137,19 +137,13 @@ typedef struct EAC3Context{
     uint8_t deltba[AC3_MAX_CHANNELS][9];    ///< Channel delta bit allocation
 
     int got_cplchan;
-    int chgaqmod[AC3_MAX_CHANNELS];                 ///< Channel gain adaptive quantization mode
-    int chgaqgain[AC3_MAX_CHANNELS][256];           ///< Channel gain adaptive quantization gain
+    int chgaqgain[256];                             ///< Channel gain adaptive quantization gain
     float pre_chmant[6][AC3_MAX_CHANNELS][256];     ///< Pre channel mantissas
 
     int firstspxcos[AC3_MAX_CHANNELS];              ///< First spectral extension coordinates states
     int firstcplcos[AC3_MAX_CHANNELS];              ///< First coupling coordinates states
     int firstcplleak;                               ///< First coupling leak state
 ///@}
-
-    // TODO
-    int chgaqbin[AC3_MAX_CHANNELS][256];
-    int chgaqsections[AC3_MAX_CHANNELS];
-    int chactivegaqbins[AC3_MAX_CHANNELS];
 
     int nrematbnds;                    ///< Number of rematrixing bands
     int ncplsubnd;                     ///< Number of coupling sub-bands
