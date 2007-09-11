@@ -1124,7 +1124,7 @@ static const int16_t lsf_5_5[64][4] = {
 {  334,  475, 1095,  821}, {  864,  524,  843,  497}, {  714,  711,  788,  750}, { 1076,  714, 1204,  753}
 };
 
-// interpolation filter for adaptive (pitch) codebook routines
+// b60 FIR filter coefficients (based on Hamming windowed sinc function)
 static const int16_t inter6[61] = {
 29443, 28346, 25207, 20449, 14701,  8693,  3143, -1352,
 -4402, -5865, -5850, -4673, -2783,  -672,  1211,  2536,
@@ -1139,7 +1139,7 @@ static const int16_t inter6[61] = {
 // track start positions for fixed codebook routines
 static const uint8_t track_position[16] = { 0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 1, 4, 1, 4 };
 
-// gray decoding table for fixed codebook routines
+// 3-bit Gray code to binary lookup table
 static const uint8_t dgray[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
 
 // pitch gain tables
