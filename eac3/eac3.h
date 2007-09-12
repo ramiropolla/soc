@@ -176,7 +176,7 @@ typedef struct EAC3Context{
 
     AVRandomState dith_state;        ///< for dither generation
 
-    int ntchans;                     ///< Total of all channels
+    int num_channels;                ///< Total of all channels
     int lfe_channel;                 ///< Index of LFE channel
 
     GetBitContext *gbc;              ///< Bitstream reader
