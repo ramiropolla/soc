@@ -360,9 +360,9 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     s->lfe_channel = s->num_channels+1;
     if (s->lfeon) {
         s->strtmant[s->lfe_channel] = 0;
-        s->endmant[s->lfe_channel] = 7;
-        s->nchgrps[s->lfe_channel] = 2;
-        s->chincpl[s->lfe_channel] = 0;
+        s->endmant [s->lfe_channel] = 7;
+        s->nchgrps [s->lfe_channel] = 2;
+        s->chincpl [s->lfe_channel] = 0;
         s->num_channels++;
     }
 
