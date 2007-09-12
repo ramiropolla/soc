@@ -336,12 +336,12 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     s->substreamid = get_bits(gbc, 3);
     s->frmsiz = get_bits(gbc, 11);
     s->fscod = get_bits(gbc, 2);
-    if(s->fscod == 0x3){
+    if(s->fscod == 3){
         log_missing_feature(s->avctx, "Reduced Sampling Rates");
         return -1;
 #if 0
         s->fscod2 = get_bits(gbc, 2);
-        s->numblkscod = 0x3; /* six blocks per frame */
+        s->numblkscod = 3; /* six blocks per frame */
 #endif
     }else{
         s->numblkscod = get_bits(gbc, 2);
@@ -373,7 +373,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             skip_bits(gbc, 8); //skip Compression gain word
         }
     }
-    if(s->strmtyp == 0x1){
+    if(s->strmtyp == 1){
         /* if dependent stream */
         if(get_bits1(gbc)){
             s->chanmap = get_bits(gbc, 16);
@@ -392,21 +392,21 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     s->mixmdate = get_bits1(gbc);
     if(s->mixmdate){
         /* Mixing metadata */
-        if(s->acmod > 0x2){
+        if(s->acmod > 2){
             /* if more than 2 channels */
             s->dmixmod = get_bits(gbc, 2);
         }
-        if((s->acmod & 0x1) && (s->acmod > 0x2)){
+        if((s->acmod & 1) && (s->acmod > 2)){
             /* if three front channels exist */
             skip_bits(gbc, 3); //skip Lt/Rt center mix level
             s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = mixlevels[get_bits(gbc, 3)];
         }
-        if(s->acmod & 0x4){
+        if(s->acmod & 4){
             /* if a surround channel exists */
             float surmixlev;
             skip_bits(gbc, 3); //skip Lt/Rt surround mix level
             surmixlev = mixlevels[get_bits(gbc, 3)];
-            if(s->acmod & 0x2){
+            if(s->acmod & 2){
                 //two surround channels
                 s->downmix_coeffs[s->acmod-4][0] = s->downmix_coeffs[s->acmod-3][1] =
                     surmixlev;
@@ -422,7 +422,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 s->lfemixlevcod = get_bits(gbc, 5);
             }
         }
-        if(s->strmtyp == 0){
+        if(!s->strmtyp){
             /* if independent stream */
             for(i = 0; i < (s->acmod?1:2); i++){
                 if(get_bits1(gbc)){
@@ -435,18 +435,18 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 s->extpgmscl = get_bits(gbc, 6);
             }
             s->mixdef = get_bits(gbc, 2);
-            if(s->mixdef == 0x1){
+            if(s->mixdef == 1){
                 /* mixing option 2 */
                 skip_bits(gbc, 5);
-            }else if(s->mixdef == 0x2){
+            }else if(s->mixdef == 2){
                 /* mixing option 3 */
                 skip_bits(gbc, 12);
-            }else if(s->mixdef == 0x3){
+            }else if(s->mixdef == 3){
                 /* mixing option 4 */
                 s->mixdeflen = get_bits(gbc, 5);
                 skip_bits(gbc, 8*(s->mixdeflen+2));
             }
-            if(s->acmod < 0x2){
+            if(s->acmod < 2){
                 /* if mono or dual mono source */
                 for(i = 0; i < (s->acmod?1:2); i++){
                     if(get_bits1(gbc)){
@@ -459,7 +459,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             s->frmmixcfginfoe = get_bits1(gbc);
             if(s->frmmixcfginfoe){
                 /* mixing configuration information */
-                if(s->numblkscod == 0x0){
+                if(!s->numblkscod){
                     s->blkmixcfginfo[0] = get_bits(gbc, 5);
                 }else{
                     for(blk = 0; blk < ff_eac3_blocks[s->numblkscod]; blk++){
@@ -479,7 +479,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         if(s->acmod == AC3_ACMOD_STEREO) /* if in 2/0 mode */{
             skip_bits(gbc, 4); //skip Dolby surround and headphone mode
         }
-        if(s->acmod >= 0x6){
+        if(s->acmod >= 6){
             /* if both surround channels exist */
             skip_bits(gbc, 2); //skip Dolby surround EX mode
         }
@@ -488,17 +488,17 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 skip_bits(gbc, 8); //skip Mix level, Room type and A/D converter type
             }
         }
-        if(s->fscod < 0x3){
+        if(s->fscod < 3){
             /* if not half sample rate */
             skip_bits1(gbc); //skip Source sample rate code
         }
     }
-    if((s->strmtyp == 0x0) && (s->numblkscod != 0x3) ){
+    if((!s->strmtyp) && (s->numblkscod != 3) ){
         skip_bits1(gbc); //converter synchronization flag
     }
-    if(s->strmtyp == 0x2){
+    if(s->strmtyp == 2){
         /* if bit stream converted from AC-3 */
-        if(s->numblkscod == 0x3 || get_bits1(gbc)){
+        if(s->numblkscod == 3 || get_bits1(gbc)){
             /* 6 blocks per frame */
             skip_bits(gbc, 6); // skip Frame size code
         }
@@ -517,7 +517,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     int blk, ch;
 
     /* Audio frame exist flags and strategy data */
-    if(s->numblkscod == 0x3){
+    if(s->numblkscod == 3){
         /* six blocks per frame */
         /* LUT-based exponent strategy syntax */
         s->expstre = get_bits1(gbc);
@@ -548,7 +548,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     s->skipflde = get_bits1(gbc);
     s->spxattene = get_bits1(gbc);
     /* Coupling data */
-    if(s->acmod > 0x1){
+    if(s->acmod > 1){
         s->cplstre[0] = 1;
         s->cplinu[0] = get_bits1(gbc);
         s->ncplblks = s->cplinu[0];
@@ -579,7 +579,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         /* LUT-based exponent strategy syntax */
         int frmchexpstr;
         /* cplexpstr[blk] and chexpstr[blk][ch] derived from table lookups. see Table E2.14 */
-        for(ch = !((s->acmod > 0x1) && (s->ncplblks > 0)); ch <= s->nfchans; ch++){
+        for(ch = !((s->acmod > 1) && (s->ncplblks)); ch <= s->nfchans; ch++){
             frmchexpstr = get_bits(gbc, 5);
             for(blk=0; blk<6; blk++){
                 s->chexpstr[blk][ch] = ff_eac3_frm_expstr[frmchexpstr][blk];
@@ -593,8 +593,8 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         }
     }
     /* Converter exponent strategy data */
-    if(s->strmtyp == 0x0){
-        if(s->numblkscod == 0x3 || get_bits1(gbc)){
+    if(!s->strmtyp){
+        if(s->numblkscod == 3 || get_bits1(gbc)){
             for(ch = 1; ch <= s->nfchans; ch++){
                 skip_bits(gbc, 5); //skip Converter channel exponent strategy
             }
@@ -602,7 +602,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
     /* AHT data */
     if(s->ahte){
-        /* AHT is only available in 6 block mode (numblkscod ==0x3) */
+        /* AHT is only available in 6 block mode (numblkscod ==3) */
         /* coupling can use AHT only when coupling in use for all blocks */
         /* ncplregs derived from cplstre and cplexpstr - see Section E3.3.2 */
         int nchregs;
@@ -618,7 +618,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
             s->chahtinu[ch] = 0;
     }
     /* Audio frame SNR offset data */
-    if(s->snroffststr == 0x0){
+    if(!s->snroffststr){
         int csnroffst = (get_bits(gbc, 6) - 15) << 4;
         int snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
         for(ch=0; ch<= s->num_channels; ch++)
@@ -651,7 +651,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
             s->chinspxatten[ch]=0;
     }
     /* Block start information */
-    if (s->numblkscod != 0x0){
+    if (s->numblkscod){
         s->blkstrtinfoe = get_bits1(gbc);
     }else{
         s->blkstrtinfoe = 0;
@@ -700,7 +700,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         if(get_bits1(gbc)){
             s->dynrng[i] = ff_ac3_dynrng_tbl[get_bits(gbc, 8)];
         }else{
-            if(blk==0){
+            if(!blk){
                 s->dynrng[i] = 1.0f;
             }
         }
@@ -1076,22 +1076,22 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }
         }
     }else{
-        s->bit_alloc_params.sdecay = ff_sdecaytab[0x2];   /* Table 7.6 */
-        s->bit_alloc_params.fdecay = ff_fdecaytab[0x1];   /* Table 7.7 */
-        s->bit_alloc_params.sgain  = ff_sgaintab[0x1];    /* Table 7.8 */
-        s->bit_alloc_params.dbknee = ff_dbkneetab[0x2];   /* Table 7.9 */
-        s->bit_alloc_params.floor  = ff_floortab[0x7];    /* Table 7.10 */
+        s->bit_alloc_params.sdecay = ff_sdecaytab[2];   /* Table 7.6 */
+        s->bit_alloc_params.fdecay = ff_fdecaytab[1];   /* Table 7.7 */
+        s->bit_alloc_params.sgain  = ff_sgaintab[1];    /* Table 7.8 */
+        s->bit_alloc_params.dbknee = ff_dbkneetab[2];   /* Table 7.9 */
+        s->bit_alloc_params.floor  = ff_floortab[7];    /* Table 7.10 */
     }
 
-    if(s->snroffststr != 0x0){
+    if(s->snroffststr){
         av_log(s->avctx, AV_LOG_INFO, "NOT TESTED\n");
         if(!blk || get_bits1(gbc) ){
             int csnroffst = (get_bits(gbc, 6) - 15) << 4;
-            if(s->snroffststr == 0x1){
+            if(s->snroffststr == 1){
                 int snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
                 for(ch=!s->cplinu[blk]; ch<= s->num_channels; ch++)
                     s->snroffst[ch] = snroffst;
-            }else if(s->snroffststr == 0x2){
+            }else if(s->snroffststr == 2){
                 for(ch=!s->cplinu[blk]; ch<= s->num_channels; ch++)
                     s->snroffst[ch] = (csnroffst + get_bits(gbc, 4)) << 2;
             }
@@ -1104,10 +1104,10 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     }else{
         if(!blk){
             for(ch = !s->cplinu[blk]; ch <= s->num_channels; ch++)
-                s->fgain[ch] = ff_fgaintab[0x4];
+                s->fgain[ch] = ff_fgaintab[4];
         }
     }
-    if(s->strmtyp == 0x0){
+    if(!s->strmtyp){
         if(get_bits1(gbc)){
             skip_bits(gbc, 10); //Converter SNR offset
         }
@@ -1265,8 +1265,8 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     avctx->bit_rate = (c->frmsiz * (avctx->sample_rate) * 16 / ( ff_eac3_blocks[c->numblkscod] * 256)) / 1000;
 
     /* channel config */
-    if (avctx->request_channels == 0) {
-        if(avctx->channels == 0)
+    if (!avctx->request_channels) {
+        if(!avctx->channels)
             avctx->channels = c->num_channels;
     } else if(c->num_channels < avctx->request_channels) {
         av_log(avctx, AV_LOG_ERROR, "Cannot upmix EAC3 from %d to %d channels.\n",
