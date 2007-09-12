@@ -651,12 +651,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
             s->chinspxatten[ch]=0;
     }
     /* Block start information */
-    if (s->numblkscod){
-        s->blkstrtinfoe = get_bits1(gbc);
-    }else{
-        s->blkstrtinfoe = 0;
-    }
-    if(s->blkstrtinfoe){
+    if(s->numblkscod && get_bits1(gbc)){
         /* nblkstrtbits determined from frmsiz (see Section E2.3.2.27) */
         // nblkstrtbits = (numblks - 1) * (4 + ceiling (log2 (words_per_frame)))
         // where numblks is derived from the numblkscod in Table E2.9

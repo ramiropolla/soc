@@ -89,7 +89,6 @@ typedef struct EAC3Context{
     int transproclen[AC3_MAX_CHANNELS];  ///< Transient processing length
     int chinspxatten[AC3_MAX_CHANNELS];  ///< Channel in spectral extension attenuation process
     int spxattencod[AC3_MAX_CHANNELS];   ///< spectral extension attenuation code
-    int blkstrtinfoe;                ///< Block start information exists
     uint32_t blkstrtinfo;            ///< Block start information
     int ncplblks;
 ///@}
