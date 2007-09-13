@@ -54,7 +54,7 @@ typedef struct
     int           frame_num;
 } QCELPContext;
 
-static void qcelp_update_pitchf_mem(float *pitchf_mem, const float *last)
+static void qcelp_update_filter_mem(float *pitchf_mem, const float *last)
 {
     memmove(pitchf_mem, pitchf_mem+40, 110*sizeof(float));
     memmove(pitchf_mem+110, last, 40*sizeof(float));
@@ -484,7 +484,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
 
                 if(k==39)
                 {
-                    qcelp_update_pitchf_mem(pitch_mem, &pv[i-k]);
+                    qcelp_update_filter_mem(pitch_mem, &pv[i-k]);
                 }
 
                 k=(k<39)? k+1:0;
