@@ -1718,6 +1718,11 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
 
     init_get_bits(&r->s.gb, r->slice_data, r->si.size);
     res = r->rv30 ? rv30_parse_slice_header(r, gb, &r->si) : rv40_parse_slice_header(r, gb, &r->si);
+    if((res < 0 && !s->current_picture_ptr) || (r->prev_si.type == -1 && r->si.start)){
+        av_log(s->avctx, AV_LOG_ERROR, "Incorrect or unknown slice header\n");
+        *last = 0;
+        return -1;
+    }
     if(res < 0 || (r->prev_si.type != -1 && slice_compare(&r->prev_si, &r->si))){
         r->ssi.data = av_realloc(r->ssi.data, r->ssi.data_size + (size>>3));
         memcpy(r->ssi.data + r->ssi.data_size, r->slice_data, size >> 3);
