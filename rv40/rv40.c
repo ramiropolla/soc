@@ -573,6 +573,8 @@ static int rv30_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     t = get_bits(gb, 13);
     skip_bits(gb, r->rpr);
     si->vlc_set = 0;
+    si->width  = w;
+    si->height = h;
     mb_size = ((w + 15) >> 4) * ((h + 15) >> 4);
     for(i = 0; i < 5; i++)
         if(rv40_mb_max_sizes[i] > mb_size)
