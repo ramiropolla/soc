@@ -1641,6 +1641,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     if(s->mb_x && !s->first_slice_line && !((s->mb_y-1)==s->resync_mb_y && s->mb_x == s->resync_mb_x))
         r->avail[3] = 1;
 
+    r->quant = r->si.quant;
     cbp = cbp2 = rv40_decode_mb_header(r, intra_types);
 
     if(cbp == -1)
