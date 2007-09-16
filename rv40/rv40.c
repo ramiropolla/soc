@@ -1699,85 +1699,12 @@ static int check_slice_end(RV40DecContext *r, MpegEncContext *s)
     return 0;
 }
 
-static int rv30_decode_slice(RV40DecContext *r, int size, int end, int *last)
+static inline int slice_compare(SliceInfo *si1, SliceInfo *si2)
 {
-    MpegEncContext *s = &r->s;
-    GetBitContext *gb = &s->gb;
-    int mb_pos;
-    *last = 1;
-
-    init_get_bits(&r->s.gb, r->slice_data, r->si.size);
-    if(rv30_parse_slice_header(r, gb, &r->si) < 0){
-        av_log(s->avctx, AV_LOG_ERROR, "Error parsing slice header\n");
-        *last = 0;
-        return -1;
-    }
-
-    if(r->prev_si.type != -1 && (r->si.type != r->prev_si.type || r->si.start <= r->prev_si.start || r->si.width != r->prev_si.width || r->si.height != r->prev_si.height)){
-        av_log(s->avctx, AV_LOG_ERROR, "Slice headers mismatch\n");
-    }
-    if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
-        s->pict_type = r->si.type ? r->si.type : I_TYPE;
-        if(MPV_frame_start(s, s->avctx) < 0)
-            return -1;
-        ff_er_frame_start(s);
-        s->current_picture_ptr = &s->current_picture;
-        s->mb_x = s->mb_y = 0;
-    }
-
-    r->si.size = size;
-    r->si.end = end;
-    r->quant = r->si.quant;
-    r->bits = r->si.size;
-    r->block_start = r->si.start;
-    s->mb_num_left = r->si.end - r->si.start;
-    r->skip_blocks = 0;
-
-    r->prev_si = r->si;
-    mb_pos = s->mb_x + s->mb_y * s->mb_width;
-    if(r->block_start != mb_pos){
-        av_log(s->avctx, AV_LOG_ERROR, "Slice indicates MB offset %d, got %d\n", r->block_start, mb_pos);
-        s->mb_x = r->block_start % s->mb_width;
-        s->mb_y = r->block_start / s->mb_width;
-    }
-    memset(r->intra_types_hist, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
-    s->first_slice_line = 1;
-    s->resync_mb_x= s->mb_x;
-    s->resync_mb_y= s->mb_y;
-
-    ff_init_block_index(s);
-    while(!check_slice_end(r, s) && s->mb_num_left-- && s->mb_y < s->mb_height) {
-        ff_update_block_index(s);
-        s->dsp.clear_blocks(s->block[0]);
-
-        /* save information about decoded position in case of truncated slice */
-        if(r->bits > get_bits_count(gb)){
-            r->ssi.bits_used = get_bits_count(gb);
-            r->ssi.mb_x = s->mb_x;
-            r->ssi.mb_y = s->mb_y;
-        }
-
-        if(rv40_decode_macroblock(r, r->intra_types + (s->mb_x + 1) * 4) < 0)
-            break;
-        if (++s->mb_x == s->mb_width) {
-            s->mb_x = 0;
-            s->mb_y++;
-            ff_init_block_index(s);
-
-            memmove(r->intra_types_hist, r->intra_types, r->intra_types_stride * 4 * sizeof(int));
-            memset(r->intra_types, -1, r->intra_types_stride * 4 * sizeof(int));
-        }
-        if(s->mb_x == s->resync_mb_x)
-            s->first_slice_line=0;
-    }
-    ff_er_add_slice(s, s->resync_mb_x, s->resync_mb_y, s->mb_x-1, s->mb_y, AC_END|DC_END|MV_END);
-    *last = 0;
-    if(s->mb_y >= s->mb_height || r->bits < get_bits_count(gb))
-        *last = 1;
-    if(r->bits > get_bits_count(gb) && show_bits(gb, r->bits-get_bits_count(gb)))
-        *last = 1;
-
-    return 0;
+    return si1->type   != si2->type ||
+           si1->start  >= si2->start ||
+           si1->width  != si2->width ||
+           si1->height != si2->height;
 }
 
 static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
@@ -1785,32 +1712,26 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
     int mb_pos;
+    int res;
+    int old_mb_x = r->ssi.mb_x, old_mb_y = r->ssi.mb_y;
     *last = 1;
 
     init_get_bits(&r->s.gb, r->slice_data, r->si.size);
-    if(rv40_parse_slice_header(r, gb, &r->si) < 0){
-        if(!r->truncated){
-            av_log(s->avctx, AV_LOG_ERROR, "Error parsing slice header\n");
-            *last = 0;
-            return -1;
-        }else{
-            r->ssi.data = av_realloc(r->ssi.data, r->ssi.data_size + (size>>3));
-            memcpy(r->ssi.data + r->ssi.data_size, r->slice_data, size >> 3);
-            r->ssi.data_size += size >> 3; // XXX: overflow check?
-            size = r->ssi.data_size * 8;
-            init_get_bits(&r->s.gb, r->ssi.data, r->ssi.data_size * 8);
-            r->si = r->prev_si;
-            skip_bits(gb, r->ssi.bits_used);
-            s->mb_x = r->ssi.mb_x;
-            s->mb_y = r->ssi.mb_y;
-            r->si.start = s->mb_x + s->mb_y * s->mb_width;
-        }
-    }else
-        r->truncated = 0;
-
-    if(!r->truncated && r->prev_si.type != -1 && (r->si.type != r->prev_si.type || r->si.start <= r->prev_si.start || r->si.width != r->prev_si.width || r->si.height != r->prev_si.height)){
-        av_log(s->avctx, AV_LOG_ERROR, "Slice headers mismatch\n");
+    res = r->rv30 ? rv30_parse_slice_header(r, gb, &r->si) : rv40_parse_slice_header(r, gb, &r->si);
+    if(res < 0 || (r->prev_si.type != -1 && slice_compare(&r->prev_si, &r->si))){
+        r->ssi.data = av_realloc(r->ssi.data, r->ssi.data_size + (size>>3));
+        memcpy(r->ssi.data + r->ssi.data_size, r->slice_data, size >> 3);
+        r->ssi.data_size += size >> 3; // XXX: overflow check?
+        size = r->ssi.data_size * 8;
+        init_get_bits(&r->s.gb, r->ssi.data, r->ssi.data_size * 8);
+        r->si = r->prev_si;
+        skip_bits(gb, r->ssi.bits_used);
+        s->mb_x = r->ssi.mb_x;
+        s->mb_y = r->ssi.mb_y;
+        r->si.start = s->mb_x + s->mb_y * s->mb_width;
+        r->truncated = 1;
     }
+
     if ((s->mb_x == 0 && s->mb_y == 0) || s->current_picture_ptr==NULL) {
         if(s->width != r->si.width || s->height != r->si.height /*&& avcodec_check_dimensions(s->avctx, r->si.width, r->si.height) >= 0 */){
             av_log(s->avctx, AV_LOG_DEBUG, "Changing dimensions to %dx%d\n", r->si.width,r->si.height);
@@ -1876,20 +1797,20 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
         if(s->mb_x == s->resync_mb_x)
             s->first_slice_line=0;
     }
+    if(!r->truncated)
+        ff_er_add_slice(s, s->resync_mb_x, s->resync_mb_y, s->mb_x-1, s->mb_y, AC_END|DC_END|MV_END);
+    else // add only additionally decoded blocks
+        ff_er_add_slice(s, old_mb_x+1, old_mb_y, s->mb_x-1, s->mb_y, AC_END|DC_END|MV_END);
     r->truncated = 0;
-    ff_er_add_slice(s, s->resync_mb_x, s->resync_mb_y, s->mb_x-1, s->mb_y, AC_END|DC_END|MV_END);
     *last = 0;
-    if(s->mb_y >= s->mb_height || r->bits < get_bits_count(gb))
+    if(s->mb_y >= s->mb_height)
         *last = 1;
     if(r->bits > get_bits_count(gb) && show_bits(gb, r->bits-get_bits_count(gb)))
         *last = 1;
 
-    if(r->bits < get_bits_count(gb)){
-        r->truncated = 1;
-        r->ssi.data = av_realloc(r->ssi.data, r->bits >> 3);
-        memcpy(r->ssi.data, r->slice_data, r->bits >> 3);
-        *last = 0;
-    }
+    r->ssi.data = av_realloc(r->ssi.data, r->bits >> 3);
+    r->ssi.data_size = r->bits >> 3;
+    memcpy(r->ssi.data, r->slice_data, r->bits >> 3);
     return 0;
 }
 
@@ -2224,7 +2145,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
         }
         r->slice_data = buf + offset;
         if(r->rv30)
-            rv30_decode_slice(r, r->si.size, r->si.end, &last);
+            rv40_decode_slice(r, r->si.size, r->si.end, &last);
         else
             rv40_decode_slice(r, r->si.size, r->si.end, &last);
         if(last)
