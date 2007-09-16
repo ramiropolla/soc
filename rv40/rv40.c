@@ -1689,7 +1689,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
 static int check_slice_end(RV40DecContext *r, MpegEncContext *s)
 {
     int bits;
-    if(r->skip_blocks)
+    if(r->skip_blocks > 1)
         return 0;
     if(s->mb_y >= s->mb_height)
         return 1;
