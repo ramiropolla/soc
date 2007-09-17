@@ -2064,31 +2064,6 @@ static int rv40_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
-/** These bits of slice header should be the same for all slices in one frame */
-#define KEY_MASK 0xE0CFFF80
-
-/**
- * Find slice offsets and return them in array.
- */
-static int* find_slice_offsets(uint8_t *buf, int buf_size, int *slices)
-{
-    int *offsets;
-    int i;
-    int hdr = AV_RB32(buf) & KEY_MASK;
-
-    offsets = av_malloc(sizeof(int)*12);//just to avoid unnecessary reallocs
-    offsets[0] = 0;
-    *slices = 1;
-    for(i = 4; i < buf_size; i += 4){
-        if((AV_RB32(buf + i) & KEY_MASK) == hdr){
-            (*slices)++;
-            offsets = av_realloc(offsets, *slices * sizeof(int));
-            offsets[*slices - 1] = i;
-        }
-    }
-    return offsets;
-}
-
 static int rv40_decode_frame(AVCodecContext *avctx,
                             void *data, int *data_size,
                             uint8_t *buf, int buf_size)
