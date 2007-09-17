@@ -108,7 +108,6 @@ typedef struct RV40DecContext{
     int intra_types_stride;  ///< stride for block types data
     int block_start;         ///< start of slice in blocks
     int ptype;               ///< picture type
-    int quant;               ///< quantizer
 
     int vlc_set;             ///< index of currently selected VLC set
     RV40VLC *cur_vlcs;       ///< VLC set used for current frame decoding
@@ -1640,17 +1639,17 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     if(s->mb_x && !s->first_slice_line && !((s->mb_y-1)==s->resync_mb_y && s->mb_x == s->resync_mb_x))
         r->avail[3] = 1;
 
-    r->quant = r->si.quant;
+    s->qscale = r->si.quant;
     cbp = cbp2 = rv40_decode_mb_header(r, intra_types);
 
     if(cbp == -1)
         return -1;
 
-    luma_dc_quant = r->rv30 ? rv30_luma_dc_quant[r->quant] : rv40_luma_quant[r->si.type>>1][r->quant];
+    luma_dc_quant = r->rv30 ? rv30_luma_dc_quant[s->qscale] : rv40_luma_quant[r->si.type>>1][s->qscale];
     if(r->is16){
         memset(block16, 0, sizeof(block16));
         rv40_decode_block(block16, gb, r->cur_vlcs, 3, 0);
-        rv40_dequant4x4_16x16(block16, 0, rv40_qscale_tab[luma_dc_quant],rv40_qscale_tab[r->quant]);
+        rv40_dequant4x4_16x16(block16, 0, rv40_qscale_tab[luma_dc_quant],rv40_qscale_tab[s->qscale]);
         rv40_intra_inv_transform_noround(block16, 0);
     }
 
@@ -1661,7 +1660,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         if(cbp & 1)
             rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, r->luma_vlc, 0);
         if((cbp & 1) || r->is16){
-            rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[luma_dc_quant],rv40_qscale_tab[r->quant]);
+            rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[luma_dc_quant],rv40_qscale_tab[s->qscale]);
             if(r->is16) //FIXME: optimize
                 s->block[blknum][blkoff] = block16[(i & 3) | ((i & 0xC) << 1)];
             rv40_intra_inv_transform(s->block[blknum], blkoff);
@@ -1674,7 +1673,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         blknum = ((i & 4) >> 2) + 4;
         blkoff = ((i & 1) << 2) + ((i & 2) << 4);
         rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, r->chroma_vlc, 1);
-        rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[rv40_chroma_quant[1][r->quant]],rv40_qscale_tab[rv40_chroma_quant[0][r->quant]]);
+        rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[rv40_chroma_quant[1][s->qscale]],rv40_qscale_tab[rv40_chroma_quant[0][s->qscale]]);
         rv40_intra_inv_transform(s->block[blknum], blkoff);
     }
     if(IS_INTRA(s->current_picture_ptr->mb_type[s->mb_x + s->mb_y*s->mb_stride]))
@@ -1756,7 +1755,7 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
 
     r->si.size = size;
     r->si.end = end;
-    r->quant = r->si.quant;
+    s->qscale = r->si.quant;
     r->bits = r->si.size;
     r->block_start = r->si.start;
     s->mb_num_left = r->si.end - r->si.start;
@@ -1971,9 +1970,9 @@ static void rv40_postprocess(RV40DecContext *r)
     int i, j;
     int no_up, no_left;
     uint8_t *Y, *U, *V;
-    const int alpha = rv40_alpha_tab[r->quant], beta = rv40_beta_tab[r->quant];
+    const int alpha = rv40_alpha_tab[s->qscale], beta = rv40_beta_tab[s->qscale];
     //XXX these are probably not correct
-    const int thr = r->quant, lim0 = rv40_filter_clip_tbl[1][r->quant], lim1 = rv40_filter_clip_tbl[2][r->quant];
+    const int thr = s->qscale, lim0 = rv40_filter_clip_tbl[1][s->qscale], lim1 = rv40_filter_clip_tbl[2][s->qscale];
 
     mb_pos = s->resync_mb_x + s->resync_mb_y * s->mb_stride;
     memset(r->intra_types_hist, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
