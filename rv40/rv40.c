@@ -149,14 +149,10 @@ static int rv40_gen_vlc(const uint8_t *bits2, int size, VLC *vlc)
 {
     int i;
     int counts[17] = {0}, codes[17];
-    uint16_t *cw, *syms;
-    uint8_t *bits;
+    uint16_t cw[size], syms[size];
+    uint8_t bits[size];
     int maxbits = 0, realsize;
     int ret;
-
-    cw = av_mallocz(size * 2);
-    syms = av_malloc(size * 2);
-    bits = av_malloc(size);
 
     realsize = 0;
     for(i = 0; i < size; i++){
@@ -164,14 +160,12 @@ static int rv40_gen_vlc(const uint8_t *bits2, int size, VLC *vlc)
             bits[realsize] = bits2[i];
             syms[realsize] = i;
             realsize++;
-            if(bits2[i] > maxbits)
-                maxbits = bits2[i];
+            maxbits = FFMAX(maxbits, bits2[i]);
+            counts[bits2[i]]++;
         }
     }
 
     size = realsize;
-    for(i = 0; i < size; i++)
-        counts[bits[i]]++;
     codes[0] = 0;
     for(i = 0; i < 16; i++)
         codes[i+1] = (codes[i] + counts[i]) << 1;
@@ -182,9 +176,6 @@ static int rv40_gen_vlc(const uint8_t *bits2, int size, VLC *vlc)
                           bits, 1, 1,
                           cw,   2, 2,
                           syms, 2, 2, INIT_VLC_USE_STATIC);
-    av_free(cw);
-    av_free(syms);
-    av_free(bits);
     return ret;
 }
 
