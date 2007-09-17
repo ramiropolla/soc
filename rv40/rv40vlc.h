@@ -40,7 +40,7 @@
 
 // INTRA TABLES
 // BLOCK 0
-static const uint8_t rv40_table_0_0_0[CBPPAT_VLC_SIZE] =
+static const uint8_t rv34_table_0_0_0[CBPPAT_VLC_SIZE] =
  {
   8, 10, 10, 10, 10, 10, 11, 10, 10, 11, 10, 10, 10, 10, 10,  6,
  12, 12, 13, 12, 13, 12, 13, 11, 13, 13, 13, 12, 13, 12, 12,  8,
@@ -125,14 +125,14 @@ static const uint8_t rv40_table_0_0_0[CBPPAT_VLC_SIZE] =
  16, 16, 16, 13, 16, 13, 16, 10, 16, 16, 13, 10, 13, 10, 10,  1,
 };
 
-static const uint8_t rv40_table_0_0_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_0_0_1[4][CBP_VLC_SIZE] = {
  { 0,  3,  3,  4,  3,  5,  5,  5,  2,  5,  4,  6,  4,  6,  6,  6 },
  { 0,  3,  4,  4,  3,  4,  5,  5,  3,  5,  4,  5,  4,  5,  5,  3 },
  { 0,  4,  4,  4,  4,  5,  5,  4,  4,  5,  4,  5,  4,  4,  4,  2 },
  { 0,  6,  6,  5,  6,  5,  6,  4,  6,  6,  5,  4,  4,  4,  4,  1 }
 };
 
-static const uint8_t rv40_table_0_0_2[CBPPAT_VLC_SIZE] =  {
+static const uint8_t rv34_table_0_0_2[CBPPAT_VLC_SIZE] =  {
   2,  7,  7,  8,  7,  8,  9,  8,  7,  9,  8,  8,  8,  8,  9,  7,
   6,  9, 10, 10, 10, 10, 11, 10, 10, 11, 11, 11, 10, 11, 11,  9,
   9, 11, 12, 12, 12, 13, 14, 13, 13, 14, 14, 13, 13, 13, 14, 11,
@@ -216,14 +216,14 @@ static const uint8_t rv40_table_0_0_2[CBPPAT_VLC_SIZE] =  {
   8, 10, 10, 10, 10, 10, 11,  9, 10, 11, 10,  9, 10,  9,  9,  5,
 };
 
-static const uint8_t rv40_table_0_0_3[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_0_0_3[4][CBP_VLC_SIZE] = {
  { 0,  2,  3,  4,  2,  5,  6,  7,  3,  6,  5,  7,  4,  7,  8,  8 },
  { 0,  3,  3,  4,  3,  4,  5,  5,  3,  5,  4,  6,  3,  5,  6,  5 },
  { 0,  3,  3,  4,  3,  4,  5,  5,  3,  5,  4,  5,  4,  5,  5,  4 },
  { 0,  4,  4,  4,  4,  5,  5,  4,  4,  5,  5,  4,  4,  4,  4,  2 }
 };
 
-static const uint8_t rv40_table_0_0_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_0_4[FIRSTBLK_VLC_SIZE] = {
   0,  9,  6,  9,  6, 10,  8,  9,  7, 11,  8, 11,  9, 11,  9, 10,
  14, 16, 13, 14, 13, 14, 12, 11,  5, 11,  7, 10,  8, 10,  8,  9,
   8, 12,  8, 11,  9, 12,  9, 10, 14, 16, 12, 13, 13, 14, 11, 11,
@@ -280,7 +280,7 @@ static const uint8_t rv40_table_0_0_4[FIRSTBLK_VLC_SIZE] = {
  11, 14,  9, 10, 10, 11,  8,  6, 12, 15,  9,  9,  9, 10,  7,  4,
 };
 
-static const uint8_t rv40_table_0_0_5[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_0_5[FIRSTBLK_VLC_SIZE] = {
   0,  6,  3,  7,  3,  7,  6,  7,  5,  9,  6,  9,  7,  9,  8,  8,
  16, 16, 16, 16, 16, 16, 16, 11,  3,  8,  5,  8,  6,  8,  7,  7,
   7, 11,  7, 10,  8, 10,  8,  9, 16, 16, 16, 16, 16, 16, 14, 10,
@@ -337,7 +337,7 @@ static const uint8_t rv40_table_0_0_5[FIRSTBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
-static const uint8_t rv40_table_0_0_6[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_0_6[FIRSTBLK_VLC_SIZE] = {
   2,  8,  5,  9,  6,  9,  8,  8,  8, 12,  9, 11,  9, 11, 10, 10,
  16, 16, 14, 16, 14, 16, 14, 12,  5, 10,  6,  9,  8, 10,  8,  9,
   9, 12,  9, 11, 10, 12, 10, 10, 16, 16, 14, 15, 15, 16, 13, 12,
@@ -394,7 +394,7 @@ static const uint8_t rv40_table_0_0_6[FIRSTBLK_VLC_SIZE] = {
  13, 16, 12, 13, 12, 13, 11, 10, 16, 16, 13, 14, 13, 14, 11,  8,
 };
 
-static const uint8_t rv40_table_0_0_7[OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_0_7[OTHERBLK_VLC_SIZE] = {
   0,  5, 10,  3,  6, 10,  7,  8,  9,  4,  6, 10,  6,  7,  9,  8,
   8,  9,  8,  8,  9,  8,  9,  9,  9,  9,  8,  3,  6, 10,  4,  6,
  10,  7,  7,  9,  5,  7, 10,  6,  7,  9,  7,  7,  8,  7,  8,  9,
@@ -404,7 +404,7 @@ static const uint8_t rv40_table_0_0_7[OTHERBLK_VLC_SIZE] = {
   7,  7,  7,  8,  8,  8,  7,  7,  7,  7,  6,  5
 };
 
-static const uint8_t rv40_table_0_0_8[OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_0_8[OTHERBLK_VLC_SIZE] = {
   0,  5, 10,  3,  6, 10,  7,  8, 10,  4,  7, 10,  6,  7, 10,  8,
   8, 10,  8,  9, 10,  9,  9, 10,  9,  9,  9,  2,  6, 10,  4,  7,
  10,  7,  8,  9,  5,  7, 10,  6,  7, 10,  8,  8,  9,  8,  9, 10,
@@ -414,7 +414,7 @@ static const uint8_t rv40_table_0_0_8[OTHERBLK_VLC_SIZE] = {
   7,  8,  8,  8,  8,  9,  8,  8,  8,  7,  7,  7
 };
 
-static const uint8_t rv40_table_0_0_9[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_0_9[FIRSTBLK_VLC_SIZE] = {
   0, 10,  5, 10,  7, 12,  9, 11,  8, 13,  9, 12, 10, 13, 11, 12,
  16, 16, 14, 15, 15, 16, 13, 14,  5, 12,  6, 11,  9, 13, 10, 11,
   9, 14,  9, 12, 11, 14, 11, 12, 16, 16, 14, 15, 15, 16, 13, 13,
@@ -471,7 +471,7 @@ static const uint8_t rv40_table_0_0_9[FIRSTBLK_VLC_SIZE] = {
  10, 14,  9, 11, 10, 12,  8,  8, 12, 14,  9, 10, 10, 11,  8,  7,
 };
 
-static const uint8_t rv40_table_0_0_10[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_0_10[2][OTHERBLK_VLC_SIZE] = {
 { 0,  5, 11,  3,  6, 11,  8,  9, 11,  3,  6, 10,  6,  7, 11,  9,
   9, 11,  7,  9, 11,  9,  9, 11, 10, 10, 11,  2,  6, 10,  4,  7,
  10,  7,  9, 11,  4,  7, 11,  6,  7, 10,  9,  9, 11,  7,  9, 11,
@@ -488,13 +488,13 @@ static const uint8_t rv40_table_0_0_10[2][OTHERBLK_VLC_SIZE] = {
   9, 10, 11, 10, 11, 12, 10, 10, 12, 10, 10, 10 }
 };
 
-static const uint8_t rv40_table_0_0_11[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_0_0_11[COEFF_VLC_SIZE] = {
   1,  3,  3,  4,  4,  5,  6,  6,  6,  7,  7,  7,  8,  8,  9,  9,
   9,  9, 10, 10, 10, 11, 11, 11, 10, 10, 10, 12, 13, 14, 15, 15,
 };
 
 // BLOCK 1
-static const uint8_t rv40_table_0_1_0[CBPPAT_VLC_SIZE] =
+static const uint8_t rv34_table_0_1_0[CBPPAT_VLC_SIZE] =
  {  12, 12, 11,  9, 11, 10, 11,  9, 11, 11, 10,  9,  9,  8,  9,  5,
  14, 13, 14, 11, 14, 11, 13, 10, 14, 13, 12, 10, 12, 10, 11,  6,
  16, 13, 16, 12, 16, 12, 16, 11, 16, 14, 16, 12, 15, 12, 13,  8,
@@ -578,14 +578,14 @@ static const uint8_t rv40_table_0_1_0[CBPPAT_VLC_SIZE] =
  16, 16, 16, 13, 16, 13, 14, 10, 16, 14, 12,  9, 12, 10,  9,  3,
 };
 
-static const uint8_t rv40_table_0_1_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_0_1_1[4][CBP_VLC_SIZE] = {
  { 0,  4,  3,  4,  3,  4,  5,  4,  3,  5,  4,  5,  3,  5,  5,  5 },
  { 0,  4,  4,  4,  4,  4,  5,  4,  4,  5,  4,  4,  3,  4,  4,  3 },
  { 0,  4,  4,  4,  4,  4,  5,  4,  4,  5,  5,  5,  4,  4,  4,  2 },
  { 0,  5,  6,  5,  5,  5,  6,  4,  6,  6,  5,  4,  5,  4,  4,  1 }
 };
 
-static const uint8_t rv40_table_0_1_2[CBPPAT_VLC_SIZE] =  {
+static const uint8_t rv34_table_0_1_2[CBPPAT_VLC_SIZE] =  {
   2,  6,  6,  7,  6,  7,  8,  7,  7,  8,  7,  8,  7,  8,  8,  5,
   5,  8,  9,  9,  9,  9, 12, 10, 10, 11, 10, 10, 10, 11, 11,  8,
   9, 10, 13, 12, 13, 12, 15, 13, 13, 14, 13, 14, 13, 13, 14, 11,
@@ -669,14 +669,14 @@ static const uint8_t rv40_table_0_1_2[CBPPAT_VLC_SIZE] =  {
   7, 10, 10, 10, 10, 10, 11, 10, 10, 11, 10, 10, 10, 10, 10,  7,
 };
 
-static const uint8_t rv40_table_0_1_3[4][FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_1_3[4][FIRSTBLK_VLC_SIZE] = {
  { 0,  2,  3,  4,  2,  5,  6,  7,  3,  6,  5,  7,  4,  7,  8,  8 },
  { 0,  3,  3,  4,  3,  4,  5,  5,  3,  5,  4,  6,  3,  5,  6,  5 },
  { 0,  3,  3,  4,  3,  4,  5,  5,  3,  5,  4,  5,  4,  5,  5,  4 },
  { 0,  4,  4,  4,  4,  4,  5,  4,  4,  5,  5,  4,  4,  4,  5,  2 }
 };
 
-static const uint8_t rv40_table_0_1_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_1_4[FIRSTBLK_VLC_SIZE] = {
   0, 10,  5, 10,  6, 11,  8, 10,  7, 12,  8, 11,  9, 12,  9, 10,
  14, 16, 13, 13, 13, 14, 12, 11,  5, 12,  6, 10,  8, 12,  9, 10,
   8, 13,  8, 11,  9, 12,  9, 10, 14, 16, 12, 13, 13, 14, 11, 11,
@@ -733,7 +733,7 @@ static const uint8_t rv40_table_0_1_4[FIRSTBLK_VLC_SIZE] = {
  11, 15,  9, 11, 10, 12,  9,  7, 13, 15,  9,  9, 10, 10,  7,  5,
 };
 
-static const uint8_t rv40_table_0_1_5[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_1_5[FIRSTBLK_VLC_SIZE] = {
   0,  7,  3,  8,  4,  9,  7,  8,  5, 10,  7, 10,  8, 11,  8,  9,
  16, 16, 16, 16, 16, 16, 11, 10,  2, 10,  4,  9,  7, 10,  7,  8,
   7, 16,  7, 10,  9, 16,  8,  9, 16, 16, 16, 16, 16, 16, 11, 10,
@@ -790,7 +790,7 @@ static const uint8_t rv40_table_0_1_5[FIRSTBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
-static const uint8_t rv40_table_0_1_6[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_1_6[FIRSTBLK_VLC_SIZE] = {
   2,  9,  6,  9,  6, 10,  8,  9,  8, 12,  9, 11,  9, 12, 10, 10,
  16, 16, 14, 14, 15, 15, 13, 12,  5, 11,  7, 10,  8, 11,  9,  9,
   9, 13,  9, 11, 10, 12, 10, 10, 15, 16, 14, 14, 14, 16, 12, 11,
@@ -847,7 +847,7 @@ static const uint8_t rv40_table_0_1_6[FIRSTBLK_VLC_SIZE] = {
  12, 16, 11, 13, 11, 14, 10, 10, 14, 16, 11, 13, 12, 13, 10,  8,
 };
 
-static const uint8_t rv40_table_0_1_7[OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_1_7[OTHERBLK_VLC_SIZE] = {
   0,  5, 10,  4,  6, 10,  7,  8, 10,  4,  6, 10,  6,  7,  9,  8,
   8,  9,  8,  8,  9,  8,  9,  9,  9,  9,  9,  2,  6, 10,  4,  6,
  10,  7,  7,  9,  5,  7, 10,  6,  7,  9,  7,  7,  9,  7,  8,  9,
@@ -857,7 +857,7 @@ static const uint8_t rv40_table_0_1_7[OTHERBLK_VLC_SIZE] = {
   7,  7,  8,  8,  8,  9,  8,  8,  8,  7,  7,  6
 };
 
-static const uint8_t rv40_table_0_1_8[OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_1_8[OTHERBLK_VLC_SIZE] = {
   0,  5, 10,  3,  6, 10,  7,  8, 10,  4,  7, 10,  6,  7, 10,  8,
   9, 10,  8,  9, 11,  8,  9, 10, 10, 10, 10,  2,  6, 10,  4,  6,
  10,  7,  8, 10,  4,  7, 10,  5,  7, 10,  8,  8, 10,  8,  9, 10,
@@ -867,7 +867,7 @@ static const uint8_t rv40_table_0_1_8[OTHERBLK_VLC_SIZE] = {
   8,  8, 10,  9,  9, 10,  9,  9, 10,  9,  9,  9
 };
 
-static const uint8_t rv40_table_0_1_9[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_1_9[FIRSTBLK_VLC_SIZE] = {
   0, 11,  5, 11,  7, 13, 10, 12,  7, 13,  9, 13, 10, 14, 12, 13,
  16, 16, 15, 16, 16, 16, 15, 15,  4, 13,  6, 12, 10, 14, 11, 12,
   8, 14,  9, 13, 11, 15, 12, 13, 16, 16, 15, 16, 15, 16, 15, 14,
@@ -924,7 +924,7 @@ static const uint8_t rv40_table_0_1_9[FIRSTBLK_VLC_SIZE] = {
  11, 14, 10, 12, 10, 13,  9,  9, 13, 15, 10, 11, 11, 12,  9,  8,
 };
 
-static const uint8_t rv40_table_0_1_10[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_1_10[2][OTHERBLK_VLC_SIZE] = {
 { 0,  5, 12,  4,  7, 12,  8, 10, 13,  4,  7, 12,  6,  8, 12, 10,
  10, 12,  8,  9, 12, 10, 10, 12, 12, 12, 12,  1,  6, 12,  4,  7,
  12,  8,  9, 12,  4,  7, 12,  6,  8, 11,  9, 10, 12,  8,  9, 12,
@@ -941,13 +941,13 @@ static const uint8_t rv40_table_0_1_10[2][OTHERBLK_VLC_SIZE] = {
  11, 12, 14, 12, 14, 15, 13, 13, 14, 13, 13, 14 }
 };
 
-static const uint8_t rv40_table_0_1_11[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_0_1_11[COEFF_VLC_SIZE] = {
   1,  2,  3,  5,  5,  6,  6,  7,  7,  8,  8,  9, 10, 10, 10, 11,
  11, 11, 12, 12, 13, 13, 13, 13, 13, 13, 13, 14, 16, 16, 16, 16,
 };
 
 // BLOCK 2
-static const uint8_t rv40_table_0_2_0[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_0[CBPPAT_VLC_SIZE] = {
  10, 10,  9,  8,  9,  8,  9,  7,  9,  9,  8,  7,  8,  7,  7,  4,
  13, 11, 12,  9, 12,  9, 12,  9, 12, 11, 11,  9, 10,  9,  9,  6,
  15, 12, 15, 11, 14, 10, 14, 10, 14, 13, 13, 11, 13, 11, 12,  7,
@@ -1031,14 +1031,14 @@ static const uint8_t rv40_table_0_2_0[CBPPAT_VLC_SIZE] = {
  16, 16, 16, 13, 16, 13, 15, 10, 15, 14, 13, 10, 13, 10, 10,  4,
 };
 
-static const uint8_t rv40_table_0_2_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_1[4][CBP_VLC_SIZE] = {
  { 0,  3,  3,  4,  3,  4,  4,  5,  3,  5,  4,  5,  4,  5,  5,  5 },
  { 0,  4,  4,  4,  4,  4,  5,  4,  3,  5,  4,  4,  4,  4,  4,  3 },
  { 0,  4,  4,  4,  3,  4,  5,  4,  4,  5,  4,  4,  4,  4,  4,  3 },
  { 0,  5,  5,  5,  5,  5,  6,  4,  5,  6,  5,  5,  5,  4,  4,  1 }
 };
 
-static const uint8_t rv40_table_0_2_2[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_2[CBPPAT_VLC_SIZE] = {
   1,  6,  6,  7,  6,  7,  9,  8,  7,  9,  7,  8,  7,  8,  8,  6,
   6,  9, 10, 10, 10, 10, 12, 11, 10, 12, 11, 11, 11, 11, 12,  9,
   9, 10, 13, 11, 13, 12, 14, 13, 14, 14, 14, 14, 14, 14, 14, 12,
@@ -1122,14 +1122,14 @@ static const uint8_t rv40_table_0_2_2[CBPPAT_VLC_SIZE] = {
   8, 11, 11, 11, 11, 12, 13, 12, 11, 13, 11, 12, 11, 12, 12,  9,
 };
 
-static const uint8_t rv40_table_0_2_3[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_3[4][CBP_VLC_SIZE] = {
  { 0,  2,  3,  4,  2,  4,  6,  7,  3,  6,  5,  7,  5,  7,  8,  8 },
  { 0,  3,  3,  4,  3,  3,  6,  6,  3,  6,  4,  6,  3,  6,  6,  5 },
  { 0,  3,  3,  4,  3,  4,  5,  5,  3,  5,  4,  5,  4,  5,  5,  4 },
  { 0,  4,  4,  4,  4,  4,  6,  4,  4,  6,  5,  4,  4,  4,  4,  2 }
 };
 
-static const uint8_t rv40_table_0_2_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_4[FIRSTBLK_VLC_SIZE] = {
   0, 10,  5, 10,  6, 11,  8, 10,  7, 12,  8, 11,  8, 12,  9, 10,
  14, 16, 13, 13, 13, 14, 12, 11,  4, 12,  6, 10,  8, 12,  9, 10,
   8, 13,  8, 11,  9, 12,  9, 10, 14, 16, 12, 13, 13, 14, 11, 11,
@@ -1186,7 +1186,7 @@ static const uint8_t rv40_table_0_2_4[FIRSTBLK_VLC_SIZE] = {
  11, 15, 10, 11, 11, 12,  9,  8, 13, 15, 10, 10, 10, 11,  8,  7,
 };
 
-static const uint8_t rv40_table_0_2_5[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_5[FIRSTBLK_VLC_SIZE] = {
   0,  9,  3,  8,  5,  9,  7,  8,  5, 11,  6,  9,  8, 11,  8,  9,
  16, 16, 16, 16, 16, 16, 11, 10,  2, 10,  4,  9,  7, 10,  7,  8,
   7, 16,  7, 10,  9, 11,  8,  9, 16, 16, 11, 16, 16, 16, 11, 10,
@@ -1243,7 +1243,7 @@ static const uint8_t rv40_table_0_2_5[FIRSTBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
-static const uint8_t rv40_table_0_2_6[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_6[FIRSTBLK_VLC_SIZE] = {
   1, 10,  6, 10,  7, 11,  9, 10,  8, 12,  9, 12,  9, 12, 10, 10,
  16, 16, 14, 16, 14, 15, 13, 12,  5, 12,  7, 10,  9, 11,  9, 10,
   9, 13,  9, 12, 10, 13, 10, 10, 16, 16, 14, 15, 14, 14, 13, 12,
@@ -1300,7 +1300,7 @@ static const uint8_t rv40_table_0_2_6[FIRSTBLK_VLC_SIZE] = {
  12, 16, 11, 15, 12, 14, 11, 11, 13, 16, 12, 13, 11, 13, 10,  9,
 };
 
-static const uint8_t rv40_table_0_2_7[OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_7[OTHERBLK_VLC_SIZE] = {
   0,  5, 10,  3,  6, 10,  7,  8, 11,  4,  6, 10,  6,  7, 10,  8,
   9, 10,  8,  8, 10,  9,  9, 10, 10, 10, 10,  2,  6, 10,  4,  6,
  10,  7,  8, 10,  4,  7, 10,  6,  7, 10,  8,  8, 10,  7,  8, 10,
@@ -1310,7 +1310,7 @@ static const uint8_t rv40_table_0_2_7[OTHERBLK_VLC_SIZE] = {
   8,  8,  9,  8,  9, 10,  8,  8,  9,  9,  8,  8
 };
 
-static const uint8_t rv40_table_0_2_8[OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_8[OTHERBLK_VLC_SIZE] = {
   0,  5, 11,  3,  6, 11,  7,  9, 11,  4,  6, 11,  5,  7, 10,  9,
   9, 11,  8,  9, 11,  9, 10, 11, 11, 11, 11,  2,  6, 10,  3,  6,
  10,  7,  9, 11,  4,  7, 10,  5,  7, 10,  8,  9, 11,  8,  9, 11,
@@ -1320,7 +1320,7 @@ static const uint8_t rv40_table_0_2_8[OTHERBLK_VLC_SIZE] = {
  10, 11, 12, 10, 11, 12, 10, 10, 11, 11, 11, 11
 };
 
-static const uint8_t rv40_table_0_2_9[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_9[FIRSTBLK_VLC_SIZE] = {
   0, 12,  6, 13,  7, 14, 11, 14,  8, 14, 10, 14, 11, 15, 13, 15,
  16, 16, 16, 16, 16, 16, 16, 16,  5, 14,  7, 13, 10, 16, 12, 14,
   9, 16, 10, 14, 12, 16, 13, 16, 16, 16, 16, 16, 16, 16, 16, 16,
@@ -1377,7 +1377,7 @@ static const uint8_t rv40_table_0_2_9[FIRSTBLK_VLC_SIZE] = {
  12, 16, 11, 13, 11, 14, 11, 11, 13, 16, 12, 13, 12, 14, 11, 11,
 };
 
-static const uint8_t rv40_table_0_2_10[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_10[2][OTHERBLK_VLC_SIZE] = {
 { 0,  6, 13,  4,  7, 14,  9, 11, 14,  3,  7, 13,  7,  8, 13, 11,
  11, 14,  8, 10, 13, 10, 11, 13, 13, 13, 14,  1,  6, 12,  4,  8,
  13,  9, 10, 15,  4,  8, 13,  7,  8, 12, 11, 11, 14,  8, 10, 13,
@@ -1394,13 +1394,13 @@ static const uint8_t rv40_table_0_2_10[2][OTHERBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 14, 16, 16, 16, 16, 16 }
 };
 
-static const uint8_t rv40_table_0_2_11[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_0_2_11[COEFF_VLC_SIZE] = {
   1,  2,  3,  4,  5,  6,  8,  8,  9,  9, 10, 10, 11, 12, 12, 12,
  13, 13, 14, 14, 14, 14, 16, 16, 14, 16, 16, 16, 14, 16, 16, 16,
 };
 
 // BLOCK 3
-static const uint8_t rv40_table_0_3_0[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_0[CBPPAT_VLC_SIZE] = {
   8,  8,  8,  7,  8,  7,  8,  6,  8,  8,  7,  6,  7,  6,  6,  4,
  11, 10, 11,  9, 11,  9, 11,  8, 11, 10, 10,  9, 10,  8,  9,  6,
  13, 11, 13, 10, 12, 10, 13,  9, 13, 12, 13, 10, 12, 10, 11,  7,
@@ -1484,14 +1484,14 @@ static const uint8_t rv40_table_0_3_0[CBPPAT_VLC_SIZE] = {
  16, 16, 15, 13, 16, 14, 14, 11, 15, 14, 13, 10, 13, 11, 10,  5,
 };
 
-static const uint8_t rv40_table_0_3_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_1[4][CBP_VLC_SIZE] = {
  { 0,  3,  3,  4,  3,  4,  4,  5,  3,  5,  4,  5,  4,  5,  5,  5 },
  { 0,  3,  3,  4,  3,  4,  5,  5,  3,  5,  4,  5,  4,  5,  5,  4 },
  { 0,  3,  4,  4,  3,  4,  5,  4,  4,  5,  4,  5,  4,  5,  4,  3 },
  { 0,  4,  5,  4,  4,  4,  5,  4,  4,  5,  5,  4,  4,  4,  4,  2 }
 };
 
-static const uint8_t rv40_table_0_3_2[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_2[CBPPAT_VLC_SIZE] = {
   1,  6,  6,  7,  6,  7,  9,  7,  6,  9,  7,  8,  7,  8,  8,  5,
   5,  8, 10, 10, 10, 10, 12, 11, 11, 12, 11, 11, 11, 12, 12,  9,
   9, 10, 12, 11, 13, 12, 15, 13, 14, 15, 15, 14, 14, 15, 15, 12,
@@ -1575,14 +1575,14 @@ static const uint8_t rv40_table_0_3_2[CBPPAT_VLC_SIZE] = {
   8, 11, 11, 12, 12, 12, 13, 12, 11, 13, 12, 12, 12, 13, 12, 10,
 };
 
-static const uint8_t rv40_table_0_3_3[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_3[4][CBP_VLC_SIZE] = {
  { 0,  2,  3,  4,  2,  4,  7,  6,  3,  7,  5,  7,  5,  7,  7,  7 },
  { 0,  3,  3,  3,  3,  4,  6,  6,  3,  6,  4,  6,  3,  6,  6,  5 },
  { 0,  3,  3,  4,  3,  4,  5,  5,  3,  5,  4,  5,  4,  5,  5,  4 },
  { 0,  4,  4,  4,  4,  5,  5,  4,  4,  5,  5,  4,  4,  4,  4,  2 }
 };
 
-static const uint8_t rv40_table_0_3_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_4[FIRSTBLK_VLC_SIZE] = {
   0, 10,  5, 10,  5, 10,  8, 10,  6, 11,  8, 11,  8, 11,  9, 10,
  14, 16, 13, 14, 13, 14, 12, 12,  4, 12,  5, 10,  8, 12,  9, 10,
   7, 12,  8, 11,  9, 12,  9, 10, 14, 16, 12, 13, 13, 14, 12, 12,
@@ -1639,7 +1639,7 @@ static const uint8_t rv40_table_0_3_4[FIRSTBLK_VLC_SIZE] = {
  12, 15, 11, 12, 12, 13, 10, 10, 14, 15, 11, 11, 12, 12, 10,  9,
 };
 
-static const uint8_t rv40_table_0_3_5[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_5[FIRSTBLK_VLC_SIZE] = {
   0,  8,  3,  8,  5,  9,  7,  8,  5, 10,  6, 10,  8, 11,  8,  9,
  16, 16, 15, 16, 16, 16, 11, 11,  2, 10,  4,  9,  7, 10,  7,  8,
   7, 16,  7, 10,  9, 11,  8,  9, 16, 16, 15, 16, 16, 16, 11, 11,
@@ -1696,7 +1696,7 @@ static const uint8_t rv40_table_0_3_5[FIRSTBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
-static const uint8_t rv40_table_0_3_6[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_6[FIRSTBLK_VLC_SIZE] = {
   1, 10,  6, 10,  7, 11,  9, 10,  8, 12,  9, 12,  9, 12, 10, 10,
  15, 16, 14, 15, 14, 16, 13, 12,  5, 12,  7, 11,  8, 11,  9, 10,
   9, 13,  9, 12, 10, 12, 10, 10, 16, 16, 14, 15, 13, 16, 13, 12,
@@ -1753,7 +1753,7 @@ static const uint8_t rv40_table_0_3_6[FIRSTBLK_VLC_SIZE] = {
  13, 16, 12, 16, 12, 15, 12, 12, 14, 16, 12, 14, 12, 14, 11, 10,
 };
 
-static const uint8_t rv40_table_0_3_7[OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_7[OTHERBLK_VLC_SIZE] = {
   0,  5, 11,  3,  6, 11,  7,  9, 12,  3,  6, 11,  6,  7, 11,  9,
   9, 11,  8,  9, 11,  9,  9, 11, 11, 11, 12,  2,  6, 11,  4,  6,
  11,  7,  9, 11,  4,  7, 11,  5,  7, 10,  9,  9, 11,  7,  8, 11,
@@ -1763,7 +1763,7 @@ static const uint8_t rv40_table_0_3_7[OTHERBLK_VLC_SIZE] = {
  10, 10, 12,  9, 10, 12,  9,  9, 11, 11, 10, 11
 };
 
-static const uint8_t rv40_table_0_3_8[OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_8[OTHERBLK_VLC_SIZE] = {
   0,  6, 11,  3,  7, 11,  8, 10, 12,  4,  7, 11,  6,  8, 11, 10,
  11, 12,  9, 10, 12, 10, 10, 12, 12, 12, 13,  1,  6, 11,  4,  7,
  11,  8, 10, 12,  4,  7, 11,  6,  8, 11, 10, 10, 12,  9, 10, 12,
@@ -1773,7 +1773,7 @@ static const uint8_t rv40_table_0_3_8[OTHERBLK_VLC_SIZE] = {
  13, 13, 14, 12, 13, 15, 13, 13, 14, 14, 14, 14
 };
 
-static const uint8_t rv40_table_0_3_9[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_9[FIRSTBLK_VLC_SIZE] = {
   0, 13,  6, 13,  8, 14, 12, 16,  8, 16, 11, 16, 12, 16, 14, 16,
  16, 16, 16, 16, 16, 16, 16, 16,  4, 16,  7, 14, 11, 16, 13, 16,
   9, 16, 11, 16, 12, 16, 14, 16, 16, 16, 16, 16, 16, 16, 16, 16,
@@ -1830,7 +1830,7 @@ static const uint8_t rv40_table_0_3_9[FIRSTBLK_VLC_SIZE] = {
  12, 16, 12, 16, 12, 16, 12, 13, 16, 16, 13, 14, 13, 16, 13, 13,
 };
 
-static const uint8_t rv40_table_0_3_10[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_10[2][OTHERBLK_VLC_SIZE] = {
 { 0,  6, 13,  3,  8, 14, 10, 12, 16,  3,  8, 15,  7,  9, 15, 12,
  13, 15,  9, 11, 15, 11, 12, 16, 14, 16, 16,  1,  7, 13,  4,  8,
  14,  9, 11, 15,  4,  8, 14,  7,  9, 14, 12, 13, 15,  8, 10, 14,
@@ -1847,13 +1847,13 @@ static const uint8_t rv40_table_0_3_10[2][OTHERBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 }
 };
 
-static const uint8_t rv40_table_0_3_11[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_0_3_11[COEFF_VLC_SIZE] = {
   1,  2,  3,  4,  5,  6,  8,  8,  9,  9, 10, 10, 11, 12, 12, 12,
  13, 13, 16, 16, 16, 16, 16, 16, 16, 16, 14, 12, 16, 16, 16, 16,
 };
 
 // BLOCK 4
-static const uint8_t rv40_table_0_4_0[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_0[CBPPAT_VLC_SIZE] = {
   5,  6,  6,  6,  6,  6,  7,  6,  6,  7,  6,  6,  6,  6,  6,  4,
   9,  9,  9,  8,  9,  8, 10,  8, 10, 10,  9,  9,  9,  8,  9,  6,
  11, 10, 12, 10, 11, 10, 12,  9, 12, 11, 11, 10, 11, 10, 11,  8,
@@ -1937,14 +1937,14 @@ static const uint8_t rv40_table_0_4_0[CBPPAT_VLC_SIZE] = {
  15, 15, 14, 13, 15, 13, 14, 12, 14, 14, 13, 11, 13, 11, 11,  7,
 };
 
-static const uint8_t rv40_table_0_4_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_1[4][CBP_VLC_SIZE] = {
  { 0,  3,  3,  4,  3,  4,  5,  6,  2,  5,  4,  7,  4,  6,  6,  7 },
  { 0,  3,  3,  4,  3,  4,  5,  5,  3,  5,  4,  5,  4,  5,  5,  4 },
  { 0,  3,  3,  4,  3,  4,  5,  5,  3,  5,  4,  5,  4,  5,  5,  4 },
  { 0,  4,  4,  4,  4,  5,  5,  4,  4,  5,  5,  4,  4,  4,  4,  2 }
 };
 
-static const uint8_t rv40_table_0_4_2[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_2[CBPPAT_VLC_SIZE] = {
   1,  5,  6,  7,  6,  7,  9,  8,  6,  9,  8,  8,  7,  8,  8,  6,
   5,  8, 10, 10, 10, 11, 13, 12, 11, 13, 12, 12, 12, 12, 13, 10,
   8, 10, 13, 12, 13, 13, 16, 14, 14, 16, 16, 14, 16, 16, 16, 12,
@@ -2028,14 +2028,14 @@ static const uint8_t rv40_table_0_4_2[CBPPAT_VLC_SIZE] = {
   8, 12, 12, 13, 12, 14, 14, 14, 12, 16, 13, 14, 12, 14, 14, 11,
 };
 
-static const uint8_t rv40_table_0_4_3[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_3[4][CBP_VLC_SIZE] = {
  { 0,  2,  3,  4,  2,  4,  6,  7,  3,  7,  5,  7,  5,  7,  7,  7 },
  { 0,  2,  3,  4,  3,  4,  6,  5,  3,  6,  4,  6,  4,  6,  6,  6 },
  { 0,  3,  3,  4,  3,  4,  5,  5,  3,  5,  4,  5,  4,  5,  5,  4 },
  { 0,  3,  4,  4,  4,  4,  5,  4,  4,  5,  4,  4,  4,  4,  4,  3 }
 };
 
-static const uint8_t rv40_table_0_4_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_4[FIRSTBLK_VLC_SIZE] = {
   0, 10,  4, 10,  5, 11,  9, 11,  6, 11,  8, 11,  8, 12, 10, 12,
  15, 16, 13, 15, 14, 15, 13, 14,  4, 12,  5, 11,  8, 12,  9, 11,
   7, 13,  8, 12,  9, 13, 10, 12, 15, 16, 13, 15, 14, 16, 13, 14,
@@ -2092,7 +2092,7 @@ static const uint8_t rv40_table_0_4_4[FIRSTBLK_VLC_SIZE] = {
  13, 16, 13, 14, 14, 16, 12, 13, 16, 16, 14, 14, 14, 15, 13, 13,
 };
 
-static const uint8_t rv40_table_0_4_5[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_5[FIRSTBLK_VLC_SIZE] = {
   0,  9,  3,  9,  5,  9,  7,  9,  5, 10,  7, 11,  8, 11,  9, 10,
  16, 16, 16, 16, 16, 16, 16, 16,  2, 11,  4, 10,  7, 11,  8, 10,
   7, 16,  7, 11,  9, 16,  9, 11, 16, 16, 16, 16, 16, 16, 16, 16,
@@ -2149,7 +2149,7 @@ static const uint8_t rv40_table_0_4_5[FIRSTBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
-static const uint8_t rv40_table_0_4_6[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_6[FIRSTBLK_VLC_SIZE] = {
   1, 10,  5, 10,  6, 10,  9, 10,  7, 12,  9, 12,  9, 12, 10, 10,
  16, 16, 15, 16, 14, 16, 13, 13,  5, 12,  7, 11,  8, 11,  9, 10,
   8, 13,  9, 12, 10, 12, 10, 11, 16, 16, 16, 16, 14, 16, 13, 12,
@@ -2206,7 +2206,7 @@ static const uint8_t rv40_table_0_4_6[FIRSTBLK_VLC_SIZE] = {
  13, 16, 12, 16, 12, 16, 12, 12, 14, 16, 13, 15, 13, 16, 12, 11,
 };
 
-static const uint8_t rv40_table_0_4_7[OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_7[OTHERBLK_VLC_SIZE] = {
   0,  6, 12,  3,  7, 12,  9, 11, 13,  4,  7, 12,  6,  8, 12, 10,
  11, 13,  8, 10, 13, 10, 11, 13, 13, 13, 14,  1,  6, 12,  4,  7,
  12,  9, 10, 14,  4,  7, 12,  6,  7, 12, 10, 11, 13,  8,  9, 13,
@@ -2216,7 +2216,7 @@ static const uint8_t rv40_table_0_4_7[OTHERBLK_VLC_SIZE] = {
  12, 13, 15, 11, 13, 15, 12, 12, 15, 14, 14, 14
 };
 
-static const uint8_t rv40_table_0_4_8[OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_8[OTHERBLK_VLC_SIZE] = {
   0,  5, 11,  3,  6, 11, 10, 10, 12,  3,  7, 11,  6,  8, 11, 11,
  11, 12, 10, 10, 12, 11, 11, 13, 14, 13, 14,  1,  6, 11,  4,  7,
  11, 10, 11, 13,  5,  7, 11,  7,  8, 11, 11, 11, 13, 10, 11, 13,
@@ -2226,7 +2226,7 @@ static const uint8_t rv40_table_0_4_8[OTHERBLK_VLC_SIZE] = {
  14, 13, 16, 13, 13, 16, 13, 14, 15, 15, 14, 15
 };
 
-static const uint8_t rv40_table_0_4_9[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_9[FIRSTBLK_VLC_SIZE] = {
   0, 16,  6, 16,  8, 16, 16, 16,  9, 16, 11, 16, 12, 16, 16, 16,
  16, 16, 16, 16, 16, 16, 16, 16,  4, 16,  7, 16, 11, 16, 16, 16,
  10, 16, 11, 16, 13, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
@@ -2283,7 +2283,7 @@ static const uint8_t rv40_table_0_4_9[FIRSTBLK_VLC_SIZE] = {
  13, 16, 12, 16, 16, 16, 13, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
-static const uint8_t rv40_table_0_4_10[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_10[2][OTHERBLK_VLC_SIZE] = {
 { 0,  6, 16,  3,  8, 16, 10, 13, 16,  3,  8, 16,  7,  9, 16, 13,
  16, 16,  8, 10, 16, 11, 13, 16, 16, 16, 16,  1,  7, 14,  4,  8,
  16, 10, 12, 16,  4,  8, 13,  7,  9, 16, 13, 14, 16,  8, 10, 16,
@@ -2300,14 +2300,14 @@ static const uint8_t rv40_table_0_4_10[2][OTHERBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 }
 };
 
-static const uint8_t rv40_table_0_4_11[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_0_4_11[COEFF_VLC_SIZE] = {
   1,  2,  3,  4,  5,  7,  7,  8,  8,  9, 10, 10, 12, 11, 13, 12,
  15, 13, 14, 13, 12, 15, 14, 13, 12, 12, 10, 11, 16, 16, 16, 16,
 };
 
 // INTER TABLES
 // BLOCK 0
-static const uint8_t rv40_table_1_0_0[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_1_0_0[CBPPAT_VLC_SIZE] = {
   7,  9,  9,  8,  9,  8,  9,  8,  9,  9,  8,  8,  8,  8,  8,  4,
   7, 10, 11, 10, 11, 10, 12, 10, 12, 11, 11, 10, 11, 10, 10,  7,
  10, 11, 15, 12, 15, 12, 15, 12, 15, 14, 14, 12, 14, 12, 14,  9,
@@ -2391,14 +2391,14 @@ static const uint8_t rv40_table_1_0_0[CBPPAT_VLC_SIZE] = {
  10, 13, 13, 11, 13, 12, 13,  9, 13, 13, 12,  9, 12, 10, 10,  3,
 };
 
-static const uint8_t rv40_table_1_0_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_1_0_1[4][CBP_VLC_SIZE] = {
  { 0,  6,  6,  3,  6,  4,  5,  3,  6,  5,  4,  3,  3,  4,  4,  3 },
  { 0,  6,  6,  4,  6,  4,  5,  3,  6,  5,  4,  3,  4,  4,  4,  2 },
  { 0,  7,  7,  4,  7,  5,  5,  4,  7,  5,  5,  4,  5,  4,  4,  1 },
  { 0,  7,  7,  5,  7,  5,  6,  4,  7,  6,  5,  3,  5,  4,  4,  1 }
 };
 
-static const uint8_t rv40_table_1_0_2[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_0_2[FIRSTBLK_VLC_SIZE] = {
   0,  7,  5,  7,  5,  7,  6,  6,  7, 10,  7,  9,  8,  9,  8,  7,
  12, 14, 11, 12, 12, 12, 11,  9,  6,  9,  6,  8,  7,  9,  7,  7,
   8, 11,  8,  9,  9, 10,  9,  8, 13, 15, 12, 12, 12, 13, 11,  9,
@@ -2455,7 +2455,7 @@ static const uint8_t rv40_table_1_0_2[FIRSTBLK_VLC_SIZE] = {
  14, 16, 12, 12, 12, 13, 10,  7, 16, 16, 11, 11, 12, 11,  8,  5,
 };
 
-static const uint8_t rv40_table_1_0_3[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_0_3[2][OTHERBLK_VLC_SIZE] = {
 { 0,  4,  8,  3,  6,  8,  6,  7,  8,  4,  6,  8,  6,  7,  8,  7,
   8,  8,  7,  8,  8,  8,  8,  8,  8,  8,  8,  3,  6,  8,  4,  6,
   9,  7,  7,  8,  5,  7,  9,  6,  7,  9,  8,  8,  8,  7,  8,  8,
@@ -2472,7 +2472,7 @@ static const uint8_t rv40_table_1_0_3[2][OTHERBLK_VLC_SIZE] = {
   8,  8,  9,  8,  9,  9,  8,  9,  9,  8,  8,  7 }
 };
 
-static const uint8_t rv40_table_1_0_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_0_4[FIRSTBLK_VLC_SIZE] = {
   0,  7,  4,  8,  5,  8,  7,  8,  6, 10,  7, 10,  8, 10,  9,  9,
  13, 16, 12, 13, 13, 14, 12, 12,  4, 10,  6,  9,  8, 11,  8,  9,
   8, 12,  8, 11, 10, 12, 10, 10, 14, 16, 12, 13, 14, 15, 12, 12,
@@ -2528,7 +2528,7 @@ static const uint8_t rv40_table_1_0_4[FIRSTBLK_VLC_SIZE] = {
  16, 16, 14, 15, 14, 14, 12, 11, 14, 16, 12, 13, 13, 15, 11, 11,
  14, 16, 12, 13, 13, 14, 11, 11, 15, 16, 12, 13, 13, 13, 10,  9,
 };
-static const uint8_t rv40_table_1_0_5[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_0_5[2][OTHERBLK_VLC_SIZE] = {
 { 0,  4,  9,  3,  6,  9,  7,  8, 10,  3,  6,  9,  5,  7, 10,  9,
   9, 10,  7,  8, 10,  8,  9, 10, 10, 10, 10,  2,  6,  9,  4,  7,
  10,  8,  9, 10,  4,  7, 10,  6,  7, 10,  9,  9, 10,  7,  8, 10,
@@ -2545,13 +2545,13 @@ static const uint8_t rv40_table_1_0_5[2][OTHERBLK_VLC_SIZE] = {
  11, 11, 12, 11, 12, 12, 11, 12, 12, 12, 11, 11 }
 };
 
-static const uint8_t rv40_table_1_0_6[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_1_0_6[COEFF_VLC_SIZE] = {
   1,  2,  4,  4,  5,  5,  6,  7,  7,  7,  8,  8,  8,  9,  9, 10,
  10, 10, 10, 11, 11, 11, 11, 12, 11, 11, 11, 13, 14, 15, 16, 16,
 };
 
 // BLOCK 2
-static const uint8_t rv40_table_1_1_0[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_1_1_0[CBPPAT_VLC_SIZE] = {
   5,  7,  7,  7,  7,  7,  8,  7,  7,  8,  7,  7,  7,  7,  7,  4,
   7,  9, 11,  9, 11,  9, 11,  9, 11, 10, 10,  9, 10,  9, 10,  6,
  11, 11, 14, 11, 14, 11, 14, 11, 15, 13, 14, 12, 14, 12, 13,  9,
@@ -2635,14 +2635,14 @@ static const uint8_t rv40_table_1_1_0[CBPPAT_VLC_SIZE] = {
  11, 14, 13, 12, 14, 12, 13, 10, 14, 13, 12, 10, 12, 10, 10,  4,
 };
 
-static const uint8_t rv40_table_1_1_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_1_1_1[4][CBP_VLC_SIZE] = {
  { 0,  6,  6,  3,  6,  3,  5,  4,  6,  5,  3,  4,  3,  4,  4,  3 },
  { 0,  6,  6,  4,  6,  4,  4,  4,  6,  4,  4,  3,  4,  4,  4,  2 },
  { 0,  6,  6,  4,  6,  4,  5,  4,  6,  5,  4,  3,  4,  4,  3,  2 },
  { 0,  7,  7,  5,  7,  5,  6,  4,  7,  6,  5,  3,  5,  4,  4,  1 }
 };
 
-static const uint8_t rv40_table_1_1_2[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_1_2[FIRSTBLK_VLC_SIZE] = {
   0,  7,  4,  7,  5,  7,  6,  6,  6, 10,  7,  8,  8,  9,  8,  7,
  13, 14, 11, 12, 12, 12, 11,  9,  5,  9,  6,  8,  7,  9,  7,  7,
   8, 11,  8,  9,  9, 10,  9,  8, 13, 16, 12, 12, 12, 13, 11,  9,
@@ -2699,7 +2699,7 @@ static const uint8_t rv40_table_1_1_2[FIRSTBLK_VLC_SIZE] = {
  14, 16, 12, 12, 12, 13, 10,  8, 15, 16, 11, 11, 11, 12,  9,  6,
 };
 
-static const uint8_t rv40_table_1_1_3[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_1_3[2][OTHERBLK_VLC_SIZE] = {
 { 0,  4,  8,  3,  6,  8,  6,  7,  9,  4,  6,  8,  5,  7,  8,  8,
   8,  9,  7,  7,  8,  8,  8,  8,  8,  9,  8,  3,  6,  8,  4,  6,
   9,  7,  7,  9,  5,  6,  9,  6,  7,  9,  8,  8,  9,  7,  8,  8,
@@ -2716,7 +2716,7 @@ static const uint8_t rv40_table_1_1_3[2][OTHERBLK_VLC_SIZE] = {
   9,  9, 10,  9,  9, 10,  9,  9, 10,  9,  9,  8 }
 };
 
-static const uint8_t rv40_table_1_1_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_1_4[FIRSTBLK_VLC_SIZE] = {
   0,  7,  4,  7,  5,  8,  7,  8,  5, 10,  7, 10,  8, 10,  9, 10,
  13, 16, 12, 14, 14, 14, 13, 12,  4, 10,  6,  9,  8, 11,  9,  9,
   8, 12,  8, 11, 10, 12, 10, 10, 14, 16, 13, 14, 14, 15, 13, 12,
@@ -2773,7 +2773,7 @@ static const uint8_t rv40_table_1_1_4[FIRSTBLK_VLC_SIZE] = {
  13, 16, 12, 14, 13, 15, 12, 12, 14, 16, 12, 13, 13, 14, 11, 10,
 };
 
-static const uint8_t rv40_table_1_1_5[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_1_5[2][OTHERBLK_VLC_SIZE] = {
 { 0,  4,  9,  3,  6, 10,  8,  9, 11,  3,  5,  9,  5,  7, 10,  9,
  10, 11,  7,  8, 10,  9,  9, 11, 11, 11, 12,  2,  5, 10,  4,  7,
  10,  8,  9, 11,  4,  6, 10,  6,  7, 10,  9, 10, 11,  7,  9, 10,
@@ -2790,13 +2790,13 @@ static const uint8_t rv40_table_1_1_5[2][OTHERBLK_VLC_SIZE] = {
  12, 12, 13, 12, 13, 14, 13, 13, 14, 13, 13, 13 }
 };
 
-static const uint8_t rv40_table_1_1_6[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_1_1_6[COEFF_VLC_SIZE] = {
   1,  2,  3,  5,  5,  6,  6,  7,  7,  8,  9,  9,  9, 10, 10, 10,
  11, 11, 12, 12, 12, 12, 13, 13, 12, 12, 13, 14, 16, 16, 16, 16,
 };
 
 // BLOCK 2
-static const uint8_t rv40_table_1_2_0[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_1_2_0[CBPPAT_VLC_SIZE] = {
   4,  6,  6,  6,  6,  6,  7,  6,  6,  7,  6,  6,  6,  6,  6,  3,
   6,  9, 10,  9, 10,  9, 11,  9, 10, 10, 10,  9, 10,  9, 10,  6,
  10, 11, 14, 11, 14, 11, 14, 11, 14, 13, 14, 11, 14, 11, 13,  9,
@@ -2880,14 +2880,14 @@ static const uint8_t rv40_table_1_2_0[CBPPAT_VLC_SIZE] = {
  11, 14, 14, 13, 14, 13, 14, 12, 13, 14, 13, 12, 13, 12, 12,  7,
 };
 
-static const uint8_t rv40_table_1_2_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_1_2_1[4][CBP_VLC_SIZE] = {
  { 0,  6,  6,  3,  6,  3,  5,  4,  6,  5,  3,  4,  3,  4,  4,  3 },
  { 0,  5,  5,  3,  5,  4,  5,  4,  5,  5,  4,  4,  4,  4,  4,  2 },
  { 0,  6,  6,  4,  6,  4,  5,  3,  6,  5,  4,  3,  4,  4,  4,  2 },
  { 0,  7,  7,  5,  7,  5,  6,  4,  7,  6,  5,  3,  5,  4,  4,  1 }
 };
 
-static const uint8_t rv40_table_1_2_2[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_2_2[FIRSTBLK_VLC_SIZE] = {
   0,  7,  4,  7,  5,  7,  6,  6,  6, 10,  7,  8,  8,  9,  8,  8,
  13, 14, 11, 12, 12, 12, 11, 10,  5,  9,  6,  8,  7,  9,  7,  7,
   8, 11,  8,  9,  9, 10,  9,  8, 13, 16, 12, 12, 13, 13, 11, 10,
@@ -2944,7 +2944,7 @@ static const uint8_t rv40_table_1_2_2[FIRSTBLK_VLC_SIZE] = {
  14, 16, 12, 13, 12, 13, 10,  9, 14, 16, 11, 11, 12, 12,  9,  7,
 };
 
-static const uint8_t rv40_table_1_2_3[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_2_3[2][OTHERBLK_VLC_SIZE] = {
 { 0,  4,  8,  3,  6,  9,  7,  8,  9,  4,  6,  8,  5,  7,  9,  8,
   9,  9,  7,  8,  9,  8,  8,  9,  9,  9,  9,  2,  6,  9,  4,  6,
   9,  7,  8, 10,  5,  7,  9,  6,  7,  9,  8,  8,  9,  7,  8,  9,
@@ -2961,7 +2961,7 @@ static const uint8_t rv40_table_1_2_3[2][OTHERBLK_VLC_SIZE] = {
  10, 11, 11,  9, 10, 11, 10, 11, 11, 10, 10, 10 }
 };
 
-static const uint8_t rv40_table_1_2_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_2_4[FIRSTBLK_VLC_SIZE] = {
   0,  7,  3,  8,  5,  8,  7,  9,  5, 10,  7, 10,  8, 11, 10, 10,
  14, 16, 14, 15, 14, 16, 14, 14,  4, 10,  6, 10,  8, 11,  9, 10,
   8, 12,  9, 11, 10, 12, 11, 11, 15, 16, 14, 16, 15, 16, 14, 14,
@@ -3018,7 +3018,7 @@ static const uint8_t rv40_table_1_2_4[FIRSTBLK_VLC_SIZE] = {
  13, 16, 13, 16, 14, 16, 13, 13, 15, 16, 13, 14, 13, 15, 12, 12,
 };
 
-static const uint8_t rv40_table_1_2_5[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_2_5[2][OTHERBLK_VLC_SIZE] = {
 { 0,  4, 10,  3,  6, 10,  8, 10, 12,  2,  6, 10,  6,  8, 11, 10,
  11, 12,  7,  9, 11,  9, 10, 12, 12, 13, 13,  2,  6, 10,  4,  7,
  11,  9, 10, 13,  4,  7, 11,  7,  8, 11, 10, 11, 12,  8,  9, 12,
@@ -3035,13 +3035,13 @@ static const uint8_t rv40_table_1_2_5[2][OTHERBLK_VLC_SIZE] = {
  14, 15, 16, 14, 16, 16, 15, 16, 16, 15, 15, 16 }
 };
 
-static const uint8_t rv40_table_1_2_6[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_1_2_6[COEFF_VLC_SIZE] = {
   1,  2,  3,  4,  6,  6,  7,  7,  8,  8,  9,  9, 10, 10, 11, 12,
  12, 12, 13, 13, 13, 14, 14, 15, 14, 14, 16, 16, 16, 16, 16, 16,
 };
 
 // BLOCK 3
-static const uint8_t rv40_table_1_3_0[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_1_3_0[CBPPAT_VLC_SIZE] = {
   2,  6,  6,  5,  6,  6,  7,  6,  6,  7,  6,  6,  6,  6,  6,  3,
   6,  9, 10,  9, 10,  9, 11,  9, 10, 10, 10,  9, 10,  9, 10,  7,
  10, 11, 14, 11, 14, 11, 14, 11, 14, 13, 14, 12, 14, 12, 13,  9,
@@ -3125,14 +3125,14 @@ static const uint8_t rv40_table_1_3_0[CBPPAT_VLC_SIZE] = {
  12, 15, 15, 14, 15, 14, 16, 14, 14, 16, 15, 13, 14, 13, 13,  9,
 };
 
-static const uint8_t rv40_table_1_3_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_1_3_1[4][CBP_VLC_SIZE] = {
  { 0,  6,  6,  3,  6,  3,  5,  4,  6,  5,  3,  4,  3,  4,  4,  3 },
  { 0,  5,  5,  3,  5,  4,  5,  4,  5,  5,  4,  4,  4,  4,  4,  2 },
  { 0,  6,  6,  4,  6,  4,  5,  3,  6,  5,  4,  3,  4,  4,  4,  2 },
  { 0,  7,  7,  4,  7,  5,  6,  4,  7,  6,  5,  4,  4,  4,  4,  1 }
 };
 
-static const uint8_t rv40_table_1_3_2[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_3_2[FIRSTBLK_VLC_SIZE] = {
   0,  7,  4,  6,  4,  7,  6,  7,  6,  9,  7,  8,  7,  9,  8,  8,
  13, 14, 12, 12, 12, 13, 11, 11,  5,  9,  5,  8,  7,  9,  7,  8,
   8, 11,  8, 10,  9, 10,  9,  9, 13, 15, 12, 13, 12, 13, 11, 11,
@@ -3189,7 +3189,7 @@ static const uint8_t rv40_table_1_3_2[FIRSTBLK_VLC_SIZE] = {
  13, 16, 12, 13, 12, 14, 11, 10, 14, 16, 11, 12, 12, 12, 10,  8,
 };
 
-static const uint8_t rv40_table_1_3_3[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_3_3[2][OTHERBLK_VLC_SIZE] = {
 { 0,  4,  9,  3,  6,  9,  7,  8, 10,  3,  6,  9,  6,  7,  9,  9,
   9, 10,  7,  8,  9,  8,  9, 10, 10, 10, 11,  2,  6,  9,  4,  7,
  10,  7,  9, 10,  4,  7, 10,  6,  7, 10,  9,  9, 10,  7,  8, 10,
@@ -3206,7 +3206,7 @@ static const uint8_t rv40_table_1_3_3[2][OTHERBLK_VLC_SIZE] = {
  11, 12, 13, 11, 12, 13, 11, 12, 13, 12, 13, 12 }
 };
 
-static const uint8_t rv40_table_1_3_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_3_4[FIRSTBLK_VLC_SIZE] = {
   0,  8,  4,  9,  5,  9,  8, 10,  6, 11,  8, 11,  9, 12, 11, 12,
  16, 16, 16, 16, 16, 16, 16, 16,  4, 11,  6, 11,  9, 12, 10, 12,
   9, 13, 10, 13, 11, 16, 12, 13, 16, 16, 16, 16, 16, 16, 16, 16,
@@ -3263,7 +3263,7 @@ static const uint8_t rv40_table_1_3_4[FIRSTBLK_VLC_SIZE] = {
  14, 16, 16, 16, 16, 16, 16, 16, 16, 16, 14, 16, 16, 16, 14, 15,
 };
 
-static const uint8_t rv40_table_1_3_5[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_3_5[2][OTHERBLK_VLC_SIZE] = {
 { 0,  4, 12,  3,  7, 12, 10, 11, 14,  3,  6, 12,  7,  9, 13, 12,
  13, 14,  8, 11, 13, 11, 12, 14, 14, 14, 14,  1,  7, 12,  5,  8,
  13, 10, 12, 14,  4,  8, 13,  8,  9, 13, 12, 13, 14,  9, 11, 14,
@@ -3280,13 +3280,13 @@ static const uint8_t rv40_table_1_3_5[2][OTHERBLK_VLC_SIZE] = {
  14, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 }
 };
 
-static const uint8_t rv40_table_1_3_6[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_1_3_6[COEFF_VLC_SIZE] = {
   1,  2,  3,  4,  5,  6,  8,  8,  9,  9, 10, 10, 11, 11, 12, 12,
  13, 13, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
 // BLOCK 4
-static const uint8_t rv40_table_1_4_0[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_1_4_0[CBPPAT_VLC_SIZE] = {
   2,  5,  5,  5,  5,  5,  6,  6,  5,  6,  5,  6,  5,  6,  6,  4,
   6,  8, 10,  8, 10,  9, 11,  9, 10, 10, 10,  9, 10,  9, 10,  8,
  10, 11, 13, 11, 13, 11, 14, 11, 14, 13, 13, 12, 13, 12, 13, 10,
@@ -3370,14 +3370,14 @@ static const uint8_t rv40_table_1_4_0[CBPPAT_VLC_SIZE] = {
  12, 14, 14, 14, 14, 15, 16, 14, 14, 16, 15, 14, 14, 15, 14, 11,
 };
 
-static const uint8_t rv40_table_1_4_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_1_4_1[4][CBP_VLC_SIZE] = {
  { 0,  5,  5,  3,  5,  3,  5,  4,  5,  5,  3,  4,  3,  4,  4,  4 },
  { 0,  5,  5,  3,  5,  4,  5,  4,  5,  5,  3,  4,  3,  4,  4,  3 },
  { 0,  6,  6,  4,  6,  4,  5,  4,  6,  5,  4,  3,  4,  4,  3,  2 },
  { 0,  7,  7,  4,  7,  5,  6,  4,  7,  6,  5,  4,  4,  4,  4,  1 }
 };
 
-static const uint8_t rv40_table_1_4_2[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_4_2[FIRSTBLK_VLC_SIZE] = {
   0,  7,  3,  7,  4,  7,  6,  7,  6,  9,  7,  9,  7,  9,  8,  9,
  13, 14, 12, 13, 13, 13, 12, 12,  4,  9,  5,  9,  7,  9,  8,  9,
   7, 11,  8, 10,  9, 11,  9, 10, 13, 16, 12, 14, 13, 14, 12, 12,
@@ -3434,7 +3434,7 @@ static const uint8_t rv40_table_1_4_2[FIRSTBLK_VLC_SIZE] = {
  13, 16, 12, 14, 13, 15, 11, 11, 14, 16, 12, 13, 12, 13, 11, 10,
 };
 
-static const uint8_t rv40_table_1_4_3[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_4_3[2][OTHERBLK_VLC_SIZE] = {
 { 0,  4,  9,  3,  6, 10,  7,  9, 11,  3,  5,  9,  5,  7, 10,  9,
  10, 12,  7,  8, 10,  9, 10, 11, 11, 12, 12,  2,  6, 10,  4,  7,
  10,  7,  9, 12,  4,  7, 10,  6,  7, 11,  9, 10, 12,  7,  9, 11,
@@ -3451,7 +3451,7 @@ static const uint8_t rv40_table_1_4_3[2][OTHERBLK_VLC_SIZE] = {
  14, 15, 16, 13, 14, 15, 14, 14, 15, 15, 16, 16 }
 };
 
-static const uint8_t rv40_table_1_4_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_4_4[FIRSTBLK_VLC_SIZE] = {
   0,  8,  4,  9,  5, 10,  9, 11,  5, 11,  9, 12,  9, 13, 12, 16,
  16, 16, 16, 16, 16, 16, 16, 16,  4, 11,  6, 12,  9, 13, 11, 13,
   9, 16, 10, 16, 12, 16, 13, 16, 16, 16, 16, 16, 16, 16, 16, 16,
@@ -3508,7 +3508,7 @@ static const uint8_t rv40_table_1_4_4[FIRSTBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
-static const uint8_t rv40_table_1_4_5[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_4_5[2][OTHERBLK_VLC_SIZE] = {
 { 0,  4, 12,  3,  7, 13, 10, 12, 15,  3,  7, 13,  7,  9, 14, 12,
  12, 13,  8, 11, 14, 11, 13, 15, 15, 14, 14,  1,  6, 13,  5,  8,
  13, 10, 13, 15,  4,  8, 13,  8,  9, 14, 13, 13, 15,  8, 11, 14,
@@ -3525,13 +3525,13 @@ static const uint8_t rv40_table_1_4_5[2][OTHERBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 }
 };
 
-static const uint8_t rv40_table_1_4_6[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_1_4_6[COEFF_VLC_SIZE] = {
   1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 13, 14, 15, 16, 16,
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
 // BLOCK 5
-static const uint8_t rv40_table_1_5_0[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_1_5_0[CBPPAT_VLC_SIZE] = {
   1,  5,  5,  6,  5,  6,  7,  7,  5,  7,  6,  7,  5,  6,  6,  6,
   6,  9, 10,  9, 10,  9, 11, 10, 11, 11, 11, 10, 11, 10, 11,  9,
  10, 11, 14, 12, 14, 12, 16, 12, 16, 13, 16, 13, 14, 13, 16, 12,
@@ -3615,14 +3615,14 @@ static const uint8_t rv40_table_1_5_0[CBPPAT_VLC_SIZE] = {
  12, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 13,
 };
 
-static const uint8_t rv40_table_1_5_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_1_5_1[4][CBP_VLC_SIZE] = {
  { 0,  5,  5,  3,  5,  3,  5,  4,  5,  5,  3,  4,  3,  4,  4,  4 },
  { 0,  5,  5,  3,  5,  4,  5,  4,  5,  5,  3,  4,  3,  4,  4,  3 },
  { 0,  5,  5,  3,  5,  4,  4,  4,  5,  4,  4,  4,  3,  4,  4,  3 },
  { 0,  6,  6,  4,  6,  4,  5,  4,  6,  5,  4,  3,  4,  4,  3,  2 }
 };
 
-static const uint8_t rv40_table_1_5_2[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_5_2[FIRSTBLK_VLC_SIZE] = {
   0,  7,  4,  8,  4,  8,  7,  8,  6, 10,  7, 10,  8, 10,  9, 10,
  13, 16, 13, 15, 13, 15, 13, 14,  4, 10,  5, 10,  7, 10,  9, 10,
   7, 12,  8, 11,  9, 12, 10, 11, 13, 16, 13, 15, 13, 16, 13, 14,
@@ -3679,7 +3679,7 @@ static const uint8_t rv40_table_1_5_2[FIRSTBLK_VLC_SIZE] = {
  13, 16, 13, 16, 13, 16, 12, 13, 15, 16, 13, 14, 14, 15, 13, 13,
 };
 
-static const uint8_t rv40_table_1_5_3[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_5_3[2][OTHERBLK_VLC_SIZE] = {
 { 0,  5, 10,  3,  7, 11,  9, 11, 14,  3,  7, 11,  7,  8, 12, 11,
  12, 14,  7,  9, 12, 10, 11, 14, 13, 14, 16,  1,  7, 11,  5,  8,
  12,  9, 11, 15,  4,  8, 12,  7,  9, 13, 11, 12, 15,  8, 10, 13,
@@ -3696,7 +3696,7 @@ static const uint8_t rv40_table_1_5_3[2][OTHERBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 }
 };
 
-static const uint8_t rv40_table_1_5_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_5_4[FIRSTBLK_VLC_SIZE] = {
   0,  8,  4, 10,  5, 11, 10, 16,  5, 12,  9, 16, 10, 16, 16, 16,
  16, 16, 16, 16, 16, 16, 16, 16,  4, 12,  7, 12,  9, 16, 12, 16,
   9, 16, 11, 16, 12, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
@@ -3753,7 +3753,7 @@ static const uint8_t rv40_table_1_5_4[FIRSTBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
-static const uint8_t rv40_table_1_5_5[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_5_5[2][OTHERBLK_VLC_SIZE] = {
 { 0,  5, 16,  3,  8, 14, 11, 13, 14,  2,  8, 14,  8, 10, 16, 13,
  13, 14,  9, 13, 16, 12, 13, 16, 16, 14, 16,  1,  7, 14,  6, 10,
  14, 12, 16, 16,  5,  9, 14,  9, 11, 16, 15, 16, 16, 10, 12, 16,
@@ -3770,13 +3770,13 @@ static const uint8_t rv40_table_1_5_5[2][OTHERBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 }
 };
 
-static const uint8_t rv40_table_1_5_6[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_1_5_6[COEFF_VLC_SIZE] = {
   1,  2,  3,  4,  5,  6,  7,  8, 10, 10, 11, 11, 13, 12, 12, 13,
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
 // BLOCK 6
-static const uint8_t rv40_table_1_6_0[CBPPAT_VLC_SIZE] = {
+static const uint8_t rv34_table_1_6_0[CBPPAT_VLC_SIZE] = {
   1,  5,  5,  6,  5,  6,  7,  8,  5,  7,  6,  8,  6,  7,  7,  7,
   5,  9, 10, 10, 10, 10, 12, 11, 10, 11, 11, 11, 10, 11, 12, 10,
   9, 11, 13, 12, 13, 12, 16, 14, 16, 14, 16, 16, 16, 13, 16, 13,
@@ -3860,14 +3860,14 @@ static const uint8_t rv40_table_1_6_0[CBPPAT_VLC_SIZE] = {
  10, 16, 16, 16, 16, 16, 16, 16, 14, 16, 16, 16, 16, 16, 16, 14,
 };
 
-static const uint8_t rv40_table_1_6_1[4][CBP_VLC_SIZE] = {
+static const uint8_t rv34_table_1_6_1[4][CBP_VLC_SIZE] = {
  { 0,  4,  4,  3,  4,  3,  5,  5,  4,  5,  3,  5,  3,  5,  4,  5 },
  { 0,  4,  4,  3,  4,  4,  5,  4,  4,  5,  3,  5,  3,  5,  4,  4 },
  { 0,  4,  4,  3,  4,  4,  5,  4,  4,  5,  4,  4,  3,  4,  4,  4 },
  { 0,  4,  4,  3,  5,  4,  5,  4,  5,  5,  4,  4,  3,  4,  4,  3 }
 };
 
-static const uint8_t rv40_table_1_6_2[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_6_2[FIRSTBLK_VLC_SIZE] = {
   0,  8,  4, 10,  5,  9,  8, 10,  6, 11,  8, 12,  8, 11, 10, 13,
  14, 16, 14, 16, 14, 16, 16, 16,  3, 11,  5, 11,  8, 12, 10, 12,
   7, 12,  9, 13, 10, 13, 11, 13, 14, 16, 14, 16, 16, 16, 16, 16,
@@ -3924,7 +3924,7 @@ static const uint8_t rv40_table_1_6_2[FIRSTBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
-static const uint8_t rv40_table_1_6_3[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_6_3[2][OTHERBLK_VLC_SIZE] = {
 { 0,  5, 11,  3,  7, 13,  9, 12, 16,  3,  7, 12,  6,  9, 14, 11,
  13, 16,  7, 10, 16, 11, 12, 16, 16, 16, 16,  1,  6, 12,  5,  9,
  16,  9, 13, 16,  4,  8, 16,  7, 10, 16, 12, 15, 16,  7, 11, 16,
@@ -3941,7 +3941,7 @@ static const uint8_t rv40_table_1_6_3[2][OTHERBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 }
 };
 
-static const uint8_t rv40_table_1_6_4[FIRSTBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_6_4[FIRSTBLK_VLC_SIZE] = {
   0, 10,  4, 12,  5, 16, 11, 16,  6, 16, 10, 16, 11, 16, 16, 16,
  16, 16, 16, 16, 16, 16, 16, 16,  3, 16,  7, 16, 10, 16, 16, 16,
   9, 16, 12, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
@@ -3998,7 +3998,7 @@ static const uint8_t rv40_table_1_6_4[FIRSTBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
 };
 
-static const uint8_t rv40_table_1_6_5[2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_1_6_5[2][OTHERBLK_VLC_SIZE] = {
 { 0,  5, 16,  3,  8, 16, 12, 12, 16,  2,  8, 16,  8, 10, 16, 13,
  13, 16,  9, 13, 16, 12, 13, 16, 16, 16, 16,  1,  8, 16,  6, 10,
  16, 12, 16, 16,  5,  9, 16,  9, 11, 16, 13, 16, 16,  9, 12, 14,
@@ -4015,108 +4015,108 @@ static const uint8_t rv40_table_1_6_5[2][OTHERBLK_VLC_SIZE] = {
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16 }
 };
 
-static const uint8_t rv40_table_1_6_6[COEFF_VLC_SIZE] = {
+static const uint8_t rv34_table_1_6_6[COEFF_VLC_SIZE] = {
   1,  2,  3,  4,  5,  6,  7,  8, 10, 10, 10, 11, 14, 13, 15, 16,
  16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 15, 16, 16, 16,
 };
 
 
-static const uint8_t* rv40_intra_cbppatvlc_pointers[NUM_INTRA_TABLES][2] = {
- { rv40_table_0_0_0, rv40_table_0_0_2 }, { rv40_table_0_1_0, rv40_table_0_1_2 },
- { rv40_table_0_2_0, rv40_table_0_2_2 }, { rv40_table_0_3_0, rv40_table_0_3_2 },
- { rv40_table_0_4_0, rv40_table_0_4_2 },
+static const uint8_t* rv34_intra_cbppatvlc_pointers[NUM_INTRA_TABLES][2] = {
+ { rv34_table_0_0_0, rv34_table_0_0_2 }, { rv34_table_0_1_0, rv34_table_0_1_2 },
+ { rv34_table_0_2_0, rv34_table_0_2_2 }, { rv34_table_0_3_0, rv34_table_0_3_2 },
+ { rv34_table_0_4_0, rv34_table_0_4_2 },
 };
 
-static const uint8_t* rv40_intra_cbpvlc_pointers[NUM_INTRA_TABLES][2][4] = {
- {{ rv40_table_0_0_1[0], rv40_table_0_0_1[1], rv40_table_0_0_1[2], rv40_table_0_0_1[3]},
-  { rv40_table_0_0_3[0], rv40_table_0_0_3[1], rv40_table_0_0_3[2], rv40_table_0_0_3[3]} },
- {{ rv40_table_0_1_1[0], rv40_table_0_1_1[1], rv40_table_0_1_1[2], rv40_table_0_1_1[3]},
-  { rv40_table_0_1_3[0], rv40_table_0_1_3[1], rv40_table_0_1_3[2], rv40_table_0_1_3[3]} },
- {{ rv40_table_0_2_1[0], rv40_table_0_2_1[1], rv40_table_0_2_1[2], rv40_table_0_2_1[3]},
-  { rv40_table_0_2_3[0], rv40_table_0_2_3[1], rv40_table_0_2_3[2], rv40_table_0_2_3[3]} },
- {{ rv40_table_0_3_1[0], rv40_table_0_3_1[1], rv40_table_0_3_1[2], rv40_table_0_3_1[3]},
-  { rv40_table_0_3_3[0], rv40_table_0_3_3[1], rv40_table_0_3_3[2], rv40_table_0_3_3[3]} },
- {{ rv40_table_0_4_1[0], rv40_table_0_4_1[1], rv40_table_0_4_1[2], rv40_table_0_4_1[3]},
-  { rv40_table_0_4_3[0], rv40_table_0_4_3[1], rv40_table_0_4_3[2], rv40_table_0_4_3[3]} },
+static const uint8_t* rv34_intra_cbpvlc_pointers[NUM_INTRA_TABLES][2][4] = {
+ {{ rv34_table_0_0_1[0], rv34_table_0_0_1[1], rv34_table_0_0_1[2], rv34_table_0_0_1[3]},
+  { rv34_table_0_0_3[0], rv34_table_0_0_3[1], rv34_table_0_0_3[2], rv34_table_0_0_3[3]} },
+ {{ rv34_table_0_1_1[0], rv34_table_0_1_1[1], rv34_table_0_1_1[2], rv34_table_0_1_1[3]},
+  { rv34_table_0_1_3[0], rv34_table_0_1_3[1], rv34_table_0_1_3[2], rv34_table_0_1_3[3]} },
+ {{ rv34_table_0_2_1[0], rv34_table_0_2_1[1], rv34_table_0_2_1[2], rv34_table_0_2_1[3]},
+  { rv34_table_0_2_3[0], rv34_table_0_2_3[1], rv34_table_0_2_3[2], rv34_table_0_2_3[3]} },
+ {{ rv34_table_0_3_1[0], rv34_table_0_3_1[1], rv34_table_0_3_1[2], rv34_table_0_3_1[3]},
+  { rv34_table_0_3_3[0], rv34_table_0_3_3[1], rv34_table_0_3_3[2], rv34_table_0_3_3[3]} },
+ {{ rv34_table_0_4_1[0], rv34_table_0_4_1[1], rv34_table_0_4_1[2], rv34_table_0_4_1[3]},
+  { rv34_table_0_4_3[0], rv34_table_0_4_3[1], rv34_table_0_4_3[2], rv34_table_0_4_3[3]} },
 };
 
-static const uint8_t* rv40_intra_firstpatvlc_pointers[NUM_INTRA_TABLES][4] = {
- { rv40_table_0_0_9, rv40_table_0_0_4, rv40_table_0_0_5, rv40_table_0_0_6 },
- { rv40_table_0_1_9, rv40_table_0_1_4, rv40_table_0_1_5, rv40_table_0_1_6 },
- { rv40_table_0_2_9, rv40_table_0_2_4, rv40_table_0_2_5, rv40_table_0_2_6 },
- { rv40_table_0_3_9, rv40_table_0_3_4, rv40_table_0_3_5, rv40_table_0_3_6 },
- { rv40_table_0_4_9, rv40_table_0_4_4, rv40_table_0_4_5, rv40_table_0_4_6 },
+static const uint8_t* rv34_intra_firstpatvlc_pointers[NUM_INTRA_TABLES][4] = {
+ { rv34_table_0_0_9, rv34_table_0_0_4, rv34_table_0_0_5, rv34_table_0_0_6 },
+ { rv34_table_0_1_9, rv34_table_0_1_4, rv34_table_0_1_5, rv34_table_0_1_6 },
+ { rv34_table_0_2_9, rv34_table_0_2_4, rv34_table_0_2_5, rv34_table_0_2_6 },
+ { rv34_table_0_3_9, rv34_table_0_3_4, rv34_table_0_3_5, rv34_table_0_3_6 },
+ { rv34_table_0_4_9, rv34_table_0_4_4, rv34_table_0_4_5, rv34_table_0_4_6 },
 };
 
-static const uint8_t* rv40_intra_secondpatvlc_pointers[NUM_INTRA_TABLES][2] = {
- { rv40_table_0_0_7, rv40_table_0_0_10[0] },
- { rv40_table_0_1_7, rv40_table_0_1_10[0] },
- { rv40_table_0_2_7, rv40_table_0_2_10[0] },
- { rv40_table_0_3_7, rv40_table_0_3_10[0] },
- { rv40_table_0_4_7, rv40_table_0_4_10[0] },
+static const uint8_t* rv34_intra_secondpatvlc_pointers[NUM_INTRA_TABLES][2] = {
+ { rv34_table_0_0_7, rv34_table_0_0_10[0] },
+ { rv34_table_0_1_7, rv34_table_0_1_10[0] },
+ { rv34_table_0_2_7, rv34_table_0_2_10[0] },
+ { rv34_table_0_3_7, rv34_table_0_3_10[0] },
+ { rv34_table_0_4_7, rv34_table_0_4_10[0] },
 };
 
-static const uint8_t* rv40_intra_thirdpatvlc_pointers[NUM_INTRA_TABLES][2] = {
- { rv40_table_0_0_8, rv40_table_0_0_10[1] },
- { rv40_table_0_1_8, rv40_table_0_1_10[1] },
- { rv40_table_0_2_8, rv40_table_0_2_10[1] },
- { rv40_table_0_3_8, rv40_table_0_3_10[1] },
- { rv40_table_0_4_8, rv40_table_0_4_10[1] },
+static const uint8_t* rv34_intra_thirdpatvlc_pointers[NUM_INTRA_TABLES][2] = {
+ { rv34_table_0_0_8, rv34_table_0_0_10[1] },
+ { rv34_table_0_1_8, rv34_table_0_1_10[1] },
+ { rv34_table_0_2_8, rv34_table_0_2_10[1] },
+ { rv34_table_0_3_8, rv34_table_0_3_10[1] },
+ { rv34_table_0_4_8, rv34_table_0_4_10[1] },
 };
 
-static const uint8_t* rv40_intra_coeffvlc_pointers[NUM_INTRA_TABLES] = {
- rv40_table_0_0_11, rv40_table_0_1_11, rv40_table_0_2_11, rv40_table_0_3_11, rv40_table_0_4_11
+static const uint8_t* rv34_intra_coeffvlc_pointers[NUM_INTRA_TABLES] = {
+ rv34_table_0_0_11, rv34_table_0_1_11, rv34_table_0_2_11, rv34_table_0_3_11, rv34_table_0_4_11
 };
 
 
-static const uint8_t* rv40_inter_cbppatvlc_pointers[NUM_INTER_TABLES] = {
- rv40_table_1_0_0, rv40_table_1_1_0, rv40_table_1_2_0, rv40_table_1_3_0,
- rv40_table_1_4_0, rv40_table_1_5_0, rv40_table_1_6_0,
+static const uint8_t* rv34_inter_cbppatvlc_pointers[NUM_INTER_TABLES] = {
+ rv34_table_1_0_0, rv34_table_1_1_0, rv34_table_1_2_0, rv34_table_1_3_0,
+ rv34_table_1_4_0, rv34_table_1_5_0, rv34_table_1_6_0,
 };
 
-static const uint8_t* rv40_inter_cbpvlc_pointers[NUM_INTER_TABLES][4] = {
- { rv40_table_1_0_1[0], rv40_table_1_0_1[1], rv40_table_1_0_1[2], rv40_table_1_0_1[3] },
- { rv40_table_1_1_1[0], rv40_table_1_1_1[1], rv40_table_1_1_1[2], rv40_table_1_1_1[3] },
- { rv40_table_1_2_1[0], rv40_table_1_2_1[1], rv40_table_1_2_1[2], rv40_table_1_2_1[3] },
- { rv40_table_1_3_1[0], rv40_table_1_3_1[1], rv40_table_1_3_1[2], rv40_table_1_3_1[3] },
- { rv40_table_1_4_1[0], rv40_table_1_4_1[1], rv40_table_1_4_1[2], rv40_table_1_4_1[3] },
- { rv40_table_1_5_1[0], rv40_table_1_5_1[1], rv40_table_1_5_1[2], rv40_table_1_5_1[3] },
- { rv40_table_1_6_1[0], rv40_table_1_6_1[1], rv40_table_1_6_1[2], rv40_table_1_6_1[3] },
+static const uint8_t* rv34_inter_cbpvlc_pointers[NUM_INTER_TABLES][4] = {
+ { rv34_table_1_0_1[0], rv34_table_1_0_1[1], rv34_table_1_0_1[2], rv34_table_1_0_1[3] },
+ { rv34_table_1_1_1[0], rv34_table_1_1_1[1], rv34_table_1_1_1[2], rv34_table_1_1_1[3] },
+ { rv34_table_1_2_1[0], rv34_table_1_2_1[1], rv34_table_1_2_1[2], rv34_table_1_2_1[3] },
+ { rv34_table_1_3_1[0], rv34_table_1_3_1[1], rv34_table_1_3_1[2], rv34_table_1_3_1[3] },
+ { rv34_table_1_4_1[0], rv34_table_1_4_1[1], rv34_table_1_4_1[2], rv34_table_1_4_1[3] },
+ { rv34_table_1_5_1[0], rv34_table_1_5_1[1], rv34_table_1_5_1[2], rv34_table_1_5_1[3] },
+ { rv34_table_1_6_1[0], rv34_table_1_6_1[1], rv34_table_1_6_1[2], rv34_table_1_6_1[3] },
 };
 
-static const uint8_t* rv40_inter_firstpatvlc_pointers[NUM_INTER_TABLES][2] = {
- { rv40_table_1_0_2, rv40_table_1_0_4 },
- { rv40_table_1_1_2, rv40_table_1_1_4 },
- { rv40_table_1_2_2, rv40_table_1_2_4 },
- { rv40_table_1_3_2, rv40_table_1_3_4 },
- { rv40_table_1_4_2, rv40_table_1_4_4 },
- { rv40_table_1_5_2, rv40_table_1_5_4 },
- { rv40_table_1_6_2, rv40_table_1_6_4 }
+static const uint8_t* rv34_inter_firstpatvlc_pointers[NUM_INTER_TABLES][2] = {
+ { rv34_table_1_0_2, rv34_table_1_0_4 },
+ { rv34_table_1_1_2, rv34_table_1_1_4 },
+ { rv34_table_1_2_2, rv34_table_1_2_4 },
+ { rv34_table_1_3_2, rv34_table_1_3_4 },
+ { rv34_table_1_4_2, rv34_table_1_4_4 },
+ { rv34_table_1_5_2, rv34_table_1_5_4 },
+ { rv34_table_1_6_2, rv34_table_1_6_4 }
 };
 
-static const uint8_t* rv40_inter_secondpatvlc_pointers[NUM_INTER_TABLES][2] = {
- { rv40_table_1_0_3[0], rv40_table_1_0_5[0] },
- { rv40_table_1_1_3[0], rv40_table_1_1_5[0] },
- { rv40_table_1_2_3[0], rv40_table_1_2_5[0] },
- { rv40_table_1_3_3[0], rv40_table_1_3_5[0] },
- { rv40_table_1_4_3[0], rv40_table_1_4_5[0] },
- { rv40_table_1_5_3[0], rv40_table_1_5_5[0] },
- { rv40_table_1_6_3[0], rv40_table_1_6_5[0] },
+static const uint8_t* rv34_inter_secondpatvlc_pointers[NUM_INTER_TABLES][2] = {
+ { rv34_table_1_0_3[0], rv34_table_1_0_5[0] },
+ { rv34_table_1_1_3[0], rv34_table_1_1_5[0] },
+ { rv34_table_1_2_3[0], rv34_table_1_2_5[0] },
+ { rv34_table_1_3_3[0], rv34_table_1_3_5[0] },
+ { rv34_table_1_4_3[0], rv34_table_1_4_5[0] },
+ { rv34_table_1_5_3[0], rv34_table_1_5_5[0] },
+ { rv34_table_1_6_3[0], rv34_table_1_6_5[0] },
 };
 
-static const uint8_t* rv40_inter_thirdpatvlc_pointers[NUM_INTER_TABLES][2] = {
- { rv40_table_1_0_3[1], rv40_table_1_0_5[1] },
- { rv40_table_1_1_3[1], rv40_table_1_1_5[1] },
- { rv40_table_1_2_3[1], rv40_table_1_2_5[1] },
- { rv40_table_1_3_3[1], rv40_table_1_3_5[1] },
- { rv40_table_1_4_3[1], rv40_table_1_4_5[1] },
- { rv40_table_1_5_3[1], rv40_table_1_5_5[1] },
- { rv40_table_1_6_3[1], rv40_table_1_6_5[1] },
+static const uint8_t* rv34_inter_thirdpatvlc_pointers[NUM_INTER_TABLES][2] = {
+ { rv34_table_1_0_3[1], rv34_table_1_0_5[1] },
+ { rv34_table_1_1_3[1], rv34_table_1_1_5[1] },
+ { rv34_table_1_2_3[1], rv34_table_1_2_5[1] },
+ { rv34_table_1_3_3[1], rv34_table_1_3_5[1] },
+ { rv34_table_1_4_3[1], rv34_table_1_4_5[1] },
+ { rv34_table_1_5_3[1], rv34_table_1_5_5[1] },
+ { rv34_table_1_6_3[1], rv34_table_1_6_5[1] },
 };
 
-static const uint8_t* rv40_inter_coeffvlc_pointers[NUM_INTER_TABLES] = {
- rv40_table_1_0_6, rv40_table_1_1_6, rv40_table_1_2_6, rv40_table_1_3_6,
- rv40_table_1_4_6, rv40_table_1_5_6, rv40_table_1_6_6,
+static const uint8_t* rv34_inter_coeffvlc_pointers[NUM_INTER_TABLES] = {
+ rv34_table_1_0_6, rv34_table_1_1_6, rv34_table_1_2_6, rv34_table_1_3_6,
+ rv34_table_1_4_6, rv34_table_1_5_6, rv34_table_1_6_6,
 };
 
 #endif /* RV40VLC_H */

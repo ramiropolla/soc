@@ -32,14 +32,14 @@
 /**
  * Number of ones in nibble minus one
  */
-static const uint8_t rv40_count_ones[16] = {
+static const uint8_t rv34_count_ones[16] = {
     0, 0, 0, 1, 0, 1, 1, 2, 0, 1, 1, 2, 1, 2, 2, 3
 };
 
 /**
  * Values used to reconstruct coded block pattern
  */
-static const uint8_t rv40_cbp_code[16] = {
+static const uint8_t rv34_cbp_code[16] = {
     0x00, 0x20, 0x10, 0x30, 0x02, 0x22, 0x12, 0x32,
     0x01, 0x21, 0x11, 0x31, 0x03, 0x23, 0x13, 0x33
 };
@@ -120,7 +120,7 @@ static const uint8_t rv40_luma_quant[2][32] = {
  * Chroma quantizer values
  * Second table is used for DC-only blocks
  */
-static const uint8_t rv40_chroma_quant[2][32] = {
+static const uint8_t rv34_chroma_quant[2][32] = {
  {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
    16, 17, 17, 18, 19, 20, 20, 21, 22, 22, 23, 23, 24, 24, 25, 25 },
  {  0,  0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13,
@@ -130,7 +130,7 @@ static const uint8_t rv40_chroma_quant[2][32] = {
 /**
  * This table is used for dequantizing
  */
-static const uint16_t rv40_qscale_tab[32] = {
+static const uint16_t rv34_qscale_tab[32] = {
   60,   67,   76,   85,   96,  108,  121,  136,
  152,  171,  192,  216,  242,  272,  305,  341,
  383,  432,  481,  544,  606,  683,  767,  854,
@@ -140,7 +140,7 @@ static const uint16_t rv40_qscale_tab[32] = {
 /**
  * 4x4 dezigzag pattern
  */
-static const uint8_t rv40_dezigzag[16] = {
+static const uint8_t rv34_dezigzag[16] = {
   0,  1,  8, 16,
   9,  2,  3, 10,
  17, 24, 25, 18,
@@ -151,7 +151,7 @@ static const uint8_t rv40_dezigzag[16] = {
  * Tables used to translate quantizer value into VLC set for decoding
  * First table is used for intraframes.
  */
-static const uint8_t rv40_quant_to_vlc_set[2][31] = {
+static const uint8_t rv34_quant_to_vlc_set[2][31] = {
  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
    2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 0 },
  { 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3,
@@ -161,7 +161,7 @@ static const uint8_t rv40_quant_to_vlc_set[2][31] = {
 /**
  * Table for obtaining quantizer difference
  */
-static const int8_t rv40_dquant_tab[] = {
+static const int8_t rv34_dquant_tab[] = {
   0,  0,  2,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1,
  -1,  1, -1,  1, -1,  1, -2,  2, -2,  2, -2,  2, -2,  2, -2,  2,
  -2,  2, -2,  2, -2,  2, -2,  2, -2,  2, -3,  3, -3,  3, -3,  3,
@@ -172,24 +172,24 @@ static const int8_t rv40_dquant_tab[] = {
  * Maximum number of macroblocks for each of the possible slice offset sizes
  * @todo this is the same as ff_mba_max, maybe use it instead
  */
-static const uint16_t rv40_mb_max_sizes[6] = { 0x2F, 0x68, 0x18B, 0x62F, 0x18BF, 0x23FF };
+static const uint16_t rv34_mb_max_sizes[6] = { 0x2F, 0x68, 0x18B, 0x62F, 0x18BF, 0x23FF };
 /**
  * Bits needed to code slice offset for the given size
  * @todo this is the same as ff_mba_length, maybe use it instead
  */
-static const uint8_t rv40_mb_bits_sizes[6] = { 6, 7, 9, 11, 13, 14 };
+static const uint8_t rv34_mb_bits_sizes[6] = { 6, 7, 9, 11, 13, 14 };
 
 /**
  * Dither values for deblocking filter - left/top values
  */
-static const uint8_t rv40_dither_l[16] = {
+static const uint8_t rv34_dither_l[16] = {
     0x40, 0x50, 0x20, 0x60, 0x30, 0x50, 0x40, 0x30,
     0x50, 0x40, 0x50, 0x30, 0x60, 0x20, 0x50, 0x40
 };
 /**
  * Dither values for deblocking filter - right/bottom values
  */
-static const uint8_t rv40_dither_r[16] = {
+static const uint8_t rv34_dither_r[16] = {
     0x40, 0x30, 0x60, 0x20, 0x50, 0x30, 0x30, 0x40,
     0x40, 0x40, 0x50, 0x30, 0x20, 0x60, 0x30, 0x40
 };
@@ -199,19 +199,19 @@ static const uint8_t rv40_dither_r[16] = {
  * @{
  */
 /** alpha parameter for RV40 loop filter - almost the same as in JVT-A003r1 */
-static const uint8_t rv40_alpha_tab[32] = {
+static const uint8_t rv34_alpha_tab[32] = {
     128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 122,  96,  75,  59,  47,  37,
      29,  23,  18,  15,  13,  11,  10,   9,
       8,   7,   6,   5,   4,   3,   2,   1
 };
 /** beta parameter for RV40 loop filter - almost the same as in JVT-A003r1 */
-static const uint8_t rv40_beta_tab[32] = {
+static const uint8_t rv34_beta_tab[32] = {
      0,  0,  0,  0,  0,  0,  0,  0,  3,  3,  3,  4,  4,  4,  6,  6,
      6,  7,  8,  8,  9,  9, 10, 10, 11, 11, 12, 13, 14, 15, 16, 17
 };
 /** clip table for RV40 loop filter - the same as in JVT-A003r1 */
-static const uint8_t rv40_filter_clip_tbl[3][32] = {
+static const uint8_t rv34_filter_clip_tbl[3][32] = {
     {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0

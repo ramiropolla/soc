@@ -38,30 +38,30 @@
 //#define DEBUG
 
 /** Translation of RV40 macroblock types to lavc ones */
-static const int rv40_mb_type_to_lavc[12] = {
+static const int rv34_mb_type_to_lavc[12] = {
     MB_TYPE_INTRA, MB_TYPE_INTRA16x16, MB_TYPE_16x16,   MB_TYPE_8x8,
     MB_TYPE_16x16, MB_TYPE_16x16,      MB_TYPE_SKIP,    MB_TYPE_DIRECT2,
     MB_TYPE_16x8,  MB_TYPE_8x16,       MB_TYPE_DIRECT2, MB_TYPE_16x16
 };
 
 /**
- * RV40 Macroblock types
+ * RV30 and RV40 Macroblock types
  * @{
  */
 enum RV40BlockTypes{
-    RV40_MB_TYPE_INTRA,      ///< Intra macroblock
-    RV40_MB_TYPE_INTRA16x16, ///< Intra macroblock with DCs in a separate 4x4 block
-    RV40_MB_P_16x16,         ///< P-frame macroblock, one motion frame
-    RV40_MB_P_8x8,           ///< P-frame macroblock, 8x8 motion compensation partitions
-    RV40_MB_B_FORWARD,       ///< B-frame macroblock, forward prediction
-    RV40_MB_B_BACKWARD,      ///< B-frame macroblock, backward prediction
-    RV40_MB_SKIP,            ///< Skipped block
-    RV40_MB_B_INTERP,        ///< Bidirectionally predicted B-frame macroblock, no motion vectors
-    RV40_MB_P_16x8,          ///< P-frame macroblock, 16x8 motion compensation partitions
-    RV40_MB_P_8x16,          ///< P-frame macroblock, 8x16 motion compensation partitions
-    RV40_MB_B_DIRECT,        ///< Bidirectionally predicted B-frame macroblock, two motion vectors
-    RV40_MB_P_MIX16x16,      ///< P-frame macroblock with DCs in a separate 4x4 block, one motion vector
-    RV40_MB_TYPES
+    RV34_MB_TYPE_INTRA,      ///< Intra macroblock
+    RV34_MB_TYPE_INTRA16x16, ///< Intra macroblock with DCs in a separate 4x4 block
+    RV34_MB_P_16x16,         ///< P-frame macroblock, one motion frame
+    RV34_MB_P_8x8,           ///< P-frame macroblock, 8x8 motion compensation partitions
+    RV34_MB_B_FORWARD,       ///< B-frame macroblock, forward prediction
+    RV34_MB_B_BACKWARD,      ///< B-frame macroblock, backward prediction
+    RV34_MB_SKIP,            ///< Skipped block
+    RV34_MB_B_INTERP,        ///< Bidirectionally predicted B-frame macroblock, no motion vectors
+    RV34_MB_P_16x8,          ///< P-frame macroblock, 16x8 motion compensation partitions
+    RV34_MB_P_8x16,          ///< P-frame macroblock, 8x16 motion compensation partitions
+    RV34_MB_B_DIRECT,        ///< Bidirectionally predicted B-frame macroblock, two motion vectors
+    RV34_MB_P_MIX16x16,      ///< P-frame macroblock with DCs in a separate 4x4 block, one motion vector
+    RV34_MB_TYPES
 };
 /** @} */
 
@@ -70,14 +70,14 @@ enum RV40BlockTypes{
  *
  * intra frame VLC sets do not contain some of those tables
  */
-typedef struct RV40VLC{
+typedef struct RV34VLC{
     VLC cbppattern[2];     ///< VLCs used for pattern of coded block patterns decoding
     VLC cbp[2][4];         ///< VLCs used for coded block patterns decoding
     VLC first_pattern[4];  ///< VLCs used for decoding coefficients in the first subblock
     VLC second_pattern[2]; ///< VLCs used for decoding coefficients in the subblocks 2 and 3
     VLC third_pattern[2];  ///< VLCs used for decoding coefficients in the last subblock
     VLC coefficient;       ///< VLCs used for decoding big coefficients
-}RV40VLC;
+}RV34VLC;
 
 /** Essential slice information */
 typedef struct SliceInfo{
@@ -100,7 +100,7 @@ typedef struct SavedSliceInfo{
 }SavedSliceInfo;
 
 /** Decoder context */
-typedef struct RV40DecContext{
+typedef struct RV34DecContext{
     MpegEncContext s;
     int mb_bits;             ///< bits needed to read MB offet in slice header
     int *intra_types_hist;   ///< old block types, used for prediction
@@ -109,7 +109,7 @@ typedef struct RV40DecContext{
     int block_start;         ///< start of slice in blocks
 
     int vlc_set;             ///< index of currently selected VLC set
-    RV40VLC *cur_vlcs;       ///< VLC set used for current frame decoding
+    RV34VLC *cur_vlcs;       ///< VLC set used for current frame decoding
     int bits;                ///< slice size in bits
     H264PredContext h;       ///< functions for 4x4 and 16x16 intra block prediction
     SliceInfo si;            ///< current slice information
@@ -130,9 +130,9 @@ typedef struct RV40DecContext{
     int rpr;                 ///< one field size in RV30 slice header
 
     int avail[4];            ///< whether left, top, top rights and top left MBs are available
-}RV40DecContext;
+}RV34DecContext;
 
-static RV40VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
+static RV34VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
 static VLC aic_top_vlc;
 static VLC aic_mode1_vlc[AIC_MODE1_NUM], aic_mode2_vlc[AIC_MODE2_NUM];
 static VLC mbinfo_vlc, ptype_vlc[NUM_PTYPE_VLCS], btype_vlc[NUM_BTYPE_VLCS];
@@ -145,7 +145,7 @@ static VLC mbinfo_vlc, ptype_vlc[NUM_PTYPE_VLCS], btype_vlc[NUM_BTYPE_VLCS];
 /**
  * Generate VLC from codeword lengths
  */
-static int rv40_gen_vlc(const uint8_t *bits2, int size, VLC *vlc)
+static int rv34_gen_vlc(const uint8_t *bits2, int size, VLC *vlc)
 {
     int i;
     int counts[17] = {0}, codes[17];
@@ -182,36 +182,36 @@ static int rv40_gen_vlc(const uint8_t *bits2, int size, VLC *vlc)
 /**
  * Initialize all tables
  */
-static void rv40_init_tables()
+static void rv34_init_tables()
 {
     int i, j, k;
 
     for(i = 0; i < NUM_INTRA_TABLES; i++){
         for(j = 0; j < 2; j++)
-            rv40_gen_vlc(rv40_intra_cbppatvlc_pointers[i][j], CBPPAT_VLC_SIZE, &intra_vlcs[i].cbppattern[j]);
+            rv34_gen_vlc(rv34_intra_cbppatvlc_pointers[i][j], CBPPAT_VLC_SIZE, &intra_vlcs[i].cbppattern[j]);
         for(j = 0; j < 2; j++)
             for(k = 0; k < 4; k++)
-                rv40_gen_vlc(rv40_intra_cbpvlc_pointers[i][j][k], CBP_VLC_SIZE, &intra_vlcs[i].cbp[j][k]);
+                rv34_gen_vlc(rv34_intra_cbpvlc_pointers[i][j][k], CBP_VLC_SIZE, &intra_vlcs[i].cbp[j][k]);
         for(j = 0; j < 4; j++)
-            rv40_gen_vlc(rv40_intra_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &intra_vlcs[i].first_pattern[j]);
+            rv34_gen_vlc(rv34_intra_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &intra_vlcs[i].first_pattern[j]);
         for(j = 0; j < 2; j++)
-            rv40_gen_vlc(rv40_intra_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].second_pattern[j]);
+            rv34_gen_vlc(rv34_intra_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].second_pattern[j]);
         for(j = 0; j < 2; j++)
-            rv40_gen_vlc(rv40_intra_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].third_pattern[j]);
-        rv40_gen_vlc(rv40_intra_coeffvlc_pointers[i], COEFF_VLC_SIZE, &intra_vlcs[i].coefficient);
+            rv34_gen_vlc(rv34_intra_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].third_pattern[j]);
+        rv34_gen_vlc(rv34_intra_coeffvlc_pointers[i], COEFF_VLC_SIZE, &intra_vlcs[i].coefficient);
     }
 
     for(i = 0; i < NUM_INTER_TABLES; i++){
-        rv40_gen_vlc(rv40_inter_cbppatvlc_pointers[i], CBPPAT_VLC_SIZE, &inter_vlcs[i].cbppattern[0]);
+        rv34_gen_vlc(rv34_inter_cbppatvlc_pointers[i], CBPPAT_VLC_SIZE, &inter_vlcs[i].cbppattern[0]);
         for(j = 0; j < 4; j++)
-            rv40_gen_vlc(rv40_inter_cbpvlc_pointers[i][j], CBP_VLC_SIZE, &inter_vlcs[i].cbp[0][j]);
+            rv34_gen_vlc(rv34_inter_cbpvlc_pointers[i][j], CBP_VLC_SIZE, &inter_vlcs[i].cbp[0][j]);
         for(j = 0; j < 2; j++)
-            rv40_gen_vlc(rv40_inter_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &inter_vlcs[i].first_pattern[j]);
+            rv34_gen_vlc(rv34_inter_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &inter_vlcs[i].first_pattern[j]);
         for(j = 0; j < 2; j++)
-            rv40_gen_vlc(rv40_inter_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].second_pattern[j]);
+            rv34_gen_vlc(rv34_inter_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].second_pattern[j]);
         for(j = 0; j < 2; j++)
-            rv40_gen_vlc(rv40_inter_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].third_pattern[j]);
-        rv40_gen_vlc(rv40_inter_coeffvlc_pointers[i], COEFF_VLC_SIZE, &inter_vlcs[i].coefficient);
+            rv34_gen_vlc(rv34_inter_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].third_pattern[j]);
+        rv34_gen_vlc(rv34_inter_coeffvlc_pointers[i], COEFF_VLC_SIZE, &inter_vlcs[i].coefficient);
     }
 
     init_vlc(&aic_top_vlc, AIC_TOP_BITS, AIC_TOP_SIZE,
@@ -259,7 +259,7 @@ static void rv40_init_tables()
  * Real Video 4.0 inverse transform
  * Code is almost the same as in SVQ3, only scaling is different
  */
-static void rv40_intra_inv_transform(DCTELEM *block, const int offset){
+static void rv34_intra_inv_transform(DCTELEM *block, const int offset){
     int temp[16];
     unsigned int i;
 
@@ -295,7 +295,7 @@ static void rv40_intra_inv_transform(DCTELEM *block, const int offset){
  * Code is almost the same but final coefficients are multiplied by 1.5
  * and have no rounding
  */
-static void rv40_intra_inv_transform_noround(DCTELEM *block, const int offset){
+static void rv34_intra_inv_transform_noround(DCTELEM *block, const int offset){
     int temp[16];
     unsigned int i;
 
@@ -336,7 +336,7 @@ static void rv40_intra_inv_transform_noround(DCTELEM *block, const int offset){
 /**
  * Decode coded block pattern
  */
-static int rv40_decode_cbp(GetBitContext *gb, RV40VLC *vlc, int table)
+static int rv34_decode_cbp(GetBitContext *gb, RV34VLC *vlc, int table)
 {
     int pattern, code, cbp=0;
     int table2;
@@ -349,12 +349,12 @@ static int rv40_decode_cbp(GetBitContext *gb, RV40VLC *vlc, int table)
     pattern = code & 0xF;
     code >>= 4;
 
-    table2 = rv40_count_ones[pattern];
+    table2 = rv34_count_ones[pattern];
 
     for(mask = 8; mask; mask >>= 1, curshift++){
         if(!(pattern & mask)) continue;
         t = get_vlc2(gb, vlc->cbp[table][table2].table, vlc->cbp[table][table2].bits, 1);
-        cbp |= rv40_cbp_code[t] << curshift[0];
+        cbp |= rv34_cbp_code[t] << curshift[0];
     }
 
     for(i = 0; i < 4; i++){
@@ -420,7 +420,7 @@ static inline void decode_subblock(DCTELEM *dst, int code, const int is_block2, 
  *  o--o
  */
 
-static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *rvlc, int fc, int sc)
+static inline void rv34_decode_block(DCTELEM *dst, GetBitContext *gb, RV34VLC *rvlc, int fc, int sc)
 {
     int code, pattern;
 
@@ -449,7 +449,7 @@ static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *r
  * Dequantize ordinary 4x4 block
  * @todo optimize
  */
-static inline void rv40_dequant4x4(DCTELEM *block, int offset, int Qdc, int Q)
+static inline void rv34_dequant4x4(DCTELEM *block, int offset, int Qdc, int Q)
 {
     int i, j;
 
@@ -464,15 +464,15 @@ static inline void rv40_dequant4x4(DCTELEM *block, int offset, int Qdc, int Q)
  * Dequantize 4x4 block of DC values for 16x16 macroblock
  * @todo optimize
  */
-static inline void rv40_dequant4x4_16x16(DCTELEM *block, int offset, int Qdc, int Q)
+static inline void rv34_dequant4x4_16x16(DCTELEM *block, int offset, int Qdc, int Q)
 {
     int i;
 
     block += offset;
     for(i = 0; i < 3; i++)
-         block[rv40_dezigzag[i]] = (block[rv40_dezigzag[i]] * Qdc + 8) >> 4;
+         block[rv34_dezigzag[i]] = (block[rv34_dezigzag[i]] * Qdc + 8) >> 4;
     for(; i < 16; i++)
-         block[rv40_dezigzag[i]] = (block[rv40_dezigzag[i]] * Q + 8) >> 4;
+         block[rv34_dezigzag[i]] = (block[rv34_dezigzag[i]] * Q + 8) >> 4;
 }
 /** @} */ //block functions
 
@@ -524,7 +524,7 @@ static void rv40_parse_picture_size(GetBitContext *gb, int *w, int *h)
 /**
  * Select VLC set for decoding from current quantizer, modifier and frame type
  */
-static inline RV40VLC* choose_vlc_set(int quant, int mod, int type)
+static inline RV34VLC* choose_vlc_set(int quant, int mod, int type)
 {
     if(mod == 2){
         if(quant < 19) quant += 10;
@@ -532,11 +532,11 @@ static inline RV40VLC* choose_vlc_set(int quant, int mod, int type)
     }
     if(mod == 1)
         if(quant < 26) quant += 5;
-    return type ? &inter_vlcs[rv40_quant_to_vlc_set[1][av_clip(quant, 0, 30)]]
-                : &intra_vlcs[rv40_quant_to_vlc_set[0][av_clip(quant, 0, 30)]];
+    return type ? &inter_vlcs[rv34_quant_to_vlc_set[1][av_clip(quant, 0, 30)]]
+                : &intra_vlcs[rv34_quant_to_vlc_set[0][av_clip(quant, 0, 30)]];
 }
 
-static int rv30_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceInfo *si)
+static int rv30_parse_slice_header(RV34DecContext *r, GetBitContext *gb, SliceInfo *si)
 {
     int t, mb_bits;
     int w = r->s.width, h = r->s.height;
@@ -557,16 +557,16 @@ static int rv30_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     si->height = h;
     mb_size = ((w + 15) >> 4) * ((h + 15) >> 4);
     for(i = 0; i < 5; i++)
-        if(rv40_mb_max_sizes[i] > mb_size)
+        if(rv34_mb_max_sizes[i] > mb_size)
             break;
-    mb_bits = rv40_mb_bits_sizes[i];
+    mb_bits = rv34_mb_bits_sizes[i];
     si->start = get_bits(gb, mb_bits);
     get_bits1(gb);
     si->header_size = get_bits_count(gb);
     return 0;
 }
 
-static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceInfo *si)
+static int rv40_parse_slice_header(RV34DecContext *r, GetBitContext *gb, SliceInfo *si)
 {
     int t, mb_bits;
     int w = r->s.width, h = r->s.height;
@@ -590,9 +590,9 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     si->height = h;
     mb_size = ((w + 15) >> 4) * ((h + 15) >> 4);
     for(i = 0; i < 5; i++)
-        if(rv40_mb_max_sizes[i] > mb_size)
+        if(rv34_mb_max_sizes[i] > mb_size)
             break;
-    mb_bits = rv40_mb_bits_sizes[i];
+    mb_bits = rv34_mb_bits_sizes[i];
     si->start = get_bits(gb, mb_bits);
     si->header_size = get_bits_count(gb);
 
@@ -640,7 +640,7 @@ static inline int get_omega_signed(GetBitContext *gb)
 /**
  * Decode 4x4 intra types array
  */
-static int rv30_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *dst)
+static int rv30_decode_intra_types(RV34DecContext *r, GetBitContext *gb, int *dst)
 {
     int i, j, k;
     int A, B;
@@ -672,7 +672,7 @@ static int rv30_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *ds
 /**
  * Decode 4x4 intra types array
  */
-static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *dst)
+static int rv40_decode_intra_types(RV34DecContext *r, GetBitContext *gb, int *dst)
 {
     MpegEncContext *s = &r->s;
     int i, j, k, v;
@@ -735,10 +735,10 @@ static int rv40_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *ds
 /**
  * Decode quantizer difference and return modified quantizer
  */
-static inline int rv40_decode_dquant(GetBitContext *gb, int quant)
+static inline int rv34_decode_dquant(GetBitContext *gb, int quant)
 {
     if(get_bits1(gb))
-        return av_clip(quant + rv40_dquant_tab[quant * 2 + get_bits1(gb)], 0, 31);
+        return av_clip(quant + rv34_dquant_tab[quant * 2 + get_bits1(gb)], 0, 31);
     else
         return get_bits(gb, 5);
 }
@@ -746,10 +746,10 @@ static inline int rv40_decode_dquant(GetBitContext *gb, int quant)
 /**
  * Decode macroblock information
  */
-static int rv30_decode_mb_info(RV40DecContext *r)
+static int rv30_decode_mb_info(RV34DecContext *r)
 {
-    static const int rv30_p_types[6] = { RV40_MB_SKIP, RV40_MB_P_16x16, RV40_MB_P_8x8, -1, RV40_MB_TYPE_INTRA, RV40_MB_TYPE_INTRA16x16 };
-    static const int rv30_b_types[6] = { RV40_MB_SKIP, RV40_MB_B_INTERP, RV40_MB_B_FORWARD, RV40_MB_B_BACKWARD, RV40_MB_TYPE_INTRA, RV40_MB_TYPE_INTRA16x16 };
+    static const int rv30_p_types[6] = { RV34_MB_SKIP, RV34_MB_P_16x16, RV34_MB_P_8x8, -1, RV34_MB_TYPE_INTRA, RV34_MB_TYPE_INTRA16x16 };
+    static const int rv30_b_types[6] = { RV34_MB_SKIP, RV34_MB_B_INTERP, RV34_MB_B_FORWARD, RV34_MB_B_BACKWARD, RV34_MB_TYPE_INTRA, RV34_MB_TYPE_INTRA16x16 };
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
     int code;
@@ -772,21 +772,21 @@ static int rv30_decode_mb_info(RV40DecContext *r)
 /**
  * Decode macroblock information
  */
-static int rv40_decode_mb_info(RV40DecContext *r)
+static int rv40_decode_mb_info(RV34DecContext *r)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
     int q, i;
     int prev_type = 0;
     int mb_pos = s->mb_x + s->mb_y * s->mb_stride;
-    int blocks[RV40_MB_TYPES];
+    int blocks[RV34_MB_TYPES];
     int count = 0;
 
     if(!r->s.mb_skip_run)
         r->s.mb_skip_run = get_omega(gb);
 
     if(--r->s.mb_skip_run)
-         return RV40_MB_SKIP;
+         return RV34_MB_SKIP;
 
     memset(blocks, 0, sizeof(blocks));
     if(r->avail[0])
@@ -798,14 +798,14 @@ static int rv40_decode_mb_info(RV40DecContext *r)
     if(r->avail[1] && r->avail[3])
         blocks[r->mb_type[mb_pos - s->mb_stride - 1]]++;
 
-    for(i = 0; i < RV40_MB_TYPES; i++){
+    for(i = 0; i < RV34_MB_TYPES; i++){
         if(blocks[i] > count){
             count = blocks[i];
             prev_type = i;
         }
     }
     if(s->pict_type == P_TYPE){
-        if(prev_type == RV40_MB_SKIP) prev_type = RV40_MB_P_16x16;
+        if(prev_type == RV34_MB_SKIP) prev_type = RV34_MB_P_16x16;
         prev_type = block_num_to_ptype_vlc_num[prev_type];
         q = get_vlc2(gb, ptype_vlc[prev_type].table, PTYPE_VLC_BITS, 1);
         if(q < PBTYPE_ESCAPE)
@@ -831,10 +831,10 @@ static int rv40_decode_mb_info(RV40DecContext *r)
  */
 
 /** Macroblock partition width in 8x8 blocks */
-static const uint8_t part_sizes_w[RV40_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 2, 1, 2, 2 };
+static const uint8_t part_sizes_w[RV34_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 2, 1, 2, 2 };
 
 /** Macroblock partition height in 8x8 blocks */
-static const uint8_t part_sizes_h[RV40_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2 };
+static const uint8_t part_sizes_h[RV34_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2 };
 
 /**
  * Motion vectors prediction
@@ -843,7 +843,7 @@ static const uint8_t part_sizes_h[RV40_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 1, 
  * motion vector from the left, top and right top blocks but in corener cases
  * some other vectors may be used instead
  */
-static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
+static void rv34_pred_mv(RV34DecContext *r, int block_type, int subblock_no)
 {
     MpegEncContext *s = &r->s;
     int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride;
@@ -859,14 +859,14 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
     no_B = !r->avail[1];
     no_C = !r->avail[2];
     switch(block_type){
-    case RV40_MB_P_16x16:
-    case RV40_MB_P_MIX16x16:
+    case RV34_MB_P_16x16:
+    case RV34_MB_P_MIX16x16:
         if(!no_C){
             C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][0];
             C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][1];
         }
         break;
-    case RV40_MB_P_8x8:
+    case RV34_MB_P_8x8:
         mv_pos += (subblock_no & 1) + (subblock_no >> 1)*s->b8_stride;
         if(subblock_no & 1) no_A = 0;
         if(subblock_no & 2) no_B = 0;
@@ -883,7 +883,7 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
             C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][1];
         }
         break;
-    case RV40_MB_P_16x8:
+    case RV34_MB_P_16x8:
         mv_pos += subblock_no*s->b8_stride;
         no_B &= ~subblock_no;
         no_C |= subblock_no;
@@ -892,7 +892,7 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
             C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][1];
         }
         break;
-    case RV40_MB_P_8x16:
+    case RV34_MB_P_8x16:
         mv_pos += subblock_no;
         no_A &= ~subblock_no;
         if(!subblock_no) no_C = no_B;
@@ -939,7 +939,7 @@ static void rv40_pred_mv(RV40DecContext *r, int block_type, int subblock_no)
 /**
  * Predict motion vector for B-frame macroblock.
  */
-static inline void rv40_pred_b_vector(int A[2], int B[2], int C[2], int no_A, int no_B, int no_C, int *mx, int *my)
+static inline void rv34_pred_b_vector(int A[2], int B[2], int C[2], int no_A, int no_B, int no_C, int *mx, int *my)
 {
     if(no_A + no_B + no_C){
         *mx = A[0] + B[0] + C[0];
@@ -957,7 +957,7 @@ static inline void rv40_pred_b_vector(int A[2], int B[2], int C[2], int no_A, in
 /**
  * Motion vector prediction for B-frames.
  */
-static void rv40_pred_mv_b(RV40DecContext *r, int block_type)
+static void rv34_pred_mv_b(RV34DecContext *r, int block_type)
 {
     MpegEncContext *s = &r->s;
     int mb_pos = s->mb_x + s->mb_y * s->mb_stride;
@@ -977,9 +977,9 @@ static void rv40_pred_mv_b(RV40DecContext *r, int block_type)
         no_A[0] = no_A[1] = 1;
     else{
         no_A[0] = no_A[1] = 0;
-        if(r->mb_type[mb_pos - 1] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - 1] != RV40_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - 1] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - 1] != RV34_MB_B_DIRECT)
             no_A[0] = 1;
-        if(r->mb_type[mb_pos - 1] != RV40_MB_B_BACKWARD && r->mb_type[mb_pos - 1] != RV40_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - 1] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - 1] != RV34_MB_B_DIRECT)
             no_A[1] = 1;
         if(!no_A[0]){
             A[0][0] = s->current_picture_ptr->motion_val[0][mv_pos - 1][0];
@@ -994,9 +994,9 @@ static void rv40_pred_mv_b(RV40DecContext *r, int block_type)
         no_B[0] = no_B[1] = 1;
     }else{
         no_B[0] = no_B[1] = 0;
-        if(r->mb_type[mb_pos - s->mb_stride] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride] != RV40_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_DIRECT)
             no_B[0] = 1;
-        if(r->mb_type[mb_pos - s->mb_stride] != RV40_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride] != RV40_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_DIRECT)
             no_B[1] = 1;
         if(!no_B[0]){
             B[0][0] = s->current_picture_ptr->motion_val[0][mv_pos - s->b8_stride][0];
@@ -1009,16 +1009,16 @@ static void rv40_pred_mv_b(RV40DecContext *r, int block_type)
     }
     if(r->avail[2]){
         no_C[0] = no_C[1] = 0;
-        if(r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_DIRECT)
             no_C[0] = 1;
-        if(r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride + 1] != RV40_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_DIRECT)
             no_C[1] = 1;
         c_mv_pos = mv_pos - s->b8_stride + 2;
     }else if(r->avail[3]){
         no_C[0] = no_C[1] = 0;
-        if(r->mb_type[mb_pos - s->mb_stride - 1] != RV40_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride - 1] != RV40_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_DIRECT)
             no_C[0] = 1;
-        if(r->mb_type[mb_pos - s->mb_stride - 1] != RV40_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride - 1] != RV40_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_DIRECT)
             no_C[1] = 1;
         c_mv_pos = mv_pos - s->b8_stride - 1;
     }else{
@@ -1034,21 +1034,21 @@ static void rv40_pred_mv_b(RV40DecContext *r, int block_type)
         C[1][1] = s->current_picture_ptr->motion_val[1][c_mv_pos][1];
     }
     switch(block_type){
-    case RV40_MB_B_FORWARD:
-        rv40_pred_b_vector(A[0], B[0], C[0], no_A[0], no_B[0], no_C[0], &mx[0], &my[0]);
+    case RV34_MB_B_FORWARD:
+        rv34_pred_b_vector(A[0], B[0], C[0], no_A[0], no_B[0], no_C[0], &mx[0], &my[0]);
         r->dmv[1][0] = 0;
         r->dmv[1][1] = 0;
         break;
-    case RV40_MB_B_BACKWARD:
+    case RV34_MB_B_BACKWARD:
         r->dmv[1][0] = r->dmv[0][0];
         r->dmv[1][1] = r->dmv[0][1];
         r->dmv[0][0] = 0;
         r->dmv[0][1] = 0;
-        rv40_pred_b_vector(A[1], B[1], C[1], no_A[1], no_B[1], no_C[1], &mx[1], &my[1]);
+        rv34_pred_b_vector(A[1], B[1], C[1], no_A[1], no_B[1], no_C[1], &mx[1], &my[1]);
         break;
-    case RV40_MB_B_DIRECT:
-        rv40_pred_b_vector(A[0], B[0], C[0], no_A[0], no_B[0], no_C[0], &mx[0], &my[0]);
-        rv40_pred_b_vector(A[1], B[1], C[1], no_A[1], no_B[1], no_C[1], &mx[1], &my[1]);
+    case RV34_MB_B_DIRECT:
+        rv34_pred_b_vector(A[0], B[0], C[0], no_A[0], no_B[0], no_C[0], &mx[0], &my[0]);
+        rv34_pred_b_vector(A[1], B[1], C[1], no_A[1], no_B[1], no_C[1], &mx[1], &my[1]);
         break;
     default:
         no_A[0] = no_A[1] = no_B[0] = no_B[1] = no_C[0] = no_C[1] = 1;
@@ -1079,7 +1079,7 @@ static void rv40_pred_mv_b(RV40DecContext *r, int block_type)
  * @param width width of the current partition in 8x8 blocks
  * @param height height of the current partition in 8x8 blocks
  */
-static inline void rv40_mc(RV40DecContext *r, const int block_type,
+static inline void rv34_mc(RV34DecContext *r, const int block_type,
                           const int xoff, const int yoff, int mv_off,
                           const int width, const int height)
 {
@@ -1121,21 +1121,21 @@ static inline void rv40_mc(RV40DecContext *r, const int block_type,
     Y = s->dest[0] + xoff + yoff*s->linesize;
     U = s->dest[1] + (xoff>>1) + (yoff>>1)*s->uvlinesize;
     V = s->dest[2] + (xoff>>1) + (yoff>>1)*s->uvlinesize;
-    if(block_type == RV40_MB_P_16x8){
+    if(block_type == RV34_MB_P_16x8){
         s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
         Y    += 8;
         srcY += 8;
         s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
         s->dsp.put_h264_chroma_pixels_tab[0]   (U, srcU, s->uvlinesize, 4, uvmx, uvmy);
         s->dsp.put_h264_chroma_pixels_tab[0]   (V, srcV, s->uvlinesize, 4, uvmx, uvmy);
-    }else if(block_type == RV40_MB_P_8x16){
+    }else if(block_type == RV34_MB_P_8x16){
         s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
         Y    += 8 * s->linesize;
         srcY += 8 * s->linesize;
         s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
         s->dsp.put_h264_chroma_pixels_tab[1]   (U, srcU, s->uvlinesize, 8, uvmx, uvmy);
         s->dsp.put_h264_chroma_pixels_tab[1]   (V, srcV, s->uvlinesize, 8, uvmx, uvmy);
-    }else if(block_type == RV40_MB_P_8x8){
+    }else if(block_type == RV34_MB_P_8x8){
         s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
         s->dsp.put_h264_chroma_pixels_tab[1]   (U, srcU, s->uvlinesize, 4, uvmx, uvmy);
         s->dsp.put_h264_chroma_pixels_tab[1]   (V, srcV, s->uvlinesize, 4, uvmx, uvmy);
@@ -1152,14 +1152,14 @@ static inline void rv40_mc(RV40DecContext *r, const int block_type,
  * @param r decoder context
  * @param block_type type of the current block
  */
-static inline void rv40_mc_b(RV40DecContext *r, const int block_type)
+static inline void rv34_mc_b(RV34DecContext *r, const int block_type)
 {
     MpegEncContext *s = &r->s;
     uint8_t *srcY, *srcU, *srcV;
     int dxy, mx, my, uvmx, uvmy, src_x, src_y, uvsrc_x, uvsrc_y;
     int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride;
 
-    if(block_type != RV40_MB_B_BACKWARD){
+    if(block_type != RV34_MB_B_BACKWARD){
         mx = s->current_picture_ptr->motion_val[0][mv_pos][0];
         my = s->current_picture_ptr->motion_val[0][mv_pos][1];
         srcY = s->last_picture_ptr->data[0];
@@ -1172,7 +1172,7 @@ static inline void rv40_mc_b(RV40DecContext *r, const int block_type)
         srcU = s->next_picture_ptr->data[1];
         srcV = s->next_picture_ptr->data[2];
     }
-    if(block_type == RV40_MB_B_INTERP){
+    if(block_type == RV34_MB_B_INTERP){
         mx += (s->next_picture_ptr->motion_val[0][mv_pos][0] + 1) >> 1;
         my += (s->next_picture_ptr->motion_val[0][mv_pos][1] + 1) >> 1;
     }
@@ -1212,7 +1212,7 @@ static inline void rv40_mc_b(RV40DecContext *r, const int block_type)
  * @param r decoder context
  * @param block_type type of the current block
  */
-static inline void rv40_mc_b_interp(RV40DecContext *r, const int block_type)
+static inline void rv34_mc_b_interp(RV34DecContext *r, const int block_type)
 {
     MpegEncContext *s = &r->s;
     uint8_t *srcY, *srcU, *srcV;
@@ -1221,7 +1221,7 @@ static inline void rv40_mc_b_interp(RV40DecContext *r, const int block_type)
 
     mx = s->current_picture_ptr->motion_val[1][mv_pos][0];
     my = s->current_picture_ptr->motion_val[1][mv_pos][1];
-    if(block_type == RV40_MB_B_INTERP){
+    if(block_type == RV34_MB_B_INTERP){
         mx -= s->next_picture_ptr->motion_val[0][mv_pos][0] >> 1;
         my -= s->next_picture_ptr->motion_val[0][mv_pos][1] >> 1;
     }
@@ -1263,15 +1263,15 @@ static inline void rv40_mc_b_interp(RV40DecContext *r, const int block_type)
  * Decode motion vector differences
  * and perform motion vector reconstruction and motion compensation.
  */
-static int rv40_decode_mv(RV40DecContext *r, int block_type)
+static int rv34_decode_mv(RV34DecContext *r, int block_type)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
     int i, j;
 
     switch(block_type){
-    case RV40_MB_TYPE_INTRA:
-    case RV40_MB_TYPE_INTRA16x16:
+    case RV34_MB_TYPE_INTRA:
+    case RV34_MB_TYPE_INTRA16x16:
         for(j = 0; j < 2; j++){
             for(i = 0; i < 2; i++){
                 s->current_picture_ptr->motion_val[0][s->mb_x * 2 + s->mb_y * 2 * s->b8_stride + i + j*s->b8_stride][0] = 0;
@@ -1279,66 +1279,66 @@ static int rv40_decode_mv(RV40DecContext *r, int block_type)
             }
         }
         return 0;
-    case RV40_MB_SKIP:
+    case RV34_MB_SKIP:
         r->dmv[0][0] = 0;
         r->dmv[0][1] = 0;
         if(s->pict_type == P_TYPE){
-            rv40_pred_mv(r, block_type, 0);
-            rv40_mc(r, block_type, 0, 0, 0, 2, 2);
+            rv34_pred_mv(r, block_type, 0);
+            rv34_mc(r, block_type, 0, 0, 0, 2, 2);
             break;
         }
-    case RV40_MB_B_INTERP:
+    case RV34_MB_B_INTERP:
         r->dmv[0][0] = 0;
         r->dmv[0][1] = 0;
         r->dmv[1][0] = 0;
         r->dmv[1][1] = 0;
-        rv40_pred_mv_b  (r, RV40_MB_B_INTERP);
-        rv40_mc_b       (r, RV40_MB_B_INTERP);
-        rv40_mc_b_interp(r, RV40_MB_B_INTERP);
+        rv34_pred_mv_b  (r, RV34_MB_B_INTERP);
+        rv34_mc_b       (r, RV34_MB_B_INTERP);
+        rv34_mc_b_interp(r, RV34_MB_B_INTERP);
         break;
-    case RV40_MB_P_16x16:
-    case RV40_MB_P_MIX16x16:
+    case RV34_MB_P_16x16:
+    case RV34_MB_P_MIX16x16:
         r->dmv[0][0] = get_omega_signed(gb);
         r->dmv[0][1] = get_omega_signed(gb);
-        rv40_pred_mv(r, block_type, 0);
-        rv40_mc(r, block_type, 0, 0, 0, 2, 2);
+        rv34_pred_mv(r, block_type, 0);
+        rv34_mc(r, block_type, 0, 0, 0, 2, 2);
         break;
-    case RV40_MB_B_FORWARD:
-    case RV40_MB_B_BACKWARD:
+    case RV34_MB_B_FORWARD:
+    case RV34_MB_B_BACKWARD:
         r->dmv[0][0] = get_omega_signed(gb);
         r->dmv[0][1] = get_omega_signed(gb);
-        rv40_pred_mv_b  (r, block_type);
-        rv40_mc_b       (r, block_type);
+        rv34_pred_mv_b  (r, block_type);
+        rv34_mc_b       (r, block_type);
         break;
-    case RV40_MB_P_16x8:
-    case RV40_MB_P_8x16:
-    case RV40_MB_B_DIRECT:
+    case RV34_MB_P_16x8:
+    case RV34_MB_P_8x16:
+    case RV34_MB_B_DIRECT:
         r->dmv[0][0] = get_omega_signed(gb);
         r->dmv[0][1] = get_omega_signed(gb);
         r->dmv[1][0] = get_omega_signed(gb);
         r->dmv[1][1] = get_omega_signed(gb);
-        rv40_pred_mv(r, block_type, 0);
-        rv40_pred_mv(r, block_type, 1);
-        if(block_type == RV40_MB_P_16x8){
-            rv40_mc(r, block_type, 0, 0, 0,            2, 1);
-            rv40_mc(r, block_type, 0, 8, s->b8_stride, 2, 1);
+        rv34_pred_mv(r, block_type, 0);
+        rv34_pred_mv(r, block_type, 1);
+        if(block_type == RV34_MB_P_16x8){
+            rv34_mc(r, block_type, 0, 0, 0,            2, 1);
+            rv34_mc(r, block_type, 0, 8, s->b8_stride, 2, 1);
         }
-        if(block_type == RV40_MB_P_8x16){
-            rv40_mc(r, block_type, 0, 0, 0, 1, 2);
-            rv40_mc(r, block_type, 8, 0, 1, 1, 2);
+        if(block_type == RV34_MB_P_8x16){
+            rv34_mc(r, block_type, 0, 0, 0, 1, 2);
+            rv34_mc(r, block_type, 8, 0, 1, 1, 2);
         }
-        if(block_type == RV40_MB_B_DIRECT){
-            rv40_pred_mv_b  (r, block_type);
-            rv40_mc_b       (r, block_type);
-            rv40_mc_b_interp(r, block_type);
+        if(block_type == RV34_MB_B_DIRECT){
+            rv34_pred_mv_b  (r, block_type);
+            rv34_mc_b       (r, block_type);
+            rv34_mc_b_interp(r, block_type);
         }
         break;
-    case RV40_MB_P_8x8:
+    case RV34_MB_P_8x8:
         for(i=0;i< 4;i++){
             r->dmv[i][0] = get_omega_signed(gb);
             r->dmv[i][1] = get_omega_signed(gb);
-            rv40_pred_mv(r, block_type, i);
-            rv40_mc(r, block_type, (i&1)<<3, (i&2)<<2, (i&1)+(i>>1)*s->b8_stride, 1, 1);
+            rv34_pred_mv(r, block_type, i);
+            rv34_mc(r, block_type, (i&1)<<3, (i&2)<<2, (i&1)+(i>>1)*s->b8_stride, 1, 1);
         }
         break;
     }
@@ -1365,7 +1365,7 @@ static const int ittrans16[4] = {
 /**
  * Perform 4x4 intra prediction
  */
-static void rv40_pred_4x4_block(RV40DecContext *r, uint8_t *dst, int stride, int itype, int no_up, int no_left, int no_down, int no_right)
+static void rv34_pred_4x4_block(RV34DecContext *r, uint8_t *dst, int stride, int itype, int no_up, int no_left, int no_down, int no_right)
 {
     uint8_t *prev = dst - stride + 4;
     uint32_t topleft;
@@ -1392,7 +1392,7 @@ static void rv40_pred_4x4_block(RV40DecContext *r, uint8_t *dst, int stride, int
 }
 
 /** add_pixels_clamped for 4x4 block */
-static void rv40_add_4x4_block(uint8_t *dst, int stride, DCTELEM block[64], int off)
+static void rv34_add_4x4_block(uint8_t *dst, int stride, DCTELEM block[64], int off)
 {
     int x, y;
     for(y = 0; y < 4; y++)
@@ -1400,7 +1400,7 @@ static void rv40_add_4x4_block(uint8_t *dst, int stride, DCTELEM block[64], int 
             dst[x + y*stride] = av_clip_uint8(dst[x + y*stride] + block[off + x+y*8]);
 }
 
-static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp, int is16)
+static void rv34_output_macroblock(RV34DecContext *r, int *intra_types, int cbp, int is16)
 {
     MpegEncContext *s = &r->s;
     DSPContext *dsp = &s->dsp;
@@ -1418,10 +1418,10 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
             YY = Y;
             for(i = 0; i < 4; i++, cbp >>= 1, YY += 4){
                 no_topright = no_up || (i==3 && j) || (i==3 && !j && (s->mb_x-1) == s->mb_width);
-                rv40_pred_4x4_block(r, YY, s->linesize, ittrans[intra_types[i]], no_up, no_left, i || (j==3), no_topright);
+                rv34_pred_4x4_block(r, YY, s->linesize, ittrans[intra_types[i]], no_up, no_left, i || (j==3), no_topright);
                 no_left = 0;
                 if(!(cbp & 1)) continue;
-                rv40_add_4x4_block(YY, s->linesize, s->block[(i>>1)+(j&2)], (i&1)*4+(j&1)*32);
+                rv34_add_4x4_block(YY, s->linesize, s->block[(i>>1)+(j&2)], (i&1)*4+(j&1)*32);
             }
             no_up = 0;
             Y += s->linesize * 4;
@@ -1433,12 +1433,12 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
             no_left = !r->avail[0];
             for(i = 0; i < 2; i++, cbp >>= 1, no_left = 0){
                 no_topright = no_up || (i && j) || (i && !j && (s->mb_x-1) == s->mb_width);
-                rv40_pred_4x4_block(r, U + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, no_topright);
-                rv40_pred_4x4_block(r, V + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, no_topright);
+                rv34_pred_4x4_block(r, U + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, no_topright);
+                rv34_pred_4x4_block(r, V + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, no_topright);
                 if(cbp & 0x01)
-                    rv40_add_4x4_block(U + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[4], i*4+j*32);
+                    rv34_add_4x4_block(U + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[4], i*4+j*32);
                 if(cbp & 0x10)
-                    rv40_add_4x4_block(V + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[5], i*4+j*32);
+                    rv34_add_4x4_block(V + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[5], i*4+j*32);
             }
             no_up = 0;
         }
@@ -1487,7 +1487,7 @@ static void rv40_output_macroblock(RV40DecContext *r, int *intra_types, int cbp,
  * @addtogroup bitstream
  * Decode macroblock header and return CBP in case of success, -1 otherwise.
  */
-static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
+static int rv34_decode_mb_header(RV34DecContext *r, int *intra_types)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
@@ -1508,26 +1508,26 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
             break;
         }
         s->current_picture_ptr->mb_type[mb_pos] = r->is16 ? MB_TYPE_INTRA16x16 : MB_TYPE_INTRA;
-        r->block_type = r->is16 ? RV40_MB_TYPE_INTRA16x16 : RV40_MB_TYPE_INTRA;
+        r->block_type = r->is16 ? RV34_MB_TYPE_INTRA16x16 : RV34_MB_TYPE_INTRA;
     }else if(!r->si.type && r->rv30){
         r->is16 = get_bits1(gb);
         s->current_picture_ptr->mb_type[mb_pos] = r->is16 ? MB_TYPE_INTRA16x16 : MB_TYPE_INTRA;
-        r->block_type = r->is16 ? RV40_MB_TYPE_INTRA16x16 : RV40_MB_TYPE_INTRA;
+        r->block_type = r->is16 ? RV34_MB_TYPE_INTRA16x16 : RV34_MB_TYPE_INTRA;
     }else{
         r->block_type = r->rv30 ? rv30_decode_mb_info(r) : rv40_decode_mb_info(r);
         if(r->block_type == -1)
             return -1;
-        s->current_picture_ptr->mb_type[mb_pos] = rv40_mb_type_to_lavc[r->block_type];
+        s->current_picture_ptr->mb_type[mb_pos] = rv34_mb_type_to_lavc[r->block_type];
         r->mb_type[mb_pos] = r->block_type;
-        if(r->block_type == RV40_MB_SKIP){
+        if(r->block_type == RV34_MB_SKIP){
             if(s->pict_type == P_TYPE)
-                r->mb_type[mb_pos] = RV40_MB_P_16x16;
+                r->mb_type[mb_pos] = RV34_MB_P_16x16;
             if(s->pict_type == B_TYPE)
-                r->mb_type[mb_pos] = RV40_MB_B_INTERP;
+                r->mb_type[mb_pos] = RV34_MB_B_INTERP;
         }
         r->is16 = !!IS_INTRA16x16(s->current_picture_ptr->mb_type[mb_pos]);
-        rv40_decode_mv(r, r->block_type);
-        if(r->block_type == RV40_MB_SKIP){
+        rv34_decode_mv(r, r->block_type);
+        if(r->block_type == RV34_MB_SKIP){
             for(i = 0; i < 16; i++)
                 intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = 0;
             return 0;
@@ -1558,14 +1558,14 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
         for(i = 0; i < 16; i++)
             intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = 0;
         r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, 1);
-        if(r->mb_type[mb_pos] == RV40_MB_P_MIX16x16){
+        if(r->mb_type[mb_pos] == RV34_MB_P_MIX16x16){
             r->is16 = 1;
             r->chroma_vlc = 1;
             r->luma_vlc   = 2;
             r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, 0);
         }
     }
-    return rv40_decode_cbp(gb, r->cur_vlcs, r->is16);
+    return rv34_decode_cbp(gb, r->cur_vlcs, r->is16);
 }
 
 /**
@@ -1581,7 +1581,7 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
 #define V_CBP_MASK 0xF00000
 
 
-static void rv40_apply_differences(RV40DecContext *r, int cbp)
+static void rv34_apply_differences(RV34DecContext *r, int cbp)
 {
     static const int shifts[4] = { 0, 2, 8, 10 };
     MpegEncContext *s = &r->s;
@@ -1596,7 +1596,7 @@ static void rv40_apply_differences(RV40DecContext *r, int cbp)
         s->dsp.add_pixels_clamped(s->block[5], s->dest[2], s->uvlinesize);
 }
 
-static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
+static int rv34_decode_macroblock(RV34DecContext *r, int *intra_types)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
@@ -1617,7 +1617,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         r->avail[3] = 1;
 
     s->qscale = r->si.quant;
-    cbp = cbp2 = rv40_decode_mb_header(r, intra_types);
+    cbp = cbp2 = rv34_decode_mb_header(r, intra_types);
 
     if(cbp == -1)
         return -1;
@@ -1625,9 +1625,9 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
     luma_dc_quant = r->rv30 ? rv30_luma_dc_quant[s->qscale] : rv40_luma_quant[r->si.type>>1][s->qscale];
     if(r->is16){
         memset(block16, 0, sizeof(block16));
-        rv40_decode_block(block16, gb, r->cur_vlcs, 3, 0);
-        rv40_dequant4x4_16x16(block16, 0, rv40_qscale_tab[luma_dc_quant],rv40_qscale_tab[s->qscale]);
-        rv40_intra_inv_transform_noround(block16, 0);
+        rv34_decode_block(block16, gb, r->cur_vlcs, 3, 0);
+        rv34_dequant4x4_16x16(block16, 0, rv34_qscale_tab[luma_dc_quant],rv34_qscale_tab[s->qscale]);
+        rv34_intra_inv_transform_noround(block16, 0);
     }
 
     for(i = 0; i < 16; i++, cbp >>= 1){
@@ -1635,33 +1635,33 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
         blknum = ((i & 2) >> 1) + ((i & 8) >> 2);
         blkoff = ((i & 1) << 2) + ((i & 4) << 3);
         if(cbp & 1)
-            rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, r->luma_vlc, 0);
+            rv34_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, r->luma_vlc, 0);
         if((cbp & 1) || r->is16){
-            rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[luma_dc_quant],rv40_qscale_tab[s->qscale]);
+            rv34_dequant4x4(s->block[blknum], blkoff, rv34_qscale_tab[luma_dc_quant],rv34_qscale_tab[s->qscale]);
             if(r->is16) //FIXME: optimize
                 s->block[blknum][blkoff] = block16[(i & 3) | ((i & 0xC) << 1)];
-            rv40_intra_inv_transform(s->block[blknum], blkoff);
+            rv34_intra_inv_transform(s->block[blknum], blkoff);
         }
     }
-    if(r->block_type == RV40_MB_P_MIX16x16)
+    if(r->block_type == RV34_MB_P_MIX16x16)
         r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, 1);
     for(; i < 24; i++, cbp >>= 1){
         if(!(cbp & 1)) continue;
         blknum = ((i & 4) >> 2) + 4;
         blkoff = ((i & 1) << 2) + ((i & 2) << 4);
-        rv40_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, r->chroma_vlc, 1);
-        rv40_dequant4x4(s->block[blknum], blkoff, rv40_qscale_tab[rv40_chroma_quant[1][s->qscale]],rv40_qscale_tab[rv40_chroma_quant[0][s->qscale]]);
-        rv40_intra_inv_transform(s->block[blknum], blkoff);
+        rv34_decode_block(s->block[blknum] + blkoff, gb, r->cur_vlcs, r->chroma_vlc, 1);
+        rv34_dequant4x4(s->block[blknum], blkoff, rv34_qscale_tab[rv34_chroma_quant[1][s->qscale]],rv34_qscale_tab[rv34_chroma_quant[0][s->qscale]]);
+        rv34_intra_inv_transform(s->block[blknum], blkoff);
     }
     if(IS_INTRA(s->current_picture_ptr->mb_type[s->mb_x + s->mb_y*s->mb_stride]))
-        rv40_output_macroblock(r, intra_types, cbp2, r->is16);
+        rv34_output_macroblock(r, intra_types, cbp2, r->is16);
     else
-        rv40_apply_differences(r, cbp2);
+        rv34_apply_differences(r, cbp2);
 
     return 0;
 }
 
-static int check_slice_end(RV40DecContext *r, MpegEncContext *s)
+static int check_slice_end(RV34DecContext *r, MpegEncContext *s)
 {
     int bits;
     if(r->s.mb_skip_run > 1)
@@ -1682,7 +1682,7 @@ static inline int slice_compare(SliceInfo *si1, SliceInfo *si2)
            si1->height != si2->height;
 }
 
-static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
+static int rv34_decode_slice(RV34DecContext *r, int size, int end, int *last)
 {
     MpegEncContext *s = &r->s;
     GetBitContext *gb = &s->gb;
@@ -1764,7 +1764,7 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
             r->ssi.mb_y = s->mb_y;
         }
 
-        if(rv40_decode_macroblock(r, r->intra_types + (s->mb_x + 1) * 4) < 0)
+        if(rv34_decode_macroblock(r, r->intra_types + (s->mb_x + 1) * 4) < 0)
             break;
         if (++s->mb_x == s->mb_width) {
             s->mb_x = 0;
@@ -1798,7 +1798,7 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
 /**
  * Weaker deblocking
  */
-static inline void rv40_weak_loop_filter(uint8_t *src, const int step,
+static inline void rv34_weak_loop_filter(uint8_t *src, const int step,
                             const int flag0, const int flag1, const int mult,
                             const int lim0, const int lim1, const int lim2, const int thr1,
                             const int S0, const int S1, const int S2, const int S3)
@@ -1836,12 +1836,12 @@ static inline void rv40_weak_loop_filter(uint8_t *src, const int step,
  * parameter  sub - index of the value with coefficient = 25
  * parameter last - index of the value with coefficient 25 or 51
  */
-#define RV40_STRONG_FILTER(src, step, start, last, sub) \
+#define RV34_STRONG_FILTER(src, step, start, last, sub) \
      26*(src[start*step] + src[(start+1)*step] + src[(start+2)*step] + src[(start+3)*step] + src[last*step]) - src[last*step] - src[sub*step]
 /**
  * Deblocking filter, the alternated version from JVT-A003r1 H.26L draft.
  */
-static inline void rv40_adaptive_loop_filter(uint8_t *src, const int step, const int stride, const int dmode, const int lim0, const int lim1, const int mult, const int thr0, const int thr1, const int chroma, const int edge)
+static inline void rv34_adaptive_loop_filter(uint8_t *src, const int step, const int stride, const int dmode, const int lim0, const int lim1, const int mult, const int thr0, const int thr1, const int chroma, const int edge)
 {
     int diffs[4][4];
     int s0 = 0, s1 = 0, s2 = 0, s3 = 0;
@@ -1888,8 +1888,8 @@ static inline void rv40_adaptive_loop_filter(uint8_t *src, const int step, const
             sflag = (mult * FFABS(t)) >> 7;
             if(sflag > 1) continue;
 
-            p0 = (RV40_STRONG_FILTER(src, step, -3, 1, -3) + rv40_dither_l[dmode + i]) >> 7;
-            p1 = (RV40_STRONG_FILTER(src, step, -1, 3, -1) + rv40_dither_r[dmode + i]) >> 7;
+            p0 = (RV34_STRONG_FILTER(src, step, -3, 1, -3) + rv34_dither_l[dmode + i]) >> 7;
+            p1 = (RV34_STRONG_FILTER(src, step, -1, 3, -1) + rv34_dither_r[dmode + i]) >> 7;
             if(!sflag){
                 src[-1*step] = p0;
                 src[ 0*step] = p1;
@@ -1903,8 +1903,8 @@ static inline void rv40_adaptive_loop_filter(uint8_t *src, const int step, const
                 else
                     src[ 0*step] = src[-1*step];
             }
-            p0 = (RV40_STRONG_FILTER(src, step, -4, 0, -4) + rv40_dither_l[dmode + i]) >> 7;
-            p1 = (RV40_STRONG_FILTER(src, step, -1, 3, -1) + rv40_dither_r[dmode + i]) >> 7;
+            p0 = (RV34_STRONG_FILTER(src, step, -4, 0, -4) + rv34_dither_l[dmode + i]) >> 7;
+            p1 = (RV34_STRONG_FILTER(src, step, -1, 3, -1) + rv34_dither_r[dmode + i]) >> 7;
             if(!sflag){
                 src[-2*step] = p0;
                 src[ 1*step] = p1;
@@ -1919,37 +1919,37 @@ static inline void rv40_adaptive_loop_filter(uint8_t *src, const int step, const
                     src[ 1*step] += v88;
             }
             if(!chroma){
-                src[-3*step] = (RV40_STRONG_FILTER(src, step, -4, -1, -3) + 64) >> 7;
-                src[ 2*step] = (RV40_STRONG_FILTER(src, step,  0,  0,  2) + 64) >> 7;
+                src[-3*step] = (RV34_STRONG_FILTER(src, step, -4, -1, -3) + 64) >> 7;
+                src[ 2*step] = (RV34_STRONG_FILTER(src, step,  0,  0,  2) + 64) >> 7;
             }
         }
     }else if(llim0 == 3 && llim1 == 3)
         for(i = 0; i < 4; i++, src += stride)
-            rv40_weak_loop_filter(src, step, 1, 1, mult, lim0, lim1, v88, thr1,
+            rv34_weak_loop_filter(src, step, 1, 1, mult, lim0, lim1, v88, thr1,
                                   diffs[i][0], diffs[i][1], diffs[i][2], diffs[i][3]);
     else
         for(i = 0; i < 4; i++, src += stride)
-            rv40_weak_loop_filter(src, step, llim0==3, llim1==3, mult, lim0>>1, lim1>>1, v88>>1, thr1,
+            rv34_weak_loop_filter(src, step, llim0==3, llim1==3, mult, lim0>>1, lim1>>1, v88>>1, thr1,
                                   diffs[i][0], diffs[i][1], diffs[i][2], diffs[i][3]);
 }
 
-static void rv40_v_loop_filter(uint8_t *src, int stride, int dmode, int lim0, int lim1, int mult, int thr0, int thr1, int chroma, int edge){
-    rv40_adaptive_loop_filter(src, 1, stride, dmode, lim0, lim1, mult, thr0, thr1, chroma, edge);
+static void rv34_v_loop_filter(uint8_t *src, int stride, int dmode, int lim0, int lim1, int mult, int thr0, int thr1, int chroma, int edge){
+    rv34_adaptive_loop_filter(src, 1, stride, dmode, lim0, lim1, mult, thr0, thr1, chroma, edge);
 }
-static void rv40_h_loop_filter(uint8_t *src, int stride, int dmode, int lim0, int lim1, int mult, int thr0, int thr1, int chroma, int edge){
-    rv40_adaptive_loop_filter(src, stride, 1, dmode, lim0, lim1, mult, thr0, thr1, chroma, edge);
+static void rv34_h_loop_filter(uint8_t *src, int stride, int dmode, int lim0, int lim1, int mult, int thr0, int thr1, int chroma, int edge){
+    rv34_adaptive_loop_filter(src, stride, 1, dmode, lim0, lim1, mult, thr0, thr1, chroma, edge);
 }
 
-static void rv40_loop_filter(RV40DecContext *r)
+static void rv34_loop_filter(RV34DecContext *r)
 {
     MpegEncContext *s = &r->s;
     int mb_pos;
     int i, j;
     int no_up, no_left;
     uint8_t *Y, *U, *V;
-    const int alpha = rv40_alpha_tab[s->qscale], beta = rv40_beta_tab[s->qscale];
+    const int alpha = rv34_alpha_tab[s->qscale], beta = rv34_beta_tab[s->qscale];
     //XXX these are probably not correct
-    const int thr = s->qscale, lim0 = rv40_filter_clip_tbl[1][s->qscale], lim1 = rv40_filter_clip_tbl[2][s->qscale];
+    const int thr = s->qscale, lim0 = rv34_filter_clip_tbl[1][s->qscale], lim1 = rv34_filter_clip_tbl[2][s->qscale];
 
     mb_pos = s->resync_mb_x + s->resync_mb_y * s->mb_stride;
     memset(r->intra_types_hist, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
@@ -1966,11 +1966,11 @@ static void rv40_loop_filter(RV40DecContext *r)
                 for(i = 0; i < 4; i++){
                     Y = s->dest[0] + i*4 + j*4*s->linesize;
                     if(!j && !no_up)
-                        rv40_h_loop_filter(Y, s->linesize, i*4+j, lim0, lim1, alpha, beta, thr, 0, 1);
+                        rv34_h_loop_filter(Y, s->linesize, i*4+j, lim0, lim1, alpha, beta, thr, 0, 1);
                     if(j != 3)
-                        rv40_h_loop_filter(Y + 4*s->linesize, s->linesize, i*4+j, lim0, lim1, alpha, beta, thr, 0, 0);
+                        rv34_h_loop_filter(Y + 4*s->linesize, s->linesize, i*4+j, lim0, lim1, alpha, beta, thr, 0, 0);
                     if(i || !no_left)
-                        rv40_v_loop_filter(Y, s->linesize, i*4+j, lim0, lim1, alpha, beta, thr, 0, !i);
+                        rv34_v_loop_filter(Y, s->linesize, i*4+j, lim0, lim1, alpha, beta, thr, 0, !i);
                 }
             }
         }
@@ -1991,9 +1991,9 @@ static void rv40_loop_filter(RV40DecContext *r)
  * Initialize decoder
  * @todo Maybe redone in some other way
  */
-static int rv40_decode_init(AVCodecContext *avctx)
+static int rv34_decode_init(AVCodecContext *avctx)
 {
-    RV40DecContext *r = avctx->priv_data;
+    RV34DecContext *r = avctx->priv_data;
     MpegEncContext *s = &r->s;
 
     static int tables_done = 0;
@@ -2026,7 +2026,7 @@ static int rv40_decode_init(AVCodecContext *avctx)
     r->mb_type = av_mallocz(r->s.mb_stride * r->s.mb_height * sizeof(int));
 
     if(!tables_done){
-        rv40_init_tables();
+        rv34_init_tables();
         tables_done = 1;
     }
     r->prev_si.type = -1;
@@ -2041,11 +2041,11 @@ static int rv40_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
-static int rv40_decode_frame(AVCodecContext *avctx,
+static int rv34_decode_frame(AVCodecContext *avctx,
                             void *data, int *data_size,
                             uint8_t *buf, int buf_size)
 {
-    RV40DecContext *r = avctx->priv_data;
+    RV34DecContext *r = avctx->priv_data;
     MpegEncContext *s = &r->s;
     AVFrame *pict = data;
     SliceInfo si;
@@ -2098,10 +2098,7 @@ static int rv40_decode_frame(AVCodecContext *avctx,
                 r->si.end = si.start;
         }
         r->slice_data = buf + offset;
-        if(r->rv30)
-            rv40_decode_slice(r, r->si.size, r->si.end, &last);
-        else
-            rv40_decode_slice(r, r->si.size, r->si.end, &last);
+        rv34_decode_slice(r, r->si.size, r->si.end, &last);
         if(last)
             break;
         s->mb_num_left = r->si.end - r->si.start;
@@ -2127,9 +2124,9 @@ static int rv40_decode_frame(AVCodecContext *avctx,
     return buf_size;
 }
 
-static int rv40_decode_end(AVCodecContext *avctx)
+static int rv34_decode_end(AVCodecContext *avctx)
 {
-    RV40DecContext *r = avctx->priv_data;
+    RV34DecContext *r = avctx->priv_data;
 
     MPV_common_end(&r->s);
 
@@ -2145,20 +2142,20 @@ AVCodec rv30_decoder = {
     "rv30",
     CODEC_TYPE_VIDEO,
     CODEC_ID_RV30,
-    sizeof(RV40DecContext),
-    rv40_decode_init,
+    sizeof(RV34DecContext),
+    rv34_decode_init,
     NULL,
-    rv40_decode_end,
-    rv40_decode_frame,
+    rv34_decode_end,
+    rv34_decode_frame,
 };
 
 AVCodec rv40_decoder = {
     "rv40",
     CODEC_TYPE_VIDEO,
     CODEC_ID_RV40,
-    sizeof(RV40DecContext),
-    rv40_decode_init,
+    sizeof(RV34DecContext),
+    rv34_decode_init,
     NULL,
-    rv40_decode_end,
-    rv40_decode_frame,
+    rv34_decode_end,
+    rv34_decode_frame,
 };
