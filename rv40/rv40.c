@@ -115,7 +115,6 @@ typedef struct RV40DecContext{
     SliceInfo si;            ///< current slice information
     SliceInfo prev_si;       ///< info for the saved slice
     uint8_t *slice_data;     ///< saved slice data
-    int has_slice;           ///< has previously saved slice
 
     int *mb_type;            ///< internal macroblock types
     int block_type;          ///< current block type
