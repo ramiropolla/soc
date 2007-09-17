@@ -1841,7 +1841,7 @@ static inline void rv40_weak_loop_filter(uint8_t *src, const int step,
 /**
  * Deblocking filter, the alternated version from JVT-A003r1 H.26L draft.
  */
-static inline void rv40_loop_filter(uint8_t *src, const int step, const int stride, const int dmode, const int lim0, const int lim1, const int mult, const int thr0, const int thr1, const int chroma, const int edge)
+static inline void rv40_adaptive_loop_filter(uint8_t *src, const int step, const int stride, const int dmode, const int lim0, const int lim1, const int mult, const int thr0, const int thr1, const int chroma, const int edge)
 {
     int diffs[4][4];
     int s0 = 0, s1 = 0, s2 = 0, s3 = 0;
@@ -1934,13 +1934,13 @@ static inline void rv40_loop_filter(uint8_t *src, const int step, const int stri
 }
 
 static void rv40_v_loop_filter(uint8_t *src, int stride, int dmode, int lim0, int lim1, int mult, int thr0, int thr1, int chroma, int edge){
-    rv40_loop_filter(src, 1, stride, dmode, lim0, lim1, mult, thr0, thr1, chroma, edge);
+    rv40_adaptive_loop_filter(src, 1, stride, dmode, lim0, lim1, mult, thr0, thr1, chroma, edge);
 }
 static void rv40_h_loop_filter(uint8_t *src, int stride, int dmode, int lim0, int lim1, int mult, int thr0, int thr1, int chroma, int edge){
-    rv40_loop_filter(src, stride, 1, dmode, lim0, lim1, mult, thr0, thr1, chroma, edge);
+    rv40_adaptive_loop_filter(src, stride, 1, dmode, lim0, lim1, mult, thr0, thr1, chroma, edge);
 }
 
-static void rv40_postprocess(RV40DecContext *r)
+static void rv40_loop_filter(RV40DecContext *r)
 {
     MpegEncContext *s = &r->s;
     int mb_pos;
