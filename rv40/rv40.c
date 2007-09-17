@@ -599,7 +599,43 @@ static int rv40_parse_slice_header(RV40DecContext *r, GetBitContext *gb, SliceIn
     return 0;
 }
 
-static inline int get_omega(GetBitContext *gb);
+/**
+ * Decode variable-length code constructed from variable-length codes
+ * similar to Even-Rodeh and Elias Omega codes
+ *
+ * Code is constructed from bit chunks of even length (odd length means end of code)
+ * and chunks are coded with variable-length codes too
+ */
+static inline int get_omega(GetBitContext *gb)
+{
+    int code = 1, t, tb;
+
+    for(;;){
+        t = get_vlc2(gb, mbinfo_vlc.table, MBINFO_BITS, 1);
+        tb = t >> 5;
+        code = (code << tb) | (t & 0xF);
+        if(t & 0x10) break;
+    }
+    return code;
+}
+
+/**
+ * Decode signed integer variable-length code constructed from variable-length codes
+ * similar to Even-Rodeh and Elias Omega codes
+ *
+ * Code is constructed from bit chunks of even length (odd length means end of code)
+ * and chunks are coded with variable-length codes too
+ */
+static inline int get_omega_signed(GetBitContext *gb)
+{
+    int code;
+
+    code = get_omega(gb);
+    if(code & 1)
+        return -(code >> 1);
+    else
+        return code >> 1;
+}
 
 /**
  * Decode 4x4 intra types array
@@ -705,44 +741,6 @@ static inline int rv40_decode_dquant(GetBitContext *gb, int quant)
         return av_clip(quant + rv40_dquant_tab[quant * 2 + get_bits1(gb)], 0, 31);
     else
         return get_bits(gb, 5);
-}
-
-/**
- * Decode variable-length code constructed from variable-length codes
- * similar to Even-Rodeh and Elias Omega codes
- *
- * Code is constructed from bit chunks of even length (odd length means end of code)
- * and chunks are coded with variable-length codes too
- */
-static inline int get_omega(GetBitContext *gb)
-{
-    int code = 1, t, tb;
-
-    for(;;){
-        t = get_vlc2(gb, mbinfo_vlc.table, MBINFO_BITS, 1);
-        tb = t >> 5;
-        code = (code << tb) | (t & 0xF);
-        if(t & 0x10) break;
-    }
-    return code;
-}
-
-/**
- * Decode signed integer variable-length code constructed from variable-length codes
- * similar to Even-Rodeh and Elias Omega codes
- *
- * Code is constructed from bit chunks of even length (odd length means end of code)
- * and chunks are coded with variable-length codes too
- */
-static inline int get_omega_signed(GetBitContext *gb)
-{
-    int code;
-
-    code = get_omega(gb);
-    if(code & 1)
-        return -(code >> 1);
-    else
-        return code >> 1;
 }
 
 /**
