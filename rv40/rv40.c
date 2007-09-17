@@ -1519,10 +1519,12 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
             return -1;
         s->current_picture_ptr->mb_type[mb_pos] = rv40_mb_type_to_lavc[r->block_type];
         r->mb_type[mb_pos] = r->block_type;
-        if(s->pict_type == P_TYPE && r->block_type == RV40_MB_SKIP)
-            r->mb_type[mb_pos] = RV40_MB_P_16x16;
-        if(s->pict_type == B_TYPE && r->block_type == RV40_MB_SKIP)
-            r->mb_type[mb_pos] = RV40_MB_B_INTERP;
+        if(r->block_type == RV40_MB_SKIP){
+            if(s->pict_type == P_TYPE)
+                r->mb_type[mb_pos] = RV40_MB_P_16x16;
+            if(s->pict_type == B_TYPE)
+                r->mb_type[mb_pos] = RV40_MB_B_INTERP;
+        }
         r->is16 = !!IS_INTRA16x16(s->current_picture_ptr->mb_type[mb_pos]);
         rv40_decode_mv(r, r->block_type);
         if(r->block_type == RV40_MB_SKIP){
