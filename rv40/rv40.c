@@ -760,7 +760,7 @@ static int rv30_decode_mb_info(RV40DecContext *r)
         return -1;
     }
     if(code > 5){
-        av_log(NULL,0, "dquant needed\n");
+        av_log(s->avctx, AV_LOG_ERROR, "dquant needed\n");
         code -= 6;
     }
     if(s->pict_type != B_TYPE)
@@ -811,14 +811,14 @@ static int rv40_decode_mb_info(RV40DecContext *r)
         if(q < PBTYPE_ESCAPE)
             return q;
         q = get_vlc2(gb, ptype_vlc[prev_type].table, PTYPE_VLC_BITS, 1);
-        av_log(NULL,0,"Dquant for P-frame\n");
+        av_log(s->avctx, AV_LOG_ERROR, "Dquant for P-frame\n");
     }else{
         prev_type = block_num_to_btype_vlc_num[prev_type];
         q = get_vlc2(gb, btype_vlc[prev_type].table, BTYPE_VLC_BITS, 1);
         if(q < PBTYPE_ESCAPE)
             return q;
         q = get_vlc2(gb, btype_vlc[prev_type].table, BTYPE_VLC_BITS, 1);
-        av_log(NULL,0,"Dquant for B-frame\n");
+        av_log(s->avctx, AV_LOG_ERROR, "Dquant for B-frame\n");
     }
     return 0;
 }
@@ -1503,7 +1503,7 @@ static int rv40_decode_mb_header(RV40DecContext *r, int *intra_types)
         case 1:
             break;
         case 2:
-            av_log(NULL,0,"Need DQUANT\n");
+            av_log(s->avctx, AV_LOG_ERROR, "Need DQUANT\n");
             // q = decode_dquant(gb);
             break;
         }
