@@ -2011,7 +2011,6 @@ static int rv40_decode_init(AVCodecContext *avctx)
     avctx->flags |= CODEC_FLAG_EMU_EDGE;
     r->s.flags |= CODEC_FLAG_EMU_EDGE;
     avctx->pix_fmt = PIX_FMT_YUV420P;
-    avctx->max_b_frames = 8;
     avctx->has_b_frames = 1;
     s->low_delay = 0;
 
