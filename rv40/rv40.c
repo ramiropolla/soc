@@ -387,7 +387,10 @@ static inline void decode_coeff(DCTELEM *dst, int coef, int esc, GetBitContext *
     }
 }
 
-static inline void decode_subblock(DCTELEM *dst, int code, GetBitContext *gb, VLC *vlc)
+/**
+ * Decode 2x2 subblock of coefficients
+ */
+static inline void decode_subblock(DCTELEM *dst, int code, const int is_block2, GetBitContext *gb, VLC *vlc)
 {
     int coeffs[4];
 
@@ -396,23 +399,13 @@ static inline void decode_subblock(DCTELEM *dst, int code, GetBitContext *gb, VL
     coeffs[2] = modulo_three_table[code][2];
     coeffs[3] = modulo_three_table[code][3];
     decode_coeff(dst  , coeffs[0], 3, gb, vlc);
-    decode_coeff(dst+1, coeffs[1], 2, gb, vlc);
-    decode_coeff(dst+8, coeffs[2], 2, gb, vlc);
-    decode_coeff(dst+9, coeffs[3], 2, gb, vlc);
-}
-
-// slightly modified version for the third subblock
-static inline void decode_subblock2(DCTELEM *dst, int code, GetBitContext *gb, VLC *vlc)
-{
-    int coeffs[4];
-
-    coeffs[0] = modulo_three_table[code][0];
-    coeffs[1] = modulo_three_table[code][1];
-    coeffs[2] = modulo_three_table[code][2];
-    coeffs[3] = modulo_three_table[code][3];
-    decode_coeff(dst  , coeffs[0], 3, gb, vlc);
-    decode_coeff(dst+8, coeffs[1], 2, gb, vlc);
-    decode_coeff(dst+1, coeffs[2], 2, gb, vlc);
+    if(!is_block2){
+        decode_coeff(dst+1, coeffs[1], 2, gb, vlc);
+        decode_coeff(dst+8, coeffs[2], 2, gb, vlc);
+    }else{
+        decode_coeff(dst+8, coeffs[1], 2, gb, vlc);
+        decode_coeff(dst+1, coeffs[2], 2, gb, vlc);
+    }
     decode_coeff(dst+9, coeffs[3], 2, gb, vlc);
 }
 
@@ -436,19 +429,19 @@ static inline void rv40_decode_block(DCTELEM *dst, GetBitContext *gb, RV40VLC *r
     pattern = code & 0x7;
 
     code >>= 3;
-    decode_subblock(dst, code, gb, &rvlc->coefficient);
+    decode_subblock(dst, code, 0, gb, &rvlc->coefficient);
 
     if(pattern & 4){
         code = get_vlc2(gb, rvlc->second_pattern[sc].table, 9, 2);
-        decode_subblock(dst + 2, code, gb, &rvlc->coefficient);
+        decode_subblock(dst + 2, code, 0, gb, &rvlc->coefficient);
     }
     if(pattern & 2){ // Looks like coefficients 1 and 2 are swapped for this block
         code = get_vlc2(gb, rvlc->second_pattern[sc].table, 9, 2);
-        decode_subblock2(dst + 8*2, code, gb, &rvlc->coefficient);
+        decode_subblock(dst + 8*2, code, 1, gb, &rvlc->coefficient);
     }
     if(pattern & 1){
         code = get_vlc2(gb, rvlc->third_pattern[sc].table, 9, 2);
-        decode_subblock(dst + 8*2+2, code, gb, &rvlc->coefficient);
+        decode_subblock(dst + 8*2+2, code, 0, gb, &rvlc->coefficient);
     }
 }
 
