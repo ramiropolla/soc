@@ -148,13 +148,11 @@ static VLC mbinfo_vlc, ptype_vlc[NUM_PTYPE_VLCS], btype_vlc[NUM_BTYPE_VLCS];
 static int rv40_gen_vlc(const uint8_t *bits2, int size, VLC *vlc)
 {
     int i;
-    int counts[17], codes[17];
+    int counts[17] = {0}, codes[17];
     uint16_t *cw, *syms;
     uint8_t *bits;
     int maxbits = 0, realsize;
     int ret;
-
-    memset(counts, 0, 16 * sizeof(int));
 
     cw = av_mallocz(size * 2);
     syms = av_malloc(size * 2);
