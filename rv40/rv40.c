@@ -107,7 +107,6 @@ typedef struct RV40DecContext{
     int *intra_types;        ///< block types
     int intra_types_stride;  ///< stride for block types data
     int block_start;         ///< start of slice in blocks
-    int ptype;               ///< picture type
 
     int vlc_set;             ///< index of currently selected VLC set
     RV40VLC *cur_vlcs;       ///< VLC set used for current frame decoding
