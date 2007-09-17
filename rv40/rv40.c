@@ -44,22 +44,26 @@ static const int rv40_mb_type_to_lavc[12] = {
     MB_TYPE_16x8,  MB_TYPE_8x16,       MB_TYPE_DIRECT2, MB_TYPE_16x16
 };
 
-/** RV40 Macroblock types */
+/**
+ * RV40 Macroblock types
+ * @{
+ */
 enum RV40BlockTypes{
-    RV40_MB_TYPE_INTRA,
-    RV40_MB_TYPE_INTRA16x16,
-    RV40_MB_P_16x16,
-    RV40_MB_P_8x8,
-    RV40_MB_B_FORWARD, //XXX: maybe vice versa
-    RV40_MB_B_BACKWARD,
-    RV40_MB_SKIP,
-    RV40_MB_B_INTERP,
-    RV40_MB_P_16x8,
-    RV40_MB_P_8x16,
-    RV40_MB_B_DIRECT,
-    RV40_MB_P_MIX16x16, // inter 16x16 block very similar to Intra16x16
+    RV40_MB_TYPE_INTRA,      ///< Intra macroblock
+    RV40_MB_TYPE_INTRA16x16, ///< Intra macroblock with DCs in a separate 4x4 block
+    RV40_MB_P_16x16,         ///< P-frame macroblock, one motion frame
+    RV40_MB_P_8x8,           ///< P-frame macroblock, 8x8 motion compensation partitions
+    RV40_MB_B_FORWARD,       ///< B-frame macroblock, forward prediction
+    RV40_MB_B_BACKWARD,      ///< B-frame macroblock, backward prediction
+    RV40_MB_SKIP,            ///< Skipped block
+    RV40_MB_B_INTERP,        ///< Bidirectionally predicted B-frame macroblock, no motion vectors
+    RV40_MB_P_16x8,          ///< P-frame macroblock, 16x8 motion compensation partitions
+    RV40_MB_P_8x16,          ///< P-frame macroblock, 8x16 motion compensation partitions
+    RV40_MB_B_DIRECT,        ///< Bidirectionally predicted B-frame macroblock, two motion vectors
+    RV40_MB_P_MIX16x16,      ///< P-frame macroblock with DCs in a separate 4x4 block, one motion vector
     RV40_MB_TYPES
 };
+/** @} */
 
 /**
  * VLC tables used by decoder
