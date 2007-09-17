@@ -630,7 +630,7 @@ static inline int get_omega(GetBitContext *gb);
  */
 static int rv30_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *dst)
 {
-    int i, j;
+    int i, j, k;
     int A, B;
     int *ptr;
     int code;
@@ -643,19 +643,14 @@ static int rv30_decode_intra_types(RV40DecContext *r, GetBitContext *gb, int *ds
                 av_log(r->s.avctx, AV_LOG_ERROR, "Incorrect intra prediction code\n");
                 return -1;
             }
-            A = ptr[-r->intra_types_stride] + 1;
-            B = ptr[-1] + 1;
-            *ptr++ = rv30_itype_from_context[A * 90 + B * 9 + rv30_itype_code[code + 0]];
-            if(ptr[-1] == 9){
-                av_log(r->s.avctx, AV_LOG_ERROR, "Incorrect intra prediction mode\n");
-                return -1;
-            }
-            A = ptr[-r->intra_types_stride] + 1;
-            B = ptr[-1] + 1;
-            *ptr++ = rv30_itype_from_context[A * 90 + B * 9 + rv30_itype_code[code + 1]];
-            if(ptr[-1] == 9){
-                av_log(r->s.avctx, AV_LOG_ERROR, "Incorrect intra prediction mode\n");
-                return -1;
+            for(k = 0; k < 2; k++){
+                A = ptr[-r->intra_types_stride] + 1;
+                B = ptr[-1] + 1;
+                *ptr++ = rv30_itype_from_context[A * 90 + B * 9 + rv30_itype_code[code + k]];
+                if(ptr[-1] == 9){
+                    av_log(r->s.avctx, AV_LOG_ERROR, "Incorrect intra prediction mode\n");
+                    return -1;
+                }
             }
         }
     }
