@@ -116,7 +116,6 @@ typedef struct RV40DecContext{
     SliceInfo prev_si;       ///< info for the saved slice
     uint8_t *slice_data;     ///< saved slice data
     int has_slice;           ///< has previously saved slice
-    int skip_blocks;         ///< blocks to skip (interframe slice only)
 
     int *mb_type;            ///< internal macroblock types
     int block_type;          ///< current block type
@@ -806,10 +805,10 @@ static int rv40_decode_mb_info(RV40DecContext *r)
     int blocks[RV40_MB_TYPES];
     int count = 0;
 
-    if(!r->skip_blocks)
-        r->skip_blocks = get_omega(gb);
+    if(!r->s.mb_skip_run)
+        r->s.mb_skip_run = get_omega(gb);
 
-    if(--r->skip_blocks)
+    if(--r->s.mb_skip_run)
          return RV40_MB_SKIP;
 
     memset(blocks, 0, sizeof(blocks));
@@ -1686,7 +1685,7 @@ static int rv40_decode_macroblock(RV40DecContext *r, int *intra_types)
 static int check_slice_end(RV40DecContext *r, MpegEncContext *s)
 {
     int bits;
-    if(r->skip_blocks > 1)
+    if(r->s.mb_skip_run > 1)
         return 0;
     if(s->mb_y >= s->mb_height)
         return 1;
@@ -1758,7 +1757,7 @@ static int rv40_decode_slice(RV40DecContext *r, int size, int end, int *last)
     r->bits = r->si.size;
     r->block_start = r->si.start;
     s->mb_num_left = r->si.end - r->si.start;
-    r->skip_blocks = 0;
+    r->s.mb_skip_run = 0;
 
     r->prev_si = r->si;
 
