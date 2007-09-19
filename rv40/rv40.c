@@ -135,6 +135,7 @@ typedef struct RV34DecContext{
 
     int (*parse_slice_header)(struct RV34DecContext *r, GetBitContext *gb, SliceInfo *si);
     int (*decode_intra_types)(struct RV34DecContext *r, GetBitContext *gb, int *dst);
+    int (*decode_mb_info)(struct RV34DecContext *r);
 }RV34DecContext;
 
 static RV34VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
@@ -1520,7 +1521,7 @@ static int rv34_decode_mb_header(RV34DecContext *r, int *intra_types)
         s->current_picture_ptr->mb_type[mb_pos] = r->is16 ? MB_TYPE_INTRA16x16 : MB_TYPE_INTRA;
         r->block_type = r->is16 ? RV34_MB_TYPE_INTRA16x16 : RV34_MB_TYPE_INTRA;
     }else{
-        r->block_type = r->rv30 ? rv30_decode_mb_info(r) : rv40_decode_mb_info(r);
+        r->block_type = r->decode_mb_info(r);
         if(r->block_type == -1)
             return -1;
         s->current_picture_ptr->mb_type[mb_pos] = rv34_mb_type_to_lavc[r->block_type];
@@ -2041,6 +2042,7 @@ static int rv34_decode_init(AVCodecContext *avctx)
     }
     r->parse_slice_header = r->rv30 ? rv30_parse_slice_header : rv40_parse_slice_header;
     r->decode_intra_types = r->rv30 ? rv30_decode_intra_types : rv40_decode_intra_types;
+    r->decode_mb_info     = r->rv30 ? rv30_decode_mb_info     : rv40_decode_mb_info;
     if(r->rv30){
         r->luma_dc_quant_i = rv30_luma_dc_quant;
         r->luma_dc_quant_p = rv30_luma_dc_quant;
