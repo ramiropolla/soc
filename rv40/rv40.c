@@ -130,6 +130,9 @@ typedef struct RV34DecContext{
     int rpr;                 ///< one field size in RV30 slice header
 
     int avail[4];            ///< whether left, top, top rights and top left MBs are available
+
+    int (*parse_slice_header)(struct RV34DecContext *r, GetBitContext *gb, SliceInfo *si);
+    int (*decode_intra_types)(struct RV34DecContext *r, GetBitContext *gb, int *dst);
 }RV34DecContext;
 
 static RV34VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
@@ -1537,13 +1540,8 @@ static int rv34_decode_mb_header(RV34DecContext *r, int *intra_types)
     }
     if(IS_INTRA(s->current_picture_ptr->mb_type[mb_pos])){
         if(!r->is16){
-            if(r->rv30){
-                if(rv30_decode_intra_types(r, gb, intra_types) < 0)
-                    return -1;
-            }else{
-                if(rv40_decode_intra_types(r, gb, intra_types) < 0)
-                    return -1;
-            }
+            if(r->decode_intra_types(r, gb, intra_types) < 0)
+                return -1;
             r->chroma_vlc = 0;
             r->luma_vlc   = 1;
         }else{
@@ -1692,7 +1690,7 @@ static int rv34_decode_slice(RV34DecContext *r, int size, int end, int *last)
     *last = 1;
 
     init_get_bits(&r->s.gb, r->slice_data, r->si.size);
-    res = r->rv30 ? rv30_parse_slice_header(r, gb, &r->si) : rv40_parse_slice_header(r, gb, &r->si);
+    res = r->parse_slice_header(r, gb, &r->si);
     if((res < 0 && !s->current_picture_ptr) || (r->prev_si.type == -1 && r->si.start)){
         av_log(s->avctx, AV_LOG_ERROR, "Incorrect or unknown slice header\n");
         *last = 0;
@@ -2038,6 +2036,8 @@ static int rv34_decode_init(AVCodecContext *avctx)
         r->rpr = (avctx->extradata[1] & 7) >> 1;
         r->rpr = FFMIN(r->rpr + 1, 3);
     }
+    r->parse_slice_header = r->rv30 ? rv30_parse_slice_header : rv40_parse_slice_header;
+    r->decode_intra_types = r->rv30 ? rv30_decode_intra_types : rv40_decode_intra_types;
     return 0;
 }
 
@@ -2086,15 +2086,13 @@ static int rv34_decode_frame(AVCodecContext *avctx,
         r->si.end = s->mb_width * s->mb_height;
         if(i+1 < slice_count){
             init_get_bits(&s->gb, buf+slice_offset[i+1], (buf_size-slice_offset[i+1])*8);
-            if(!r->rv30 && rv40_parse_slice_header(r, &r->s.gb, &si) < 0){
+            if(r->parse_slice_header(r, &r->s.gb, &si) < 0){
                 if(i+2 < slice_count)
                     size = slice_offset[i+2] - offset;
                 else
                     size = buf_size - offset;
                 r->si.size = size * 8;
-            }else if(!r->rv30)
-                r->si.end = si.start;
-            if(r->rv30 && rv30_parse_slice_header(r, &r->s.gb, &si) >= 0)
+            }else
                 r->si.end = si.start;
         }
         r->slice_data = buf + offset;
