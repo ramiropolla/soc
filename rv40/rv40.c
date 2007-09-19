@@ -136,9 +136,10 @@ typedef struct RV34DecContext{
 }RV34DecContext;
 
 static RV34VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
+static VLC omega_part_vlc;
 static VLC aic_top_vlc;
 static VLC aic_mode1_vlc[AIC_MODE1_NUM], aic_mode2_vlc[AIC_MODE2_NUM];
-static VLC mbinfo_vlc, ptype_vlc[NUM_PTYPE_VLCS], btype_vlc[NUM_BTYPE_VLCS];
+static VLC ptype_vlc[NUM_PTYPE_VLCS], btype_vlc[NUM_BTYPE_VLCS];
 
 /**
  * @defgroup vlc RV40 VLC generating functions
@@ -234,10 +235,10 @@ static void rv34_init_tables()
                  aic_mode2_vlc_bits[i],  1, 1,
                  aic_mode2_vlc_codes[i], 2, 2, INIT_VLC_USE_STATIC);
     }
-    init_vlc_sparse(&mbinfo_vlc, MBINFO_BITS, NUM_MBINFO,
-                    mbinfo_vlc_bits,  1, 1,
-                    mbinfo_vlc_codes, 1, 1,
-                    mbinfo_vlc_syms,  1, 1, INIT_VLC_USE_STATIC);
+    init_vlc_sparse(&omega_part_vlc, OMEGA_BITS, NUM_OMEGA,
+                    omega_part_vlc_bits,  1, 1,
+                    omega_part_vlc_codes, 1, 1,
+                    omega_part_vlc_syms,  1, 1, INIT_VLC_USE_STATIC);
     for(i = 0; i < NUM_PTYPE_VLCS; i++)
          init_vlc_sparse(&ptype_vlc[i], PTYPE_VLC_BITS, PTYPE_VLC_SIZE,
                          ptype_vlc_bits[i],  1, 1,
@@ -614,7 +615,7 @@ static inline int get_omega(GetBitContext *gb)
     int code = 1, t, tb;
 
     for(;;){
-        t = get_vlc2(gb, mbinfo_vlc.table, MBINFO_BITS, 1);
+        t = get_vlc2(gb, omega_part_vlc.table, OMEGA_BITS, 1);
         tb = t >> 5;
         code = (code << tb) | (t & 0xF);
         if(t & 0x10) break;
