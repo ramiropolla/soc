@@ -107,6 +107,8 @@ typedef struct RV34DecContext{
     int *intra_types;        ///< block types
     int intra_types_stride;  ///< stride for block types data
     int block_start;         ///< start of slice in blocks
+    uint8_t *luma_dc_quant_i;///< luma subblock DC quantizer for intraframes
+    uint8_t *luma_dc_quant_p;///< luma subblock DC quantizer for interframes
 
     int vlc_set;             ///< index of currently selected VLC set
     RV34VLC *cur_vlcs;       ///< VLC set used for current frame decoding
@@ -1621,7 +1623,7 @@ static int rv34_decode_macroblock(RV34DecContext *r, int *intra_types)
     if(cbp == -1)
         return -1;
 
-    luma_dc_quant = r->rv30 ? rv30_luma_dc_quant[s->qscale] : rv40_luma_quant[r->si.type>>1][s->qscale];
+    luma_dc_quant = r->si.type ? r->luma_dc_quant_p[s->qscale] : r->luma_dc_quant_i[s->qscale];
     if(r->is16){
         memset(block16, 0, sizeof(block16));
         rv34_decode_block(block16, gb, r->cur_vlcs, 3, 0);
@@ -2039,6 +2041,13 @@ static int rv34_decode_init(AVCodecContext *avctx)
     }
     r->parse_slice_header = r->rv30 ? rv30_parse_slice_header : rv40_parse_slice_header;
     r->decode_intra_types = r->rv30 ? rv30_decode_intra_types : rv40_decode_intra_types;
+    if(r->rv30){
+        r->luma_dc_quant_i = rv30_luma_dc_quant;
+        r->luma_dc_quant_p = rv30_luma_dc_quant;
+    }else{
+        r->luma_dc_quant_i = rv40_luma_quant[0];
+        r->luma_dc_quant_p = rv40_luma_quant[1];
+    }
     return 0;
 }
 
