@@ -613,7 +613,7 @@ static int rv40_parse_slice_header(RV34DecContext *r, GetBitContext *gb, SliceIn
  * Code is constructed from bit chunks of even length (odd length means end of code)
  * and chunks are coded with variable-length codes too
  */
-static inline int get_omega(GetBitContext *gb)
+int rv34_get_omega(GetBitContext *gb)
 {
     int code = 1, t, tb;
 
@@ -633,11 +633,11 @@ static inline int get_omega(GetBitContext *gb)
  * Code is constructed from bit chunks of even length (odd length means end of code)
  * and chunks are coded with variable-length codes too
  */
-static inline int get_omega_signed(GetBitContext *gb)
+int rv34_get_omega_signed(GetBitContext *gb)
 {
     int code;
 
-    code = get_omega(gb);
+    code = rv34_get_omega(gb);
     if(code & 1)
         return -(code >> 1);
     else
@@ -657,7 +657,7 @@ static int rv30_decode_intra_types(RV34DecContext *r, GetBitContext *gb, int *ds
     for(i = 0; i < 4; i++, dst += r->intra_types_stride){
         ptr = dst;
         for(j = 0; j < 4; j+= 2){
-            code = (get_omega(gb) - 1) << 1;
+            code = (rv34_get_omega(gb) - 1) << 1;
             if(code >= 81*2){
                 av_log(r->s.avctx, AV_LOG_ERROR, "Incorrect intra prediction code\n");
                 return -1;
@@ -761,7 +761,7 @@ static int rv30_decode_mb_info(RV34DecContext *r)
     GetBitContext *gb = &s->gb;
     int code;
 
-    code = get_omega(gb) - 1;
+    code = rv34_get_omega(gb) - 1;
     if(code > 11){
         av_log(s->avctx, AV_LOG_ERROR, "Incorrect MB type code\n");
         return -1;
@@ -790,7 +790,7 @@ static int rv40_decode_mb_info(RV34DecContext *r)
     int count = 0;
 
     if(!r->s.mb_skip_run)
-        r->s.mb_skip_run = get_omega(gb);
+        r->s.mb_skip_run = rv34_get_omega(gb);
 
     if(--r->s.mb_skip_run)
          return RV34_MB_SKIP;
@@ -1305,25 +1305,25 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
         break;
     case RV34_MB_P_16x16:
     case RV34_MB_P_MIX16x16:
-        r->dmv[0][0] = get_omega_signed(gb);
-        r->dmv[0][1] = get_omega_signed(gb);
+        r->dmv[0][0] = rv34_get_omega_signed(gb);
+        r->dmv[0][1] = rv34_get_omega_signed(gb);
         rv34_pred_mv(r, block_type, 0);
         rv34_mc(r, block_type, 0, 0, 0, 2, 2);
         break;
     case RV34_MB_B_FORWARD:
     case RV34_MB_B_BACKWARD:
-        r->dmv[0][0] = get_omega_signed(gb);
-        r->dmv[0][1] = get_omega_signed(gb);
+        r->dmv[0][0] = rv34_get_omega_signed(gb);
+        r->dmv[0][1] = rv34_get_omega_signed(gb);
         rv34_pred_mv_b  (r, block_type);
         rv34_mc_b       (r, block_type);
         break;
     case RV34_MB_P_16x8:
     case RV34_MB_P_8x16:
     case RV34_MB_B_DIRECT:
-        r->dmv[0][0] = get_omega_signed(gb);
-        r->dmv[0][1] = get_omega_signed(gb);
-        r->dmv[1][0] = get_omega_signed(gb);
-        r->dmv[1][1] = get_omega_signed(gb);
+        r->dmv[0][0] = rv34_get_omega_signed(gb);
+        r->dmv[0][1] = rv34_get_omega_signed(gb);
+        r->dmv[1][0] = rv34_get_omega_signed(gb);
+        r->dmv[1][1] = rv34_get_omega_signed(gb);
         rv34_pred_mv(r, block_type, 0);
         rv34_pred_mv(r, block_type, 1);
         if(block_type == RV34_MB_P_16x8){
@@ -1342,8 +1342,8 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
         break;
     case RV34_MB_P_8x8:
         for(i=0;i< 4;i++){
-            r->dmv[i][0] = get_omega_signed(gb);
-            r->dmv[i][1] = get_omega_signed(gb);
+            r->dmv[i][0] = rv34_get_omega_signed(gb);
+            r->dmv[i][1] = rv34_get_omega_signed(gb);
             rv34_pred_mv(r, block_type, i);
             rv34_mc(r, block_type, (i&1)<<3, (i&2)<<2, (i&1)+(i>>1)*s->b8_stride, 1, 1);
         }
