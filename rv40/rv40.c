@@ -111,7 +111,6 @@ static int rv40_parse_slice_header(RV34DecContext *r, GetBitContext *gb, SliceIn
     int mb_size;
 
     memset(si, 0, sizeof(SliceInfo));
-    si->type = -1;
     if(get_bits1(gb))
         return -1;
     si->type = get_bits(gb, 2);
