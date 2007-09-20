@@ -1640,7 +1640,6 @@ int ff_rv34_decode_init(AVCodecContext *avctx)
 
     static int tables_done = 0;
 
-    r->rv30 = (avctx->codec_id == CODEC_ID_RV30);
     MPV_decode_defaults(s);
     s->avctx= avctx;
     s->out_format = FMT_H263;
