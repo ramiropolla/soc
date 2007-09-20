@@ -1072,16 +1072,16 @@ static void rv34_output_macroblock(RV34DecContext *r, int *intra_types, int cbp,
             }
             no_up = 0;
             Y += s->linesize * 4;
-            intra_types += r->intra_types_stride;
+            intra_types += s->b4_stride;
         }
-        intra_types -= r->intra_types_stride * 4;
+        intra_types -= s->b4_stride * 4;
         no_up = !r->avail[1];
         for(j = 0; j < 2; j++){
             no_left = !r->avail[0];
             for(i = 0; i < 2; i++, cbp >>= 1, no_left = 0){
                 no_topright = no_up || (i && j) || (i && !j && (s->mb_x-1) == s->mb_width);
-                rv34_pred_4x4_block(r, U + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, no_topright);
-                rv34_pred_4x4_block(r, V + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*r->intra_types_stride]], no_up, no_left, i || j, no_topright);
+                rv34_pred_4x4_block(r, U + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*s->b4_stride]], no_up, no_left, i || j, no_topright);
+                rv34_pred_4x4_block(r, V + i*4 + j*4*s->uvlinesize, s->uvlinesize, ittrans[intra_types[i*2+j*2*s->b4_stride]], no_up, no_left, i || j, no_topright);
                 if(cbp & 0x01)
                     rv34_add_4x4_block(U + i*4 + j*4*s->uvlinesize, s->uvlinesize, s->block[4], i*4+j*32);
                 if(cbp & 0x10)
@@ -1176,7 +1176,7 @@ static int rv34_decode_mb_header(RV34DecContext *r, int *intra_types)
         rv34_decode_mv(r, r->block_type);
         if(r->block_type == RV34_MB_SKIP){
             for(i = 0; i < 16; i++)
-                intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = 0;
+                intra_types[(i & 3) + (i>>2) * s->b4_stride] = 0;
             return 0;
         }
         r->chroma_vlc = 1;
@@ -1191,14 +1191,14 @@ static int rv34_decode_mb_header(RV34DecContext *r, int *intra_types)
         }else{
             t = get_bits(gb, 2);
             for(i = 0; i < 16; i++)
-                intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = t;
+                intra_types[(i & 3) + (i>>2) * s->b4_stride] = t;
             r->chroma_vlc = 0;
             r->luma_vlc   = 2;
         }
         r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, 0);
     }else{
         for(i = 0; i < 16; i++)
-            intra_types[(i & 3) + (i>>2) * r->intra_types_stride] = 0;
+            intra_types[(i & 3) + (i>>2) * s->b4_stride] = 0;
         r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, 1);
         if(r->mb_type[mb_pos] == RV34_MB_P_MIX16x16){
             r->is16 = 1;
@@ -1389,7 +1389,7 @@ static int rv34_decode_slice(RV34DecContext *r, int size, int end, int *last)
         s->mb_y = r->block_start / s->mb_width;
     }
     if(!r->truncated){
-        memset(r->intra_types_hist, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
+        memset(r->intra_types_hist, -1, s->b4_stride * 4 * 2 * sizeof(int));
         s->first_slice_line = 1;
         s->resync_mb_x= s->mb_x;
         s->resync_mb_y= s->mb_y;
@@ -1406,15 +1406,15 @@ static int rv34_decode_slice(RV34DecContext *r, int size, int end, int *last)
             r->ssi.mb_y = s->mb_y;
         }
 
-        if(rv34_decode_macroblock(r, r->intra_types + (s->mb_x + 1) * 4) < 0)
+        if(rv34_decode_macroblock(r, r->intra_types + s->mb_x * 4 + 1) < 0)
             break;
         if (++s->mb_x == s->mb_width) {
             s->mb_x = 0;
             s->mb_y++;
             ff_init_block_index(s);
 
-            memmove(r->intra_types_hist, r->intra_types, r->intra_types_stride * 4 * sizeof(int));
-            memset(r->intra_types, -1, r->intra_types_stride * 4 * sizeof(int));
+            memmove(r->intra_types_hist, r->intra_types, s->b4_stride * 4 * sizeof(int));
+            memset(r->intra_types, -1, s->b4_stride * 4 * sizeof(int));
         }
         if(s->mb_x == s->resync_mb_x)
             s->first_slice_line=0;
@@ -1594,7 +1594,7 @@ static void rv34_loop_filter(RV34DecContext *r)
     const int thr = s->qscale, lim0 = rv34_filter_clip_tbl[1][s->qscale], lim1 = rv34_filter_clip_tbl[2][s->qscale];
 
     mb_pos = s->resync_mb_x + s->resync_mb_y * s->mb_stride;
-    memset(r->intra_types_hist, -1, r->intra_types_stride * 4 * 2 * sizeof(int));
+    memset(r->intra_types_hist, -1, s->b4_stride * 4 * 2 * sizeof(int));
     s->first_slice_line = 1;
     s->mb_x= s->resync_mb_x;
     s->mb_y= s->resync_mb_y;
@@ -1660,9 +1660,8 @@ int ff_rv34_decode_init(AVCodecContext *avctx)
 
     ff_h264_pred_init(&r->h, CODEC_ID_RV40);
 
-    r->intra_types_stride = (s->mb_width + 1) * 4;
-    r->intra_types_hist = av_malloc(r->intra_types_stride * 4 * 2 * sizeof(int));
-    r->intra_types = r->intra_types_hist + r->intra_types_stride * 4;
+    r->intra_types_hist = av_malloc(s->b4_stride * 4 * 2 * sizeof(int));
+    r->intra_types = r->intra_types_hist + s->b4_stride * 4;
 
     r->mb_type = av_mallocz(r->s.mb_stride * r->s.mb_height * sizeof(int));
 

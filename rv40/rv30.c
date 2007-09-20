@@ -69,7 +69,7 @@ static int rv30_decode_intra_types(RV34DecContext *r, GetBitContext *gb, int *ds
     int *ptr;
     int code;
 
-    for(i = 0; i < 4; i++, dst += r->intra_types_stride){
+    for(i = 0; i < 4; i++, dst += r->s.b4_stride){
         ptr = dst;
         for(j = 0; j < 4; j+= 2){
             code = (ff_rv34_get_omega(gb) - 1) << 1;
@@ -78,7 +78,7 @@ static int rv30_decode_intra_types(RV34DecContext *r, GetBitContext *gb, int *ds
                 return -1;
             }
             for(k = 0; k < 2; k++){
-                A = ptr[-r->intra_types_stride] + 1;
+                A = ptr[-r->s.b4_stride] + 1;
                 B = ptr[-1] + 1;
                 *ptr++ = rv30_itype_from_context[A * 90 + B * 9 + rv30_itype_code[code + k]];
                 if(ptr[-1] == 9){

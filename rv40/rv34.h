@@ -94,7 +94,6 @@ typedef struct RV34DecContext{
     int mb_bits;             ///< bits needed to read MB offet in slice header
     int *intra_types_hist;   ///< old block types, used for prediction
     int *intra_types;        ///< block types
-    int intra_types_stride;  ///< stride for block types data
     int block_start;         ///< start of slice in blocks
     uint8_t *luma_dc_quant_i;///< luma subblock DC quantizer for intraframes
     uint8_t *luma_dc_quant_p;///< luma subblock DC quantizer for interframes
