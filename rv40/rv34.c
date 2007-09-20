@@ -94,17 +94,15 @@ static void rv34_init_tables()
     int i, j, k;
 
     for(i = 0; i < NUM_INTRA_TABLES; i++){
-        for(j = 0; j < 2; j++)
+        for(j = 0; j < 2; j++){
             rv34_gen_vlc(rv34_intra_cbppatvlc_pointers[i][j], CBPPAT_VLC_SIZE, &intra_vlcs[i].cbppattern[j]);
-        for(j = 0; j < 2; j++)
+            rv34_gen_vlc(rv34_intra_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].second_pattern[j]);
+            rv34_gen_vlc(rv34_intra_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].third_pattern[j]);
             for(k = 0; k < 4; k++)
                 rv34_gen_vlc(rv34_intra_cbpvlc_pointers[i][j][k], CBP_VLC_SIZE, &intra_vlcs[i].cbp[j][k]);
+        }
         for(j = 0; j < 4; j++)
             rv34_gen_vlc(rv34_intra_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &intra_vlcs[i].first_pattern[j]);
-        for(j = 0; j < 2; j++)
-            rv34_gen_vlc(rv34_intra_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].second_pattern[j]);
-        for(j = 0; j < 2; j++)
-            rv34_gen_vlc(rv34_intra_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].third_pattern[j]);
         rv34_gen_vlc(rv34_intra_coeffvlc_pointers[i], COEFF_VLC_SIZE, &intra_vlcs[i].coefficient);
     }
 
@@ -112,12 +110,11 @@ static void rv34_init_tables()
         rv34_gen_vlc(rv34_inter_cbppatvlc_pointers[i], CBPPAT_VLC_SIZE, &inter_vlcs[i].cbppattern[0]);
         for(j = 0; j < 4; j++)
             rv34_gen_vlc(rv34_inter_cbpvlc_pointers[i][j], CBP_VLC_SIZE, &inter_vlcs[i].cbp[0][j]);
-        for(j = 0; j < 2; j++)
+        for(j = 0; j < 2; j++){
             rv34_gen_vlc(rv34_inter_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &inter_vlcs[i].first_pattern[j]);
-        for(j = 0; j < 2; j++)
             rv34_gen_vlc(rv34_inter_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].second_pattern[j]);
-        for(j = 0; j < 2; j++)
             rv34_gen_vlc(rv34_inter_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].third_pattern[j]);
+        }
         rv34_gen_vlc(rv34_inter_coeffvlc_pointers[i], COEFF_VLC_SIZE, &inter_vlcs[i].coefficient);
     }
 
