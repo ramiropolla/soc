@@ -1020,6 +1020,22 @@ static void rv34_add_4x4_block(uint8_t *dst, int stride, DCTELEM block[64], int 
             dst[x + y*stride] = av_clip_uint8(dst[x + y*stride] + block[off + x+y*8]);
 }
 
+static inline int adjust_pred16(int itype, int no_up, int no_left)
+{
+    if(no_up && no_left)
+        itype = DC_128_PRED8x8;
+    else if(no_up){
+        if(itype == PLANE_PRED8x8)itype = HOR_PRED8x8;
+        if(itype == VERT_PRED8x8) itype = HOR_PRED8x8;
+        if(itype == DC_PRED8x8)   itype = LEFT_DC_PRED8x8;
+    }else if(no_left){
+        if(itype == PLANE_PRED8x8)itype = VERT_PRED8x8;
+        if(itype == HOR_PRED8x8)  itype = VERT_PRED8x8;
+        if(itype == DC_PRED8x8)   itype = TOP_DC_PRED8x8;
+    }
+    return itype;
+}
+
 static void rv34_output_macroblock(RV34DecContext *r, int *intra_types, int cbp, int is16)
 {
     MpegEncContext *s = &r->s;
@@ -1065,17 +1081,7 @@ static void rv34_output_macroblock(RV34DecContext *r, int *intra_types, int cbp,
     }else{
         no_left = !r->avail[0];
         itype = ittrans16[intra_types[0]];
-        if(no_up && no_left)
-            itype = DC_128_PRED8x8;
-        else if(no_up){
-            if(itype == PLANE_PRED8x8)itype = HOR_PRED8x8;
-            if(itype == VERT_PRED8x8) itype = HOR_PRED8x8;
-            if(itype == DC_PRED8x8)   itype = LEFT_DC_PRED8x8;
-        }else if(no_left){
-            if(itype == PLANE_PRED8x8)itype = VERT_PRED8x8;
-            if(itype == HOR_PRED8x8)  itype = VERT_PRED8x8;
-            if(itype == DC_PRED8x8)   itype = TOP_DC_PRED8x8;
-        }
+        itype = adjust_pred16(itype, no_up, no_left);
         r->h.pred16x16[itype](Y, s->linesize);
         dsp->add_pixels_clamped(s->block[0], Y, s->current_picture.linesize[0]);
         dsp->add_pixels_clamped(s->block[1], Y + 8, s->current_picture.linesize[0]);
@@ -1085,15 +1091,7 @@ static void rv34_output_macroblock(RV34DecContext *r, int *intra_types, int cbp,
 
         itype = ittrans16[intra_types[0]];
         if(itype == PLANE_PRED8x8) itype = DC_PRED8x8;
-        if(no_up && no_left)
-            itype = DC_128_PRED8x8;
-        else if(no_up){
-            if(itype == VERT_PRED8x8) itype = HOR_PRED8x8;
-            if(itype == DC_PRED8x8)   itype = LEFT_DC_PRED8x8;
-        }else if(no_left){
-            if(itype == HOR_PRED8x8)  itype = VERT_PRED8x8;
-            if(itype == DC_PRED8x8)   itype = TOP_DC_PRED8x8;
-        }
+        itype = adjust_pred16(itype, no_up, no_left);
         r->h.pred8x8[itype](U, s->uvlinesize);
         dsp->add_pixels_clamped(s->block[4], U, s->uvlinesize);
         r->h.pred8x8[itype](V, s->uvlinesize);
