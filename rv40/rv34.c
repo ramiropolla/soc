@@ -367,29 +367,6 @@ static inline int decode210(GetBitContext *gb){
 }
 
 /**
- * Get stored dimension from bitstream
- *
- * If the width/height is the standard one then it's coded as 3-bit index.
- * Otherwise it is coded as escaped 8-bit portions.
- */
-static int get_dimension(GetBitContext *gb, const int *dim1, const int *dim2)
-{
-    int val, t;
-
-    t = get_bits(gb, 3);
-    val = dim1[t];
-    if(!val && dim2)
-        val = dim2[(t*2 | get_bits1(gb)) & 3];
-    if(!val){
-        do{
-            t = get_bits(gb, 8);
-            val += t << 2;
-        }while(t == 0xFF);
-    }
-    return val;
-}
-
-/**
  * Decode staring slice position
  * @todo maybe replace with ff_h263_decode_mba() ?
  */
