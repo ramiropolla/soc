@@ -1659,7 +1659,7 @@ int ff_rv34_decode_init(AVCodecContext *avctx)
     r->intra_types_hist = av_malloc(s->b4_stride * 4 * 2 * sizeof(int));
     r->intra_types = r->intra_types_hist + s->b4_stride * 4;
 
-    r->mb_type = av_mallocz(r->s.mb_stride * r->s.mb_height * sizeof(int));
+    r->mb_type = av_mallocz(r->s.mb_stride * r->s.mb_height * sizeof(*r->mb_type));
 
     if(!tables_done){
         rv34_init_tables();
