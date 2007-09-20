@@ -1112,23 +1112,12 @@ static int rv34_decode_mb_header(RV34DecContext *r, int *intra_types)
     int mb_pos = s->mb_x + s->mb_y * s->mb_stride;
     int i, t;
 
-    if(!r->si.type && !r->rv30){
-        r->is16 = 0;
-        switch(decode210(gb)){
-        case 0: // 16x16 block
-            r->is16 = 1;
-            break;
-        case 1:
-            break;
-        case 2:
-            av_log(s->avctx, AV_LOG_ERROR, "Need DQUANT\n");
-            // q = decode_dquant(gb);
-            break;
-        }
-        s->current_picture_ptr->mb_type[mb_pos] = r->is16 ? MB_TYPE_INTRA16x16 : MB_TYPE_INTRA;
-        r->block_type = r->is16 ? RV34_MB_TYPE_INTRA16x16 : RV34_MB_TYPE_INTRA;
-    }else if(!r->si.type && r->rv30){
+    if(!r->si.type){
         r->is16 = get_bits1(gb);
+        if(!r->is16 && !r->rv30){
+            if(!get_bits1(gb))
+                av_log(s->avctx, AV_LOG_ERROR, "Need DQUANT\n");
+        }
         s->current_picture_ptr->mb_type[mb_pos] = r->is16 ? MB_TYPE_INTRA16x16 : MB_TYPE_INTRA;
         r->block_type = r->is16 ? RV34_MB_TYPE_INTRA16x16 : RV34_MB_TYPE_INTRA;
     }else{
@@ -1157,15 +1146,14 @@ static int rv34_decode_mb_header(RV34DecContext *r, int *intra_types)
         if(!r->is16){
             if(r->decode_intra_types(r, gb, intra_types) < 0)
                 return -1;
-            r->chroma_vlc = 0;
             r->luma_vlc   = 1;
         }else{
             t = get_bits(gb, 2);
             for(i = 0; i < 16; i++)
                 intra_types[(i & 3) + (i>>2) * s->b4_stride] = t;
-            r->chroma_vlc = 0;
             r->luma_vlc   = 2;
         }
+        r->chroma_vlc = 0;
         r->cur_vlcs = choose_vlc_set(r->si.quant, r->si.vlc_set, 0);
     }else{
         for(i = 0; i < 16; i++)
