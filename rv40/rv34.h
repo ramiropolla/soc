@@ -35,7 +35,6 @@
 
 /**
  * RV30 and RV40 Macroblock types
- * @{
  */
 enum RV40BlockTypes{
     RV34_MB_TYPE_INTRA,      ///< Intra macroblock
@@ -52,7 +51,6 @@ enum RV40BlockTypes{
     RV34_MB_P_MIX16x16,      ///< P-frame macroblock with DCs in a separate 4x4 block, one motion vector
     RV34_MB_TYPES
 };
-/** @} */
 
 /**
  * VLC tables used by decoder
