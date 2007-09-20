@@ -59,10 +59,9 @@ static int rv34_gen_vlc(const uint8_t *bits2, int size, VLC *vlc)
     int counts[17] = {0}, codes[17];
     uint16_t cw[size], syms[size];
     uint8_t bits[size];
-    int maxbits = 0, realsize;
+    int maxbits = 0, realsize = 0;
     int ret;
 
-    realsize = 0;
     for(i = 0; i < size; i++){
         if(bits2[i]){
             bits[realsize] = bits2[i];
