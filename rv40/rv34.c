@@ -461,7 +461,7 @@ int ff_rv34_get_omega_signed(GetBitContext *gb)
 static inline int rv34_decode_dquant(GetBitContext *gb, int quant)
 {
     if(get_bits1(gb))
-        return av_clip(quant + rv34_dquant_tab[quant * 2 + get_bits1(gb)], 0, 31);
+        return quant + rv34_dquant_tab[quant * 2 + get_bits1(gb)];
     else
         return get_bits(gb, 5);
 }
