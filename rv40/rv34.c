@@ -879,6 +879,9 @@ static inline void rv34_mc_b_interp(RV34DecContext *r, const int block_type)
     s->dsp.avg_h264_chroma_pixels_tab[0]   (s->dest[2], srcV, s->uvlinesize, 8, uvmx, uvmy);
 }
 
+/** Number of motion vectors in each macroblock type */
+static const int num_mvs[RV34_MB_TYPES] = { 0, 0, 1, 4, 1, 1, 0, 0, 2, 2, 2, 1 };
+
 /**
  * Decode motion vector differences
  * and perform motion vector reconstruction and motion compensation.
@@ -889,6 +892,11 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
     GetBitContext *gb = &s->gb;
     int i, j;
 
+    memset(r->dmv, 0, sizeof(r->dmv));
+    for(i = 0; i < num_mvs[block_type]; i++){
+        r->dmv[i][0] = ff_rv34_get_omega_signed(gb);
+        r->dmv[i][1] = ff_rv34_get_omega_signed(gb);
+    }
     switch(block_type){
     case RV34_MB_TYPE_INTRA:
     case RV34_MB_TYPE_INTRA16x16:
@@ -900,43 +908,29 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
         }
         return 0;
     case RV34_MB_SKIP:
-        r->dmv[0][0] = 0;
-        r->dmv[0][1] = 0;
         if(s->pict_type == P_TYPE){
             rv34_pred_mv(r, block_type, 0);
             rv34_mc(r, block_type, 0, 0, 0, 2, 2);
             break;
         }
     case RV34_MB_B_INTERP:
-        r->dmv[0][0] = 0;
-        r->dmv[0][1] = 0;
-        r->dmv[1][0] = 0;
-        r->dmv[1][1] = 0;
         rv34_pred_mv_b  (r, RV34_MB_B_INTERP);
         rv34_mc_b       (r, RV34_MB_B_INTERP);
         rv34_mc_b_interp(r, RV34_MB_B_INTERP);
         break;
     case RV34_MB_P_16x16:
     case RV34_MB_P_MIX16x16:
-        r->dmv[0][0] = ff_rv34_get_omega_signed(gb);
-        r->dmv[0][1] = ff_rv34_get_omega_signed(gb);
         rv34_pred_mv(r, block_type, 0);
         rv34_mc(r, block_type, 0, 0, 0, 2, 2);
         break;
     case RV34_MB_B_FORWARD:
     case RV34_MB_B_BACKWARD:
-        r->dmv[0][0] = ff_rv34_get_omega_signed(gb);
-        r->dmv[0][1] = ff_rv34_get_omega_signed(gb);
         rv34_pred_mv_b  (r, block_type);
         rv34_mc_b       (r, block_type);
         break;
     case RV34_MB_P_16x8:
     case RV34_MB_P_8x16:
     case RV34_MB_B_DIRECT:
-        r->dmv[0][0] = ff_rv34_get_omega_signed(gb);
-        r->dmv[0][1] = ff_rv34_get_omega_signed(gb);
-        r->dmv[1][0] = ff_rv34_get_omega_signed(gb);
-        r->dmv[1][1] = ff_rv34_get_omega_signed(gb);
         rv34_pred_mv(r, block_type, 0);
         rv34_pred_mv(r, block_type, 1);
         if(block_type == RV34_MB_P_16x8){
@@ -955,8 +949,6 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
         break;
     case RV34_MB_P_8x8:
         for(i=0;i< 4;i++){
-            r->dmv[i][0] = ff_rv34_get_omega_signed(gb);
-            r->dmv[i][1] = ff_rv34_get_omega_signed(gb);
             rv34_pred_mv(r, block_type, i);
             rv34_mc(r, block_type, (i&1)<<3, (i&2)<<2, (i&1)+(i>>1)*s->b8_stride, 1, 1);
         }
