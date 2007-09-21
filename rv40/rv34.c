@@ -138,7 +138,7 @@ static void rv34_init_tables()
  */
 static void rv34_intra_inv_transform(DCTELEM *block, const int offset){
     int temp[16];
-    unsigned int i;
+    int i;
 
     for(i=0; i<4; i++){
         const int z0= 13*(block[offset+i+8*0] +    block[offset+i+8*2]);
@@ -174,7 +174,7 @@ static void rv34_intra_inv_transform(DCTELEM *block, const int offset){
  */
 static void rv34_intra_inv_transform_noround(DCTELEM *block, const int offset){
     int temp[16];
-    unsigned int i;
+    int i;
 
     for(i=0; i<4; i++){
         const int z0= 13*(block[offset+i+8*0] +    block[offset+i+8*2]);
