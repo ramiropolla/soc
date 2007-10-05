@@ -460,7 +460,7 @@ static int mpegts_write_header(AVFormatContext *s)
         int codec_rate;
         st = s->streams[i];
         ts_st = (MpegTSWriteStream*) st->priv_data;
-        if(st->codec->rc_max_rate || st->codec->codec_type == CODEC_TYPE_VIDEO)
+        if(st->codec->rc_max_rate)
             codec_rate= st->codec->rc_max_rate;
         else
             codec_rate= st->codec->bit_rate;
