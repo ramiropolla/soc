@@ -633,7 +633,7 @@ static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index, int *pitc
         }else {
             // decoding with 5 or 6 bit resolution
             *pitch_lag_int = ( ((pitch_index + 2)*10923 )>>15) - 1 + p->search_range_min;
-            *pitch_lag_frac = pitch_index - *pitch_lag_int*3 - 2;
+            *pitch_lag_frac = pitch_index - (*pitch_lag_int - p->search_range_min)*3 - 2;
         }
     }
 }
