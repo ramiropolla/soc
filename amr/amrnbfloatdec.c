@@ -43,20 +43,12 @@ typedef struct AMRContext {
 
     int16_t                       *amr_prms; ///< pointer to the decoded amr parameters (lsf coefficients, codebook indices, etc)
     int                 bad_frame_indicator; ///< bad frame ? 1 : 0
-    int                      cur_frame_mode; ///< current frame mode
 
     float       prev_lsf_r[LP_FILTER_ORDER];
     float           lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
     float    prev_lsp_sub4[LP_FILTER_ORDER]; ///< lsp vector for the 4th subframe of the previous frame
 
     float           lpc[4][LP_FILTER_ORDER]; ///< vectors of lpc coefficients for 4 subframes
-
-    int                       pitch_lag_int; ///< integer part of pitch lag from current subframe
-    int                      pitch_lag_frac; ///< fractional part of pitch lag from current subframe
-    int                  prev_pitch_lag_int; ///< integer part of pitch lag from previous subframe
-
-    float prev_excitation[PITCH_LAG_MAX + LP_FILTER_ORDER + 1]; ///< buffer of the past excitation vector
-    float                      pitch_vector[AMR_SUBFRAME_SIZE]; ///< adaptive code book (pitch) vector
 
 } AMRContext;
 
@@ -401,152 +393,13 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs) {
 
 /*** end of LPC coefficient decoding functions ***/
 
-/*** pitch vector decoding functions ***/
-
-/**
- * Decode the adaptive codebook index to the integer and fractional parts of the
- * pitch lag for one subframe at 1/3 resolution
- *
- * @param p                   pointer to the AMRContext
- * @param pitch_index         parsed adaptive codebook (pitch) index
- *
- * @return void
- */
-
-static void decode_pitch_lag_3(AMRContext *p, int pitch_index) {
-    // subframe 1 or 3
-    if(p->cur_subframe & 1) {
-        if(pitch_index < 197) {
-            // 10923>>15 is approximately 1/3
-            p->pitch_lag_int = ( ((pitch_index + 2)*10923)>>15 ) + 19;
-            p->pitch_lag_frac = pitch_index - p->pitch_lag_int*3 + 58;
-        }else {
-            p->pitch_lag_int = pitch_index - 112;
-            p->pitch_lag_frac = 0;
-        }
-    // subframe 2 or 4
-    }else {
-        if( (p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515) ||
-            (p->cur_frame_mode == MODE_59)  || (p->cur_frame_mode == MODE_67) ) {
-            // decoding with 4 bit resolution
-            int t1_temp = clip(p->prev_pitch_lag_int, p->search_range_max-4, p->search_range_min+5);
-
-            if(pitch_index < 4) {
-                // integer only precision for [t1_temp-5, t1_temp-2]
-                p->pitch_lag_int = pitch_index + (t1_temp - 5);
-                p->pitch_lag_frac = 0;
-            }else if(pitch_index < 12) {
-                // 1/3 fractional precision for [t1_temp-1 2/3, t1_temp+2/3]
-                p->pitch_lag_int = ( ((pitch_index - 5)*10923)>>15 ) + t1_temp - 1;
-                p->pitch_lag_frac = pitch_index - p->pitch_lag_int*3 - 9;
-            }else {
-                // integer only precision for [t1_temp+1, t1_temp+4]
-                pitch_lag_int = pitch_index + t1_temp - 11;
-                pitch_lag_frac = 0;
-            }
-        }else {
-            // decoding with 5 or 6 bit resolution, 1/3 fractional precision
-            // 10923>>15 is approximately 1/3
-            int temp = ( ((pitch_index + 2)*10923)>>15 ) - 1;
-            p->pitch_lag_int = temp + p->search_range_min;
-            p->pitch_lag_frac = pitch_index - temp*3 - 2;
-        }
-    }
-}
-
-
-/**
- * Decode the adaptive codebook index to the integer and fractional parts of the
- * pitch lag for one subframe at 1/6 resolution
- *
- * @param p                   pointer to the AMRContext
- * @param pitch_index         parsed adaptive codebook (pitch) index
- *
- * @return void
- */
-
-static void decode_pitch_lag_6(AMRContext *p, int pitch_index) {
-    // subframe 1 or 3
-    if(p->cur_subframe & 1) {
-        if(pitch_index < 463){
-            p->pitch_lag_int = (pitch_index + 5)/6 + 17;
-            p->pitch_lag_frac = pitch_index - p->pitch_lag_int*6 + 105;
-        }else {
-            p->pitch_lag_int = pitch_index - 368;
-            p->pitch_lag_frac = 0;
-        }
-    // subframe 2 or 4
-    }else {
-        int temp;
-        // find the search range
-        p->search_range_min = FFMAX(p->pitch_lag_int - 5, PITCH_LAG_MIN_MODE_122);
-        p->search_range_max = p->search_range_min + 9;
-        if(p->search_range_max > PITCH_LAG_MAX) {
-            p->search_range_max = PITCH_LAG_MAX;
-            p->search_range_min = p->search_range_max - 9;
-        }
-        // calculate the pitch lag
-        temp = (pitch_index + 5)/6 - 1;
-        p->pitch_lag_int = temp + p->search_range_min;
-        p->pitch_lag_frac = pitch_index - temp*6 - 3;
-    }
-}
-
-/**
- * Calculate the pitch vector by interpolating the past excitation at the pitch
- * pitch lag using a b60 hamming windowed sinc function
- *
- * @param p                   pointer to the AMRContext
- * @param lag_int             integer part of pitch lag
- * @param lag_frac            fractional part of pitch lag
- *
- * @return void
- */
-
-static void interp_pitch_vector(AMRContext *p, int lag_int, int lag_frac) {
-    int n, i;
-    float *b60_idx1, *b60_idx2, *exc_idx;
-
-    lag_frac *= -1;
-    if(p->cur_frame_mode != MODE_122) {
-        lag_frac <<= 1;
-    }
-
-    if(lag_frac < 0) {
-        lag_frac += 6;
-        lag_int--;
-    }
-
-    b60_idx1 = &b60[    lag_frac];
-    b60_idx2 = &b60[6 - lag_frac];
-    exc_idx = &p->prev_excitation[-lag_int];
-
-    for(n=0; n<AMR_SUBFRAME_SIZE; n++) {
-        for(i=0; i<10; i++) {
-            p->pitch_vector[n] += b60_idx1[6*i] * exc_idx[-i];
-        }
-        exc_idx++;
-        for(i=0; i<10; i++) {
-            p->pitch_vector[n] += b60_idx2[6*i] * exc_idx[ i];
-        }
-        exc_idx++;
-    }
-}
-
-/*** end of pitch vector decoding functions ***/
-
-/*** algebraic code book (fixed) vector decoding functions ***/
-/*** end of algebraic code book (fixed) vector decoding functions ***/
-
 
 static int amrnb_decode_frame(AVCodecContext *avctx,
         void *data, int *data_size, uint8_t *buf, int buf_size) {
 
     AMRContext *p = avctx->priv_data;        // pointer to private data
     int16_t *buf_out = data;                 // pointer to the output data buffer
-    int i, subframe;                         // counters
-    int index = 0;                           // index counter (different modes
-                                             // advance through amr_prms differently)
+    int i;                                   // counter
     enum Mode speech_mode = MODE_475;        // ???
 
     // decode the bitstream to amr parameters
@@ -559,15 +412,11 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         lsf2lsp_5(p);
         // interpolate LSP vectors at subframes 1 and 3
         interp_lsp_13(p);
-        // advance index into amr_prms
-        index += 5;
     }else {
         // decode split-matrix quantised lsf vector indices to an lsp vector
         lsf2lsp_3(p);
         // interpolate LSP vectors at subframes 1, 2 and 3
         interp_lsp_123(p);
-        // advance index into amr_prms
-        index += 3;
     }
 
     // convert LSP vectors to LPC coefficient vectors
@@ -576,59 +425,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
     }
 
 /*** end of LPC coefficient decoding ***/
-
-    for(subframe = 0; subframe < 5; subframe++) {
-
-/*** adaptive code book (pitch) vector decoding ***/
-
-        // decode integer and fractional parts of pitch lag from parsed pitch
-        // index
-        if(p->cur_frame_mode == MODE_122) {
-            decode_pitch_lag_6(p, p->amr_prms[index]);
-        }else {
-            decode_pitch_lag_3(p, p->amr_prms[index]);
-        }
-
-        // interpolate the past excitation at the pitch lag to obtain the pitch
-        // vector
-        interp_pitch_vector(p, p->pitch_lag_int, p->pitch_lag_frac);
-
-/*** end of adaptive code book (pitch) vector decoding ***/
-
-/*** algebraic code book (fixed) vector decoding ***/
-
-        switch(p->cur_frame_mode) {
-            case MODE_475:
-            case MODE_515:
-                decode_2_pulses_9bits(p, index++, index++);
-            break;
-            case MODE_59:
-                decode_2_pulses_11bits(p, index++, index++);
-            break;
-            case MODE_67:
-                decode_3_pulses_14bits(p, index++, index++);
-            break;
-            case MODE_74:
-            case MODE_795:
-                decode_4_pulses_17bits(p, index++, index++);
-            break;
-            case MODE_102:
-                decode_8_pulses_31bits(p, index);
-                index += 7;
-            break;
-            case MODE_122:
-                // decode pitch gain
-                // INSERT PITCH GAIN DECODING FUNCTION HERE calling with index++
-                decode_10_pulses_35bits(p, index);
-                index += 10;
-            break;
-            default:
-            break;
-        }
-
-/*** end of algebraic code book (fixed) vector decoding ***/
-
-    }
 
     /* Report how many samples we got */
     *data_size = buf_size;
