@@ -27,7 +27,8 @@
 
 
 // general definitions
-#define AMR_BLOCK_SIZE 160
+#define AMR_BLOCK_SIZE    160
+#define AMR_SUBFRAME_SIZE 40
 
 // definition of modes for decoder
 #define NO_DATA 15

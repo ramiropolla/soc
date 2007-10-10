@@ -721,7 +721,7 @@ static void decode_pitch_vector(AVCodecContext *avctx, int *excitation) {
         p->cur_pitch_lag_frac += 6;
         excitation_temp--;
     }
-    for(i=0; i<40; i++) {
+    for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
         // reset temp
         temp = 0;
         for(j=0; j<10; j++) {
@@ -748,7 +748,7 @@ static void reconstruct_fixed_code(int *fixed_code, int *pulse_position, int sig
     int i;
 
     // reset the code
-    memset(fixed_code, 0, AMR_BLOCK_SIZE);
+    memset(fixed_code, 0, AMR_SUBFRAME_SIZE*sizeof(int));
 
     // assign the pulse values (+/-1) to their appropriate positions
     for(i=0; i<nr_pulses; i++)
@@ -919,13 +919,13 @@ static void decode_4_pulses_17bits(int sign, int fixed_index, int *fixed_code) {
     // find the position of the first pulse
     pulse_position[0] = dgray[ fixed_index        & 7]*5;
     // find the position of the second pulse
-    pulse_position[1] = dgray[(fixed_index >> 3)  & 7] + 1;
+    pulse_position[1] = dgray[(fixed_index >> 3)  & 7]*5 + 1;
     // find the position of the third pulse
-    pulse_position[2] = dgray[(fixed_index >> 6)  & 7] + 2;
+    pulse_position[2] = dgray[(fixed_index >> 6)  & 7]*5 + 2;
     // find the subset of pulses used for the fourth pulse
     pulse_subset = (fixed_index >> 9) & 1;
     // find the position of the fourth pulse
-    pulse_position[3] = dgray[(fixed_index >> 10) & 7] + pulse_subset + 3;
+    pulse_position[3] = dgray[(fixed_index >> 10) & 7]*5 + pulse_subset + 3;
 
     // reconstruct the fixed code
     reconstruct_fixed_code(fixed_code, pulse_position, sign, 4);
@@ -947,7 +947,7 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, int *fixed_code) {
     int i, pos1, pos2, sign;
 
     // reset the code
-    memset(fixed_code, 0, 40*sizeof(int));
+    memset(fixed_code, 0, AMR_SUBFRAME_SIZE*sizeof(int));
     fixed2position(&fixed_index[TRACKS_MODE_102], position_index);
 
     for(i=0; i<TRACKS_MODE_102; i++) {
@@ -981,7 +981,7 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code) {
     int i, pos1, pos2, sign;
 
     // reset the code
-    memset(fixed_code, 0, 40*sizeof(int));
+    memset(fixed_code, 0, AMR_SUBFRAME_SIZE*sizeof(int));
 
     for(i=0; i<5; i++) {
         // find the position of the ith pulse
