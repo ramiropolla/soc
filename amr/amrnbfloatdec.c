@@ -536,6 +536,236 @@ static void interp_pitch_vector(AMRContext *p, int lag_int, int lag_frac) {
 /*** end of pitch vector decoding functions ***/
 
 
+/*** algebraic code book (fixed) vector decoding functions ***/
+
+/**
+ * Reconstruct the algebraic codebook vector
+ *
+ * @param pulse_position       vector of pulse positions
+ * @param sign                 signs of the pulses
+ * @param nr_pulses            number of pulses
+ * @param fixed_code           algebraic codebook vector
+ *
+ * @return void
+ */
+
+static void reconstruct_fixed_code(float *pulse_position, int sign, int nr_pulses, float *fixed_code) {
+    int i;
+
+    // reset the code
+    memset(fixed_code, 0, AMR_SUBFRAME_SIZE*sizeof(float));
+
+    for(i=0; i<nr_pulses; i++)
+        fixed_code[pulse_position[i]] = ((sign >> i) & 1) ? 1.0 : -1.0;
+}
+
+/**
+ * Decode the algebraic codebook index to pulse positions and signs and construct
+ * the algebraic codebook vector for MODE_475 and MODE_515
+ *
+ * @param fixed_index          positions of the two pulses
+ * @param sign                 signs of the two pulses
+ * @param subframe             current subframe
+ * @param fixed_code           pointer to the algebraic codebook vector
+ *
+ * @return void
+ */
+
+static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe, float *fixed_code) {
+    int pulse_position[2];
+    int pulse_subset;
+
+    // pulse subset is the msb (bit 7) of the 7-bits used to code the 2 pulses
+    pulse_subset = (fixed_index & 0x40)>>6;
+    // first pulse position is coded in bits 1-3
+    pulse_position[0] = ( fixed_index       & 7)*5 + track_position[ (pulse_subset<<3) + (subframe<<1) ];
+    // second pulse position is coded in bits 4-6
+    pulse_position[1] = ((fixed_index >> 3) & 7)*5 + track_position[ (pulse_subset<<3) + (subframe<<1) + 1 ];
+
+    // reconstruct the fixed code
+    reconstruct_fixed_code(pulse_position, sign, 2, fixed_code);
+}
+
+/**
+ * Decode the algebraic codebook index to pulse positions and signs and construct
+ * the algebraic codebook vector for MODE_59
+ *
+ * @param fixed_index          positions of the two pulses
+ * @param sign                 signs of the two pulses
+ * @param fixed_code           pointer to the algebraic codebook vector
+ *
+ * @return void
+ */
+
+static void decode_2_pulses_11bits(int fixed_index, int sign, float *fixed_code) {
+    int pulse_position[2];
+    int pulse_subset;
+
+    // pulse subset for the first pulse is the lsb (bit 1) of the 9-bits used
+    // to code the 2 pulses
+    pulse_subset = fixed_index & 1;
+    // first pulse position is coded in bits 2-4
+    pulse_position[0] = ((fixed_index >> 1) & 7)*5 + pulse_subset<<1 + 1;
+    // pulse subset for the second pulse is coded in bits 5-6
+    pulse_subset = (fixed_index >> 4) & 3;
+    // second pulse position is coded in bits 7-9
+    pulse_position[1] = ((fixed_index >> 6) & 7)*5 + pulse_subset + (pulse_subset == 3 ? 1 : 0);
+
+    // reconstruct the fixed code
+    reconstruct_fixed_code(pulse_position, sign, 2, fixed_code);
+}
+
+/**
+ * Decode the algebraic codebook index to pulse positions and signs and construct
+ * the algebraic codebook vector for MODE_67
+ *
+ * @param fixed_index          positions of the three pulses
+ * @param sign                 signs of the three pulses
+ * @param fixed_code           pointer to the algebraic codebook vector
+ *
+ * @return void
+ */
+
+static void decode_3_pulses_14bits(int fixed_index, int sign, float *fixed_code) {
+    int pulse_position[3];
+    int pulse_subset;
+
+    // first pulse position is coded in bits 1-3
+    pulse_position[0] = ( fixed_index       & 7)*5;
+    // pulse subset for the second pulse is coded in bit 4
+    pulse_subset = (fixed_index >> 3) & 1;
+    // second pulse position is coded in bits 5-7
+    pulse_position[1] = ((fixed_index >> 4) & 7)*5 + pulse_subset<<1 + 1;
+    // pulse subset for the second pulse is coded in bit 8
+    pulse_subset = (fixed_index >> 7) & 1;
+    // third pulse position is coded in bits 9-11
+    pulse_position[2] = ((fixed_index >> 8) & 7)*5 + pulse_subset<<1 + 2;
+
+    // reconstruct the fixed code
+    reconstruct_fixed_code(pulse_position, sign, 3, fixed_code);
+}
+
+/**
+ * Decode the algebraic codebook index to pulse positions and signs and construct
+ * the algebraic codebook vector for MODE_74 and MODE_795
+ *
+ * @param fixed_index          positions of the four pulses
+ * @param sign                 signs of the four pulses
+ * @param fixed_code           pointer to the algebraic codebook vector
+ *
+ * @return void
+ */
+
+static void decode_4_pulses_17bits(int fixed_index, int sign, float *fixed_code) {
+    int pulse_position[4];
+    int pulse_subset;
+
+    // first pulse position is Gray coded in bits 1-3
+    pulse_position[0] = gray_decode[ fixed_index        & 7]*5;
+    // second pulse position is Gray coded in bits 4-6
+    pulse_position[1] = gray_decode[(fixed_index >> 3)  & 7]*5 + 1;
+    // third pulse position is Gray coded in bits 7-9
+    pulse_position[2] = gray_decode[(fixed_index >> 6)  & 7]*5 + 2;
+    // pulse subset for the fourth pulse is coded in bit 10
+    pulse_subset = (fixed_index >> 9) & 1;
+    // third pulse position is Gray coded in bits 11-13
+    pulse_position[3] = gray_decode[(fixed_index >> 10) & 7]*5 + pulse_subset + 3;
+
+    // reconstruct the fixed code
+    reconstruct_fixed_code(pulse_position, sign, 4, fixed_code);
+}
+
+/**
+ * Decode the algebraic codebook index to pulse positions and signs and construct
+ * the algebraic codebook vector for MODE_102
+ *
+ * @param fixed_index          positions of the eight pulses
+ * @param fixed_code           pointer to the algebraic codebook vector
+ *
+ * @return void
+ */
+
+static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_code) {
+    int pulse_position[8];
+    int i, pos1, pos2, sign, temp;
+
+    // decode pulse positions
+    // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
+    // the 3 pulses and the upper 7 bits being coded in base 5
+    temp = fixed_index[4] >> 3;
+    pulse_position[0] = (temp    %5)<<1 +  fixed_index[4]    &1;
+    pulse_position[4] = (temp /5)%5)<<1 + (fixed_index[4]>>1)&1;
+    pulse_position[1] = (temp/25)%5)<<1 + (fixed_index[4]>>2)&1;
+
+    // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
+    // the 3 pulses and the upper 7 bits being coded in base 5
+    temp = fixed_index[5] >> 3;
+    pulse_position[2] = (temp    %5)<<1 +  fixed_index[5]    &1;
+    pulse_position[6] = (temp /5)%5)<<1 + (fixed_index[5]>>1)&1;
+    pulse_position[5] = (temp/25)%5)<<1 + (fixed_index[5]>>2)&1;
+
+    // coded using 5+2 bits with the 2 LSBs being, individually, the LSB of 1 of
+    // the 2 pulses and the upper 5 bits being coded in base 5
+    temp = ((fixed_index[6] >> 2)*25)>>5;
+    pulse_position[3] = temp%5;
+    pulse_position[7] = temp/5;
+    if(pulse_position[7]&1)
+        pulse_position[3] = 4 - pulse_position[3];
+    pulse_position[3] = pulse_position[3]<<1 +  fixed_index[6]    &1;
+    pulse_position[7] = pulse_position[7]<<1 + (fixed_index[6]>>1)&1;
+
+    // reset the code
+    memset(fixed_code, 0, AMR_SUBFRAME_SIZE*sizeof(float));
+
+    // reconstruct the fixed code
+    for(i=0; i<TRACKS_MODE_102; i++) {
+        pos1 = (pulse_position[i]   << 2) + i; // ith pulse position
+        pos2 = (pulse_position[i+4] << 2) + i; // i+4th pulse position
+        sign = fixed_index[i] ? -1.0 : 1.0; // sign of ith pulse
+        // assign the ith pulse (+/-1) to its appropriate position
+        fixed_code[pos1] = sign;
+        // sign of i+4th pulse is relative to sign of ith pulse
+        if(pos2 < pos1) sign = -sign;
+        // assign the i+4th pulse (+/-1) to its appropriate position
+        fixed_code[pos2] += sign;
+    }
+}
+
+/**
+ * Decode the algebraic codebook index to pulse positions and signs and construct
+ * the algebraic codebook vector for MODE_122
+ *
+ * @param fixed_index          positions of the ten pulses
+ * @param fixed_code           pointer to the algebraic codebook vector
+ *
+ * @return void
+ */
+
+static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_code) {
+    int i, pos1, pos2, sign;
+
+    // reset the code
+    memset(fixed_code, 0, AMR_SUBFRAME_SIZE*sizeof(float));
+
+    // the positions and signs are explicitly coded in MODE_122
+
+    // reconstruct the fixed code
+    for(i=0; i<5; i++) {
+        pos1 = gray_decode[fixed_index[i  ] & 7]*5 + i; // ith pulse position
+        sign = (fixed_index[i] & 8) ? -1.0 : 1.0; // sign of ith pulse
+        pos2 = gray_decode[fixed_index[i+5] & 7]*5 + i; // i+5th pulse position
+        // assign the ith pulse (+/-1) to its appropriate position
+        fixed_code[pos1] = sign;
+        // sign of i+5th pulse is relative to sign of ith pulse
+        if(pos2 < pos1) sign = -sign;
+        // assign the i+5th pulse (+/-1) to its appropriate position
+        fixed_code[pos2] += sign;
+    }
+}
+
+/*** end of algebraic code book (fixed) vector decoding functions ***/
+
+
 static int amrnb_decode_frame(AVCodecContext *avctx,
         void *data, int *data_size, uint8_t *buf, int buf_size) {
 
@@ -591,6 +821,43 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         interp_pitch_vector(p, p->pitch_lag_int, p->pitch_lag_frac);
 
 /*** end of adaptive code book (pitch) vector decoding ***/
+
+/*** algebraic code book (fixed) vector decoding ***/
+
+        switch(p->cur_frame_mode) {
+            case MODE_475:
+            case MODE_515:
+                decode_2_pulses_9bits(*index, *(index+1), subframe, &p->fixed_code);
+                index += 2;
+            break;
+            case MODE_59:
+                decode_2_pulses_11bits(*index, *(index+1), &p->fixed_code);
+                index += 2;
+            break;
+            case MODE_67:
+                decode_3_pulses_14bits(*index, *(index+1), &p->fixed_code);
+                index += 2;
+            break;
+            case MODE_74:
+            case MODE_795:
+                decode_4_pulses_17bits(*index, *(index+1), &p->fixed_code);
+                index += 2;
+            break;
+            case MODE_102:
+                decode_8_pulses_31bits(index, &p->fixed_code);
+                index += 7;
+            break;
+            case MODE_122:
+                // decode pitch gain
+                // INSERT PITCH GAIN DECODING FUNCTION HERE calling with index++
+                decode_10_pulses_35bits(index, &p->fixed_code);
+                index += 10;
+            break;
+            default:
+            break;
+        }
+
+/*** end of algebraic code book (fixed) vector decoding ***/
 
     }
 

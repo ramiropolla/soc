@@ -1807,4 +1807,12 @@ static const float qua_gain_pit_MODE_122[16] = {
 1.0498046875  , 1.099853515625, 1.14990234375 , 1.199951171875,
 };
 
+// fixed tables
+
+// track start positions for algebraic code book routines
+static const uint8_t track_position[16] = { 0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 1, 4, 1, 4 };
+
+// 3-bit Gray code to binary lookup table
+static const uint8_t gray_decode[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
+
 /**************************** end of tables *****************************/
