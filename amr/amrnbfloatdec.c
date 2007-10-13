@@ -58,6 +58,8 @@ typedef struct AMRContext {
     float prev_excitation[PITCH_LAG_MAX + LP_FILTER_ORDER + 1]; ///< buffer of the past excitation vector
     float                      pitch_vector[AMR_SUBFRAME_SIZE]; ///< adaptive code book (pitch) vector
 
+    float                      fixed_vector[AMR_SUBFRAME_SIZE]; ///< algebraic code book (fixed) vector
+
 } AMRContext;
 
 
@@ -544,19 +546,19 @@ static void interp_pitch_vector(AMRContext *p, int lag_int, int lag_frac) {
  * @param pulse_position       vector of pulse positions
  * @param sign                 signs of the pulses
  * @param nr_pulses            number of pulses
- * @param fixed_code           algebraic codebook vector
+ * @param fixed_vector         algebraic codebook vector
  *
  * @return void
  */
 
-static void reconstruct_fixed_code(float *pulse_position, int sign, int nr_pulses, float *fixed_code) {
+static void reconstruct_fixed_vector(float *pulse_position, int sign, int nr_pulses, float *fixed_vector) {
     int i;
 
     // reset the code
-    memset(fixed_code, 0, AMR_SUBFRAME_SIZE*sizeof(float));
+    memset(fixed_vector, 0, AMR_SUBFRAME_SIZE*sizeof(float));
 
     for(i=0; i<nr_pulses; i++)
-        fixed_code[pulse_position[i]] = ((sign >> i) & 1) ? 1.0 : -1.0;
+        fixed_vector[pulse_position[i]] = ((sign >> i) & 1) ? 1.0 : -1.0;
 }
 
 /**
@@ -566,12 +568,12 @@ static void reconstruct_fixed_code(float *pulse_position, int sign, int nr_pulse
  * @param fixed_index          positions of the two pulses
  * @param sign                 signs of the two pulses
  * @param subframe             current subframe
- * @param fixed_code           pointer to the algebraic codebook vector
+ * @param fixed_vector         pointer to the algebraic codebook vector
  *
  * @return void
  */
 
-static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe, float *fixed_code) {
+static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe, float *fixed_vector) {
     int pulse_position[2];
     int pulse_subset;
 
@@ -583,7 +585,7 @@ static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe, float
     pulse_position[1] = ((fixed_index >> 3) & 7)*5 + track_position[ (pulse_subset<<3) + (subframe<<1) + 1 ];
 
     // reconstruct the fixed code
-    reconstruct_fixed_code(pulse_position, sign, 2, fixed_code);
+    reconstruct_fixed_vector(pulse_position, sign, 2, fixed_vector);
 }
 
 /**
@@ -592,12 +594,12 @@ static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe, float
  *
  * @param fixed_index          positions of the two pulses
  * @param sign                 signs of the two pulses
- * @param fixed_code           pointer to the algebraic codebook vector
+ * @param fixed_vector         pointer to the algebraic codebook vector
  *
  * @return void
  */
 
-static void decode_2_pulses_11bits(int fixed_index, int sign, float *fixed_code) {
+static void decode_2_pulses_11bits(int fixed_index, int sign, float *fixed_vector) {
     int pulse_position[2];
     int pulse_subset;
 
@@ -612,7 +614,7 @@ static void decode_2_pulses_11bits(int fixed_index, int sign, float *fixed_code)
     pulse_position[1] = ((fixed_index >> 6) & 7)*5 + pulse_subset + (pulse_subset == 3 ? 1 : 0);
 
     // reconstruct the fixed code
-    reconstruct_fixed_code(pulse_position, sign, 2, fixed_code);
+    reconstruct_fixed_vector(pulse_position, sign, 2, fixed_vector);
 }
 
 /**
@@ -621,12 +623,12 @@ static void decode_2_pulses_11bits(int fixed_index, int sign, float *fixed_code)
  *
  * @param fixed_index          positions of the three pulses
  * @param sign                 signs of the three pulses
- * @param fixed_code           pointer to the algebraic codebook vector
+ * @param fixed_vector         pointer to the algebraic codebook vector
  *
  * @return void
  */
 
-static void decode_3_pulses_14bits(int fixed_index, int sign, float *fixed_code) {
+static void decode_3_pulses_14bits(int fixed_index, int sign, float *fixed_vector) {
     int pulse_position[3];
     int pulse_subset;
 
@@ -642,7 +644,7 @@ static void decode_3_pulses_14bits(int fixed_index, int sign, float *fixed_code)
     pulse_position[2] = ((fixed_index >> 8) & 7)*5 + pulse_subset<<1 + 2;
 
     // reconstruct the fixed code
-    reconstruct_fixed_code(pulse_position, sign, 3, fixed_code);
+    reconstruct_fixed_vector(pulse_position, sign, 3, fixed_vector);
 }
 
 /**
@@ -651,12 +653,12 @@ static void decode_3_pulses_14bits(int fixed_index, int sign, float *fixed_code)
  *
  * @param fixed_index          positions of the four pulses
  * @param sign                 signs of the four pulses
- * @param fixed_code           pointer to the algebraic codebook vector
+ * @param fixed_vector         pointer to the algebraic codebook vector
  *
  * @return void
  */
 
-static void decode_4_pulses_17bits(int fixed_index, int sign, float *fixed_code) {
+static void decode_4_pulses_17bits(int fixed_index, int sign, float *fixed_vector) {
     int pulse_position[4];
     int pulse_subset;
 
@@ -672,7 +674,7 @@ static void decode_4_pulses_17bits(int fixed_index, int sign, float *fixed_code)
     pulse_position[3] = gray_decode[(fixed_index >> 10) & 7]*5 + pulse_subset + 3;
 
     // reconstruct the fixed code
-    reconstruct_fixed_code(pulse_position, sign, 4, fixed_code);
+    reconstruct_fixed_vector(pulse_position, sign, 4, fixed_vector);
 }
 
 /**
@@ -680,12 +682,12 @@ static void decode_4_pulses_17bits(int fixed_index, int sign, float *fixed_code)
  * the algebraic codebook vector for MODE_102
  *
  * @param fixed_index          positions of the eight pulses
- * @param fixed_code           pointer to the algebraic codebook vector
+ * @param fixed_vector         pointer to the algebraic codebook vector
  *
  * @return void
  */
 
-static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_code) {
+static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector) {
     int pulse_position[8];
     int i, pos1, pos2, sign, temp;
 
@@ -715,7 +717,7 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_code) {
     pulse_position[7] = pulse_position[7]<<1 + (fixed_index[6]>>1)&1;
 
     // reset the code
-    memset(fixed_code, 0, AMR_SUBFRAME_SIZE*sizeof(float));
+    memset(fixed_vector, 0, AMR_SUBFRAME_SIZE*sizeof(float));
 
     // reconstruct the fixed code
     for(i=0; i<TRACKS_MODE_102; i++) {
@@ -723,11 +725,11 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_code) {
         pos2 = (pulse_position[i+4] << 2) + i; // i+4th pulse position
         sign = fixed_index[i] ? -1.0 : 1.0; // sign of ith pulse
         // assign the ith pulse (+/-1) to its appropriate position
-        fixed_code[pos1] = sign;
+        fixed_vector[pos1] = sign;
         // sign of i+4th pulse is relative to sign of ith pulse
         if(pos2 < pos1) sign = -sign;
         // assign the i+4th pulse (+/-1) to its appropriate position
-        fixed_code[pos2] += sign;
+        fixed_vector[pos2] += sign;
     }
 }
 
@@ -736,16 +738,16 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_code) {
  * the algebraic codebook vector for MODE_122
  *
  * @param fixed_index          positions of the ten pulses
- * @param fixed_code           pointer to the algebraic codebook vector
+ * @param fixed_vector         pointer to the algebraic codebook vector
  *
  * @return void
  */
 
-static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_code) {
+static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_vector) {
     int i, pos1, pos2, sign;
 
     // reset the code
-    memset(fixed_code, 0, AMR_SUBFRAME_SIZE*sizeof(float));
+    memset(fixed_vector, 0, AMR_SUBFRAME_SIZE*sizeof(float));
 
     // the positions and signs are explicitly coded in MODE_122
 
@@ -755,11 +757,11 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_code) {
         sign = (fixed_index[i] & 8) ? -1.0 : 1.0; // sign of ith pulse
         pos2 = gray_decode[fixed_index[i+5] & 7]*5 + i; // i+5th pulse position
         // assign the ith pulse (+/-1) to its appropriate position
-        fixed_code[pos1] = sign;
+        fixed_vector[pos1] = sign;
         // sign of i+5th pulse is relative to sign of ith pulse
         if(pos2 < pos1) sign = -sign;
         // assign the i+5th pulse (+/-1) to its appropriate position
-        fixed_code[pos2] += sign;
+        fixed_vector[pos2] += sign;
     }
 }
 
@@ -827,30 +829,30 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         switch(p->cur_frame_mode) {
             case MODE_475:
             case MODE_515:
-                decode_2_pulses_9bits(*index, *(index+1), subframe, &p->fixed_code);
+                decode_2_pulses_9bits(*index, *(index+1), subframe, &p->fixed_vector);
                 index += 2;
             break;
             case MODE_59:
-                decode_2_pulses_11bits(*index, *(index+1), &p->fixed_code);
+                decode_2_pulses_11bits(*index, *(index+1), &p->fixed_vector);
                 index += 2;
             break;
             case MODE_67:
-                decode_3_pulses_14bits(*index, *(index+1), &p->fixed_code);
+                decode_3_pulses_14bits(*index, *(index+1), &p->fixed_vector);
                 index += 2;
             break;
             case MODE_74:
             case MODE_795:
-                decode_4_pulses_17bits(*index, *(index+1), &p->fixed_code);
+                decode_4_pulses_17bits(*index, *(index+1), &p->fixed_vector);
                 index += 2;
             break;
             case MODE_102:
-                decode_8_pulses_31bits(index, &p->fixed_code);
+                decode_8_pulses_31bits(index, &p->fixed_vector);
                 index += 7;
             break;
             case MODE_122:
                 // decode pitch gain
                 // INSERT PITCH GAIN DECODING FUNCTION HERE calling with index++
-                decode_10_pulses_35bits(index, &p->fixed_code);
+                decode_10_pulses_35bits(index, &p->fixed_vector);
                 index += 10;
             break;
             default:
