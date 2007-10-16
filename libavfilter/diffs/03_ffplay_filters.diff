@@ -1,5 +1,5 @@
---- ffplay.c    2007-08-20 11:53:06.000000000 -0400
-+++ ffplay.c    2007-08-20 11:57:49.000000000 -0400
+--- ffplay.c.old2	2007-10-16 20:27:42.000000000 +0200
++++ ffplay.c	2007-10-16 20:27:51.000000000 +0200
 @@ -25,6 +25,10 @@
  #include "swscale.h"
  #include "avstring.h"
@@ -131,7 +131,7 @@
          /* get a pointer on the bitmap */
          SDL_LockYUVOverlay (vp->bmp);
  
-@@ -1377,6 +1427,136 @@
+@@ -1378,6 +1428,136 @@
      return 0;
  }
  
@@ -236,9 +236,9 @@
 +    AVFilterPicRef *pic;
 +
 +    if(avfilter_request_frame(ctx->inputs[0]))
-+        return 0;
++        return -1;
 +    if(!(pic = ctx->inputs[0]->cur_pic))
-+        return 0;
++        return -1;
 +    ctx->inputs[0]->cur_pic = NULL;
 +
 +    frame->opaque = pic;
@@ -268,10 +268,11 @@
  static int video_thread(void *arg)
  {
      VideoState *is = arg;
-@@ -1384,10 +1564,46 @@
-     uint64_t pts_int;
+@@ -1386,10 +1566,47 @@
      double pts;
+     int ret;
  
++
 +#if ENABLE_AVFILTER
 +    AVFilterContext *filt_src = NULL, *filt_out = NULL, *filt_graph = NULL;
 +    AVFilter *filterdef;
@@ -308,14 +309,14 @@
          while (is->paused && !is->videoq.abort_request)
              SDL_Delay(10);
 +#if ENABLE_AVFILTER
-+        while(get_filtered_video_frame(filt_out, frame, &pts_int)) {
++        ret = get_filtered_video_frame(filt_out, frame, &pts_int);
 +#else
-         while(get_video_frame(is, frame, &pts_int)) {
+         ret = get_video_frame(is, frame, &pts_int);
 +#endif
+ 
+         if (ret < 0) goto the_end;
              pts  = pts_int;
-             pts /= AV_TIME_BASE;
-             if(output_picture2(is, frame, pts) < 0)
-@@ -1398,6 +1614,10 @@
+@@ -1402,6 +1619,10 @@
                  stream_pause(cur_stream);
      }
   the_end:
@@ -326,7 +327,7 @@
      av_free(frame);
      return 0;
  }
-@@ -2127,6 +2347,12 @@
+@@ -2131,6 +2352,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -339,7 +340,7 @@
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2483,6 +2709,9 @@
+@@ -2487,6 +2714,9 @@
  #endif
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },

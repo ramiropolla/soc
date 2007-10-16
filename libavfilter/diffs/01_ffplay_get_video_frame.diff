@@ -2,7 +2,7 @@ Index: ffplay.c
 ===================================================================
 --- ffplay.c	(revision 10755)
 +++ ffplay.c	(working copy)
-@@ -1341,21 +1341,12 @@
+@@ -1341,49 +1341,63 @@
      avcodec_default_release_buffer(c, pic);
  }
  
@@ -23,11 +23,15 @@ Index: ffplay.c
 -        if (packet_queue_get(&is->videoq, pkt, 1) < 0)
 -            break;
 -
-+    while (packet_queue_get(&is->videoq, pkt, 1) >= 0) {
++    if (packet_queue_get(&is->videoq, pkt, 1) < 0)
++        return -1;
++    
          if(pkt->data == flush_pkt.data){
              avcodec_flush_buffers(is->video_st->codec);
-             continue;
-@@ -1364,26 +1355,45 @@
+-            continue;
++            return 0;
+         }
+ 
          /* NOTE: ipts is the PTS of the _first_ picture beginning in
             this packet, if any */
          global_video_pkt_pts= pkt->pts;
@@ -61,7 +65,6 @@ Index: ffplay.c
 +        av_free_packet(pkt);
 +        if(got_picture)
 +            return 1;
-+    }
 +    return 0;
 +}
 +
@@ -71,16 +74,20 @@ Index: ffplay.c
 +    AVFrame *frame= avcodec_alloc_frame();
 +    uint64_t pts_int;
 +    double pts;
++    int ret;
 +
 +    for(;;) {
 +        while (is->paused && !is->videoq.abort_request)
 +            SDL_Delay(10);
-+        while(get_video_frame(is, frame, &pts_int)) {
++        ret = get_video_frame(is, frame, &pts_int);
++
++        if (ret < 0) goto the_end;
 +            pts  = pts_int;
 +            pts /= AV_TIME_BASE;
++            if (ret)
 +            if(output_picture2(is, frame, pts) < 0)
                  goto the_end;
-         }
+-        }
 -        av_free_packet(pkt);
          if (step)
              if (cur_stream)
