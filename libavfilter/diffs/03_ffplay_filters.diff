@@ -1,5 +1,5 @@
---- ffplay.c	2007-08-20 11:53:06.000000000 -0400
-+++ ffplay.c	2007-08-20 11:57:49.000000000 -0400
+--- ffplay.c    2007-08-20 11:53:06.000000000 -0400
++++ ffplay.c    2007-08-20 11:57:49.000000000 -0400
 @@ -25,6 +25,10 @@
  #include "swscale.h"
  #include "avstring.h"
@@ -11,7 +11,7 @@
  #include "version.h"
  #include "cmdutils.h"
  
-@@ -81,6 +85,10 @@
+@@ -84,6 +88,10 @@
      int width, height; /* source height & width */
      enum PixelFormat pix_fmt;
      int allocated;
@@ -22,7 +22,7 @@
  } VideoPicture;
  
  typedef struct SubPicture {
-@@ -163,6 +171,10 @@
+@@ -166,6 +174,10 @@
      //    QETimer *video_timer;
      char filename[1024];
      int width, height, xleft, ytop;
@@ -33,7 +33,7 @@
  } VideoState;
  
  void show_help(void);
-@@ -202,6 +214,9 @@
+@@ -205,6 +217,9 @@
  static int error_resilience = FF_ER_CAREFUL;
  static int error_concealment = 3;
  static int decoder_reorder_pts= 0;
@@ -43,7 +43,7 @@
  
  /* current context */
  static int is_full_screen;
-@@ -648,14 +663,22 @@
+@@ -651,14 +666,22 @@
  
      vp = &is->pictq[is->pictq_rindex];
      if (vp->bmp) {
@@ -68,7 +68,7 @@
          /* if an active format is indicated, then it overrides the
             mpeg format */
  #if 0
-@@ -858,9 +881,15 @@
+@@ -861,9 +884,15 @@
      } else if(!is_full_screen && screen_width){
          w = screen_width;
          h = screen_height;
@@ -84,7 +84,7 @@
      } else {
          w = 640;
          h = 480;
-@@ -1166,9 +1195,19 @@
+@@ -1169,9 +1198,19 @@
      if (vp->bmp)
          SDL_FreeYUVOverlay(vp->bmp);
  
@@ -104,7 +104,7 @@
  
  #if 0
      /* XXX: use generic function */
-@@ -1223,8 +1262,13 @@
+@@ -1226,8 +1265,13 @@
  
      /* alloc or resize hardware picture buffer */
      if (!vp->bmp ||
@@ -118,7 +118,7 @@
          SDL_Event event;
  
          vp->allocated = 0;
-@@ -1248,6 +1292,12 @@
+@@ -1251,6 +1295,12 @@
  
      /* if the frame is not skipped, then display it */
      if (vp->bmp) {
@@ -131,7 +131,7 @@
          /* get a pointer on the bitmap */
          SDL_LockYUVOverlay (vp->bmp);
  
-@@ -1374,6 +1424,136 @@
+@@ -1377,6 +1427,136 @@
      return 0;
  }
  
@@ -268,7 +268,7 @@
  static int video_thread(void *arg)
  {
      VideoState *is = arg;
-@@ -1381,10 +1561,46 @@
+@@ -1384,10 +1564,46 @@
      uint64_t pts_int;
      double pts;
  
@@ -315,7 +315,7 @@
              pts  = pts_int;
              pts /= AV_TIME_BASE;
              if(output_picture2(is, frame, pts) < 0)
-@@ -1395,6 +1611,10 @@
+@@ -1398,6 +1614,10 @@
                  stream_pause(cur_stream);
      }
   the_end:
@@ -326,7 +326,7 @@
      av_free(frame);
      return 0;
  }
-@@ -2145,6 +2365,12 @@
+@@ -2127,6 +2347,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -339,7 +339,7 @@
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2497,6 +2723,9 @@
+@@ -2483,6 +2709,9 @@
  #endif
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },

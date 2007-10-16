@@ -1,8 +1,8 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 10134)
+--- ffplay.c	(revision 10755)
 +++ ffplay.c	(working copy)
-@@ -1338,21 +1338,12 @@
+@@ -1341,21 +1341,12 @@
      avcodec_default_release_buffer(c, pic);
  }
  
@@ -27,7 +27,7 @@ Index: ffplay.c
          if(pkt->data == flush_pkt.data){
              avcodec_flush_buffers(is->video_st->codec);
              continue;
-@@ -1361,26 +1352,45 @@
+@@ -1364,26 +1355,45 @@
          /* NOTE: ipts is the PTS of the _first_ picture beginning in
             this packet, if any */
          global_video_pkt_pts= pkt->pts;

@@ -1,6 +1,6 @@
 Index: configure
 ===================================================================
---- configure	(revision 10118)
+--- configure	(revision 10755)
 +++ configure	(working copy)
 @@ -70,6 +70,7 @@
    echo "                           and ffmpeg will be under GPL [default=no]"
@@ -10,15 +10,15 @@ Index: configure
    echo "  --enable-beosthreads     use BeOS threads [default=no]"
    echo "  --enable-pthreads        use pthreads [default=no]"
    echo "  --enable-w32threads      use Win32 threads [default=no]"
-@@ -570,6 +571,7 @@
- CONFIG_LIST='
-     audio_beos
-     audio_oss
+@@ -599,6 +600,7 @@
+ 
+ CONFIG_LIST="
+     $COMPONENT_LIST
 +    avfilter
      avisynth
      beos_netserver
-     bktr
-@@ -1837,6 +1839,7 @@
+     ffmpeg
+@@ -1790,6 +1792,7 @@
  echo "shared                    ${shared-no}"
  echo "postprocessing support    ${pp-no}"
  echo "software scaler enabled   ${swscaler-no}"
@@ -26,7 +26,7 @@ Index: configure
  echo "video hooking             ${vhook-no}"
  if enabled vhook; then
      echo "Imlib2 support            ${imlib2-no}"
-@@ -2115,3 +2118,8 @@
+@@ -2059,3 +2062,8 @@
    apply libswscale.pc sed s/^Libs:.*$/Libs:/
    apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
  fi
@@ -37,7 +37,7 @@ Index: configure
 +fi
 Index: Makefile
 ===================================================================
---- Makefile	(revision 10118)
+--- Makefile	(revision 10755)
 +++ Makefile	(working copy)
 @@ -8,6 +8,7 @@
  
@@ -70,7 +70,7 @@ Index: Makefile
  
  ffmpeg_g$(EXESUF): ffmpeg.o cmdutils.o .libs
  	$(CC) $(LDFLAGS) -o $@ ffmpeg.o cmdutils.o $(EXTRALIBS)
-@@ -181,6 +190,9 @@
+@@ -182,6 +191,9 @@
  	$(MAKE) -C libpostproc install-headers
  endif
  	$(MAKE) -C libswscale  install-headers
@@ -80,22 +80,23 @@ Index: Makefile
  
  uninstall: uninstall-progs uninstall-libs uninstall-headers uninstall-man uninstall-vhook
  
-@@ -199,12 +211,14 @@
- 	$(MAKE) -C libavcodec  uninstall-libs
+@@ -201,6 +213,7 @@
  	$(MAKE) -C libavformat uninstall-libs
  	$(MAKE) -C libpostproc uninstall-libs
+ 	$(MAKE) -C libswscale  uninstall-libs
 +	$(MAKE) -C libavfilter uninstall-libs
  
  uninstall-headers:
  	$(MAKE) -C libavutil   uninstall-headers
- 	$(MAKE) -C libavcodec  uninstall-headers
+@@ -208,6 +221,7 @@
  	$(MAKE) -C libavformat uninstall-headers
  	$(MAKE) -C libpostproc uninstall-headers
+ 	$(MAKE) -C libswscale  uninstall-headers
 +	$(MAKE) -C libavfilter uninstall-headers
  	-rmdir "$(INCDIR)"
  
  depend dep: .depend .vhookdep
-@@ -217,6 +231,9 @@
+@@ -220,6 +234,9 @@
  ifeq ($(CONFIG_SWSCALER),yes)
  	$(MAKE) -C libswscale  depend
  endif
@@ -105,7 +106,7 @@ Index: Makefile
  
  .depend: $(SRCS) version.h
  	$(CC) -MM $(CFLAGS) $(SDL_CFLAGS) $(filter-out %.h,$^) 1>.depend
-@@ -236,6 +253,7 @@
+@@ -239,6 +256,7 @@
  	$(MAKE) -C libavformat clean
  	$(MAKE) -C libpostproc clean
  	$(MAKE) -C libswscale  clean
@@ -113,11 +114,11 @@ Index: Makefile
  	rm -f *.o *~ .libs gmon.out TAGS $(ALLPROGS) $(ALLPROGS_G) \
  	   output_example$(EXESUF) qt-faststart$(EXESUF) cws2fws$(EXESUF)
  	rm -f doc/*.html doc/*.pod doc/*.1
-@@ -249,6 +267,7 @@
+@@ -252,6 +270,7 @@
  	$(MAKE) -C libavformat distclean
  	$(MAKE) -C libpostproc distclean
  	$(MAKE) -C libswscale  distclean
 +	$(MAKE) -C libavfilter distclean
- 	rm -f .depend version.h config.* *.pc
+ 	rm -f .depend .vhookdep version.h config.* *.pc
  
  TAGS:
