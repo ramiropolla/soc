@@ -89,8 +89,6 @@ where input_video.avi has a vertical resolution of 480 pixels, the result
 should be that ffplay mirrors the top half of the video onto the bottom half.
 
 KNOWN ISSUES:
-- if ffplay finishes playing the video, when you hit 'q' to quit, it will sit
-  and eat 100% CPU
 - colorspace negotiation needs work.  currently, it may do more conversions
   than necessary.
 - if for some reason the filter chain cannot be setup (due to an unknown
