@@ -164,7 +164,7 @@
 +    AVFilterPicRef *picref;
 +    uint64_t pts;
 +
-+    if(!get_video_frame(priv->is, priv->frame, &pts))
++    if(get_video_frame(priv->is, priv->frame, &pts) < 0)
 +        return -1;
 +
 +    /* FIXME: until I figure out how to hook everything up to the codec
