@@ -24,8 +24,8 @@
  * RV30 and RV40 decoder common data declarations.
  */
 
-#ifndef RV30_H
-#define RV30_H
+#ifndef FFMPEG_RV34_H
+#define FFMPEG_RV34_H
 
 #include "avcodec.h"
 #include "dsputil.h"
@@ -133,4 +133,4 @@ int ff_rv34_decode_init(AVCodecContext *avctx);
 int ff_rv34_decode_frame(AVCodecContext *avctx, void *data, int *data_size, uint8_t *buf, int buf_size);
 int ff_rv34_decode_end(AVCodecContext *avctx);
 /** @} */
-#endif /* RV34_H */
+#endif /* FFMPEG_RV34_H */

@@ -24,8 +24,8 @@
  * Miscellaneous RV40 tables.
  */
 
-#ifndef RV40DATA_H
-#define RV40DATA_H
+#ifndef FFMPEG_RV40DATA_H
+#define FFMPEG_RV40DATA_H
 
 #include <stdint.h>
 
@@ -65,4 +65,4 @@ static const uint8_t rv40_luma_quant[2][32] = {
    16, 17, 18, 19, 20, 20, 21, 21, 22, 23, 23, 23, 24, 24, 24, 24 }
 };
 
-#endif /* RV40DATA_H */
+#endif /* FFMPEG_RV40DATA_H */

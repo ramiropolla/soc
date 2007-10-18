@@ -24,8 +24,8 @@
  * Miscellaneous RV30 tables.
  */
 
-#ifndef RV30DATA_H
-#define RV30DATA_H
+#ifndef FFMPEG_RV30DATA_H
+#define FFMPEG_RV30DATA_H
 
 #include <stdint.h>
 
@@ -171,4 +171,4 @@ static const uint8_t rv30_itype_from_context[900] = {
     2, 7, 8, 4, 0, 6, 1, 5, 3,
     2, 8, 3, 0, 7, 4, 1, 6, 5,
 };
-#endif /* RV30DATA_H */
+#endif /* FFMPEG_RV30DATA_H */

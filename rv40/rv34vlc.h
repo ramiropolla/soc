@@ -24,8 +24,8 @@
  * RV40 VLC tables.
  */
 
-#ifndef RV40VLC_H
-#define RV40VLC_H
+#ifndef FFMPEG_RV40VLC_H
+#define FFMPEG_RV40VLC_H
 
 #include <stdint.h>
 
@@ -4146,4 +4146,4 @@ static const uint8_t omega_part_vlc_syms[NUM_OMEGA] = {
 };
 //@}
 
-#endif /* RV40VLC_H */
+#endif /* FFMPEG_RV40VLC_H */

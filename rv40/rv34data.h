@@ -24,8 +24,8 @@
  * Miscellaneous RV30/40 tables.
  */
 
-#ifndef RV34DATA_H
-#define RV34DATA_H
+#ifndef FFMPEG_RV34DATA_H
+#define FFMPEG_RV34DATA_H
 
 #include <stdint.h>
 
@@ -190,4 +190,4 @@ static const uint8_t rv34_filter_clip_tbl[3][32] = {
     }
 };
 /** @} */ // end loopfilter group
-#endif /* RV34DATA_H */
+#endif /* FFMPEG_RV34DATA_H */
