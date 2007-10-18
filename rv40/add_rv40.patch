@@ -1,8 +1,20 @@
+Index: Changelog
+===================================================================
+--- Changelog	(revision 10777)
++++ Changelog	(working copy)
+@@ -100,6 +100,7 @@
+ - DNxHD encoder
+ - H.264 PAFF decoding
+ - Nellymoser ASAO decoder
++- RealVideo 3 and 4 decoder
+ 
+ version 0.4.9-pre1:
+ 
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile
-+++ libavcodec/Makefile
-@@ -151,6 +151,8 @@
+--- libavcodec/Makefile	(revision 10777)
++++ libavcodec/Makefile	(working copy)
+@@ -156,6 +156,8 @@
  OBJS-$(CONFIG_RV10_ENCODER)            += rv10.o mpegvideo_enc.o motion_est.o ratecontrol.o h263.o
  OBJS-$(CONFIG_RV20_DECODER)            += rv10.o h263.o
  OBJS-$(CONFIG_RV20_ENCODER)            += rv10.o mpegvideo_enc.o motion_est.o ratecontrol.o h263.o
@@ -13,27 +25,40 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_SHORTEN_DECODER)         += shorten.o golomb.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c
-+++ libavcodec/allcodecs.c
-@@ -128,6 +128,8 @@
-     REGISTER_DECODER(RPZA, rpza);
-     REGISTER_ENCDEC (RV10, rv10);
-     REGISTER_ENCDEC (RV20, rv20);
-+    REGISTER_DECODER(RV30, rv30);
-+    REGISTER_DECODER(RV40, rv40);
-     REGISTER_ENCDEC (SGI, sgi);
-     REGISTER_DECODER(SMACKER, smacker);
-     REGISTER_DECODER(SMC, smc);
-Index: libavformat/riff.c
+--- libavcodec/allcodecs.c	(revision 10777)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -133,6 +133,8 @@
+     REGISTER_DECODER (RPZA, rpza);
+     REGISTER_ENCDEC  (RV10, rv10);
+     REGISTER_ENCDEC  (RV20, rv20);
++    REGISTER_DECODER (RV30, rv30);
++    REGISTER_DECODER (RV40, rv40);
+     REGISTER_ENCDEC  (SGI, sgi);
+     REGISTER_DECODER (SMACKER, smacker);
+     REGISTER_DECODER (SMC, smc);
+Index: doc/general.texi
 ===================================================================
---- libavformat/riff.c
-+++ libavformat/riff.c
-@@ -172,6 +172,8 @@
-     { CODEC_ID_JPEG2000, MKTAG('M', 'J', '2', 'C') },
-     { CODEC_ID_VMNC, MKTAG('V', 'M', 'n', 'c') },
-     { CODEC_ID_TARGA, MKTAG('t', 'g', 'a', ' ') },
-+    { CODEC_ID_RV30, MKTAG('R', 'V', '3', '0') },
-+    { CODEC_ID_RV40, MKTAG('R', 'V', '4', '0') },
-     { CODEC_ID_NONE, 0 },
- };
- 
+--- doc/general.texi	(revision 10777)
++++ doc/general.texi	(working copy)
+@@ -162,6 +162,8 @@
+ @item H.264                  @tab     @tab  X
+ @item RealVideo 1.0          @tab  X  @tab  X
+ @item RealVideo 2.0          @tab  X  @tab  X
++@item RealVideo 3.0          @tab     @tab  X @tab not completely working
++@item RealVideo 4.0          @tab     @tab  X @tab not completely working
+ @item MJPEG                  @tab  X  @tab  X
+ @item lossless MJPEG         @tab  X  @tab  X
+ @item JPEG-LS                @tab  X  @tab  X @tab fourcc: MJLS, lossless and near-lossless is supported
+Index: MAINTAINERS
+===================================================================
+--- MAINTAINERS	(revision 10777)
++++ MAINTAINERS	(working copy)
+@@ -163,6 +163,8 @@
+   rpza.c                                Roberto Togni
+   rtjpeg.c, rtjpeg.h                    Reimar Doeffinger
+   rv10.c                                Michael Niedermayer
++  rv3*                                  Kostya Shishkov
++  rv4*                                  Kostya Shishkov
+   s3tc*                                 Ivo van Poorten
+   smc.c                                 Mike Melanson
+   snow.c                                Michael Niedermayer, Loren Merritt
