@@ -1518,7 +1518,6 @@ static void rv34_loop_filter(RV34DecContext *r)
     const int thr = s->qscale, lim0 = rv34_filter_clip_tbl[1][s->qscale], lim1 = rv34_filter_clip_tbl[2][s->qscale];
 
     mb_pos = s->resync_mb_x + s->resync_mb_y * s->mb_stride;
-    memset(r->intra_types_hist, -1, s->b4_stride * 4 * 2 * sizeof(int));
     s->first_slice_line = 1;
     s->mb_x= s->resync_mb_x;
     s->mb_y= s->resync_mb_y;
