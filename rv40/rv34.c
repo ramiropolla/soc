@@ -1313,6 +1313,9 @@ static int rv34_decode_slice(RV34DecContext *r, int size, int end, int *last)
             s->height = r->si.height;
             if(MPV_common_init(s) < 0)
                 return -1;
+            r->intra_types_hist = av_realloc(r->intra_types_hist, s->b4_stride * 4 * 2 * sizeof(int));
+            r->intra_types = r->intra_types_hist + s->b4_stride * 4;
+            r->mb_type = av_realloc(r->mb_type, r->s.mb_stride * r->s.mb_height * sizeof(*r->mb_type));
         }
         s->pict_type = r->si.type ? r->si.type : I_TYPE;
         if(MPV_frame_start(s, s->avctx) < 0)
