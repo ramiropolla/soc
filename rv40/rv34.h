@@ -78,14 +78,6 @@ typedef struct SliceInfo{
     int height;            ///< coded height
 }SliceInfo;
 
-/** Slice information saved for truncated slices */
-typedef struct SavedSliceInfo{
-    uint8_t *data;         ///< bitstream data
-    int data_size;         ///< data size
-    int bits_used;         ///< bits used up to last decoded block
-    int mb_x, mb_y;        ///< coordinates of the last decoded block
-}SavedSliceInfo;
-
 /** Decoder context */
 typedef struct RV34DecContext{
     MpegEncContext s;
@@ -110,9 +102,6 @@ typedef struct RV34DecContext{
     int chroma_vlc;          ///< which VLC set will be used for chroma blocks decoding
     int is16;                ///< current block has additional 16x16 specific features or not
     int dmv[4][2];           ///< differential motion vectors for the current macroblock
-
-    int truncated;           ///< flag signalling that slice ended prematurely
-    SavedSliceInfo ssi;      ///< data for truncated slice
 
     int rv30;                ///< indicates which RV variasnt is currently decoded
     int rpr;                 ///< one field size in RV30 slice header
