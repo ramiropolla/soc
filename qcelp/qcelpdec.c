@@ -708,9 +708,9 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 {
     QCELPContext *q    = avctx->priv_data;
     const QCELPBitmap *order = NULL;
-    int16_t  *outbuffer = data, cbseed;
+    int16_t  *outbuffer = data;
     int      i, n, is_ifq = 0, is_codecframe_fmt = 0;
-    uint16_t first16 = 0;
+    uint16_t first16 = 0, cbseed = 0;
     float    qtzd_lspf[10], gain[16], cdn_vector[160], ppf_vector[160], lpc[10];
     float    interpolated_lspf[10];
     int      g0[16], index[16];
@@ -753,6 +753,14 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             q->frame->rate = RATE_OCTAVE;
             q->frame->bits = qcelp_bits_per_rate[RATE_OCTAVE];
             order = QCELP_REFERENCE_FRAME + QCELP_8THRPKT_REFERENCE_POS;
+
+            /*
+             * We assume its IFQ unless we find at least one '0'
+             * in the first 16 bits, this check is performed as part of
+             * the reordering loop that follows
+             */
+
+            is_ifq = 1;
             break;
         case  1:
             is_codecframe_fmt=1;
@@ -791,12 +799,11 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         q->frame->data[ order[n].index ] |=
         get_bits1(&q->gb)<<order[n].bitpos;
 
-        if(n<20)
+        if(q->frame->rate == RATE_OCTAVE)
         {
-            if(n>3)  // This is the random seed for rate 1/8 frames
-                cbseed |= q->frame->data[ order[n].index ]>>n;
-            if(n<16) // This is for a rate 1/8 only sanity check
-                first16 |= q->frame->data[ order[n].index ]>>n;
+            if(n>3)  // Random seed
+                cbseed  |= (uint16_t)q->frame->data[ order[n].index ]<<(n-4);
+            if(n<16 && !q->frame->data[ order[n].index ]) is_ifq = 0;
         }
 
     }
