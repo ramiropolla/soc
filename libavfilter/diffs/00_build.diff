@@ -53,7 +53,7 @@ Index: Makefile
  
 +ifeq ($(CONFIG_AVFILTER),yes)
 +LDFLAGS+=-L$(BUILD_ROOT)/libavfilter
-+EXTRALIBS+=-lavfilter$(BUILDSUF)
++EXTRALIBS := -lavfilter$(BUILDSUF) $(EXTRALIBS)
 +endif
 +
  all: lib $(PROGS) $(ALL_TARGETS-yes)
