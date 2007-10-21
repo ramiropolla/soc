@@ -104,6 +104,15 @@
  
  #if 0
      /* XXX: use generic function */
+@@ -1208,7 +1247,7 @@
+ {
+     VideoPicture *vp;
+     int dst_pix_fmt;
+-    AVPicture pict;
++    AVPicture pict, pict_src;
+     static struct SwsContext *img_convert_ctx;
+ 
+     /* wait until we have space to put a new picture */
 @@ -1226,8 +1265,13 @@
  
      /* alloc or resize hardware picture buffer */
@@ -131,7 +140,35 @@
          /* get a pointer on the bitmap */
          SDL_LockYUVOverlay (vp->bmp);
  
-@@ -1378,6 +1428,136 @@
+@@ -1262,6 +1312,19 @@
+         pict.linesize[0] = vp->bmp->pitches[0];
+         pict.linesize[1] = vp->bmp->pitches[2];
+         pict.linesize[2] = vp->bmp->pitches[1];
++
++#if ENABLE_AVFILTER
++        pict_src.data[0] = src_frame->data[0];
++        pict_src.data[1] = src_frame->data[1];
++        pict_src.data[2] = src_frame->data[2];
++
++        pict_src.linesize[0] = src_frame->linesize[0];
++        pict_src.linesize[1] = src_frame->linesize[1];
++        pict_src.linesize[2] = src_frame->linesize[2];
++
++        av_picture_copy(&pict, &pict_src,
++                        vp->pix_fmt, vp->width, vp->height);
++#else
+         img_convert_ctx = sws_getCachedContext(img_convert_ctx,
+             vp->width, vp->height, vp->pix_fmt, vp->width, vp->height,
+             dst_pix_fmt, sws_flags, NULL, NULL, NULL);
+@@ -1271,6 +1334,7 @@
+         }
+         sws_scale(img_convert_ctx, src_frame->data, src_frame->linesize,
+                   0, vp->height, pict.data, pict.linesize);
++#endif
+         /* update the bitmap content */
+         SDL_UnlockYUVOverlay(vp->bmp);
+ 
+@@ -1378,6 +1442,134 @@
      return 0;
  }
  
@@ -225,9 +262,7 @@
 +
 +static int *output_query_formats(AVFilterLink *link)
 +{
-+    return avfilter_make_format_list(8, PIX_FMT_YUV420P, PIX_FMT_YUV422P, PIX_FMT_YUV444P,
-+                                        PIX_FMT_YUV410P, PIX_FMT_YUV411P, PIX_FMT_YUYV422,
-+                                        PIX_FMT_RGB24,   PIX_FMT_BGR24);
++    return avfilter_make_format_list(1, PIX_FMT_YUV420P);
 +}
 +
 +static int get_filtered_video_frame(AVFilterContext *ctx, AVFrame *frame,
@@ -268,7 +303,7 @@
  static int video_thread(void *arg)
  {
      VideoState *is = arg;
-@@ -1386,10 +1566,47 @@
+@@ -1386,10 +1578,47 @@
      double pts;
      int ret;
  
@@ -316,7 +351,7 @@
  
          if (ret < 0) goto the_end;
              pts  = pts_int;
-@@ -1402,6 +1619,10 @@
+@@ -1402,6 +1631,10 @@
                  stream_pause(cur_stream);
      }
   the_end:
@@ -327,7 +362,7 @@
      av_free(frame);
      return 0;
  }
-@@ -2131,6 +2352,12 @@
+@@ -2131,6 +2364,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -340,7 +375,7 @@
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2487,6 +2714,9 @@
+@@ -2487,6 +2726,9 @@
  #endif
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
