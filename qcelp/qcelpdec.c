@@ -803,7 +803,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         {
             if(n>3)  // Random seed
                 cbseed  |= (uint16_t)q->frame->data[ order[n].index ]<<(n-4);
-            if(n<16 && !q->frame->data[ order[n].index ]) is_ifq = 0;
+            if(n<16 && is_ifq && !q->frame->data[ order[n].index ]) is_ifq = 0;
         }
 
     }
