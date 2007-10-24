@@ -59,13 +59,12 @@ Index: Makefile
  all: lib $(PROGS) $(ALL_TARGETS-yes)
  
  lib:
-@@ -76,7 +82,10 @@
- endif
+@@ -77,6 +83,9 @@
  ifeq ($(CONFIG_SWSCALER),yes)
  	$(MAKE) -C libswscale  all
+ endif
 +ifeq ($(CONFIG_AVFILTER),yes)
 +	$(MAKE) -C libavfilter all
- endif
 +endif
  
  ffmpeg_g$(EXESUF): ffmpeg.o cmdutils.o .libs
