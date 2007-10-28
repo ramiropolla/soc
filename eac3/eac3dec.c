@@ -124,11 +124,7 @@ static void spectral_extension(EAC3Context *s){
             for (bnd = 0; bnd < s->nspxbnds; bnd++){
                 bandsize = s->spxbndsztab[bnd];
                 nratio = ((spxmant + 0.5*bandsize) / spxbandtable[s->spxendf]) - noffset[ch];
-                if (nratio < 0.0)
-                    nratio = 0.0;
-                else
-                    if (nratio > 1.0)
-                        nratio = 1.0;
+                nratio = FFMAX(FFMIN(nratio, 1.0), 0.0);
                 nblendfact[ch][bnd] = sqrt(nratio);
                 sblendfact[ch][bnd] = sqrt(1 - nratio);
                 spxmant += bandsize;
@@ -161,7 +157,7 @@ static void spectral_extension(EAC3Context *s){
             /* apply notch at all other wrap points */
             for (bnd = 1; bnd < s->nspxbnds; bnd++){
                 if (wrapflag[bnd]) {
-                    filtbin = filtbin - 5;
+                    filtbin -= 5;
                     for (bin = 0; bin < 3; bin++){
                         s->transform_coeffs[ch][filtbin] *= ff_eac3_spxattentab[s->spxattencod[ch]][bin];
                         filtbin++;
@@ -328,6 +324,9 @@ static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int
     if (s->chahtinu[ch] != 0) {
         idct_transform_coeffs_ch(s, ch, blk);
     }
+
+    memset(s->transform_coeffs[ch]+s->endmant[ch], 0,
+            sizeof(s->transform_coeffs[0])-s->endmant[ch]);
 }
 
 static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
@@ -368,7 +367,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
 
     s->bsid = get_bits(gbc, 5);
     if (s->bsid < 11 || s->bsid > 16) {
-        av_log(s->avctx, AV_LOG_ERROR, "bsid should be between 11 and 16\n");
+        av_log(s->avctx, AV_LOG_ERROR, "bsid is not within 11 and 16\n");
         return -1;
     }
 
@@ -572,7 +571,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
             s->ncplblks += s->cplinu[blk];
         }
     } else {
-        memset(s->cplinu, 0, sizeof(int) * ff_eac3_blocks[s->numblkscod]);
+        memset(s->cplinu, 0, sizeof(*s->cplinu) * ff_eac3_blocks[s->numblkscod]);
         s->ncplblks = 0;
     }
 
@@ -623,8 +622,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
             s->chahtinu[ch] = (nchregs == 1) && get_bits1(gbc);
         }
     } else {
-        for (ch = 0; ch <= s->num_channels; ch++)
-            s->chahtinu[ch] = 0;
+        memset(s->chahtinu, 0, sizeof(s->chahtinu));
     }
     /* Audio frame SNR offset data */
     if (!s->snroffststr) {
@@ -1095,18 +1093,13 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     }
 
     if (s->snroffststr) {
-        av_log(s->avctx, AV_LOG_INFO, "NOT TESTED\n");
         if (!blk || get_bits1(gbc)) {
             int csnroffst = (get_bits(gbc, 6) - 15) << 4;
-            if (s->snroffststr == 1) {
-                int snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
-                for (ch = !s->cplinu[blk]; ch <= s->num_channels; ch++)
-                    s->snroffst[ch] = snroffst;
-            } else {
-                if (s->snroffststr == 2) {
-                    for (ch = !s->cplinu[blk]; ch <= s->num_channels; ch++)
-                        s->snroffst[ch] = (csnroffst + get_bits(gbc, 4)) << 2;
-                }
+            int snroffst = 0;
+            for (i = !s->cplinu[blk]; ch <= s->num_channels; ch++){
+                if (ch == !s->cplinu[blk] || s->snroffststr == 2)
+                    snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
+                s->snroffst[ch] = snroffst;
             }
         }
     }
@@ -1171,39 +1164,31 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     /* run bit allocation */
     for (ch = !s->cplinu[blk]; ch <= s->num_channels; ch++) {
-        int start=0, end=0;
-        start = s->strtmant[ch];
-        end = s->endmant[ch];
-
-        ff_ac3_bit_alloc_calc_psd((int8_t *)s->dexps[ch], start, end,
-                s->psd[ch], s->bndpsd[ch]);
+        ff_ac3_bit_alloc_calc_psd((int8_t *)s->dexps[ch], s->strtmant[ch],
+                s->endmant[ch], s->psd[ch], s->bndpsd[ch]);
 
         s->bit_alloc_params.fscod = s->fscod;
         s->bit_alloc_params.halfratecod = 0;
 
         ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params,
-                s->bndpsd[ch], start, end, s->fgain[ch],
+                s->bndpsd[ch], s->strtmant[ch], s->endmant[ch], s->fgain[ch],
                 (ch == s->lfe_channel),
                 s->deltbae[ch], s->deltnseg[ch],
                 s->deltoffst[ch], s->deltlen[ch],
                 s->deltba[ch], s->mask[ch]);
 
         if (s->chahtinu[ch] == 0)
-            ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], start, end,
-                    s->snroffst[ch], s->bit_alloc_params.floor, ff_ac3_baptab,
+            ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], s->strtmant[ch],
+                    s->endmant[ch], s->snroffst[ch], s->bit_alloc_params.floor, ff_ac3_baptab,
                     s->bap[ch]);
         else
             if (s->chahtinu[ch] == 1)
-                ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], start, end,
+                ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], s->strtmant[ch], s->endmant[ch],
                         s->snroffst[ch], s->bit_alloc_params.floor, ff_ac3_hebaptab,
                         s->hebap[ch]);
     }
 
     got_cplchan = 0;
-
-    // TODO only for debug
-    for (ch = 0; ch <= s->num_channels; ch++)
-        memset(s->transform_coeffs[ch], 0, 256*sizeof(float));
 
     /* Quantized mantissa values */
     for (ch = 1; ch <= s->num_channels; ch++) {
@@ -1227,8 +1212,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 /**
  * Performs Inverse MDCT transform
  */
-static void do_imdct(EAC3Context *ctx)
-{
+static void do_imdct(EAC3Context *ctx){
     int ch;
 
     for (ch = 1; ch <= ctx->nfchans + ctx->lfeon; ch++) {
@@ -1276,7 +1260,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         avctx->sample_rate = ff_ac3_freqs[c->fscod];
     }
 
-    avctx->bit_rate = (c->frmsiz * (avctx->sample_rate) * 16 / ( ff_eac3_blocks[c->numblkscod] * 256)) / 1000;
+    avctx->bit_rate = (c->frmsiz * avctx->sample_rate * 16 / ( ff_eac3_blocks[c->numblkscod] * 256)) / 1000;
 
     /* channel config */
     if (!avctx->request_channels) {
