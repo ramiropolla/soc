@@ -1,0 +1,356 @@
+Index: ffmpeg.c
+===================================================================
+--- ffmpeg.c	(revision 10755)
++++ ffmpeg.c	(working copy)
+@@ -34,6 +34,10 @@
+ #include "fifo.h"
+ #include "avstring.h"
+ 
++#if ENABLE_AVFILTER
++# include "avfilter.h"
++#endif
++
+ #if !defined(HAVE_GETRUSAGE) && defined(HAVE_GETPROCESSTIMES)
+ #include <windows.h>
+ #endif
+@@ -142,6 +146,7 @@
+ static int loop_input = 0;
+ static int loop_output = AVFMT_NOOUTPUTLOOP;
+ static int qp_hist = 0;
++static char *vfilters = NULL;
+ 
+ static int intra_only = 0;
+ static int audio_sample_rate = 44100;
+@@ -277,6 +282,11 @@
+                                 is not defined */
+     int64_t       pts;       /* current pts */
+     int is_start;            /* is 1 at the start and after a discontinuity */
++#if ENABLE_AVFILTER
++    AVFilterContext *out_video_filter;
++    AVFilterContext *input_video_filter;
++    AVFrame *filter_frame;
++#endif
+ } AVInputStream;
+ 
+ typedef struct AVInputFile {
+@@ -292,6 +302,241 @@
+ static struct termios oldtty;
+ #endif
+ 
++#if ENABLE_AVFILTER
++typedef struct {
++    AVInputStream *ist;
++} FilterInPriv;
++
++static int input_init(AVFilterContext *ctx, const char *args, void *opaque)
++{
++    FilterInPriv *priv = ctx->priv;
++
++    if(!opaque) return -1;
++
++    priv->ist = opaque;
++    priv->ist->filter_frame = avcodec_alloc_frame();
++
++    return 0;
++}
++
++static void input_uninit(AVFilterContext *ctx)
++{
++    FilterInPriv *priv = ctx->priv;
++    av_free(priv->ist->filter_frame);
++}
++
++static int input_request_frame(AVFilterLink *link)
++{
++    FilterInPriv *priv = link->src->priv;
++    AVFilterPicRef *picref;
++
++    picref = avfilter_get_video_buffer(link, AV_PERM_WRITE);
++
++    memcpy(picref->data,     priv->ist->filter_frame->data,
++           sizeof(priv->ist->filter_frame->data));
++
++    memcpy(picref->linesize, priv->ist->filter_frame->linesize,
++           sizeof(priv->ist->filter_frame->linesize));
++
++    picref->pts = priv->ist->pts;
++    picref->pixel_aspect = priv->ist->st->codec->sample_aspect_ratio;
++    avfilter_start_frame(link, avfilter_ref_pic(picref, ~0));
++    avfilter_draw_slice(link, 0, picref->h);
++    avfilter_end_frame(link);
++    avfilter_unref_pic(picref);
++
++    return 0;
++}
++
++static int *input_query_formats(AVFilterLink *link)
++{
++    FilterInPriv *priv = link->src->priv;
++    return avfilter_make_format_list(1, priv->ist->st->codec->pix_fmt);
++}
++
++static int input_config_props(AVFilterLink *link)
++{
++    FilterInPriv *priv  = link->src->priv;
++    AVCodecContext *c = priv->ist->st->codec;
++
++    link->w = c->width;
++    link->h = c->height;
++
++    return 0;
++}
++
++static AVFilter input_filter =
++{
++    .name      = "ffmpeg_input",
++    .author    = "Vitor Sessak",
++
++    .priv_size = sizeof(FilterInPriv),
++
++    .init      = input_init,
++    .uninit    = input_uninit,
++
++    .inputs    = (AVFilterPad[]) {{ .name = NULL }},
++    .outputs   = (AVFilterPad[]) {{ .name = "default",
++                                    .type = AV_PAD_VIDEO,
++                                    .request_frame = input_request_frame,
++                                    .query_formats = input_query_formats,
++                                    .config_props  = input_config_props, },
++                                  { .name = NULL }},
++};
++
++typedef struct {
++    int pix_fmt;
++} FilterOutPriv;
++
++
++static int output_init(AVFilterContext *ctx, const char *args, void *opaque)
++{
++    FilterOutPriv *priv = ctx->priv;
++
++    if(!opaque) return -1;
++
++    priv->pix_fmt = *((int *)opaque);
++
++    return 0;
++}
++
++static void output_end_frame(AVFilterLink *link)
++{
++}
++
++static int *output_query_formats(AVFilterLink *link)
++{
++    FilterOutPriv *priv = link->dst->priv;
++    return avfilter_make_format_list(1, priv->pix_fmt);
++}
++
++static int get_filtered_video_pic(AVFilterContext *ctx, AVPicture *pic2,
++                                  uint64_t *pts)
++{
++    AVFilterPicRef *pic;
++
++    if(avfilter_request_frame(ctx->inputs[0]))
++        return -1;
++    if(!(pic = ctx->inputs[0]->cur_pic))
++        return -1;
++    ctx->inputs[0]->cur_pic = NULL;
++
++    *pts          = pic->pts;
++
++    memcpy(pic2->data,     pic->data,     sizeof(pic->data));
++    memcpy(pic2->linesize, pic->linesize, sizeof(pic->linesize));
++
++    return 1;
++}
++
++static AVFilter output_filter =
++{
++    .name      = "ffmpeg_output",
++    .author    = "Vitor Sessak",
++
++    .priv_size = sizeof(FilterOutPriv),
++    .init      = output_init,
++
++    .inputs    = (AVFilterPad[]) {{ .name          = "default",
++                                    .type          = AV_PAD_VIDEO,
++                                    .end_frame     = output_end_frame,
++                                    .query_formats = output_query_formats,
++                                    .min_perms     = AV_PERM_READ, },
++                                  { .name = NULL }},
++    .outputs   = (AVFilterPad[]) {{ .name = NULL }},
++};
++
++static int configure_filters(AVInputStream *ist, AVOutputStream *ost)
++{
++    AVFilterContext *curr_filter;
++    AVFilterContext *filt_graph;
++    AVCodecContext *codec = ost->st->codec;
++    AVCodecContext *icodec = ist->st->codec;
++
++    avfilter_init();
++    
++    if(!(ist->input_video_filter = avfilter_open(&input_filter,  "src")))
++        return -1;
++    if(!(ist->out_video_filter = avfilter_open(&output_filter, "out")))
++        return -1;
++
++    if(avfilter_init_filter(ist->input_video_filter, NULL, ist))
++        return -1;
++    if(avfilter_init_filter(ist->out_video_filter, NULL, &codec->pix_fmt))
++        return -1;
++
++    curr_filter = ist->input_video_filter;
++
++    if(ost->video_crop) {
++        char crop_args[255];
++        AVFilterContext *filt_crop;
++        snprintf(crop_args, 255, "%d:%d:%d:%d", ost->topBand, ost->topBand, codec->height - frame_topBand, codec->width- frame_bottomBand);
++        filt_crop = avfilter_open(avfilter_get_by_name("crop"), NULL);
++        if (!filt_crop)
++            return -1;
++        if (avfilter_init_filter(filt_crop, crop_args, NULL))
++            return -1;
++        if (avfilter_link(curr_filter, 0, filt_crop, 0))
++            return -1;
++        if (avfilter_config_link(curr_filter->outputs[0]))
++            return -1;
++        curr_filter = filt_crop;
++    }
++
++    if((codec->width !=
++        icodec->width - (frame_leftBand + frame_rightBand) +
++        (frame_padleft + frame_padright)) ||
++       (codec->height != icodec->height - (frame_topBand  + frame_bottomBand) +
++        (frame_padtop + frame_padbottom))) {
++        char crop_args[255];
++        AVFilterContext *filt_scale;
++        snprintf(crop_args, 255, "%d:%d", codec->width -
++                                             (frame_padleft + frame_padright),
++                 codec->height - (frame_padtop + frame_padbottom));
++        filt_scale = avfilter_open(avfilter_get_by_name("scale"), NULL);
++        if (!filt_scale)
++            return -1;
++        if (avfilter_init_filter(filt_scale, crop_args, NULL))
++            return -1;
++        if (avfilter_link(curr_filter, 0, filt_scale, 0))
++            return -1;
++        if (avfilter_config_link(curr_filter->outputs[0]))
++            return -1;
++        curr_filter = filt_scale;
++    }
++      
++
++
++    if(vfilters) {
++        if(!(filt_graph = avfilter_open(avfilter_get_by_name("graph"), NULL)))
++            return -1;
++        if(avfilter_init_filter(filt_graph, vfilters, NULL))
++            return -1;
++        if(avfilter_link(curr_filter, 0, filt_graph, 0))
++            return -1;
++        if(avfilter_link(filt_graph, 0, ist->out_video_filter, 0))
++            return -1;
++        if(avfilter_config_link(curr_filter->outputs[0]))
++            return -1;
++        if(avfilter_graph_config_links(filt_graph))
++            return -1;
++        if(avfilter_config_link(filt_graph->outputs[0]))
++            return -1;
++    } else {
++        if(avfilter_link(curr_filter, 0, ist->out_video_filter, 0) < 0)
++            return -1;
++        if(avfilter_config_link(curr_filter->outputs[0]))
++            return -1;
++
++    }
++
++    codec->width = ist->out_video_filter->inputs[0]->w;
++    codec->height = ist->out_video_filter->inputs[0]->h;
++
++    return 0;
++}
++#endif /* ENABLE_AVFILTER */
++
+ static void term_exit(void)
+ {
+ #ifdef HAVE_TERMIOS_H
+@@ -616,6 +861,13 @@
+         frame_hook_process(picture2, dec->pix_fmt, dec->width, dec->height,
+                            1000000 * ist->pts / AV_TIME_BASE);
+ 
++#if ENABLE_AVFILTER
++    memcpy(ist->filter_frame->data,  picture2->data, sizeof(picture2->data));
++    memcpy(ist->filter_frame->linesize, picture2->linesize, sizeof(picture2->linesize));
++
++    if (get_filtered_video_pic(ist->out_video_filter, picture2, &ist->pts) < 0)
++        fprintf(stderr, "Error: get_filtered_video_pic failed!\n");
++#endif    
+     if (picture != picture2)
+         *picture = *picture2;
+     *bufp = buf;
+@@ -726,6 +978,9 @@
+     if (nb_frames <= 0)
+         return;
+ 
++#if ENABLE_AVFILTER
++    formatted_picture = in_picture;
++#else
+     if (ost->video_crop) {
+         if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
+             av_log(NULL, AV_LOG_ERROR, "error cropping picture\n");
+@@ -735,6 +990,7 @@
+     } else {
+         formatted_picture = in_picture;
+     }
++#endif
+ 
+     final_picture = formatted_picture;
+     padding_src = formatted_picture;
+@@ -750,12 +1006,14 @@
+         }
+     }
+ 
++#if !ENABLE_AVFILTER
+     if (ost->video_resample) {
+         padding_src = NULL;
+         final_picture = &ost->pict_tmp;
+         sws_scale(ost->img_resample_ctx, formatted_picture->data, formatted_picture->linesize,
+               0, ost->resample_height, resampling_dst->data, resampling_dst->linesize);
+     }
++#endif
+ 
+     if (ost->video_pad) {
+         av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
+@@ -1654,10 +1912,21 @@
+                         fprintf(stderr, "Cannot get resampling context\n");
+                         exit(1);
+                     }
++#if ENABLE_AVFILTER
++                    ost->resample_height = icodec->height;
++#else
+                     ost->resample_height = icodec->height - (frame_topBand + frame_bottomBand);
++#endif
+                 }
+                 ost->encoding_needed = 1;
+                 ist->decoding_needed = 1;
++
++#if ENABLE_AVFILTER
++                if (configure_filters(ist, ost)) {
++                    fprintf(stderr, "Error opening filters!\n");
++                    exit(1);
++                }
++#endif
+                 break;
+             case CODEC_TYPE_SUBTITLE:
+                 ost->encoding_needed = 1;
+@@ -3674,6 +3943,9 @@
+ #ifdef CONFIG_VHOOK
+     { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
+ #endif
++#if ENABLE_AVFILTER
++    { "vfilters", OPT_STRING | HAS_ARG, {(void*)&vfilters}, "video filters", "filter list" },
++#endif
+     { "intra_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_intra_matrix}, "specify intra matrix coeffs", "matrix" },
+     { "inter_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_inter_matrix}, "specify inter matrix coeffs", "matrix" },
+     { "top", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_top_field_first}, "top=1/bottom=0/auto=-1 field first", "" },
