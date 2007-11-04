@@ -133,10 +133,6 @@ static void end_frame(AVFilterLink *link)
 {
 }
 
-static void draw_slice(AVFilterLink *link, int y, int h)
-{
-}
-
 static int lower_timestamp(OverlayContext *over)
 {
     if(!over->pics[0][0] &&
@@ -230,7 +226,6 @@ AVFilter avfilter_vf_overlay =
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
                                     .start_frame     = start_frame,
-                                    .draw_slice      = draw_slice,
                                     .query_formats   = query_formats_main,
                                     .config_props    = config_input_main,
                                     .end_frame       = end_frame,
@@ -239,7 +234,6 @@ AVFilter avfilter_vf_overlay =
                                   { .name            = "sub",
                                     .type            = AV_PAD_VIDEO,
                                     .start_frame     = start_frame,
-                                    .draw_slice      = draw_slice,
                                     .query_formats   = query_formats_sub,
                                     .config_props    = config_input_sub,
                                     .end_frame       = end_frame,

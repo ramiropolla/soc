@@ -82,10 +82,6 @@ static void end_frame(AVFilterLink *link)
 {
 }
 
-static void draw_slice(AVFilterLink *link, int y, int h)
-{
-}
-
 static int request_frame(AVFilterLink *link)
 {
     FPSContext *fps = link->src->priv;
@@ -116,7 +112,6 @@ AVFilter avfilter_vf_fps =
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
                                     .start_frame     = start_frame,
-                                    .draw_slice      = draw_slice,
                                     .query_formats   = query_formats,
                                     .end_frame       = end_frame, },
                                   { .name = NULL}},

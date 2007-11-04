@@ -140,10 +140,6 @@ static void end_frame(AVFilterLink *link)
     avfilter_unref_pic(link->dst->outputs[0]->outpic);
 }
 
-static void draw_slice(AVFilterLink *link, int y, int h)
-{
-}
-
 AVFilter avfilter_vf_scale =
 {
     .name      = "scale",
@@ -157,7 +153,6 @@ AVFilter avfilter_vf_scale =
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
                                     .start_frame     = start_frame,
-                                    .draw_slice      = draw_slice,
                                     .end_frame       = end_frame,
                                     .query_formats   = query_formats,
                                     .min_perms       = AV_PERM_READ, },
