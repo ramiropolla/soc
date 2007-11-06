@@ -4,7 +4,7 @@ CFLAGS+=-I$(SRC_PATH)/libavcodec -I$(SRC_PATH)/libswscale
 
 OBJS = avfilter.o \
        avfiltergraph.o \
-       avfiltergraphdesc.o \
+       avfiltergraphfile.o \
        defaults.o \
 
 # TODO: real conditional compilation
