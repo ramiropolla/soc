@@ -60,6 +60,11 @@ typedef struct AMRContext {
 
     float                      fixed_vector[AMR_SUBFRAME_SIZE]; ///< algebraic code book (fixed) vector
 
+    float               prediction_error[4]; ///< quantified prediction errors {20log10(^γ_gc)} for previous four subframes
+    float                        pitch_gain;
+    float                 fixed_gain_factor;
+    float                        fixed_gain;
+
 } AMRContext;
 
 
@@ -768,6 +773,40 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_vector) {
 /*** end of algebraic code book (fixed) vector decoding functions ***/
 
 
+/*** gain decoding functions ***/
+
+/**
+ * Predict the fixed gain
+ *
+ * @param fixed_vector         pointer to the algebraic codebook vector
+ * @param prev_pred_error      pointer to the quantified prediction errors from the previous four subframes
+ *
+ * @return Returns the predicted fixed gain
+ */
+
+static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error) {
+    int i;
+    float energy_pred = 0.0, energy_fixed_mean = 0.0;
+
+    // Calculate the predicted energy
+    for(i=0; i<4; i++) {
+        energy_pred += energy_pred_fac[i]*prev_pred_error[4-i];
+    }
+
+    // Calculate the mean fixed vector energy
+    for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
+        energy_fixed_mean += fixed_vector[i]*fixed_vector[i];
+    }
+    energy_fixed_mean = 10.0*log10f(energy_fixed_mean/(float)AMR_SUBFRAME_SIZE);
+
+    // predicted fixed gain =
+    // 10^(0.05 * (predicted energy + desired mean energy - mean fixed vector energy))
+    return powf(10.0, 0.05*(energy_pred + energy_mean[mode] - energy_fixed_mean));
+}
+
+/*** end of gain decoding functions ***/
+
+
 static int amrnb_decode_frame(AVCodecContext *avctx,
         void *data, int *data_size, uint8_t *buf, int buf_size) {
 
@@ -851,7 +890,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
             break;
             case MODE_122:
                 // decode pitch gain
-                // INSERT PITCH GAIN DECODING FUNCTION HERE calling with index++
+                p->pitch_gain = qua_gain_pit[*index++];
                 decode_10_pulses_35bits(index, &p->fixed_vector);
                 index += 10;
             break;
@@ -860,6 +899,37 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         }
 
 /*** end of algebraic code book (fixed) vector decoding ***/
+
+/*** gain decoding ***/
+
+        // calculate the predicted fixed gain g_c'
+        p->fixed_gain = fixed_gain_prediction(&p->fixed_vector, &p->prediction_error);
+
+        // decode pitch gain and fixed gain correction factor
+        if(p->cur_frame_mode == MODE_122) {
+            p->fixed_gain_factor = qua_gain_code[*index++];
+        }else if(p->cur_frame_mode == MODE_795) {
+            p->pitch_gain =        qua_gain_pit[*index++];
+            p->fixed_gain_factor = qua_gain_code[*index++];
+        }else if(p->cur_frame_mode == MODE_67 || p->cur_frame_mode == MODE_74 ||
+                 p->cur_frame_mode == MODE_102) {
+            p->pitch_gain =        gains_high[index][0];
+            p->fixed_gain_factor = gains_high[index][1];
+            *index++;
+        }else if(p->cur_frame_mode == MODE_515 || p->cur_frame_mode == MODE_59) {
+            p->pitch_gain =        gains_low[index][0];
+            p->fixed_gain_factor = gains_low[index][1];
+            *index++;
+        }else {
+            p->pitch_gain =        gains_MODE_475[index + (subframe&1)<<1][0];
+            p->fixed_gain_factor = gains_MODE_475[index + (subframe&1)<<1][1];
+            *index++;
+        }
+
+        // ^g_c = g_c' * ^gamma_gc
+        p->fixed_gain *= p->fixed_gain_factor;
+
+/*** end of gain decoding ***/
 
     }
 
