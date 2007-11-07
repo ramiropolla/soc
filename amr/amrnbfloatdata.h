@@ -1775,6 +1775,7 @@ static const float pred_fac[LP_FILTER_ORDER] = {
 #define PRED_FAC_MODE_122 0.65
 #define FREQ_LSP_FAC 2*M_PI/8000.0
 
+
 // pitch tables
 
 #define PITCH_LAG_MAX            143
@@ -1793,6 +1794,18 @@ static const float b60[61] = {
 0.00277710 , 0.00271606 , 0.00213623 , 0.00115967 , 0.000000   ,
 };
 
+
+// fixed tables
+
+// track start positions for algebraic code book routines
+static const uint8_t track_position[16] = { 0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 1, 4, 1, 4 };
+
+// 3-bit Gray code to binary lookup table
+static const uint8_t gray_decode[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
+
+
+// gain tables
+
 static const float qua_gain_pit[16] = {
 0.0             , 0.20001220703125, 0.400146484375  , 0.5             ,
 0.5999755859375 , 0.70001220703125, 0.75            , 0.79998779296875,
@@ -1806,13 +1819,5 @@ static const float qua_gain_pit_MODE_122[16] = {
 0.849853515625, 0.89990234375 , 0.949951171875, 1.0           ,
 1.0498046875  , 1.099853515625, 1.14990234375 , 1.199951171875,
 };
-
-// fixed tables
-
-// track start positions for algebraic code book routines
-static const uint8_t track_position[16] = { 0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 1, 4, 1, 4 };
-
-// 3-bit Gray code to binary lookup table
-static const uint8_t gray_decode[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
 
 /**************************** end of tables *****************************/
