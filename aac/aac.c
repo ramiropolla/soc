@@ -1293,13 +1293,15 @@ static void ms_tool(AACContext * ac, cpe_struct * cpe) {
             for (gp = 0; gp < ics->group_len[g]; gp++) {
                 for (i = 0; i < ics->max_sfb; i++) {
                     if (ms->mask[g][i]) {
-                        for (k = offsets[i] + gp*128; k < offsets[i+1] + gp*128; k++) {
+                        for (k = offsets[i]; k < offsets[i+1]; k++) {
                             float tmp = ch0[k] - ch1[k];
                             ch0[k] += ch1[k];
                             ch1[k] = tmp;
                         }
                     }
                 }
+                ch0 += 128;
+                ch1 += 128;
             }
             //av_log(ac->avccontext, AV_LOG_INFO, "\n");
         }
