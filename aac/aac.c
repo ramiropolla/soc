@@ -28,7 +28,6 @@
  *  To reduce the memory required, reorder the ret buffer so all buffers are after eachother.
  *  And then try to do the interleaving inplace.
  *
- *  Fix the audible distortion. This appears when the window sequence is EIGHT_SHORT_SEQUENCE.
  */
 
 #define V_DEBUG
