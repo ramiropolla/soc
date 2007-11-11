@@ -215,7 +215,7 @@ typedef struct {
     int length[8][4];
     int direction[8][4];
     int order[8][4];
-    float *tmp2_map;
+    float *tmp2_map[8];
     int coef[8][4][TNS_MAX_ORDER];
 } tns_struct;
 
@@ -1079,7 +1079,7 @@ static void tns_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics
                 assert(coef_res == 3 || coef_res == 4);
                 coef_compress = get_bits1(gb);
                 coef_len = coef_res - coef_compress;
-                tns->tmp2_map = tns_tmp2_map[(coef_compress << 1) + (coef_res - 3)];
+                tns->tmp2_map[w] = tns_tmp2_map[(coef_compress << 1) + (coef_res - 3)];
                 for (i = 0; i < tns->order[w][filt]; i++)
                     tns->coef[w][filt][i] = get_bits(gb, coef_len);
             }
@@ -1598,7 +1598,7 @@ static void tns_filter_tool(AACContext * ac, int decode, sce_struct * sce, float
             // tns_decode_coef
             lpc[0] = 1;
             for (m = 1; m <= order; m++) {
-                lpc[m] = tns->tmp2_map[tns->coef[w][filt][m - 1]];
+                lpc[m] = tns->tmp2_map[w][tns->coef[w][filt][m - 1]];
                 for (i = 1; i < m; i++)
                     b[i] = lpc[i] + lpc[m] * lpc[m-i];
                 for (i = 1; i < m; i++)
@@ -1614,6 +1614,7 @@ static void tns_filter_tool(AACContext * ac, int decode, sce_struct * sce, float
             } else {
                 inc = 1;
             }
+            start += w * 128;
 
             // ar filter
             memset(b, 0, sizeof(b));
