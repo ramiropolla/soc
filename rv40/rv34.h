@@ -111,7 +111,17 @@ typedef struct RV34DecContext{
     int (*parse_slice_header)(struct RV34DecContext *r, GetBitContext *gb, SliceInfo *si);
     int (*decode_mb_info)(struct RV34DecContext *r);
     int (*decode_intra_types)(struct RV34DecContext *r, GetBitContext *gb, int *dst);
+    void (*loop_filter)(struct RV34DecContext *r);
 }RV34DecContext;
+
+/**
+ * Loop filter tables
+ */
+extern const uint8_t ff_rv34_dither_l[16];
+extern const uint8_t ff_rv34_dither_r[16];
+extern const uint8_t ff_rv34_alpha_tab[32];
+extern const uint8_t ff_rv34_beta_tab[32];
+extern const uint8_t ff_rv34_filter_clip_tbl[3][32];
 
 /**
  * Common decoding functions

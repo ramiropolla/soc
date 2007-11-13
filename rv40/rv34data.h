@@ -146,14 +146,14 @@ static const uint8_t rv34_mb_bits_sizes[6] = { 6, 7, 9, 11, 13, 14 };
 /**
  * Dither values for deblocking filter - left/top values
  */
-static const uint8_t rv34_dither_l[16] = {
+const uint8_t ff_rv34_dither_l[16] = {
     0x40, 0x50, 0x20, 0x60, 0x30, 0x50, 0x40, 0x30,
     0x50, 0x40, 0x50, 0x30, 0x60, 0x20, 0x50, 0x40
 };
 /**
  * Dither values for deblocking filter - right/bottom values
  */
-static const uint8_t rv34_dither_r[16] = {
+const uint8_t ff_rv34_dither_r[16] = {
     0x40, 0x30, 0x60, 0x20, 0x50, 0x30, 0x30, 0x40,
     0x40, 0x40, 0x50, 0x30, 0x20, 0x60, 0x30, 0x40
 };
@@ -163,19 +163,19 @@ static const uint8_t rv34_dither_r[16] = {
  * @{
  */
 /** alpha parameter for RV40 loop filter - almost the same as in JVT-A003r1 */
-static const uint8_t rv34_alpha_tab[32] = {
+const uint8_t ff_rv34_alpha_tab[32] = {
     128, 128, 128, 128, 128, 128, 128, 128,
     128, 128, 122,  96,  75,  59,  47,  37,
      29,  23,  18,  15,  13,  11,  10,   9,
       8,   7,   6,   5,   4,   3,   2,   1
 };
 /** beta parameter for RV40 loop filter - almost the same as in JVT-A003r1 */
-static const uint8_t rv34_beta_tab[32] = {
+const uint8_t ff_rv34_beta_tab[32] = {
      0,  0,  0,  0,  0,  0,  0,  0,  3,  3,  3,  4,  4,  4,  6,  6,
      6,  7,  8,  8,  9,  9, 10, 10, 11, 11, 12, 13, 14, 15, 16, 17
 };
 /** clip table for RV40 loop filter - the same as in JVT-A003r1 */
-static const uint8_t rv34_filter_clip_tbl[3][32] = {
+const uint8_t ff_rv34_filter_clip_tbl[3][32] = {
     {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
