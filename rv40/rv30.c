@@ -117,6 +117,65 @@ static int rv30_decode_mb_info(RV34DecContext *r)
         return rv30_b_types[code];
 }
 
+static inline void rv30_weak_loop_filter(uint8_t *src, const int step,
+                                         const int stride, const int lim[2])
+{
+    uint8_t *cm = ff_cropTbl + MAX_NEG_CROP;
+    int i, k, t, diff;
+
+    for(k = 0; k < 2; k++){
+        if(!lim[k]){
+            src += stride * 4;
+            continue;
+        }
+        for(i = 0; i < 4; i++){
+            t = ((src[-2*step] - src[1*step]) - (src[-1*step] - src[0*step])*4) >> 3;
+            diff = av_clip(t, -lim[k], lim[k]);
+            src[-1*step] = cm[src[-1*step] + diff];
+            src[ 0*step] = cm[src[ 0*step] - diff];
+            src += stride;
+        }
+    }
+}
+
+static void rv30_loop_filter(RV34DecContext *r)
+{
+    MpegEncContext *s = &r->s;
+    int mb_pos;
+    int i, j;
+    uint8_t *Y, *U, *V;
+    int lim[2];
+
+    lim[0] = 31;//FIXME calculate correct value
+    lim[1] = 31;//FIXME calculate correct value
+    s->mb_x = 0;
+    for(s->mb_y = 0; s->mb_y < s->mb_height; s->mb_y++){
+        ff_init_block_index(s);
+        mb_pos = s->mb_y * s->mb_stride;
+        for(s->mb_x = 0; s->mb_x < s->mb_width; s->mb_x++, mb_pos++){
+            ff_update_block_index(s);
+            if(!IS_INTRA(s->current_picture_ptr->mb_type[mb_pos])) continue;
+            Y = s->dest[0];
+            for(i = 0; i < 2; i++){
+                if(s->mb_x && IS_INTRA(s->current_picture_ptr->mb_type[mb_pos - 1]))
+                    rv30_weak_loop_filter(Y, 1, s->linesize, lim);
+                rv30_weak_loop_filter(Y+ 4, 1, s->linesize, lim);
+                rv30_weak_loop_filter(Y+ 8, 1, s->linesize, lim);
+                rv30_weak_loop_filter(Y+12, 1, s->linesize, lim);
+                Y += s->linesize * 8;
+            }
+            Y -= s->linesize * 16;
+            for(i = 0; i < 2; i++){
+                if(s->mb_y && IS_INTRA(s->current_picture_ptr->mb_type[mb_pos - s->mb_stride]))
+                    rv30_weak_loop_filter(Y, s->linesize, 1, lim);
+                rv30_weak_loop_filter(Y+ 4*s->linesize, s->linesize, 1, lim);
+                rv30_weak_loop_filter(Y+ 8*s->linesize, s->linesize, 1, lim);
+                rv30_weak_loop_filter(Y+12*s->linesize, s->linesize, 1, lim);
+                Y += 8;
+            }
+        }
+    }
+}
 
 /**
  * Initialize decoder
@@ -137,6 +196,7 @@ static int rv30_decode_init(AVCodecContext *avctx)
     r->parse_slice_header = rv30_parse_slice_header;
     r->decode_intra_types = rv30_decode_intra_types;
     r->decode_mb_info     = rv30_decode_mb_info;
+    r->loop_filter        = rv30_loop_filter;
     r->luma_dc_quant_i = rv30_luma_dc_quant;
     r->luma_dc_quant_p = rv30_luma_dc_quant;
     return 0;
