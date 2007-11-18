@@ -1409,7 +1409,7 @@ int ff_rv34_decode_init(AVCodecContext *avctx)
 static int get_slice_offset(AVCodecContext *avctx, uint8_t *buf, int n)
 {
     if(avctx->slice_count) return avctx->slice_offset[n];
-    else                   return AV_RL32(buf + n*8);
+    else                   return AV_RL32(buf + n*8 - 4) == 1 ? AV_RL32(buf + n*8) :  AV_RB32(buf + n*8);
 }
 
 int ff_rv34_decode_frame(AVCodecContext *avctx,
