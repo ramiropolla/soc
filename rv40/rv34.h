@@ -115,15 +115,6 @@ typedef struct RV34DecContext{
 }RV34DecContext;
 
 /**
- * Loop filter tables
- */
-extern const uint8_t ff_rv34_dither_l[16];
-extern const uint8_t ff_rv34_dither_r[16];
-extern const uint8_t ff_rv34_alpha_tab[32];
-extern const uint8_t ff_rv34_beta_tab[32];
-extern const uint8_t ff_rv34_filter_clip_tbl[3][32];
-
-/**
  * Common decoding functions
  */
 int ff_rv34_get_start_offset(GetBitContext *gb, int blocks);

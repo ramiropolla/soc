@@ -344,8 +344,8 @@ static inline void rv40_adaptive_loop_filter(uint8_t *src, const int step, const
             sflag = (mult * FFABS(t)) >> 7;
             if(sflag > 1) continue;
 
-            p0 = (RV34_STRONG_FILTER(src, step, -3, 1, -3) + ff_rv34_dither_l[dmode + i]) >> 7;
-            p1 = (RV34_STRONG_FILTER(src, step, -1, 3, -1) + ff_rv34_dither_r[dmode + i]) >> 7;
+            p0 = (RV34_STRONG_FILTER(src, step, -3, 1, -3) + rv40_dither_l[dmode + i]) >> 7;
+            p1 = (RV34_STRONG_FILTER(src, step, -1, 3, -1) + rv40_dither_r[dmode + i]) >> 7;
             if(!sflag){
                 src[-1*step] = p0;
                 src[ 0*step] = p1;
@@ -359,8 +359,8 @@ static inline void rv40_adaptive_loop_filter(uint8_t *src, const int step, const
                 else
                     src[ 0*step] = src[-1*step];
             }
-            p0 = (RV34_STRONG_FILTER(src, step, -4, 0, -4) + ff_rv34_dither_l[dmode + i]) >> 7;
-            p1 = (RV34_STRONG_FILTER(src, step, -1, 3, -1) + ff_rv34_dither_r[dmode + i]) >> 7;
+            p0 = (RV34_STRONG_FILTER(src, step, -4, 0, -4) + rv40_dither_l[dmode + i]) >> 7;
+            p1 = (RV34_STRONG_FILTER(src, step, -1, 3, -1) + rv40_dither_r[dmode + i]) >> 7;
             if(!sflag){
                 src[-2*step] = p0;
                 src[ 1*step] = p1;
@@ -403,9 +403,9 @@ static void rv40_loop_filter(RV34DecContext *r)
     int i, j;
     int no_up, no_left;
     uint8_t *Y, *U, *V;
-    const int alpha = ff_rv34_alpha_tab[s->qscale], beta = ff_rv34_beta_tab[s->qscale];
+    const int alpha = rv40_alpha_tab[s->qscale], beta = rv40_beta_tab[s->qscale];
     //XXX these are probably not correct
-    const int thr = s->qscale, lim0 = ff_rv34_filter_clip_tbl[1][s->qscale], lim1 = ff_rv34_filter_clip_tbl[2][s->qscale];
+    const int thr = s->qscale, lim0 = rv40_filter_clip_tbl[1][s->qscale], lim1 = rv40_filter_clip_tbl[2][s->qscale];
 
     s->first_slice_line = 1;
     s->mb_x= 0;

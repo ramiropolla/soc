@@ -65,4 +65,52 @@ static const uint8_t rv40_luma_quant[2][32] = {
    16, 17, 18, 19, 20, 20, 21, 21, 22, 23, 23, 23, 24, 24, 24, 24 }
 };
 
+/**
+ * @begingroup loopfilter coefficients used by RV40 loop filter
+ * @{
+ */
+/**
+ * Dither values for deblocking filter - left/top values
+ */
+static const uint8_t rv40_dither_l[16] = {
+    0x40, 0x50, 0x20, 0x60, 0x30, 0x50, 0x40, 0x30,
+    0x50, 0x40, 0x50, 0x30, 0x60, 0x20, 0x50, 0x40
+};
+/**
+ * Dither values for deblocking filter - right/bottom values
+ */
+static const uint8_t rv40_dither_r[16] = {
+    0x40, 0x30, 0x60, 0x20, 0x50, 0x30, 0x30, 0x40,
+    0x40, 0x40, 0x50, 0x30, 0x20, 0x60, 0x30, 0x40
+};
+
+/** alpha parameter for RV40 loop filter - almost the same as in JVT-A003r1 */
+static const uint8_t rv40_alpha_tab[32] = {
+    128, 128, 128, 128, 128, 128, 128, 128,
+    128, 128, 122,  96,  75,  59,  47,  37,
+     29,  23,  18,  15,  13,  11,  10,   9,
+      8,   7,   6,   5,   4,   3,   2,   1
+};
+/** beta parameter for RV40 loop filter - almost the same as in JVT-A003r1 */
+static const uint8_t rv40_beta_tab[32] = {
+     0,  0,  0,  0,  0,  0,  0,  0,  3,  3,  3,  4,  4,  4,  6,  6,
+     6,  7,  8,  8,  9,  9, 10, 10, 11, 11, 12, 13, 14, 15, 16, 17
+};
+/** clip table for RV40 loop filter - the same as in JVT-A003r1 */
+static const uint8_t rv40_filter_clip_tbl[3][32] = {
+    {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    },
+    {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+        1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 5, 5
+    },
+    {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1,
+        1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 5, 7, 8, 9
+    }
+};
+/** @} */ // end loopfilter group
+
 #endif /* FFMPEG_RV40DATA_H */
