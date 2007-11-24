@@ -123,6 +123,7 @@ static const uint8_t rv34_quant_to_vlc_set[2][31] = {
 
 /**
  * Table for obtaining quantizer difference
+ * @todo replace it with modified_quant_tab from h263data.h
  */
 static const int8_t rv34_dquant_tab[] = {
   0,  0,  2,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1,
