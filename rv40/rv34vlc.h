@@ -20,8 +20,8 @@
  */
 
 /**
- * @file rv40vlc.h
- * RV40 VLC tables.
+ * @file rv34vlc.h
+ * RV30/40 VLC tables.
  */
 
 #ifndef FFMPEG_RV34VLC_H
