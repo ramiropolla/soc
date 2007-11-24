@@ -81,8 +81,7 @@ static const uint8_t modulo_three_table[108][4] = {
 };
 
 /**
- * Chroma quantizer values
- * Second table is used for DC-only blocks
+ * Quantizer values used for AC and DC coefficients in chroma blocks
  */
 static const uint8_t rv34_chroma_quant[2][32] = {
  {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
