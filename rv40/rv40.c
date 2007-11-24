@@ -460,8 +460,8 @@ static int rv40_decode_init(AVCodecContext *avctx)
     r->decode_intra_types = rv40_decode_intra_types;
     r->decode_mb_info     = rv40_decode_mb_info;
     r->loop_filter        = rv40_loop_filter;
-    r->luma_dc_quant_i = rv40_luma_quant[0];
-    r->luma_dc_quant_p = rv40_luma_quant[1];
+    r->luma_dc_quant_i = rv40_luma_dc_quant[0];
+    r->luma_dc_quant_p = rv40_luma_dc_quant[1];
     return 0;
 }
 

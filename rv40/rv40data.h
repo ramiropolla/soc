@@ -58,7 +58,7 @@ static const uint16_t rv40_aic_table_index[MODE2_PATTERNS_NUM] = {
  * Luma quantizer values
  * Second table is used for inter blocks
  */
-static const uint8_t rv40_luma_quant[2][32] = {
+static const uint8_t rv40_luma_dc_quant[2][32] = {
  {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
    16, 17, 17, 18, 18, 18, 19, 19, 19, 20, 20, 20, 22, 22, 22, 22 },
  {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
