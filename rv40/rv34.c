@@ -103,19 +103,19 @@ static void rv34_init_tables()
         }
         for(j = 0; j < 4; j++)
             rv34_gen_vlc(rv34_intra_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &intra_vlcs[i].first_pattern[j]);
-        rv34_gen_vlc(rv34_intra_coeffvlc_pointers[i], COEFF_VLC_SIZE, &intra_vlcs[i].coefficient);
+        rv34_gen_vlc(rv34_intra_coeffvlc[i], COEFF_VLC_SIZE, &intra_vlcs[i].coefficient);
     }
 
     for(i = 0; i < NUM_INTER_TABLES; i++){
-        rv34_gen_vlc(rv34_inter_cbppatvlc_pointers[i], CBPPAT_VLC_SIZE, &inter_vlcs[i].cbppattern[0]);
+        rv34_gen_vlc(rv34_inter_cbppatvlc[i], CBPPAT_VLC_SIZE, &inter_vlcs[i].cbppattern[0]);
         for(j = 0; j < 4; j++)
-            rv34_gen_vlc(rv34_inter_cbpvlc_pointers[i][j], CBP_VLC_SIZE, &inter_vlcs[i].cbp[0][j]);
+            rv34_gen_vlc(rv34_inter_cbpvlc[i][j], CBP_VLC_SIZE, &inter_vlcs[i].cbp[0][j]);
         for(j = 0; j < 2; j++){
             rv34_gen_vlc(rv34_inter_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &inter_vlcs[i].first_pattern[j]);
             rv34_gen_vlc(rv34_inter_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].second_pattern[j]);
             rv34_gen_vlc(rv34_inter_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].third_pattern[j]);
         }
-        rv34_gen_vlc(rv34_inter_coeffvlc_pointers[i], COEFF_VLC_SIZE, &inter_vlcs[i].coefficient);
+        rv34_gen_vlc(rv34_inter_coeffvlc[i], COEFF_VLC_SIZE, &inter_vlcs[i].coefficient);
     }
 
     init_vlc_sparse(&omega_part_vlc, OMEGA_BITS, NUM_OMEGA,
