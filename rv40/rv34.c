@@ -216,7 +216,7 @@ static void rv34_intra_inv_transform_noround(DCTELEM *block, const int offset){
 static int rv34_decode_cbp(GetBitContext *gb, RV34VLC *vlc, int table)
 {
     int pattern, code, cbp=0;
-    int table2;
+    int ones;
     static const int cbp_masks[3] = {0x100000, 0x010000, 0x110000};
     static const int shifts[4] = { 0, 2, 8, 10 };
     int *curshift = shifts;
@@ -226,11 +226,11 @@ static int rv34_decode_cbp(GetBitContext *gb, RV34VLC *vlc, int table)
     pattern = code & 0xF;
     code >>= 4;
 
-    table2 = rv34_count_ones[pattern];
+    ones = rv34_count_ones[pattern];
 
     for(mask = 8; mask; mask >>= 1, curshift++){
         if(!(pattern & mask)) continue;
-        cbp |= get_vlc2(gb, vlc->cbp[table][table2].table, vlc->cbp[table][table2].bits, 1) << curshift[0];
+        cbp |= get_vlc2(gb, vlc->cbp[table][ones].table, vlc->cbp[table][ones].bits, 1) << curshift[0];
     }
 
     for(i = 0; i < 4; i++){
