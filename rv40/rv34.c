@@ -21,7 +21,7 @@
 
 /**
  * @file rv34.c
- * RV30 and RV40 decoder common data.
+ * RV30/40 decoder common data.
  */
 
 #include "avcodec.h"
@@ -34,7 +34,7 @@
 
 //#define DEBUG
 
-/** Translation of RV40 macroblock types to lavc ones */
+/** Translation of RV30/40 macroblock types to lavc ones */
 static const int rv34_mb_type_to_lavc[12] = {
     MB_TYPE_INTRA, MB_TYPE_INTRA16x16, MB_TYPE_16x16,   MB_TYPE_8x8,
     MB_TYPE_16x16, MB_TYPE_16x16,      MB_TYPE_SKIP,    MB_TYPE_DIRECT2,
@@ -46,7 +46,7 @@ static RV34VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
 static VLC omega_part_vlc;
 
 /**
- * @defgroup vlc RV40 VLC generating functions
+ * @defgroup vlc RV30/40 VLC generating functions
  * @{
  */
 
@@ -128,7 +128,7 @@ static void rv34_init_tables()
 
 
 /**
- * @defgroup transform RV40 inverse transform functions
+ * @defgroup transform RV30/40 inverse transform functions
  * @{
  */
 
@@ -167,7 +167,7 @@ static void rv34_intra_inv_transform(DCTELEM *block, const int offset){
 }
 
 /**
- * RealVideo 4.0 inverse transform - special version
+ * RealVideo 3.0/4.0 inverse transform - special version
  *
  * Code is almost the same but final coefficients are multiplied by 1.5
  * and have no rounding
@@ -206,7 +206,7 @@ static void rv34_intra_inv_transform_noround(DCTELEM *block, const int offset){
 
 
 /**
- * @defgroup block RV40 4x4 block decoding functions
+ * @defgroup block RV30/40 4x4 block decoding functions
  * @{
  */
 
@@ -355,7 +355,7 @@ static inline void rv34_dequant4x4_16x16(DCTELEM *block, int offset, int Qdc, in
 
 
 /**
- * @defgroup bitstream RV40 bitstream parsing
+ * @defgroup bitstream RV30/40 bitstream parsing
  * @{
  */
 
@@ -963,13 +963,13 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
  * @defgroup recons Macroblock reconstruction functions
  * @{
  */
-/** Mapping of RV40 intra prediction types to standard H.264 types */
+/** Mapping of RV30/40 intra prediction types to standard H.264 types */
 static const int ittrans[9] = {
  DC_PRED, VERT_PRED, HOR_PRED, DIAG_DOWN_RIGHT_PRED, DIAG_DOWN_LEFT_PRED,
  VERT_RIGHT_PRED, VERT_LEFT_PRED, HOR_UP_PRED, HOR_DOWN_PRED,
 };
 
-/** Mapping of RV40 intra 16x16 prediction types to standard H.264 types */
+/** Mapping of RV30/40 intra 16x16 prediction types to standard H.264 types */
 static const int ittrans16[4] = {
  DC_PRED8x8, VERT_PRED8x8, HOR_PRED8x8, PLANE_PRED8x8,
 };
