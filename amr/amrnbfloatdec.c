@@ -49,6 +49,8 @@ typedef struct AMRContext {
     float           lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
     float    prev_lsp_sub4[LP_FILTER_ORDER]; ///< lsp vector for the 4th subframe of the previous frame
 
+    float      lsp_avg[10][LP_FILTER_ORDER]; ///< averaged lsp vectors for previous 10 frames
+
     float           lpc[4][LP_FILTER_ORDER]; ///< vectors of lpc coefficients for 4 subframes
 
     int                       pitch_lag_int; ///< integer part of pitch lag from current subframe
@@ -63,7 +65,9 @@ typedef struct AMRContext {
     float               prediction_error[4]; ///< quantified prediction errors {20log10(^γ_gc)} for previous four subframes
     float                        pitch_gain;
     float                 fixed_gain_factor;
-    float                        fixed_gain;
+    float                     fixed_gain[5]; ///< quantified fixed gains for the current and previous four subframes
+
+    int                          diff_count; ///< the number of subframes for which diff has been above 0.65
 
 } AMRContext;
 
@@ -917,7 +921,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 /*** gain decoding ***/
 
         // calculate the predicted fixed gain g_c'
-        p->fixed_gain = fixed_gain_prediction(&p->fixed_vector, &p->prediction_error);
+        p->fixed_gain[4] = fixed_gain_prediction(&p->fixed_vector, &p->prediction_error);
 
         // decode pitch gain and fixed gain correction factor
         if(p->cur_frame_mode == MODE_122) {
@@ -941,7 +945,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         }
 
         // ^g_c = g_c' * ^gamma_gc
-        p->fixed_gain *= p->fixed_gain_factor;
+        p->fixed_gain[4] *= p->fixed_gain_factor;
 
 /*** end of gain decoding ***/
 
@@ -953,6 +957,37 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         if(p->pitch_lag_int < AMR_SUBFRAME_SIZE) {
             for(i=p->pitch_lag_int; i<AMR_SUBFRAME_SIZE; i++) {
                 p->fixed_vector[i] += p->beta*p->fixed_vector[i-p->pitch_lag_int];
+            }
+        }
+
+        // smooth fixed gain
+        if(p->cur_frame_mode < MODE_74 || p->cur_frame_mode == MODE_102) {
+            float diff = 0.0;
+            float smoothing_factor = 0.0;
+
+            memmove(p->lsp_avg[0], p->lsp_avg[1], 9*LP_FILTER_ORDER*sizeof(float));
+            for(i=0; i<LP_FILTER_ORDER; i++) {
+                // calculate averaged lsp vector
+                p->lsp_avg[9][i] = 0.84*lsp_avg[8][i] + 0.16*p->prev_lsp_sub4[i];
+                // calculate diff
+                diff += fabs(p->lsp_avg[9][i]-p->lsp[subframe][i])/p->lsp_avg[9][i];
+            }
+
+            // if diff has been >0.65 for 10 frames (40 subframes) no smoothing is applied
+            if(diff > 0.65) {
+                p->diff_count++;
+            }else {
+                p->diff_count = 0;
+            }
+
+            if(p->diff_count < 40) {
+                float fixed_gain_mean;
+                // calculate the fixed gain smoothing factor (k_m)
+                smoothing_factor = FFMIN(0.25, FFMAX(0.0, diff - 0.4))/0.25;
+                // calculate the mean fixed gain for the current subframe
+                fixed_gain_mean = (p->fixed_gain[0] + p->fixed_gain[1] + p->fixed_gain[2] + p->fixed_gain[3] + p->fixed_gain[4])/5.0;
+                // calculate the smoothed fixed gain
+                p->fixed_gain[4] = smoothing_factor*p->fixed_gain[4] + (1.0 - smoothing_factor)*fixed_gain_mean;
             }
         }
 
