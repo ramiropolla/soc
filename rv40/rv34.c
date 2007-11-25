@@ -52,38 +52,38 @@ static VLC omega_part_vlc;
 
 /**
  * Generate VLC from codeword lengths
+ * @param bits   codeword lengths (zeroes are accepted)
+ * @param size   length of input data
+ * @param insyms symbols for input codes (NULL for default ones)
  */
-static int rv34_gen_vlc(const uint8_t *bits2, int size, VLC *vlc)
+static void rv34_gen_vlc(const uint8_t *bits, int size, VLC *vlc, const uint8_t *insyms)
 {
     int i;
     int counts[17] = {0}, codes[17];
     uint16_t cw[size], syms[size];
-    uint8_t bits[size];
+    uint8_t bits2[size];
     int maxbits = 0, realsize = 0;
-    int ret;
 
     for(i = 0; i < size; i++){
-        if(bits2[i]){
-            bits[realsize] = bits2[i];
-            syms[realsize] = i;
+        if(bits[i]){
+            bits2[realsize] = bits[i];
+            syms[realsize] = insyms ? insyms[i] : i;
             realsize++;
-            maxbits = FFMAX(maxbits, bits2[i]);
-            counts[bits2[i]]++;
+            maxbits = FFMAX(maxbits, bits[i]);
+            counts[bits[i]]++;
         }
     }
 
-    size = realsize;
     codes[0] = 0;
     for(i = 0; i < 16; i++)
         codes[i+1] = (codes[i] + counts[i]) << 1;
     for(i = 0; i < realsize; i++)
-        cw[i] = codes[bits[i]]++;
+        cw[i] = codes[bits2[i]]++;
 
-    ret = init_vlc_sparse(vlc, FFMIN(maxbits, 9), size,
-                          bits, 1, 1,
-                          cw,   2, 2,
-                          syms, 2, 2, INIT_VLC_USE_STATIC);
-    return ret;
+    init_vlc_sparse(vlc, FFMIN(maxbits, 9), realsize,
+                    bits2, 1, 1,
+                    cw,    2, 2,
+                    syms,  2, 2, INIT_VLC_USE_STATIC);
 }
 
 /**
@@ -95,27 +95,27 @@ static void rv34_init_tables()
 
     for(i = 0; i < NUM_INTRA_TABLES; i++){
         for(j = 0; j < 2; j++){
-            rv34_gen_vlc(rv34_intra_cbppatvlc_pointers[i][j], CBPPAT_VLC_SIZE, &intra_vlcs[i].cbppattern[j]);
-            rv34_gen_vlc(rv34_intra_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].second_pattern[j]);
-            rv34_gen_vlc(rv34_intra_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].third_pattern[j]);
+            rv34_gen_vlc(rv34_intra_cbppatvlc_pointers[i][j], CBPPAT_VLC_SIZE, &intra_vlcs[i].cbppattern[j], NULL);
+            rv34_gen_vlc(rv34_intra_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].second_pattern[j], NULL);
+            rv34_gen_vlc(rv34_intra_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].third_pattern[j], NULL);
             for(k = 0; k < 4; k++)
-                rv34_gen_vlc(rv34_intra_cbpvlc_pointers[i][j][k], CBP_VLC_SIZE, &intra_vlcs[i].cbp[j][k]);
+                rv34_gen_vlc(rv34_intra_cbpvlc_pointers[i][j][k], CBP_VLC_SIZE, &intra_vlcs[i].cbp[j][k], rv34_cbp_code);
         }
         for(j = 0; j < 4; j++)
-            rv34_gen_vlc(rv34_intra_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &intra_vlcs[i].first_pattern[j]);
-        rv34_gen_vlc(rv34_intra_coeffvlc[i], COEFF_VLC_SIZE, &intra_vlcs[i].coefficient);
+            rv34_gen_vlc(rv34_intra_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &intra_vlcs[i].first_pattern[j], NULL);
+        rv34_gen_vlc(rv34_intra_coeffvlc[i], COEFF_VLC_SIZE, &intra_vlcs[i].coefficient, NULL);
     }
 
     for(i = 0; i < NUM_INTER_TABLES; i++){
-        rv34_gen_vlc(rv34_inter_cbppatvlc[i], CBPPAT_VLC_SIZE, &inter_vlcs[i].cbppattern[0]);
+        rv34_gen_vlc(rv34_inter_cbppatvlc[i], CBPPAT_VLC_SIZE, &inter_vlcs[i].cbppattern[0], NULL);
         for(j = 0; j < 4; j++)
-            rv34_gen_vlc(rv34_inter_cbpvlc[i][j], CBP_VLC_SIZE, &inter_vlcs[i].cbp[0][j]);
+            rv34_gen_vlc(rv34_inter_cbpvlc[i][j], CBP_VLC_SIZE, &inter_vlcs[i].cbp[0][j], rv34_cbp_code);
         for(j = 0; j < 2; j++){
-            rv34_gen_vlc(rv34_inter_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &inter_vlcs[i].first_pattern[j]);
-            rv34_gen_vlc(rv34_inter_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].second_pattern[j]);
-            rv34_gen_vlc(rv34_inter_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].third_pattern[j]);
+            rv34_gen_vlc(rv34_inter_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &inter_vlcs[i].first_pattern[j], NULL);
+            rv34_gen_vlc(rv34_inter_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].second_pattern[j], NULL);
+            rv34_gen_vlc(rv34_inter_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].third_pattern[j], NULL);
         }
-        rv34_gen_vlc(rv34_inter_coeffvlc[i], COEFF_VLC_SIZE, &inter_vlcs[i].coefficient);
+        rv34_gen_vlc(rv34_inter_coeffvlc[i], COEFF_VLC_SIZE, &inter_vlcs[i].coefficient, NULL);
     }
 
     init_vlc_sparse(&omega_part_vlc, OMEGA_BITS, NUM_OMEGA,
@@ -230,8 +230,7 @@ static int rv34_decode_cbp(GetBitContext *gb, RV34VLC *vlc, int table)
 
     for(mask = 8; mask; mask >>= 1, curshift++){
         if(!(pattern & mask)) continue;
-        t = get_vlc2(gb, vlc->cbp[table][table2].table, vlc->cbp[table][table2].bits, 1);
-        cbp |= rv34_cbp_code[t] << curshift[0];
+        cbp |= get_vlc2(gb, vlc->cbp[table][table2].table, vlc->cbp[table][table2].bits, 1) << curshift[0];
     }
 
     for(i = 0; i < 4; i++){
