@@ -807,6 +807,20 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error) 
 /*** end of gain decoding functions ***/
 
 
+/*** pre-processing functions ***/
+
+static inline float av_clipf(float a, float min, float max) {
+    if(a>max)
+        return max;
+    else if(a<min)
+        return min;
+    else
+        return a;
+}
+
+/*** end of pre-processing functions ***/
+
+
 static int amrnb_decode_frame(AVCodecContext *avctx,
         void *data, int *data_size, uint8_t *buf, int buf_size) {
 
@@ -930,6 +944,19 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         p->fixed_gain *= p->fixed_gain_factor;
 
 /*** end of gain decoding ***/
+
+/*** pre-processing ***/
+
+        p->beta = av_clipf(p->pitch_gain, 0.0, p->cur_frame_mode == MODE_122 ? 1.0 : 0.8);
+
+        // conduct pitch sharpening as appropriate
+        if(p->pitch_lag_int < AMR_SUBFRAME_SIZE) {
+            for(i=p->pitch_lag_int; i<AMR_SUBFRAME_SIZE; i++) {
+                p->fixed_vector[i] += p->beta*p->fixed_vector[i-p->pitch_lag_int];
+            }
+        }
+
+/*** end of pre-processing ***/
 
     }
 
