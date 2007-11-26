@@ -49,7 +49,7 @@ typedef struct AMRContext {
     float           lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
     float    prev_lsp_sub4[LP_FILTER_ORDER]; ///< lsp vector for the 4th subframe of the previous frame
 
-    float      lsp_avg[10][LP_FILTER_ORDER]; ///< averaged lsp vectors for previous 10 frames
+    float          lsp_avg[LP_FILTER_ORDER]; ///< vector of averaged lsp coefficients
 
     float           lpc[4][LP_FILTER_ORDER]; ///< vectors of lpc coefficients for 4 subframes
 
@@ -861,11 +861,10 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         lsp2lpc(p->lsp[i], p->lpc[i]);
     }
 
-    // update averaged lsp vectors (used for fixed gain smoothing)
-    memmove(p->lsp_avg[0], p->lsp_avg[1], 9*LP_FILTER_ORDER*sizeof(float));
+    // update averaged lsp vector (used for fixed gain smoothing)
     for(i=0; i<LP_FILTER_ORDER; i++) {
         // calculate averaged lsp vector
-        p->lsp_avg[9][i] = 0.84*p->lsp_avg[8][i] + 0.16*p->prev_lsp_sub4[i];
+        p->lsp_avg[i] = 0.84*p->lsp_avg[i] + 0.16*p->prev_lsp_sub4[i];
     }
 
 /*** end of LPC coefficient decoding ***/
@@ -974,7 +973,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 
             for(i=0; i<LP_FILTER_ORDER; i++) {
                 // calculate diff
-                diff += fabs(p->lsp_avg[9][i]-p->lsp[subframe][i])/p->lsp_avg[9][i];
+                diff += fabs(p->lsp_avg[i]-p->lsp[subframe][i])/p->lsp_avg[i];
             }
 
             // if diff has been >0.65 for 10 frames (40 subframes) no smoothing is applied
