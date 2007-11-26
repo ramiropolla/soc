@@ -968,7 +968,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
             memmove(p->lsp_avg[0], p->lsp_avg[1], 9*LP_FILTER_ORDER*sizeof(float));
             for(i=0; i<LP_FILTER_ORDER; i++) {
                 // calculate averaged lsp vector
-                p->lsp_avg[9][i] = 0.84*lsp_avg[8][i] + 0.16*p->prev_lsp_sub4[i];
+                p->lsp_avg[9][i] = 0.84*p->lsp_avg[8][i] + 0.16*p->prev_lsp_sub4[i];
                 // calculate diff
                 diff += fabs(p->lsp_avg[9][i]-p->lsp[subframe][i])/p->lsp_avg[9][i];
             }
