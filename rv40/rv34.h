@@ -44,10 +44,10 @@ enum RV40BlockTypes{
     RV34_MB_B_FORWARD,       ///< B-frame macroblock, forward prediction
     RV34_MB_B_BACKWARD,      ///< B-frame macroblock, backward prediction
     RV34_MB_SKIP,            ///< Skipped block
-    RV34_MB_B_INTERP,        ///< Bidirectionally predicted B-frame macroblock, no motion vectors
+    RV34_MB_B_DIRECT,        ///< Bidirectionally predicted B-frame macroblock, no motion vectors
     RV34_MB_P_16x8,          ///< P-frame macroblock, 16x8 motion compensation partitions
     RV34_MB_P_8x16,          ///< P-frame macroblock, 8x16 motion compensation partitions
-    RV34_MB_B_DIRECT,        ///< Bidirectionally predicted B-frame macroblock, two motion vectors
+    RV34_MB_B_BIDIR,         ///< Bidirectionally predicted B-frame macroblock, two motion vectors
     RV34_MB_P_MIX16x16,      ///< P-frame macroblock with DCs in a separate 4x4 block, one motion vector
     RV34_MB_TYPES
 };

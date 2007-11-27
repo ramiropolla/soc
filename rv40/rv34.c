@@ -592,9 +592,9 @@ static void rv34_pred_mv_b(RV34DecContext *r, int block_type)
         no_A[0] = no_A[1] = 1;
     else{
         no_A[0] = no_A[1] = 0;
-        if(r->mb_type[mb_pos - 1] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - 1] != RV34_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - 1] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - 1] != RV34_MB_B_BIDIR)
             no_A[0] = 1;
-        if(r->mb_type[mb_pos - 1] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - 1] != RV34_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - 1] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - 1] != RV34_MB_B_BIDIR)
             no_A[1] = 1;
         if(!no_A[0]){
             A[0][0] = s->current_picture_ptr->motion_val[0][mv_pos - 1][0];
@@ -609,9 +609,9 @@ static void rv34_pred_mv_b(RV34DecContext *r, int block_type)
         no_B[0] = no_B[1] = 1;
     }else{
         no_B[0] = no_B[1] = 0;
-        if(r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_BIDIR)
             no_B[0] = 1;
-        if(r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride] != RV34_MB_B_BIDIR)
             no_B[1] = 1;
         if(!no_B[0]){
             B[0][0] = s->current_picture_ptr->motion_val[0][mv_pos - s->b8_stride][0];
@@ -624,16 +624,16 @@ static void rv34_pred_mv_b(RV34DecContext *r, int block_type)
     }
     if(r->avail[2]){
         no_C[0] = no_C[1] = 0;
-        if(r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_BIDIR)
             no_C[0] = 1;
-        if(r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride + 1] != RV34_MB_B_BIDIR)
             no_C[1] = 1;
         c_mv_pos = mv_pos - s->b8_stride + 2;
     }else if(r->avail[3]){
         no_C[0] = no_C[1] = 0;
-        if(r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_FORWARD  && r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_BIDIR)
             no_C[0] = 1;
-        if(r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_DIRECT)
+        if(r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_BACKWARD && r->mb_type[mb_pos - s->mb_stride - 1] != RV34_MB_B_BIDIR)
             no_C[1] = 1;
         c_mv_pos = mv_pos - s->b8_stride - 1;
     }else{
@@ -661,7 +661,7 @@ static void rv34_pred_mv_b(RV34DecContext *r, int block_type)
         r->dmv[0][1] = 0;
         rv34_pred_b_vector(A[1], B[1], C[1], no_A[1], no_B[1], no_C[1], &mx[1], &my[1]);
         break;
-    case RV34_MB_B_DIRECT:
+    case RV34_MB_B_BIDIR:
         rv34_pred_b_vector(A[0], B[0], C[0], no_A[0], no_B[0], no_C[0], &mx[0], &my[0]);
         rv34_pred_b_vector(A[1], B[1], C[1], no_A[1], no_B[1], no_C[1], &mx[1], &my[1]);
         break;
@@ -787,7 +787,7 @@ static inline void rv34_mc_b(RV34DecContext *r, const int block_type)
         srcU = s->next_picture_ptr->data[1];
         srcV = s->next_picture_ptr->data[2];
     }
-    if(block_type == RV34_MB_B_INTERP){
+    if(block_type == RV34_MB_B_DIRECT){
         mx += (s->next_picture_ptr->motion_val[0][mv_pos][0] + 1) >> 1;
         my += (s->next_picture_ptr->motion_val[0][mv_pos][1] + 1) >> 1;
     }
@@ -836,7 +836,7 @@ static inline void rv34_mc_b_interp(RV34DecContext *r, const int block_type)
 
     mx = s->current_picture_ptr->motion_val[1][mv_pos][0];
     my = s->current_picture_ptr->motion_val[1][mv_pos][1];
-    if(block_type == RV34_MB_B_INTERP){
+    if(block_type == RV34_MB_B_DIRECT){
         mx -= s->next_picture_ptr->motion_val[0][mv_pos][0] >> 1;
         my -= s->next_picture_ptr->motion_val[0][mv_pos][1] >> 1;
     }
@@ -908,10 +908,10 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
             rv34_mc(r, block_type, 0, 0, 0, 2, 2);
             break;
         }
-    case RV34_MB_B_INTERP:
-        rv34_pred_mv_b  (r, RV34_MB_B_INTERP);
-        rv34_mc_b       (r, RV34_MB_B_INTERP);
-        rv34_mc_b_interp(r, RV34_MB_B_INTERP);
+    case RV34_MB_B_DIRECT:
+        rv34_pred_mv_b  (r, RV34_MB_B_DIRECT);
+        rv34_mc_b       (r, RV34_MB_B_DIRECT);
+        rv34_mc_b_interp(r, RV34_MB_B_DIRECT);
         break;
     case RV34_MB_P_16x16:
     case RV34_MB_P_MIX16x16:
@@ -925,7 +925,7 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
         break;
     case RV34_MB_P_16x8:
     case RV34_MB_P_8x16:
-    case RV34_MB_B_DIRECT:
+    case RV34_MB_B_BIDIR:
         rv34_pred_mv(r, block_type, 0);
         rv34_pred_mv(r, block_type, 1);
         if(block_type == RV34_MB_P_16x8){
@@ -936,7 +936,7 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
             rv34_mc(r, block_type, 0, 0, 0, 1, 2);
             rv34_mc(r, block_type, 8, 0, 1, 1, 2);
         }
-        if(block_type == RV34_MB_B_DIRECT){
+        if(block_type == RV34_MB_B_BIDIR){
             rv34_pred_mv_b  (r, block_type);
             rv34_mc_b       (r, block_type);
             rv34_mc_b_interp(r, block_type);
@@ -1117,7 +1117,7 @@ static int rv34_decode_mb_header(RV34DecContext *r, int *intra_types)
             if(s->pict_type == P_TYPE)
                 r->mb_type[mb_pos] = RV34_MB_P_16x16;
             if(s->pict_type == B_TYPE)
-                r->mb_type[mb_pos] = RV34_MB_B_INTERP;
+                r->mb_type[mb_pos] = RV34_MB_B_DIRECT;
         }
         r->is16 = !!IS_INTRA16x16(s->current_picture_ptr->mb_type[mb_pos]);
         rv34_decode_mv(r, r->block_type);
