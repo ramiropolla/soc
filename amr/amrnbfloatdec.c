@@ -794,7 +794,7 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error) 
 
     // Calculate the predicted energy
     for(i=0; i<4; i++) {
-        energy_pred += energy_pred_fac[i]*prev_pred_error[4-i];
+        energy_pred += energy_pred_fac[i]*prev_pred_error[3-i];
     }
 
     // Calculate the mean fixed vector energy
