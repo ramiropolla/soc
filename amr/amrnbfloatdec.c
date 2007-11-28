@@ -63,7 +63,7 @@ typedef struct AMRContext {
     float                      fixed_vector[AMR_SUBFRAME_SIZE]; ///< algebraic code book (fixed) vector
 
     float               prediction_error[4]; ///< quantified prediction errors {20log10(^γ_gc)} for previous four subframes
-    float                        pitch_gain;
+    float                     pitch_gain[5]; ///< quantified pitch gains for the current and previous four subframes
     float                 fixed_gain_factor;
     float                     fixed_gain[5]; ///< quantified fixed gains for the current and previous four subframes
 
@@ -914,7 +914,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
             break;
             case MODE_122:
                 // decode pitch gain
-                p->pitch_gain = qua_gain_pit[*index++];
+                p->pitch_gain[4] = qua_gain_pit[*index++];
                 decode_10_pulses_35bits(index, &p->fixed_vector);
                 index += 10;
             break;
@@ -933,19 +933,19 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         if(p->cur_frame_mode == MODE_122) {
             p->fixed_gain_factor = qua_gain_code[*index++];
         }else if(p->cur_frame_mode == MODE_795) {
-            p->pitch_gain =        qua_gain_pit[*index++];
+            p->pitch_gain[4] =     qua_gain_pit[*index++];
             p->fixed_gain_factor = qua_gain_code[*index++];
         }else if(p->cur_frame_mode == MODE_67 || p->cur_frame_mode == MODE_74 ||
                  p->cur_frame_mode == MODE_102) {
-            p->pitch_gain =        gains_high[index][0];
+            p->pitch_gain[4] =     gains_high[index][0];
             p->fixed_gain_factor = gains_high[index][1];
             *index++;
         }else if(p->cur_frame_mode == MODE_515 || p->cur_frame_mode == MODE_59) {
-            p->pitch_gain =        gains_low[index][0];
+            p->pitch_gain[4] =     gains_low[index][0];
             p->fixed_gain_factor = gains_low[index][1];
             *index++;
         }else {
-            p->pitch_gain =        gains_MODE_475[index + (subframe&1)<<1][0];
+            p->pitch_gain[4] =     gains_MODE_475[index + (subframe&1)<<1][0];
             p->fixed_gain_factor = gains_MODE_475[index + (subframe&1)<<1][1];
             *index++;
         }
@@ -957,7 +957,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 
 /*** pre-processing ***/
 
-        p->beta = av_clipf(p->pitch_gain, 0.0, p->cur_frame_mode == MODE_122 ? 1.0 : 0.8);
+        p->beta = av_clipf(p->pitch_gain[4], 0.0, p->cur_frame_mode == MODE_122 ? 1.0 : 0.8);
 
         // conduct pitch sharpening as appropriate
         if(p->pitch_lag_int < AMR_SUBFRAME_SIZE) {
