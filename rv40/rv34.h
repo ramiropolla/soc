@@ -55,7 +55,7 @@ enum RV40BlockTypes{
 /**
  * VLC tables used by decoder
  *
- * intra frame VLC sets do not contain some of those tables
+ * Intra frame VLC sets do not contain some of those tables.
  */
 typedef struct RV34VLC{
     VLC cbppattern[2];     ///< VLCs used for pattern of coded block patterns decoding
@@ -66,7 +66,7 @@ typedef struct RV34VLC{
     VLC coefficient;       ///< VLCs used for decoding big coefficients
 }RV34VLC;
 
-/** Essential slice information */
+/** essential slice information */
 typedef struct SliceInfo{
     int type;              ///< slice type (intra, inter)
     int size;              ///< size of the slice in bits
@@ -78,7 +78,7 @@ typedef struct SliceInfo{
     int height;            ///< coded height
 }SliceInfo;
 
-/** Decoder context */
+/** decoder context */
 typedef struct RV34DecContext{
     MpegEncContext s;
     int mb_bits;             ///< bits needed to read MB offet in slice header
@@ -115,7 +115,7 @@ typedef struct RV34DecContext{
 }RV34DecContext;
 
 /**
- * Common decoding functions
+ * common decoding functions
  */
 int ff_rv34_get_start_offset(GetBitContext *gb, int blocks);
 int ff_rv34_get_omega(GetBitContext *gb);
