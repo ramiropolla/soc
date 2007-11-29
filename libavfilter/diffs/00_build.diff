@@ -1,6 +1,6 @@
 Index: configure
 ===================================================================
---- configure	(revision 10755)
+--- configure	(revision 11113)
 +++ configure	(working copy)
 @@ -70,6 +70,7 @@
    echo "                           and ffmpeg will be under GPL [default=no]"
@@ -10,7 +10,7 @@ Index: configure
    echo "  --enable-beosthreads     use BeOS threads [default=no]"
    echo "  --enable-pthreads        use pthreads [default=no]"
    echo "  --enable-w32threads      use Win32 threads [default=no]"
-@@ -599,6 +600,7 @@
+@@ -598,6 +599,7 @@
  
  CONFIG_LIST="
      $COMPONENT_LIST
@@ -18,7 +18,7 @@ Index: configure
      avisynth
      beos_netserver
      ffmpeg
-@@ -1790,6 +1792,7 @@
+@@ -1799,6 +1801,7 @@
  echo "shared                    ${shared-no}"
  echo "postprocessing support    ${pp-no}"
  echo "software scaler enabled   ${swscaler-no}"
@@ -26,9 +26,9 @@ Index: configure
  echo "video hooking             ${vhook-no}"
  if enabled vhook; then
      echo "Imlib2 support            ${imlib2-no}"
-@@ -2059,3 +2062,8 @@
-   apply libswscale.pc sed s/^Libs:.*$/Libs:/
-   apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
+@@ -2094,3 +2097,8 @@
+     apply libswscale.pc sed s/^Libs:.*$/Libs:/
+     apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
  fi
 +
 +if enabled avfilter; then
@@ -37,17 +37,18 @@ Index: configure
 +fi
 Index: Makefile
 ===================================================================
---- Makefile	(revision 10755)
+--- Makefile	(revision 11113)
 +++ Makefile	(working copy)
-@@ -8,6 +8,7 @@
+@@ -8,7 +8,7 @@
  
  CFLAGS=$(OPTFLAGS) -I$(BUILD_ROOT) -I$(SRC_PATH) -I$(SRC_PATH)/libavutil \
         -I$(SRC_PATH)/libavcodec -I$(SRC_PATH)/libavformat -I$(SRC_PATH)/libswscale \
-+	   -I$(SRC_PATH)/libavfilter \
+-       -I$(SRC_PATH)/libavdevice \
++       -I$(SRC_PATH)/libavdevice -I$(SRC_PATH)/libavfilter \
         -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_ISOC9X_SOURCE -DHAVE_AV_CONFIG_H
  LDFLAGS+= -g
  
-@@ -65,6 +66,11 @@
+@@ -69,6 +69,11 @@
  EXTRALIBS+=-lswscale$(BUILDSUF)
  endif
  
@@ -59,7 +60,7 @@ Index: Makefile
  all: lib $(PROGS) $(ALL_TARGETS-yes)
  
  lib:
-@@ -77,6 +83,9 @@
+@@ -82,6 +87,9 @@
  ifeq ($(CONFIG_SWSCALER),yes)
  	$(MAKE) -C libswscale  all
  endif
@@ -69,7 +70,7 @@ Index: Makefile
  
  ffmpeg_g$(EXESUF): ffmpeg.o cmdutils.o .libs
  	$(CC) $(LDFLAGS) -o $@ ffmpeg.o cmdutils.o $(EXTRALIBS)
-@@ -182,6 +191,9 @@
+@@ -188,6 +196,9 @@
  	$(MAKE) -C libpostproc install-headers
  endif
  	$(MAKE) -C libswscale  install-headers
@@ -79,23 +80,23 @@ Index: Makefile
  
  uninstall: uninstall-progs uninstall-libs uninstall-headers uninstall-man uninstall-vhook
  
-@@ -201,6 +213,7 @@
- 	$(MAKE) -C libavformat uninstall-libs
+@@ -208,6 +219,7 @@
+ 	$(MAKE) -C libavdevice uninstall-libs
  	$(MAKE) -C libpostproc uninstall-libs
  	$(MAKE) -C libswscale  uninstall-libs
 +	$(MAKE) -C libavfilter uninstall-libs
  
  uninstall-headers:
  	$(MAKE) -C libavutil   uninstall-headers
-@@ -208,6 +221,7 @@
- 	$(MAKE) -C libavformat uninstall-headers
+@@ -216,6 +228,7 @@
+ 	$(MAKE) -C libavdevice uninstall-headers
  	$(MAKE) -C libpostproc uninstall-headers
  	$(MAKE) -C libswscale  uninstall-headers
 +	$(MAKE) -C libavfilter uninstall-headers
  	-rmdir "$(INCDIR)"
  
  depend dep: .depend .vhookdep
-@@ -220,6 +234,9 @@
+@@ -229,6 +242,9 @@
  ifeq ($(CONFIG_SWSCALER),yes)
  	$(MAKE) -C libswscale  depend
  endif
@@ -105,16 +106,16 @@ Index: Makefile
  
  .depend: $(SRCS) version.h
  	$(CC) -MM $(CFLAGS) $(SDL_CFLAGS) $(filter-out %.h,$^) 1>.depend
-@@ -239,6 +256,7 @@
- 	$(MAKE) -C libavformat clean
+@@ -249,6 +265,7 @@
+ 	$(MAKE) -C libavdevice clean
  	$(MAKE) -C libpostproc clean
  	$(MAKE) -C libswscale  clean
 +	$(MAKE) -C libavfilter clean
  	rm -f *.o *~ .libs gmon.out TAGS $(ALLPROGS) $(ALLPROGS_G) \
  	   output_example$(EXESUF) qt-faststart$(EXESUF) cws2fws$(EXESUF)
  	rm -f doc/*.html doc/*.pod doc/*.1
-@@ -252,6 +270,7 @@
- 	$(MAKE) -C libavformat distclean
+@@ -263,6 +280,7 @@
+ 	$(MAKE) -C libavdevice distclean
  	$(MAKE) -C libpostproc distclean
  	$(MAKE) -C libswscale  distclean
 +	$(MAKE) -C libavfilter distclean
