@@ -1,8 +1,8 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 10755)
+--- ffplay.c	(revision 11113)
 +++ ffplay.c	(working copy)
-@@ -1341,49 +1341,63 @@
+@@ -1343,49 +1343,63 @@
      avcodec_default_release_buffer(c, pic);
  }
  
@@ -22,10 +22,9 @@ Index: ffplay.c
 -        }
 -        if (packet_queue_get(&is->videoq, pkt, 1) < 0)
 -            break;
--
 +    if (packet_queue_get(&is->videoq, pkt, 1) < 0)
 +        return -1;
-+    
+ 
          if(pkt->data == flush_pkt.data){
              avcodec_flush_buffers(is->video_st->codec);
 -            continue;

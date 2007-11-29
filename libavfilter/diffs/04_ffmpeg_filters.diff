@@ -1,10 +1,10 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 10755)
+--- ffmpeg.c	(revision 11113)
 +++ ffmpeg.c	(working copy)
-@@ -34,6 +34,10 @@
- #include "fifo.h"
+@@ -36,6 +36,10 @@
  #include "avstring.h"
+ #include "os_support.h"
  
 +#if ENABLE_AVFILTER
 +# include "avfilter.h"
@@ -13,7 +13,7 @@ Index: ffmpeg.c
  #if !defined(HAVE_GETRUSAGE) && defined(HAVE_GETPROCESSTIMES)
  #include <windows.h>
  #endif
-@@ -142,6 +146,7 @@
+@@ -140,6 +144,7 @@
  static int loop_input = 0;
  static int loop_output = AVFMT_NOOUTPUTLOOP;
  static int qp_hist = 0;
@@ -21,7 +21,7 @@ Index: ffmpeg.c
  
  static int intra_only = 0;
  static int audio_sample_rate = 44100;
-@@ -277,6 +282,11 @@
+@@ -276,6 +281,11 @@
                                  is not defined */
      int64_t       pts;       /* current pts */
      int is_start;            /* is 1 at the start and after a discontinuity */
@@ -33,7 +33,7 @@ Index: ffmpeg.c
  } AVInputStream;
  
  typedef struct AVInputFile {
-@@ -292,6 +302,241 @@
+@@ -291,6 +301,239 @@
  static struct termios oldtty;
  #endif
  
@@ -189,7 +189,7 @@ Index: ffmpeg.c
 +    AVCodecContext *icodec = ist->st->codec;
 +
 +    avfilter_init();
-+    
++
 +    if(!(ist->input_video_filter = avfilter_open(&input_filter,  "src")))
 +        return -1;
 +    if(!(ist->out_video_filter = avfilter_open(&output_filter, "out")))
@@ -239,8 +239,6 @@ Index: ffmpeg.c
 +            return -1;
 +        curr_filter = filt_scale;
 +    }
-+      
-+
 +
 +    if(vfilters) {
 +        if(!(filt_graph = avfilter_open(avfilter_get_by_name("graph"), NULL)))
@@ -275,7 +273,7 @@ Index: ffmpeg.c
  static void term_exit(void)
  {
  #ifdef HAVE_TERMIOS_H
-@@ -616,6 +861,13 @@
+@@ -621,6 +864,13 @@
          frame_hook_process(picture2, dec->pix_fmt, dec->width, dec->height,
                             1000000 * ist->pts / AV_TIME_BASE);
  
@@ -285,11 +283,11 @@ Index: ffmpeg.c
 +
 +    if (get_filtered_video_pic(ist->out_video_filter, picture2, &ist->pts) < 0)
 +        fprintf(stderr, "Error: get_filtered_video_pic failed!\n");
-+#endif    
++#endif
      if (picture != picture2)
          *picture = *picture2;
      *bufp = buf;
-@@ -726,6 +978,9 @@
+@@ -731,6 +981,9 @@
      if (nb_frames <= 0)
          return;
  
@@ -299,7 +297,7 @@ Index: ffmpeg.c
      if (ost->video_crop) {
          if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
              av_log(NULL, AV_LOG_ERROR, "error cropping picture\n");
-@@ -735,6 +990,7 @@
+@@ -740,6 +993,7 @@
      } else {
          formatted_picture = in_picture;
      }
@@ -307,7 +305,7 @@ Index: ffmpeg.c
  
      final_picture = formatted_picture;
      padding_src = formatted_picture;
-@@ -750,12 +1006,14 @@
+@@ -755,12 +1009,14 @@
          }
      }
  
@@ -322,7 +320,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1654,10 +1912,21 @@
+@@ -1696,10 +1952,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          exit(1);
                      }
@@ -344,7 +342,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3674,6 +3943,9 @@
+@@ -3784,6 +4051,9 @@
  #ifdef CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
