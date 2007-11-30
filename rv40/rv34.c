@@ -111,9 +111,9 @@ static void rv34_init_tables()
         for(j = 0; j < 4; j++)
             rv34_gen_vlc(rv34_inter_cbpvlc[i][j], CBP_VLC_SIZE, &inter_vlcs[i].cbp[0][j], rv34_cbp_code);
         for(j = 0; j < 2; j++){
-            rv34_gen_vlc(rv34_inter_firstpatvlc_pointers[i][j], FIRSTBLK_VLC_SIZE, &inter_vlcs[i].first_pattern[j], NULL);
-            rv34_gen_vlc(rv34_inter_secondpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].second_pattern[j], NULL);
-            rv34_gen_vlc(rv34_inter_thirdpatvlc_pointers[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].third_pattern[j], NULL);
+            rv34_gen_vlc(rv34_table_inter_firstpat [i][j], FIRSTBLK_VLC_SIZE, &inter_vlcs[i].first_pattern[j],  NULL);
+            rv34_gen_vlc(rv34_table_inter_secondpat[i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].second_pattern[j], NULL);
+            rv34_gen_vlc(rv34_table_intra_thirdpat [i][j], OTHERBLK_VLC_SIZE, &inter_vlcs[i].third_pattern[j],  NULL);
         }
         rv34_gen_vlc(rv34_inter_coeffvlc[i], COEFF_VLC_SIZE, &inter_vlcs[i].coefficient, NULL);
     }
