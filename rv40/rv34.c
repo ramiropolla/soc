@@ -96,8 +96,8 @@ static void rv34_init_tables()
     for(i = 0; i < NUM_INTRA_TABLES; i++){
         for(j = 0; j < 2; j++){
             rv34_gen_vlc(rv34_table_intra_cbppat      [i][j], CBPPAT_VLC_SIZE,   &intra_vlcs[i].cbppattern[j],     NULL);
-            rv34_gen_vlc(rv34_table_intra_secondpatvlc[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].second_pattern[j], NULL);
-            rv34_gen_vlc(rv34_table_intra_thirdpatvlc [i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].third_pattern[j],  NULL);
+            rv34_gen_vlc(rv34_table_intra_secondpat[i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].second_pattern[j], NULL);
+            rv34_gen_vlc(rv34_table_intra_thirdpat [i][j], OTHERBLK_VLC_SIZE, &intra_vlcs[i].third_pattern[j],  NULL);
             for(k = 0; k < 4; k++)
                 rv34_gen_vlc(rv34_table_intra_cbp[i][j+k*2],  CBP_VLC_SIZE,      &intra_vlcs[i].cbp[j][k],         rv34_cbp_code);
         }

@@ -2070,7 +2070,7 @@ static const uint8_t rv34_table_intra_firstpat[NUM_INTRA_TABLES][4][FIRSTBLK_VLC
 };
 
 
-static const uint8_t rv34_table_intra_secondpatvlc[NUM_INTRA_TABLES][2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_intra_secondpat[NUM_INTRA_TABLES][2][OTHERBLK_VLC_SIZE] = {
   {
     {
        0,  5, 10,  3,  6, 10,  7,  8,  9,  4,  6, 10,  6,  7,  9,  8,
@@ -2173,7 +2173,7 @@ static const uint8_t rv34_table_intra_secondpatvlc[NUM_INTRA_TABLES][2][OTHERBLK
   },
 };
 
-static const uint8_t rv34_table_intra_thirdpatvlc[NUM_INTRA_TABLES][2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_intra_thirdpat[NUM_INTRA_TABLES][2][OTHERBLK_VLC_SIZE] = {
   {
     {
        0,  5, 10,  3,  6, 10,  7,  8, 10,  4,  7, 10,  6,  7, 10,  8,
