@@ -34,7 +34,7 @@
 
 //#define DEBUG
 
-/** Translation of RV30/40 macroblock types to lavc ones */
+/** translation of RV30/40 macroblock types to lavc ones */
 static const int rv34_mb_type_to_lavc[12] = {
     MB_TYPE_INTRA, MB_TYPE_INTRA16x16, MB_TYPE_16x16,   MB_TYPE_8x8,
     MB_TYPE_16x16, MB_TYPE_16x16,      MB_TYPE_SKIP,    MB_TYPE_DIRECT2,
@@ -51,7 +51,7 @@ static VLC omega_part_vlc;
  */
 
 /**
- * Generate VLC from codeword lengths
+ * Generate VLC from codeword lengths.
  * @param bits   codeword lengths (zeroes are accepted)
  * @param size   length of input data
  * @param insyms symbols for input codes (NULL for default ones)
@@ -87,7 +87,7 @@ static void rv34_gen_vlc(const uint8_t *bits, int size, VLC *vlc, const uint8_t 
 }
 
 /**
- * Initialize all tables
+ * Initialize all tables.
  */
 static void rv34_init_tables()
 {
@@ -134,7 +134,7 @@ static void rv34_init_tables()
 
 /**
  * Real Video 4.0 inverse transform
- * Code is almost the same as in SVQ3, only scaling is different
+ * Code is almost the same as in SVQ3, only scaling is different.
  */
 static void rv34_intra_inv_transform(DCTELEM *block, const int offset){
     int temp[16];
@@ -170,7 +170,7 @@ static void rv34_intra_inv_transform(DCTELEM *block, const int offset){
  * RealVideo 3.0/4.0 inverse transform - special version
  *
  * Code is almost the same but final coefficients are multiplied by 1.5
- * and have no rounding
+ * and have no rounding.
  */
 static void rv34_intra_inv_transform_noround(DCTELEM *block, const int offset){
     int temp[16];
@@ -211,7 +211,7 @@ static void rv34_intra_inv_transform_noround(DCTELEM *block, const int offset){
  */
 
 /**
- * Decode coded block pattern
+ * Decode coded block pattern.
  */
 static int rv34_decode_cbp(GetBitContext *gb, RV34VLC *vlc, int table)
 {
@@ -244,7 +244,7 @@ static int rv34_decode_cbp(GetBitContext *gb, RV34VLC *vlc, int table)
 }
 
 /**
- * Get one coefficient value from bistream and store it
+ * Get one coefficient value from bistream and store it.
  */
 static inline void decode_coeff(DCTELEM *dst, int coef, int esc, GetBitContext *gb, VLC* vlc)
 {
@@ -264,7 +264,7 @@ static inline void decode_coeff(DCTELEM *dst, int coef, int esc, GetBitContext *
 }
 
 /**
- * Decode 2x2 subblock of coefficients
+ * Decode 2x2 subblock of coefficients.
  */
 static inline void decode_subblock(DCTELEM *dst, int code, const int is_block2, GetBitContext *gb, VLC *vlc)
 {
@@ -286,7 +286,7 @@ static inline void decode_subblock(DCTELEM *dst, int code, const int is_block2, 
 }
 
 /**
- * Decode coefficients for 4x4 block
+ * Decode coefficients for 4x4 block.
  *
  * This is done by filling 2x2 subblocks with decoded coefficients
  * in this order (the same for subblocks and subblock coefficients):
@@ -322,7 +322,7 @@ static inline void rv34_decode_block(DCTELEM *dst, GetBitContext *gb, RV34VLC *r
 }
 
 /**
- * Dequantize ordinary 4x4 block
+ * Dequantize ordinary 4x4 block.
  * @todo optimize
  */
 static inline void rv34_dequant4x4(DCTELEM *block, int offset, int Qdc, int Q)
@@ -337,7 +337,7 @@ static inline void rv34_dequant4x4(DCTELEM *block, int offset, int Qdc, int Q)
 }
 
 /**
- * Dequantize 4x4 block of DC values for 16x16 macroblock
+ * Dequantize 4x4 block of DC values for 16x16 macroblock.
  * @todo optimize
  */
 static inline void rv34_dequant4x4_16x16(DCTELEM *block, int offset, int Qdc, int Q)
@@ -366,7 +366,7 @@ static inline int decode210(GetBitContext *gb){
 }
 
 /**
- * Decode staring slice position
+ * Decode staring slice position.
  * @todo maybe replace with ff_h263_decode_mba() ?
  */
 int ff_rv34_get_start_offset(GetBitContext *gb, int mb_size)
@@ -379,7 +379,7 @@ int ff_rv34_get_start_offset(GetBitContext *gb, int mb_size)
 }
 
 /**
- * Select VLC set for decoding from current quantizer, modifier and frame type
+ * Select VLC set for decoding from current quantizer, modifier and frame type.
  */
 static inline RV34VLC* choose_vlc_set(int quant, int mod, int type)
 {
@@ -391,10 +391,10 @@ static inline RV34VLC* choose_vlc_set(int quant, int mod, int type)
 
 /**
  * Decode variable-length code constructed from variable-length codes
- * similar to Even-Rodeh and Elias Omega codes
+ * similar to Even-Rodeh and Elias Omega codes.
  *
  * Code is constructed from bit chunks of even length (odd length means end of code)
- * and chunks are coded with variable-length codes too
+ * and chunks are coded with variable-length codes too.
  */
 int ff_rv34_get_omega(GetBitContext *gb)
 {
@@ -411,10 +411,10 @@ int ff_rv34_get_omega(GetBitContext *gb)
 
 /**
  * Decode signed integer variable-length code constructed from variable-length codes
- * similar to Even-Rodeh and Elias Omega codes
+ * similar to Even-Rodeh and Elias Omega codes.
  *
  * Code is constructed from bit chunks of even length (odd length means end of code)
- * and chunks are coded with variable-length codes too
+ * and chunks are coded with variable-length codes too.
  */
 int ff_rv34_get_omega_signed(GetBitContext *gb)
 {
@@ -428,7 +428,7 @@ int ff_rv34_get_omega_signed(GetBitContext *gb)
 }
 
 /**
- * Decode quantizer difference and return modified quantizer
+ * Decode quantizer difference and return modified quantizer.
  */
 static inline int rv34_decode_dquant(GetBitContext *gb, int quant)
 {
@@ -445,18 +445,18 @@ static inline int rv34_decode_dquant(GetBitContext *gb, int quant)
  * @{
  */
 
-/** Macroblock partition width in 8x8 blocks */
+/** macroblock partition width in 8x8 blocks */
 static const uint8_t part_sizes_w[RV34_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 2, 1, 2, 2 };
 
-/** Macroblock partition height in 8x8 blocks */
+/** macroblock partition height in 8x8 blocks */
 static const uint8_t part_sizes_h[RV34_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2 };
 
 /**
- * Motion vectors prediction
+ * motion vectors prediction
  *
  * Motion prediction performed for the block by using median prediction of
- * motion vector from the left, top and right top blocks but in corener cases
- * some other vectors may be used instead
+ * motion vector from the left, top and right top blocks but in corner cases
+ * some other vectors may be used instead.
  */
 static void rv34_pred_mv(RV34DecContext *r, int block_type, int subblock_no)
 {
@@ -684,7 +684,7 @@ static void rv34_pred_mv_b(RV34DecContext *r, int block_type)
 }
 
 /**
- * Generic motion compensation function - hopefully compiler will optimize it for each case
+ * Generic motion compensation function - hopefully compiler will optimize it for each case.
  *
  * @param r decoder context
  * @param block_type type of the current block
@@ -874,7 +874,7 @@ static inline void rv34_mc_b_interp(RV34DecContext *r, const int block_type)
     s->dsp.avg_h264_chroma_pixels_tab[0]   (s->dest[2], srcV, s->uvlinesize, 8, uvmx, uvmy);
 }
 
-/** Number of motion vectors in each macroblock type */
+/** number of motion vectors in each macroblock type */
 static const int num_mvs[RV34_MB_TYPES] = { 0, 0, 1, 4, 1, 1, 0, 0, 2, 2, 2, 1 };
 
 /**
@@ -958,19 +958,19 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
  * @defgroup recons Macroblock reconstruction functions
  * @{
  */
-/** Mapping of RV30/40 intra prediction types to standard H.264 types */
+/** mapping of RV30/40 intra prediction types to standard H.264 types */
 static const int ittrans[9] = {
  DC_PRED, VERT_PRED, HOR_PRED, DIAG_DOWN_RIGHT_PRED, DIAG_DOWN_LEFT_PRED,
  VERT_RIGHT_PRED, VERT_LEFT_PRED, HOR_UP_PRED, HOR_DOWN_PRED,
 };
 
-/** Mapping of RV30/40 intra 16x16 prediction types to standard H.264 types */
+/** mapping of RV30/40 intra 16x16 prediction types to standard H.264 types */
 static const int ittrans16[4] = {
  DC_PRED8x8, VERT_PRED8x8, HOR_PRED8x8, PLANE_PRED8x8,
 };
 
 /**
- * Perform 4x4 intra prediction
+ * Perform 4x4 intra prediction.
  */
 static void rv34_pred_4x4_block(RV34DecContext *r, uint8_t *dst, int stride, int itype, int no_up, int no_left, int no_down, int no_right)
 {
@@ -1160,8 +1160,9 @@ static int rv34_decode_mb_header(RV34DecContext *r, int *intra_types)
  * @addtogroup recons
  * @{
  */
-/** Mask for retrieving all bits in coded block pattern
- * corresponding to one 8x8 block.
+/**
+ * mask for retrieving all bits in coded block pattern
+ * corresponding to one 8x8 block
  */
 #define LUMA_CBP_BLOCK_MASK 0x303
 
@@ -1358,8 +1359,8 @@ static int rv34_decode_slice(RV34DecContext *r, int size, int end, int *last)
 /** @} */ // recons group end
 
 /**
- * Initialize decoder
- * @todo Maybe redone in some other way
+ * Initialize decoder.
+ * @todo Maybe redone in some other way.
  */
 int ff_rv34_decode_init(AVCodecContext *avctx)
 {
