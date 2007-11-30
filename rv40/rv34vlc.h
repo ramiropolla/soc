@@ -3890,7 +3890,7 @@ static const uint8_t rv34_table_inter_secondpat[NUM_INTER_TABLES][2][OTHERBLK_VL
   },
 };
 
-static const uint8_t rv34_table_intra_thirdpat[NUM_INTER_TABLES][2][OTHERBLK_VLC_SIZE] = {
+static const uint8_t rv34_table_inter_thirdpat[NUM_INTER_TABLES][2][OTHERBLK_VLC_SIZE] = {
   {
     {
        0,  5,  8,  3,  6,  9,  6,  7,  9,  4,  6,  9,  6,  7,  9,  8,
