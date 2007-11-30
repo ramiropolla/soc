@@ -366,7 +366,7 @@ static inline int decode210(GetBitContext *gb){
 }
 
 /**
- * Decode staring slice position.
+ * Decode starting slice position.
  * @todo maybe replace with ff_h263_decode_mba() ?
  */
 int ff_rv34_get_start_offset(GetBitContext *gb, int mb_size)
@@ -452,10 +452,10 @@ static const uint8_t part_sizes_w[RV34_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 2, 
 static const uint8_t part_sizes_h[RV34_MB_TYPES] = { 2, 2, 2, 1, 2, 2, 2, 2, 1, 2, 2, 2 };
 
 /**
- * motion vectors prediction
+ * motion vector prediction
  *
  * Motion prediction performed for the block by using median prediction of
- * motion vector from the left, top and right top blocks but in corner cases
+ * motion vectors from the left, top and right top blocks but in corner cases
  * some other vectors may be used instead.
  */
 static void rv34_pred_mv(RV34DecContext *r, int block_type, int subblock_no)
