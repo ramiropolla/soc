@@ -1360,7 +1360,6 @@ static int rv34_decode_slice(RV34DecContext *r, int size, int end, int *last)
 
 /**
  * Initialize decoder.
- * @todo Maybe redone in some other way.
  */
 int ff_rv34_decode_init(AVCodecContext *avctx)
 {
