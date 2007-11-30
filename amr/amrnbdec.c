@@ -1024,7 +1024,6 @@ int qsort_compare(const int *a, const int *b) {
 
 static int median(int *values, int n) {
     int temp[9]; // largest n used for median calculation is 9
-    int i;
 
     memcpy(values, temp, n*sizeof(int));
 
