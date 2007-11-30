@@ -69,6 +69,9 @@ typedef struct AMRContext {
 
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
 
+    uint8_t           ir_filter_strength[2]; ///< impulse response filter strength; 0 - strong, 1 - medium, 2 - none
+    float                        *ir_filter; ///< pointer to impulse response filter data
+
 } AMRContext;
 
 
@@ -822,6 +825,75 @@ static inline float av_clipf(float a, float min, float max) {
         return a;
 }
 
+/**
+ * Comparison function for use with qsort
+ *
+ * @param a             First value for comparison
+ * @param b             Second value for comparison
+ * @return a-b : the result of the comparison
+ */
+
+float qsort_compare(const float *a, const float *b) {
+    return (float)(*a - *b);
+}
+
+/**
+ * Find the median of some float values
+ *
+ * @param values        pointer to the values of which to find the median
+ * @param n             number of values
+ * @return Returns the median value
+ */
+
+static float medianf(float *values, int n) {
+    float temp[9]; // largest n used for median calculation is 9
+
+    memcpy(values, temp, n*sizeof(float));
+
+    qsort(temp, n, sizeof(float), qsort_compare);
+
+    if(n&1) {
+        return                     temp[ n>>1 ];
+    }else {
+        return (temp[ (n>>1)-1 ] + temp[ n>>1 ])/2.0;
+    }
+}
+
+/**
+ * Circularly convolve the fixed vector with a phase dispersion impulse response
+ * filter
+ *
+ * @param fixed_vector  pointer to the fixed vector
+ * @param ir_filter     pointer to the impulse response filter
+ */
+
+static void convolve_circ(float *fixed_vector, float *ir_filter) {
+    int i, j, k;
+    int npulses = 0, pulse_positions[AMR_SUBFRAME_SIZE];
+    float fixed_vector_temp[AMR_SUBFRAME_SIZE];
+
+    memcpy(fixed_vector_temp, fixed_vector, AMR_SUBFRAME_SIZE*sizeof(float));
+    memset(fixed_vector, 0, AMR_SUBFRAME_SIZE*sizeof(float));
+
+    // Find non-zero pulses (most are zero)
+    for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
+        if(fixed_vector_temp[i]) {
+            pulse_positions[npulses] = i;
+            npulses++;
+        }
+    }
+
+    for(i=0; i<npulses; i++) {
+        k = 0;
+        for(j=pulse_positions[i]; j<AMR_SUBFRAME_SIZE; j++) {
+            fixed_vector[j] += fixed_vector_temp[pulse_positions[i]]*ir_filter[k++];
+        }
+        for(j=0; j<pulse_positions[i]; j++) {
+            fixed_vector[j] += fixed_vector_temp[pulse_positions[i]]*ir_filter[k++];
+        }
+    }
+}
+
 /*** end of pre-processing functions ***/
 
 
@@ -992,6 +1064,43 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
                 // calculate the smoothed fixed gain
                 p->fixed_gain[4] = smoothing_factor*p->fixed_gain[4] + (1.0 - smoothing_factor)*fixed_gain_mean;
             }
+        }
+
+        // anti-sparseness processing
+        if(p->pitch_gain < 0.6) {
+            // strong filtering
+            p->ir_filter_strength[1] = 0;
+        }else if(p->pitch_gain < 0.9) {
+            // medium filtering
+            p->ir_filter_strength[1] = 1;
+        }else {
+            // no filtering
+            p->ir_filter_strength[1] = 2;
+        }
+
+        // detect 'onset'
+        if(p->fixed_gain[4] > 2.0*p->fixed_gain[3]) {
+            p->ir_filter_strength[1] = FFMIN(p->ir_filter_strength[1] + 1, 2);
+        }else if(p->ir_filter_strength[1] == 0 && medianf(p->pitch_gain, 5) >= 0.6 &&
+                    p->ir_filter_strength[1] > p->ir_filter_strength[0] + 1) {
+            p->ir_filter_strength[1] = p->ir_filter_strength[0] + 1;
+        }
+
+        if(p->cur_frame_mode != MODE_74 && p->cur_frame_mode != MODE_102 &&
+                p->cur_frame_mode != MODE_122 && p->ir_filter_strength[1] < 2) {
+            // assign the correct impulse response
+            if(p->ir_filter_strength[1] == 1) {
+                p->ir_filter = ir_filter_medium;
+            }else {
+                if(p->cur_frame_mode != MODE_795) {
+                    p->ir_filter = ir_filter_strong;
+                }else {
+                    p->ir_filter = ir_filter_strong_MODE_795;
+                }
+            }
+
+            // circularly convolve the fixed vector with the impulse response
+            convolve_circ(p->fixed_vector, p->ir_filter);
         }
 
 /*** end of pre-processing ***/
