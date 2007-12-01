@@ -128,7 +128,6 @@ static int rv40_parse_slice_header(RV34DecContext *r, GetBitContext *gb, SliceIn
     mb_size = ((w + 15) >> 4) * ((h + 15) >> 4);
     mb_bits = ff_rv34_get_start_offset(gb, mb_size);
     si->start = get_bits(gb, mb_bits);
-    si->header_size = get_bits_count(gb);
 
     return 0;
 }

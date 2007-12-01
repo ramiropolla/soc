@@ -73,7 +73,6 @@ typedef struct SliceInfo{
     int quant;             ///< quantizer used for this slice
     int vlc_set;           ///< VLCs used for this slice
     int start, end;        ///< start and end macroblocks of the slice
-    int header_size;       ///< header size in bits
     int width;             ///< coded width
     int height;            ///< coded height
 }SliceInfo;
