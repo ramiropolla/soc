@@ -291,7 +291,7 @@ static inline void rv40_weak_loop_filter(uint8_t *src, const int step,
  * parameter  sub - index of the value with coefficient = 25
  * parameter last - index of the value with coefficient 25 or 51
  */
-#define RV34_STRONG_FILTER(src, step, start, last, sub) \
+#define RV40_STRONG_FILTER(src, step, start, last, sub) \
      26*(src[start*step] + src[(start+1)*step] + src[(start+2)*step] + src[(start+3)*step] + src[last*step]) - src[last*step] - src[sub*step]
 /**
  * Deblocking filter, the alternated version from JVT-A003r1 H.26L draft.
@@ -343,8 +343,8 @@ static inline void rv40_adaptive_loop_filter(uint8_t *src, const int step, const
             sflag = (mult * FFABS(t)) >> 7;
             if(sflag > 1) continue;
 
-            p0 = (RV34_STRONG_FILTER(src, step, -3, 1, -3) + rv40_dither_l[dmode + i]) >> 7;
-            p1 = (RV34_STRONG_FILTER(src, step, -1, 3, -1) + rv40_dither_r[dmode + i]) >> 7;
+            p0 = (RV40_STRONG_FILTER(src, step, -3, 1, -3) + rv40_dither_l[dmode + i]) >> 7;
+            p1 = (RV40_STRONG_FILTER(src, step, -1, 3, -1) + rv40_dither_r[dmode + i]) >> 7;
             if(!sflag){
                 src[-1*step] = p0;
                 src[ 0*step] = p1;
@@ -358,8 +358,8 @@ static inline void rv40_adaptive_loop_filter(uint8_t *src, const int step, const
                 else
                     src[ 0*step] = src[-1*step];
             }
-            p0 = (RV34_STRONG_FILTER(src, step, -4, 0, -4) + rv40_dither_l[dmode + i]) >> 7;
-            p1 = (RV34_STRONG_FILTER(src, step, -1, 3, -1) + rv40_dither_r[dmode + i]) >> 7;
+            p0 = (RV40_STRONG_FILTER(src, step, -4, 0, -4) + rv40_dither_l[dmode + i]) >> 7;
+            p1 = (RV40_STRONG_FILTER(src, step, -1, 3, -1) + rv40_dither_r[dmode + i]) >> 7;
             if(!sflag){
                 src[-2*step] = p0;
                 src[ 1*step] = p1;
@@ -374,8 +374,8 @@ static inline void rv40_adaptive_loop_filter(uint8_t *src, const int step, const
                     src[ 1*step] += v88;
             }
             if(!chroma){
-                src[-3*step] = (RV34_STRONG_FILTER(src, step, -4, -1, -3) + 64) >> 7;
-                src[ 2*step] = (RV34_STRONG_FILTER(src, step,  0,  0,  2) + 64) >> 7;
+                src[-3*step] = (RV40_STRONG_FILTER(src, step, -4, -1, -3) + 64) >> 7;
+                src[ 2*step] = (RV40_STRONG_FILTER(src, step,  0,  0,  2) + 64) >> 7;
             }
         }
     }else if(llim0 == 3 && llim1 == 3)
