@@ -126,12 +126,8 @@ static void rv34_init_tables()
  * @{
  */
 
-/**
- * Real Video 4.0 inverse transform
- * Code is almost the same as in SVQ3, only scaling is different.
- */
-static void rv34_intra_inv_transform(DCTELEM *block, const int offset){
-    int temp[16];
+static void rv34_row_transform(int temp[16], DCTELEM *block, const int offset)
+{
     int i;
 
     for(i=0; i<4; i++){
@@ -145,6 +141,17 @@ static void rv34_intra_inv_transform(DCTELEM *block, const int offset){
         temp[4*i+2]= z1-z2;
         temp[4*i+3]= z0-z3;
     }
+}
+
+/**
+ * Real Video 4.0 inverse transform
+ * Code is almost the same as in SVQ3, only scaling is different.
+ */
+static void rv34_intra_inv_transform(DCTELEM *block, const int offset){
+    int temp[16];
+    int i;
+
+    rv34_row_transform(temp, block, offset);
 
     for(i=0; i<4; i++){
         const int z0= 13*(temp[4*0+i] +    temp[4*2+i]) + 0x200;
@@ -170,17 +177,7 @@ static void rv34_intra_inv_transform_noround(DCTELEM *block, const int offset){
     int temp[16];
     int i;
 
-    for(i=0; i<4; i++){
-        const int z0= 13*(block[offset+i+8*0] +    block[offset+i+8*2]);
-        const int z1= 13*(block[offset+i+8*0] -    block[offset+i+8*2]);
-        const int z2=  7* block[offset+i+8*1] - 17*block[offset+i+8*3];
-        const int z3= 17* block[offset+i+8*1] +  7*block[offset+i+8*3];
-
-        temp[4*i+0]= z0+z3;
-        temp[4*i+1]= z1+z2;
-        temp[4*i+2]= z1-z2;
-        temp[4*i+3]= z0-z3;
-    }
+    rv34_row_transform(temp, block, offset);
 
     for(i=0; i<4; i++){
         const int z0= 13*(temp[4*0+i] +    temp[4*2+i]);
