@@ -209,7 +209,7 @@ static int rv40_decode_mb_info(RV34DecContext *r)
     int count = 0;
 
     if(!r->s.mb_skip_run)
-        r->s.mb_skip_run = ff_rv34_get_omega(gb);
+        r->s.mb_skip_run = ff_rv34_get_gamma(gb);
 
     if(--r->s.mb_skip_run)
          return RV34_MB_SKIP;

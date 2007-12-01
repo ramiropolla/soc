@@ -386,7 +386,7 @@ static inline RV34VLC* choose_vlc_set(int quant, int mod, int type)
 /**
  * Decode Levenstein (also known as Elias Gamma) code.
  */
-int ff_rv34_get_omega(GetBitContext *gb)
+int ff_rv34_get_gamma(GetBitContext *gb)
 {
     int code = 1;
 
@@ -399,11 +399,11 @@ int ff_rv34_get_omega(GetBitContext *gb)
 /**
  * Decode Levenstein (also known as Elias Gamma) code as signed integer.
  */
-int ff_rv34_get_omega_signed(GetBitContext *gb)
+int ff_rv34_get_gamma_signed(GetBitContext *gb)
 {
     int code;
 
-    code = ff_rv34_get_omega(gb);
+    code = ff_rv34_get_gamma(gb);
     if(code & 1)
         return -(code >> 1);
     else
@@ -872,8 +872,8 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
 
     memset(r->dmv, 0, sizeof(r->dmv));
     for(i = 0; i < num_mvs[block_type]; i++){
-        r->dmv[i][0] = ff_rv34_get_omega_signed(gb);
-        r->dmv[i][1] = ff_rv34_get_omega_signed(gb);
+        r->dmv[i][0] = ff_rv34_get_gamma_signed(gb);
+        r->dmv[i][1] = ff_rv34_get_gamma_signed(gb);
     }
     switch(block_type){
     case RV34_MB_TYPE_INTRA:

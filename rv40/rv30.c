@@ -71,7 +71,7 @@ static int rv30_decode_intra_types(RV34DecContext *r, GetBitContext *gb, int *ds
     for(i = 0; i < 4; i++, dst += r->s.b4_stride){
         ptr = dst;
         for(j = 0; j < 4; j+= 2){
-            code = (ff_rv34_get_omega(gb) - 1) << 1;
+            code = (ff_rv34_get_gamma(gb) - 1) << 1;
             if(code >= 81*2){
                 av_log(r->s.avctx, AV_LOG_ERROR, "Incorrect intra prediction code\n");
                 return -1;
@@ -101,7 +101,7 @@ static int rv30_decode_mb_info(RV34DecContext *r)
     GetBitContext *gb = &s->gb;
     int code;
 
-    code = ff_rv34_get_omega(gb) - 1;
+    code = ff_rv34_get_gamma(gb) - 1;
     if(code > 11){
         av_log(s->avctx, AV_LOG_ERROR, "Incorrect MB type code\n");
         return -1;
