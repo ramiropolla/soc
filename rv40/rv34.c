@@ -631,14 +631,8 @@ static void rv34_pred_mv_b(RV34DecContext *r, int block_type)
     switch(block_type){
     case RV34_MB_B_FORWARD:
         rv34_pred_b_vector(A[0], B[0], C[0], no_A[0], no_B[0], no_C[0], &mx[0], &my[0]);
-        r->dmv[1][0] = 0;
-        r->dmv[1][1] = 0;
         break;
     case RV34_MB_B_BACKWARD:
-        r->dmv[1][0] = r->dmv[0][0];
-        r->dmv[1][1] = r->dmv[0][1];
-        r->dmv[0][0] = 0;
-        r->dmv[0][1] = 0;
         rv34_pred_b_vector(A[1], B[1], C[1], no_A[1], no_B[1], no_C[1], &mx[1], &my[1]);
         break;
     case RV34_MB_B_BIDIR:
@@ -664,7 +658,7 @@ static void rv34_pred_mv_b(RV34DecContext *r, int block_type)
 }
 
 /**
- * Generic motion compensation function - hopefully compiler will optimize it for each case.
+ * generic motion compensation function
  *
  * @param r decoder context
  * @param block_type type of the current block
@@ -676,18 +670,20 @@ static void rv34_pred_mv_b(RV34DecContext *r, int block_type)
  */
 static inline void rv34_mc(RV34DecContext *r, const int block_type,
                           const int xoff, const int yoff, int mv_off,
-                          const int width, const int height)
+                          const int width, const int height, int dir,
+                          qpel_mc_func (*qpel_mc)[16],
+                          h264_chroma_mc_func (*chroma_mc))
 {
     MpegEncContext *s = &r->s;
     uint8_t *Y, *U, *V, *srcY, *srcU, *srcV;
     int dxy, mx, my, uvmx, uvmy, src_x, src_y, uvsrc_x, uvsrc_y;
     int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride + mv_off;
 
-    mx = s->current_picture_ptr->motion_val[0][mv_pos][0];
-    my = s->current_picture_ptr->motion_val[0][mv_pos][1];
-    srcY = s->last_picture_ptr->data[0];
-    srcU = s->last_picture_ptr->data[1];
-    srcV = s->last_picture_ptr->data[2];
+    mx = s->current_picture_ptr->motion_val[dir][mv_pos][0];
+    my = s->current_picture_ptr->motion_val[dir][mv_pos][1];
+    srcY = dir ? s->next_picture_ptr->data[0] : s->last_picture_ptr->data[0];
+    srcU = dir ? s->next_picture_ptr->data[1] : s->last_picture_ptr->data[1];
+    srcV = dir ? s->next_picture_ptr->data[2] : s->last_picture_ptr->data[2];
     src_x = s->mb_x * 16 + xoff + (mx >> 2);
     src_y = s->mb_y * 16 + yoff + (my >> 2);
     uvsrc_x = s->mb_x * 8 + (xoff >> 1) + (mx >> 3);
@@ -717,141 +713,44 @@ static inline void rv34_mc(RV34DecContext *r, const int block_type,
     U = s->dest[1] + (xoff>>1) + (yoff>>1)*s->uvlinesize;
     V = s->dest[2] + (xoff>>1) + (yoff>>1)*s->uvlinesize;
     if(block_type == RV34_MB_P_16x8){
-        s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
+        qpel_mc[1][dxy](Y, srcY, s->linesize);
         Y    += 8;
         srcY += 8;
-        s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
-        s->dsp.put_h264_chroma_pixels_tab[0]   (U, srcU, s->uvlinesize, 4, uvmx, uvmy);
-        s->dsp.put_h264_chroma_pixels_tab[0]   (V, srcV, s->uvlinesize, 4, uvmx, uvmy);
+        qpel_mc[1][dxy](Y, srcY, s->linesize);
+        chroma_mc[0]   (U, srcU, s->uvlinesize, 4, uvmx, uvmy);
+        chroma_mc[0]   (V, srcV, s->uvlinesize, 4, uvmx, uvmy);
     }else if(block_type == RV34_MB_P_8x16){
-        s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
+        qpel_mc[1][dxy](Y, srcY, s->linesize);
         Y    += 8 * s->linesize;
         srcY += 8 * s->linesize;
-        s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
-        s->dsp.put_h264_chroma_pixels_tab[1]   (U, srcU, s->uvlinesize, 8, uvmx, uvmy);
-        s->dsp.put_h264_chroma_pixels_tab[1]   (V, srcV, s->uvlinesize, 8, uvmx, uvmy);
+        qpel_mc[1][dxy](Y, srcY, s->linesize);
+        chroma_mc[1]   (U, srcU, s->uvlinesize, 8, uvmx, uvmy);
+        chroma_mc[1]   (V, srcV, s->uvlinesize, 8, uvmx, uvmy);
     }else if(block_type == RV34_MB_P_8x8){
-        s->dsp.put_h264_qpel_pixels_tab[1][dxy](Y, srcY, s->linesize);
-        s->dsp.put_h264_chroma_pixels_tab[1]   (U, srcU, s->uvlinesize, 4, uvmx, uvmy);
-        s->dsp.put_h264_chroma_pixels_tab[1]   (V, srcV, s->uvlinesize, 4, uvmx, uvmy);
+        qpel_mc[1][dxy](Y, srcY, s->linesize);
+        chroma_mc[1]   (U, srcU, s->uvlinesize, 4, uvmx, uvmy);
+        chroma_mc[1]   (V, srcV, s->uvlinesize, 4, uvmx, uvmy);
     }else{
-        s->dsp.put_h264_qpel_pixels_tab[0][dxy](Y, srcY, s->linesize);
-        s->dsp.put_h264_chroma_pixels_tab[0]   (U, srcU, s->uvlinesize, 8, uvmx, uvmy);
-        s->dsp.put_h264_chroma_pixels_tab[0]   (V, srcV, s->uvlinesize, 8, uvmx, uvmy);
+        qpel_mc[0][dxy](Y, srcY, s->linesize);
+        chroma_mc[0]   (U, srcU, s->uvlinesize, 8, uvmx, uvmy);
+        chroma_mc[0]   (V, srcV, s->uvlinesize, 8, uvmx, uvmy);
     }
 }
 
-/**
- * B-frame specific motion compensation function
- *
- * @param r decoder context
- * @param block_type type of the current block
- */
-static inline void rv34_mc_b(RV34DecContext *r, const int block_type)
+static void rv34_mc_1mv(RV34DecContext *r, const int block_type,
+                        const int xoff, const int yoff, int mv_off,
+                        const int width, const int height, int dir)
 {
-    MpegEncContext *s = &r->s;
-    uint8_t *srcY, *srcU, *srcV;
-    int dxy, mx, my, uvmx, uvmy, src_x, src_y, uvsrc_x, uvsrc_y;
-    int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride;
-
-    if(block_type != RV34_MB_B_BACKWARD){
-        mx = s->current_picture_ptr->motion_val[0][mv_pos][0];
-        my = s->current_picture_ptr->motion_val[0][mv_pos][1];
-        srcY = s->last_picture_ptr->data[0];
-        srcU = s->last_picture_ptr->data[1];
-        srcV = s->last_picture_ptr->data[2];
-    }else{
-        mx = s->current_picture_ptr->motion_val[1][mv_pos][0];
-        my = s->current_picture_ptr->motion_val[1][mv_pos][1];
-        srcY = s->next_picture_ptr->data[0];
-        srcU = s->next_picture_ptr->data[1];
-        srcV = s->next_picture_ptr->data[2];
-    }
-    if(block_type == RV34_MB_B_DIRECT){
-        mx += (s->next_picture_ptr->motion_val[0][mv_pos][0] + 1) >> 1;
-        my += (s->next_picture_ptr->motion_val[0][mv_pos][1] + 1) >> 1;
-    }
-    src_x = s->mb_x * 16 + (mx >> 2);
-    src_y = s->mb_y * 16 + (my >> 2);
-    uvsrc_x = s->mb_x * 8 + (mx >> 3);
-    uvsrc_y = s->mb_y * 8 + (my >> 3);
-    srcY += src_y * s->linesize + src_x;
-    srcU += uvsrc_y * s->uvlinesize + uvsrc_x;
-    srcV += uvsrc_y * s->uvlinesize + uvsrc_x;
-    if(   (unsigned)(src_x - !!(mx&3)*2) > s->h_edge_pos - !!(mx&3)*2 - 16 - 3
-       || (unsigned)(src_y - !!(my&3)*2) > s->v_edge_pos - !!(my&3)*2 - 16 - 3){
-        uint8_t *uvbuf= s->edge_emu_buffer + 20 * s->linesize;
-
-        srcY -= 2 + 2*s->linesize;
-        ff_emulated_edge_mc(s->edge_emu_buffer, srcY, s->linesize, 16+4, 16+4,
-                            src_x - 2, src_y - 2, s->h_edge_pos, s->v_edge_pos);
-        srcY = s->edge_emu_buffer + 2 + 2*s->linesize;
-        ff_emulated_edge_mc(uvbuf     , srcU, s->uvlinesize, 8+1, 8+1,
-                            uvsrc_x, uvsrc_y, s->h_edge_pos >> 1, s->v_edge_pos >> 1);
-        ff_emulated_edge_mc(uvbuf + 16, srcV, s->uvlinesize, 8+1, 8+1,
-                            uvsrc_x, uvsrc_y, s->h_edge_pos >> 1, s->v_edge_pos >> 1);
-        srcU = uvbuf;
-        srcV = uvbuf + 16;
-    }
-    dxy = ((my & 3) << 2) | (mx & 3);
-    uvmx = mx & 6;
-    uvmy = my & 6;
-    s->dsp.put_h264_qpel_pixels_tab[0][dxy](s->dest[0], srcY, s->linesize);
-    s->dsp.put_h264_chroma_pixels_tab[0]   (s->dest[1], srcU, s->uvlinesize, 8, uvmx, uvmy);
-    s->dsp.put_h264_chroma_pixels_tab[0]   (s->dest[2], srcV, s->uvlinesize, 8, uvmx, uvmy);
+    rv34_mc(r, block_type, xoff, yoff, mv_off, width, height, dir,
+            r->s.dsp.put_h264_qpel_pixels_tab, r->s.dsp.put_h264_chroma_pixels_tab);
 }
 
-/**
- * B-frame specific motion compensation function - for direct/interpolated blocks
- *
- * @param r decoder context
- * @param block_type type of the current block
- */
-static inline void rv34_mc_b_interp(RV34DecContext *r, const int block_type)
+static void rv34_mc_2mv(RV34DecContext *r, const int block_type)
 {
-    MpegEncContext *s = &r->s;
-    uint8_t *srcY, *srcU, *srcV;
-    int dxy, mx, my, uvmx, uvmy, src_x, src_y, uvsrc_x, uvsrc_y;
-    int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride;
-
-    mx = s->current_picture_ptr->motion_val[1][mv_pos][0];
-    my = s->current_picture_ptr->motion_val[1][mv_pos][1];
-    if(block_type == RV34_MB_B_DIRECT){
-        mx -= s->next_picture_ptr->motion_val[0][mv_pos][0] >> 1;
-        my -= s->next_picture_ptr->motion_val[0][mv_pos][1] >> 1;
-    }
-    srcY = s->next_picture_ptr->data[0];
-    srcU = s->next_picture_ptr->data[1];
-    srcV = s->next_picture_ptr->data[2];
-
-    src_x = s->mb_x * 16 + (mx >> 2);
-    src_y = s->mb_y * 16 + (my >> 2);
-    uvsrc_x = s->mb_x * 8 + (mx >> 3);
-    uvsrc_y = s->mb_y * 8 + (my >> 3);
-    srcY += src_y * s->linesize + src_x;
-    srcU += uvsrc_y * s->uvlinesize + uvsrc_x;
-    srcV += uvsrc_y * s->uvlinesize + uvsrc_x;
-    if(   (unsigned)(src_x - !!(mx&3)*2) > s->h_edge_pos - !!(mx&3)*2 - 16 - 3
-       || (unsigned)(src_y - !!(my&3)*2) > s->v_edge_pos - !!(my&3)*2 - 16 - 3){
-        uint8_t *uvbuf= s->edge_emu_buffer + 20 * s->linesize;
-
-        srcY -= 2 + 2*s->linesize;
-        ff_emulated_edge_mc(s->edge_emu_buffer, srcY, s->linesize, 16+4, 16+4,
-                            src_x - 2, src_y - 2, s->h_edge_pos, s->v_edge_pos);
-        srcY = s->edge_emu_buffer + 2 + 2*s->linesize;
-        ff_emulated_edge_mc(uvbuf     , srcU, s->uvlinesize, 8+1, 8+1,
-                            uvsrc_x, uvsrc_y, s->h_edge_pos >> 1, s->v_edge_pos >> 1);
-        ff_emulated_edge_mc(uvbuf + 16, srcV, s->uvlinesize, 8+1, 8+1,
-                            uvsrc_x, uvsrc_y, s->h_edge_pos >> 1, s->v_edge_pos >> 1);
-        srcU = uvbuf;
-        srcV = uvbuf + 16;
-    }
-    dxy = ((my & 3) << 2) | (mx & 3);
-    uvmx = mx & 6;
-    uvmy = my & 6;
-    s->dsp.avg_h264_qpel_pixels_tab[0][dxy](s->dest[0], srcY, s->linesize);
-    s->dsp.avg_h264_chroma_pixels_tab[0]   (s->dest[1], srcU, s->uvlinesize, 8, uvmx, uvmy);
-    s->dsp.avg_h264_chroma_pixels_tab[0]   (s->dest[2], srcV, s->uvlinesize, 8, uvmx, uvmy);
+    rv34_mc(r, block_type, 0, 0, 0, 2, 2, 0,
+            r->s.dsp.put_h264_qpel_pixels_tab, r->s.dsp.put_h264_chroma_pixels_tab);
+    rv34_mc(r, block_type, 0, 0, 0, 2, 2, 1,
+            r->s.dsp.avg_h264_qpel_pixels_tab, r->s.dsp.avg_h264_chroma_pixels_tab);
 }
 
 /** number of motion vectors in each macroblock type */
@@ -885,23 +784,22 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
     case RV34_MB_SKIP:
         if(s->pict_type == P_TYPE){
             rv34_pred_mv(r, block_type, 0);
-            rv34_mc(r, block_type, 0, 0, 0, 2, 2);
+            rv34_mc_1mv (r, block_type, 0, 0, 0, 2, 2, 0);
             break;
         }
     case RV34_MB_B_DIRECT:
         rv34_pred_mv_b  (r, RV34_MB_B_DIRECT);
-        rv34_mc_b       (r, RV34_MB_B_DIRECT);
-        rv34_mc_b_interp(r, RV34_MB_B_DIRECT);
+        rv34_mc_2mv     (r, RV34_MB_B_DIRECT);
         break;
     case RV34_MB_P_16x16:
     case RV34_MB_P_MIX16x16:
         rv34_pred_mv(r, block_type, 0);
-        rv34_mc(r, block_type, 0, 0, 0, 2, 2);
+        rv34_mc_1mv (r, block_type, 0, 0, 0, 2, 2, 0);
         break;
     case RV34_MB_B_FORWARD:
     case RV34_MB_B_BACKWARD:
         rv34_pred_mv_b  (r, block_type);
-        rv34_mc_b       (r, block_type);
+        rv34_mc_1mv     (r, block_type, 0, 0, 0, 2, 2, block_type == RV34_MB_B_BACKWARD);
         break;
     case RV34_MB_P_16x8:
     case RV34_MB_P_8x16:
@@ -909,23 +807,22 @@ static int rv34_decode_mv(RV34DecContext *r, int block_type)
         rv34_pred_mv(r, block_type, 0);
         rv34_pred_mv(r, block_type, 1);
         if(block_type == RV34_MB_P_16x8){
-            rv34_mc(r, block_type, 0, 0, 0,            2, 1);
-            rv34_mc(r, block_type, 0, 8, s->b8_stride, 2, 1);
+            rv34_mc_1mv(r, block_type, 0, 0, 0,            2, 1, 0);
+            rv34_mc_1mv(r, block_type, 0, 8, s->b8_stride, 2, 1, 0);
         }
         if(block_type == RV34_MB_P_8x16){
-            rv34_mc(r, block_type, 0, 0, 0, 1, 2);
-            rv34_mc(r, block_type, 8, 0, 1, 1, 2);
+            rv34_mc_1mv(r, block_type, 0, 0, 0, 1, 2, 0);
+            rv34_mc_1mv(r, block_type, 8, 0, 1, 1, 2, 0);
         }
         if(block_type == RV34_MB_B_BIDIR){
             rv34_pred_mv_b  (r, block_type);
-            rv34_mc_b       (r, block_type);
-            rv34_mc_b_interp(r, block_type);
+            rv34_mc_2mv     (r, block_type);
         }
         break;
     case RV34_MB_P_8x8:
         for(i=0;i< 4;i++){
             rv34_pred_mv(r, block_type, i);
-            rv34_mc(r, block_type, (i&1)<<3, (i&2)<<2, (i&1)+(i>>1)*s->b8_stride, 1, 1);
+            rv34_mc_1mv (r, block_type, (i&1)<<3, (i&2)<<2, (i&1)+(i>>1)*s->b8_stride, 1, 1, 0);
         }
         break;
     }
