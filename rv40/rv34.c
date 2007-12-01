@@ -43,7 +43,6 @@ static const int rv34_mb_type_to_lavc[12] = {
 
 
 static RV34VLC intra_vlcs[NUM_INTRA_TABLES], inter_vlcs[NUM_INTER_TABLES];
-static VLC omega_part_vlc;
 
 /**
  * @defgroup vlc RV30/40 VLC generating functions
@@ -117,11 +116,6 @@ static void rv34_init_tables()
         }
         rv34_gen_vlc(rv34_inter_coeffvlc[i], COEFF_VLC_SIZE, &inter_vlcs[i].coefficient, NULL);
     }
-
-    init_vlc_sparse(&omega_part_vlc, OMEGA_BITS, NUM_OMEGA,
-                    omega_part_vlc_bits,  1, 1,
-                    omega_part_vlc_codes, 1, 1,
-                    omega_part_vlc_syms,  1, 1, INIT_VLC_USE_STATIC);
 }
 
 /** @} */ // vlc group
@@ -390,31 +384,20 @@ static inline RV34VLC* choose_vlc_set(int quant, int mod, int type)
 }
 
 /**
- * Decode variable-length code constructed from variable-length codes
- * similar to Even-Rodeh and Elias Omega codes.
- *
- * Code is constructed from bit chunks of even length (odd length means end of code)
- * and chunks are coded with variable-length codes too.
+ * Decode Levenstein (also known as Elias Gamma) code.
  */
 int ff_rv34_get_omega(GetBitContext *gb)
 {
-    int code = 1, t, tb;
+    int code = 1;
 
-    for(;;){
-        t = get_vlc2(gb, omega_part_vlc.table, OMEGA_BITS, 1);
-        tb = t >> 5;
-        code = (code << tb) | (t & 0xF);
-        if(t & 0x10) break;
+    while(!get_bits1(gb)){
+        code = (code << 1) | get_bits1(gb);
     }
     return code;
 }
 
 /**
- * Decode signed integer variable-length code constructed from variable-length codes
- * similar to Even-Rodeh and Elias Omega codes.
- *
- * Code is constructed from bit chunks of even length (odd length means end of code)
- * and chunks are coded with variable-length codes too.
+ * Decode Levenstein (also known as Elias Gamma) code as signed integer.
  */
 int ff_rv34_get_omega_signed(GetBitContext *gb)
 {
