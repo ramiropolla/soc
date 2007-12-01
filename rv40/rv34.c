@@ -443,75 +443,74 @@ static void rv34_pred_mv(RV34DecContext *r, int block_type, int subblock_no)
     MpegEncContext *s = &r->s;
     int mv_pos = s->mb_x * 2 + s->mb_y * 2 * s->b8_stride;
     int A[2], B[2], C[2];
-    int no_A = 1, no_B = 1, no_C = 1;
+    int has_A, has_B, has_C;
     int i, j;
     int mx, my;
 
     memset(A, 0, sizeof(A));
     memset(B, 0, sizeof(B));
     memset(C, 0, sizeof(C));
-    no_A = !r->avail[0];
-    no_B = !r->avail[1];
-    no_C = !r->avail[2];
+    has_A = r->avail[0];
+    has_B = r->avail[1];
+    has_C = r->avail[2];
     switch(block_type){
     case RV34_MB_P_16x16:
     case RV34_MB_P_MIX16x16:
-        if(!no_C){
+        if(has_C){
             C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][0];
             C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][1];
         }
         break;
     case RV34_MB_P_8x8:
         mv_pos += (subblock_no & 1) + (subblock_no >> 1)*s->b8_stride;
-        if(subblock_no & 1) no_A = 0;
-        if(subblock_no & 2) no_B = 0;
-        no_C |= (subblock_no == 3);
-        if(subblock_no == 2) no_C = 0;
-        if(!subblock_no) no_C = no_B;
-        if(!no_C){
+        if(subblock_no & 1) has_A = 1;
+        if(subblock_no & 2) has_B = 1;
+        if(subblock_no == 2) has_C = 1;
+        if(!subblock_no) has_C = has_B;
+        if(has_C){
             C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][0];
             C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][1];
         }
         if(subblock_no == 3){
-            no_C = 0;
+            has_C = 1;
             C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][0];
             C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride-1][1];
         }
         break;
     case RV34_MB_P_16x8:
         mv_pos += subblock_no*s->b8_stride;
-        no_B &= ~subblock_no;
-        no_C |= subblock_no;
-        if(!no_C){
+        has_B |= subblock_no;
+        has_C &= ~subblock_no;
+        if(has_C){
             C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][0];
             C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+2][1];
         }
         break;
     case RV34_MB_P_8x16:
         mv_pos += subblock_no;
-        no_A &= ~subblock_no;
-        if(!subblock_no) no_C = no_B;
-        if(!no_C){
+        has_A |= subblock_no;
+        if(!subblock_no) has_C = has_B;
+        if(has_C){
             C[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][0];
             C[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride+1][1];
         }
         break;
     default:
-        no_A = no_B = no_C = 1;
+        has_A = has_B = has_C = 0;
     }
-    if(!no_A){
+    if(has_A){
         A[0] = s->current_picture_ptr->motion_val[0][mv_pos-1][0];
         A[1] = s->current_picture_ptr->motion_val[0][mv_pos-1][1];
     }
-    if(!no_B){
+    if(has_B){
         B[0] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride][0];
         B[1] = s->current_picture_ptr->motion_val[0][mv_pos-s->b8_stride][1];
     }else{
         B[0] = A[0];
         B[1] = A[1];
     }
-    if(no_C){
-        if(no_B || (no_A && !r->rv30)){
+    if(!has_C){
+        if(!has_B || (!has_A && !r->rv30)){
             C[0] = A[0];
             C[1] = A[1];
         }else{
