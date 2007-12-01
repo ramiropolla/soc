@@ -119,7 +119,7 @@ static int rv40_parse_slice_header(RV34DecContext *r, GetBitContext *gb, SliceIn
     if(get_bits(gb, 2))
         return -1;
     si->vlc_set = get_bits(gb, 2);
-    get_bits1(gb);
+    skip_bits1(gb);
     t = get_bits(gb, 13); /// ???
     if(!si->type || !get_bits1(gb))
         rv40_parse_picture_size(gb, &w, &h);

@@ -39,13 +39,13 @@ static int rv30_parse_slice_header(RV34DecContext *r, GetBitContext *gb, SliceIn
     int mb_size;
 
     memset(si, 0, sizeof(SliceInfo));
-    get_bits(gb, 3);
+    skip_bits(gb, 3);
     si->type = get_bits(gb, 2);
     if(si->type == 1) si->type = 0;
     if(get_bits1(gb))
         return -1;
     si->quant = get_bits(gb, 5);
-    get_bits1(gb);
+    skip_bits1(gb);
     t = get_bits(gb, 13);
     skip_bits(gb, r->rpr);
     si->vlc_set = 0;
@@ -54,7 +54,7 @@ static int rv30_parse_slice_header(RV34DecContext *r, GetBitContext *gb, SliceIn
     mb_size = ((w + 15) >> 4) * ((h + 15) >> 4);
     mb_bits = ff_rv34_get_start_offset(gb, mb_size);
     si->start = get_bits(gb, mb_bits);
-    get_bits1(gb);
+    skip_bits1(gb);
     return 0;
 }
 
