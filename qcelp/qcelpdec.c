@@ -74,11 +74,6 @@ static int qcelp_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
-static int qcelp_decode_close(AVCodecContext *avctx)
-{
-    return 0;
-}
-
 /**
  * Decodes the 10 quantized LSP frequencies from the LSPV/LSP
  * transsmision codes of any frame rate.
@@ -946,7 +941,6 @@ AVCodec qcelp_decoder =
     .type   = CODEC_TYPE_AUDIO,
     .id     = CODEC_ID_QCELP,
     .init   = qcelp_decode_init,
-    .close  = qcelp_decode_close,
     .decode = qcelp_decode_frame,
     .priv_data_size = sizeof(QCELPContext),
 };
