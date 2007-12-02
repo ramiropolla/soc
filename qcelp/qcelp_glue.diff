@@ -1,8 +1,8 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 10817)
+--- libavcodec/Makefile	(revision 11123)
 +++ libavcodec/Makefile	(working copy)
-@@ -138,6 +138,7 @@
+@@ -140,6 +140,7 @@
  OBJS-$(CONFIG_PNG_ENCODER)             += png.o pngenc.o
  OBJS-$(CONFIG_PPM_ENCODER)             += pnmenc.o pnm.o
  OBJS-$(CONFIG_PTX_DECODER)             += ptx.o
@@ -10,7 +10,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_QDM2_DECODER)            += qdm2.o mdct.o fft.o mpegaudiodec.o mpegaudiodecheader.o mpegaudio.o mpegaudiodata.o
  OBJS-$(CONFIG_QDRAW_DECODER)           += qdrw.o
  OBJS-$(CONFIG_QPEG_DECODER)            += qpeg.o
-@@ -323,6 +324,7 @@
+@@ -325,6 +326,7 @@
  OBJS-$(CONFIG_MPEGAUDIO_PARSER)        += mpegaudio_parser.o mpegaudiodecheader.o mpegaudiodata.o
  OBJS-$(CONFIG_MPEGVIDEO_PARSER)        += mpegvideo_parser.o
  OBJS-$(CONFIG_PNM_PARSER)              += pnm_parser.o pnm.o
@@ -20,17 +20,17 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_DUMP_EXTRADATA_BSF)      += dump_extradata_bsf.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 10817)
+--- libavcodec/allcodecs.c	(revision 11123)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -199,6 +199,7 @@
-     REGISTER_DECODER (MP3ON4, mp3on4);
+@@ -189,6 +189,7 @@
      REGISTER_DECODER (MPC7, mpc7);
+     REGISTER_DECODER (MPC8, mpc8);
      REGISTER_DECODER (NELLYMOSER, nellymoser);
 +    REGISTER_DECODER (QCELP, qcelp);
      REGISTER_DECODER (QDM2, qdm2);
      REGISTER_DECODER (RA_144, ra_144);
      REGISTER_DECODER (RA_288, ra_288);
-@@ -282,6 +283,7 @@
+@@ -294,6 +295,7 @@
      REGISTER_PARSER  (MPEGAUDIO, mpegaudio);
      REGISTER_PARSER  (MPEGVIDEO, mpegvideo);
      REGISTER_PARSER  (PNM, pnm);
@@ -40,7 +40,7 @@ Index: libavcodec/allcodecs.c
      /* bitstream filters */
 Index: libavformat/isom.c
 ===================================================================
---- libavformat/isom.c	(revision 10817)
+--- libavformat/isom.c	(revision 11123)
 +++ libavformat/isom.c	(working copy)
 @@ -166,6 +166,9 @@
      { CODEC_ID_AC3,  MKTAG('m', 's', 0x20, 0x00) }, /* Dolby AC-3 */
@@ -54,9 +54,9 @@ Index: libavformat/isom.c
      { CODEC_ID_DVAUDIO, MKTAG('v', 'd', 'v', 'a') },
 Index: libavformat/mov.c
 ===================================================================
---- libavformat/mov.c	(revision 10817)
+--- libavformat/mov.c	(revision 11123)
 +++ libavformat/mov.c	(working copy)
-@@ -838,6 +838,8 @@
+@@ -839,6 +839,8 @@
          st->codec->sample_rate= 16000;
          st->codec->channels= 1; /* really needed */
          break;
