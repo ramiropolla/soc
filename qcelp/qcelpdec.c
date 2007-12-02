@@ -36,22 +36,17 @@
 
 typedef struct
 {
+    GetBitContext     gb;
     qcelp_packet_rate rate;
-    uint8_t data[76];       /*!< Data from a _parsed_ frame */
-    int     bits;
-} QCELPFrame;
-
-typedef struct
-{
-    GetBitContext gb;
-    QCELPFrame    *frame;
-    uint8_t       erasure_count;
-    uint8_t       ifq_count;
-    float         prev_lspf[10];
-    float         pitchf_mem[150];
-    float         pitchp_mem[150];
-    float         formant_mem[10];
-    int           frame_num;
+    uint8_t           data[76];       /*!< Data from a _parsed_ frame */
+    uint8_t           erasure_count;
+    uint8_t           ifq_count;
+    float             prev_lspf[10];
+    float             pitchf_mem[150];
+    float             pitchp_mem[150];
+    float             formant_mem[10];
+    int               frame_num;
+    int               bits;
 } QCELPContext;
 
 static void qcelp_update_filter_mem(float *pitchf_mem, const float *last)
@@ -76,21 +71,11 @@ static int qcelp_decode_init(AVCodecContext *avctx)
     avctx->sample_rate = 8000;
     avctx->channels = 1;
 
-    q->frame = av_mallocz(sizeof(QCELPFrame));
-
-
-    if(q->frame == NULL)
-        return -1;
-
     return 0;
 }
 
 static int qcelp_decode_close(AVCodecContext *avctx)
 {
-    QCELPContext *q = avctx->priv_data;
-
-    av_free(q->frame);
-
     return 0;
 }
 
@@ -100,21 +85,21 @@ static int qcelp_decode_close(AVCodecContext *avctx)
  *
  * TIA/EIA/IS-733 2.4.3.2.6.2-2
  */
-static void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
+static void qcelp_decode_lspf(const QCELPContext *q, float *lspf)
 {
     const uint8_t *lspv;
     int i;
 
-    if(frame->rate == RATE_OCTAVE)
+    if(q->rate == RATE_OCTAVE)
     {
-        lspv=frame->data+QCELP_LSP0_POS;
+        lspv=q->data+QCELP_LSP0_POS;
         for(i=0; i<10; i++)
         {
             lspf[i]=lspv[i]? 0.02:-0.02; /* 2.4.3.3.1-1 */
         }
     }else
     {
-        lspv=frame->data+QCELP_LSPV0_POS;
+        lspv=q->data+QCELP_LSPV0_POS;
 
         lspf[0]=        qcelp_lspvq1[lspv[0]].x / 10000.0;
         lspf[1]=lspf[0]+qcelp_lspvq1[lspv[0]].y / 10000.0;
@@ -135,26 +120,27 @@ static void qcelp_decode_lspf(const QCELPFrame *frame, float *lspf)
  *
  * TIA/EIA/IS-733 2.4.6.2
  */
-void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
-     int *g0, uint16_t *cbseed, float *gain, int *index)
+void qcelp_decode_params(AVCodecContext *avctx, int *g0, uint16_t *cbseed,
+     float *gain, int *index)
 {
-    int           i, gs[16], g1[16], predictor;
-    const uint8_t *cbgain, *cbsign, *cindex, *data;
-    float         ga[16];
+    int                 i, gs[16], g1[16], predictor;
+    const uint8_t       *cbgain, *cbsign, *cindex, *data;
+    float               ga[16];
+    const QCELPContext  *q = avctx->priv_data;
 
     // FIXME need to get rid of g0, sanity checks should be done here
 
-    cbsign=frame->data+QCELP_CBSIGN0_POS;
-    cbgain=frame->data+QCELP_CBGAIN0_POS;
-    cindex=frame->data+QCELP_CINDEX0_POS;
+    cbsign=q->data+QCELP_CBSIGN0_POS;
+    cbgain=q->data+QCELP_CBGAIN0_POS;
+    cindex=q->data+QCELP_CINDEX0_POS;
 
-    switch(frame->rate)
+    switch(q->rate)
     {
         case RATE_FULL:
         case RATE_HALF:
             for(i=0; i<16; i++)
             {
-                if(frame->rate == RATE_HALF && i>=4) break;
+                if(q->rate == RATE_HALF && i>=4) break;
 
                 gs[i]=cbsign[i]? -1:1;
                 g0[i]=4*cbgain[i];
@@ -168,7 +154,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
                  * table.
                  */
 
-                if(frame->rate == RATE_FULL && i > 0 && !((i+1) & 3))
+                if(q->rate == RATE_FULL && i > 0 && !((i+1) & 3))
                     predictor=av_clip(floor((g1[i-1]+g1[i-2]+g1[i-3])/3.0), 6,
                               38)-6;
                 else
@@ -215,7 +201,7 @@ void qcelp_decode_params(AVCodecContext *avctx, const QCELPFrame *frame,
 
             // Build random* seed needed to make Cdn
 
-            data=frame->data;
+            data=q->data;
             *cbseed=(0x0003 & data[QCELP_LSPV0_POS+4])<<14 |
                     (0x003C & data[QCELP_LSPV0_POS+3])<< 8 |
                     (0x0060 & data[QCELP_LSPV0_POS+2])<< 1 |
@@ -405,8 +391,7 @@ static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
  *
  * @param step Mode, 1 for pitch filter or 2 for pitch pre-filter
  */
-static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
-           float *pv)
+static int qcelp_do_pitchfilter(QCELPContext *q, int step, float *pv)
 {
     int     i, j, k, tmp;
     uint8_t *pgain, *plag, *pfrac;
@@ -414,14 +399,14 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
 
     assert(step == 1 || step == 2);
 
-    switch(frame->rate)
+    switch(q->rate)
     {
         case RATE_FULL:
         case RATE_HALF:
 
-            pgain=frame->data+QCELP_PGAIN0_POS;
-            plag =frame->data+QCELP_PLAG0_POS;
-            pfrac=frame->data+QCELP_PFRAC0_POS;
+            pgain=q->data+QCELP_PGAIN0_POS;
+            plag =q->data+QCELP_PLAG0_POS;
+            pfrac=q->data+QCELP_PFRAC0_POS;
 
             // Compute Gain & Lag for the whole frame
 
@@ -462,7 +447,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
 
                         if(tmp < 0)
                             hamm_tmp+=qcelp_hammsinc_table[j+4]
-                                   * pitch_mem[150+tmp];
+                                   * q->pitchf_mem[150+tmp];
                         else
                             hamm_tmp+=qcelp_hammsinc_table[j+4]
                                    * pv [tmp];
@@ -475,7 +460,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
                     tmp=k-lag[i/40];
 
                     if(tmp < 0)
-                        pv[i]+=lrintf(gain[i/40]*pitch_mem[150+tmp]);
+                        pv[i]+=lrintf(gain[i/40]*q->pitchf_mem[150+tmp]);
                     else
                         pv[i]+=lrintf(gain[i/40]*pv[i - lrintf(lag[i/40])]);
                 }
@@ -484,7 +469,7 @@ static int qcelp_do_pitchfilter(QCELPFrame *frame, float *pitch_mem, int step,
 
                 if(k==39)
                 {
-                    qcelp_update_filter_mem(pitch_mem, &pv[i-k]);
+                    qcelp_update_filter_mem(q->pitchf_mem, &pv[i-k]);
                 }
 
                 k=(k<39)? k+1:0;
@@ -729,29 +714,29 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         case 35:
             is_codecframe_fmt=1;
         case 34:
-            q->frame->rate = RATE_FULL;
-            q->frame->bits = qcelp_bits_per_rate[RATE_FULL];
+            q->rate = RATE_FULL;
+            q->bits = qcelp_bits_per_rate[RATE_FULL];
             order = QCELP_REFERENCE_FRAME + QCELP_FULLPKT_REFERENCE_POS;
             break;
         case 17:
             is_codecframe_fmt=1;
         case 16:
-            q->frame->rate = RATE_HALF;
-            q->frame->bits = qcelp_bits_per_rate[RATE_HALF];
+            q->rate = RATE_HALF;
+            q->bits = qcelp_bits_per_rate[RATE_HALF];
             order = QCELP_REFERENCE_FRAME + QCELP_HALFPKT_REFERENCE_POS;
             break;
         case  8:
             is_codecframe_fmt=1;
         case  7:
-            q->frame->rate = RATE_QUARTER;
-            q->frame->bits = qcelp_bits_per_rate[RATE_QUARTER];
+            q->rate = RATE_QUARTER;
+            q->bits = qcelp_bits_per_rate[RATE_QUARTER];
             order = QCELP_REFERENCE_FRAME + QCELP_4THRPKT_REFERENCE_POS;
             break;
         case  4:
             is_codecframe_fmt=1;
         case  3:
-            q->frame->rate = RATE_OCTAVE;
-            q->frame->bits = qcelp_bits_per_rate[RATE_OCTAVE];
+            q->rate = RATE_OCTAVE;
+            q->bits = qcelp_bits_per_rate[RATE_OCTAVE];
             order = QCELP_REFERENCE_FRAME + QCELP_8THRPKT_REFERENCE_POS;
 
             /*
@@ -765,8 +750,8 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         case  1:
             is_codecframe_fmt=1;
         case  0:
-            q->frame->rate = BLANK;
-            q->frame->bits = 0;
+            q->rate = BLANK;
+            q->bits = 0;
             order = NULL;
             break;
         default:
@@ -780,11 +765,11 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     {
         claimed_rate=get_bits(&q->gb, 8);
 
-        if((claimed_rate ==  0 && q->frame->rate != BLANK       ) ||
-           (claimed_rate ==  1 && q->frame->rate != RATE_OCTAVE ) ||
-           (claimed_rate ==  2 && q->frame->rate != RATE_QUARTER) ||
-           (claimed_rate ==  3 && q->frame->rate != RATE_HALF   ) ||
-           (claimed_rate ==  4 && q->frame->rate != RATE_FULL   ))
+        if((claimed_rate ==  0 && q->rate != BLANK       ) ||
+           (claimed_rate ==  1 && q->rate != RATE_OCTAVE ) ||
+           (claimed_rate ==  2 && q->rate != RATE_QUARTER) ||
+           (claimed_rate ==  3 && q->rate != RATE_HALF   ) ||
+           (claimed_rate ==  4 && q->rate != RATE_FULL   ))
         {
            av_log(avctx, AV_LOG_WARNING,
                   "Claimed rate and buffer size missmatch\n");
@@ -793,31 +778,31 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     // Data reordering loop
 
-    memset(q->frame->data, 0, 76);
-    for(n=0; n < q->frame->bits; n++)
+    memset(q->data, 0, 76);
+    for(n=0; n < q->bits; n++)
     {
-        q->frame->data[ order[n].index ] |=
+        q->data[ order[n].index ] |=
         get_bits1(&q->gb)<<order[n].bitpos;
 
-        if(q->frame->rate == RATE_OCTAVE)
+        if(q->rate == RATE_OCTAVE)
         {
             if(n>3)  // Random seed
-                cbseed  |= (uint16_t)q->frame->data[ order[n].index ]<<(n-4);
-            if(n<16 && is_ifq && !q->frame->data[ order[n].index ]) is_ifq = 0;
+                cbseed  |= (uint16_t)q->data[ order[n].index ]<<(n-4);
+            if(n<16 && is_ifq && !q->data[ order[n].index ]) is_ifq = 0;
         }
 
     }
 
     // Check for erasures/blanks on rates 1, 1/4 and 1/8
 
-    if(q->frame->rate != RATE_HALF && q->frame->data[QCELP_RSRVD_POS])
+    if(q->rate != RATE_HALF && q->data[QCELP_RSRVD_POS])
     {
         av_log(avctx, AV_LOG_ERROR, "Wrong data in reserved frame area:%d\n",
-               q->frame->data[QCELP_RSRVD_POS]);
+               q->data[QCELP_RSRVD_POS]);
         is_ifq=1;
     }
 
-    if(q->frame->rate == RATE_OCTAVE && first16==0xFFFF)
+    if(q->rate == RATE_OCTAVE && first16==0xFFFF)
     {
         av_log(avctx, AV_LOG_ERROR,
                "Wrong frame data, rate 1/8 and first 16 bits are on\n");
@@ -826,17 +811,17 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     // Preliminary decoding of frame's transmission codes
 
-    qcelp_decode_lspf(q->frame, qtzd_lspf);
-    qcelp_decode_params(avctx, q->frame, g0, &cbseed, gain, index);
+    qcelp_decode_lspf(q, qtzd_lspf);
+    qcelp_decode_params(avctx, g0, &cbseed, gain, index);
 
     // Check for badly received packets TIA/EIA/IS-733 2.4.8.7.3
 
-    if(q->frame->rate != RATE_OCTAVE)
+    if(q->rate != RATE_OCTAVE)
     {
 
         // Check for outbound LSP freqs and codebook gain params
 
-        if(q->frame->rate != RATE_QUARTER)
+        if(q->rate != RATE_QUARTER)
         {
             if(qtzd_lspf[9] <= .66 || qtzd_lspf[9] >= .985)
             {
@@ -880,12 +865,11 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     if(!is_ifq)
     {
-        qcelp_compute_svector(q->frame->rate, gain, index, cbseed, cdn_vector);
+        qcelp_compute_svector(q->rate, gain, index, cbseed, cdn_vector);
 
         // Pitch filter
 
-        if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchf_mem,
-                                          1, cdn_vector)))
+        if((is_ifq = qcelp_do_pitchfilter(q, 1, cdn_vector)))
         {
             av_log(avctx, AV_LOG_WARNING,
                    "Error can't pitchfilter cdn_vector[%d]\n", is_ifq);
@@ -905,8 +889,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
          * compromise.
          */
 
-        if((is_ifq = qcelp_do_pitchfilter(q->frame, q->pitchp_mem,
-                                          2, ppf_vector)))
+        if((is_ifq = qcelp_do_pitchfilter(q, 2, ppf_vector)))
         {
             av_log(avctx, AV_LOG_WARNING,
                    "Error can't pitch-prefilter ppf_vector[%d]\n", is_ifq);
@@ -922,7 +905,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     for(i=0; i<4; i++)
     {
-        qcelp_do_interpolate_lspf(q->frame->rate, q->prev_lspf, qtzd_lspf,
+        qcelp_do_interpolate_lspf(q->rate, q->prev_lspf, qtzd_lspf,
                                   interpolated_lspf, i*40, q->frame_num);
 
         qcelp_lsp2lpc(interpolated_lspf, lpc);
