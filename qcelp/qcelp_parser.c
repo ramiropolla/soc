@@ -51,6 +51,10 @@ static int qcelp_find_frame_end(ParseContext *pc, const uint8_t *buf,
         case  4:             // RATE_OCTAVE in 'codec frame' fmt
         case  3:             // RATE_OCTAVE
             return buf_size;
+        case  2:
+        case  1:
+        case  0:
+            return END_NOT_FOUND;
     }
 
     /*
@@ -60,9 +64,6 @@ static int qcelp_find_frame_end(ParseContext *pc, const uint8_t *buf,
      *
      * http://tools.ietf.org/html/draft-mckay-qcelp-02
      */
-
-    if(buf_size < 3)
-        return END_NOT_FOUND;
 
     switch(buf[0])
     {
@@ -97,7 +98,7 @@ static int qcelp_parse(AVCodecParserContext *s, AVCodecContext *avctx,
     {
         next=qcelp_find_frame_end(pc, buf, buf_size);
 
-        if (ff_combine_frame(pc, next, &buf, &buf_size) < 0)
+        if(ff_combine_frame(pc, next, &buf, &buf_size) < 0)
         {
             *poutbuf = NULL;
             *poutbuf_size = 0;
