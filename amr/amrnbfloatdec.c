@@ -58,7 +58,7 @@ typedef struct AMRContext {
     int                  prev_pitch_lag_int; ///< integer part of pitch lag from previous subframe
 
     float excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1 + AMR_SUBFRAME_SIZE]; ///< excitation buffer
-    float                       excitation*; ///< pointer to the current excitation vector in excitation_buf
+    float                       *excitation; ///< pointer to the current excitation vector in excitation_buf
 
     float                      pitch_vector[AMR_SUBFRAME_SIZE]; ///< adaptive code book (pitch) vector
 
