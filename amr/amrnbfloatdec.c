@@ -67,6 +67,7 @@ typedef struct AMRContext {
     float                 fixed_gain_factor;
     float                     fixed_gain[5]; ///< quantified fixed gains for the current and previous four subframes
 
+    float                              beta; ///< beta = pitch_gain, bounded by [0.0,1.0] for 12.2 kbps or [0.0,0.8] for other modes
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
 
     uint8_t           ir_filter_strength[2]; ///< impulse response filter strength; 0 - strong, 1 - medium, 2 - none
