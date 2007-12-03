@@ -1757,12 +1757,12 @@ static const float lsf_5_5[64][4] = {
 { 174.316   ,  173.584   ,  192.383   ,  183.105   }, { 262.695   ,  174.316   ,  293.945   ,  183.838   },
 };
 
-static const float lsf_mean_3[LP_FILTER_ORDER] = {
+static const float lsf_3_mean[LP_FILTER_ORDER] = {
  377.441,  554.688,  922.363, 1339.84 , 1702.15 ,
 2046.39 , 2452.88 , 2741.46 , 3116.70 , 3348.14 ,
 };
 
-static const float lsf_mean_5[LP_FILTER_ORDER] = {
+static const float lsf_5_mean[LP_FILTER_ORDER] = {
  337.891,  507.80 ,  834.961, 1247.7  , 1646.0  ,
 1982.91 , 2407.96 , 2708.1  , 3104.0  , 3344.97 ,
 };
