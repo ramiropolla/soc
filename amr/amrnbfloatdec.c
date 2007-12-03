@@ -220,7 +220,7 @@ static void lsf2lsp_5(AMRContext *p) {
     float lsf_r[2][LP_FILTER_ORDER]; // residual LSF vectors
     float lsf_q[2][LP_FILTER_ORDER]; // quantified LSF vectors
     float sign;
-    int idx;
+    int i, idx;
 
     // decode split-matrix quantized residual LSF vectors
 
