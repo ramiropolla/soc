@@ -44,6 +44,7 @@ typedef struct AMRContext {
     int16_t                       *amr_prms; ///< pointer to the decoded amr parameters (lsf coefficients, codebook indices, etc)
     int                 bad_frame_indicator; ///< bad frame ? 1 : 0
     int                      cur_frame_mode; ///< current frame mode
+    int                      cur_frame_type; ///< current frame type
 
     float       prev_lsf_r[LP_FILTER_ORDER];
     float           lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
