@@ -57,7 +57,9 @@ typedef struct AMRContext {
     int                      pitch_lag_frac; ///< fractional part of pitch lag from current subframe
     int                  prev_pitch_lag_int; ///< integer part of pitch lag from previous subframe
 
-    float prev_excitation[PITCH_LAG_MAX + LP_FILTER_ORDER + 1]; ///< buffer of the past excitation vector
+    float excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1 + AMR_SUBFRAME_SIZE]; ///< excitation buffer
+    float                       excitation*; ///< pointer to the current excitation vector in excitation_buf
+
     float                      pitch_vector[AMR_SUBFRAME_SIZE]; ///< adaptive code book (pitch) vector
 
     float                      fixed_vector[AMR_SUBFRAME_SIZE]; ///< algebraic code book (fixed) vector
@@ -90,6 +92,9 @@ static int amrnb_decode_init(AVCodecContext *avctx) {
     // Check amr_prms allocation
     if(p->amr_prms == NULL)
         return -1;
+
+    // p->excitation always points to the same position in p->excitation_buf
+    p->excitation = &p->excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1];
 
     /* return 0 for a successful init, -1 for failure */
     return 0;
@@ -511,19 +516,21 @@ static void decode_pitch_lag_6(AMRContext *p, int pitch_index) {
  * Calculate the pitch vector by interpolating the past excitation at the pitch
  * pitch lag using a b60 hamming windowed sinc function
  *
- * @param p                   pointer to the AMRContext
+ * @param prev_excitation     pointer to the element after the previous excitations
  * @param lag_int             integer part of pitch lag
  * @param lag_frac            fractional part of pitch lag
+ * @param mode                current frame mode
+ * @param pitch_vector        pointer to the pitch vector
  *
  * @return void
  */
 
-static void interp_pitch_vector(AMRContext *p, int lag_int, int lag_frac) {
+static void interp_pitch_vector(float *prev_excitation, int lag_int, int lag_frac, enum Mode mode, float *pitch_vector) {
     int n, i;
     float *b60_idx1, *b60_idx2, *exc_idx;
 
     lag_frac *= -1;
-    if(p->cur_frame_mode != MODE_122) {
+    if(mode != MODE_122) {
         lag_frac <<= 1;
     }
 
@@ -534,15 +541,15 @@ static void interp_pitch_vector(AMRContext *p, int lag_int, int lag_frac) {
 
     b60_idx1 = &b60[    lag_frac];
     b60_idx2 = &b60[6 - lag_frac];
-    exc_idx = &p->prev_excitation[-lag_int];
+    exc_idx = &prev_excitation[-lag_int];
 
     for(n=0; n<AMR_SUBFRAME_SIZE; n++) {
         for(i=0; i<10; i++) {
-            p->pitch_vector[n] += b60_idx1[6*i] * exc_idx[-i];
+            pitch_vector[n] += b60_idx1[6*i] * exc_idx[-i];
         }
         exc_idx++;
         for(i=0; i<10; i++) {
-            p->pitch_vector[n] += b60_idx2[6*i] * exc_idx[ i];
+            pitch_vector[n] += b60_idx2[6*i] * exc_idx[ i];
         }
         exc_idx++;
     }
@@ -956,7 +963,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 
         // interpolate the past excitation at the pitch lag to obtain the pitch
         // vector
-        interp_pitch_vector(p, p->pitch_lag_int, p->pitch_lag_frac);
+        interp_pitch_vector(p->excitation, p->pitch_lag_int, p->pitch_lag_frac, p->cur_frame_mode, p->pitch_vector);
 
 /*** end of adaptive code book (pitch) vector decoding ***/
 
