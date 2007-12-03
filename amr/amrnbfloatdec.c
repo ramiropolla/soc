@@ -34,12 +34,12 @@
 #include "avcodec.h"
 #include "bitstream.h"
 #include "common.h"
+#include "dsputil.h"
 #include "amrnbfloatdata.h"
 
 typedef struct AMRContext {
 
     GetBitContext                        gb;
-    int16_t                  *sample_buffer;
 
     int16_t                       *amr_prms; ///< pointer to the decoded amr parameters (lsf coefficients, codebook indices, etc)
     int                 bad_frame_indicator; ///< bad frame ? 1 : 0
@@ -76,23 +76,35 @@ typedef struct AMRContext {
     uint8_t           ir_filter_strength[2]; ///< impulse response filter strength; 0 - strong, 1 - medium, 2 - none
     float                        *ir_filter; ///< pointer to impulse response filter data
 
+    DSPContext                          dsp;
+    float                          add_bias;
+    float                          mul_bias;
+    DECLARE_ALIGNED_16(float,    samples_in[LP_FILTER_ORDER + AMR_BLOCK_SIZE]); ///< floating point samples
+    DECLARE_ALIGNED_16(int16_t, samples_out[LP_FILTER_ORDER + AMR_BLOCK_SIZE]); ///< 16-bit signed int samples
+
 } AMRContext;
 
 
 static int amrnb_decode_init(AVCodecContext *avctx) {
     AMRContext *p = avctx->priv_data;
 
-    // allocate and zero the 16-bit mono sample buffer
-    p->sample_buffer = av_mallocz(sizeof(int16_t)*AMR_BLOCK_SIZE);
     // allocate and zero the amr parameters
     p->amr_prms = av_mallocz(sizeof(int16_t)*PRMS_MODE_122);
 
-    /* Check if the allocation was successful */
-    if(p->sample_buffer == NULL)
-        return -1;
     // Check amr_prms allocation
     if(p->amr_prms == NULL)
         return -1;
+
+    dsputil_init(&p->dsp, avctx);
+
+    // set bias values for float to 16-bit int conversion
+    if(p->dsp.float_to_int16 == ff_float_to_int16_c) {
+        p->add_bias = 385.0;
+        p->mul_bias = 1.0;
+    }else {
+        p->add_bias = 0.0;
+        p->mul_bias = 32767.0;
+    }
 
     // p->excitation always points to the same position in p->excitation_buf
     p->excitation = &p->excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1];
@@ -906,6 +918,74 @@ static void convolve_circ(float *fixed_vector, float *ir_filter) {
 /*** end of pre-processing functions ***/
 
 
+/*** synthesis functions ***/
+
+/**
+ * Conduct 10th order linear predictive coding synthesis
+ *
+ * @param p             pointer to the AMRContext
+ * @param excitation    pointer to the excitation vector
+ * @param lpc           pointer to the LPC coefficients
+ * @param samples       pointer to the output speech samples
+ * @param overflow      16-bit overflow flag
+ */
+
+static void synthesis(AMRContext *p, float *excitation, float *lpc, float *samples, uint8_t overflow) {
+    int i, j;
+
+    // if an overflow has been detected, the pitch vector is scaled down by a
+    // factor of 4
+    if(overflow) {
+        for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
+            p->pitch_vector[i] /= 4.0;
+        }
+    }
+
+    // construct the excitation vector
+    for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
+        excitation[i] = p->pitch_gain*p->pitch_vector[i] + p->fixed_gain*p->fixed_vector[i];
+    }
+
+    // if an overflow has been detected, pitch vector contribution emphasis and
+    // adaptive gain control are skipped
+    if(p->pitch_gain > 0.5 && !overflow) {
+        float excitation_temp[AMR_SUBFRAME_SIZE];
+        float pitch_factor = (p->cur_frame_mode == MODE_122 ? 0.25 : 0.5)*p->beta*p->pitch_gain;
+        float eta, temp1 = 0.0, temp2 = 0.0;
+
+        for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
+            // emphasise pitch vector contribution
+            excitation_temp[i] = excitation[i] + pitch_factor*p->pitch_vector[i];
+            // find gain scale
+            temp1 +=      excitation[i]*excitation[i];
+            temp2 += excitation_temp[i]*excitation_temp[i];
+        }
+
+        // adaptive gain control by gain scaling
+        eta = sqrt(temp1/temp2);
+        for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
+            excitation[i] = eta*excitation_temp[i];
+        }
+    }
+
+    for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
+        float sample_temp = 0.0;
+        for(j=0; j<LP_FILTER_ORDER; j++) {
+            sample_temp -= lpc[j]*samples[i-j];
+        }
+        samples[i] = excitation[i] + sample_temp;
+    }
+
+    // Check for overflows
+    for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
+        if(FFABS(samples[i])>1.0)
+            synthesis(excitation, lpc, samples, 1);
+    }
+}
+
+/*** end of synthesis functions ***/
+
+
 static int amrnb_decode_frame(AVCodecContext *avctx,
         void *data, int *data_size, uint8_t *buf, int buf_size) {
 
@@ -1114,6 +1194,18 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 
 /*** end of pre-processing ***/
 
+/*** synthesis ***/
+
+        synthesis(p, p->excitation, p->lpc[subframe], p->samples_in, 0);
+
+/*** end of synthesis ***/
+
+        // convert float samples to 16-bit integer
+        for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
+            p->samples_in[i] += p->add_bias;
+        }
+        p->dsp.float_to_int16(p->samples_out, p->samples_in, AMR_SUBFRAME_SIZE);
+
     }
 
     /* Report how many samples we got */
@@ -1146,3 +1238,4 @@ AVCodec amrnb_decoder =
     .close = amrnb_decode_close,
     .decode = amrnb_decode_frame,
 };
+
