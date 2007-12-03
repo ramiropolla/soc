@@ -300,9 +300,9 @@ static void lsf2lsp_3(AMRContext *p) {
     // assign lsf tables according to mode
     if((p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515)) {
         lsf_3_1_tmp = lsf_3_1;
-        lsf_3_3_tmp = lsf_3_MODE_515;
+        lsf_3_3_tmp = lsf_3_3_MODE_515;
     }else if(p->cur_frame_mode == MODE_795) {
-        lsf_3_1_tmp = lsf_3_MODE_795;
+        lsf_3_1_tmp = lsf_3_3_MODE_795;
         lsf_3_3_tmp = lsf_3_3;
     }else {
         lsf_3_1_tmp = lsf_3_1;
