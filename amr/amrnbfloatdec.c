@@ -452,7 +452,7 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs) {
 
 static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe) {
     // subframe 1 or 3
-    if(subframe & 1) {
+    if(!(subframe & 1)) {
         if(pitch_index < 197) {
             // 10923>>15 is approximately 1/3
             p->pitch_lag_int = ( ((pitch_index + 2)*10923)>>15 ) + 19;
@@ -503,7 +503,7 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe) {
 
 static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe) {
     // subframe 1 or 3
-    if(subframe & 1) {
+    if(!(subframe & 1)) {
         if(pitch_index < 463){
             p->pitch_lag_int = (pitch_index + 5)/6 + 17;
             p->pitch_lag_frac = pitch_index - p->pitch_lag_int*6 + 105;
@@ -1027,7 +1027,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 
 /*** end of LPC coefficient decoding ***/
 
-    for(subframe = 0; subframe < 5; subframe++) {
+    for(subframe = 0; subframe < 4; subframe++) {
 
 /*** adaptive code book (pitch) vector decoding ***/
 
@@ -1116,8 +1116,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
             p->fixed_gain_factor = gains_low[p->amr_prms[index]][1];
             index++;
         }else {
-            p->pitch_gain[4] =     gains_MODE_475[p->amr_prms[index] + ((subframe&1)<<1)][0];
-            p->fixed_gain_factor = gains_MODE_475[p->amr_prms[index] + ((subframe&1)<<1)][1];
+            p->pitch_gain[4] =     gains_MODE_475[p->amr_prms[index] + ( (!(subframe&1)) <<1)][0];
+            p->fixed_gain_factor = gains_MODE_475[p->amr_prms[index] + ( (!(subframe&1)) <<1)][1];
             index++;
         }
 
