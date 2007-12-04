@@ -578,7 +578,7 @@ static void interp_pitch_vector(float *prev_excitation, int lag_int, int lag_fra
  * @return void
  */
 
-static void reconstruct_fixed_vector(float *pulse_position, int sign, int nr_pulses, float *fixed_vector) {
+static void reconstruct_fixed_vector(int *pulse_position, int sign, int nr_pulses, float *fixed_vector) {
     int i;
 
     // reset the code
