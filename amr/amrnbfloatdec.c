@@ -779,10 +779,10 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_vector) {
     // the positions and signs are explicitly coded in MODE_122
 
     // reconstruct the fixed code
-    for(i=0; i<5; i++) {
-        pos1 = gray_decode[fixed_index[i  ] & 7]*5 + i; // ith pulse position
+    for(i=0; i<TRACKS; i++) {
+        pos1 = gray_decode[fixed_index[i  ] & 7]*TRACKS + i; // ith pulse position
         sign = (fixed_index[i] & 8) ? -1.0 : 1.0; // sign of ith pulse
-        pos2 = gray_decode[fixed_index[i+5] & 7]*5 + i; // i+5th pulse position
+        pos2 = gray_decode[fixed_index[i+5] & 7]*TRACKS + i; // i+5th pulse position
         // assign the ith pulse (+/-1) to its appropriate position
         fixed_vector[pos1] = sign;
         // sign of i+5th pulse is relative to sign of ith pulse

@@ -1800,6 +1800,9 @@ static const float b60[61] = {
 
 // fixed tables
 
+#define TRACKS          5
+#define TRACKS_MODE_102 4
+
 // track start positions for algebraic code book routines
 static const uint8_t track_position[16] = { 0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 1, 4, 1, 4 };
 
