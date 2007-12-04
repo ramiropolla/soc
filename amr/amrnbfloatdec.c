@@ -63,9 +63,8 @@ typedef struct AMRContext {
     float excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1 + AMR_SUBFRAME_SIZE]; ///< excitation buffer
     float                       *excitation; ///< pointer to the current excitation vector in excitation_buf
 
-    float                      pitch_vector[AMR_SUBFRAME_SIZE]; ///< adaptive code book (pitch) vector
-
-    float                      fixed_vector[AMR_SUBFRAME_SIZE]; ///< algebraic code book (fixed) vector
+    float   pitch_vector[AMR_SUBFRAME_SIZE]; ///< adaptive code book (pitch) vector
+    float   fixed_vector[AMR_SUBFRAME_SIZE]; ///< algebraic code book (fixed) vector
 
     float               prediction_error[4]; ///< quantified prediction errors {20log10(^γ_gc)} for previous four subframes
     float                     pitch_gain[5]; ///< quantified pitch gains for the current and previous four subframes
