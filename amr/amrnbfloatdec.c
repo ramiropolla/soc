@@ -445,6 +445,7 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs) {
  *
  * @param p                   pointer to the AMRContext
  * @param pitch_index         parsed adaptive codebook (pitch) index
+ * @param subframe            current subframe
  *
  * @return void
  */
@@ -496,6 +497,7 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe) {
  *
  * @param p                   pointer to the AMRContext
  * @param pitch_index         parsed adaptive codebook (pitch) index
+ * @param subframe            current subframe
  *
  * @return void
  */
