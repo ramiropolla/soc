@@ -84,6 +84,8 @@ typedef struct AMRContext {
     DECLARE_ALIGNED_16(float,    samples_in[LP_FILTER_ORDER + AMR_BLOCK_SIZE]); ///< floating point samples
     DECLARE_ALIGNED_16(int16_t, samples_out[LP_FILTER_ORDER + AMR_BLOCK_SIZE]); ///< 16-bit signed int samples
 
+    uint8_t                  remainder_bits; ///< bits to skip when decoding the next frame
+
 } AMRContext;
 
 
@@ -133,7 +135,7 @@ enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size, enum Mode 
 
     // initialise get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
-    skip_bits1(&p->gb);
+    skip_bits(&p->gb, 1 + p->remainder_bits);
     // set the mode
     mode = get_bits(&p->gb ,4);
     // set the bad frame indicator based on the quality bit
@@ -1212,14 +1214,17 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
             p->samples_in[i] += p->add_bias;
         }
         p->dsp.float_to_int16(p->samples_out, p->samples_in, AMR_SUBFRAME_SIZE);
+        memcpy(buf_out, p->samples_out, AMR_SUBFRAME_SIZE*sizeof(int16_t));
 
     }
 
     /* Report how many samples we got */
-    *data_size = buf_size;
+    *data_size = AMR_BLOCK_SIZE * sizeof(int16_t);
+
+    p->remainder_bits = mode_bits[p->cur_frame_mode]&3;
 
     /* Return the amount of bytes consumed if everything was ok */
-    return *data_size*sizeof(int16_t);
+    return mode_bits[p->cur_frame_mode]>>3;
 }
 
 
