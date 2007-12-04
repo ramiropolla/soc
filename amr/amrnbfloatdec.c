@@ -1162,10 +1162,10 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         }
 
         // anti-sparseness processing
-        if(p->pitch_gain < 0.6) {
+        if(p->pitch_gain[4] < 0.6) {
             // strong filtering
             p->ir_filter_strength[1] = 0;
-        }else if(p->pitch_gain < 0.9) {
+        }else if(p->pitch_gain[4] < 0.9) {
             // medium filtering
             p->ir_filter_strength[1] = 1;
         }else {
