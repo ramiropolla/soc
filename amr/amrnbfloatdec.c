@@ -46,7 +46,7 @@ typedef struct AMRContext {
     int                      cur_frame_mode; ///< current frame mode
     int                      cur_frame_type; ///< current frame type
 
-    float       prev_lsf_r[LP_FILTER_ORDER];
+    float       prev_lsf_r[LP_FILTER_ORDER]; ///< residual LSF vector from previous subframe
     float           lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
     float    prev_lsp_sub4[LP_FILTER_ORDER]; ///< lsp vector for the 4th subframe of the previous frame
 
@@ -277,7 +277,7 @@ static void lsf2lsp_5(AMRContext *p) {
         lsf_q[0][i] = lsf_r[0][i] + temp;
         lsf_q[1][i] = lsf_r[1][i] + temp;
     }
-    // update residual LSD vector from previous subframe
+    // update residual LSF vector from previous subframe
     memcpy(p->prev_lsf_r, lsf_r[1], LP_FILTER_ORDER*sizeof(float));
 
     // convert LSF vectors to LSP vectors
