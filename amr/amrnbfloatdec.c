@@ -1206,7 +1206,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 
 /*** synthesis ***/
 
-        synthesis(p, p->excitation, p->lpc[subframe], p->samples_in, 0);
+        synthesis(p, p->excitation, p->lpc[subframe], &p->samples_in[LP_FILTER_ORDER], 0);
 
 /*** end of synthesis ***/
 
