@@ -476,8 +476,8 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe) {
                 p->pitch_lag_frac = pitch_index - p->pitch_lag_int*3 - 9;
             }else {
                 // integer only precision for [t1_temp+1, t1_temp+4]
-                pitch_lag_int = pitch_index + t1_temp - 11;
-                pitch_lag_frac = 0;
+                p->pitch_lag_int = pitch_index + t1_temp - 11;
+                p->pitch_lag_frac = 0;
             }
         }else {
             // decoding with 5 or 6 bit resolution, 1/3 fractional precision
