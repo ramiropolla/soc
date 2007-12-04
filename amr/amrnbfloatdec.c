@@ -1055,20 +1055,20 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         switch(p->cur_frame_mode) {
             case MODE_475:
             case MODE_515:
-                decode_2_pulses_9bits(*index, *(index+1), subframe, &p->fixed_vector);
+                decode_2_pulses_9bits(index, index+1, subframe, &p->fixed_vector);
                 index += 2;
             break;
             case MODE_59:
-                decode_2_pulses_11bits(*index, *(index+1), &p->fixed_vector);
+                decode_2_pulses_11bits(index, index+1, &p->fixed_vector);
                 index += 2;
             break;
             case MODE_67:
-                decode_3_pulses_14bits(*index, *(index+1), &p->fixed_vector);
+                decode_3_pulses_14bits(index, index+1, &p->fixed_vector);
                 index += 2;
             break;
             case MODE_74:
             case MODE_795:
-                decode_4_pulses_17bits(*index, *(index+1), &p->fixed_vector);
+                decode_4_pulses_17bits(index, index+1, &p->fixed_vector);
                 index += 2;
             break;
             case MODE_102:
@@ -1077,7 +1077,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
             break;
             case MODE_122:
                 // decode pitch gain
-                p->pitch_gain[4] = qua_gain_pit[*index++];
+                p->pitch_gain[4] = qua_gain_pit[index];
+                index++;
                 decode_10_pulses_35bits(index, &p->fixed_vector);
                 index += 10;
             break;
@@ -1094,23 +1095,26 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 
         // decode pitch gain and fixed gain correction factor
         if(p->cur_frame_mode == MODE_122) {
-            p->fixed_gain_factor = qua_gain_code[*index++];
+            p->fixed_gain_factor = qua_gain_code[index];
+            index++;
         }else if(p->cur_frame_mode == MODE_795) {
-            p->pitch_gain[4] =     qua_gain_pit[*index++];
-            p->fixed_gain_factor = qua_gain_code[*index++];
+            p->pitch_gain[4] =     qua_gain_pit[index];
+            index++;
+            p->fixed_gain_factor = qua_gain_code[index];
+            index++;
         }else if(p->cur_frame_mode == MODE_67 || p->cur_frame_mode == MODE_74 ||
                  p->cur_frame_mode == MODE_102) {
             p->pitch_gain[4] =     gains_high[index][0];
             p->fixed_gain_factor = gains_high[index][1];
-            *index++;
+            index++;
         }else if(p->cur_frame_mode == MODE_515 || p->cur_frame_mode == MODE_59) {
             p->pitch_gain[4] =     gains_low[index][0];
             p->fixed_gain_factor = gains_low[index][1];
-            *index++;
+            index++;
         }else {
             p->pitch_gain[4] =     gains_MODE_475[index + ((subframe&1)<<1)][0];
             p->fixed_gain_factor = gains_MODE_475[index + ((subframe&1)<<1)][1];
-            *index++;
+            index++;
         }
 
         // ^g_c = g_c' * ^gamma_gc
