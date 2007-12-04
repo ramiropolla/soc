@@ -968,7 +968,7 @@ static void synthesis(AMRContext *p, float *excitation, float *lpc, float *sampl
     for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
         float sample_temp = 0.0;
         for(j=0; j<LP_FILTER_ORDER; j++) {
-            sample_temp -= lpc[j]*samples[i-j];
+            sample_temp -= lpc[j]*samples[i-j-1];
         }
         samples[i] = excitation[i] + sample_temp;
     }
