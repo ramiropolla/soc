@@ -806,7 +806,7 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_vector) {
  * @return Returns the predicted fixed gain
  */
 
-static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error) {
+static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error, enum Mode mode) {
     int i;
     float energy_pred = 0.0, energy_fixed_mean = 0.0;
 
@@ -1090,7 +1090,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 /*** gain decoding ***/
 
         // calculate the predicted fixed gain g_c'
-        p->fixed_gain[4] = fixed_gain_prediction(&p->fixed_vector, &p->prediction_error);
+        p->fixed_gain[4] = fixed_gain_prediction(&p->fixed_vector, &p->prediction_error, p->cur_frame_mode);
 
         // decode pitch gain and fixed gain correction factor
         if(p->cur_frame_mode == MODE_122) {
