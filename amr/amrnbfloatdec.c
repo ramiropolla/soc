@@ -722,16 +722,16 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector) {
     // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
     // the 3 pulses and the upper 7 bits being coded in base 5
     temp = fixed_index[4] >> 3;
-    pulse_position[0] = ((temp    %5)<<1) + ( fixed_index[4]    &1);
-    pulse_position[4] = ((temp /5)%5)<<1) + ((fixed_index[4]>>1)&1);
-    pulse_position[1] = ((temp/25)%5)<<1) + ((fixed_index[4]>>2)&1);
+    pulse_position[0] = (( temp    %5)<<1) + ( fixed_index[4]    &1);
+    pulse_position[4] = (((temp /5)%5)<<1) + ((fixed_index[4]>>1)&1);
+    pulse_position[1] = (((temp/25)%5)<<1) + ((fixed_index[4]>>2)&1);
 
     // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
     // the 3 pulses and the upper 7 bits being coded in base 5
     temp = fixed_index[5] >> 3;
-    pulse_position[2] = ((temp    %5)<<1) + ( fixed_index[5]    &1);
-    pulse_position[6] = ((temp /5)%5)<<1) + ((fixed_index[5]>>1)&1);
-    pulse_position[5] = ((temp/25)%5)<<1) + ((fixed_index[5]>>2)&1);
+    pulse_position[2] = (( temp    %5)<<1) + ( fixed_index[5]    &1);
+    pulse_position[6] = (((temp /5)%5)<<1) + ((fixed_index[5]>>1)&1);
+    pulse_position[5] = (((temp/25)%5)<<1) + ((fixed_index[5]>>2)&1);
 
     // coded using 5+2 bits with the 2 LSBs being, individually, the LSB of 1 of
     // the 2 pulses and the upper 5 bits being coded in base 5
