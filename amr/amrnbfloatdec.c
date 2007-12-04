@@ -634,7 +634,7 @@ static void decode_2_pulses_11bits(int fixed_index, int sign, float *fixed_vecto
     // to code the 2 pulses
     pulse_subset = fixed_index & 1;
     // first pulse position is coded in bits 2-4
-    pulse_position[0] = ((fixed_index >> 1) & 7)*5 + pulse_subset<<1 + 1;
+    pulse_position[0] = ((fixed_index >> 1) & 7)*5 + (pulse_subset<<1) + 1;
     // pulse subset for the second pulse is coded in bits 5-6
     pulse_subset = (fixed_index >> 4) & 3;
     // second pulse position is coded in bits 7-9
@@ -664,11 +664,11 @@ static void decode_3_pulses_14bits(int fixed_index, int sign, float *fixed_vecto
     // pulse subset for the second pulse is coded in bit 4
     pulse_subset = (fixed_index >> 3) & 1;
     // second pulse position is coded in bits 5-7
-    pulse_position[1] = ((fixed_index >> 4) & 7)*5 + pulse_subset<<1 + 1;
+    pulse_position[1] = ((fixed_index >> 4) & 7)*5 + (pulse_subset<<1) + 1;
     // pulse subset for the second pulse is coded in bit 8
     pulse_subset = (fixed_index >> 7) & 1;
     // third pulse position is coded in bits 9-11
-    pulse_position[2] = ((fixed_index >> 8) & 7)*5 + pulse_subset<<1 + 2;
+    pulse_position[2] = ((fixed_index >> 8) & 7)*5 + (pulse_subset<<1) + 2;
 
     // reconstruct the fixed code
     reconstruct_fixed_vector(pulse_position, sign, 3, fixed_vector);
@@ -722,16 +722,16 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector) {
     // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
     // the 3 pulses and the upper 7 bits being coded in base 5
     temp = fixed_index[4] >> 3;
-    pulse_position[0] = (temp    %5)<<1 +  fixed_index[4]    &1;
-    pulse_position[4] = (temp /5)%5)<<1 + (fixed_index[4]>>1)&1;
-    pulse_position[1] = (temp/25)%5)<<1 + (fixed_index[4]>>2)&1;
+    pulse_position[0] = ((temp    %5)<<1) + ( fixed_index[4]    &1);
+    pulse_position[4] = ((temp /5)%5)<<1) + ((fixed_index[4]>>1)&1);
+    pulse_position[1] = ((temp/25)%5)<<1) + ((fixed_index[4]>>2)&1);
 
     // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
     // the 3 pulses and the upper 7 bits being coded in base 5
     temp = fixed_index[5] >> 3;
-    pulse_position[2] = (temp    %5)<<1 +  fixed_index[5]    &1;
-    pulse_position[6] = (temp /5)%5)<<1 + (fixed_index[5]>>1)&1;
-    pulse_position[5] = (temp/25)%5)<<1 + (fixed_index[5]>>2)&1;
+    pulse_position[2] = ((temp    %5)<<1) + ( fixed_index[5]    &1);
+    pulse_position[6] = ((temp /5)%5)<<1) + ((fixed_index[5]>>1)&1);
+    pulse_position[5] = ((temp/25)%5)<<1) + ((fixed_index[5]>>2)&1);
 
     // coded using 5+2 bits with the 2 LSBs being, individually, the LSB of 1 of
     // the 2 pulses and the upper 5 bits being coded in base 5
@@ -740,8 +740,8 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector) {
     pulse_position[7] = temp/5;
     if(pulse_position[7]&1)
         pulse_position[3] = 4 - pulse_position[3];
-    pulse_position[3] = pulse_position[3]<<1 +  fixed_index[6]    &1;
-    pulse_position[7] = pulse_position[7]<<1 + (fixed_index[6]>>1)&1;
+    pulse_position[3] = (pulse_position[3]<<1) + ( fixed_index[6]    &1);
+    pulse_position[7] = (pulse_position[7]<<1) + ((fixed_index[6]>>1)&1);
 
     // reset the code
     memset(fixed_vector, 0, AMR_SUBFRAME_SIZE*sizeof(float));
@@ -1108,8 +1108,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
             p->fixed_gain_factor = gains_low[index][1];
             *index++;
         }else {
-            p->pitch_gain[4] =     gains_MODE_475[index + (subframe&1)<<1][0];
-            p->fixed_gain_factor = gains_MODE_475[index + (subframe&1)<<1][1];
+            p->pitch_gain[4] =     gains_MODE_475[index + ((subframe&1)<<1)][0];
+            p->fixed_gain_factor = gains_MODE_475[index + ((subframe&1)<<1)][1];
             *index++;
         }
 
