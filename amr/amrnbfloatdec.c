@@ -76,7 +76,7 @@ typedef struct AMRContext {
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
 
     uint8_t           ir_filter_strength[2]; ///< impulse response filter strength; 0 - strong, 1 - medium, 2 - none
-    float                        *ir_filter; ///< pointer to impulse response filter data
+    const float                  *ir_filter; ///< pointer to impulse response filter data
 
     DSPContext                          dsp;
     float                          add_bias;
@@ -536,7 +536,8 @@ static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe) {
 
 static void interp_pitch_vector(float *prev_excitation, int lag_int, int lag_frac, enum Mode mode, float *pitch_vector) {
     int n, i;
-    float *b60_idx1, *b60_idx2, *exc_idx;
+    const float *b60_idx1, *b60_idx2;
+    float *exc_idx;
 
     lag_frac *= -1;
     if(mode != MODE_122) {
@@ -884,7 +885,7 @@ static float medianf(float *values, int n) {
  * @param ir_filter     pointer to the impulse response filter
  */
 
-static void convolve_circ(float *fixed_vector, float *ir_filter) {
+static void convolve_circ(float *fixed_vector, const float *ir_filter) {
     int i, j, k;
     int npulses = 0, pulse_positions[AMR_SUBFRAME_SIZE];
     float fixed_vector_temp[AMR_SUBFRAME_SIZE];
