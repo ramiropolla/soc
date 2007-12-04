@@ -1043,6 +1043,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         }else {
             decode_pitch_lag_3(p, p->amr_prms[index], subframe);
         }
+        index++;
 
         // interpolate the past excitation at the pitch lag to obtain the pitch
         // vector
@@ -1055,31 +1056,31 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         switch(p->cur_frame_mode) {
             case MODE_475:
             case MODE_515:
-                decode_2_pulses_9bits(index, index+1, subframe, &p->fixed_vector);
+                decode_2_pulses_9bits(p->amr_prms[index], p->amr_prms[index+1], subframe, p->fixed_vector);
                 index += 2;
             break;
             case MODE_59:
-                decode_2_pulses_11bits(index, index+1, &p->fixed_vector);
+                decode_2_pulses_11bits(p->amr_prms[index], p->amr_prms[index+1], p->fixed_vector);
                 index += 2;
             break;
             case MODE_67:
-                decode_3_pulses_14bits(index, index+1, &p->fixed_vector);
+                decode_3_pulses_14bits(p->amr_prms[index], p->amr_prms[index+1], p->fixed_vector);
                 index += 2;
             break;
             case MODE_74:
             case MODE_795:
-                decode_4_pulses_17bits(index, index+1, &p->fixed_vector);
+                decode_4_pulses_17bits(p->amr_prms[index], p->amr_prms[index+1], p->fixed_vector);
                 index += 2;
             break;
             case MODE_102:
-                decode_8_pulses_31bits(index, &p->fixed_vector);
+                decode_8_pulses_31bits(&p->amr_prms[index], p->fixed_vector);
                 index += 7;
             break;
             case MODE_122:
                 // decode pitch gain
-                p->pitch_gain[4] = qua_gain_pit[index];
+                p->pitch_gain[4] = qua_gain_pit[p->amr_prms[index]];
                 index++;
-                decode_10_pulses_35bits(index, &p->fixed_vector);
+                decode_10_pulses_35bits(&p->amr_prms[index], p->fixed_vector);
                 index += 10;
             break;
             default:
@@ -1091,29 +1092,29 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 /*** gain decoding ***/
 
         // calculate the predicted fixed gain g_c'
-        p->fixed_gain[4] = fixed_gain_prediction(&p->fixed_vector, &p->prediction_error, p->cur_frame_mode);
+        p->fixed_gain[4] = fixed_gain_prediction(p->fixed_vector, p->prediction_error, p->cur_frame_mode);
 
         // decode pitch gain and fixed gain correction factor
         if(p->cur_frame_mode == MODE_122) {
-            p->fixed_gain_factor = qua_gain_code[index];
+            p->fixed_gain_factor = qua_gain_code[p->amr_prms[index]];
             index++;
         }else if(p->cur_frame_mode == MODE_795) {
-            p->pitch_gain[4] =     qua_gain_pit[index];
+            p->pitch_gain[4] =     qua_gain_pit[p->amr_prms[index]];
             index++;
-            p->fixed_gain_factor = qua_gain_code[index];
+            p->fixed_gain_factor = qua_gain_code[p->amr_prms[index]];
             index++;
         }else if(p->cur_frame_mode == MODE_67 || p->cur_frame_mode == MODE_74 ||
                  p->cur_frame_mode == MODE_102) {
-            p->pitch_gain[4] =     gains_high[index][0];
-            p->fixed_gain_factor = gains_high[index][1];
+            p->pitch_gain[4] =     gains_high[p->amr_prms[index]][0];
+            p->fixed_gain_factor = gains_high[p->amr_prms[index]][1];
             index++;
         }else if(p->cur_frame_mode == MODE_515 || p->cur_frame_mode == MODE_59) {
-            p->pitch_gain[4] =     gains_low[index][0];
-            p->fixed_gain_factor = gains_low[index][1];
+            p->pitch_gain[4] =     gains_low[p->amr_prms[index]][0];
+            p->fixed_gain_factor = gains_low[p->amr_prms[index]][1];
             index++;
         }else {
-            p->pitch_gain[4] =     gains_MODE_475[index + ((subframe&1)<<1)][0];
-            p->fixed_gain_factor = gains_MODE_475[index + ((subframe&1)<<1)][1];
+            p->pitch_gain[4] =     gains_MODE_475[p->amr_prms[index] + ((subframe&1)<<1)][0];
+            p->fixed_gain_factor = gains_MODE_475[p->amr_prms[index] + ((subframe&1)<<1)][1];
             index++;
         }
 
