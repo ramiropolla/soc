@@ -1226,7 +1226,6 @@ static int amrnb_decode_close(AVCodecContext *avctx) {
     AMRContext *p = avctx->priv_data;
 
     /* Free allocated memory */
-    av_free(p->sample_buffer);
     av_free(p->amr_prms);
 
     /* Return 0 if everything is ok, -1 if not */
