@@ -68,7 +68,7 @@ typedef struct AMRContext {
 
     float               prediction_error[4]; ///< quantified prediction errors {20log10(^γ_gc)} for previous four subframes
     float                     pitch_gain[5]; ///< quantified pitch gains for the current and previous four subframes
-    float                 fixed_gain_factor;
+    float                 fixed_gain_factor; ///< fixed gain correction factor {^γ_gc} for the current frame
     float                     fixed_gain[5]; ///< quantified fixed gains for the current and previous four subframes
 
     float                              beta; ///< beta = pitch_gain, bounded by [0.0,1.0] for 12.2 kbps or [0.0,0.8] for other modes
