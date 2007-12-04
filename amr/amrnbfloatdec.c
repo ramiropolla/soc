@@ -937,14 +937,14 @@ static void synthesis(AMRContext *p, float *excitation, float *lpc, float *sampl
 
     // construct the excitation vector
     for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
-        excitation[i] = p->pitch_gain*p->pitch_vector[i] + p->fixed_gain*p->fixed_vector[i];
+        excitation[i] = p->pitch_gain[4]*p->pitch_vector[i] + p->fixed_gain[4]*p->fixed_vector[i];
     }
 
     // if an overflow has been detected, pitch vector contribution emphasis and
     // adaptive gain control are skipped
-    if(p->pitch_gain > 0.5 && !overflow) {
+    if(p->pitch_gain[4] > 0.5 && !overflow) {
         float excitation_temp[AMR_SUBFRAME_SIZE];
-        float pitch_factor = (p->cur_frame_mode == MODE_122 ? 0.25 : 0.5)*p->beta*p->pitch_gain;
+        float pitch_factor = (p->cur_frame_mode == MODE_122 ? 0.25 : 0.5)*p->beta*p->pitch_gain[4];
         float eta, temp1 = 0.0, temp2 = 0.0;
 
         for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
