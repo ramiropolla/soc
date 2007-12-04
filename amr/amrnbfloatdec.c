@@ -54,6 +54,8 @@ typedef struct AMRContext {
 
     float           lpc[4][LP_FILTER_ORDER]; ///< vectors of lpc coefficients for 4 subframes
 
+    int                    search_range_min; ///< minimum pitch lag search range
+    int                    search_range_max; ///< maximum pitch lag search range
     int                       pitch_lag_int; ///< integer part of pitch lag from current subframe
     int                      pitch_lag_frac; ///< fractional part of pitch lag from current subframe
     int                  prev_pitch_lag_int; ///< integer part of pitch lag from previous subframe
@@ -462,7 +464,7 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe) {
         if( (p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515) ||
             (p->cur_frame_mode == MODE_59)  || (p->cur_frame_mode == MODE_67) ) {
             // decoding with 4 bit resolution
-            int t1_temp = clip(p->prev_pitch_lag_int, p->search_range_max-4, p->search_range_min+5);
+            int t1_temp = FFMAX(FFMIN(p->prev_pitch_lag_int, p->search_range_max-4), p->search_range_min+5);
 
             if(pitch_index < 4) {
                 // integer only precision for [t1_temp-5, t1_temp-2]
@@ -510,13 +512,6 @@ static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe) {
     // subframe 2 or 4
     }else {
         int temp;
-        // find the search range
-        p->search_range_min = FFMAX(p->pitch_lag_int - 5, PITCH_LAG_MIN_MODE_122);
-        p->search_range_max = p->search_range_min + 9;
-        if(p->search_range_max > PITCH_LAG_MAX) {
-            p->search_range_max = PITCH_LAG_MAX;
-            p->search_range_min = p->search_range_max - 9;
-        }
         // calculate the pitch lag
         temp = (pitch_index + 5)/6 - 1;
         p->pitch_lag_int = temp + p->search_range_min;
@@ -1032,6 +1027,14 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
     for(subframe = 0; subframe < 5; subframe++) {
 
 /*** adaptive code book (pitch) vector decoding ***/
+
+        // find the search range
+        p->search_range_min = FFMAX(p->pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
+        p->search_range_max = p->search_range_min + 9;
+        if(p->search_range_max > PITCH_LAG_MAX) {
+            p->search_range_max = PITCH_LAG_MAX;
+            p->search_range_min = p->search_range_max - 9;
+        }
 
         // decode integer and fractional parts of pitch lag from parsed pitch
         // index
