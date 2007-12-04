@@ -973,7 +973,7 @@ static void synthesis(AMRContext *p, float *excitation, float *lpc, float *sampl
     // Check for overflows
     for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
         if(FFABS(samples[i])>1.0)
-            synthesis(excitation, lpc, samples, 1);
+            synthesis(p, excitation, lpc, samples, 1);
     }
 }
 
