@@ -25,7 +25,10 @@
  * AMR narrowband data and definitions
  */
 
+#ifndef FFMPEG_AMRNBFLOATDATA_H
+#define FFMPEG_AMRNBFLOATDATA_H
 
+#include <inttypes.h>
 #include <math.h>
 
 // general definitions
@@ -2057,3 +2060,6 @@ static const float ir_filter_medium[AMR_SUBFRAME_SIZE] = {
 
 
 /**************************** end of tables *****************************/
+
+#endif /* FFMPEG_AMRNBFLOATDATA_H */
+
