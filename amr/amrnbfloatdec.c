@@ -982,6 +982,41 @@ static void synthesis(AMRContext *p, float *excitation, float *lpc, float *sampl
 /*** end of synthesis functions ***/
 
 
+/*** update functions ***/
+
+/**
+ * Update buffers and history at the end of decoding a subframe
+ *
+ * @param p             pointer to the AMRContext
+ */
+
+static void update_state(AMRContext *p) {
+    // update the excitation buffer moving the current values into the buffer
+    // pushing out those no longer needed
+    memmove(&p->excitation_buf[0], &p->excitation_buf[AMR_SUBFRAME_SIZE],
+        (PITCH_LAG_MAX + LP_FILTER_ORDER + 1)*sizeof(float));
+
+    // update quantified prediction error energy history
+    p->prediction_error[0] = p->prediction_error[1];
+    p->prediction_error[1] = p->prediction_error[2];
+    p->prediction_error[2] = p->prediction_error[3];
+    p->prediction_error[3] = 20.0*log10f(p->fixed_gain_factor);
+
+    // update gain history
+    memmove(&p->pitch_gain[0], &p->pitch_gain[1], 4*sizeof(float));
+    memmove(&p->fixed_gain[0], &p->fixed_gain[1], 4*sizeof(float));
+
+    // update ir filter strength history
+    p->ir_filter_strength[0] = p->ir_filter_strength[1];
+
+    // update speech sample history
+    memmove(&p->samples_in[0], &p->samples_in[LP_FILTER_ORDER],
+        AMR_SUBFRAME_SIZE*sizeof(float));
+}
+
+/*** end of update functions ***/
+
+
 static int amrnb_decode_frame(AVCodecContext *avctx,
         void *data, int *data_size, uint8_t *buf, int buf_size) {
 
@@ -1215,6 +1250,9 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         }
         p->dsp.float_to_int16(p->samples_out, p->samples_in, AMR_SUBFRAME_SIZE);
         memcpy(buf_out, p->samples_out, AMR_SUBFRAME_SIZE*sizeof(int16_t));
+
+        // update buffers and history
+        update_state(p);
 
     }
 
