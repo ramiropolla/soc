@@ -446,9 +446,9 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs) {
  * @return void
  */
 
-static void decode_pitch_lag_3(AMRContext *p, int pitch_index) {
+static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe) {
     // subframe 1 or 3
-    if(p->cur_subframe & 1) {
+    if(subframe & 1) {
         if(pitch_index < 197) {
             // 10923>>15 is approximately 1/3
             p->pitch_lag_int = ( ((pitch_index + 2)*10923)>>15 ) + 19;
@@ -497,9 +497,9 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index) {
  * @return void
  */
 
-static void decode_pitch_lag_6(AMRContext *p, int pitch_index) {
+static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe) {
     // subframe 1 or 3
-    if(p->cur_subframe & 1) {
+    if(subframe & 1) {
         if(pitch_index < 463){
             p->pitch_lag_int = (pitch_index + 5)/6 + 17;
             p->pitch_lag_frac = pitch_index - p->pitch_lag_int*6 + 105;
@@ -1036,9 +1036,9 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
         // decode integer and fractional parts of pitch lag from parsed pitch
         // index
         if(p->cur_frame_mode == MODE_122) {
-            decode_pitch_lag_6(p, p->amr_prms[index]);
+            decode_pitch_lag_6(p, p->amr_prms[index], subframe);
         }else {
-            decode_pitch_lag_3(p, p->amr_prms[index]);
+            decode_pitch_lag_3(p, p->amr_prms[index], subframe);
         }
 
         // interpolate the past excitation at the pitch lag to obtain the pitch
