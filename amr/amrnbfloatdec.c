@@ -294,7 +294,6 @@ static void lsf2lsp_3(AMRContext *p) {
     float lsf_r[LP_FILTER_ORDER]; // residual LSF vector
     float lsf_q[LP_FILTER_ORDER]; // quantified LSF vector
     const float (*lsf_3_1_tmp)[3], (*lsf_3_3_tmp)[4]; // temp ptrs for switching tables depending on mode
-    float sign;
     int idx, i;
 
     // assign lsf tables according to mode
