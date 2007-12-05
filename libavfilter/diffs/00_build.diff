@@ -26,7 +26,23 @@ Index: configure
  echo "video hooking             ${vhook-no}"
  if enabled vhook; then
      echo "Imlib2 support            ${imlib2-no}"
-@@ -2094,3 +2097,8 @@
+@@ -1992,6 +1995,7 @@
+         libavcodec/sh4    \
+         libavcodec/sparc  \
+         libavdevice       \
++        libavfilter       \
+         libavformat       \
+         libavutil         \
+         libpostproc       \
+@@ -2006,6 +2010,7 @@
+         doc/texi2pod.pl      \
+         libavcodec/Makefile  \
+         libavdevice/Makefile \
++        libavfilter/Makefile \
+         libavformat/Makefile \
+         libavutil/Makefile   \
+         libpostproc/Makefile \
+@@ -2094,3 +2099,8 @@
      apply libswscale.pc sed s/^Libs:.*$/Libs:/
      apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
  fi
