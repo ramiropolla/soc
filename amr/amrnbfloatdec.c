@@ -397,7 +397,7 @@ static void lsp2poly(float *lsp, float *f) {
     for(i=2; i<7; i++) {
         int idx_lsp = 2*i-4;
         f[i] = 2.0*(-lsp[idx_lsp]*f[i-1] + f[i-2]);
-        for(j=i-1; j>0; j--) {
+        for(j=i-1; j>1; j--) {
             f[j] += -2.0*lsp[idx_lsp]*f[j-1] + f[j-2];
         }
     }
