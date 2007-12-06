@@ -413,7 +413,7 @@ static void lsp2poly(float *lsp, float *f) {
  */
 
 static void lsp2lpc(float *lsp, float *lpc_coeffs) {
-    float f1[6], f2[6];
+    float f1[7], f2[7];
     int i;
 
     // find F1(z) and F2(z) from the lsps
@@ -421,7 +421,7 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs) {
     lsp2poly(&lsp[1], f2);
 
     // multiply F1(z) by 1+z^{-1} and F2(z) by 1-z^{-1} to obtain F1'(z) and F2'(z)
-    for(i=5; i>0; i--) {
+    for(i=6; i>1; i--) {
         f1[i] += f1[i-1];
         f2[i] -= f2[i-1];
     }
@@ -429,8 +429,8 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs) {
     // A(z) = ( F1'(z) + F2'(z) )/2
     // note f1 and f2 are actually f1' and f2'
     for(i=0; i<5; i++) {
-        lpc_coeffs[i]   = 0.5*(f1[i+1] + f2[i+1]); // lpc 0..4 uses indices to f, 1..5
-        lpc_coeffs[i+5] = 0.5*(f1[5-i] - f2[5-i]); // lpc 5..9 uses indices to f, 5..1
+        lpc_coeffs[i]   = 0.5*(f1[i+2] + f2[i+2]); // lpc 0..4 uses indices to f, 2..6
+        lpc_coeffs[i+5] = 0.5*(f1[6-i] - f2[6-i]); // lpc 5..9 uses indices to f, 6..2
     }
 }
 
