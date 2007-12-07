@@ -391,14 +391,14 @@ static void interp_lsp_123(AMRContext *p) {
 static void lsp2poly(float *lsp, float *f) {
     int i, j;
 
-    f[0] = 0.0;
-    f[1] = 1.0;
+    f[-1] = 0.0;
+    f[ 0] = 1.0;
 
-    for(i=2; i<7; i++) {
-        int idx_lsp = 2*i-4;
-        f[i] = 2.0*(-lsp[idx_lsp]*f[i-1] + f[i-2]);
-        for(j=i-1; j>1; j--) {
-            f[j] += -2.0*lsp[idx_lsp]*f[j-1] + f[j-2];
+    for(i=0; i<5; i++) {
+        int idx_lsp = 2*i;
+        f[i+1] = -lsp[idx_lsp]*f[i] + 2.0*f[i-1];
+        for(j=i; j>0; j--) {
+            f[j] += -lsp[idx_lsp]*f[j-1] + f[j-2];
         }
     }
 }
@@ -417,8 +417,8 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs) {
     int i;
 
     // find F1(z) and F2(z) from the lsps
-    lsp2poly(&lsp[0], f1);
-    lsp2poly(&lsp[1], f2);
+    lsp2poly(&lsp[0], &f1[1]);
+    lsp2poly(&lsp[1], &f2[1]);
 
     // multiply F1(z) by 1+z^{-1} and F2(z) by 1-z^{-1} to obtain F1'(z) and F2'(z)
     for(i=6; i>1; i--) {
