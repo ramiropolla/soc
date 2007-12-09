@@ -88,6 +88,41 @@ typedef struct AMRContext {
 } AMRContext;
 
 
+static void reset_state(AMRContext *p) {
+    int i;
+
+    // initialise values for the lsp vector from the 4th subframe of the
+    // previous subframe values
+    // taken from Decoder_amr_reset using (val<<10)/16777216.0
+    p->prev_lsp_sub4[0] = 1.8310546875;
+    p->prev_lsp_sub4[1] = 1.5869140625;
+    p->prev_lsp_sub4[2] = 1.28173828125;
+    p->prev_lsp_sub4[3] = 0.91552734375;
+    p->prev_lsp_sub4[4] = 0.48828125;
+    p->prev_lsp_sub4[5] = 0;
+    p->prev_lsp_sub4[6] = -0.48828125;
+    p->prev_lsp_sub4[7] = -0.91552734375;
+    p->prev_lsp_sub4[8] = -1.28173828125;
+    p->prev_lsp_sub4[9] = -1.5869140625;
+
+    // initialise mean lsp values
+    // taken from Decoder_amr_reset using (val<<10)/16777216.0
+    p->lsp_avg[0] = 0.08447265625;
+    p->lsp_avg[1] = 0.12677001953125;
+    p->lsp_avg[2] = 0.208740234375;
+    p->lsp_avg[3] = 0.311767578125;
+    p->lsp_avg[4] = 0.4114990234375;
+    p->lsp_avg[5] = 0.4957275390625;
+    p->lsp_avg[6] = 0.60198974609375;
+    p->lsp_avg[7] = 0.677001953125;
+    p->lsp_avg[8] = 0.7760009765625;
+    p->lsp_avg[9] = 0.83624267578125;
+
+    for(i=0; i<4; i++) {
+        p->prediction_error[i] = MIN_ENERGY;
+    }
+}
+
 static int amrnb_decode_init(AVCodecContext *avctx) {
     AMRContext *p = avctx->priv_data;
 
@@ -111,6 +146,8 @@ static int amrnb_decode_init(AVCodecContext *avctx) {
 
     // p->excitation always points to the same position in p->excitation_buf
     p->excitation = &p->excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1];
+
+    reset_state(p);
 
     /* return 0 for a successful init, -1 for failure */
     return 0;
