@@ -1841,7 +1841,7 @@ static const float energy_mean[8] = { 33.0, 33.0, 33.0, 28.75, 30.0, 36.0, 33.0,
 static const float energy_pred_fac[4] = { 0.68, 0.58, 0.34, 0.19 };
 
 // gain table for 4.75 kbps mode
-// first index has even/odd indices for even/odd subframes
+// first index has even/odd indices for subframes 0,2/1,3
 // second index is {pitch_gain, fixed_gain_factor}
 static const float gains_MODE_475[512][2] = {
 {0.049561, 0.031250}, {0.033081, 0.034180}, {0.175354, 0.277100}, {0.138306, 0.830566},

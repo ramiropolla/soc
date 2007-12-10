@@ -1057,6 +1057,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
     int i, subframe;                         // counters
     int index = 0;                           // index counter (different modes
                                              // advance through amr_prms differently)
+    int gains_index_MODE_475 = 0;            // MODE_475 gains index coded every other subframe
     enum Mode speech_mode = MODE_475;        // ???
 
     // decode the bitstream to amr parameters
@@ -1182,8 +1183,13 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
             p->fixed_gain_factor = gains_low[p->amr_prms[index]][1];
             index++;
         }else {
-            p->pitch_gain[4] =     gains_MODE_475[p->amr_prms[index] + ( (!(subframe&1)) <<1)][0];
-            p->fixed_gain_factor = gains_MODE_475[p->amr_prms[index] + ( (!(subframe&1)) <<1)][1];
+            // gain index is only coded in subframes 0,2
+            if(!(subframe&1)) {
+                gains_index_MODE_475 = p->amr_prms[index]<<1;
+                index++;
+            }
+            p->pitch_gain[4] =     gains_MODE_475[gains_index_MODE_475 + (subframe&1)][0];
+            p->fixed_gain_factor = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][1];
             index++;
         }
 
