@@ -41,7 +41,7 @@ typedef struct AMRContext {
 
     GetBitContext                        gb;
 
-    int16_t                       *amr_prms; ///< pointer to the decoded amr parameters (lsf coefficients, codebook indices, etc)
+    int16_t         amr_prms[PRMS_MODE_122]; ///< decoded amr parameters (lsf coefficients, codebook indices, etc)
     int                 bad_frame_indicator; ///< bad frame ? 1 : 0
     int                      cur_frame_mode; ///< current frame mode
     int                      cur_frame_type; ///< current frame type
@@ -125,13 +125,6 @@ static void reset_state(AMRContext *p) {
 
 static int amrnb_decode_init(AVCodecContext *avctx) {
     AMRContext *p = avctx->priv_data;
-
-    // allocate and zero the amr parameters
-    p->amr_prms = av_mallocz(sizeof(int16_t)*PRMS_MODE_122);
-
-    // Check amr_prms allocation
-    if(p->amr_prms == NULL)
-        return -1;
 
     dsputil_init(&p->dsp, avctx);
 
@@ -1307,9 +1300,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 
 static int amrnb_decode_close(AVCodecContext *avctx) {
     AMRContext *p = avctx->priv_data;
-
-    /* Free allocated memory */
-    av_free(p->amr_prms);
 
     /* Return 0 if everything is ok, -1 if not */
     return 0;
