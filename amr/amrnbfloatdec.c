@@ -1003,12 +1003,6 @@ static void synthesis(AMRContext *p, float *excitation, float *lpc, float *sampl
         }
         samples[i] = excitation[i] + sample_temp;
     }
-
-    // Check for overflows
-    for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
-        if(fabsf(samples[i])>1.0)
-            synthesis(p, excitation, lpc, samples, 1);
-    }
 }
 
 /*** end of synthesis functions ***/
@@ -1279,6 +1273,13 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 /*** synthesis ***/
 
         synthesis(p, p->excitation, p->lpc[subframe], &p->samples_in[LP_FILTER_ORDER], 0);
+
+        // Check for overflows
+        for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
+            if(fabsf(samples[i])>1.0)
+                synthesis(p, excitation, lpc, samples, 1);
+        }
+
 
 /*** end of synthesis ***/
 
