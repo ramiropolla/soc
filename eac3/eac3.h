@@ -18,8 +18,8 @@
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
-#ifndef EAC3_H
-#define EAC3_H
+#ifndef FFMPEG_EAC3_H
+#define FFMPEG_EAC3_H
 
 #include "dsputil.h"
 #include "avcodec.h"

@@ -36,18 +36,11 @@
 void ff_ac3_window_init(float *window);
 void ff_ac3_tables_init(void);
 
-/** tables for ungrouping mantissas */
-extern float ff_ac3_b1_mantissas[32][3];
-extern float ff_ac3_b2_mantissas[128][3];
-extern float ff_ac3_b3_mantissas[8];
-extern float ff_ac3_b4_mantissas[128][2];
-extern float ff_ac3_b5_mantissas[16];
-
 /** dynamic range table. converts codes to scale factors. */
-extern float ff_ac3_dynrng_tbl[256];
+extern float ff_ac3_dynamic_range_tab[256];
 
-/** dialogue normalization table */
-extern float ff_ac3_dialnorm_tbl[32];
+/** dialog normalization table */
+extern float ff_ac3_dialog_norm_tab[32];
 
 /**
  * table for exponent to scale_factor mapping
@@ -55,14 +48,11 @@ extern float ff_ac3_dialnorm_tbl[32];
  */
 extern float ff_ac3_scale_factors[25];
 
-/** table for grouping exponents */
-extern uint8_t ff_ac3_exp_ungroup_tbl[128][3];
-
 /**
  * Decode the grouped exponents according to exponent strategy.
  * reference: Section 7.1.3 Exponent Decoding
  */
-void ff_ac3_decode_exponents(GetBitContext *gb, int expstr, int ngrps,
+void ff_ac3_decode_exponents(GetBitContext *gb, int exp_strategy, int ngrps,
                              uint8_t absexp, int8_t *dexps);
 
 /**

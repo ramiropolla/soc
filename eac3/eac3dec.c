@@ -354,7 +354,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     s->lfeon = get_bits1(gbc);
 
     // calculate number of channels
-    s->nfchans = ff_ac3_channels[s->acmod];
+    s->nfchans = ff_ac3_channels_tab[s->acmod];
     s->num_channels = s->nfchans;
     s->lfe_channel = s->num_channels+1;
     if (s->lfeon) {
@@ -372,7 +372,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     }
 
     for (i = 0; i < (s->acmod ? 1 : 2); i++) {
-        s->dialnorm[i] = ff_ac3_dialnorm_tbl[get_bits(gbc, 5)];
+        s->dialnorm[i] = ff_ac3_dialog_norm_tab[get_bits(gbc, 5)];
         if (get_bits1(gbc)) {
             skip_bits(gbc, 8); //skip Compression gain word
         }
@@ -484,7 +484,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         /* Informational metadata */
         skip_bits(gbc, 3); //skip Bit stream mode
         skip_bits(gbc, 2); //skip copyright bit and original bitstream bit
-        if (s->acmod == AC3_ACMOD_STEREO) { /* if in 2/0 mode */
+        if (s->acmod == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
             skip_bits(gbc, 4); //skip Dolby surround and headphone mode
         }
         if (s->acmod >= 6) {
@@ -700,7 +700,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* Dynamic range control */
     for (i = 0; i < (s->acmod ? 1 : 2); i++) {
         if (get_bits1(gbc)) {
-            s->dynrng[i] = ff_ac3_dynrng_tbl[get_bits(gbc, 8)];
+            s->dynrng[i] = ff_ac3_dynamic_range_tab[get_bits(gbc, 8)];
         } else {
             if (!blk) {
                 s->dynrng[i] = 1.0f;
@@ -714,7 +714,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             log_missing_feature(s->avctx, "Spectral extension");
             return -1;
 #if 0
-            if (s->acmod == AC3_ACMOD_MONO) {
+            if (s->acmod == AC3_CHMODE_MONO) {
                 s->chinspx[1] = 1;
             } else {
                 for (ch = 1; ch <= s->nfchans; ch++) {
@@ -821,7 +821,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     if (s->cplstre[blk]) {
         if (s->cplinu[blk]) {
             s->ecplinu = get_bits1(gbc);
-            if (s->acmod == AC3_ACMOD_STEREO) {
+            if (s->acmod == AC3_CHMODE_STEREO) {
                 s->chincpl[1] = 1;
                 s->chincpl[2] = 1;
             } else {
@@ -831,7 +831,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }
             if (!s->ecplinu) {
                 /* standard coupling in use */
-                if (s->acmod == AC3_ACMOD_STEREO) { /* if in 2/0 mode */
+                if (s->acmod == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
                     s->phsflginu = get_bits1(gbc);
                 }
                 s->cplbegf = get_bits(gbc, 4);
@@ -965,7 +965,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     s->firstcplcos[ch] = 1;
                 }
             } /* ch */
-            if ((s->acmod == AC3_ACMOD_STEREO) && s->phsflginu
+            if ((s->acmod == AC3_CHMODE_STEREO) && s->phsflginu
                     && (s->cplcoe[1] || s->cplcoe[2])) {
                 for (bnd = 0; bnd < s->ncplbnd; bnd++) {
                     s->phsflg[bnd] = get_bits1(gbc);
@@ -1026,13 +1026,13 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         } /* ecplinu[blk] */
     } /* cplinu[blk] */
     /* Rematrixing operation in the 2/0 mode */
-    if (s->acmod == AC3_ACMOD_STEREO) { /* if in 2/0 mode */
+    if (s->acmod == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
         if (!blk || get_bits1(gbc)) {
             /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf */
             // TODO spx in one channel
             int end = (s->cplinu[blk] || s->spxinu) ?
-                FFMIN(s->endmant[1], s->endmant[2]) : (ff_ac3_rematrix_band_tbl[4]-1);
-            for (bnd = 0; ff_ac3_rematrix_band_tbl[bnd] <= end; bnd++) {
+                FFMIN(s->endmant[1], s->endmant[2]) : (ff_ac3_rematrix_band_tab[4]-1);
+            for (bnd = 0; ff_ac3_rematrix_band_tab[bnd] <= end; bnd++) {
                 s->rematflg[bnd] = get_bits1(gbc);
             }
             s->nrematbnds = bnd;
@@ -1073,11 +1073,11 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* Bit-allocation parametric information */
     if (s->bamode) {
         if (get_bits1(gbc)) {
-            s->bit_alloc_params.sdecay = ff_sdecaytab[get_bits(gbc, 2)];   /* Table 7.6 */
-            s->bit_alloc_params.fdecay = ff_fdecaytab[get_bits(gbc, 2)];   /* Table 7.7 */
-            s->bit_alloc_params.sgain  = ff_sgaintab [get_bits(gbc, 2)];   /* Table 7.8 */
-            s->bit_alloc_params.dbknee = ff_dbkneetab[get_bits(gbc, 2)];   /* Table 7.9 */
-            s->bit_alloc_params.floor  = ff_floortab [get_bits(gbc, 3)];   /* Table 7.10 */
+            s->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[get_bits(gbc, 2)];   /* Table 7.6 */
+            s->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[get_bits(gbc, 2)];   /* Table 7.7 */
+            s->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab [get_bits(gbc, 2)];   /* Table 7.8 */
+            s->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[get_bits(gbc, 2)];   /* Table 7.9 */
+            s->bit_alloc_params.floor      = ff_ac3_floor_tab     [get_bits(gbc, 3)];   /* Table 7.10 */
         } else {
             if (!blk) {
                 av_log(s->avctx, AV_LOG_ERROR, "no bit allocation information in first block\n");
@@ -1085,11 +1085,11 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }
         }
     } else {
-        s->bit_alloc_params.sdecay = ff_sdecaytab[2];   /* Table 7.6 */
-        s->bit_alloc_params.fdecay = ff_fdecaytab[1];   /* Table 7.7 */
-        s->bit_alloc_params.sgain  = ff_sgaintab[1];    /* Table 7.8 */
-        s->bit_alloc_params.dbknee = ff_dbkneetab[2];   /* Table 7.9 */
-        s->bit_alloc_params.floor  = ff_floortab[7];    /* Table 7.10 */
+        s->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[2];  /* Table 7.6 */
+        s->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[1];  /* Table 7.7 */
+        s->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab [1];  /* Table 7.8 */
+        s->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[2];  /* Table 7.9 */
+        s->bit_alloc_params.floor      = ff_ac3_floor_tab     [7];  /* Table 7.10 */
     }
 
     if (s->snroffststr) {
@@ -1106,11 +1106,11 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     if (s->frmfgaincode && get_bits1(gbc)) {
         for (ch = !s->cplinu[blk]; ch <= s->num_channels; ch++)
-            s->fgain[ch] = ff_fgaintab[get_bits(gbc, 3)];
+            s->fgain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
     } else {
         if (!blk) {
             for (ch = !s->cplinu[blk]; ch <= s->num_channels; ch++)
-                s->fgain[ch] = ff_fgaintab[4];
+                s->fgain[ch] = ff_ac3_fast_gain_tab[4];
         }
     }
     if (!s->strmtyp) {
@@ -1127,8 +1127,8 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             s->cplleake = get_bits1(gbc);
         }
         if (s->cplleake) {
-            s->bit_alloc_params.cplfleak = get_bits(gbc, 3);
-            s->bit_alloc_params.cplsleak = get_bits(gbc, 3);
+            s->bit_alloc_params.cpl_fast_leak = get_bits(gbc, 3);
+            s->bit_alloc_params.cpl_slow_leak = get_bits(gbc, 3);
         }
     }
     /* Delta bit allocation information */
@@ -1167,8 +1167,8 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         ff_ac3_bit_alloc_calc_psd((int8_t *)s->dexps[ch], s->strtmant[ch],
                 s->endmant[ch], s->psd[ch], s->bndpsd[ch]);
 
-        s->bit_alloc_params.fscod = s->fscod;
-        s->bit_alloc_params.halfratecod = 0;
+        s->bit_alloc_params.sr_code = s->fscod;
+        s->bit_alloc_params.sr_shift = 0;
 
         ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params,
                 s->bndpsd[ch], s->strtmant[ch], s->endmant[ch], s->fgain[ch],
@@ -1179,7 +1179,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
         if (s->chahtinu[ch] == 0)
             ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], s->strtmant[ch],
-                    s->endmant[ch], s->snroffst[ch], s->bit_alloc_params.floor, ff_ac3_baptab,
+                    s->endmant[ch], s->snroffst[ch], s->bit_alloc_params.floor, ff_ac3_bap_tab,
                     s->bap[ch]);
         else
             if (s->chahtinu[ch] == 1)
@@ -1255,9 +1255,9 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         return -1;
 
     if (c->fscod == 3) {
-        avctx->sample_rate = ff_ac3_freqs[c->fscod2] / 2;
+        avctx->sample_rate = ff_ac3_sample_rate_tab[c->fscod2] / 2;
     } else {
-        avctx->sample_rate = ff_ac3_freqs[c->fscod];
+        avctx->sample_rate = ff_ac3_sample_rate_tab[c->fscod];
     }
 
     avctx->bit_rate = (c->frmsiz * avctx->sample_rate * 16 / ( ff_eac3_blocks[c->numblkscod] * 256)) / 1000;
@@ -1289,7 +1289,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         }
 
         /* recover coefficients if rematrixing is in use */
-        if (c->acmod == AC3_ACMOD_STEREO)
+        if (c->acmod == AC3_CHMODE_STEREO)
             ff_ac3_do_rematrixing(c->transform_coeffs,
                     FFMIN(c->endmant[1], c->endmant[2]),
                     c->nrematbnds, c->rematflg);
@@ -1297,7 +1297,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         /* apply scaling to coefficients (dialnorm, dynrng) */
         for (ch = 1; ch <= c->nfchans + c->lfeon; ch++) {
             float gain=2.0f;
-            if (c->acmod == AC3_ACMOD_DUALMONO) {
+            if (c->acmod == AC3_CHMODE_DUALMONO) {
                 gain *= c->dialnorm[ch-1] * c->dynrng[ch-1];
             } else {
                 gain *= c->dialnorm[0] * c->dynrng[0];
