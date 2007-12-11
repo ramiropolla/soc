@@ -326,7 +326,7 @@ static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int
     }
 
     memset(s->transform_coeffs[ch]+s->endmant[ch], 0,
-            sizeof(s->transform_coeffs[0])-s->endmant[ch]);
+           (AC3_MAX_COEFS - s->endmant[ch])*sizeof(float));
 }
 
 static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
