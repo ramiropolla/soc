@@ -346,10 +346,10 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         return -1;
 #if 0
         s->fscod2 = get_bits(gbc, 2);
-        s->numblkscod = 3; /* six blocks per frame */
+        s->num_blocks = 6;
 #endif
     } else {
-        s->numblkscod = get_bits(gbc, 2);
+        s->num_blocks = ff_eac3_blocks[get_bits(gbc, 2)];
     }
     s->acmod = get_bits(gbc, 3);
     s->lfeon = get_bits1(gbc);
@@ -467,10 +467,10 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 s->frmmixcfginfoe = get_bits1(gbc);
                 if (s->frmmixcfginfoe) {
                     /* mixing configuration information */
-                    if (!s->numblkscod) {
+                    if (s->num_blocks == 1) {
                         s->blkmixcfginfo[0] = get_bits(gbc, 5);
                     } else {
-                        for (blk = 0; blk < ff_eac3_blocks[s->numblkscod]; blk++) {
+                        for (blk = 0; blk < s->num_blocks; blk++) {
                             if (get_bits1(gbc)) {
                                 s->blkmixcfginfo[blk] = get_bits(gbc, 5);
                             }
@@ -502,12 +502,12 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             skip_bits1(gbc); //skip Source sample rate code
         }
     }
-    if ((!s->strmtyp) && (s->numblkscod != 3)) {
+    if ((!s->strmtyp) && s->num_blocks != 6) {
         skip_bits1(gbc); //converter synchronization flag
     }
     if (s->strmtyp == 2) {
         /* if bit stream converted from AC-3 */
-        if (s->numblkscod == 3 || get_bits1(gbc)) {
+        if (s->num_blocks == 6 || get_bits1(gbc)) {
             /* 6 blocks per frame */
             skip_bits(gbc, 6); // skip Frame size code
         }
@@ -526,8 +526,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     int blk, ch;
 
     /* Audio frame exist flags and strategy data */
-    if (s->numblkscod == 3) {
-        /* six blocks per frame */
+    if (s->num_blocks == 6) {
         /* LUT-based exponent strategy syntax */
         s->expstre = get_bits1(gbc);
         s->ahte = get_bits1(gbc);
@@ -561,7 +560,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         s->cplstre[0] = 1;
         s->cplinu[0] = get_bits1(gbc);
         s->ncplblks = s->cplinu[0];
-        for (blk = 1; blk < ff_eac3_blocks[s->numblkscod]; blk++) {
+        for (blk = 1; blk < s->num_blocks; blk++) {
             s->cplstre[blk] = get_bits1(gbc);
 
             if (s->cplstre[blk]) {
@@ -572,14 +571,14 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
             s->ncplblks += s->cplinu[blk];
         }
     } else {
-        memset(s->cplinu, 0, sizeof(*s->cplinu) * ff_eac3_blocks[s->numblkscod]);
+        memset(s->cplinu, 0, sizeof(*s->cplinu) * s->num_blocks);
         s->ncplblks = 0;
     }
 
     /* Exponent strategy data */
     if (s->expstre) {
         /* AC-3 style exponent strategy syntax */
-        for (blk = 0; blk < ff_eac3_blocks[s->numblkscod]; blk++) {
+        for (blk = 0; blk < s->num_blocks; blk++) {
             for (ch = !s->cplinu[blk]; ch <= s->nfchans; ch++) {
                 s->chexpstr[blk][ch] = get_bits(gbc, 2);
             }
@@ -597,13 +596,13 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
     /* LFE exponent strategy */
     if (s->lfeon) {
-        for (blk = 0; blk < ff_eac3_blocks[s->numblkscod]; blk++) {
+        for (blk = 0; blk < s->num_blocks; blk++) {
             s->chexpstr[blk][s->lfe_channel] = get_bits1(gbc);
         }
     }
     /* Converter exponent strategy data */
     if (!s->strmtyp) {
-        if (s->numblkscod == 3 || get_bits1(gbc)) {
+        if (s->num_blocks == 6 || get_bits1(gbc)) {
             for (ch = 1; ch <= s->nfchans; ch++) {
                 skip_bits(gbc, 5); //skip Converter channel exponent strategy
             }
@@ -659,12 +658,12 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
             s->chinspxatten[ch]=0;
     }
     /* Block start information */
-    if (s->numblkscod && get_bits1(gbc)) {
+    if (s->num_blocks > 1 && get_bits1(gbc)) {
         /* nblkstrtbits determined from frmsiz (see Section E2.3.2.27) */
         // nblkstrtbits = (numblks - 1) * (4 + ceiling (log2 (words_per_frame)))
         // where numblks is derived from the numblkscod in Table E2.9
         // words_per_frame = frmsiz + 1
-        int nblkstrtbits = (ff_eac3_blocks[s->numblkscod]-1) * (4 + (av_log2(s->frmsiz-1)+1) );
+        int nblkstrtbits = (s->num_blocks-1) * (4 + (av_log2(s->frmsiz-1)+1) );
         av_log(s->avctx, AV_LOG_INFO, "nblkstrtbits = %i\n", nblkstrtbits);
         s->blkstrtinfo = get_bits(gbc, nblkstrtbits);
     }
@@ -1261,7 +1260,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         avctx->sample_rate = ff_ac3_sample_rate_tab[c->fscod];
     }
 
-    avctx->bit_rate = (c->frmsiz * avctx->sample_rate * 16 / ( ff_eac3_blocks[c->numblkscod] * 256)) / 1000;
+    avctx->bit_rate = (c->frmsiz * avctx->sample_rate * 16 / (c->num_blocks * 256)) / 1000;
 
     /* channel config */
     if (!avctx->request_channels) {
@@ -1283,7 +1282,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         }
     }
 
-    for (blk = 0; blk < ff_eac3_blocks[c->numblkscod]; blk++) {
+    for (blk = 0; blk < c->num_blocks; blk++) {
         if (parse_audblk(&gbc, c, blk)) {
             av_log(c->avctx, AV_LOG_ERROR, "Error in parse_audblk\n");
             return -1;
@@ -1330,7 +1329,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         }
     }
 
-    *data_size = ff_eac3_blocks[c->numblkscod] * 256 * avctx->channels * sizeof (int16_t); // TODO is ok?
+    *data_size = c->num_blocks * 256 * avctx->channels * sizeof (int16_t); // TODO is ok?
 
     return (c->frmsiz+1)*2;
 }

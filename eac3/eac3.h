@@ -47,7 +47,7 @@ typedef struct EAC3Context{
     int frmsiz;                      ///< Frame size
     int fscod;                       ///< Sample rate code
     int fscod2;                      ///< Sample rate code 2
-    int numblkscod;                  ///< Number of audio blocks
+    int num_blocks;                  ///< Number of audio blocks
     int acmod;                       ///< Audio coding mode
     int lfeon;                       ///< Low frequency effect channel on
     int bsid;                        ///< Bit stream identification
