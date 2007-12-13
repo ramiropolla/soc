@@ -42,7 +42,7 @@ typedef struct EAC3Context{
     int syncword;
 ///@name Bit stream information
 ///@{
-    int strmtyp;                     ///< Stream type
+    int stream_type;                 ///< Stream type
     int substreamid;                 ///< Substream identification
     int frame_size;                  ///< Frame size, in bytes
     int fscod;                       ///< Sample rate code
@@ -204,5 +204,13 @@ typedef enum {
     EAC3_GAQ_14,
     EAC3_GAQ_124
 } EAC3GaqMode;
+
+/** Stream Type */
+typedef enum {
+    EAC3_STREAM_TYPE_INDEPENDENT = 0,
+    EAC3_STREAM_TYPE_DEPENDENT,
+    EAC3_STREAM_TYPE_AC3_CONVERT,
+    EAC3_STREAM_TYPE_RESERVED
+} EAC3StreamType;
 
 #endif

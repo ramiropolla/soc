@@ -333,9 +333,12 @@ static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int
 static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     int i, blk;
 
-    s->strmtyp = get_bits(gbc, 2);
-    if (s->strmtyp) {
+    s->stream_type = get_bits(gbc, 2);
+    if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
         log_missing_feature(s->avctx, "Dependent substream");
+        return -1;
+    } else if (s->stream_type == EAC3_STREAM_TYPE_RESERVED) {
+        av_log(s->avctx, AV_LOG_ERROR, "Reserved stream type\n");
         return -1;
     }
     s->substreamid = get_bits(gbc, 3);
@@ -378,7 +381,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             skip_bits(gbc, 8); //skip Compression gain word
         }
     }
-    if (s->strmtyp == 1) {
+    if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
         /* if dependent stream */
         if (get_bits1(gbc)) {
             s->chanmap = get_bits(gbc, 16);
@@ -427,8 +430,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 s->lfemixlevcod = get_bits(gbc, 5);
             }
         }
-        if (!s->strmtyp) {
-            /* if independent stream */
+        if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT) {
             for (i = 0; i < (s->acmod ? 1 : 2); i++) {
                 if (get_bits1(gbc)) {
                     s->pgmscl[i] = get_bits(gbc, 6);
@@ -502,10 +504,10 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             skip_bits1(gbc); //skip Source sample rate code
         }
     }
-    if ((!s->strmtyp) && s->num_blocks != 6) {
+    if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT && s->num_blocks != 6) {
         skip_bits1(gbc); //converter synchronization flag
     }
-    if (s->strmtyp == 2) {
+    if (s->stream_type == EAC3_STREAM_TYPE_AC3_CONVERT) {
         /* if bit stream converted from AC-3 */
         if (s->num_blocks == 6 || get_bits1(gbc)) {
             /* 6 blocks per frame */
@@ -601,7 +603,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         }
     }
     /* Converter exponent strategy data */
-    if (!s->strmtyp) {
+    if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT) {
         if (s->num_blocks == 6 || get_bits1(gbc)) {
             for (ch = 1; ch <= s->nfchans; ch++) {
                 skip_bits(gbc, 5); //skip Converter channel exponent strategy
@@ -1113,7 +1115,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 s->fgain[ch] = ff_ac3_fast_gain_tab[4];
         }
     }
-    if (!s->strmtyp) {
+    if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT) {
         if (get_bits1(gbc)) {
             skip_bits(gbc, 10); //Converter SNR offset
         }
