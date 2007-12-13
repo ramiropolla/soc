@@ -51,6 +51,8 @@ static const float mixlevels[9] = {
     LEVEL_MINUS_9DB
 };
 
+static float idct_cos_tab[6][5];
+
 static void log_missing_feature(AVCodecContext *avctx, const char *log){
     av_log(avctx, AV_LOG_ERROR, "%s is not implemented. If you want to help, "
             "update your FFmpeg version to the newest one from SVN. If the "
@@ -301,9 +303,9 @@ static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
     int bin, i;
     float tmp;
     for (bin = s->strtmant[ch]; bin < s->endmant[ch]; bin++) {
-        tmp = 0;
-        for (i = 0; i < 6; i++) {
-            tmp += (i?sqrt(2):1) * s->pre_chmant[i][ch][bin] * cos(M_PI*i*(2*blk + 1)/12);
+        tmp = s->pre_chmant[0][ch][bin];
+        for (i = 1; i < 6; i++) {
+            tmp += idct_cos_tab[blk][i-1] * s->pre_chmant[i][ch][bin];
         }
         s->transform_coeffs[ch][bin] = tmp * ff_ac3_scale_factors[s->dexps[ch][bin]];
     }
@@ -1343,12 +1345,24 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     return c->frame_size;
 }
 
+static void eac3_tables_init(void) {
+    int blk, i;
+
+    // initialize IDCT cosine table for use with AHT
+    for(blk=0; blk<6; blk++) {
+        for(i=1; i<6; i++) {
+            idct_cos_tab[blk][i-1] = M_SQRT2 * cos(M_PI*i*(2*blk + 1)/12);
+        }
+    }
+}
+
 static int eac3_decode_init(AVCodecContext *avctx){
     EAC3Context *ctx = avctx->priv_data;
 
     ctx->avctx = avctx;
     ac3_common_init();
     ff_ac3_tables_init();
+    eac3_tables_init();
     av_init_random(0, &ctx->dith_state);
     ff_mdct_init(&ctx->imdct_256, 8, 1);
     ff_mdct_init(&ctx->imdct_512, 9, 1);
