@@ -382,7 +382,6 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         }
     }
     if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
-        /* if dependent stream */
         if (get_bits1(gbc)) {
             s->chanmap = get_bits(gbc, 16);
         } else {
@@ -508,9 +507,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         skip_bits1(gbc); //converter synchronization flag
     }
     if (s->stream_type == EAC3_STREAM_TYPE_AC3_CONVERT) {
-        /* if bit stream converted from AC-3 */
         if (s->num_blocks == 6 || get_bits1(gbc)) {
-            /* 6 blocks per frame */
             skip_bits(gbc, 6); // skip Frame size code
         }
     }
