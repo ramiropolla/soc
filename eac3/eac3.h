@@ -44,7 +44,7 @@ typedef struct EAC3Context{
 ///@{
     int strmtyp;                     ///< Stream type
     int substreamid;                 ///< Substream identification
-    int frmsiz;                      ///< Frame size
+    int frame_size;                  ///< Frame size, in bytes
     int fscod;                       ///< Sample rate code
     int fscod2;                      ///< Sample rate code 2
     int num_blocks;                  ///< Number of audio blocks

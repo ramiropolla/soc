@@ -339,7 +339,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         return -1;
     }
     s->substreamid = get_bits(gbc, 3);
-    s->frmsiz = get_bits(gbc, 11);
+    s->frame_size = (get_bits(gbc, 11) + 1) * 2;
     s->fscod = get_bits(gbc, 2);
     if (s->fscod == 3) {
         log_missing_feature(s->avctx, "Reduced Sampling Rates");
@@ -663,7 +663,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         // nblkstrtbits = (numblks - 1) * (4 + ceiling (log2 (words_per_frame)))
         // where numblks is derived from the numblkscod in Table E2.9
         // words_per_frame = frmsiz + 1
-        int nblkstrtbits = (s->num_blocks-1) * (4 + (av_log2(s->frmsiz-1)+1) );
+        int nblkstrtbits = (s->num_blocks-1) * (4 + av_log2(s->frame_size-2));
         av_log(s->avctx, AV_LOG_INFO, "nblkstrtbits = %i\n", nblkstrtbits);
         s->blkstrtinfo = get_bits(gbc, nblkstrtbits);
     }
@@ -1260,7 +1260,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         avctx->sample_rate = ff_ac3_sample_rate_tab[c->fscod];
     }
 
-    avctx->bit_rate = (c->frmsiz * avctx->sample_rate * 16 / (c->num_blocks * 256)) / 1000;
+    avctx->bit_rate = (c->frame_size * avctx->sample_rate * 8 / (c->num_blocks * 256)) / 1000;
 
     /* channel config */
     if (!avctx->request_channels) {
@@ -1331,7 +1331,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
     *data_size = c->num_blocks * 256 * avctx->channels * sizeof (int16_t); // TODO is ok?
 
-    return (c->frmsiz+1)*2;
+    return c->frame_size;
 }
 
 static int eac3_decode_init(AVCodecContext *avctx){
