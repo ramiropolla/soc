@@ -1256,6 +1256,13 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     if (parse_bsi(&gbc, c) || parse_audfrm(&gbc, c))
         return -1;
 
+    if (c->substreamid) {
+        // TODO: allow user to select which substream to decode
+        av_log(avctx, AV_LOG_INFO, "Skipping additional substream #%d\n",
+               c->substreamid);
+        return -1;
+    }
+
     if (c->sr_code == EAC3_SR_CODE_REDUCED) {
         avctx->sample_rate = ff_ac3_sample_rate_tab[c->sr_code2] / 2;
     } else {
