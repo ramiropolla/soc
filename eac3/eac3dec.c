@@ -345,6 +345,10 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     s->frame_size = (get_bits(gbc, 11) + 1) * 2;
     s->sr_code = get_bits(gbc, 2);
     if (s->sr_code == EAC3_SR_CODE_REDUCED) {
+        /* The E-AC3 specification does not tell how to handle reduced sample
+           rates in bit allocation.  The best assumption would be that it is
+           handled like AC3 DolbyNet, but we cannot be sure until we have a
+           sample which utilizes this feature. */
         log_missing_feature(s->avctx, "Reduced Sampling Rates");
         return -1;
 #if 0
