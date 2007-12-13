@@ -343,12 +343,12 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     }
     s->substreamid = get_bits(gbc, 3);
     s->frame_size = (get_bits(gbc, 11) + 1) * 2;
-    s->fscod = get_bits(gbc, 2);
-    if (s->fscod == 3) {
+    s->sr_code = get_bits(gbc, 2);
+    if (s->sr_code == EAC3_SR_CODE_REDUCED) {
         log_missing_feature(s->avctx, "Reduced Sampling Rates");
         return -1;
 #if 0
-        s->fscod2 = get_bits(gbc, 2);
+        s->sr_code2 = get_bits(gbc, 2);
         s->num_blocks = 6;
 #endif
     } else {
@@ -498,8 +498,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 skip_bits(gbc, 8); //skip Mix level, Room type and A/D converter type
             }
         }
-        if (s->fscod < 3) {
-            /* if not half sample rate */
+        if (s->sr_code != EAC3_SR_CODE_REDUCED) {
             skip_bits1(gbc); //skip Source sample rate code
         }
     }
@@ -1166,7 +1165,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         ff_ac3_bit_alloc_calc_psd((int8_t *)s->dexps[ch], s->strtmant[ch],
                 s->endmant[ch], s->psd[ch], s->bndpsd[ch]);
 
-        s->bit_alloc_params.sr_code = s->fscod;
+        s->bit_alloc_params.sr_code = s->sr_code;
         s->bit_alloc_params.sr_shift = 0;
 
         ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params,
@@ -1253,10 +1252,10 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     if (parse_bsi(&gbc, c) || parse_audfrm(&gbc, c))
         return -1;
 
-    if (c->fscod == 3) {
-        avctx->sample_rate = ff_ac3_sample_rate_tab[c->fscod2] / 2;
+    if (c->sr_code == EAC3_SR_CODE_REDUCED) {
+        avctx->sample_rate = ff_ac3_sample_rate_tab[c->sr_code2] / 2;
     } else {
-        avctx->sample_rate = ff_ac3_sample_rate_tab[c->fscod];
+        avctx->sample_rate = ff_ac3_sample_rate_tab[c->sr_code];
     }
 
     avctx->bit_rate = (c->frame_size * avctx->sample_rate * 8 / (c->num_blocks * 256)) / 1000;

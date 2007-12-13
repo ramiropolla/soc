@@ -45,8 +45,8 @@ typedef struct EAC3Context{
     int stream_type;                 ///< Stream type
     int substreamid;                 ///< Substream identification
     int frame_size;                  ///< Frame size, in bytes
-    int fscod;                       ///< Sample rate code
-    int fscod2;                      ///< Sample rate code 2
+    int sr_code;                     ///< Sample rate code
+    int sr_code2;                    ///< Sample rate code 2
     int num_blocks;                  ///< Number of audio blocks
     int acmod;                       ///< Audio coding mode
     int lfeon;                       ///< Low frequency effect channel on
@@ -212,5 +212,7 @@ typedef enum {
     EAC3_STREAM_TYPE_AC3_CONVERT,
     EAC3_STREAM_TYPE_RESERVED
 } EAC3StreamType;
+
+#define EAC3_SR_CODE_REDUCED  3
 
 #endif
