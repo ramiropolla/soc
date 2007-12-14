@@ -360,11 +360,11 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     } else {
         s->num_blocks = ff_eac3_blocks[get_bits(gbc, 2)];
     }
-    s->acmod = get_bits(gbc, 3);
+    s->channel_mode = get_bits(gbc, 3);
     s->lfeon = get_bits1(gbc);
 
     // calculate number of channels
-    s->nfchans = ff_ac3_channels_tab[s->acmod];
+    s->nfchans = ff_ac3_channels_tab[s->channel_mode];
     s->num_channels = s->nfchans;
     s->lfe_channel = s->num_channels+1;
     if (s->lfeon) {
@@ -381,7 +381,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         return -1;
     }
 
-    for (i = 0; i < (s->acmod ? 1 : 2); i++) {
+    for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
         s->dialnorm[i] = ff_ac3_dialog_norm_tab[get_bits(gbc, 5)];
         if (get_bits1(gbc)) {
             skip_bits(gbc, 8); //skip Compression gain word
@@ -401,33 +401,33 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     /* set stereo downmixing coefficients
        reference: Section 7.8.2 Downmixing Into Two Channels */
     for (i = 0; i < s->nfchans; i++) {
-        s->downmix_coeffs[i][0] = mixlevels[eac3_default_coeffs[s->acmod][i][0]];
-        s->downmix_coeffs[i][1] = mixlevels[eac3_default_coeffs[s->acmod][i][1]];
+        s->downmix_coeffs[i][0] = mixlevels[eac3_default_coeffs[s->channel_mode][i][0]];
+        s->downmix_coeffs[i][1] = mixlevels[eac3_default_coeffs[s->channel_mode][i][1]];
     }
 
     s->mixmdate = get_bits1(gbc);
     if (s->mixmdate) {
         /* Mixing metadata */
-        if (s->acmod > 2) {
+        if (s->channel_mode > 2) {
             /* if more than 2 channels */
             s->dmixmod = get_bits(gbc, 2);
         }
-        if ((s->acmod & 1) && (s->acmod > 2)) {
+        if ((s->channel_mode & 1) && (s->channel_mode > 2)) {
             /* if three front channels exist */
             skip_bits(gbc, 3); //skip Lt/Rt center mix level
             s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = mixlevels[get_bits(gbc, 3)];
         }
-        if (s->acmod & 4) {
+        if (s->channel_mode & 4) {
             /* if a surround channel exists */
             float surmixlev;
             skip_bits(gbc, 3); //skip Lt/Rt surround mix level
             surmixlev = mixlevels[get_bits(gbc, 3)];
-            if (s->acmod & 2) {
+            if (s->channel_mode & 2) {
                 //two surround channels
-                s->downmix_coeffs[s->acmod-4][0] = s->downmix_coeffs[s->acmod-3][1] =
+                s->downmix_coeffs[s->channel_mode-4][0] = s->downmix_coeffs[s->channel_mode-3][1] =
                     surmixlev;
             } else {
-                s->downmix_coeffs[s->acmod-2][0] = s->downmix_coeffs[s->acmod-2][1] =
+                s->downmix_coeffs[s->channel_mode-2][0] = s->downmix_coeffs[s->channel_mode-2][1] =
                     surmixlev * LEVEL_MINUS_3DB;
             }
         }
@@ -439,7 +439,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             }
         }
         if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT) {
-            for (i = 0; i < (s->acmod ? 1 : 2); i++) {
+            for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
                 if (get_bits1(gbc)) {
                     s->pgmscl[i] = get_bits(gbc, 6);
                 } else {
@@ -464,9 +464,9 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                         skip_bits(gbc, 8*(s->mixdeflen+2));
                     }
                 }
-                if (s->acmod < 2) {
+                if (s->channel_mode < 2) {
                     /* if mono or dual mono source */
-                    for (i = 0; i < (s->acmod ? 1 : 2); i++) {
+                    for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
                         if (get_bits1(gbc)) {
                             s->paninfo[i] = get_bits(gbc, 14);
                         } else {
@@ -495,14 +495,14 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         /* Informational metadata */
         skip_bits(gbc, 3); //skip Bit stream mode
         skip_bits(gbc, 2); //skip copyright bit and original bitstream bit
-        if (s->acmod == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
+        if (s->channel_mode == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
             skip_bits(gbc, 4); //skip Dolby surround and headphone mode
         }
-        if (s->acmod >= 6) {
+        if (s->channel_mode >= 6) {
             /* if both surround channels exist */
             skip_bits(gbc, 2); //skip Dolby surround EX mode
         }
-        for (i = 0; i < (s->acmod ? 1 : 2); i++) {
+        for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
             if (get_bits1(gbc)) {
                 skip_bits(gbc, 8); //skip Mix level, Room type and A/D converter type
             }
@@ -571,7 +571,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     s->skipflde = get_bits1(gbc);
     s->spxattene = get_bits1(gbc);
     /* Coupling data */
-    if (s->acmod > 1) {
+    if (s->channel_mode > 1) {
         s->cplstre[0] = 1;
         s->cplinu[0] = get_bits1(gbc);
         s->ncplblks = s->cplinu[0];
@@ -602,7 +602,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         /* LUT-based exponent strategy syntax */
         int frmchexpstr;
         /* cplexpstr[blk] and chexpstr[blk][ch] derived from table lookups. see Table E2.14 */
-        for (ch = !((s->acmod > 1) && (s->ncplblks)); ch <= s->nfchans; ch++) {
+        for (ch = !((s->channel_mode > 1) && (s->ncplblks)); ch <= s->nfchans; ch++) {
             frmchexpstr = get_bits(gbc, 5);
             for (blk = 0; blk < 6; blk++) {
                 s->chexpstr[blk][ch] = ff_eac3_frm_expstr[frmchexpstr][blk];
@@ -707,7 +707,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     }
 
     /* Dynamic range control */
-    for (i = 0; i < (s->acmod ? 1 : 2); i++) {
+    for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
         if (get_bits1(gbc)) {
             s->dynrng[i] = ff_ac3_dynamic_range_tab[get_bits(gbc, 8)];
         } else {
@@ -723,7 +723,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             log_missing_feature(s->avctx, "Spectral extension");
             return -1;
 #if 0
-            if (s->acmod == AC3_CHMODE_MONO) {
+            if (s->channel_mode == AC3_CHMODE_MONO) {
                 s->chinspx[1] = 1;
             } else {
                 for (ch = 1; ch <= s->nfchans; ch++) {
@@ -833,7 +833,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     if (s->cplstre[blk]) {
         if (s->cplinu[blk]) {
             s->ecplinu = get_bits1(gbc);
-            if (s->acmod == AC3_CHMODE_STEREO) {
+            if (s->channel_mode == AC3_CHMODE_STEREO) {
                 s->chincpl[1] = 1;
                 s->chincpl[2] = 1;
             } else {
@@ -843,7 +843,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }
             if (!s->ecplinu) {
                 /* standard coupling in use */
-                if (s->acmod == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
+                if (s->channel_mode == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
                     s->phsflginu = get_bits1(gbc);
                 }
                 s->cplbegf = get_bits(gbc, 4);
@@ -977,7 +977,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     s->firstcplcos[ch] = 1;
                 }
             } /* ch */
-            if ((s->acmod == AC3_CHMODE_STEREO) && s->phsflginu
+            if ((s->channel_mode == AC3_CHMODE_STEREO) && s->phsflginu
                     && (s->cplcoe[1] || s->cplcoe[2])) {
                 for (bnd = 0; bnd < s->ncplbnd; bnd++) {
                     s->phsflg[bnd] = get_bits1(gbc);
@@ -1038,7 +1038,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         } /* ecplinu[blk] */
     } /* cplinu[blk] */
     /* Rematrixing operation in the 2/0 mode */
-    if (s->acmod == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
+    if (s->channel_mode == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
         if (!blk || get_bits1(gbc)) {
             /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf */
             // TODO spx in one channel
@@ -1302,7 +1302,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         }
 
         /* recover coefficients if rematrixing is in use */
-        if (c->acmod == AC3_CHMODE_STEREO)
+        if (c->channel_mode == AC3_CHMODE_STEREO)
             ff_ac3_do_rematrixing(c->transform_coeffs,
                     FFMIN(c->endmant[1], c->endmant[2]),
                     c->nrematbnds, c->rematflg);
@@ -1310,7 +1310,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         /* apply scaling to coefficients (dialnorm, dynrng) */
         for (ch = 1; ch <= c->nfchans + c->lfeon; ch++) {
             float gain=2.0f;
-            if (c->acmod == AC3_CHMODE_DUALMONO) {
+            if (c->channel_mode == AC3_CHMODE_DUALMONO) {
                 gain *= c->dialnorm[ch-1] * c->dynrng[ch-1];
             } else {
                 gain *= c->dialnorm[0] * c->dynrng[0];
