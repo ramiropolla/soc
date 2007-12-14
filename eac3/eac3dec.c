@@ -405,8 +405,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         s->downmix_coeffs[i][1] = mixlevels[eac3_default_coeffs[s->channel_mode][i][1]];
     }
 
-    s->mixmdate = get_bits1(gbc);
-    if (s->mixmdate) {
+    if (get_bits1(gbc)) {
         /* Mixing metadata */
         if (s->channel_mode > 2) {
             /* if more than 2 channels */
@@ -433,8 +432,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         }
         if (s->lfe_on) {
             /* if the LFE channel exists */
-            s->lfemixlevcode = get_bits1(gbc);
-            if (s->lfemixlevcode) {
+            if (get_bits1(gbc)) {
                 s->lfemixlevcod = get_bits(gbc, 5);
             }
         }
@@ -474,8 +472,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                         }
                     }
                 }
-                s->frmmixcfginfoe = get_bits1(gbc);
-                if (s->frmmixcfginfoe) {
+                if (get_bits1(gbc)) {
                     /* mixing configuration information */
                     if (s->num_blocks == 1) {
                         s->blkmixcfginfo[0] = get_bits(gbc, 5);
@@ -490,8 +487,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             }
         }
     }
-    s->infomdate = get_bits1(gbc);
-    if (s->infomdate) {
+    if (get_bits1(gbc)) {
         /* Informational metadata */
         skip_bits(gbc, 3); //skip Bit stream mode
         skip_bits(gbc, 2); //skip copyright bit and original bitstream bit

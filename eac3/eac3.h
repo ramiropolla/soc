@@ -52,18 +52,14 @@ typedef struct EAC3Context{
     int lfe_on;                      ///< Low frequency effect channel on (lfeon)
     int bitstream_id;                ///< Bit stream identification (bsid)
     float dialog_norm[2];            ///< Dialogue normalization (dialnorm)
-    int mixmdate;                    ///< Mixing meta-data exists
     int dmixmod;                     ///< Preferred stereo downmix mode
-    int lfemixlevcode;               ///< lfe mix level code exists
     int lfemixlevcod;                ///< lfe mix level code
     int pgmscl[2];                   ///< Program scale factor
     int extpgmscl;                   ///< External program scale factor
     int mixdef;                      ///< Mix control type
     int mixdeflen;                   ///< Length of mixing parameter data field
     int paninfo[2];                  ///< Pan information
-    int frmmixcfginfoe;              ///< Frame mixing configuration information exists
     int blkmixcfginfo[6];            ///< Block mixing configuration information
-    int infomdate;                   ///< Informational meta-data exists
 ///@}
 ///@name Audio Frame
 ///@{
