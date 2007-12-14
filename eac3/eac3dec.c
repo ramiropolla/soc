@@ -440,14 +440,13 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         }
         if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT) {
             for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
+                // TODO: apply program scale factor
                 if (get_bits1(gbc)) {
-                    s->pgmscl[i] = get_bits(gbc, 6);
-                } else {
-                    //TODO program scale factor = 0dB
+                    skip_bits(gbc, 6);  // skip program scale factor
                 }
             }
             if (get_bits1(gbc)) {
-                s->extpgmscl = get_bits(gbc, 6);
+                skip_bits(gbc, 6);  // skip external program scale factor
             }
             s->mixdef = get_bits(gbc, 2);
             if (s->mixdef == 1) {
