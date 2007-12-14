@@ -51,7 +51,7 @@ typedef struct EAC3Context{
     int channel_mode;                ///< Channel mode (acmod)
     int lfe_on;                      ///< Low frequency effect channel on (lfeon)
     int bitstream_id;                ///< Bit stream identification (bsid)
-    float dialnorm[2];               ///< Dialogue normalization
+    float dialog_norm[2];            ///< Dialogue normalization (dialnorm)
     int mixmdate;                    ///< Mixing meta-data exists
     int dmixmod;                     ///< Preferred stereo downmix mode
     int lfemixlevcode;               ///< lfe mix level code exists
@@ -91,7 +91,7 @@ typedef struct EAC3Context{
 ///@{
     int blksw[AC3_MAX_CHANNELS];     ///< Block switch flag
     int dithflag[AC3_MAX_CHANNELS];  ///< Dither flag
-    float dynrng[2];                 ///< Dynamic range gain word
+    float dynamic_range[2];          ///< Dynamic range gain (dynrng)
     float downmix_coeffs[AC3_MAX_CHANNELS][2];  ///< stereo downmix coefficients
     int spxinu;                      ///< spectral extension in use
     int chinspx[AC3_MAX_CHANNELS];   ///< Channel in spectral extension
