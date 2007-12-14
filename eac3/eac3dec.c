@@ -453,35 +453,35 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 /* mixing option 2 */
                 skip_bits(gbc, 5);
             } else if (s->mixdef == 2) {
-                    /* mixing option 3 */
-                    skip_bits(gbc, 12);
+                /* mixing option 3 */
+                skip_bits(gbc, 12);
             } else if (s->mixdef == 3) {
-                        /* mixing option 4 */
-                        s->mixdeflen = get_bits(gbc, 5);
-                        skip_bits(gbc, 8*(s->mixdeflen+2));
+                /* mixing option 4 */
+                s->mixdeflen = get_bits(gbc, 5);
+                skip_bits(gbc, 8*(s->mixdeflen+2));
             }
-                if (s->channel_mode < 2) {
-                    /* if mono or dual mono source */
-                    for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
-                        if (get_bits1(gbc)) {
-                            s->paninfo[i] = get_bits(gbc, 14);
-                        } else {
-                            //TODO default = center
-                        }
-                    }
-                }
-                if (get_bits1(gbc)) {
-                    /* mixing configuration information */
-                    if (s->num_blocks == 1) {
-                        s->blkmixcfginfo[0] = get_bits(gbc, 5);
+            if (s->channel_mode < 2) {
+                /* if mono or dual mono source */
+                for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
+                    if (get_bits1(gbc)) {
+                        s->paninfo[i] = get_bits(gbc, 14);
                     } else {
-                        for (blk = 0; blk < s->num_blocks; blk++) {
-                            if (get_bits1(gbc)) {
-                                s->blkmixcfginfo[blk] = get_bits(gbc, 5);
-                            }
+                        //TODO default = center
+                    }
+                }
+            }
+            if (get_bits1(gbc)) {
+                /* mixing configuration information */
+                if (s->num_blocks == 1) {
+                    s->blkmixcfginfo[0] = get_bits(gbc, 5);
+                } else {
+                    for (blk = 0; blk < s->num_blocks; blk++) {
+                        if (get_bits1(gbc)) {
+                            s->blkmixcfginfo[blk] = get_bits(gbc, 5);
                         }
                     }
                 }
+            }
         }
     }
     if (get_bits1(gbc)) {
