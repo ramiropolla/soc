@@ -452,17 +452,14 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             if (s->mixdef == 1) {
                 /* mixing option 2 */
                 skip_bits(gbc, 5);
-            } else {
-                if (s->mixdef == 2) {
+            } else if (s->mixdef == 2) {
                     /* mixing option 3 */
                     skip_bits(gbc, 12);
-                } else {
-                    if (s->mixdef == 3) {
+            } else if (s->mixdef == 3) {
                         /* mixing option 4 */
                         s->mixdeflen = get_bits(gbc, 5);
                         skip_bits(gbc, 8*(s->mixdeflen+2));
-                    }
-                }
+            }
                 if (s->channel_mode < 2) {
                     /* if mono or dual mono source */
                     for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
@@ -485,7 +482,6 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                         }
                     }
                 }
-            }
         }
     }
     if (get_bits1(gbc)) {
