@@ -434,7 +434,8 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         if (s->lfe_on) {
             /* if the LFE channel exists */
             if (get_bits1(gbc)) {
-                s->lfemixlevcod = get_bits(gbc, 5);
+                // TODO: use LFE mix level
+                skip_bits(gbc, 5); // skip LFE mix level code
             }
         }
         if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT) {

@@ -52,7 +52,6 @@ typedef struct EAC3Context{
     int lfe_on;                      ///< Low frequency effect channel on (lfeon)
     int bitstream_id;                ///< Bit stream identification (bsid)
     float dialog_norm[2];            ///< Dialogue normalization (dialnorm)
-    int lfemixlevcod;                ///< lfe mix level code
     int pgmscl[2];                   ///< Program scale factor
     int extpgmscl;                   ///< External program scale factor
     int mixdef;                      ///< Mix control type
