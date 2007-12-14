@@ -42,14 +42,14 @@ typedef struct EAC3Context{
     int syncword;
 ///@name Bit stream information
 ///@{
-    int stream_type;                 ///< Stream type
+    int stream_type;                 ///< Stream type (strmtyp)
     int substreamid;                 ///< Substream identification
     int frame_size;                  ///< Frame size, in bytes
-    int sr_code;                     ///< Sample rate code
-    int sr_code2;                    ///< Sample rate code 2
+    int sr_code;                     ///< Sample rate code (fscod)
+    int sr_code2;                    ///< Sample rate code 2 (fscod2)
     int num_blocks;                  ///< Number of audio blocks
     int channel_mode;                ///< Channel mode (acmod)
-    int lfe_on;                      ///< Low frequency effect channel on
+    int lfe_on;                      ///< Low frequency effect channel on (lfeon)
     int bitstream_id;                ///< Bit stream identification (bsid)
     float dialnorm[2];               ///< Dialogue normalization
     int mixmdate;                    ///< Mixing meta-data exists
