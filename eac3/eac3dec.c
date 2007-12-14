@@ -777,6 +777,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
     }
 
+#if 0
     /* Spectral extension coordinates */
     if (s->spxinu) {
         for (ch = 1; ch <= s->nfchans; ch++) {
@@ -815,6 +816,8 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }
         }
     }
+#endif
+
     /* Coupling strategy and enhanced coupling strategy information */
     if (s->cplstre[blk]) {
         if (s->cplinu[blk]) {
