@@ -411,25 +411,25 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             /* if more than 2 channels */
             skip_bits(gbc, 2);  // skip preferred stereo downmix mode
 
-        if (s->channel_mode & 1) {
-            /* if three front channels exist */
-            skip_bits(gbc, 3); //skip Lt/Rt center mix level
-            s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = mixlevels[get_bits(gbc, 3)];
-        }
-        if (s->channel_mode & 4) {
-            /* if a surround channel exists */
-            float surmixlev;
-            skip_bits(gbc, 3); //skip Lt/Rt surround mix level
-            surmixlev = mixlevels[get_bits(gbc, 3)];
-            if (s->channel_mode & 2) {
-                //two surround channels
-                s->downmix_coeffs[s->channel_mode-4][0] = s->downmix_coeffs[s->channel_mode-3][1] =
-                    surmixlev;
-            } else {
-                s->downmix_coeffs[s->channel_mode-2][0] = s->downmix_coeffs[s->channel_mode-2][1] =
-                    surmixlev * LEVEL_MINUS_3DB;
+            if (s->channel_mode & 1) {
+                /* if three front channels exist */
+                skip_bits(gbc, 3); //skip Lt/Rt center mix level
+                s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = mixlevels[get_bits(gbc, 3)];
             }
-        }
+            if (s->channel_mode & 4) {
+                /* if a surround channel exists */
+                float surmixlev;
+                skip_bits(gbc, 3); //skip Lt/Rt surround mix level
+                surmixlev = mixlevels[get_bits(gbc, 3)];
+                if (s->channel_mode & 2) {
+                    //two surround channels
+                    s->downmix_coeffs[s->channel_mode-4][0] = s->downmix_coeffs[s->channel_mode-3][1] =
+                        surmixlev;
+                } else {
+                    s->downmix_coeffs[s->channel_mode-2][0] = s->downmix_coeffs[s->channel_mode-2][1] =
+                        surmixlev * LEVEL_MINUS_3DB;
+                }
+            }
         }
         if (s->lfe_on) {
             /* if the LFE channel exists */
