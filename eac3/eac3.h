@@ -136,7 +136,7 @@ typedef struct EAC3Context{
 
     int firstspxcos[AC3_MAX_CHANNELS];              ///< First spectral extension coordinates states
     int firstcplcos[AC3_MAX_CHANNELS];              ///< First coupling coordinates states
-    int firstcplleak;                               ///< First coupling leak state
+    int first_cpl_leak;                             ///< First coupling leak state (firstcplleak)
 ///@}
 
     int nrematbnds;                    ///< Number of rematrixing bands

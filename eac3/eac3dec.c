@@ -681,7 +681,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         s->firstspxcos[ch] = 1;
         s->firstcplcos[ch] = 1;
     }
-    s->firstcplleak = 1;
+    s->first_cpl_leak = 1;
 
     return 0;
 } /* end of audfrm */
@@ -933,7 +933,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 s->chincpl[ch] = 0;
                 s->firstcplcos[ch] = 1;
             }
-            s->firstcplleak = 1;
+            s->first_cpl_leak = 1;
             s->phsflginu = 0;
             s->ecplinu = 0;
         }
@@ -1125,17 +1125,12 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
     }
     if (s->cplinu[blk]) {
-        if (s->firstcplleak) {
-            s->cplleake = 1;
-            s->firstcplleak = 0;
-        } else {
-            /* !firstcplleak */
-            s->cplleake = get_bits1(gbc);
-        }
-        if (s->cplleake) {
+        if (s->first_cpl_leak || get_bits1(gbc)) {
             s->bit_alloc_params.cpl_fast_leak = get_bits(gbc, 3);
             s->bit_alloc_params.cpl_slow_leak = get_bits(gbc, 3);
         }
+        if(s->first_cpl_leak)
+            s->first_cpl_leak = 0;
     }
     /* Delta bit allocation information */
     if (s->dbaflde && get_bits1(gbc)) {
