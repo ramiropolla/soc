@@ -448,17 +448,11 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             if (get_bits1(gbc)) {
                 skip_bits(gbc, 6);  // skip external program scale factor
             }
-            s->mixdef = get_bits(gbc, 2);
-            if (s->mixdef == 1) {
-                /* mixing option 2 */
-                skip_bits(gbc, 5);
-            } else if (s->mixdef == 2) {
-                /* mixing option 3 */
-                skip_bits(gbc, 12);
-            } else if (s->mixdef == 3) {
-                /* mixing option 4 */
-                s->mixdeflen = get_bits(gbc, 5);
-                skip_bits(gbc, 8*(s->mixdeflen+2));
+            /* skip mixing parameter data */
+            switch(get_bits(gbc, 2)) {
+                case 1: skip_bits(gbc, 5);                     break;
+                case 2: skip_bits(gbc, 12);                    break;
+                case 3: skip_bits(gbc, 8*get_bits(gbc, 5)+16); break;
             }
             if (s->channel_mode < 2) {
                 /* if mono or dual mono source */
