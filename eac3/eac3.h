@@ -52,7 +52,6 @@ typedef struct EAC3Context{
     int lfe_on;                      ///< Low frequency effect channel on (lfeon)
     int bitstream_id;                ///< Bit stream identification (bsid)
     float dialog_norm[2];            ///< Dialogue normalization (dialnorm)
-    int paninfo[2];                  ///< Pan information
     int blkmixcfginfo[6];            ///< Block mixing configuration information
 ///@}
 ///@name Audio Frame

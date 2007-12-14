@@ -454,13 +454,15 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 case 2: skip_bits(gbc, 12);                    break;
                 case 3: skip_bits(gbc, 8*get_bits(gbc, 5)+16); break;
             }
+            /* skip pan information for mono or dual mono source */
             if (s->channel_mode < 2) {
-                /* if mono or dual mono source */
                 for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
                     if (get_bits1(gbc)) {
-                        s->paninfo[i] = get_bits(gbc, 14);
-                    } else {
-                        //TODO default = center
+                        /* note: this is not in the ATSC A/52B specification
+                           reference: ETSI TS 102 366 V1.1.1
+                                      section: E.1.3.1.25 */
+                        skip_bits(gbc, 8);  // skip Pan mean direction index
+                        skip_bits(gbc, 6);  // skip reserved paninfo bits
                     }
                 }
             }
