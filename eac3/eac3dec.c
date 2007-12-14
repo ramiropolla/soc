@@ -658,13 +658,12 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
     /* Block start information */
     if (s->num_blocks > 1 && get_bits1(gbc)) {
-        /* nblkstrtbits determined from frmsiz (see Section E2.3.2.27) */
-        // nblkstrtbits = (numblks - 1) * (4 + ceiling (log2 (words_per_frame)))
-        // where numblks is derived from the numblkscod in Table E2.9
-        // words_per_frame = frmsiz + 1
-        int nblkstrtbits = (s->num_blocks-1) * (4 + av_log2(s->frame_size-2));
-        av_log(s->avctx, AV_LOG_INFO, "nblkstrtbits = %i\n", nblkstrtbits);
-        s->blkstrtinfo = get_bits(gbc, nblkstrtbits);
+        /* reference: Section E2.3.2.27
+           nblkstrtbits = (numblks - 1) * (4 + ceiling(log2(words_per_frame)))
+           Great that the spec tells how to parse. Unfortunately it doesn't say
+           what this data is or what it's used for. */
+        int block_start_bits = (s->num_blocks-1) * (4 + av_log2(s->frame_size-2));
+        skip_bits(gbc, block_start_bits);
     }
     /* Syntax state initialization */
     for (ch = 1; ch <= s->nfchans; ch++) {

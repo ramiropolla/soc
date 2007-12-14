@@ -86,7 +86,6 @@ typedef struct EAC3Context{
     int chahtinu[AC3_MAX_CHANNELS];      ///< Channel AHT in use
     int chinspxatten[AC3_MAX_CHANNELS];  ///< Channel in spectral extension attenuation process
     int spxattencod[AC3_MAX_CHANNELS];   ///< spectral extension attenuation code
-    uint32_t blkstrtinfo;            ///< Block start information
     int ncplblks;
 ///@}
 ///@name Audio block
