@@ -84,9 +84,6 @@ typedef struct EAC3Context{
     int cplstre[MAX_BLOCKS];         ///< Coupling strategy exists
     int chexpstr[MAX_BLOCKS][AC3_MAX_CHANNELS];  ///< Channel exponent strategy
     int chahtinu[AC3_MAX_CHANNELS];      ///< Channel AHT in use
-    int chintransproc[AC3_MAX_CHANNELS]; ///< Channel in transient pre-noise processing
-    int transprocloc[AC3_MAX_CHANNELS];  ///< Transient location relative to start of frame
-    int transproclen[AC3_MAX_CHANNELS];  ///< Transient processing length
     int chinspxatten[AC3_MAX_CHANNELS];  ///< Channel in spectral extension attenuation process
     int spxattencod[AC3_MAX_CHANNELS];   ///< spectral extension attenuation code
     uint32_t blkstrtinfo;            ///< Block start information

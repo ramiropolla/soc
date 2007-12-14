@@ -637,17 +637,12 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
     /* Audio frame transient pre-noise processing data */
     if (s->transproce) {
-        av_log(s->avctx, AV_LOG_ERROR, "transient pre-noise processing NOT IMPLEMENTED\n");
-        return -1;
-#if 0
         for (ch = 1; ch <= s->nfchans; ch++) {
-            s->chintransproc[ch] = get_bits1(gbc);
-            if (s->chintransproc[ch]) {
-                s->transprocloc[ch] = get_bits(gbc, 10);
-                s->transproclen[ch] = get_bits(gbc, 8);
+            if (get_bits1(gbc)) { // channel in transient processing
+                skip_bits(gbc, 10); // skip transient processing location
+                skip_bits(gbc, 8);  // skip transient processing length
             }
         }
-#endif
     }
     /* Spectral extension attenuation data */
     if (s->spxattene) {
@@ -1319,6 +1314,8 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         }
 
         do_imdct(c);
+
+        // TODO: Transient Pre-Noise Cross-Fading
 
         if (avctx->channels != c->num_channels) {
             ff_ac3_downmix(c->output, c->nfchans, avctx->channels, c->downmix_coeffs);
