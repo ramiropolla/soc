@@ -375,9 +375,9 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         s->num_channels++;
     }
 
-    s->bsid = get_bits(gbc, 5);
-    if (s->bsid < 11 || s->bsid > 16) {
-        av_log(s->avctx, AV_LOG_ERROR, "bsid is not within 11 and 16\n");
+    s->bitstream_id = get_bits(gbc, 5);
+    if (s->bitstream_id < 11 || s->bitstream_id > 16) {
+        av_log(s->avctx, AV_LOG_ERROR, "bitstream id is not within 11 and 16\n");
         return -1;
     }
 

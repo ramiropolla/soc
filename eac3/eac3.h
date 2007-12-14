@@ -50,7 +50,7 @@ typedef struct EAC3Context{
     int num_blocks;                  ///< Number of audio blocks
     int channel_mode;                ///< Channel mode (acmod)
     int lfe_on;                      ///< Low frequency effect channel on
-    int bsid;                        ///< Bit stream identification
+    int bitstream_id;                ///< Bit stream identification (bsid)
     float dialnorm[2];               ///< Dialogue normalization
     int mixmdate;                    ///< Mixing meta-data exists
     int dmixmod;                     ///< Preferred stereo downmix mode
