@@ -558,6 +558,14 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
 
     /* frame-based syntax flags */
     s->bamode = get_bits1(gbc);
+    if (!s->bamode) {
+        /* set default bit allocation parameters */
+        s->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[2];  /* Table 7.6 */
+        s->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[1];  /* Table 7.7 */
+        s->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab [1];  /* Table 7.8 */
+        s->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[2];  /* Table 7.9 */
+        s->bit_alloc_params.floor      = ff_ac3_floor_tab     [7];  /* Table 7.10 */
+    }
     s->frmfgaincode = get_bits1(gbc);
     s->dbaflde = get_bits1(gbc);
     s->skipflde = get_bits1(gbc);
@@ -1088,12 +1096,6 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 return -1;
             }
         }
-    } else {
-        s->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[2];  /* Table 7.6 */
-        s->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[1];  /* Table 7.7 */
-        s->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab [1];  /* Table 7.8 */
-        s->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[2];  /* Table 7.9 */
-        s->bit_alloc_params.floor      = ff_ac3_floor_tab     [7];  /* Table 7.10 */
     }
 
     if (s->snroffststr) {
