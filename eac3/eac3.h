@@ -49,7 +49,7 @@ typedef struct EAC3Context{
     int sr_code2;                    ///< Sample rate code 2
     int num_blocks;                  ///< Number of audio blocks
     int channel_mode;                ///< Channel mode (acmod)
-    int lfeon;                       ///< Low frequency effect channel on
+    int lfe_on;                      ///< Low frequency effect channel on
     int bsid;                        ///< Bit stream identification
     float dialnorm[2];               ///< Dialogue normalization
     int mixmdate;                    ///< Mixing meta-data exists

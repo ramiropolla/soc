@@ -361,13 +361,13 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         s->num_blocks = ff_eac3_blocks[get_bits(gbc, 2)];
     }
     s->channel_mode = get_bits(gbc, 3);
-    s->lfeon = get_bits1(gbc);
+    s->lfe_on = get_bits1(gbc);
 
     // calculate number of channels
     s->nfchans = ff_ac3_channels_tab[s->channel_mode];
     s->num_channels = s->nfchans;
     s->lfe_channel = s->num_channels+1;
-    if (s->lfeon) {
+    if (s->lfe_on) {
         s->strtmant[s->lfe_channel] = 0;
         s->endmant [s->lfe_channel] = 7;
         s->nchgrps [s->lfe_channel] = 2;
@@ -431,7 +431,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                     surmixlev * LEVEL_MINUS_3DB;
             }
         }
-        if (s->lfeon) {
+        if (s->lfe_on) {
             /* if the LFE channel exists */
             s->lfemixlevcode = get_bits1(gbc);
             if (s->lfemixlevcode) {
@@ -610,7 +610,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         }
     }
     /* LFE exponent strategy */
-    if (s->lfeon) {
+    if (s->lfe_on) {
         for (blk = 0; blk < s->num_blocks; blk++) {
             s->chexpstr[blk][s->lfe_channel] = get_bits1(gbc);
         }
@@ -1221,7 +1221,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 static void do_imdct(EAC3Context *ctx){
     int ch;
 
-    for (ch = 1; ch <= ctx->nfchans + ctx->lfeon; ch++) {
+    for (ch = 1; ch <= ctx->nfchans + ctx->lfe_on; ch++) {
         if (ctx->blksw[ch]) {
             /* 256-point IMDCT */
             ff_ac3_do_imdct_256(ctx->tmp_output, ctx->transform_coeffs[ch],
@@ -1308,7 +1308,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
                     c->nrematbnds, c->rematflg);
 
         /* apply scaling to coefficients (dialnorm, dynrng) */
-        for (ch = 1; ch <= c->nfchans + c->lfeon; ch++) {
+        for (ch = 1; ch <= c->nfchans + c->lfe_on; ch++) {
             float gain=2.0f;
             if (c->channel_mode == AC3_CHMODE_DUALMONO) {
                 gain *= c->dialnorm[ch-1] * c->dynrng[ch-1];
