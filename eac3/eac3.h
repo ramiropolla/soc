@@ -52,7 +52,6 @@ typedef struct EAC3Context{
     int lfeon;                       ///< Low frequency effect channel on
     int bsid;                        ///< Bit stream identification
     float dialnorm[2];               ///< Dialogue normalization
-    int chanmap;                     ///< Custom channel map
     int mixmdate;                    ///< Mixing meta-data exists
     int dmixmod;                     ///< Preferred stereo downmix mode
     int lfemixlevcode;               ///< lfe mix level code exists

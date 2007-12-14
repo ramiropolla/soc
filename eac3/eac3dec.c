@@ -387,13 +387,16 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             skip_bits(gbc, 8); //skip Compression gain word
         }
     }
+#if 0
+    /* TODO: Add support for dependent streams */
     if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
         if (get_bits1(gbc)) {
-            s->chanmap = get_bits(gbc, 16);
+            skip_bits(gbc, 16); // skip custom channel map
         } else {
             //TODO default channel map based on acmod and lfeon
         }
     }
+#endif
 
     /* set stereo downmixing coefficients
        reference: Section 7.8.2 Downmixing Into Two Channels */
