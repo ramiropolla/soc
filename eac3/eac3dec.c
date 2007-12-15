@@ -466,14 +466,14 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                     }
                 }
             }
+            /* skip mixing configuration information */
             if (get_bits1(gbc)) {
-                /* mixing configuration information */
                 if (s->num_blocks == 1) {
-                    s->blkmixcfginfo[0] = get_bits(gbc, 5);
+                    skip_bits(gbc, 5);
                 } else {
                     for (blk = 0; blk < s->num_blocks; blk++) {
                         if (get_bits1(gbc)) {
-                            s->blkmixcfginfo[blk] = get_bits(gbc, 5);
+                            skip_bits(gbc, 5);
                         }
                     }
                 }
