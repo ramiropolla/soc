@@ -426,7 +426,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
                 case 1: skip_bits(gbc, 5);                     break;
                 case 2: skip_bits(gbc, 12);                    break;
                 case 3: {
-                    int mix_data_size = 8 * get_bits(gbc, 5) + 16;
+                    int mix_data_size = (get_bits(gbc, 5) + 2) << 3;
                     skip_bits_long(gbc, mix_data_size);
                     break;
                 }
