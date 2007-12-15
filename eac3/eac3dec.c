@@ -44,7 +44,7 @@ static void uncouple_channels(EAC3Context *s){
     for (bnd = 0; bnd < s->ncplbnd; bnd++) {
         do {
             for (j = 0; j < 12; j++) {
-                for (ch = 1; ch <= s->nfchans; ch++) {
+                for (ch = 1; ch <= s->fbw_channels; ch++) {
                     if (s->chincpl[ch]) {
                         s->transform_coeffs[ch][i] =
                             s->transform_coeffs[CPL_CH][i] *
@@ -72,7 +72,7 @@ static void spectral_extension(EAC3Context *s){
     copystartmant = spxbandtable[s->spxstrtf];
     copyendmant = spxbandtable[s->spxbegf];
 
-    for (ch = 1; ch <= s->nfchans; ch++) {
+    for (ch = 1; ch <= s->fbw_channels; ch++) {
         if (!s->chinspx[ch])
             continue;
 
@@ -337,8 +337,8 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     s->lfe_on = get_bits1(gbc);
 
     // calculate number of channels
-    s->nfchans = ff_ac3_channels_tab[s->channel_mode];
-    s->num_channels = s->nfchans;
+    s->fbw_channels = ff_ac3_channels_tab[s->channel_mode];
+    s->num_channels = s->fbw_channels;
     s->lfe_channel = s->num_channels+1;
     if (s->lfe_on) {
         s->strtmant[s->lfe_channel] = 0;
@@ -373,7 +373,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
 
     /* set stereo downmixing coefficients
        reference: Section 7.8.2 Downmixing Into Two Channels */
-    for (i = 0; i < s->nfchans; i++) {
+    for (i = 0; i < s->fbw_channels; i++) {
         s->downmix_coeffs[i][0] = ff_ac3_mix_levels[ff_ac3_default_coeffs[s->channel_mode][i][0]];
         s->downmix_coeffs[i][1] = ff_ac3_mix_levels[ff_ac3_default_coeffs[s->channel_mode][i][1]];
     }
@@ -511,12 +511,12 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     parse_transient_proc_info = get_bits1(gbc);
     s->block_switch_syntax = get_bits1(gbc);
     if (!s->block_switch_syntax) {
-        for (ch = 1; ch <= s->nfchans; ch++)
+        for (ch = 1; ch <= s->fbw_channels; ch++)
             s->blksw[ch] = 0;
     }
     s->dither_flag_syntax = get_bits1(gbc);
     if (!s->dither_flag_syntax) {
-        for (ch = 1; ch <= s->nfchans; ch++)
+        for (ch = 1; ch <= s->fbw_channels; ch++)
             s->dithflag[ch] = 1; /* dither on */
     }
     s->dithflag[CPL_CH] = s->dithflag[s->lfe_channel] = 0;
@@ -559,7 +559,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     if (ac3_exponent_strategy) {
         /* AC-3 style exponent strategy syntax */
         for (blk = 0; blk < s->num_blocks; blk++) {
-            for (ch = !s->cpl_in_use[blk]; ch <= s->nfchans; ch++) {
+            for (ch = !s->cpl_in_use[blk]; ch <= s->fbw_channels; ch++) {
                 s->exp_strategy[blk][ch] = get_bits(gbc, 2);
             }
         }
@@ -567,7 +567,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         /* LUT-based exponent strategy syntax */
         int frmchexpstr;
         /* cplexpstr[blk] and chexpstr[blk][ch] derived from table lookups. see Table E2.14 */
-        for (ch = !((s->channel_mode > 1) && num_cpl_blocks); ch <= s->nfchans; ch++) {
+        for (ch = !((s->channel_mode > 1) && num_cpl_blocks); ch <= s->fbw_channels; ch++) {
             frmchexpstr = get_bits(gbc, 5);
             for (blk = 0; blk < 6; blk++) {
                 s->exp_strategy[blk][ch] = ff_eac3_frm_expstr[frmchexpstr][blk];
@@ -583,7 +583,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     /* Converter exponent strategy data */
     if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT) {
         if (s->num_blocks == 6 || get_bits1(gbc)) {
-            for (ch = 1; ch <= s->nfchans; ch++) {
+            for (ch = 1; ch <= s->fbw_channels; ch++) {
                 skip_bits(gbc, 5); //skip Converter channel exponent strategy
             }
         }
@@ -613,7 +613,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
     /* Audio frame transient pre-noise processing data */
     if (parse_transient_proc_info) {
-        for (ch = 1; ch <= s->nfchans; ch++) {
+        for (ch = 1; ch <= s->fbw_channels; ch++) {
             if (get_bits1(gbc)) { // channel in transient processing
                 skip_bits(gbc, 10); // skip transient processing location
                 skip_bits(gbc, 8);  // skip transient processing length
@@ -622,14 +622,14 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
     /* Spectral extension attenuation data */
     if (parse_spx_atten_data) {
-        for (ch = 1; ch <= s->nfchans; ch++) {
+        for (ch = 1; ch <= s->fbw_channels; ch++) {
             s->channel_uses_spx[ch] = get_bits1(gbc);
             if (s->channel_uses_spx[ch]) {
                 s->spx_atten_code[ch] = get_bits(gbc, 5);
             }
         }
     } else {
-        for (ch = 1; ch <= s->nfchans; ch++)
+        for (ch = 1; ch <= s->fbw_channels; ch++)
             s->channel_uses_spx[ch]=0;
     }
     /* Block start information */
@@ -642,7 +642,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         skip_bits(gbc, block_start_bits);
     }
     /* Syntax state initialization */
-    for (ch = 1; ch <= s->nfchans; ch++) {
+    for (ch = 1; ch <= s->fbw_channels; ch++) {
         s->firstspxcos[ch] = 1;
         s->firstcplcos[ch] = 1;
     }
@@ -661,12 +661,12 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     /* Block switch and dither flags */
     if (s->block_switch_syntax) {
-        for (ch = 1; ch <= s->nfchans; ch++) {
+        for (ch = 1; ch <= s->fbw_channels; ch++) {
             s->blksw[ch] = get_bits1(gbc);
         }
     }
     if (s->dither_flag_syntax) {
-        for (ch = 1; ch <= s->nfchans; ch++) {
+        for (ch = 1; ch <= s->fbw_channels; ch++) {
             s->dithflag[ch] = get_bits1(gbc);
         }
     }
@@ -691,14 +691,14 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             if (s->channel_mode == AC3_CHMODE_MONO) {
                 s->chinspx[1] = 1;
             } else {
-                for (ch = 1; ch <= s->nfchans; ch++) {
+                for (ch = 1; ch <= s->fbw_channels; ch++) {
                     s->chinspx[ch] = get_bits1(gbc);
                 }
             }
 #if 0
             {
                 int nspx=0;
-                for (ch = 1; ch <= s->nfchans; ch++) {
+                for (ch = 1; ch <= s->fbw_channels; ch++) {
                     nspx+=s->chinspx[ch];
                 }
                 if (!nspx)
@@ -718,7 +718,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             } else {
                 s->spxendf = s->spxendf * 2 + 3;
             }
-            for (ch = 1; ch <= s->nfchans; ch++) {
+            for (ch = 1; ch <= s->fbw_channels; ch++) {
                 if (s->chinspx[ch])
                     s->endmant[ch] = 25 + 12 * s->spxbegf;
             }
@@ -746,7 +746,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 #endif
         } else {
             /* !spxinu */
-            for (ch = 1; ch <= s->nfchans; ch++) {
+            for (ch = 1; ch <= s->fbw_channels; ch++) {
                 s->chinspx[ch] = 0;
                 s->firstspxcos[ch] = 1;
             }
@@ -756,7 +756,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 #if 0
     /* Spectral extension coordinates */
     if (s->spxinu) {
-        for (ch = 1; ch <= s->nfchans; ch++) {
+        for (ch = 1; ch <= s->fbw_channels; ch++) {
             if (s->chinspx[ch]) {
                 if (s->firstspxcos[ch]) {
                     s->spxcoe[ch] = 1;
@@ -802,7 +802,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 s->chincpl[1] = 1;
                 s->chincpl[2] = 1;
             } else {
-                for (ch = 1; ch <= s->nfchans; ch++) {
+                for (ch = 1; ch <= s->fbw_channels; ch++) {
                     s->chincpl[ch] = get_bits1(gbc);
                 }
             }
@@ -827,7 +827,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     av_log(s->avctx, AV_LOG_ERROR, "cplstrtmant > cplendmant [blk=%i]\n", blk);
                     return -1;
                 }
-                for (ch = 1; ch <= s->nfchans; ch++) {
+                for (ch = 1; ch <= s->fbw_channels; ch++) {
                     if (s->chincpl[ch])
                         s->endmant[ch] = s->strtmant[CPL_CH];
                 }
@@ -894,7 +894,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             } /* ecplinu[blk] */
         } else {
             /* !cplinu[blk] */
-            for (ch = 1; ch <= s->nfchans; ch++) {
+            for (ch = 1; ch <= s->fbw_channels; ch++) {
                 s->chincpl[ch] = 0;
                 s->firstcplcos[ch] = 1;
             }
@@ -907,7 +907,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     if (s->cpl_in_use[blk]) {
         if (!s->ecplinu) {
             /* standard coupling in use */
-            for (ch = 1; ch <= s->nfchans; ch++) {
+            for (ch = 1; ch <= s->fbw_channels; ch++) {
                 if (s->chincpl[ch]) {
                     if (s->firstcplcos[ch]) {
                         s->cplcoe[ch] = 1;
@@ -956,7 +956,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 #if 0
             s->firstchincpl = -1;
             s->ecplangleintrp = get_bits1(gbc);
-            for (ch = 1; ch <= s->nfchans; ch++) {
+            for (ch = 1; ch <= s->fbw_channels; ch++) {
                 if (s->chincpl[ch]) {
                     if (s->firstchincpl == -1) {
                         s->firstchincpl = ch;
@@ -1016,7 +1016,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
     }
     /* Channel bandwidth code */
-    for (ch = 1; ch <= s->nfchans; ch++) {
+    for (ch = 1; ch <= s->fbw_channels; ch++) {
         if (!blk && s->exp_strategy[blk][ch] == EXP_REUSE) {
             av_log(s->avctx, AV_LOG_ERROR,  "no channel exponent strategy in first block\n");
             return -1;
@@ -1099,10 +1099,10 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     }
     /* Delta bit allocation information */
     if (s->dba_syntax && get_bits1(gbc)) {
-        for (ch = !s->cpl_in_use[blk]; ch <= s->nfchans; ch++) {
+        for (ch = !s->cpl_in_use[blk]; ch <= s->fbw_channels; ch++) {
             s->deltbae[ch] = get_bits(gbc, 2);
         }
-        for (ch = !s->cpl_in_use[blk]; ch <= s->nfchans; ch++) {
+        for (ch = !s->cpl_in_use[blk]; ch <= s->fbw_channels; ch++) {
             if (s->deltbae[ch] == DBA_NEW) {
                 s->deltnseg[ch] = get_bits(gbc, 3);
                 for (seg = 0; seg <= s->deltnseg[ch]; seg++) {
@@ -1181,7 +1181,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 static void do_imdct(EAC3Context *ctx){
     int ch;
 
-    for (ch = 1; ch <= ctx->nfchans + ctx->lfe_on; ch++) {
+    for (ch = 1; ch <= ctx->fbw_channels + ctx->lfe_on; ch++) {
         if (ctx->blksw[ch]) {
             /* 256-point IMDCT */
             ff_ac3_do_imdct_256(ctx->tmp_output, ctx->transform_coeffs[ch],
@@ -1268,7 +1268,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
                     c->nrematbnds, c->rematflg);
 
         /* apply scaling to coefficients (dialnorm, dynrng) */
-        for (ch = 1; ch <= c->nfchans + c->lfe_on; ch++) {
+        for (ch = 1; ch <= c->fbw_channels + c->lfe_on; ch++) {
             float gain=2.0f;
             if (c->channel_mode == AC3_CHMODE_DUALMONO) {
                 gain *= c->dialog_norm[ch-1] * c->dynamic_range[ch-1];
@@ -1285,7 +1285,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         // TODO: Transient Pre-Noise Cross-Fading
 
         if (avctx->channels != c->num_channels) {
-            ff_ac3_downmix(c->output, c->nfchans, avctx->channels, c->downmix_coeffs);
+            ff_ac3_downmix(c->output, c->fbw_channels, avctx->channels, c->downmix_coeffs);
         }
 
         // convert float to 16-bit integer

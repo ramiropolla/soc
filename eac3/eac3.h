@@ -138,7 +138,7 @@ typedef struct EAC3Context{
     int necplbnd;                      ///< Number of structured enhanced coupling bands
     int nspxbnds;                      ///< Number of structured spectral extension bands
     int spxbndsztab[MAX_SPX_CODES];    ///< Sizes of spectral extension bands
-    int nfchans;                       ///< Number of fbw channels
+    int fbw_channels;                  ///< Number of fbw channels
 
     uint8_t bap[AC3_MAX_CHANNELS][AC3_MAX_COEFS];   ///< bit allocation pointers
     uint8_t hebap[AC3_MAX_CHANNELS][AC3_MAX_COEFS]; ///< high-efficiency bit allocation pointers for AHT
