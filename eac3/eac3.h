@@ -55,21 +55,20 @@ typedef struct EAC3Context{
 ///@}
 ///@name Audio Frame
 ///@{
-    int snroffststr;                 ///< SNR offset strategy
-    int snroffst[AC3_MAX_CHANNELS];  ///< SNR offset
-    int blkswe;                      ///< Block switch syntax enabled
-    int dithflage;                   ///< Dither flag syntax enabled
-    int bamode;                      ///< Bit allocation model syntax enabled
-    int frmfgaincode;                ///< Fast gain codes enabled
-    int dbaflde;                     ///< Delta bit allocation syntax enabled
-    int skipflde;                    ///< Skip Filed syntax enabled
-    int cplinu[MAX_BLOCKS];          ///< Coupling in use
-    int cplstre[MAX_BLOCKS];         ///< Coupling strategy exists
-    int chexpstr[MAX_BLOCKS][AC3_MAX_CHANNELS];  ///< Channel exponent strategy
-    int chahtinu[AC3_MAX_CHANNELS];      ///< Channel AHT in use
-    int chinspxatten[AC3_MAX_CHANNELS];  ///< Channel in spectral extension attenuation process
-    int spxattencod[AC3_MAX_CHANNELS];   ///< spectral extension attenuation code
-    int ncplblks;
+    int snr_offset_strategy;         ///< SNR offset strategy (snroffststr)
+    int snr_offset[AC3_MAX_CHANNELS];///< SNR offset (snroffst)
+    int block_switch_syntax;         ///< Block switch syntax enabled (blkswe)
+    int dither_flag_syntax;          ///< Dither flag syntax enabled (dithflage)
+    int bit_allocation_syntax;       ///< Bit allocation model syntax enabled (bamode)
+    int fast_gain_syntax;            ///< Fast gain codes enabled (frmfgaincode)
+    int dba_syntax;                  ///< Delta bit allocation syntax enabled (dbaflde)
+    int skip_syntax;                 ///< Skip Filed syntax enabled (skipflde)
+    int cpl_in_use[MAX_BLOCKS];      ///< Coupling in use (cplinu)
+    int cpl_stratety_exists[MAX_BLOCKS];            ///< Coupling strategy exists (cplstre)
+    int exp_strategy[MAX_BLOCKS][AC3_MAX_CHANNELS]; ///< Channel exponent strategy (chexpstr)
+    int channel_uses_aht[AC3_MAX_CHANNELS];         ///< Channel AHT in use (chahtinu)
+    int channel_uses_spx[AC3_MAX_CHANNELS];         ///< Channel in spectral extension attenuation process (chinspxatten)
+    int spx_atten_code[AC3_MAX_CHANNELS];           ///< spectral extension attenuation code (spxattencod)
 ///@}
 ///@name Audio block
 ///@{
