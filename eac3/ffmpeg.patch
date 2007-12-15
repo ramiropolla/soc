@@ -1,40 +1,8 @@
-Index: ffmpeg.c
-===================================================================
---- ffmpeg.c (FFmpeg SVN-r11200)
-+++ ffmpeg.c (working copy)
-@@ -1621,6 +1621,7 @@ static int av_encode(AVFormatContext **output_files,
-                 } else {
-                     if (codec->channels != icodec->channels &&
-                         (icodec->codec_id == CODEC_ID_AC3 ||
-+                         icodec->codec_id == CODEC_ID_EAC3 ||
-                          icodec->codec_id == CODEC_ID_DTS)) {
-                         /* Special case for 5:1 AC3 and DTS input */
-                         /* and mono or stereo output      */
-Index: libavcodec/Makefile
-===================================================================
---- libavcodec/Makefile (FFmpeg SVN-r11200)
-+++ libavcodec/Makefile (working copy)
-@@ -67,6 +67,7 @@ OBJS-$(CONFIG_DVDSUB_ENCODER)          += dvdsubenc.o
- OBJS-$(CONFIG_DVVIDEO_DECODER)         += dv.o
- OBJS-$(CONFIG_DVVIDEO_ENCODER)         += dv.o
- OBJS-$(CONFIG_DXA_DECODER)             += dxa.o
-+OBJS-$(CONFIG_EAC3_DECODER)            += eac3dec.o ac3dec.o ac3tab.o ac3.o mdct.o fft.o
- OBJS-$(CONFIG_EIGHTBPS_DECODER)        += 8bps.o
- OBJS-$(CONFIG_FFV1_DECODER)            += ffv1.o rangecoder.o golomb.o
- OBJS-$(CONFIG_FFV1_ENCODER)            += ffv1.o rangecoder.o
-@@ -316,6 +317,7 @@ OBJS-$(CONFIG_CAVSVIDEO_PARSER)        += cavs_parser.o
- OBJS-$(CONFIG_DCA_PARSER)              += dca_parser.o
- OBJS-$(CONFIG_DVBSUB_PARSER)           += dvbsub_parser.o
- OBJS-$(CONFIG_DVDSUB_PARSER)           += dvdsub_parser.o
-+OBJS-$(CONFIG_EAC3_PARSER)             += ac3_parser.o ac3tab.o aac_ac3_parser.o
- OBJS-$(CONFIG_H261_PARSER)             += h261_parser.o
- OBJS-$(CONFIG_H263_PARSER)             += h263_parser.o
- OBJS-$(CONFIG_H264_PARSER)             += h264_parser.o
 Index: libavcodec/aac_ac3_parser.c
 ===================================================================
---- libavcodec/aac_ac3_parser.c (FFmpeg SVN-r11200)
-+++ libavcodec/aac_ac3_parser.c (working copy)
-@@ -50,7 +50,7 @@ int ff_aac_ac3_parse(AVCodecParserContext *s1,
+--- libavcodec/aac_ac3_parser.c	(revision 11226)
++++ libavcodec/aac_ac3_parser.c	(working copy)
+@@ -50,7 +50,7 @@
  
          if (s->frame_size == 0) {
              if ((s->inbuf_ptr - s->inbuf) == s->header_size) {
@@ -43,7 +11,7 @@ Index: libavcodec/aac_ac3_parser.c
                                &samples);
                  if (len == 0) {
                      /* no sync found : move by one byte (inefficient, but simple!) */
-@@ -61,7 +61,7 @@ int ff_aac_ac3_parse(AVCodecParserContext *s1,
+@@ -61,7 +61,7 @@
                      /* update codec info */
                      avctx->sample_rate = sample_rate;
                      /* set channels,except if the user explicitly requests 1 or 2 channels, XXX/FIXME this is a bit ugly */
@@ -54,9 +22,9 @@ Index: libavcodec/aac_ac3_parser.c
                          }
 Index: libavcodec/aac_ac3_parser.h
 ===================================================================
---- libavcodec/aac_ac3_parser.h (FFmpeg SVN-r11200)
-+++ libavcodec/aac_ac3_parser.h (working copy)
-@@ -30,7 +30,7 @@ typedef struct AACAC3ParseContext {
+--- libavcodec/aac_ac3_parser.h	(revision 11226)
++++ libavcodec/aac_ac3_parser.h	(working copy)
+@@ -30,7 +30,7 @@
      uint8_t *inbuf_ptr;
      int frame_size;
      int header_size;
@@ -65,11 +33,31 @@ Index: libavcodec/aac_ac3_parser.h
                  int *bit_rate, int *samples);
      uint8_t inbuf[8192]; /* input buffer */
  } AACAC3ParseContext;
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(revision 11226)
++++ libavcodec/Makefile	(working copy)
+@@ -67,6 +67,7 @@
+ OBJS-$(CONFIG_DVVIDEO_DECODER)         += dv.o
+ OBJS-$(CONFIG_DVVIDEO_ENCODER)         += dv.o
+ OBJS-$(CONFIG_DXA_DECODER)             += dxa.o
++OBJS-$(CONFIG_EAC3_DECODER)            += eac3dec.o ac3dec.o ac3tab.o ac3.o mdct.o fft.o
+ OBJS-$(CONFIG_EIGHTBPS_DECODER)        += 8bps.o
+ OBJS-$(CONFIG_FFV1_DECODER)            += ffv1.o rangecoder.o golomb.o
+ OBJS-$(CONFIG_FFV1_ENCODER)            += ffv1.o rangecoder.o
+@@ -316,6 +317,7 @@
+ OBJS-$(CONFIG_DCA_PARSER)              += dca_parser.o
+ OBJS-$(CONFIG_DVBSUB_PARSER)           += dvbsub_parser.o
+ OBJS-$(CONFIG_DVDSUB_PARSER)           += dvdsub_parser.o
++OBJS-$(CONFIG_EAC3_PARSER)             += ac3_parser.o ac3tab.o aac_ac3_parser.o
+ OBJS-$(CONFIG_H261_PARSER)             += h261_parser.o
+ OBJS-$(CONFIG_H263_PARSER)             += h263_parser.o
+ OBJS-$(CONFIG_H264_PARSER)             += h264_parser.o
 Index: libavcodec/aac_parser.c
 ===================================================================
---- libavcodec/aac_parser.c (FFmpeg SVN-r11200)
-+++ libavcodec/aac_parser.c (working copy)
-@@ -38,7 +38,7 @@ static const int aac_channels[8] = {
+--- libavcodec/aac_parser.c	(revision 11226)
++++ libavcodec/aac_parser.c	(working copy)
+@@ -38,7 +38,7 @@
  };
  
  
@@ -78,11 +66,31 @@ Index: libavcodec/aac_parser.c
                      int *bit_rate, int *samples)
  {
      GetBitContext bits;
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c	(revision 11226)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -178,6 +178,7 @@
+     REGISTER_DECODER (COOK, cook);
+     REGISTER_DECODER (DCA, dca);
+     REGISTER_DECODER (DSICINAUDIO, dsicinaudio);
++    REGISTER_DECODER (EAC3, eac3);
+     REGISTER_ENCDEC  (FLAC, flac);
+     REGISTER_DECODER (IMC, imc);
+     REGISTER_DECODER (MACE3, mace3);
+@@ -285,6 +286,7 @@
+     REGISTER_PARSER  (DCA, dca);
+     REGISTER_PARSER  (DVBSUB, dvbsub);
+     REGISTER_PARSER  (DVDSUB, dvdsub);
++    REGISTER_PARSER  (EAC3, eac3);
+     REGISTER_PARSER  (H261, h261);
+     REGISTER_PARSER  (H263, h263);
+     REGISTER_PARSER  (H264, h264);
 Index: libavcodec/ac3_parser.c
 ===================================================================
---- libavcodec/ac3_parser.c (FFmpeg SVN-r11200)
-+++ libavcodec/ac3_parser.c (working copy)
-@@ -84,7 +84,7 @@ int ff_ac3_parse_header(const uint8_t buf[7], AC3HeaderInfo *hdr)
+--- libavcodec/ac3_parser.c	(revision 11226)
++++ libavcodec/ac3_parser.c	(working copy)
+@@ -84,7 +84,7 @@
      return 0;
  }
  
@@ -91,7 +99,7 @@ Index: libavcodec/ac3_parser.c
                      int *bit_rate, int *samples)
  {
      int err;
-@@ -100,12 +100,16 @@ static int ac3_sync(const uint8_t *buf, int *channels, int *sample_rate,
+@@ -100,12 +100,16 @@
  
      bitstream_id = hdr.bitstream_id;
      if(bitstream_id <= 10) {             /* Normal AC-3 */
@@ -108,7 +116,7 @@ Index: libavcodec/ac3_parser.c
          init_get_bits(&bits, &buf[2], (AC3_HEADER_SIZE-2) * 8);
          stream_type = get_bits(&bits, 2);
          substream_id = get_bits(&bits, 3);
-@@ -163,3 +167,11 @@ AVCodecParser ac3_parser = {
+@@ -163,3 +167,11 @@
      ff_aac_ac3_parse,
      NULL,
  };
@@ -120,11 +128,23 @@ Index: libavcodec/ac3_parser.c
 +    ff_aac_ac3_parse,
 +    NULL,
 +};
+Index: libavcodec/avcodec.h
+===================================================================
+--- libavcodec/avcodec.h	(revision 11226)
++++ libavcodec/avcodec.h	(working copy)
+@@ -274,6 +274,7 @@
+     CODEC_ID_APE,
+     CODEC_ID_NELLYMOSER,
+     CODEC_ID_MUSEPACK8,
++    CODEC_ID_EAC3,
+ 
+     /* subtitle codecs */
+     CODEC_ID_DVD_SUBTITLE= 0x17000,
 Index: libavcodec/ac3enc.c
 ===================================================================
---- libavcodec/ac3enc.c (FFmpeg SVN-r11200)
-+++ libavcodec/ac3enc.c (working copy)
-@@ -479,7 +479,8 @@ static int bit_alloc(AC3EncodeContext *s,
+--- libavcodec/ac3enc.c	(revision 11226)
++++ libavcodec/ac3enc.c	(working copy)
+@@ -479,7 +479,8 @@
          for(ch=0;ch<s->nb_all_channels;ch++) {
              ff_ac3_bit_alloc_calc_bap(mask[i][ch], psd[i][ch], 0,
                                        s->nb_coefs[ch], snr_offset,
@@ -134,35 +154,3 @@ Index: libavcodec/ac3enc.c
              frame_bits += compute_mantissa_size(s, bap[i][ch],
                                                   s->nb_coefs[ch]);
          }
-Index: libavcodec/allcodecs.c
-===================================================================
---- libavcodec/allcodecs.c (FFmpeg SVN-r11200)
-+++ libavcodec/allcodecs.c (working copy)
-@@ -178,6 +178,7 @@ void avcodec_register_all(void)
-     REGISTER_DECODER (COOK, cook);
-     REGISTER_DECODER (DCA, dca);
-     REGISTER_DECODER (DSICINAUDIO, dsicinaudio);
-+    REGISTER_DECODER (EAC3, eac3);
-     REGISTER_ENCDEC  (FLAC, flac);
-     REGISTER_DECODER (IMC, imc);
-     REGISTER_DECODER (MACE3, mace3);
-@@ -285,6 +286,7 @@ void avcodec_register_all(void)
-     REGISTER_PARSER  (DCA, dca);
-     REGISTER_PARSER  (DVBSUB, dvbsub);
-     REGISTER_PARSER  (DVDSUB, dvdsub);
-+    REGISTER_PARSER  (EAC3, eac3);
-     REGISTER_PARSER  (H261, h261);
-     REGISTER_PARSER  (H263, h263);
-     REGISTER_PARSER  (H264, h264);
-Index: libavcodec/avcodec.h
-===================================================================
---- libavcodec/avcodec.h (FFmpeg SVN-r11200)
-+++ libavcodec/avcodec.h (working copy)
-@@ -274,6 +274,7 @@ enum CodecID {
-     CODEC_ID_APE,
-     CODEC_ID_NELLYMOSER,
-     CODEC_ID_MUSEPACK8,
-+    CODEC_ID_EAC3,
- 
-     /* subtitle codecs */
-     CODEC_ID_DVD_SUBTITLE= 0x17000,
