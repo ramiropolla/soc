@@ -452,23 +452,28 @@ void ff_ac3_decode_exponents(GetBitContext *gb, int exp_strategy, int ngrps,
  * range using the coupling coefficients and coupling coordinates.
  * reference: Section 7.4.3 Coupling Coordinate Format
  */
-static void uncouple_channels(AC3DecodeContext *ctx)
+void ff_ac3_uncouple_channels(int fbw_channels, int cpl_start_freq,
+            int num_cpl_bands, int channel_in_cpl[AC3_MAX_CHANNELS],
+            int cpl_band_struct[18],
+            float transform_coeffs[AC3_MAX_CHANNELS][256],
+            float cpl_coords[AC3_MAX_CHANNELS][18])
 {
     int i, j, ch, bnd, subbnd;
 
     subbnd = -1;
-    i = ctx->start_freq[CPL_CH];
-    for(bnd=0; bnd<ctx->num_cpl_bands; bnd++) {
+    i = cpl_start_freq;
+    for(bnd=0; bnd<num_cpl_bands; bnd++) {
         do {
             subbnd++;
             for(j=0; j<12; j++) {
-                for(ch=1; ch<=ctx->fbw_channels; ch++) {
-                    if(ctx->channel_in_cpl[ch])
-                        ctx->transform_coeffs[ch][i] = ctx->transform_coeffs[CPL_CH][i] * ctx->cpl_coords[ch][bnd] * 8.0f;
+                for(ch=1; ch<=fbw_channels; ch++) {
+                    if(channel_in_cpl[ch])
+                        transform_coeffs[ch][i] = transform_coeffs[CPL_CH][i] *
+                            cpl_coords[ch][bnd] * 8.0f;
                 }
                 i++;
             }
-        } while(ctx->cpl_band_struct[subbnd]);
+        } while(cpl_band_struct[subbnd]);
     }
 }
 
@@ -603,7 +608,10 @@ static int get_transform_coeffs(AC3DecodeContext * ctx)
                     av_log(ctx->avctx, AV_LOG_ERROR, "error in decoupling channels\n");
                     return -1;
                 }
-                uncouple_channels(ctx);
+                ff_ac3_uncouple_channels(ctx->fbw_channels,
+                        ctx->start_freq[CPL_CH], ctx->num_cpl_bands,
+                        ctx->channel_in_cpl, ctx->cpl_band_struct,
+                        ctx->transform_coeffs, ctx->cpl_coords);
                 got_cplchan = 1;
             }
             end = ctx->end_freq[CPL_CH];

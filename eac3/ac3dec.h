@@ -76,6 +76,12 @@ typedef struct {
 int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *exps,
         uint8_t *bap, float *coeffs, int start, int end, AVRandomState *dith_state);
 
+void ff_ac3_uncouple_channels(int fbw_channels, int cpl_start_freq,
+            int num_cpl_bands, int channel_in_cpl[AC3_MAX_CHANNELS],
+            int cpl_band_struct[18],
+            float transform_coeffs[AC3_MAX_CHANNELS][256],
+            float cpl_coords[AC3_MAX_CHANNELS][18]);
+
 void ff_ac3_do_rematrixing(float (*transform_coeffs)[256], int end, int nrematbnd, int *rematflg);
 
 void ff_ac3_do_imdct_256(float *tmp_output, float *transform_coeffs,

@@ -36,27 +36,6 @@ static void log_missing_feature(AVCodecContext *avctx, const char *log){
             "mailing list.\n", log);
 }
 
-static void uncouple_channels(EAC3Context *s){
-    int i, j, ch, bnd, subbnd;
-
-    subbnd = 0;
-    i = s->strtmant[CPL_CH];
-    for (bnd = 0; bnd < s->num_cpl_bands; bnd++) {
-        do {
-            for (j = 0; j < 12; j++) {
-                for (ch = 1; ch <= s->fbw_channels; ch++) {
-                    if (s->channel_in_cpl[ch]) {
-                        s->transform_coeffs[ch][i] =
-                            s->transform_coeffs[CPL_CH][i] *
-                            s->cpl_coords[ch][bnd] * 8.0f;
-                    }
-                }
-                i++;
-            }
-        } while(s->cpl_band_struct[subbnd++]);
-    }
-}
-
 static void spectral_extension(EAC3Context *s){
     //Now turned off, because there are no samples for testing it.
 #if 0
@@ -1181,8 +1160,11 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
     }
 
-    if (s->cpl_in_use[blk])
-        uncouple_channels(s);
+    if (s->cpl_in_use[blk]) {
+        ff_ac3_uncouple_channels(s->fbw_channels, s->strtmant[CPL_CH],
+                s->num_cpl_bands, s->channel_in_cpl, s->cpl_band_struct,
+                s->transform_coeffs, s->cpl_coords);
+    }
 
     //apply spectral extension
     if (s->spxinu)
