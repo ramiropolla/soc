@@ -55,18 +55,14 @@ typedef struct EAC3Context{
 ///@}
 ///@name Audio Frame
 ///@{
-    int expstre;                     ///< Exponent strategy syntax enabled
-    int ahte;                        ///< Adaptive hybrid transform enabled
     int snroffststr;                 ///< SNR offset strategy
     int snroffst[AC3_MAX_CHANNELS];  ///< SNR offset
-    int transproce;                  ///< Transient pre-noise processing enabled
     int blkswe;                      ///< Block switch syntax enabled
     int dithflage;                   ///< Dither flag syntax enabled
     int bamode;                      ///< Bit allocation model syntax enabled
     int frmfgaincode;                ///< Fast gain codes enabled
     int dbaflde;                     ///< Delta bit allocation syntax enabled
     int skipflde;                    ///< Skip Filed syntax enabled
-    int spxattene;                   ///< Spectral extension attenuation enabled
     int cplinu[MAX_BLOCKS];          ///< Coupling in use
     int cplstre[MAX_BLOCKS];         ///< Coupling strategy exists
     int chexpstr[MAX_BLOCKS][AC3_MAX_CHANNELS];  ///< Channel exponent strategy

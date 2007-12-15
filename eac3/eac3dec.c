@@ -520,19 +520,21 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
 
 static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     int blk, ch;
+    int ac3_exponent_strategy, parse_aht_info, parse_spx_atten_data;
+    int parse_transient_proc_info;
 
     /* Audio frame exist flags and strategy data */
     if (s->num_blocks == 6) {
         /* LUT-based exponent strategy syntax */
-        s->expstre = get_bits1(gbc);
-        s->ahte = get_bits1(gbc);
+        ac3_exponent_strategy = get_bits1(gbc);
+        parse_aht_info = get_bits1(gbc);
     } else {
         /* AC-3 style exponent strategy syntax */
-        s->expstre = 1;
-        s->ahte = 0;
+        ac3_exponent_strategy = 1;
+        parse_aht_info = 0;
     }
     s->snroffststr = get_bits(gbc, 2);
-    s->transproce = get_bits1(gbc);
+    parse_transient_proc_info = get_bits1(gbc);
     s->blkswe = get_bits1(gbc);
     if (!s->blkswe) {
         for (ch = 1; ch <= s->nfchans; ch++)
@@ -558,7 +560,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     s->frmfgaincode = get_bits1(gbc);
     s->dbaflde = get_bits1(gbc);
     s->skipflde = get_bits1(gbc);
-    s->spxattene = get_bits1(gbc);
+    parse_spx_atten_data = get_bits1(gbc);
     /* Coupling data */
     if (s->channel_mode > 1) {
         s->cplstre[0] = 1;
@@ -580,7 +582,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     }
 
     /* Exponent strategy data */
-    if (s->expstre) {
+    if (ac3_exponent_strategy) {
         /* AC-3 style exponent strategy syntax */
         for (blk = 0; blk < s->num_blocks; blk++) {
             for (ch = !s->cplinu[blk]; ch <= s->nfchans; ch++) {
@@ -613,7 +615,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         }
     }
     /* AHT data */
-    if (s->ahte) {
+    if (parse_aht_info) {
         /* AHT is only available in 6 block mode (numblkscod ==3) */
         /* coupling can use AHT only when coupling in use for all blocks */
         /* ncplregs derived from cplstre and cplexpstr - see Section E3.3.2 */
@@ -636,7 +638,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
             s->snroffst[ch] = snroffst;
     }
     /* Audio frame transient pre-noise processing data */
-    if (s->transproce) {
+    if (parse_transient_proc_info) {
         for (ch = 1; ch <= s->nfchans; ch++) {
             if (get_bits1(gbc)) { // channel in transient processing
                 skip_bits(gbc, 10); // skip transient processing location
@@ -645,7 +647,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
         }
     }
     /* Spectral extension attenuation data */
-    if (s->spxattene) {
+    if (parse_spx_atten_data) {
         for (ch = 1; ch <= s->nfchans; ch++) {
             s->chinspxatten[ch] = get_bits1(gbc);
             if (s->chinspxatten[ch]) {
