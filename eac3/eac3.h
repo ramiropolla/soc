@@ -64,7 +64,7 @@ typedef struct EAC3Context{
     int dba_syntax;                  ///< Delta bit allocation syntax enabled (dbaflde)
     int skip_syntax;                 ///< Skip Filed syntax enabled (skipflde)
     int cpl_in_use[MAX_BLOCKS];      ///< Coupling in use (cplinu)
-    int cpl_stratety_exists[MAX_BLOCKS];            ///< Coupling strategy exists (cplstre)
+    int cpl_strategy_exists[MAX_BLOCKS];            ///< Coupling strategy exists (cplstre)
     int exp_strategy[MAX_BLOCKS][AC3_MAX_CHANNELS]; ///< Channel exponent strategy (chexpstr)
     int channel_uses_aht[AC3_MAX_CHANNELS];         ///< Channel AHT in use (chahtinu)
     int channel_uses_spx[AC3_MAX_CHANNELS];         ///< Channel in spectral extension attenuation process (chinspxatten)

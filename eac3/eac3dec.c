@@ -520,13 +520,13 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     parse_spx_atten_data = get_bits1(gbc);
     /* Coupling data */
     if (s->channel_mode > 1) {
-        s->cpl_stratety_exists[0] = 1;
+        s->cpl_strategy_exists[0] = 1;
         s->cpl_in_use[0] = get_bits1(gbc);
         num_cpl_blocks = s->cpl_in_use[0];
         for (blk = 1; blk < s->num_blocks; blk++) {
-            s->cpl_stratety_exists[blk] = get_bits1(gbc);
+            s->cpl_strategy_exists[blk] = get_bits1(gbc);
 
-            if (s->cpl_stratety_exists[blk]) {
+            if (s->cpl_strategy_exists[blk]) {
                 s->cpl_in_use[blk] = get_bits1(gbc);
             } else {
                 s->cpl_in_use[blk] = s->cpl_in_use[blk-1];
@@ -779,7 +779,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 #endif
 
     /* Coupling strategy and enhanced coupling strategy information */
-    if (s->cpl_stratety_exists[blk]) {
+    if (s->cpl_strategy_exists[blk]) {
         if (s->cpl_in_use[blk]) {
             ecpl_in_use = get_bits1(gbc);
             if (s->channel_mode == AC3_CHMODE_STEREO) {
