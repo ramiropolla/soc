@@ -159,7 +159,7 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
     endbap = chgaqmod<2?12:17;
 
     chgaqsections = 0;
-    for (bin = 0; bin < s->endmant[ch]; bin++) {
+    for (bin = 0; bin < s->end_freq[ch]; bin++) {
         if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < endbap)
             chgaqsections++;
     }
@@ -182,7 +182,7 @@ static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int 
     }
 
     m=0;
-    for (bin = s->strtmant[ch]; bin < s->endmant[ch]; bin++) {
+    for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
         if (s->hebap[ch][bin] > 7) {
             // GAQ (E3.3.4.2)
             // XXX what about gaqmod = 0 ?
@@ -254,7 +254,7 @@ static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
     // TODO fast IDCT
     int bin, i;
     float tmp;
-    for (bin = s->strtmant[ch]; bin < s->endmant[ch]; bin++) {
+    for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
         tmp = s->pre_chmant[0][ch][bin];
         for (i = 1; i < 6; i++) {
             tmp += idct_cos_tab[blk][i-1] * s->pre_chmant[i][ch][bin];
@@ -267,7 +267,7 @@ static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int
         int ch, mant_groups *m){
     if (s->channel_uses_aht[ch] == 0) {
         ff_ac3_get_transform_coeffs_ch(m, gbc, s->dexps[ch], s->bap[ch],
-                s->transform_coeffs[ch], s->strtmant[ch], s->endmant[ch],
+                s->transform_coeffs[ch], s->start_freq[ch], s->end_freq[ch],
                 &s->dith_state);
     } else {
         if (s->channel_uses_aht[ch] == 1) {
@@ -279,9 +279,9 @@ static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int
         idct_transform_coeffs_ch(s, ch, blk);
     }
 
-    memset(s->transform_coeffs[ch]+s->endmant[ch], 0,
+    memset(s->transform_coeffs[ch]+s->end_freq[ch], 0,
            sizeof(s->transform_coeffs[ch]) -
-           s->endmant[ch] * sizeof(*s->transform_coeffs[ch]));
+           s->end_freq[ch] * sizeof(*s->transform_coeffs[ch]));
 }
 
 static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
@@ -320,8 +320,8 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     s->num_channels = s->fbw_channels;
     s->lfe_channel = s->num_channels+1;
     if (s->lfe_on) {
-        s->strtmant[s->lfe_channel] = 0;
-        s->endmant [s->lfe_channel] = 7;
+        s->start_freq[s->lfe_channel] = 0;
+        s->end_freq [s->lfe_channel] = 7;
         s->nchgrps [s->lfe_channel] = 2;
         s->channel_in_cpl [s->lfe_channel] = 0;
         s->num_channels++;
@@ -704,7 +704,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             }
             for (ch = 1; ch <= s->fbw_channels; ch++) {
                 if (s->chinspx[ch])
-                    s->endmant[ch] = 25 + 12 * s->spxbegf;
+                    s->end_freq[ch] = 25 + 12 * s->spxbegf;
             }
             if (get_bits1(gbc)) {
                 for (bnd = s->spxbegf + 1; bnd < s->spxendf; bnd++) {
@@ -809,15 +809,15 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 s->num_cpl_subbands =  cpl_end - cpl_begin;
 
                 /* calculate start and end frequency bins for coupling */
-                s->strtmant[CPL_CH] = 37 + (12 * cpl_begin);
-                s->endmant[CPL_CH] = 37 + (12 * cpl_end);
-                if (s->strtmant[CPL_CH] > s->endmant[CPL_CH]) {
+                s->start_freq[CPL_CH] = 37 + (12 * cpl_begin);
+                s->end_freq[CPL_CH] = 37 + (12 * cpl_end);
+                if (s->start_freq[CPL_CH] > s->end_freq[CPL_CH]) {
                     av_log(s->avctx, AV_LOG_ERROR, "cplstrtmant > cplendmant [blk=%i]\n", blk);
                     return -1;
                 }
                 for (ch = 1; ch <= s->fbw_channels; ch++) {
                     if (s->channel_in_cpl[ch])
-                        s->endmant[ch] = s->strtmant[CPL_CH];
+                        s->end_freq[ch] = s->start_freq[CPL_CH];
                 }
 
                 /* read coupling band structure or use default */
@@ -944,7 +944,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                         s->cpl_coords[2][bnd] = -s->cpl_coords[2][bnd];
                 }
             }
-            s->nchgrps[CPL_CH] = (s->endmant[CPL_CH] - s->strtmant[CPL_CH]) /
+            s->nchgrps[CPL_CH] = (s->end_freq[CPL_CH] - s->start_freq[CPL_CH]) /
                 (3 << (s->exp_strategy[blk][CPL_CH] - 1));
         } else {
             /* enhanced coupling in use */
@@ -1003,7 +1003,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
             /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf */
             // TODO spx in one channel
             int end = (s->cpl_in_use[blk] || s->spxinu) ?
-                FFMIN(s->endmant[1], s->endmant[2]) : (ff_ac3_rematrix_band_tab[4]-1);
+                FFMIN(s->end_freq[1], s->end_freq[2]) : (ff_ac3_rematrix_band_tab[4]-1);
             for (bnd = 0; ff_ac3_rematrix_band_tab[bnd] <= end; bnd++) {
                 s->rematflg[bnd] = get_bits1(gbc);
             }
@@ -1018,17 +1018,17 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         }
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
             grpsize = 3 << (s->exp_strategy[blk][ch] - 1);
-            s->strtmant[ch] = 0;
+            s->start_freq[ch] = 0;
             if ((!s->channel_in_cpl[ch]) && (!s->chinspx[ch])) {
                 chbwcod = get_bits(gbc, 6);
                 if (chbwcod > 60) {
                     av_log(s->avctx, AV_LOG_ERROR, "chbwcod > 60\n");
                     return -1;
                 }
-                s->endmant[ch] = ((chbwcod + 12) * 3) + 37; /* (ch is not coupled) */
+                s->end_freq[ch] = ((chbwcod + 12) * 3) + 37; /* (ch is not coupled) */
             }
             grpsize = 3 << (s->exp_strategy[blk][ch] - 1);
-            s->nchgrps[ch] = (s->endmant[ch] + grpsize - 4) / grpsize;
+            s->nchgrps[ch] = (s->end_freq[ch] + grpsize - 4) / grpsize;
         }
     }
     /* Exponents */
@@ -1036,7 +1036,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
             s->dexps[ch][0] = get_bits(gbc, 4) << !ch;
             ff_ac3_decode_exponents(gbc, s->exp_strategy[blk][ch], s->nchgrps[ch],
-                    s->dexps[ch][0], s->dexps[ch]+s->strtmant[ch]+!!ch);
+                    s->dexps[ch][0], s->dexps[ch]+s->start_freq[ch]+!!ch);
             if (ch != CPL_CH && ch != s->lfe_channel)
                 skip_bits(gbc, 2); /* skip gainrng */
         }
@@ -1125,26 +1125,26 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     /* run bit allocation */
     for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++) {
-        ff_ac3_bit_alloc_calc_psd((int8_t *)s->dexps[ch], s->strtmant[ch],
-                s->endmant[ch], s->psd[ch], s->bndpsd[ch]);
+        ff_ac3_bit_alloc_calc_psd((int8_t *)s->dexps[ch], s->start_freq[ch],
+                s->end_freq[ch], s->psd[ch], s->bndpsd[ch]);
 
         s->bit_alloc_params.sr_code = s->sr_code;
         s->bit_alloc_params.sr_shift = 0;
 
         ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params,
-                s->bndpsd[ch], s->strtmant[ch], s->endmant[ch], s->fgain[ch],
+                s->bndpsd[ch], s->start_freq[ch], s->end_freq[ch], s->fgain[ch],
                 (ch == s->lfe_channel),
                 s->deltbae[ch], s->deltnseg[ch],
                 s->deltoffst[ch], s->deltlen[ch],
                 s->deltba[ch], s->mask[ch]);
 
         if (s->channel_uses_aht[ch] == 0)
-            ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], s->strtmant[ch],
-                    s->endmant[ch], s->snr_offset[ch], s->bit_alloc_params.floor, ff_ac3_bap_tab,
+            ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], s->start_freq[ch],
+                    s->end_freq[ch], s->snr_offset[ch], s->bit_alloc_params.floor, ff_ac3_bap_tab,
                     s->bap[ch]);
         else
             if (s->channel_uses_aht[ch] == 1)
-                ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], s->strtmant[ch], s->endmant[ch],
+                ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], s->start_freq[ch], s->end_freq[ch],
                         s->snr_offset[ch], s->bit_alloc_params.floor, ff_ac3_hebaptab,
                         s->hebap[ch]);
     }
@@ -1161,7 +1161,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     }
 
     if (s->cpl_in_use[blk]) {
-        ff_ac3_uncouple_channels(s->fbw_channels, s->strtmant[CPL_CH],
+        ff_ac3_uncouple_channels(s->fbw_channels, s->start_freq[CPL_CH],
                 s->num_cpl_bands, s->channel_in_cpl, s->cpl_band_struct,
                 s->transform_coeffs, s->cpl_coords);
     }
@@ -1262,7 +1262,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         /* recover coefficients if rematrixing is in use */
         if (c->channel_mode == AC3_CHMODE_STEREO)
             ff_ac3_do_rematrixing(c->transform_coeffs,
-                    FFMIN(c->endmant[1], c->endmant[2]),
+                    FFMIN(c->end_freq[1], c->end_freq[2]),
                     c->nrematbnds, c->rematflg);
 
         /* apply scaling to coefficients (dialnorm, dynrng) */
@@ -1273,7 +1273,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             } else {
                 gain *= c->dialog_norm[0] * c->dynamic_range[0];
             }
-            for (i = 0; i < c->endmant[ch]; i++) {
+            for (i = 0; i < c->end_freq[ch]; i++) {
                 c->transform_coeffs[ch][i] *= gain;
             }
         }

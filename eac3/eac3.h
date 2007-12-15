@@ -126,8 +126,8 @@ typedef struct EAC3Context{
     int nchgrps[AC3_MAX_CHANNELS];                  ///< Number of fbw channel exponent groups
     uint8_t dexps[AC3_MAX_CHANNELS][AC3_MAX_COEFS]; ///< Differential exponents
 
-    int strtmant[AC3_MAX_CHANNELS];    ///< Start frequency bin
-    int endmant[AC3_MAX_CHANNELS];     ///< End frequency bin
+    int start_freq[AC3_MAX_CHANNELS];   ///< Start frequency bin (strtmant)
+    int end_freq[AC3_MAX_CHANNELS];     ///< End frequency bin (endmant)
     int firstchincpl;
     int ecpl_start_subbnd;             ///< Enhanced coupling begin frequency
     int ecpl_end_subbnd;               ///< Enhanced coupling end frequency
