@@ -24,33 +24,6 @@
 #include "ac3dec.h"
 #include "ac3.h"
 
-/**
- * Table for default stereo downmixing coefficients
- * reference: Section 7.8.2 Downmixing Into Two Channels
- */
-static const uint8_t eac3_default_coeffs[8][5][2] = {
-    { { 2, 7 }, { 7, 2 },                               },
-    { { 4, 4 },                                         },
-    { { 2, 7 }, { 7, 2 },                               },
-    { { 2, 7 }, { 5, 5 }, { 7, 2 },                     },
-    { { 2, 7 }, { 7, 2 }, { 6, 6 },                     },
-    { { 2, 7 }, { 5, 5 }, { 7, 2 }, { 8, 8 },           },
-    { { 2, 7 }, { 7, 2 }, { 6, 7 }, { 7, 6 },           },
-    { { 2, 7 }, { 5, 5 }, { 7, 2 }, { 6, 7 }, { 7, 6 }, },
-};
-
-static const float mixlevels[9] = {
-    LEVEL_PLUS_3DB,
-    LEVEL_PLUS_1POINT5DB,
-    LEVEL_ONE,
-    LEVEL_MINUS_1POINT5DB,
-    LEVEL_MINUS_3DB,
-    LEVEL_MINUS_4POINT5DB,
-    LEVEL_MINUS_6DB,
-    LEVEL_ZERO,
-    LEVEL_MINUS_9DB
-};
-
 static float idct_cos_tab[6][5];
 
 static void log_missing_feature(AVCodecContext *avctx, const char *log){
@@ -401,8 +374,8 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     /* set stereo downmixing coefficients
        reference: Section 7.8.2 Downmixing Into Two Channels */
     for (i = 0; i < s->nfchans; i++) {
-        s->downmix_coeffs[i][0] = mixlevels[eac3_default_coeffs[s->channel_mode][i][0]];
-        s->downmix_coeffs[i][1] = mixlevels[eac3_default_coeffs[s->channel_mode][i][1]];
+        s->downmix_coeffs[i][0] = ff_ac3_mix_levels[ff_ac3_default_coeffs[s->channel_mode][i][0]];
+        s->downmix_coeffs[i][1] = ff_ac3_mix_levels[ff_ac3_default_coeffs[s->channel_mode][i][1]];
     }
 
     if (get_bits1(gbc)) {
@@ -414,13 +387,13 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             if (s->channel_mode & 1) {
                 /* if three front channels exist */
                 skip_bits(gbc, 3); //skip Lt/Rt center mix level
-                s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = mixlevels[get_bits(gbc, 3)];
+                s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = ff_ac3_mix_levels[get_bits(gbc, 3)];
             }
             if (s->channel_mode & 4) {
                 /* if a surround channel exists */
                 float surmixlev;
                 skip_bits(gbc, 3); //skip Lt/Rt surround mix level
-                surmixlev = mixlevels[get_bits(gbc, 3)];
+                surmixlev = ff_ac3_mix_levels[get_bits(gbc, 3)];
                 if (s->channel_mode & 2) {
                     //two surround channels
                     s->downmix_coeffs[s->channel_mode-4][0] = s->downmix_coeffs[s->channel_mode-3][1] =

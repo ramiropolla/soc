@@ -48,6 +48,12 @@ extern float ff_ac3_dialog_norm_tab[32];
  */
 extern float ff_ac3_scale_factors[25];
 
+/** channel mix levels */
+extern const float ff_ac3_mix_levels[9];
+
+/** default stereo downmixing coefficients */
+extern const uint8_t ff_ac3_default_coeffs[8][5][2];
+
 /**
  * Decode the grouped exponents according to exponent strategy.
  * reference: Section 7.1.3 Exponent Decoding

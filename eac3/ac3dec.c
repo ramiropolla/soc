@@ -70,12 +70,15 @@ float ff_ac3_dynamic_range_tab[256];
 /** dialog normalization table */
 float ff_ac3_dialog_norm_tab[32];
 
-static const float gain_levels[6] = {
-    LEVEL_ZERO,
+const float ff_ac3_mix_levels[9] = {
+    LEVEL_PLUS_3DB,
+    LEVEL_PLUS_1POINT5DB,
     LEVEL_ONE,
+    LEVEL_MINUS_1POINT5DB,
     LEVEL_MINUS_3DB,
     LEVEL_MINUS_4POINT5DB,
     LEVEL_MINUS_6DB,
+    LEVEL_ZERO,
     LEVEL_MINUS_9DB
 };
 
@@ -83,27 +86,27 @@ static const float gain_levels[6] = {
  * Table for center mix levels
  * reference: Section 5.4.2.4 cmixlev
  */
-static const uint8_t center_levels[4] = { 2, 3, 4, 3 };
+static const uint8_t center_levels[4] = { 4, 5, 6, 5 };
 
 /**
  * Table for surround mix levels
  * reference: Section 5.4.2.5 surmixlev
  */
-static const uint8_t surround_levels[4] = { 2, 4, 0, 4 };
+static const uint8_t surround_levels[4] = { 4, 6, 7, 6 };
 
 /**
  * Table for default stereo downmixing coefficients
  * reference: Section 7.8.2 Downmixing Into Two Channels
  */
-static const uint8_t ac3_default_coeffs[8][5][2] = {
-    { { 1, 0 }, { 0, 1 },                               },
-    { { 2, 2 },                                         },
-    { { 1, 0 }, { 0, 1 },                               },
-    { { 1, 0 }, { 3, 3 }, { 0, 1 },                     },
-    { { 1, 0 }, { 0, 1 }, { 4, 4 },                     },
-    { { 1, 0 }, { 3, 3 }, { 0, 1 }, { 5, 5 },           },
-    { { 1, 0 }, { 0, 1 }, { 4, 0 }, { 0, 4 },           },
-    { { 1, 0 }, { 3, 3 }, { 0, 1 }, { 4, 0 }, { 0, 4 }, },
+const uint8_t ff_ac3_default_coeffs[8][5][2] = {
+    { { 2, 7 }, { 7, 2 },                               },
+    { { 4, 4 },                                         },
+    { { 2, 7 }, { 7, 2 },                               },
+    { { 2, 7 }, { 5, 5 }, { 7, 2 },                     },
+    { { 2, 7 }, { 7, 2 }, { 6, 6 },                     },
+    { { 2, 7 }, { 5, 5 }, { 7, 2 }, { 8, 8 },           },
+    { { 2, 7 }, { 7, 2 }, { 6, 7 }, { 7, 6 },           },
+    { { 2, 7 }, { 5, 5 }, { 7, 2 }, { 6, 7 }, { 7, 6 }, },
 };
 
 /* override ac3.h to include coupling channel */
@@ -331,8 +334,8 @@ static int ac3_parse_header(AC3DecodeContext *ctx)
     /* get decoding parameters from header info */
     ctx->bit_alloc_params.sr_code     = hdr.sr_code;
     ctx->channel_mode                 = hdr.channel_mode;
-    center_mix_level                  = gain_levels[center_levels[hdr.center_mix_level]];
-    surround_mix_level                = gain_levels[surround_levels[hdr.surround_mix_level]];
+    center_mix_level                  = ff_ac3_mix_levels[center_levels[hdr.center_mix_level]];
+    surround_mix_level                = ff_ac3_mix_levels[surround_levels[hdr.surround_mix_level]];
     ctx->dolby_surround_mode          = hdr.dolby_surround_mode;
     ctx->lfe_on                        = hdr.lfe_on;
     ctx->bit_alloc_params.sr_shift    = hdr.sr_shift;
@@ -396,8 +399,8 @@ static int ac3_parse_header(AC3DecodeContext *ctx)
     /* set stereo downmixing coefficients
        reference: Section 7.8.2 Downmixing Into Two Channels */
     for(i=0; i<ctx->fbw_channels; i++) {
-        ctx->downmix_coeffs[i][0] = gain_levels[ac3_default_coeffs[ctx->channel_mode][i][0]];
-        ctx->downmix_coeffs[i][1] = gain_levels[ac3_default_coeffs[ctx->channel_mode][i][1]];
+        ctx->downmix_coeffs[i][0] = ff_ac3_mix_levels[ff_ac3_default_coeffs[ctx->channel_mode][i][0]];
+        ctx->downmix_coeffs[i][1] = ff_ac3_mix_levels[ff_ac3_default_coeffs[ctx->channel_mode][i][1]];
     }
     if(ctx->channel_mode > 1 && ctx->channel_mode & 1) {
         ctx->downmix_coeffs[1][0] = ctx->downmix_coeffs[1][1] = center_mix_level;
