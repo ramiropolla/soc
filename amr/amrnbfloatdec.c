@@ -997,11 +997,10 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc, float *sample
     }
 
     for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
-        float sample_temp = 0.0;
+        samples[i] = excitation[i];
         for(j=0; j<LP_FILTER_ORDER; j++) {
-            sample_temp -= lpc[j]*samples[i-j-1];
+            samples[i] -= lpc[j]*samples[i-j-1];
         }
-        samples[i] = excitation[i] + sample_temp;
         // Detect overflow
         if(fabsf(samples[i])>1.0) {
             overflow_temp = 1;
