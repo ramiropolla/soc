@@ -84,17 +84,14 @@ typedef struct EAC3Context{
     int spxbndstrc[MAX_SPX_CODES];   ///< Spectral extension band structure
     int spxcoe[AC3_MAX_CHANNELS];    ///< Spectral extension coordinates exists
     int spxblnd[AC3_MAX_CHANNELS];   ///< Spectral extension blend
-    int ecplinu;                     ///< Enhanced coupling in use
-    int chincpl[AC3_MAX_CHANNELS];   ///< Channel in coupling
-    int phsflginu;                   ///< Phase flag in use
-    int cplbegf;                     ///< Coupling begin frequency code
-    int cplendf;                     ///< Coupling end frequency code
-    int cplbndstrc[19];              ///< Coupling band structure
+    int ecpl_in_use;                 ///< Enhanced coupling in use
+    int channel_in_cpl[AC3_MAX_CHANNELS];   ///< Channel in coupling (chincpl)
+    int phase_flags_in_use;                 ///< Phase flag in use (phsflginu)
+    int cpl_band_struct[18];         ///< Coupling band structure (cplbndstrc)
     int ecplbegf;                    ///< Enhanced coupling begin frequency code
     int ecplendf;                    ///< Enhanced coupling end frequency code
     int ecplbndstrc[23];             ///< Enhanced coupling band structure
-    int cplcoe[AC3_MAX_CHANNELS];    ///< Coupling coordinates exists
-    int phsflg[18];                  ///< Phase flag
+    int phase_flags[18];             ///< Phase flag
     int ecplangleintrp;              ///< Enhanced coupling angle interpolation flag
     int ecplparam1e[AC3_MAX_CHANNELS];   ///< Enhanced coupling parameters 1 exists
     int ecplparam2e[AC3_MAX_CHANNELS];   ///< Enhanced coupling parameters 2 exists
@@ -118,13 +115,13 @@ typedef struct EAC3Context{
     float pre_chmant[6][AC3_MAX_CHANNELS][256];     ///< Pre channel mantissas
 
     int firstspxcos[AC3_MAX_CHANNELS];              ///< First spectral extension coordinates states
-    int firstcplcos[AC3_MAX_CHANNELS];              ///< First coupling coordinates states
+    int first_cpl_coords[AC3_MAX_CHANNELS];         ///< First coupling coordinates states (firstcplcos)
     int first_cpl_leak;                             ///< First coupling leak state (firstcplleak)
 ///@}
 
     int nrematbnds;                    ///< Number of rematrixing bands
-    int ncplsubnd;                     ///< Number of coupling sub-bands
-    int ncplbnd;                       ///< Number of structured coupled bands
+    int num_cpl_subbands;              ///< Number of coupling sub bands (ncplsubnd)
+    int num_cpl_bands;                 ///< Number of coupling bands (ncplbnd)
 
     int nchgrps[AC3_MAX_CHANNELS];                  ///< Number of fbw channel exponent groups
     uint8_t dexps[AC3_MAX_CHANNELS][AC3_MAX_COEFS]; ///< Differential exponents
@@ -146,7 +143,7 @@ typedef struct EAC3Context{
     int16_t bndpsd[AC3_MAX_CHANNELS][50];           ///< interpolated exponents
     int16_t mask[AC3_MAX_CHANNELS][50];             ///< masking values
 
-    float   cplco[AC3_MAX_CHANNELS][18];            ///< coupling coordinates
+    float   cpl_coords[AC3_MAX_CHANNELS][18];       ///< coupling coordinates (cplco)
     float   spxco[AC3_MAX_CHANNELS][18];            ///< Spectral extension coordinates
 
     AC3BitAllocParameters bit_alloc_params;         ///< Bit allocation parameters

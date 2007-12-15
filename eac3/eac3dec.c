@@ -39,21 +39,21 @@ static void log_missing_feature(AVCodecContext *avctx, const char *log){
 static void uncouple_channels(EAC3Context *s){
     int i, j, ch, bnd, subbnd;
 
-    subbnd = s->cplbegf+1;
+    subbnd = 0;
     i = s->strtmant[CPL_CH];
-    for (bnd = 0; bnd < s->ncplbnd; bnd++) {
+    for (bnd = 0; bnd < s->num_cpl_bands; bnd++) {
         do {
             for (j = 0; j < 12; j++) {
                 for (ch = 1; ch <= s->fbw_channels; ch++) {
-                    if (s->chincpl[ch]) {
+                    if (s->channel_in_cpl[ch]) {
                         s->transform_coeffs[ch][i] =
                             s->transform_coeffs[CPL_CH][i] *
-                            s->cplco[ch][bnd] * 8.0f;
+                            s->cpl_coords[ch][bnd] * 8.0f;
                     }
                 }
                 i++;
             }
-        } while(s->cplbndstrc[subbnd++] && subbnd<=s->cplendf);
+        } while(s->cpl_band_struct[subbnd++]);
     }
 }
 
@@ -344,7 +344,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
         s->strtmant[s->lfe_channel] = 0;
         s->endmant [s->lfe_channel] = 7;
         s->nchgrps [s->lfe_channel] = 2;
-        s->chincpl [s->lfe_channel] = 0;
+        s->channel_in_cpl [s->lfe_channel] = 0;
         s->num_channels++;
     }
 
@@ -644,7 +644,7 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     /* Syntax state initialization */
     for (ch = 1; ch <= s->fbw_channels; ch++) {
         s->firstspxcos[ch] = 1;
-        s->firstcplcos[ch] = 1;
+        s->first_cpl_coords[ch] = 1;
     }
     s->first_cpl_leak = 1;
 
@@ -655,6 +655,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     //int grp, sbnd, n, bin;
     int seg, bnd, ch, i, chbwcod, grpsize;
     int got_cplchan;
+    int ecpl_in_use=0;
     mant_groups m;
 
     m.b1ptr = m.b2ptr = m.b4ptr = 3;
@@ -797,54 +798,62 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* Coupling strategy and enhanced coupling strategy information */
     if (s->cpl_stratety_exists[blk]) {
         if (s->cpl_in_use[blk]) {
-            s->ecplinu = get_bits1(gbc);
+            ecpl_in_use = get_bits1(gbc);
             if (s->channel_mode == AC3_CHMODE_STEREO) {
-                s->chincpl[1] = 1;
-                s->chincpl[2] = 1;
+                s->channel_in_cpl[1] = 1;
+                s->channel_in_cpl[2] = 1;
             } else {
                 for (ch = 1; ch <= s->fbw_channels; ch++) {
-                    s->chincpl[ch] = get_bits1(gbc);
+                    s->channel_in_cpl[ch] = get_bits1(gbc);
                 }
             }
-            if (!s->ecplinu) {
+            if (!ecpl_in_use) {
                 /* standard coupling in use */
-                if (s->channel_mode == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
-                    s->phsflginu = get_bits1(gbc);
-                }
-                s->cplbegf = get_bits(gbc, 4);
-                if (!s->spxinu) {
-                    /* if SPX not in use */
-                    s->cplendf = get_bits(gbc, 4);
-                    s->cplendf += 3;
-                } else {
-                    /* SPX in use */
-                    s->cplendf = s->spxbegf - 1;
+                int cpl_begin, cpl_end;
+
+                /* determine if phase flags are used */
+                if (s->channel_mode == AC3_CHMODE_STEREO) {
+                    s->phase_flags_in_use = get_bits1(gbc);
                 }
 
-                s->strtmant[CPL_CH] = 37 + (12 * s->cplbegf);
-                s->endmant[CPL_CH] = 37 + (12 * s->cplendf);
+                /* get start and end subbands for coupling */
+                cpl_begin = get_bits(gbc, 4);
+                if (!s->spxinu) {
+                    cpl_end = get_bits(gbc, 4) + 3;
+                } else {
+                    cpl_end = s->spxbegf - 1;
+                }
+                s->num_cpl_subbands =  cpl_end - cpl_begin;
+
+                /* calculate start and end frequency bins for coupling */
+                s->strtmant[CPL_CH] = 37 + (12 * cpl_begin);
+                s->endmant[CPL_CH] = 37 + (12 * cpl_end);
                 if (s->strtmant[CPL_CH] > s->endmant[CPL_CH]) {
                     av_log(s->avctx, AV_LOG_ERROR, "cplstrtmant > cplendmant [blk=%i]\n", blk);
                     return -1;
                 }
                 for (ch = 1; ch <= s->fbw_channels; ch++) {
-                    if (s->chincpl[ch])
+                    if (s->channel_in_cpl[ch])
                         s->endmant[ch] = s->strtmant[CPL_CH];
                 }
+
+                /* read coupling band structure or use default */
                 if (get_bits1(gbc)) {
-                    for (bnd = s->cplbegf + 1; bnd < s->cplendf; bnd++) {
-                        s->cplbndstrc[bnd] = get_bits1(gbc);
+                    for (bnd = 0; bnd < s->num_cpl_subbands-1; bnd++) {
+                        s->cpl_band_struct[bnd] = get_bits1(gbc);
                     }
                 } else {
                     if (!blk) {
-                        for (bnd = 0; bnd < 18; bnd++)
-                            s->cplbndstrc[bnd] = ff_eac3_defcplbndstrc[bnd];
+                        for (bnd = 0; bnd < s->num_cpl_subbands-1; bnd++)
+                            s->cpl_band_struct[bnd] = ff_eac3_defcplbndstrc[bnd+cpl_begin+1];
                     }
                 }
-                s->ncplsubnd =  s->cplendf - s->cplbegf;
-                s->ncplbnd = s->ncplsubnd;
-                for (bnd = s->cplbegf + 1; bnd < s->cplendf; bnd++) {
-                    s->ncplbnd -= s->cplbndstrc[bnd];
+                s->cpl_band_struct[17] = 0;
+
+                /* calculate number of coupling bands based on band structure */
+                s->num_cpl_bands = s->num_cpl_subbands;
+                for (bnd = 0; bnd < s->num_cpl_subbands-1; bnd++) {
+                    s->num_cpl_bands -= s->cpl_band_struct[bnd];
                 }
             } else {
                 /* enhanced coupling in use */
@@ -891,61 +900,65 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     s->necplbnd -= s->ecplbndstrc[bnd];
                 }
 #endif
-            } /* ecplinu[blk] */
+            }
         } else {
-            /* !cplinu[blk] */
+            /* coupling not used for this block */
             for (ch = 1; ch <= s->fbw_channels; ch++) {
-                s->chincpl[ch] = 0;
-                s->firstcplcos[ch] = 1;
+                s->channel_in_cpl[ch] = 0;
+                s->first_cpl_coords[ch] = 1;
             }
             s->first_cpl_leak = 1;
-            s->phsflginu = 0;
-            s->ecplinu = 0;
+            s->phase_flags_in_use = 0;
+            ecpl_in_use = 0;
         }
-    } /* cplstre[blk] */
+    }
     /* Coupling coordinates */
     if (s->cpl_in_use[blk]) {
-        if (!s->ecplinu) {
+        if (!ecpl_in_use) {
             /* standard coupling in use */
+            int cpl_coords_exist = 0;
             for (ch = 1; ch <= s->fbw_channels; ch++) {
-                if (s->chincpl[ch]) {
-                    if (s->firstcplcos[ch]) {
-                        s->cplcoe[ch] = 1;
-                        s->firstcplcos[ch] = 0;
+                if (s->channel_in_cpl[ch]) {
+                    int cpl_coords_ch = 0;
+
+                    /* determine if coupling coordinates are new or reused */
+                    if (s->first_cpl_coords[ch]) {
+                        cpl_coords_ch = 1;
+                        s->first_cpl_coords[ch] = 0;
                     } else {
-                        /* !firstcplcos[ch] */
-                        s->cplcoe[ch] = get_bits1(gbc);
+                        cpl_coords_ch = get_bits1(gbc);
                     }
-                    if (s->cplcoe[ch]) {
-                        int cplcoexp, cplcomant, mstrcplco;
-                        mstrcplco = get_bits(gbc, 2);
-                        mstrcplco = 3 * mstrcplco;
-                        /* ncplbnd derived from cplbegf, cplendf, and cplbndstrc */
-                        for (bnd = 0; bnd < s->ncplbnd; bnd++) {
-                            cplcoexp = get_bits(gbc, 4);
-                            cplcomant = get_bits(gbc, 4);
-                            if (cplcoexp == 15)
-                                s->cplco[ch][bnd] = cplcomant / 16.0f;
+                    cpl_coords_exist |= cpl_coords_ch;
+
+                    if (cpl_coords_ch) {
+                        /* read coupling coordinates from bitstream */
+                        int cpl_exp, cpl_mant, cpl_master;
+                        cpl_master = 3 * get_bits(gbc, 2);
+                        for (bnd = 0; bnd < s->num_cpl_bands; bnd++) {
+                            cpl_exp = get_bits(gbc, 4);
+                            cpl_mant = get_bits(gbc, 4);
+                            if (cpl_exp == 15)
+                                s->cpl_coords[ch][bnd] = cpl_mant / 16.0f;
                             else
-                                s->cplco[ch][bnd] = (cplcomant + 16.0f) / 32.0f;
-                            s->cplco[ch][bnd] *=  ff_ac3_scale_factors[cplcoexp + mstrcplco];
+                                s->cpl_coords[ch][bnd] = (cpl_mant + 16.0f) / 32.0f;
+                            s->cpl_coords[ch][bnd] *= ff_ac3_scale_factors[cpl_exp + cpl_master];
                         }
-                    } /* cplcoe[ch] */
-                    else {
+                    } else {
                         if (!blk) {
                             av_log(s->avctx, AV_LOG_ERROR,  "no coupling coordinates in first block\n");
                             return -1;
                         }
                     }
                 } else {
-                    /* ! chincpl[ch] */
-                    s->firstcplcos[ch] = 1;
+                    /* channel not in coupling */
+                    s->first_cpl_coords[ch] = 1;
                 }
-            } /* ch */
-            if ((s->channel_mode == AC3_CHMODE_STEREO) && s->phsflginu
-                    && (s->cplcoe[1] || s->cplcoe[2])) {
-                for (bnd = 0; bnd < s->ncplbnd; bnd++) {
-                    s->phsflg[bnd] = get_bits1(gbc);
+            }
+            if ((s->channel_mode == AC3_CHMODE_STEREO) && s->phase_flags_in_use
+                    && cpl_coords_exist) {
+                for (bnd = 0; bnd < s->num_cpl_bands; bnd++) {
+                    if (get_bits1(gbc))
+                        s->cpl_coords[2][bnd] = -s->cpl_coords[2][bnd];
                 }
             }
             s->nchgrps[CPL_CH] = (s->endmant[CPL_CH] - s->strtmant[CPL_CH]) /
@@ -961,16 +974,15 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     if (s->firstchincpl == -1) {
                         s->firstchincpl = ch;
                     }
-                    if (s->firstcplcos[ch]) {
+                    if (s->first_cpl_coords[ch]) {
                         s->ecplparam1e[ch] = 1;
                         if (ch > s->firstchincpl) {
                             s->ecplparam2e[ch] = 1;
                         } else {
                             s->ecplparam2e[ch] = 0;
                         }
-                        s->firstcplcos[ch] = 0;
+                        s->first_cpl_coords[ch] = 0;
                     } else {
-                        /* !firstcplcos[ch] */
                         s->ecplparam1e[ch] = get_bits1(gbc);
                         if (ch > s->firstchincpl) {
                             s->ecplparam2e[ch] = get_bits1(gbc);
@@ -996,12 +1008,12 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                     }
                 } else {
                     /* !chincpl[ch] */
-                    s->firstcplcos[ch] = 1;
+                    s->first_cpl_coords[ch] = 1;
                 }
             } /* ch */
 #endif
-        } /* ecplinu[blk] */
-    } /* cplinu[blk] */
+        }
+    }
     /* Rematrixing operation in the 2/0 mode */
     if (s->channel_mode == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
         if (!blk || get_bits1(gbc)) {
@@ -1024,7 +1036,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
             grpsize = 3 << (s->exp_strategy[blk][ch] - 1);
             s->strtmant[ch] = 0;
-            if ((!s->chincpl[ch]) && (!s->chinspx[ch])) {
+            if ((!s->channel_in_cpl[ch]) && (!s->chinspx[ch])) {
                 chbwcod = get_bits(gbc, 6);
                 if (chbwcod > 60) {
                     av_log(s->avctx, AV_LOG_ERROR, "chbwcod > 60\n");
@@ -1159,7 +1171,7 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* Quantized mantissa values */
     for (ch = 1; ch <= s->num_channels; ch++) {
         get_eac3_transform_coeffs_ch(gbc, s, blk, ch, &m);
-        if (s->cpl_in_use[blk] && s->chincpl[ch] && !got_cplchan) {
+        if (s->cpl_in_use[blk] && s->channel_in_cpl[ch] && !got_cplchan) {
             get_eac3_transform_coeffs_ch(gbc, s, blk, CPL_CH, &m);
             got_cplchan = 1;
         }
