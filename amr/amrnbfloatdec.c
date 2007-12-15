@@ -958,8 +958,8 @@ static void convolve_circ(float *fixed_vector, const float *ir_filter) {
  * @param overflow      16-bit overflow flag
  */
 
-static void synthesis(AMRContext *p, float *excitation, float *lpc, float *samples, uint8_t overflow) {
-    int i, j;
+static int synthesis(AMRContext *p, float *excitation, float *lpc, float *samples, uint8_t overflow) {
+    int i, j, overflow_temp = 0;
 
     // if an overflow has been detected, the pitch vector is scaled down by a
     // factor of 4
@@ -1002,7 +1002,14 @@ static void synthesis(AMRContext *p, float *excitation, float *lpc, float *sampl
             sample_temp -= lpc[j]*samples[i-j-1];
         }
         samples[i] = excitation[i] + sample_temp;
+        // Detect overflow
+        if(fabsf(samples[i])>1.0) {
+            overflow_temp = 1;
+            samples[i] = av_clipf(samples[i], -1.0, 1.0);
+        }
     }
+
+    return overflow_temp;
 }
 
 /*** end of synthesis functions ***/
@@ -1272,14 +1279,12 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 
 /*** synthesis ***/
 
-        synthesis(p, p->excitation, p->lpc[subframe], &p->samples_in[LP_FILTER_ORDER], 0);
-
-        // Check for overflows
-        for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
-            if(fabsf(samples[i])>1.0)
-                synthesis(p, excitation, lpc, samples, 1);
+        if(synthesis(p, p->excitation, p->lpc[subframe], &p->samples_in[LP_FILTER_ORDER], 0)) {
+            // overflow detected -> rerun synthesis scaling pitch vector down by
+            // a factor of 4, skipping pitch vector contribution emphasis and
+            // adaptive gain control
+            synthesis(p, p->excitation, p->lpc[subframe], &p->samples_in[LP_FILTER_ORDER], 1);
         }
-
 
 /*** end of synthesis ***/
 
