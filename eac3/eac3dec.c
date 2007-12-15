@@ -425,7 +425,11 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
             switch(get_bits(gbc, 2)) {
                 case 1: skip_bits(gbc, 5);                     break;
                 case 2: skip_bits(gbc, 12);                    break;
-                case 3: skip_bits(gbc, 8*get_bits(gbc, 5)+16); break;
+                case 3: {
+                    int mix_data_size = 8 * get_bits(gbc, 5) + 16;
+                    skip_bits_long(gbc, mix_data_size);
+                    break;
+                }
             }
             /* skip pan information for mono or dual mono source */
             if (s->channel_mode < 2) {
