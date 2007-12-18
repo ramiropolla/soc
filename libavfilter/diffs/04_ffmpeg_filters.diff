@@ -323,17 +323,18 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1261,6 +1520,9 @@
+@@ -1261,6 +1520,10 @@
                      }
                  }
              }
++#if ENABLE_AVFILTER
 +        if(ist->picref)
 +            avfilter_unref_pic(ist->picref);
-+
++#endif
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1696,10 +1958,21 @@
+@@ -1696,10 +1959,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          exit(1);
                      }
@@ -355,7 +356,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3784,6 +4057,9 @@
+@@ -3784,6 +4058,9 @@
  #ifdef CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
