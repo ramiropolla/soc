@@ -1,8 +1,7 @@
-/**
- * @file aac.c
+/*
  * AAC decoder
- * @author Oded Shimon  ( ods15 ods15 dyndns org )
- * @author Maxim Gavrilov ( maxim.gavrilov gmail com )
+ * Copyright (c) 2005-2006 Oded Shimon ( ods15 ods15 dyndns org )
+ * Copyright (c) 2006-2007 Maxim Gavrilov ( maxim.gavrilov gmail com )
  *
  * Kaiser-Bessel Derived Window by Justin Ruggles
  *
@@ -21,7 +20,13 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
- *
+ */
+
+/**
+ * @file aac.c
+ * AAC decoder
+ * @author Oded Shimon  ( ods15 ods15 dyndns org )
+ * @author Maxim Gavrilov ( maxim.gavrilov gmail com )
  */
 
 /** TODO
