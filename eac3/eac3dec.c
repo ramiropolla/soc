@@ -334,7 +334,7 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     }
 
     for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
-        s->dialog_norm[i] = ff_ac3_dialog_norm_tab[get_bits(gbc, 5)];
+        skip_bits(gbc, 5); // skip dialog normalization
         if (get_bits1(gbc)) {
             skip_bits(gbc, 8); //skip Compression gain word
         }
@@ -1269,9 +1269,9 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         for (ch = 1; ch <= c->fbw_channels + c->lfe_on; ch++) {
             float gain=2.0f;
             if (c->channel_mode == AC3_CHMODE_DUALMONO) {
-                gain *= c->dialog_norm[ch-1] * c->dynamic_range[ch-1];
+                gain *= c->dynamic_range[ch-1];
             } else {
-                gain *= c->dialog_norm[0] * c->dynamic_range[0];
+                gain *= c->dynamic_range[0];
             }
             for (i = 0; i < c->end_freq[ch]; i++) {
                 c->transform_coeffs[ch][i] *= gain;

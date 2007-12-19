@@ -51,7 +51,6 @@ typedef struct EAC3Context{
     int channel_mode;                ///< Channel mode (acmod)
     int lfe_on;                      ///< Low frequency effect channel on (lfeon)
     int bitstream_id;                ///< Bit stream identification (bsid)
-    float dialog_norm[2];            ///< Dialogue normalization (dialnorm)
 ///@}
 ///@name Audio Frame
 ///@{
