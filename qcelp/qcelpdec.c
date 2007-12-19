@@ -45,6 +45,7 @@ typedef struct
     float             pitchf_mem[150];
     float             pitchp_mem[150];
     float             formant_mem[10];
+    float             last_codebook_gain;
     int               frame_num;
     int               bits;
 } QCELPContext;
@@ -120,8 +121,8 @@ void qcelp_decode_params(AVCodecContext *avctx, int *g0, uint16_t *cbseed,
 {
     int                 i, gs[16], g1[16], predictor;
     const uint8_t       *cbgain, *cbsign, *cindex, *data;
-    float               ga[16];
-    const QCELPContext  *q = avctx->priv_data;
+    float               ga[16], gain_memory;
+    QCELPContext  *q = avctx->priv_data;
 
     // FIXME need to get rid of g0, sanity checks should be done here
 
@@ -171,6 +172,8 @@ void qcelp_decode_params(AVCodecContext *avctx, int *g0, uint16_t *cbseed,
                 index[i]=(gs[i] == 1)? cindex[i]:(cindex[i]-89) & 127;
             }
 
+            q->last_codebook_gain=gain[i-1];
+
             break;
         case RATE_QUARTER:
             for(i=0; i<5; i++)
@@ -179,6 +182,8 @@ void qcelp_decode_params(AVCodecContext *avctx, int *g0, uint16_t *cbseed,
                 gs[i]=1;
                 ga[i]=qcelp_g12ga[g1[i]];
             }
+
+            q->last_codebook_gain=gain[4];
 
             /*
              * 5->8 Interpolation to 'Provide smoothing of the energy
@@ -206,13 +211,28 @@ void qcelp_decode_params(AVCodecContext *avctx, int *g0, uint16_t *cbseed,
         case RATE_OCTAVE:
             switch(cbgain[0])
             {
-                case 0: gain[0]=-4; break;
-                case 1: gain[0]=-2; break;
-                case 2: gain[0]= 0; break;
-                case 3: gain[0]= 2; break;
+                case 0: ga[0]=-4; break;
+                case 1: ga[0]=-2; break;
+                case 2: ga[0]= 0; break;
+                case 3: ga[0]= 2; break;
             }
-            gs[0]=1;
-            // WIP finish rate 1/8 calculations, spec is kind of fuzzy here
+
+            // NOTICE: gs[0]=1;
+
+            gain_memory=q->last_codebook_gain<0?
+                     q->last_codebook_gain*-1 : q->last_codebook_gain;
+
+            gain[0]=0.5*gain_memory + 0.5*ga[0];
+
+            q->last_codebook_gain=gain[0];
+
+            /*
+             * This interpolation is done to produce smoother
+             * background noise. TIA/EIA/IS-733 2.4.6.2.3
+             */
+
+            for(i=0; i<8; i++)
+                gain[i]=(0.875-0.125*i)*gain_memory+(0.125+0.125*i)*gain[0];
     }
 }
 
