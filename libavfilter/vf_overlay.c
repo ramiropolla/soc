@@ -141,7 +141,7 @@ static int lower_timestamp(OverlayContext *over)
     if(!over->pics[1][0]) return 1;
 
     if(over->pics[0][0]->pts == over->pics[1][0]->pts) return 2;
-    return !!(over->pics[0][0]->pts < over->pics[1][0]->pts);
+    return (over->pics[0][0]->pts > over->pics[1][0]->pts);
 }
 
 static void copy_image(AVFilterPicRef *dst, int x, int y,
