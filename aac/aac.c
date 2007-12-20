@@ -463,7 +463,6 @@ static void sine_window_init(float *window, int n) {
         window[i] = sin((i + 0.5) * alpha);
 }
 
-// ssr context init
 static void ssr_context_init(ssr_context * ctx) {
     int b, i;
     for (b = 0; b < 2; b++) {
