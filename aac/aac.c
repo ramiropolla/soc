@@ -30,9 +30,8 @@
  */
 
 /** TODO
- *  To reduce the memory required, reorder the ret buffer so all buffers are after eachother.
- *  And then try to do the interleaving inplace.
- *
+ *  To reduce the memory required, reorder the ret buffer so all buffers are
+ *  after each other. And then try to do the interleaving inplace.
  */
 
 #define V_DEBUG
@@ -373,7 +372,7 @@ typedef struct {
 
 
 //aux
-// TODO: may be added to dsputil?!
+// TODO: Maybe add to dsputil?!
 static void vector_add_dst(AACContext * ac, float * dst, const float * src0, const float * src1, int len) {
     int i;
     for (i = 0; i < len; i++)
@@ -844,7 +843,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     /* Initialize RNG dither */
     av_init_random(0x1f2e3d4c, &ac->random_state);
 
-    // 1024  - compensate wrong imdct method
+    // 1024  - compensate wrong IMDCT method
     // 32768 - values in AAC build for ready float->int 16 bit audio, using
     // BIAS method instead needs values -1<x<1
     for (i = 0; i < 256; i++)
@@ -1478,7 +1477,7 @@ static int lfe_channel_struct(AACContext * ac, GetBitContext * gb) {
 
 static int sbr_extension_data(AACContext * ac, GetBitContext * gb, int crc, int cnt) {
     // TODO : sbr_extension implementation
-    av_log(ac->avccontext, AV_LOG_DEBUG, "aac: SBR dont yet supported\n");
+    av_log(ac->avccontext, AV_LOG_DEBUG, "aac: SBR not yet supported.\n");
     skip_bits(gb, 8*cnt - 4);
     return cnt;
 }
@@ -1554,7 +1553,6 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
 }
 
 /** Parse extension data (incomplete)
- *
  */
 static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
     int i = 0;
