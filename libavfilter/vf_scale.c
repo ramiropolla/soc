@@ -64,23 +64,20 @@ static void uninit(AVFilterContext *ctx)
         sws_freeContext(scale->sws);
 }
 
-static int *query_formats(AVFilterLink *link)
+static int query_formats(AVFilterContext *ctx)
 {
-    return avfilter_make_format_list(31,
-                PIX_FMT_YUV444P,  PIX_FMT_YUV422P,  PIX_FMT_YUV420P,
-                PIX_FMT_YUV411P,  PIX_FMT_YUV410P,
-                PIX_FMT_YUYV422,  PIX_FMT_UYVY422,  PIX_FMT_UYYVYY411,
-                PIX_FMT_YUVJ444P, PIX_FMT_YUVJ422P, PIX_FMT_YUVJ420P,
-                PIX_FMT_YUV440P,  PIX_FMT_YUVJ440P,
-                PIX_FMT_RGB32,    PIX_FMT_BGR32,
-                PIX_FMT_RGB32_1,  PIX_FMT_BGR32_1,
-                PIX_FMT_RGB24,    PIX_FMT_BGR24,
-                PIX_FMT_RGB565,   PIX_FMT_BGR565,
-                PIX_FMT_RGB555,   PIX_FMT_BGR555,
-                PIX_FMT_RGB8,     PIX_FMT_BGR8,
-                PIX_FMT_RGB4_BYTE,PIX_FMT_BGR4_BYTE,
-                PIX_FMT_GRAY16BE, PIX_FMT_GRAY16LE,
-                PIX_FMT_GRAY8,    PIX_FMT_PAL8);
+    AVFilterFormats *formats;
+
+    if(ctx->inputs[0]) {
+        formats = avfilter_all_colorspaces();
+        avfilter_formats_ref(formats, &ctx->inputs[0]->out_formats);
+    }
+    if(ctx->outputs[0]) {
+        formats = avfilter_all_colorspaces();
+        avfilter_formats_ref(formats, &ctx->outputs[0]->in_formats);
+    }
+
+    return 0;
 }
 
 static int config_props(AVFilterLink *link)
@@ -148,18 +145,18 @@ AVFilter avfilter_vf_scale =
     .init      = init,
     .uninit    = uninit,
 
+    .query_formats = query_formats,
+
     .priv_size = sizeof(ScaleContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
                                     .start_frame     = start_frame,
                                     .end_frame       = end_frame,
-                                    .query_formats   = query_formats,
                                     .min_perms       = AV_PERM_READ, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
-                                    .query_formats   = query_formats,
                                     .config_props    = config_props, },
                                   { .name = NULL}},
 };

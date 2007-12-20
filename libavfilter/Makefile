@@ -6,6 +6,7 @@ OBJS = avfilter.o \
        avfiltergraph.o \
        avfiltergraphdesc.o \
        defaults.o \
+       formats.o \
 
 # TODO: real conditional compilation
 OBJS-yes = vf_crop.o \

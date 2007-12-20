@@ -41,9 +41,11 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
     return 0;
 }
 
-static int *query_formats(AVFilterLink *link)
+static int query_formats(AVFilterContext *ctx)
 {
-    return avfilter_make_format_list(1, PIX_FMT_RGB24);
+    avfilter_set_common_formats(ctx,
+        avfilter_make_format_list(1, PIX_FMT_RGB24));
+    return 0;
 }
 
 static int config_props(AVFilterLink *link)
@@ -92,11 +94,12 @@ AVFilter avfilter_vf_slicify =
 
     .init      = init,
 
+    .query_formats = query_formats,
+
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
-                                    .query_formats   = query_formats,
                                     .config_props    = config_props,
                                     .end_frame       = end_frame, },
                                   { .name = NULL}},

@@ -27,13 +27,15 @@ typedef struct
     int hsub, vsub;
 } NegContext;
 
-static int *query_formats(AVFilterLink *link)
+static int query_formats(AVFilterContext *ctx)
 {
-    return avfilter_make_format_list(10,
+    avfilter_set_common_formats(ctx,
+        avfilter_make_format_list(10,
                 PIX_FMT_YUV444P,  PIX_FMT_YUV422P,  PIX_FMT_YUV420P,
                 PIX_FMT_YUV411P,  PIX_FMT_YUV410P,
                 PIX_FMT_YUVJ444P, PIX_FMT_YUVJ422P, PIX_FMT_YUVJ420P,
-                PIX_FMT_YUV440P,  PIX_FMT_YUVJ440P);
+                PIX_FMT_YUV440P,  PIX_FMT_YUVJ440P));
+    return 0;
 }
 
 static int config_props(AVFilterLink *link)
@@ -99,10 +101,11 @@ AVFilter avfilter_vf_negate =
 
     .priv_size = sizeof(NegContext),
 
+    .query_formats = query_formats,
+
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
                                     .draw_slice      = draw_slice,
-                                    .query_formats   = query_formats,
                                     .config_props    = config_props,
                                     .min_perms       = AV_PERM_READ, },
                                   { .name = NULL}},
