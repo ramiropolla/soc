@@ -71,8 +71,8 @@ typedef struct EAC3Context{
 ///@}
 ///@name Audio block
 ///@{
-    int blksw[AC3_MAX_CHANNELS];     ///< Block switch flag
-    int dithflag[AC3_MAX_CHANNELS];  ///< Dither flag
+    int block_switch[AC3_MAX_CHANNELS];         ///< Block switch flag (blksw)
+    int dither_flag[AC3_MAX_CHANNELS];          ///< Dither flag (dithflag)
     float dynamic_range[2];          ///< Dynamic range gain (dynrng)
     float downmix_coeffs[AC3_MAX_CHANNELS][2];  ///< stereo downmix coefficients
     int spxinu;                      ///< spectral extension in use

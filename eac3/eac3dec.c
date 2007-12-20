@@ -495,14 +495,14 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     s->block_switch_syntax = get_bits1(gbc);
     if (!s->block_switch_syntax) {
         for (ch = 1; ch <= s->fbw_channels; ch++)
-            s->blksw[ch] = 0;
+            s->block_switch[ch] = 0;
     }
     s->dither_flag_syntax = get_bits1(gbc);
     if (!s->dither_flag_syntax) {
         for (ch = 1; ch <= s->fbw_channels; ch++)
-            s->dithflag[ch] = 1; /* dither on */
+            s->dither_flag[ch] = 1; /* dither on */
     }
-    s->dithflag[CPL_CH] = s->dithflag[s->lfe_channel] = 0;
+    s->dither_flag[CPL_CH] = s->dither_flag[s->lfe_channel] = 0;
 
     /* frame-based syntax flags */
     s->bit_allocation_syntax = get_bits1(gbc);
@@ -646,12 +646,12 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
     /* Block switch and dither flags */
     if (s->block_switch_syntax) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
-            s->blksw[ch] = get_bits1(gbc);
+            s->block_switch[ch] = get_bits1(gbc);
         }
     }
     if (s->dither_flag_syntax) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
-            s->dithflag[ch] = get_bits1(gbc);
+            s->dither_flag[ch] = get_bits1(gbc);
         }
     }
 
@@ -1182,7 +1182,7 @@ static void do_imdct(EAC3Context *ctx){
     int ch;
 
     for (ch = 1; ch <= ctx->fbw_channels + ctx->lfe_on; ch++) {
-        if (ctx->blksw[ch]) {
+        if (ctx->block_switch[ch]) {
             /* 256-point IMDCT */
             ff_ac3_do_imdct_256(ctx->tmp_output, ctx->transform_coeffs[ch],
                     &ctx->imdct_256, ctx->tmp_imdct);
