@@ -1,0 +1,16 @@
+Cosmetic:
+
+* Order functions as they are called/to match the process flow in the spec
+* Add references to the specification sections
+* Add doxygen comments to functions
+* Review Andreas' cosmetic alterations and apply good hunks one at a time
+
+Known bugs:
+
+* Audible clicks are present with various content.
+
+  Sample:
+  ftp://samples.mplayerhq.hu/MPlayer/samples/A-codecs/AAC/zodiac_audio.mov
+
+  'static' is heard in L & R channel. Good example happens exactly at 7.2s
+  (Convert to wav with ffmpeg and load in audacity)
