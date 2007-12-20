@@ -1,3 +1,9 @@
+General:
+
+* Find and remove duplicate code and tables
+* Move variables that are unnecessarily included in the context into function or
+  more isolated code blocks
+
 Cosmetic:
 
 * Order functions as they are called/to match the process flow in the spec
