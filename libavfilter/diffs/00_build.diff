@@ -1,6 +1,6 @@
 Index: configure
 ===================================================================
---- configure	(revision 11113)
+--- configure	(revision 11283)
 +++ configure	(working copy)
 @@ -70,6 +70,7 @@
    echo "                           and ffmpeg will be under GPL [default=no]"
@@ -8,9 +8,9 @@ Index: configure
    echo "  --enable-swscaler        software scaler support [default=no]"
 +  echo "  --enable-avfilter        video filter support (replaces vhook) [default=no]"
    echo "  --enable-beosthreads     use BeOS threads [default=no]"
+   echo "  --enable-os2threads      use OS/2 threads [default=no]"
    echo "  --enable-pthreads        use pthreads [default=no]"
-   echo "  --enable-w32threads      use Win32 threads [default=no]"
-@@ -598,6 +599,7 @@
+@@ -604,6 +605,7 @@
  
  CONFIG_LIST="
      $COMPONENT_LIST
@@ -18,7 +18,7 @@ Index: configure
      avisynth
      beos_netserver
      ffmpeg
-@@ -1799,6 +1801,7 @@
+@@ -1837,6 +1839,7 @@
  echo "shared                    ${shared-no}"
  echo "postprocessing support    ${pp-no}"
  echo "software scaler enabled   ${swscaler-no}"
@@ -26,7 +26,7 @@ Index: configure
  echo "video hooking             ${vhook-no}"
  if enabled vhook; then
      echo "Imlib2 support            ${imlib2-no}"
-@@ -1992,6 +1995,7 @@
+@@ -2031,6 +2034,7 @@
          libavcodec/sh4    \
          libavcodec/sparc  \
          libavdevice       \
@@ -34,7 +34,7 @@ Index: configure
          libavformat       \
          libavutil         \
          libpostproc       \
-@@ -2006,6 +2010,7 @@
+@@ -2045,6 +2049,7 @@
          doc/texi2pod.pl      \
          libavcodec/Makefile  \
          libavdevice/Makefile \
@@ -42,7 +42,7 @@ Index: configure
          libavformat/Makefile \
          libavutil/Makefile   \
          libpostproc/Makefile \
-@@ -2094,3 +2099,8 @@
+@@ -2133,3 +2138,8 @@
      apply libswscale.pc sed s/^Libs:.*$/Libs:/
      apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
  fi
@@ -53,7 +53,7 @@ Index: configure
 +fi
 Index: Makefile
 ===================================================================
---- Makefile	(revision 11113)
+--- Makefile	(revision 11283)
 +++ Makefile	(working copy)
 @@ -8,7 +8,7 @@
  

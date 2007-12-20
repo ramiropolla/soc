@@ -1,6 +1,6 @@
 --- ffplay.c    2007-08-20 11:47:41.000000000 -0400
 +++ ffplay.c    2007-08-20 11:53:06.000000000 -0400
-@@ -82,6 +82,7 @@
+@@ -84,6 +84,7 @@
      double pts;                                  ///<presentation time stamp for this picture
      SDL_Overlay *bmp;
      int width, height; /* source height & width */
@@ -8,7 +8,7 @@
      int allocated;
  } VideoPicture;
  
-@@ -655,10 +656,9 @@
+@@ -657,10 +658,9 @@
              aspect_ratio = 0;
          else
              aspect_ratio = av_q2d(is->video_st->codec->sample_aspect_ratio)
@@ -21,7 +21,7 @@
          /* if an active format is indicated, then it overrides the
             mpeg format */
  #if 0
-@@ -1169,6 +1169,10 @@
+@@ -1171,6 +1171,10 @@
      if (vp->bmp)
          SDL_FreeYUVOverlay(vp->bmp);
  
@@ -32,7 +32,7 @@
  #if 0
      /* XXX: use generic function */
      /* XXX: disable overlay if no hardware acceleration or if RGB format */
-@@ -1186,12 +1190,9 @@
+@@ -1188,12 +1192,9 @@
          break;
      }
  #endif
@@ -46,7 +46,7 @@
  
      SDL_LockMutex(is->pictq_mutex);
      vp->allocated = 1;
-@@ -1262,16 +1263,14 @@
+@@ -1264,16 +1265,14 @@
          pict.linesize[1] = vp->bmp->pitches[2];
          pict.linesize[2] = vp->bmp->pitches[1];
          img_convert_ctx = sws_getCachedContext(img_convert_ctx,
