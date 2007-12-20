@@ -36,9 +36,9 @@ static void log_missing_feature(AVCodecContext *avctx, const char *log){
             "mailing list.\n", log);
 }
 
+#if 0
 static void spectral_extension(EAC3Context *s){
     //Now turned off, because there are no samples for testing it.
-#if 0
     int copystartmant, copyendmant, copyindex, insertindex;
     int wrapflag[18];
     int bandsize, bnd, bin, spxmant, filtbin, ch;
@@ -146,8 +146,8 @@ static void spectral_extension(EAC3Context *s){
             }
         }
     }
-#endif
 }
+#endif
 
 static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
     int endbap, bin, n, m;
@@ -1166,9 +1166,11 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
                 s->transform_coeffs, s->cpl_coords);
     }
 
+#if 0
     //apply spectral extension
     if (s->spxinu)
         spectral_extension(s);
+#endif
 
     return 0;
 }
