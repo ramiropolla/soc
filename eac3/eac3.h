@@ -99,17 +99,14 @@ typedef struct EAC3Context{
     int ecplchaos[AC3_MAX_CHANNELS][23]; ///< Enhanced coupling chaos
     int ecpltrans[AC3_MAX_CHANNELS];     ///< Enhanced coupling transient present
     int rematflg[4];                 ///< Rematrixing flag
-    int cplabsexp;                   ///< Coupling absolute exponent
 
     int fgain[AC3_MAX_CHANNELS];     ///< Channel fast gain
-    int cplleake;                    ///< Coupling leak initialization exists
     uint8_t deltbae[AC3_MAX_CHANNELS];   ///< Delta bit allocation exists
     uint8_t deltnseg[AC3_MAX_CHANNELS];  ///< Channel delta bit allocation number of segments
     uint8_t deltoffst[AC3_MAX_CHANNELS][9]; ///< Channel delta bit allocation offset
     uint8_t deltlen[AC3_MAX_CHANNELS][9];   ///< Channel delta bit allocation length
     uint8_t deltba[AC3_MAX_CHANNELS][9];    ///< Channel delta bit allocation
 
-    int got_cplchan;
     int chgaqgain[256];                             ///< Channel gain adaptive quantization gain
     float pre_chmant[6][AC3_MAX_CHANNELS][256];     ///< Pre channel mantissas
 
