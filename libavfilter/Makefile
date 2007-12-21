@@ -12,6 +12,7 @@ OBJS = avfilter.o \
 OBJS-yes = vf_crop.o \
            vf_fifo.o \
            vf_fps.o \
+           vf_hflip.o \
            vf_negate.o \
            vf_overlay.o \
            vf_passthrough.o \
