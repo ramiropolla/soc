@@ -2,7 +2,7 @@ Index: ffplay.c
 ===================================================================
 --- ffplay.c	(revision 11293)
 +++ ffplay.c	(working copy)
-@@ -1343,49 +1343,67 @@
+@@ -1343,49 +1343,69 @@
      avcodec_default_release_buffer(c, pic);
  }
  
@@ -81,9 +81,11 @@ Index: ffplay.c
 +
 +        if (ret < 0) goto the_end;
 +
++        if (!ret)
++            continue;
++
 +        pts  = pts_int;
 +        pts /= AV_TIME_BASE;
-+        if (ret)
 +        if(output_picture2(is, frame, pts) < 0)
 +            goto the_end;
 +
