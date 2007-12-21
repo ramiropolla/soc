@@ -183,7 +183,7 @@
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1380,6 +1450,140 @@
+@@ -1382,6 +1452,140 @@
      return 0;
  }
  
@@ -324,7 +324,7 @@
  static int video_thread(void *arg)
  {
      VideoState *is = arg;
-@@ -1388,10 +1592,52 @@
+@@ -1390,10 +1594,52 @@
      double pts;
      int ret;
  
@@ -376,8 +376,8 @@
 +#endif
  
          if (ret < 0) goto the_end;
-             pts  = pts_int;
-@@ -1404,6 +1650,9 @@
+ 
+@@ -1410,6 +1656,9 @@
                  stream_pause(cur_stream);
      }
   the_end:
@@ -387,7 +387,7 @@
      av_free(frame);
      return 0;
  }
-@@ -2138,6 +2387,12 @@
+@@ -2144,6 +2393,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -400,7 +400,7 @@
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2494,6 +2749,9 @@
+@@ -2500,6 +2755,9 @@
  #endif
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
