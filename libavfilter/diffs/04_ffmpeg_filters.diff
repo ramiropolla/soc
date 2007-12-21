@@ -1,5 +1,7 @@
---- ffmpeg.c.old	2007-12-20 13:44:48.061553766 -0500
-+++ ffmpeg.c	2007-12-20 14:07:15.792260637 -0500
+Index: ffmpeg.c
+===================================================================
+--- ffmpeg.c	(revision 11293)
++++ ffmpeg.c	(working copy)
 @@ -36,6 +36,11 @@
  #include "avstring.h"
  #include "os_support.h"
@@ -12,15 +14,17 @@
  #if !defined(HAVE_GETRUSAGE) && defined(HAVE_GETPROCESSTIMES)
  #include <windows.h>
  #endif
-@@ -139,6 +144,7 @@
+@@ -139,6 +144,9 @@
  static int loop_input = 0;
  static int loop_output = AVFMT_NOOUTPUTLOOP;
  static int qp_hist = 0;
++#if ENABLE_AVFILTER
 +static char *vfilters = NULL;
++#endif
  
  static int intra_only = 0;
  static int audio_sample_rate = 44100;
-@@ -275,6 +281,12 @@
+@@ -275,6 +283,12 @@
                                  is not defined */
      int64_t       pts;       /* current pts */
      int is_start;            /* is 1 at the start and after a discontinuity */
@@ -33,7 +37,7 @@
  } AVInputStream;
  
  typedef struct AVInputFile {
-@@ -290,6 +302,259 @@
+@@ -290,6 +304,259 @@
  static struct termios oldtty;
  #endif
  
@@ -293,7 +297,7 @@
  static void term_exit(void)
  {
  #ifdef HAVE_TERMIOS_H
-@@ -635,6 +900,13 @@
+@@ -635,6 +902,13 @@
          frame_hook_process(picture2, dec->pix_fmt, dec->width, dec->height,
                             1000000 * ist->pts / AV_TIME_BASE);
  
@@ -307,7 +311,7 @@
      if (picture != picture2)
          *picture = *picture2;
      *bufp = buf;
-@@ -745,6 +1017,9 @@
+@@ -745,6 +1019,9 @@
      if (nb_frames <= 0)
          return;
  
@@ -317,7 +321,7 @@
      if (ost->video_crop) {
          if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
              av_log(NULL, AV_LOG_ERROR, "error cropping picture\n");
-@@ -754,6 +1029,7 @@
+@@ -754,6 +1031,7 @@
      } else {
          formatted_picture = in_picture;
      }
@@ -325,7 +329,7 @@
  
      final_picture = formatted_picture;
      padding_src = formatted_picture;
-@@ -769,12 +1045,14 @@
+@@ -769,12 +1047,14 @@
          }
      }
  
@@ -340,7 +344,7 @@
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1275,6 +1553,10 @@
+@@ -1275,6 +1555,10 @@
                      }
                  }
              }
@@ -351,7 +355,7 @@
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1680,10 +1962,21 @@
+@@ -1680,10 +1964,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          exit(1);
                      }
@@ -373,7 +377,7 @@
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3779,6 +4072,9 @@
+@@ -3782,6 +4077,9 @@
  #ifdef CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
