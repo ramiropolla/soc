@@ -115,8 +115,11 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     out->outpic      = avfilter_get_video_buffer(out, AV_PERM_WRITE);
     out->outpic->pts = picref->pts;
 
-    out->outpic->pixel_aspect.num = picref->pixel_aspect.num * out->h;
-    out->outpic->pixel_aspect.den = picref->pixel_aspect.den * out->w;
+    out->outpic->pixel_aspect.num = picref->pixel_aspect.num * out->h * link->w;
+    out->outpic->pixel_aspect.den = picref->pixel_aspect.den * out->w * link->h;
+    av_reduce(&out->outpic->pixel_aspect.num, &out->outpic->pixel_aspect.den,
+               out->outpic->pixel_aspect.num,  out->outpic->pixel_aspect.den,
+         FFMAX(out->outpic->pixel_aspect.num,  out->outpic->pixel_aspect.den));
 
     avfilter_start_frame(out, avfilter_ref_pic(out->outpic, ~0));
 }
