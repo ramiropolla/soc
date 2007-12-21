@@ -138,7 +138,7 @@ AVFilterGraphDesc *avfilter_graph_load_desc(const char *filename)
     AVFilterGraphDescExport **inputp  = NULL;
     AVFilterGraphDescExport **outputp = NULL;
 
-    Section section;
+    Section section = SEC_NONE;
     char line[LINESIZE];
     void *next;
     FILE *in;

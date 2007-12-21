@@ -77,7 +77,7 @@ static void end_frame(AVFilterLink *link)
 static void draw_slice(AVFilterLink *link, int y, int h)
 {
     SliceContext *slice = link->dst->priv;
-    int y2, i;
+    int y2;
 
     for(y2 = y; y2 + slice->h <= y + h; y2 += slice->h) {
         avfilter_draw_slice(link->dst->outputs[0], y2, slice->h);

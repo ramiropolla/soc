@@ -12,7 +12,17 @@
  #include "version.h"
  #include "cmdutils.h"
  
-@@ -86,6 +91,10 @@
+@@ -66,7 +71,9 @@
+ /* NOTE: the size must be big enough to compensate the hardware audio buffersize size */
+ #define SAMPLE_ARRAY_SIZE (2*65536)
+ 
++#if !ENABLE_AVFILTER
+ static int sws_flags = SWS_BICUBIC;
++#endif
+ 
+ typedef struct PacketQueue {
+     AVPacketList *first_pkt, *last_pkt;
+@@ -86,6 +93,10 @@
      int width, height; /* source height & width */
      enum PixelFormat pix_fmt;
      int allocated;
@@ -23,7 +33,7 @@
  } VideoPicture;
  
  typedef struct SubPicture {
-@@ -168,6 +177,10 @@
+@@ -168,6 +179,10 @@
      //    QETimer *video_timer;
      char filename[1024];
      int width, height, xleft, ytop;
@@ -34,7 +44,7 @@
  } VideoState;
  
  void show_help(void);
-@@ -207,6 +220,9 @@
+@@ -207,6 +222,9 @@
  static int error_resilience = FF_ER_CAREFUL;
  static int error_concealment = 3;
  static int decoder_reorder_pts= 0;
@@ -44,7 +54,7 @@
  
  /* current context */
  static int is_full_screen;
-@@ -653,14 +669,22 @@
+@@ -653,14 +671,22 @@
  
      vp = &is->pictq[is->pictq_rindex];
      if (vp->bmp) {
@@ -69,7 +79,7 @@
          /* if an active format is indicated, then it overrides the
             mpeg format */
  #if 0
-@@ -863,9 +887,15 @@
+@@ -863,9 +889,15 @@
      } else if(!is_full_screen && screen_width){
          w = screen_width;
          h = screen_height;
@@ -85,7 +95,7 @@
      } else {
          w = 640;
          h = 480;
-@@ -1171,9 +1201,19 @@
+@@ -1171,9 +1203,19 @@
      if (vp->bmp)
          SDL_FreeYUVOverlay(vp->bmp);
  
@@ -105,16 +115,20 @@
  
  #if 0
      /* XXX: use generic function */
-@@ -1210,7 +1250,7 @@
- {
+@@ -1211,8 +1253,11 @@
      VideoPicture *vp;
      int dst_pix_fmt;
--    AVPicture pict;
-+    AVPicture pict, pict_src;
+     AVPicture pict;
++#if ENABLE_AVFILTER
++    AVPicture pict_src;
++#else
      static struct SwsContext *img_convert_ctx;
- 
+-
++#endif
      /* wait until we have space to put a new picture */
-@@ -1228,8 +1268,13 @@
+     SDL_LockMutex(is->pictq_mutex);
+     while (is->pictq_size >= VIDEO_PICTURE_QUEUE_SIZE &&
+@@ -1228,8 +1273,13 @@
  
      /* alloc or resize hardware picture buffer */
      if (!vp->bmp ||
@@ -128,7 +142,7 @@
          SDL_Event event;
  
          vp->allocated = 0;
-@@ -1253,6 +1298,12 @@
+@@ -1253,6 +1303,12 @@
  
      /* if the frame is not skipped, then display it */
      if (vp->bmp) {
@@ -141,7 +155,7 @@
          /* get a pointer on the bitmap */
          SDL_LockYUVOverlay (vp->bmp);
  
-@@ -1264,6 +1315,19 @@
+@@ -1264,6 +1320,19 @@
          pict.linesize[0] = vp->bmp->pitches[0];
          pict.linesize[1] = vp->bmp->pitches[2];
          pict.linesize[2] = vp->bmp->pitches[1];
@@ -161,7 +175,7 @@
          img_convert_ctx = sws_getCachedContext(img_convert_ctx,
              vp->width, vp->height, vp->pix_fmt, vp->width, vp->height,
              dst_pix_fmt, sws_flags, NULL, NULL, NULL);
-@@ -1273,6 +1337,7 @@
+@@ -1273,6 +1342,7 @@
          }
          sws_scale(img_convert_ctx, src_frame->data, src_frame->linesize,
                    0, vp->height, pict.data, pict.linesize);
@@ -169,7 +183,7 @@
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1380,6 +1445,140 @@
+@@ -1380,6 +1450,140 @@
      return 0;
  }
  
@@ -310,14 +324,14 @@
  static int video_thread(void *arg)
  {
      VideoState *is = arg;
-@@ -1388,10 +1587,52 @@
+@@ -1388,10 +1592,52 @@
      double pts;
      int ret;
  
 +
 +#if ENABLE_AVFILTER
 +    AVFilterContext *filt_src = NULL, *filt_out = NULL, *filt_graph = NULL;
-+    AVFilterContext *graph;
++    AVFilterContext *graph = NULL;
 +
 +    avfilter_init();
 +
@@ -363,7 +377,7 @@
  
          if (ret < 0) goto the_end;
              pts  = pts_int;
-@@ -1404,6 +1645,9 @@
+@@ -1404,6 +1650,9 @@
                  stream_pause(cur_stream);
      }
   the_end:
@@ -373,7 +387,7 @@
      av_free(frame);
      return 0;
  }
-@@ -2138,6 +2382,12 @@
+@@ -2138,6 +2387,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -386,7 +400,7 @@
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2494,6 +2744,9 @@
+@@ -2494,6 +2749,9 @@
  #endif
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
