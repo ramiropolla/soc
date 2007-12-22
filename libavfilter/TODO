@@ -1,10 +1,9 @@
 FRAMEWORK:
-- auto-inserting needed filters (colorspace conversion, buffer, etc)
+- auto-inserting needed filters (buffer, etc)
 - pass info needed to reorder decode ordered frames
-- other useful image flags? interlace? top/bottom field first? aspect ratio?
+- other useful image flags? interlace? top/bottom field first?
 
 POSSIBLE FRAMEWORK IDEAS:
-- can colorspace negotiation be improved?
 - can parameter passing be done better with AVOption?
 - support for running different filters in different threads?
 - ability to reuse same memory for multiple slices?
@@ -22,9 +21,8 @@ FILTER IDEAS:
 - port vhook filters
 
 PROGRAMS:
-- make ffmpeg support filters - use filter graphs. allow simple chains
-  specified on the command line.  complex graphs may need a graph description
-  from a file.
+- make ffmpeg support filter graphs which can combine multiple input video
+  streams
 
 DOCUMENTATION:
 - more & better doxy comments
