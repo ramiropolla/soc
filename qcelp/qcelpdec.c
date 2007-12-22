@@ -219,8 +219,7 @@ void qcelp_decode_params(AVCodecContext *avctx, int *g0, uint16_t *cbseed,
 
             // NOTICE: gs[0]=1;
 
-            gain_memory=q->last_codebook_gain<0?
-                     q->last_codebook_gain*-1 : q->last_codebook_gain;
+            gain_memory=FFABS(q->last_codebook_gain)
 
             gain[0]=0.5*gain_memory + 0.5*ga[0];
 
