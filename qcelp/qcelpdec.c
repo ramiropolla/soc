@@ -183,8 +183,6 @@ int qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed, float *gain,
                     if(i>0 && FFABS(g0[i] - g0[i-1]) > 40) is_ifq=1;
                     if(i<3 && FFABS(g0[i+2] - 2*g0[i+1] + g0[i]) > 48) is_ifq=1;
                 }
-
-                // NOTICE: gs[i]=1;
                 ga[i]=qcelp_g12ga[g1[i]];
             }
 
@@ -221,8 +219,6 @@ int qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed, float *gain,
                 case 2: ga[0]= 0; break;
                 case 3: ga[0]= 2; break;
             }
-
-            // NOTICE: gs[0]=1;
 
             gain_memory=FFABS(q->last_codebook_gain);
 
