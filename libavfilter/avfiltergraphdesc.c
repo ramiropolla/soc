@@ -187,6 +187,72 @@ int avfilter_graph_parse_desc(AVFilterGraphDesc **desc,
     return 0;
 }
 
+AVFilterGraphDesc *avfilter_graph_parse_chain(const char *filters)
+{
+    AVFilterGraphDesc        *ret;
+    AVFilterGraphDescFilter **filterp, *filtern;
+    AVFilterGraphDescLink   **linkp,   *linkn;
+
+    char *str, *cur;
+    int index = 0;
+
+    cur = str = av_strdup(filters);
+
+    if(!(ret = av_mallocz(sizeof(AVFilterGraphDesc))))
+        goto done;
+
+    filterp = &ret->filters;
+    linkp   = &ret->links;
+
+    while(cur) {
+        char *nextfilter;
+        char *args;
+
+        nextfilter = strchr(cur, ',');
+        if(nextfilter)
+            *nextfilter++ = 0;
+
+        args = strchr(cur, '=');
+        if(args)
+            *args++ = 0;
+
+        filtern = av_mallocz(sizeof(AVFilterGraphDescFilter));
+        filtern->name = av_malloc(8);
+        snprintf(filtern->name, 8, "%d", index);
+        filtern->filter = av_strdup(cur);
+        if(args)
+            filtern->args = av_strdup(args);
+        *filterp = filtern;
+        filterp = &filtern->next;
+
+        if(index > 0) {
+            linkn = av_mallocz(sizeof(AVFilterGraphDescLink));
+            linkn->src = av_malloc(8);
+            snprintf(linkn->src, 8, "%d", index-1);
+            linkn->dst = av_malloc(8);
+            snprintf(linkn->dst, 8, "%d", index);
+
+            *linkp = linkn;
+            linkp = &linkn->next;
+        }
+
+        filters = nextfilter;
+        index ++;
+    }
+
+    ret->inputs = av_mallocz(sizeof(AVFilterGraphDescExport));
+    ret->inputs->filter = av_malloc(8);
+    snprintf(ret->inputs->filter, 8, "%d", 0);
+
+    ret->outputs = av_mallocz(sizeof(AVFilterGraphDescExport));
+    ret->outputs->filter = av_malloc(8);
+    snprintf(ret->outputs->filter, 8, "%d", index-1);
+
+done:
+    av_free(str);
+    return ret;
+}
+
 void avfilter_graph_free_desc(AVFilterGraphDesc *desc)
 {
     void *next;
