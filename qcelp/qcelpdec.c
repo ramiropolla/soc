@@ -58,8 +58,6 @@ static void qcelp_update_filter_mem(float *pitchf_mem, const float *last)
 
 static int qcelp_decode_init(AVCodecContext *avctx)
 {
-    QCELPContext *q = (QCELPContext *) avctx->priv_data;
-
     if(avctx->sample_rate != 8000)
         av_log(avctx, AV_LOG_WARNING,
                "Unsupported samplerate %d, resampling.", avctx->sample_rate);
