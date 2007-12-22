@@ -28,15 +28,6 @@
 
 #define LINESIZE    240             ///< maximum length of an input line
 
-typedef enum
-{
-    SEC_NONE,
-    SEC_FILTERS,
-    SEC_LINKS,
-    SEC_INPUTS,
-    SEC_OUTPUTS
-} Section;
-
 /** a comment is a line which is empty, or starts with whitespace, ';' or '#' */
 static inline int is_line_comment(char *line)
 {
@@ -46,7 +37,7 @@ static inline int is_line_comment(char *line)
            line[0] == '#';
 }
 
-static Section parse_section_name(char *line)
+static AVFilterGraphDescSection parse_section_name(char *line)
 {
     struct {
         char *str;
@@ -130,84 +121,97 @@ static AVFilterGraphDescExport *parse_export(char *line)
     return ret;
 }
 
+int avfilter_graph_parse_desc(AVFilterGraphDesc **desc,
+                              AVFilterGraphDescParser **parser,
+                              char *line)
+{
+    void *next;
+    int len;
+
+    if(!*desc)
+        if(!(*desc = av_mallocz(sizeof(AVFilterGraphDesc))))
+            return AVERROR_NOMEM;
+
+    if(!*parser) {
+        if(!(*parser = av_mallocz(sizeof(AVFilterGraphDescParser))))
+            return AVERROR_NOMEM;
+
+        (*parser)->filterp = &(*desc)->filters;
+        (*parser)->linkp   = &(*desc)->links;
+        (*parser)->inputp  = &(*desc)->inputs;
+        (*parser)->outputp = &(*desc)->outputs;
+    }
+
+    /* ignore comments */
+    if(is_line_comment(line)) return 0;
+
+    /* check if a new section is starting */
+    if(line[0] == '[') {
+        if(((*parser)->section = parse_section_name(line)) == SEC_NONE)
+            return AVERROR_INVALIDDATA;
+        return 0;
+    }
+
+    /* remove any trailing newline characters */
+    for(len = strlen(line); len && (line[len-1]=='\n'||line[len-1]=='\r');)
+        line[--len] = '\0';
+
+    switch((*parser)->section) {
+    case SEC_FILTERS:
+        if(!(next = parse_filter(line)))
+            return AVERROR_INVALIDDATA;
+        *(*parser)->filterp = next;
+        (*parser)->filterp  = &(*(*parser)->filterp)->next;
+        break;
+    case SEC_LINKS:
+        if(!(next = parse_link(line)))
+            return AVERROR_INVALIDDATA;
+        *(*parser)->linkp = next;
+        (*parser)->linkp  = &(*(*parser)->linkp)->next;
+        break;
+    case SEC_INPUTS:
+        if(!(next = parse_export(line)))
+            return AVERROR_INVALIDDATA;
+        *(*parser)->inputp = next;
+        (*parser)->inputp  = &(*(*parser)->inputp)->next;
+        break;
+    case SEC_OUTPUTS:
+        if(!(next = parse_export(line)))
+            return AVERROR_INVALIDDATA;
+        *(*parser)->outputp = next;
+        (*parser)->outputp  = &(*(*parser)->outputp)->next;
+        break;
+    default:
+        return AVERROR_INVALIDDATA;
+    }
+
+    return 0;
+}
+
 AVFilterGraphDesc *avfilter_graph_load_desc(const char *filename)
 {
     AVFilterGraphDesc       *ret    = NULL;
-    AVFilterGraphDescFilter **filterp = NULL;
-    AVFilterGraphDescLink   **linkp   = NULL;
-    AVFilterGraphDescExport **inputp  = NULL;
-    AVFilterGraphDescExport **outputp = NULL;
+    AVFilterGraphDescParser *parser = NULL;
 
-    Section section = SEC_NONE;
     char line[LINESIZE];
-    void *next;
-    FILE *in;
+    FILE *in = NULL;
 
     /* TODO: maybe allow searching in a predefined set of directories to
      * allow users to build up libraries of useful graphs? */
     if(!(in = fopen(filename, "r")))
         goto fail;
 
-    if(!(ret = av_mallocz(sizeof(AVFilterGraphDesc))))
-        goto fail;
-
-    filterp = &ret->filters;
-    linkp   = &ret->links;
-    inputp  = &ret->inputs;
-    outputp = &ret->outputs;
-
-    /* loop through the input file */
-    while(fgets(line, LINESIZE, in)) {
-        int len;
-
-        /* ignore comments */
-        if(is_line_comment(line)) continue;
-
-        /* check if a new section is starting */
-        if(line[0] == '[') {
-            if((section = parse_section_name(line)) == SEC_NONE)
-                goto fail;
-            continue;
-        }
-
-        /* remove any trailing newline characters */
-        for(len = strlen(line); len && (line[len-1]=='\n'||line[len-1]=='\r');)
-            line[--len] = '\0';
-
-        /* parse lines depending on the section */
-        switch(section) {
-        case SEC_FILTERS:
-            if(!(next = parse_filter(line)))
-                goto fail;
-            *filterp = next;
-            filterp  = &(*filterp)->next;
-            break;
-        case SEC_LINKS:
-            if(!(next = parse_link(line)))
-                goto fail;
-            *linkp = next;
-            linkp  = &(*linkp)->next;
-            break;
-        case SEC_INPUTS:
-            if(!(next = parse_export(line)))
-                goto fail;
-            *inputp = next;
-            inputp  = &(*inputp)->next;
-            break;
-        case SEC_OUTPUTS:
-            if(!(next = parse_export(line)))
-                goto fail;
-            *outputp = next;
-            outputp  = &(*outputp)->next;
-            break;
-        }
-    }
+    while(fgets(line, LINESIZE, in))
+        if(avfilter_graph_parse_desc(&ret, &parser, line) < 0)
+            goto fail;
 
     fclose(in);
+    av_free(parser);
     return ret;
 
 fail:
     av_free(ret);
+    av_free(parser);
     if(in) fclose(in);
 
     return NULL;
