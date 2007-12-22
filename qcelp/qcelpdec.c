@@ -116,15 +116,15 @@ static void qcelp_decode_lspf(const QCELPContext *q, float *lspf)
  *
  * TIA/EIA/IS-733 2.4.6.2
  */
-void qcelp_decode_params(AVCodecContext *avctx, int *g0, uint16_t *cbseed,
-     float *gain, int *index)
+int qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed, float *gain,
+    int *index)
 {
-    int                 i, gs[16], g1[16], predictor;
+    int                 i, gs[16], g0[16], g1[16], predictor, is_ifq;
     const uint8_t       *cbgain, *cbsign, *cindex, *data;
     float               ga[16], gain_memory;
     QCELPContext  *q = avctx->priv_data;
 
-    // FIXME need to get rid of g0, sanity checks should be done here
+    is_ifq=0;
 
     cbsign=q->data+QCELP_CBSIGN0_POS;
     cbgain=q->data+QCELP_CBGAIN0_POS;
@@ -179,7 +179,14 @@ void qcelp_decode_params(AVCodecContext *avctx, int *g0, uint16_t *cbseed,
             for(i=0; i<5; i++)
             {
                 g0[i]=g1[i]=4*cbgain[i];
-                gs[i]=1;
+
+                if(!is_ifq)
+                {
+                    if(i>0 && FFABS(g0[i] - g0[i-1]) > 40) is_ifq=1;
+                    if(i<3 && FFABS(g0[i+2] - 2*g0[i+1] + g0[i]) > 48) is_ifq=1;
+                }
+
+                // NOTICE: gs[i]=1;
                 ga[i]=qcelp_g12ga[g1[i]];
             }
 
@@ -233,6 +240,8 @@ void qcelp_decode_params(AVCodecContext *avctx, int *g0, uint16_t *cbseed,
             for(i=0; i<8; i++)
                 gain[i]=(0.875-0.125*i)*gain_memory+(0.125+0.125*i)*gain[0];
     }
+
+    return is_ifq;
 }
 
 /**
@@ -712,7 +721,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     uint16_t first16 = 0, cbseed = 0;
     float    qtzd_lspf[10], gain[16], cdn_vector[160], ppf_vector[160], lpc[10];
     float    interpolated_lspf[10];
-    int      g0[16], index[16];
+    int      index[16];
     uint8_t  claimed_rate;
 
     init_get_bits(&q->gb, buf, buf_size*8);
@@ -826,7 +835,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     // Preliminary decoding of frame's transmission codes
 
     qcelp_decode_lspf(q, qtzd_lspf);
-    qcelp_decode_params(avctx, g0, &cbseed, gain, index);
+    is_ifq=qcelp_decode_params(avctx, &cbseed, gain, index);
 
     // Check for badly received packets TIA/EIA/IS-733 2.4.8.7.3
 
@@ -863,15 +872,6 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
                 if(FFABS(qtzd_lspf[n]-qtzd_lspf[n-2]) < .08)
                     is_ifq=1;
             }
-
-            // FIXME This should be implemented into qcelp_decode_params()
-
-            for(n=0; !is_ifq && n<4; n++)
-            {
-                if(FFABS(g0[n+1]-g0[n]) > 40) is_ifq=1;
-                if(n<3 && FFABS(g0[n+2] - 2*g0[n+1] + g0[n]) > 48) is_ifq=1;
-            }
-
         }
     }
 
