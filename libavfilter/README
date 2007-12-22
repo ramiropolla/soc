@@ -35,7 +35,7 @@ And for the rest use ANSI C.
 
 THE WRONG DIRECTION:
 
-libavfilter IS NOT a wraper around another graphics library.
+libavfilter IS NOT a wrapper around another graphics library.
 Its libavfilter's job to work with pixels; it IS NOT its job to call
 a random_lib(). That would be the last resort if all else fails.
 
