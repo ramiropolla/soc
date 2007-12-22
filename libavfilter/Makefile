@@ -20,6 +20,7 @@ OBJS-yes = vf_crop.o \
            vf_slicify.o \
            vf_split.o \
            vf_vflip.o \
+           avfiltergraphfile.o \
 
 HEADERS = avfilter.h
 

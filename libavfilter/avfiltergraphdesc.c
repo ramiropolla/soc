@@ -1,5 +1,5 @@
 /*
- * Filter graph descriptions for file serialization
+ * Filter graph descriptions
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.
@@ -19,7 +19,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 
@@ -186,35 +185,6 @@ int avfilter_graph_parse_desc(AVFilterGraphDesc **desc,
     }
 
     return 0;
-}
-
-AVFilterGraphDesc *avfilter_graph_load_desc(const char *filename)
-{
-    AVFilterGraphDesc       *ret    = NULL;
-    AVFilterGraphDescParser *parser = NULL;
-
-    char line[LINESIZE];
-    FILE *in = NULL;
-
-    /* TODO: maybe allow searching in a predefined set of directories to
-     * allow users to build up libraries of useful graphs? */
-    if(!(in = fopen(filename, "r")))
-        goto fail;
-
-    while(fgets(line, LINESIZE, in))
-        if(avfilter_graph_parse_desc(&ret, &parser, line) < 0)
-            goto fail;
-
-    fclose(in);
-    av_free(parser);
-    return ret;
-
-fail:
-    av_free(ret);
-    av_free(parser);
-    if(in) fclose(in);
-
-    return NULL;
 }
 
 void avfilter_graph_free_desc(AVFilterGraphDesc *desc)
