@@ -868,7 +868,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
          * Pitch pre-filter
          *
          * Making this runtime selectable might be a good speed-wise compromise
-         * bearing an small degradation of perceived output quality.
+         * bearing a small degradation of perceived output quality.
          */
 
         if((is_ifq = qcelp_do_pitchfilter(q, 2, ppf_vector)))
