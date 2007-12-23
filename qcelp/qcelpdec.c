@@ -79,7 +79,7 @@ static int qcelp_decode_init(AVCodecContext *avctx)
  *
  * TIA/EIA/IS-733 2.4.3.2.6.2-2
  */
-static void qcelp_decode_lspf(const QCELPContext *q, float *lspf)
+static void qcelp_decode_lspf(const QCELPContext *q, float *lspf, int *is_ifq)
 {
     const uint8_t *lspv;
     int i;
@@ -105,6 +105,26 @@ static void qcelp_decode_lspf(const QCELPContext *q, float *lspf)
         lspf[7]=lspf[6]+qcelp_lspvq4[lspv[3]].y / 10000.0;
         lspf[8]=lspf[7]+qcelp_lspvq5[lspv[4]].x / 10000.0;
         lspf[9]=lspf[8]+qcelp_lspvq5[lspv[4]].y / 10000.0;
+
+        // Check for badly received packets TIA/EIA/IS-733 2.4.8.7.3
+
+        if(!*is_ifq)
+        {
+            if(q->rate != RATE_QUARTER)
+            {
+                if(lspf[9] <= .66 || lspf[9] >= .985) *is_ifq=1;
+
+                for(i=4; !*is_ifq && i<10; i++)
+                    if(FFABS(lspf[i] - lspf[i-4]) < .0931) *is_ifq=1;
+            }else
+            {
+                if(lspf[9] <= .70 || lspf[9] >=  .97) *is_ifq=1;
+
+                for(i=3; !*is_ifq && i<10; i++)
+                    if(FFABS(lspf[i] - lspf[i-2]) < .08) *is_ifq=1;
+            }
+
+        }
     }
 }
 
@@ -114,15 +134,13 @@ static void qcelp_decode_lspf(const QCELPContext *q, float *lspf)
  *
  * TIA/EIA/IS-733 2.4.6.2
  */
-int qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed, float *gain,
-    int *index)
+static void qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed,
+            float *gain, int *index, int *is_ifq)
 {
-    int                 i, gs[16], g0[16], g1[16], predictor, is_ifq;
+    int                 i, gs[16], g0[16], g1[16], predictor;
     const uint8_t       *cbgain, *cbsign, *cindex, *data;
     float               ga[16], gain_memory;
     QCELPContext  *q = avctx->priv_data;
-
-    is_ifq=0;
 
     cbsign=q->data+QCELP_CBSIGN0_POS;
     cbgain=q->data+QCELP_CBGAIN0_POS;
@@ -178,10 +196,10 @@ int qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed, float *gain,
             {
                 g0[i]=g1[i]=4*cbgain[i];
 
-                if(!is_ifq)
+                if(!*is_ifq)
                 {
-                    if(i>0 && FFABS(g0[i] - g0[i-1]) > 40) is_ifq=1;
-                    if(i<3 && FFABS(g0[i+2] - 2*g0[i+1] + g0[i]) > 48) is_ifq=1;
+                    if(i>0 && FFABS(g0[i] - g0[i-1]) > 40) *is_ifq=1;
+                    if(i<3 && FFABS(g0[i+2] - 2*g0[i+1] + g0[i]) > 48) *is_ifq=1;
                 }
                 ga[i]=qcelp_g12ga[g1[i]];
             }
@@ -234,8 +252,6 @@ int qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed, float *gain,
             for(i=0; i<8; i++)
                 gain[i]=(0.875-0.125*i)*gain_memory+(0.125+0.125*i)*gain[0];
     }
-
-    return is_ifq;
 }
 
 /**
@@ -828,46 +844,8 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     // Preliminary decoding of frame's transmission codes
 
-    qcelp_decode_lspf(q, qtzd_lspf);
-    is_ifq=qcelp_decode_params(avctx, &cbseed, gain, index);
-
-    // Check for badly received packets TIA/EIA/IS-733 2.4.8.7.3
-
-    if(q->rate != RATE_OCTAVE)
-    {
-
-        // Check for outbound LSP freqs and codebook gain params
-
-        if(q->rate != RATE_QUARTER)
-        {
-            if(qtzd_lspf[9] <= .66 || qtzd_lspf[9] >= .985)
-            {
-                av_log(avctx, AV_LOG_WARNING,
-                       "IFQ: 9th LSPF=%4f outside [.66,.985]\n", qtzd_lspf[9]);
-                is_ifq=1;
-            }
-
-            for(n=4; !is_ifq && n<10; n++)
-            {
-                if(FFABS(qtzd_lspf[n]-qtzd_lspf[n-4]) < .0931)
-                {
-                    av_log(avctx, AV_LOG_WARNING,
-                           "Wrong data, outbound LSPFs\n");
-                    is_ifq=1;
-                }
-            }
-        }else
-        {
-            if(qtzd_lspf[9] <= .70 || qtzd_lspf[9] >=  .97)
-                is_ifq=1;
-
-            for(n=3; !is_ifq && n<10; n++)
-            {
-                if(FFABS(qtzd_lspf[n]-qtzd_lspf[n-2]) < .08)
-                    is_ifq=1;
-            }
-        }
-    }
+    qcelp_decode_lspf(q, qtzd_lspf, &is_ifq);
+    qcelp_decode_params(avctx, &cbseed, gain, index, &is_ifq);
 
     // Decode loop glue code. WIP - mean it, WIP. :-)
 
