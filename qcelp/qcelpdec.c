@@ -867,12 +867,8 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         /*
          * Pitch pre-filter
          *
-         * The specification makes this filter mandatory but one can do
-         * without it while accepting a small degradation of the perceived
-         * output quality.
-         *
-         * WIP: Making this runtime selectable might be a good speed-wise
-         * compromise.
+         * Making this runtime selectable might be a good speed-wise compromise
+         * bearing an small degradation of perceived output quality.
          */
 
         if((is_ifq = qcelp_do_pitchfilter(q, 2, ppf_vector)))
