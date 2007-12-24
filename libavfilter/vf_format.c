@@ -1,5 +1,5 @@
 /*
- * Video noformat filter
+ * Video (no)format filter
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.
@@ -85,6 +85,12 @@ static int query_formats_noformat(AVFilterContext *ctx)
     return 0;
 }
 
+static int query_formats_format(AVFilterContext *ctx)
+{
+    avfilter_set_common_formats(ctx, make_format_list(ctx->priv, 1));
+    return 0;
+}
+
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     avfilter_start_frame(link->dst->outputs[0], picref);
@@ -108,6 +114,28 @@ AVFilter avfilter_vf_noformat =
     .init      = init,
 
     .query_formats = query_formats_noformat,
+
+    .priv_size = sizeof(FormatContext),
+
+    .inputs    = (AVFilterPad[]) {{ .name            = "default",
+                                    .type            = AV_PAD_VIDEO,
+                                    .start_frame     = start_frame,
+                                    .draw_slice      = draw_slice,
+                                    .end_frame       = end_frame, },
+                                  { .name = NULL}},
+    .outputs   = (AVFilterPad[]) {{ .name            = "default",
+                                    .type            = AV_PAD_VIDEO },
+                                  { .name = NULL}},
+};
+
+AVFilter avfilter_vf_format =
+{
+    .name      = "format",
+    .author    = "Bobby Bingham",
+
+    .init      = init,
+
+    .query_formats = query_formats_format,
 
     .priv_size = sizeof(FormatContext),
 

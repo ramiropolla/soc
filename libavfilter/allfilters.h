@@ -23,6 +23,7 @@
 
 extern AVFilter avfilter_vf_crop;
 extern AVFilter avfilter_vf_fifo;
+extern AVFilter avfilter_vf_format;
 extern AVFilter avfilter_vf_fps;
 extern AVFilter avfilter_vf_graph;
 extern AVFilter avfilter_vf_graphdesc;
