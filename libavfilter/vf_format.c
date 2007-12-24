@@ -1,5 +1,5 @@
 /*
- * Video passthrough filter
+ * Video noformat filter
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.
@@ -24,6 +24,67 @@
 
 #include "avfilter.h"
 
+typedef struct
+{
+    /** nonzero for each format included in the list */
+    uint8_t formats[PIX_FMT_NB];
+} FormatContext;
+
+static int init(AVFilterContext *ctx, const char *args, void *opaque)
+{
+    FormatContext *format = ctx->priv;
+    const char *cur, *sep;
+    char name[32];
+    int fmt;
+
+    /* parse the list of formats */
+    for(cur = args; cur; cur = sep) {
+        if(!(sep = strchr(cur, ':')))
+            fmt = avcodec_get_pix_fmt(cur);
+        else {
+            if(sep-cur > 32) {
+                av_log(ctx, AV_LOG_ERROR, "format name too long\n");
+                sep ++;
+                continue;
+            }
+            memcpy(name, cur, sep-cur);
+            name[sep-cur] = 0;
+            fmt = avcodec_get_pix_fmt(name);
+            sep ++;
+        }
+
+        if(fmt >= PIX_FMT_NB) {
+            av_log(ctx, AV_LOG_ERROR, "unknown pixel format\n");
+            continue;
+        }
+
+        format->formats[fmt] = 1;
+    }
+
+    return 0;
+}
+
+static AVFilterFormats *make_format_list(FormatContext *format, uint8_t val)
+{
+    AVFilterFormats *ret;
+    int i;
+
+    ret = av_mallocz(sizeof(AVFilterFormats));
+    ret->formats = av_malloc(sizeof(int) * PIX_FMT_NB);
+
+    for(i = 0; i < PIX_FMT_NB; i ++)
+        if(format->formats[i] == val)
+            ret->formats[ret->format_count ++] = i;
+
+    return ret;
+}
+
+static int query_formats_noformat(AVFilterContext *ctx)
+{
+    avfilter_set_common_formats(ctx, make_format_list(ctx->priv, 0));
+    return 0;
+}
+
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     avfilter_start_frame(link->dst->outputs[0], picref);
@@ -39,10 +100,16 @@ static void draw_slice(AVFilterLink *link, int y, int h)
     avfilter_draw_slice(link->dst->outputs[0], y, h);
 }
 
-AVFilter avfilter_vf_passthrough =
+AVFilter avfilter_vf_noformat =
 {
-    .name      = "passthrough",
+    .name      = "noformat",
     .author    = "Bobby Bingham",
+
+    .init      = init,
+
+    .query_formats = query_formats_noformat,
+
+    .priv_size = sizeof(FormatContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
