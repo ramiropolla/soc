@@ -87,7 +87,7 @@ static int config_input(AVFilterLink *link)
     crop->cw &= ~((1 << crop->hsub) - 1);
     crop->ch &= ~((1 << crop->vsub) - 1);
 
-    return avfilter_config_link(link->dst->outputs[0]);
+    return 0;
 }
 
 static int config_output(AVFilterLink *link)

@@ -59,7 +59,7 @@ static int config_props(AVFilterLink *link)
      * a reasonable minimum size for the slices */
     slice->h = FFMAX(8, slice->h & (-1 << slice->vshift));
 
-    return avfilter_config_link(link->dst->outputs[0]);
+    return 0;
 }
 
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)

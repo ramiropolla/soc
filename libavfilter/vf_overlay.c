@@ -86,7 +86,7 @@ static int config_input_main(AVFilterLink *link)
 
     /* TODO: unlink the subpicture link if it is using a different format */
 
-    return avfilter_config_link(link->dst->outputs[0]);
+    return 0;
 }
 
 static int config_input_sub(AVFilterLink *link)

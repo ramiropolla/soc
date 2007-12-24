@@ -36,7 +36,7 @@ static int config_input(AVFilterLink *link)
 
     avcodec_get_chroma_sub_sample(link->format, &tmp, &flip->vsub);
 
-    return avfilter_config_link(link->dst->outputs[0]);
+    return 0;
 }
 
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)

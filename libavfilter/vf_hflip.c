@@ -33,7 +33,7 @@ static int config_props(AVFilterLink *link)
 
     avcodec_get_chroma_sub_sample(link->format, &flip->hsub, &flip->vsub);
 
-    return avfilter_config_link(link->dst->outputs[0]);
+    return 0;
 }
 
 static void draw_slice(AVFilterLink *link, int y, int h)

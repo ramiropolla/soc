@@ -361,7 +361,7 @@
 +    avfilter_graph_add_filter(graph, filt_src);
 +    avfilter_graph_add_filter(graph, filt_out);
 +    if(avfilter_graph_config_formats(graph))                 goto the_end;
-+    if(avfilter_graph_config_links(graph))                   goto the_end;
++    if(avfilter_config_links(filt_out))                      goto the_end;
 +
 +    is->out_video_filter = filt_out;
 +#endif
