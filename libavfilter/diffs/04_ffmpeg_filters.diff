@@ -37,7 +37,7 @@ Index: ffmpeg.c
  } AVInputStream;
  
  typedef struct AVInputFile {
-@@ -290,6 +304,255 @@
+@@ -290,6 +304,257 @@
  static struct termios oldtty;
  #endif
  
@@ -205,6 +205,12 @@ Index: ffmpeg.c
 +
 +    avfilter_init();
 +
++    /* create the overall filter graph */
++    if(!(filt_graph_all = avfilter_open(avfilter_get_by_name("graph"), NULL)))
++        return -1;
++    if(avfilter_init_filter(filt_graph_all, NULL, NULL))
++        return -1;
++
 +    if(!(ist->input_video_filter = avfilter_open(&input_filter,  "src")))
 +        return -1;
 +    if(!(ist->out_video_filter = avfilter_open(&output_filter, "out")))
@@ -214,6 +220,10 @@ Index: ffmpeg.c
 +        return -1;
 +    if(avfilter_init_filter(ist->out_video_filter, NULL, &codec->pix_fmt))
 +        return -1;
++
++    /* add input and output filters to the overall graph */
++    avfilter_graph_add_filter(filt_graph_all, ist->input_video_filter);
++    avfilter_graph_add_filter(filt_graph_all, ist->out_video_filter);
 +
 +    curr_filter = ist->input_video_filter;
 +
@@ -229,6 +239,7 @@ Index: ffmpeg.c
 +        if (avfilter_link(curr_filter, 0, filt_crop, 0))
 +            return -1;
 +        curr_filter = filt_crop;
++        avfilter_graph_add_filter(filt_graph_all, curr_filter);
 +    }
 +
 +    if((codec->width !=
@@ -249,17 +260,8 @@ Index: ffmpeg.c
 +        if (avfilter_link(curr_filter, 0, filt_scale, 0))
 +            return -1;
 +        curr_filter = filt_scale;
++        avfilter_graph_add_filter(filt_graph_all, curr_filter);
 +    }
-+
-+    /* create the overall filter graph */
-+    if(!(filt_graph_all = avfilter_open(avfilter_get_by_name("graph"), NULL)))
-+        return -1;
-+    if(avfilter_init_filter(filt_graph_all, NULL, NULL))
-+        return -1;
-+
-+    /* add input and output filters to the overall graph */
-+    avfilter_graph_add_filter(filt_graph_all, curr_filter);
-+    avfilter_graph_add_filter(filt_graph_all, ist->out_video_filter);
 +
 +    if(vfilters) {
 +        if(!(filt_graph = avfilter_open(avfilter_get_by_name("graph"), NULL)))
@@ -293,7 +295,7 @@ Index: ffmpeg.c
  static void term_exit(void)
  {
  #ifdef HAVE_TERMIOS_H
-@@ -635,6 +898,13 @@
+@@ -635,6 +900,13 @@
          frame_hook_process(picture2, dec->pix_fmt, dec->width, dec->height,
                             1000000 * ist->pts / AV_TIME_BASE);
  
@@ -307,7 +309,7 @@ Index: ffmpeg.c
      if (picture != picture2)
          *picture = *picture2;
      *bufp = buf;
-@@ -745,6 +1015,9 @@
+@@ -745,6 +1017,9 @@
      if (nb_frames <= 0)
          return;
  
@@ -317,7 +319,7 @@ Index: ffmpeg.c
      if (ost->video_crop) {
          if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
              av_log(NULL, AV_LOG_ERROR, "error cropping picture\n");
-@@ -754,6 +1027,7 @@
+@@ -754,6 +1029,7 @@
      } else {
          formatted_picture = in_picture;
      }
@@ -325,7 +327,7 @@ Index: ffmpeg.c
  
      final_picture = formatted_picture;
      padding_src = formatted_picture;
-@@ -769,12 +1043,14 @@
+@@ -769,12 +1045,14 @@
          }
      }
  
@@ -340,7 +342,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1275,6 +1551,10 @@
+@@ -1275,6 +1553,10 @@
                      }
                  }
              }
@@ -351,7 +353,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1680,10 +1960,21 @@
+@@ -1680,10 +1962,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          exit(1);
                      }
@@ -373,7 +375,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3782,6 +4073,9 @@
+@@ -3782,6 +4075,9 @@
  #ifdef CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
