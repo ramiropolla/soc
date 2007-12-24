@@ -84,8 +84,6 @@ static int config_input_main(AVFilterLink *link)
 
     avcodec_get_chroma_sub_sample(link->format, &over->hsub, &over->vsub);
 
-    /* TODO: unlink the subpicture link if it is using a different format */
-
     return 0;
 }
 
