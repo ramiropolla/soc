@@ -236,7 +236,7 @@ AVFilterGraphDesc *avfilter_graph_parse_chain(const char *filters)
             linkp = &linkn->next;
         }
 
-        filters = nextfilter;
+        cur = nextfilter;
         index ++;
     }
 
