@@ -116,7 +116,7 @@ should be that ffplay mirrors the top half of the video onto the bottom half.
 
 KNOWN ISSUES:
 - if for some reason the filter chain cannot be setup (due to an unknown
-  filter, basd parameters to a filter, or for some reason two filters cannot
+  filter, bad parameters to a filter, or for some reason two filters cannot
   be linked together successfully, for example), ffplay will not display any
   video.  It is also somewhat lacking in error messages to tell you what the
   problem was.
