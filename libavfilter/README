@@ -115,8 +115,6 @@ where input_video.avi has a vertical resolution of 480 pixels, the result
 should be that ffplay mirrors the top half of the video onto the bottom half.
 
 KNOWN ISSUES:
-- colorspace negotiation needs work.  currently, it may do more conversions
-  than necessary.
 - if for some reason the filter chain cannot be setup (due to an unknown
   filter, basd parameters to a filter, or for some reason two filters cannot
   be linked together successfully, for example), ffplay will not display any
