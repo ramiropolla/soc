@@ -1,6 +1,6 @@
 Index: libavcodec/aac_ac3_parser.c
 ===================================================================
---- libavcodec/aac_ac3_parser.c	(revision 11274)
+--- libavcodec/aac_ac3_parser.c	(revision 11346)
 +++ libavcodec/aac_ac3_parser.c	(working copy)
 @@ -50,7 +50,7 @@
  
@@ -22,7 +22,7 @@ Index: libavcodec/aac_ac3_parser.c
                          }
 Index: libavcodec/aac_ac3_parser.h
 ===================================================================
---- libavcodec/aac_ac3_parser.h	(revision 11274)
+--- libavcodec/aac_ac3_parser.h	(revision 11346)
 +++ libavcodec/aac_ac3_parser.h	(working copy)
 @@ -30,7 +30,7 @@
      uint8_t *inbuf_ptr;
@@ -35,7 +35,7 @@ Index: libavcodec/aac_ac3_parser.h
  } AACAC3ParseContext;
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 11274)
+--- libavcodec/Makefile	(revision 11346)
 +++ libavcodec/Makefile	(working copy)
 @@ -67,6 +67,7 @@
  OBJS-$(CONFIG_DVVIDEO_DECODER)         += dv.o
@@ -45,7 +45,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_EIGHTBPS_DECODER)        += 8bps.o
  OBJS-$(CONFIG_FFV1_DECODER)            += ffv1.o rangecoder.o golomb.o
  OBJS-$(CONFIG_FFV1_ENCODER)            += ffv1.o rangecoder.o
-@@ -316,6 +317,7 @@
+@@ -318,6 +319,7 @@
  OBJS-$(CONFIG_DCA_PARSER)              += dca_parser.o
  OBJS-$(CONFIG_DVBSUB_PARSER)           += dvbsub_parser.o
  OBJS-$(CONFIG_DVDSUB_PARSER)           += dvdsub_parser.o
@@ -55,7 +55,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_H264_PARSER)             += h264_parser.o
 Index: libavcodec/aac_parser.c
 ===================================================================
---- libavcodec/aac_parser.c	(revision 11274)
+--- libavcodec/aac_parser.c	(revision 11346)
 +++ libavcodec/aac_parser.c	(working copy)
 @@ -38,7 +38,7 @@
  };
@@ -68,9 +68,9 @@ Index: libavcodec/aac_parser.c
      GetBitContext bits;
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 11274)
+--- libavcodec/allcodecs.c	(revision 11346)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -178,6 +178,7 @@
+@@ -180,6 +180,7 @@
      REGISTER_DECODER (COOK, cook);
      REGISTER_DECODER (DCA, dca);
      REGISTER_DECODER (DSICINAUDIO, dsicinaudio);
@@ -78,7 +78,7 @@ Index: libavcodec/allcodecs.c
      REGISTER_ENCDEC  (FLAC, flac);
      REGISTER_DECODER (IMC, imc);
      REGISTER_DECODER (MACE3, mace3);
-@@ -285,6 +286,7 @@
+@@ -287,6 +288,7 @@
      REGISTER_PARSER  (DCA, dca);
      REGISTER_PARSER  (DVBSUB, dvbsub);
      REGISTER_PARSER  (DVDSUB, dvdsub);
@@ -88,7 +88,7 @@ Index: libavcodec/allcodecs.c
      REGISTER_PARSER  (H264, h264);
 Index: libavcodec/ac3_parser.c
 ===================================================================
---- libavcodec/ac3_parser.c	(revision 11274)
+--- libavcodec/ac3_parser.c	(revision 11346)
 +++ libavcodec/ac3_parser.c	(working copy)
 @@ -84,7 +84,7 @@
      return 0;
@@ -130,9 +130,9 @@ Index: libavcodec/ac3_parser.c
 +};
 Index: libavcodec/avcodec.h
 ===================================================================
---- libavcodec/avcodec.h	(revision 11274)
+--- libavcodec/avcodec.h	(revision 11346)
 +++ libavcodec/avcodec.h	(working copy)
-@@ -274,6 +274,7 @@
+@@ -276,6 +276,7 @@
      CODEC_ID_APE,
      CODEC_ID_NELLYMOSER,
      CODEC_ID_MUSEPACK8,
@@ -142,7 +142,7 @@ Index: libavcodec/avcodec.h
      CODEC_ID_DVD_SUBTITLE= 0x17000,
 Index: libavcodec/ac3enc.c
 ===================================================================
---- libavcodec/ac3enc.c	(revision 11274)
+--- libavcodec/ac3enc.c	(revision 11346)
 +++ libavcodec/ac3enc.c	(working copy)
 @@ -479,7 +479,8 @@
          for(ch=0;ch<s->nb_all_channels;ch++) {
