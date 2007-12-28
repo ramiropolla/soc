@@ -40,8 +40,7 @@
 typedef struct EAC3Context{
     AVCodecContext *avctx;           ///< Parent context
     int syncword;
-///@name Bit stream information
-///@{
+
     int stream_type;                 ///< Stream type (strmtyp)
     int substreamid;                 ///< Substream identification
     int frame_size;                  ///< Frame size, in bytes
@@ -51,9 +50,7 @@ typedef struct EAC3Context{
     int channel_mode;                ///< Channel mode (acmod)
     int lfe_on;                      ///< Low frequency effect channel on (lfeon)
     int bitstream_id;                ///< Bit stream identification (bsid)
-///@}
-///@name Audio Frame
-///@{
+
     int snr_offset_strategy;         ///< SNR offset strategy (snroffststr)
     int snr_offset[AC3_MAX_CHANNELS];///< SNR offset (snroffst)
     int block_switch_syntax;         ///< Block switch syntax enabled (blkswe)
@@ -68,9 +65,7 @@ typedef struct EAC3Context{
     int channel_uses_aht[AC3_MAX_CHANNELS];         ///< Channel AHT in use (chahtinu)
     int channel_uses_spx[AC3_MAX_CHANNELS];         ///< Channel in spectral extension attenuation process (chinspxatten)
     int spx_atten_code[AC3_MAX_CHANNELS];           ///< spectral extension attenuation code (spxattencod)
-///@}
-///@name Audio block
-///@{
+
     int block_switch[AC3_MAX_CHANNELS];         ///< Block switch flag (blksw)
     int dither_flag[AC3_MAX_CHANNELS];          ///< Dither flag (dithflag)
     float dynamic_range[2];          ///< Dynamic range gain (dynrng)
@@ -113,7 +108,6 @@ typedef struct EAC3Context{
     int firstspxcos[AC3_MAX_CHANNELS];              ///< First spectral extension coordinates states
     int first_cpl_coords[AC3_MAX_CHANNELS];         ///< First coupling coordinates states (firstcplcos)
     int first_cpl_leak;                             ///< First coupling leak state (firstcplleak)
-///@}
 
     int nrematbnds;                    ///< Number of rematrixing bands
     int num_cpl_subbands;              ///< Number of coupling sub bands (ncplsubnd)
