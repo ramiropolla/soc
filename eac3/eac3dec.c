@@ -317,12 +317,12 @@ static int parse_bsi(EAC3Context *s){
     // calculate number of channels
     s->fbw_channels = ff_ac3_channels_tab[s->channel_mode];
     s->num_channels = s->fbw_channels;
-    s->lfe_channel = s->num_channels+1;
+    s->lfe_ch = s->num_channels+1;
     if (s->lfe_on) {
-        s->start_freq[s->lfe_channel] = 0;
-        s->end_freq [s->lfe_channel] = 7;
-        s->nchgrps [s->lfe_channel] = 2;
-        s->channel_in_cpl [s->lfe_channel] = 0;
+        s->start_freq[s->lfe_ch] = 0;
+        s->end_freq [s->lfe_ch] = 7;
+        s->nchgrps [s->lfe_ch] = 2;
+        s->channel_in_cpl [s->lfe_ch] = 0;
         s->num_channels++;
     }
 
@@ -498,7 +498,7 @@ static int parse_audfrm(EAC3Context *s){
         for (ch = 1; ch <= s->fbw_channels; ch++)
             s->dither_flag[ch] = 1; /* dither on */
     }
-    s->dither_flag[CPL_CH] = s->dither_flag[s->lfe_channel] = 0;
+    s->dither_flag[CPL_CH] = s->dither_flag[s->lfe_ch] = 0;
 
     /* frame-based syntax flags */
     s->bit_allocation_syntax = get_bits1(gbc);
@@ -556,7 +556,7 @@ static int parse_audfrm(EAC3Context *s){
     /* LFE exponent strategy */
     if (s->lfe_on) {
         for (blk = 0; blk < s->num_blocks; blk++) {
-            s->exp_strategy[blk][s->lfe_channel] = get_bits1(gbc);
+            s->exp_strategy[blk][s->lfe_ch] = get_bits1(gbc);
         }
     }
     /* Converter exponent strategy data */
@@ -1021,7 +1021,7 @@ static int parse_audblk(EAC3Context *s, const int blk){
             s->dexps[ch][0] = get_bits(gbc, 4) << !ch;
             ff_ac3_decode_exponents(gbc, s->exp_strategy[blk][ch], s->nchgrps[ch],
                     s->dexps[ch][0], s->dexps[ch]+s->start_freq[ch]+!!ch);
-            if (ch != CPL_CH && ch != s->lfe_channel)
+            if (ch != CPL_CH && ch != s->lfe_ch)
                 skip_bits(gbc, 2); /* skip gainrng */
         }
     }
@@ -1105,7 +1105,7 @@ static int parse_audblk(EAC3Context *s, const int blk){
 
         ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params, s->band_psd[ch],
                 s->start_freq[ch], s->end_freq[ch], s->fast_gain[ch],
-                (ch == s->lfe_channel), s->dba_mode[ch], s->dba_nsegs[ch],
+                (ch == s->lfe_ch), s->dba_mode[ch], s->dba_nsegs[ch],
                 s->dba_offsets[ch], s->dba_lengths[ch], s->dba_values[ch],
                 s->mask[ch]);
 
