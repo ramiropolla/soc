@@ -271,8 +271,8 @@ static void get_eac3_transform_coeffs_ch(EAC3Context *s, int blk,
                 s->transform_coeffs[ch], s->start_freq[ch], s->end_freq[ch],
                 &s->dith_state);
     } else if (s->channel_uses_aht[ch] == 1) {
-            get_transform_coeffs_aht_ch(s, ch);
-            s->channel_uses_aht[ch] = -1; /* AHT info for this frame has been read - do not read again */
+        get_transform_coeffs_aht_ch(s, ch);
+        s->channel_uses_aht[ch] = -1; /* AHT info for this frame has been read - do not read again */
     }
     if (s->channel_uses_aht[ch]) {
         idct_transform_coeffs_ch(s, ch, blk);
