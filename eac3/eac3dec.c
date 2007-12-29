@@ -383,8 +383,8 @@ static int parse_bsi(EAC3Context *s){
             }
         }
         if (s->lfe_on && get_bits1(gbc)) {
-                // TODO: use LFE mix level
-                skip_bits(gbc, 5); // skip LFE mix level code
+            // TODO: use LFE mix level
+            skip_bits(gbc, 5); // skip LFE mix level code
         }
         if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT) {
             for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
@@ -457,7 +457,7 @@ static int parse_bsi(EAC3Context *s){
     }
     if (s->stream_type == EAC3_STREAM_TYPE_AC3_CONVERT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
-            skip_bits(gbc, 6); // skip Frame size code
+        skip_bits(gbc, 6); // skip Frame size code
     }
     if (get_bits1(gbc)) {
         int addbsil = get_bits(gbc, 6);
@@ -562,9 +562,9 @@ static int parse_audfrm(EAC3Context *s){
     /* Converter exponent strategy data */
     if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
-            for (ch = 1; ch <= s->fbw_channels; ch++) {
-                skip_bits(gbc, 5); //skip Converter channel exponent strategy
-            }
+        for (ch = 1; ch <= s->fbw_channels; ch++) {
+            skip_bits(gbc, 5); //skip Converter channel exponent strategy
+        }
     }
     /* AHT data */
     if (parse_aht_info) {
@@ -656,7 +656,7 @@ static int parse_audblk(EAC3Context *s, const int blk){
         if (get_bits1(gbc)) {
             s->dynamic_range[i] = ff_ac3_dynamic_range_tab[get_bits(gbc, 8)];
         } else if (!blk) {
-                s->dynamic_range[i] = 1.0f;
+            s->dynamic_range[i] = 1.0f;
         }
     }
     /* Spectral extension strategy information */
@@ -705,8 +705,8 @@ static int parse_audblk(EAC3Context *s, const int blk){
                     s->spxbndstrc[bnd] = get_bits1(gbc);
                 }
             } else if (!blk) {
-                    for (bnd = 0; bnd < 17; bnd++)
-                        s->spxbndstrc[bnd] = ff_eac3_defspxbndstrc[bnd];
+                for (bnd = 0; bnd < 17; bnd++)
+                    s->spxbndstrc[bnd] = ff_eac3_defspxbndstrc[bnd];
             }
             // calculate number of spectral extension bands
             s->nspxbnds = 1;
@@ -818,8 +818,8 @@ static int parse_audblk(EAC3Context *s, const int blk){
                         s->cpl_band_struct[bnd] = get_bits1(gbc);
                     }
                 } else if (!blk) {
-                        for (bnd = 0; bnd < s->num_cpl_subbands-1; bnd++)
-                            s->cpl_band_struct[bnd] = ff_eac3_defcplbndstrc[bnd+cpl_begin+1];
+                    for (bnd = 0; bnd < s->num_cpl_subbands-1; bnd++)
+                        s->cpl_band_struct[bnd] = ff_eac3_defcplbndstrc[bnd+cpl_begin+1];
                 }
                 s->cpl_band_struct[17] = 0;
 
@@ -861,8 +861,8 @@ static int parse_audblk(EAC3Context *s, const int blk){
                         s->ecplbndstrc[sbnd] = get_bits1(gbc);
                     }
                 } else if (!blk) {
-                        for (sbnd = 0; sbnd < 22; sbnd++)
-                            s->ecplbndstrc[sbnd] = ff_eac3_defecplbndstrc[sbnd];
+                    for (sbnd = 0; sbnd < 22; sbnd++)
+                        s->ecplbndstrc[sbnd] = ff_eac3_defecplbndstrc[sbnd];
                 }
                 //necplbnd = ecpl_end_subbnd - ecpl_start_subbnd;
                 //necplbnd -= ecplbndstrc[ecpl_start_subbnd] + ... + ecplbndstrc[ecpl_end_subbnd -1]
@@ -915,8 +915,8 @@ static int parse_audblk(EAC3Context *s, const int blk){
                             s->cpl_coords[ch][bnd] *= ff_ac3_scale_factors[cpl_exp + cpl_master];
                         }
                     } else if (!blk) {
-                            av_log(s->avctx, AV_LOG_ERROR,  "no coupling coordinates in first block\n");
-                            return -1;
+                        av_log(s->avctx, AV_LOG_ERROR,  "no coupling coordinates in first block\n");
+                        return -1;
                     }
                 } else {
                     /* channel not in coupling */
@@ -1037,8 +1037,8 @@ static int parse_audblk(EAC3Context *s, const int blk){
             s->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[get_bits(gbc, 2)];   /* Table 7.9 */
             s->bit_alloc_params.floor      = ff_ac3_floor_tab     [get_bits(gbc, 3)];   /* Table 7.10 */
         } else if (!blk) {
-                av_log(s->avctx, AV_LOG_ERROR, "no bit allocation information in first block\n");
-                return -1;
+            av_log(s->avctx, AV_LOG_ERROR, "no bit allocation information in first block\n");
+            return -1;
         }
     }
 
@@ -1056,11 +1056,11 @@ static int parse_audblk(EAC3Context *s, const int blk){
         for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++)
             s->fgain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
     } else if (!blk) {
-            for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++)
-                s->fgain[ch] = ff_ac3_fast_gain_tab[4];
+        for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++)
+            s->fgain[ch] = ff_ac3_fast_gain_tab[4];
     }
     if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT && get_bits1(gbc)) {
-            skip_bits(gbc, 10); //Converter SNR offset
+        skip_bits(gbc, 10); //Converter SNR offset
     }
     if (s->cpl_in_use[blk]) {
         if (s->first_cpl_leak || get_bits1(gbc)) {
@@ -1086,15 +1086,15 @@ static int parse_audblk(EAC3Context *s, const int blk){
             }
         }
     } else if (!blk) {
-            for (ch = 0; ch <= s->num_channels; ch++) {
-                s->deltbae[ch] = DBA_NONE;
-            }
+        for (ch = 0; ch <= s->num_channels; ch++) {
+            s->deltbae[ch] = DBA_NONE;
+        }
     }
 
     /* Inclusion of unused dummy data */
     if (s->skip_syntax && get_bits1(gbc)) {
-            int skipl = get_bits(gbc, 9);
-            while(skipl--) skip_bits(gbc, 8);
+        int skipl = get_bits(gbc, 9);
+        while(skipl--) skip_bits(gbc, 8);
     }
 
     /* run bit allocation */
@@ -1208,7 +1208,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
     /* channel config */
     if (!avctx->request_channels && !avctx->channels) {
-            avctx->channels = c->num_channels;
+        avctx->channels = c->num_channels;
     } else {
         if (c->num_channels < avctx->request_channels) {
             av_log(avctx, AV_LOG_ERROR, "Cannot upmix EAC3 from %d to %d channels.\n",
