@@ -156,11 +156,11 @@ typedef struct EAC3Context{
     int16_t psd[AC3_MAX_CHANNELS][AC3_MAX_COEFS];   ///< scaled exponents
     int16_t bndpsd[AC3_MAX_CHANNELS][50];           ///< interpolated exponents
     int16_t mask[AC3_MAX_CHANNELS][50];             ///< masking values
-    uint8_t deltbae[AC3_MAX_CHANNELS];              ///< Delta bit allocation exists
-    uint8_t deltnseg[AC3_MAX_CHANNELS];             ///< Channel delta bit allocation number of segments
-    uint8_t deltoffst[AC3_MAX_CHANNELS][9];         ///< Channel delta bit allocation offset
-    uint8_t deltlen[AC3_MAX_CHANNELS][9];           ///< Channel delta bit allocation length
-    uint8_t deltba[AC3_MAX_CHANNELS][9];            ///< Channel delta bit allocation
+    uint8_t dba_mode[AC3_MAX_CHANNELS];             ///< Delta bit allocation mode (deltbae)
+    uint8_t dba_nsegs[AC3_MAX_CHANNELS];            ///< Number of delta segments (deltnseg)
+    uint8_t dba_offsets[AC3_MAX_CHANNELS][9];       ///< Delta segment offsets (deltoffst)
+    uint8_t dba_lengths[AC3_MAX_CHANNELS][9];       ///< Delta segment lengths (deltlen)
+    uint8_t dba_values[AC3_MAX_CHANNELS][9];        ///< Delta values for each segment (deltba)
 ///@}
 
 ///@defgroup dithering Zero-Mantissa Dithering

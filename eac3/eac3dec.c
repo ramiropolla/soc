@@ -1071,21 +1071,21 @@ static int parse_audblk(EAC3Context *s, const int blk){
     /* Delta bit allocation information */
     if (s->dba_syntax && get_bits1(gbc)) {
         for (ch = !s->cpl_in_use[blk]; ch <= s->fbw_channels; ch++) {
-            s->deltbae[ch] = get_bits(gbc, 2);
+            s->dba_mode[ch] = get_bits(gbc, 2);
         }
         for (ch = !s->cpl_in_use[blk]; ch <= s->fbw_channels; ch++) {
-            if (s->deltbae[ch] == DBA_NEW) {
-                s->deltnseg[ch] = get_bits(gbc, 3);
-                for (seg = 0; seg <= s->deltnseg[ch]; seg++) {
-                    s->deltoffst[ch][seg] = get_bits(gbc, 5);
-                    s->deltlen[ch][seg] = get_bits(gbc, 4);
-                    s->deltba[ch][seg] = get_bits(gbc, 3);
+            if (s->dba_mode[ch] == DBA_NEW) {
+                s->dba_nsegs[ch] = get_bits(gbc, 3);
+                for (seg = 0; seg <= s->dba_nsegs[ch]; seg++) {
+                    s->dba_offsets[ch][seg] = get_bits(gbc, 5);
+                    s->dba_lengths[ch][seg] = get_bits(gbc, 4);
+                    s->dba_values[ch][seg] = get_bits(gbc, 3);
                 }
             }
         }
     } else if (!blk) {
         for (ch = 0; ch <= s->num_channels; ch++) {
-            s->deltbae[ch] = DBA_NONE;
+            s->dba_mode[ch] = DBA_NONE;
         }
     }
 
@@ -1106,9 +1106,9 @@ static int parse_audblk(EAC3Context *s, const int blk){
         ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params,
                 s->bndpsd[ch], s->start_freq[ch], s->end_freq[ch], s->fgain[ch],
                 (ch == s->lfe_channel),
-                s->deltbae[ch], s->deltnseg[ch],
-                s->deltoffst[ch], s->deltlen[ch],
-                s->deltba[ch], s->mask[ch]);
+                s->dba_mode[ch], s->dba_nsegs[ch],
+                s->dba_offsets[ch], s->dba_lengths[ch],
+                s->dba_values[ch], s->mask[ch]);
 
         if (s->channel_uses_aht[ch] == 0)
             ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], s->start_freq[ch],
