@@ -990,9 +990,9 @@ static int parse_audblk(EAC3Context *s, const int blk){
         int end = (s->cpl_in_use[blk] || s->spxinu) ?
             FFMIN(s->end_freq[1], s->end_freq[2]) : (ff_ac3_rematrix_band_tab[4]-1);
         for (bnd = 0; ff_ac3_rematrix_band_tab[bnd] <= end; bnd++) {
-            s->rematflg[bnd] = get_bits1(gbc);
+            s->rematrixing_flags[bnd] = get_bits1(gbc);
         }
-        s->nrematbnds = bnd;
+        s->num_rematrixing_bands = bnd;
     }
     /* Channel bandwidth code */
     for (ch = 1; ch <= s->fbw_channels; ch++) {
@@ -1052,10 +1052,10 @@ static int parse_audblk(EAC3Context *s, const int blk){
 
     if (s->fast_gain_syntax && get_bits1(gbc)) {
         for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++)
-            s->fgain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
+            s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
     } else if (!blk) {
         for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++)
-            s->fgain[ch] = ff_ac3_fast_gain_tab[4];
+            s->fast_gain[ch] = ff_ac3_fast_gain_tab[4];
     }
     if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT && get_bits1(gbc)) {
         skip_bits(gbc, 10); //Converter SNR offset
@@ -1098,13 +1098,13 @@ static int parse_audblk(EAC3Context *s, const int blk){
     /* run bit allocation */
     for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++) {
         ff_ac3_bit_alloc_calc_psd((int8_t *)s->dexps[ch], s->start_freq[ch],
-                s->end_freq[ch], s->psd[ch], s->bndpsd[ch]);
+                s->end_freq[ch], s->psd[ch], s->band_psd[ch]);
 
         s->bit_alloc_params.sr_code = s->sr_code;
         s->bit_alloc_params.sr_shift = 0;
 
-        ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params, s->bndpsd[ch],
-                s->start_freq[ch], s->end_freq[ch], s->fgain[ch],
+        ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params, s->band_psd[ch],
+                s->start_freq[ch], s->end_freq[ch], s->fast_gain[ch],
                 (ch == s->lfe_channel), s->dba_mode[ch], s->dba_nsegs[ch],
                 s->dba_offsets[ch], s->dba_lengths[ch], s->dba_values[ch],
                 s->mask[ch]);
@@ -1233,7 +1233,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         if (c->channel_mode == AC3_CHMODE_STEREO)
             ff_ac3_do_rematrixing(c->transform_coeffs,
                     FFMIN(c->end_freq[1], c->end_freq[2]),
-                    c->nrematbnds, c->rematflg);
+                    c->num_rematrixing_bands, c->rematrixing_flags);
 
         /* apply scaling to coefficients (dialnorm, dynrng) */
         for (ch = 1; ch <= c->fbw_channels + c->lfe_on; ch++) {

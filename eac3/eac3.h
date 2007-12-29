@@ -136,8 +136,8 @@ typedef struct EAC3Context{
 ///@}
 
 ///@defgroup rematrixing Rematrixing
-    int nrematbnds;     ///< Number of rematrixing bands
-    int rematflg[4];    ///< Rematrixing flag
+    int num_rematrixing_bands;  ///< Number of rematrixing bands (nrematbnds)
+    int rematrixing_flags[4];   ///< Rematrixing flags (rematflg)
 ///@}
 
 ///@defgroup exponents Exponents
@@ -150,11 +150,11 @@ typedef struct EAC3Context{
     AC3BitAllocParameters bit_alloc_params;         ///< Bit allocation parameters
     int first_cpl_leak;                             ///< First coupling leak state (firstcplleak)
     int snr_offset[AC3_MAX_CHANNELS];               ///< SNR offset (snroffst)
-    int fgain[AC3_MAX_CHANNELS];                    ///< Channel fast gain
+    int fast_gain[AC3_MAX_CHANNELS];                ///< Channel fast gain (fgain)
     uint8_t bap[AC3_MAX_CHANNELS][AC3_MAX_COEFS];   ///< bit allocation pointers
     uint8_t hebap[AC3_MAX_CHANNELS][AC3_MAX_COEFS]; ///< high-efficiency bit allocation pointers for AHT
     int16_t psd[AC3_MAX_CHANNELS][AC3_MAX_COEFS];   ///< scaled exponents
-    int16_t bndpsd[AC3_MAX_CHANNELS][50];           ///< interpolated exponents
+    int16_t band_psd[AC3_MAX_CHANNELS][50];         ///< interpolated exponents (bndpsd)
     int16_t mask[AC3_MAX_CHANNELS][50];             ///< masking values
     uint8_t dba_mode[AC3_MAX_CHANNELS];             ///< Delta bit allocation mode (deltbae)
     uint8_t dba_nsegs[AC3_MAX_CHANNELS];            ///< Number of delta segments (deltnseg)
