@@ -169,8 +169,7 @@ static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
         for (n = 0; n < chgaqsections; n++) {
             s->chgaqgain[n] = get_bits1(gbc);
         }
-    } else {
-        if (chgaqmod == EAC3_GAQ_124) {
+    } else if (chgaqmod == EAC3_GAQ_124) {
             int grpgain;
             chgaqsections = (chgaqsections+2)/3;
             for (n = 0; n < chgaqsections; n++) {
@@ -179,7 +178,6 @@ static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
                 s->chgaqgain[3*n+1] = (grpgain%9)/3;
                 s->chgaqgain[3*n+2] = grpgain%3;
             }
-        }
     }
 
     m=0;
