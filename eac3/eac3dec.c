@@ -984,8 +984,7 @@ static int parse_audblk(EAC3Context *s, const int blk){
         }
     }
     /* Rematrixing operation in the 2/0 mode */
-    if (s->channel_mode == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
-        if (!blk || get_bits1(gbc)) {
+    if (s->channel_mode == AC3_CHMODE_STEREO && (!blk || get_bits1(gbc))) {
             /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf */
             // TODO spx in one channel
             int end = (s->cpl_in_use[blk] || s->spxinu) ?
@@ -994,7 +993,6 @@ static int parse_audblk(EAC3Context *s, const int blk){
                 s->rematflg[bnd] = get_bits1(gbc);
             }
             s->nrematbnds = bnd;
-        }
     }
     /* Channel bandwidth code */
     for (ch = 1; ch <= s->fbw_channels; ch++) {
