@@ -149,10 +149,11 @@ static void spectral_extension(EAC3Context *s){
 }
 #endif
 
-static void get_transform_coeffs_aht_ch(GetBitContext *gbc, EAC3Context *s, int ch){
+static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
     int endbap, bin, n, m;
     int bg, g, bits, pre_chmant, remap, chgaqsections, chgaqmod;
     float mant;
+    GetBitContext *gbc = &s->gbc;
 
     chgaqmod = get_bits(gbc, 2);
 
@@ -263,15 +264,15 @@ static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
     }
 }
 
-static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int blk,
+static void get_eac3_transform_coeffs_ch(EAC3Context *s, int blk,
         int ch, mant_groups *m){
     if (s->channel_uses_aht[ch] == 0) {
-        ff_ac3_get_transform_coeffs_ch(m, gbc, s->dexps[ch], s->bap[ch],
+        ff_ac3_get_transform_coeffs_ch(m, &s->gbc, s->dexps[ch], s->bap[ch],
                 s->transform_coeffs[ch], s->start_freq[ch], s->end_freq[ch],
                 &s->dith_state);
     } else {
         if (s->channel_uses_aht[ch] == 1) {
-            get_transform_coeffs_aht_ch(gbc, s, ch);
+            get_transform_coeffs_aht_ch(s, ch);
             s->channel_uses_aht[ch] = -1; /* AHT info for this frame has been read - do not read again */
         }
     }
@@ -284,8 +285,9 @@ static void get_eac3_transform_coeffs_ch(GetBitContext *gbc, EAC3Context *s, int
            s->end_freq[ch] * sizeof(*s->transform_coeffs[ch]));
 }
 
-static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
+static int parse_bsi(EAC3Context *s){
     int i, blk;
+    GetBitContext *gbc = &s->gbc;
 
     s->stream_type = get_bits(gbc, 2);
     if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
@@ -474,11 +476,12 @@ static int parse_bsi(GetBitContext *gbc, EAC3Context *s){
     return 0;
 } /* end of bsi */
 
-static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
+static int parse_audfrm(EAC3Context *s){
     int blk, ch;
     int ac3_exponent_strategy, parse_aht_info, parse_spx_atten_data;
     int parse_transient_proc_info;
     int num_cpl_blocks;
+    GetBitContext *gbc = &s->gbc;
 
     /* Audio frame exist flags and strategy data */
     if (s->num_blocks == 6) {
@@ -634,12 +637,13 @@ static int parse_audfrm(GetBitContext *gbc, EAC3Context *s){
     return 0;
 } /* end of audfrm */
 
-static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
+static int parse_audblk(EAC3Context *s, const int blk){
     //int grp, sbnd, n, bin;
     int seg, bnd, ch, i, chbwcod, grpsize;
     int got_cplchan;
     int ecpl_in_use=0;
     mant_groups m;
+    GetBitContext *gbc = &s->gbc;
 
     m.b1ptr = m.b2ptr = m.b4ptr = 3;
 
@@ -1153,9 +1157,9 @@ static int parse_audblk(GetBitContext *gbc, EAC3Context *s, const int blk){
 
     /* Quantized mantissa values */
     for (ch = 1; ch <= s->num_channels; ch++) {
-        get_eac3_transform_coeffs_ch(gbc, s, blk, ch, &m);
+        get_eac3_transform_coeffs_ch(s, blk, ch, &m);
         if (s->cpl_in_use[blk] && s->channel_in_cpl[ch] && !got_cplchan) {
-            get_eac3_transform_coeffs_ch(gbc, s, blk, CPL_CH, &m);
+            get_eac3_transform_coeffs_ch(s, blk, CPL_CH, &m);
             got_cplchan = 1;
         }
     }
@@ -1206,18 +1210,16 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     int16_t *out_samples = (int16_t *)data;
     EAC3Context *c = (EAC3Context *)avctx->priv_data;
     int k, i, blk, ch;
-    GetBitContext gbc;
 
     *data_size = 0;
-    c->gbc = &gbc;
     c->syncword = 0;
-    init_get_bits(&gbc, buf, buf_size*8);
-    c->syncword = get_bits(&gbc, 16);
+    init_get_bits(&c->gbc, buf, buf_size*8);
+    c->syncword = get_bits(&c->gbc, 16);
 
     if (c->syncword != 0x0B77)
         return -1;
 
-    if (parse_bsi(&gbc, c) || parse_audfrm(&gbc, c))
+    if (parse_bsi(c) || parse_audfrm(c))
         return -1;
 
     if (c->substreamid) {
@@ -1256,7 +1258,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     }
 
     for (blk = 0; blk < c->num_blocks; blk++) {
-        if (parse_audblk(&gbc, c, blk)) {
+        if (parse_audblk(c, blk)) {
             av_log(c->avctx, AV_LOG_ERROR, "Error in parse_audblk\n");
             return -1;
         }

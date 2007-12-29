@@ -39,7 +39,7 @@
 
 typedef struct EAC3Context{
     AVCodecContext *avctx;  ///< Parent context
-    GetBitContext *gbc;     ///< Bitstream reader
+    GetBitContext gbc;      ///< Bitstream reader
 
 ///@defgroup bsi Bit Stream Information
 ///@{
