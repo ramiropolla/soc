@@ -26,6 +26,10 @@
 
 static float idct_cos_tab[6][5];
 
+static int gaq_ungroup_tab[32][3];
+
+static float gaq_scale_factors[3][17];
+
 static void log_missing_feature(AVCodecContext *avctx, const char *log){
     av_log(avctx, AV_LOG_ERROR, "%s is not implemented. If you want to help, "
             "update your FFmpeg version to the newest one from SVN. If the "
@@ -150,101 +154,85 @@ static void spectral_extension(EAC3Context *s){
 #endif
 
 static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
-    int endbap, bin, n, m;
-    int bg, g, bits, pre_chmant, remap, chgaqsections, chgaqmod;
+    int bin, blk, gs;
+    int hebap, end_bap, gaq_mode, bits, pre_mantissa, remap, log_gain, gain;
     float mant;
     GetBitContext *gbc = &s->gbc;
 
-    chgaqmod = get_bits(gbc, 2);
+    gaq_mode = get_bits(gbc, 2);
+    end_bap = (gaq_mode < 2) ? 12 : 17;
 
-    endbap = chgaqmod<2?12:17;
-
-    chgaqsections = 0;
-    for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-        if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < endbap)
-            chgaqsections++;
-    }
-
-    if (chgaqmod == EAC3_GAQ_12 || chgaqmod == EAC3_GAQ_14) {
-        for (n = 0; n < chgaqsections; n++) {
-            s->chgaqgain[n] = get_bits1(gbc);
+    if (gaq_mode == EAC3_GAQ_12 || gaq_mode == EAC3_GAQ_14) {
+        /* read 1-bit GAQ gain codes */
+        gs = 0;
+        for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
+            if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < end_bap)
+                s->gaq_gain[gs++] = ff_gaq_gk[gaq_mode][get_bits1(gbc)];
         }
-    } else if (chgaqmod == EAC3_GAQ_124) {
-        int grpgain;
-        chgaqsections = (chgaqsections+2)/3;
-        for (n = 0; n < chgaqsections; n++) {
-            grpgain = get_bits(gbc, 5);
-            s->chgaqgain[3*n]   = grpgain/9;
-            s->chgaqgain[3*n+1] = (grpgain%9)/3;
-            s->chgaqgain[3*n+2] = grpgain%3;
-        }
-    }
-
-    m=0;
-    for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-        int hebap = s->hebap[ch][bin];
-        if (hebap > 7) {
-            // GAQ (E3.3.4.2)
-            // XXX what about gaqmod = 0 ?
-            // difference between Gk=1 and gaqmod=0 ?
-            if (hebap < endbap) {
-                // hebap in active range
-                // Gk = 1<<bg
-                bg = ff_gaq_gk[chgaqmod][s->chgaqgain[m++]];
-            } else {
-                bg = 0;
+    } else if (gaq_mode == EAC3_GAQ_124) {
+        /* read 1.67-bit GAQ gain codes (3 codes in 5 bits) */
+        int gc = 2;
+        gs = 0;
+        for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
+            if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < end_bap) {
+                if(gc++ == 2) {
+                    int group_gain = get_bits(gbc, 5);
+                    s->gaq_gain[gs++] = ff_gaq_gk[gaq_mode][gaq_ungroup_tab[group_gain][0]];
+                    s->gaq_gain[gs++] = ff_gaq_gk[gaq_mode][gaq_ungroup_tab[group_gain][1]];
+                    s->gaq_gain[gs++] = ff_gaq_gk[gaq_mode][gaq_ungroup_tab[group_gain][2]];
+                    gc = 0;
+                }
             }
-            bits = ff_bits_vs_hebap[hebap];
+        }
+    }
 
-            for (n = 0; n < 6; n++) {
-                // pre_chmant[n][ch][bin]
-                pre_chmant = get_sbits(gbc, bits-bg);
-                if (bg && pre_chmant == -(1 << (bits - bg - 1))) {
+    gs=0;
+    for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
+        hebap = s->hebap[ch][bin];
+        bits = ff_bits_vs_hebap[hebap];
+        if (!hebap) {
+            /* hebap=0  TODO:dithering */
+            for (blk = 0; blk < 6; blk++) {
+                s->pre_mantissa[blk][ch][bin] = 0;
+            }
+        } else if (hebap < 8) {
+            /* Vector Quantization */
+            int v = get_bits(gbc, bits);
+            for (blk = 0; blk < 6; blk++) {
+                s->pre_mantissa[blk][ch][bin] = ff_vq_hebap[hebap][v][blk] / 32768.0f;
+            }
+        } else {
+            /* Gain Adaptive Quantization */
+            if (gaq_mode != EAC3_GAQ_NO && hebap < end_bap) {
+                log_gain = s->gaq_gain[gs++];
+            } else {
+                log_gain = 0;
+            }
+            gain = 1 << log_gain;
+
+            for (blk = 0; blk < 6; blk++) {
+                pre_mantissa = get_sbits(gbc, bits-log_gain);
+                if (gain == 1) {
+                    // Gk = 1, GAQ mode = 0, or hebap is outside of GAQ range
+                    mant = pre_mantissa * gaq_scale_factors[0][bits];
+                    remap = 1;
+                } else if (pre_mantissa == -(1 << (bits-log_gain-1))) {
                     // large mantissa
-                    pre_chmant = get_sbits(gbc, bits - ((bg==1)?1:0));
-                    if (bg == 1)
-                        //Gk = 2
-                        mant = (float)pre_chmant/((1<<(bits-1))-1);
-                    else
-                        //Gk = 4
-                        mant = (float)pre_chmant*3.0f/((1<<(bits+1))-2);
-
-                    g = 0;
+                    pre_mantissa = get_sbits(gbc, bits-(gain==2));
+                    mant = pre_mantissa * gaq_scale_factors[log_gain][bits];
                     remap = 1;
                 } else {
                     // small mantissa
-                    if (bg)
-                        //Gk = 2 or 4
-                        mant = (float)pre_chmant/((1<<(bits-1))-1);
-                    else
-                        //Gk = 1
-                        mant = (float)pre_chmant*2.0f/((1<<bits)-1); ///XXX
-
-                    g = bg;
-                    remap = (!bg) && (s->hebap[ch][bin] < endbap);
+                    mant = pre_mantissa * ff_ac3_scale_factors[bits-1];
+                    remap = 0;
                 }
 
-                //TODO when remap needed ?
                 if (remap) {
-                    mant = (float)
-                        (ff_eac3_gaq_remap[hebap-8][0][g][0]/32768.0f + 1.0f)
-                        * mant / (1<<g) +
-                        (ff_eac3_gaq_remap[hebap-8][mant<0][g][1]) / 32768.0f;
+                    int a = ff_eac3_gaq_remap[hebap-8][0][log_gain][0] + 32768;
+                    int b = ff_eac3_gaq_remap[hebap-8][mant<0][log_gain][1];
+                    mant = (a * mant + b) / 32768;
                 }
-                s->pre_chmant[n][ch][bin] = mant;
-            }
-        } else {
-            // hebap = 0 or VQ
-            if (hebap) {
-                pre_chmant = get_bits(gbc, ff_bits_vs_hebap[hebap]);
-                for (n = 0; n < 6; n++) {
-                    s->pre_chmant[n][ch][bin] =
-                        ff_vq_hebap[hebap][pre_chmant][n] / 32768.0f;
-                }
-            } else {
-                for (n = 0; n < 6; n++) {
-                    s->pre_chmant[n][ch][bin] = 0;
-                }
+                s->pre_mantissa[blk][ch][bin] = mant;
             }
         }
     }
@@ -255,9 +243,9 @@ static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
     int bin, i;
     float tmp;
     for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-        tmp = s->pre_chmant[0][ch][bin];
+        tmp = s->pre_mantissa[0][ch][bin];
         for (i = 1; i < 6; i++) {
-            tmp += idct_cos_tab[blk][i-1] * s->pre_chmant[i][ch][bin];
+            tmp += idct_cos_tab[blk][i-1] * s->pre_mantissa[i][ch][bin];
         }
         s->transform_coeffs[ch][bin] = tmp * ff_ac3_scale_factors[s->dexps[ch][bin]];
     }
@@ -1285,6 +1273,20 @@ static void eac3_tables_init(void) {
         for(i=1; i<6; i++) {
             idct_cos_tab[blk][i-1] = M_SQRT2 * cos(M_PI*i*(2*blk + 1)/12);
         }
+    }
+
+    // initialize ungrouping table for 1.67-bit GAQ gain codes
+    for(i=0; i<32; i++) {
+        gaq_ungroup_tab[i][0] = i / 9;
+        gaq_ungroup_tab[i][1] = (i % 9) / 3;
+        gaq_ungroup_tab[i][2] = i % 3;
+    }
+
+    // initialize GAQ scale factors
+    for(i=1; i<17; i++) {
+        gaq_scale_factors[0][i] = 2.0f/((1<<i)-1);
+        gaq_scale_factors[1][i] = 1.0f/((1<<(i-1))-1);
+        gaq_scale_factors[2][i] = 3.0f/((1<<(i+1))-2);
     }
 }
 

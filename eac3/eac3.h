@@ -81,8 +81,8 @@ typedef struct EAC3Context{
 
 ///@defgroup aht Adaptive Hybrid Transform
     int channel_uses_aht[AC3_MAX_CHANNELS];     ///< Channel AHT in use (chahtinu)
-    int chgaqgain[256];                         ///< Channel gain adaptive quantization gain
-    float pre_chmant[6][AC3_MAX_CHANNELS][256]; ///< Pre channel mantissas
+    int gaq_gain[256];                              ///< Gain adaptive quantization gain
+    float pre_mantissa[6][AC3_MAX_CHANNELS][256];   ///< Pre-IDCT mantissas
 ///@}
 
 ///@defgroup spx Spectral Extension
