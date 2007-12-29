@@ -160,7 +160,7 @@ static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
     endbap = chgaqmod<2?12:17;
 
     chgaqsections = 0;
-    for (bin = 0; bin < s->end_freq[ch]; bin++) {
+    for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
         if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < endbap)
             chgaqsections++;
     }
@@ -184,18 +184,19 @@ static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
 
     m=0;
     for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-        if (s->hebap[ch][bin] > 7) {
+        int hebap = s->hebap[ch][bin];
+        if (hebap > 7) {
             // GAQ (E3.3.4.2)
             // XXX what about gaqmod = 0 ?
             // difference between Gk=1 and gaqmod=0 ?
-            if (s->hebap[ch][bin] < endbap) {
+            if (hebap < endbap) {
                 // hebap in active range
                 // Gk = 1<<bg
                 bg = ff_gaq_gk[chgaqmod][s->chgaqgain[m++]];
             } else {
                 bg = 0;
             }
-            bits = ff_bits_vs_hebap[s->hebap[ch][bin]];
+            bits = ff_bits_vs_hebap[hebap];
 
             for (n = 0; n < 6; n++) {
                 // pre_chmant[n][ch][bin]
@@ -228,19 +229,19 @@ static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
                 //TODO when remap needed ?
                 if (remap) {
                     mant = (float)
-                        (ff_eac3_gaq_remap[s->hebap[ch][bin]-8][0][g][0]/32768.0f + 1.0f)
+                        (ff_eac3_gaq_remap[hebap-8][0][g][0]/32768.0f + 1.0f)
                         * mant / (1<<g) +
-                        (ff_eac3_gaq_remap[s->hebap[ch][bin]-8][mant<0][g][1]) / 32768.0f;
+                        (ff_eac3_gaq_remap[hebap-8][mant<0][g][1]) / 32768.0f;
                 }
                 s->pre_chmant[n][ch][bin] = mant;
             }
         } else {
             // hebap = 0 or VQ
-            if (s->hebap[ch][bin]) {
-                pre_chmant = get_bits(gbc, ff_bits_vs_hebap[s->hebap[ch][bin]]);
+            if (hebap) {
+                pre_chmant = get_bits(gbc, ff_bits_vs_hebap[hebap]);
                 for (n = 0; n < 6; n++) {
                     s->pre_chmant[n][ch][bin] =
-                        ff_vq_hebap[s->hebap[ch][bin]][pre_chmant][n] / 32768.0f;
+                        ff_vq_hebap[hebap][pre_chmant][n] / 32768.0f;
                 }
             } else {
                 for (n = 0; n < 6; n++) {
