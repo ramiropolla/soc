@@ -1,0 +1,33 @@
+Enhanced AC-3 Decoder TODO List
+-------------------------------
+
+Features:
+
+* Enhanced Coupling
+    - We now have one sample which uses enhanced coupling, so testing
+      and debugging can now be done.
+
+* Spectral Extension
+    - We do not currently have any samples which use spectral extension.
+
+* Transient Pre-Noise Cross-Fading
+    - We do have a sample which contains pre-noise data.
+
+* Dependent Streams (more than 6 channels)
+    - We do not currently have any samples which use dependent streams.
+
+* Mixed AC3 and EAC3
+    - Blu-ray uses AC3 for the independent stream, interleaved with
+      E-AC3 dependent stream(s) for extra channels.
+
+General:
+* Use dither flags
+* Merge decoding contexts for AC3 and E-AC3 decoders
+* Remove duplicated code between AC3 and E-AC3 decoders
+* Try to simplify and document AHT decoding
+* Add raw E-AC3 format with proper extension and MIME type
+
+Cosmetic:
+* Continue renaming variables which are poorly named
+* Add more useful comments and remove bad comments
+* Add specification references
