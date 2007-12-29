@@ -1103,21 +1103,21 @@ static int parse_audblk(EAC3Context *s, const int blk){
         s->bit_alloc_params.sr_code = s->sr_code;
         s->bit_alloc_params.sr_shift = 0;
 
-        ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params,
-                s->bndpsd[ch], s->start_freq[ch], s->end_freq[ch], s->fgain[ch],
-                (ch == s->lfe_channel),
-                s->dba_mode[ch], s->dba_nsegs[ch],
-                s->dba_offsets[ch], s->dba_lengths[ch],
-                s->dba_values[ch], s->mask[ch]);
+        ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params, s->bndpsd[ch],
+                s->start_freq[ch], s->end_freq[ch], s->fgain[ch],
+                (ch == s->lfe_channel), s->dba_mode[ch], s->dba_nsegs[ch],
+                s->dba_offsets[ch], s->dba_lengths[ch], s->dba_values[ch],
+                s->mask[ch]);
 
         if (s->channel_uses_aht[ch] == 0)
-            ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], s->start_freq[ch],
-                    s->end_freq[ch], s->snr_offset[ch], s->bit_alloc_params.floor, ff_ac3_bap_tab,
-                    s->bap[ch]);
+            ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
+                    s->start_freq[ch], s->end_freq[ch], s->snr_offset[ch],
+                    s->bit_alloc_params.floor, ff_ac3_bap_tab, s->bap[ch]);
         else if (s->channel_uses_aht[ch] == 1)
-                ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch], s->start_freq[ch], s->end_freq[ch],
-                        s->snr_offset[ch], s->bit_alloc_params.floor, ff_ac3_hebaptab,
-                        s->hebap[ch]);
+            ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
+                    s->start_freq[ch], s->end_freq[ch], s->snr_offset[ch],
+                    s->bit_alloc_params.floor, ff_ac3_hebaptab,
+                    s->hebap[ch]);
     }
 
     got_cplchan = 0;
