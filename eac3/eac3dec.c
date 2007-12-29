@@ -985,14 +985,14 @@ static int parse_audblk(EAC3Context *s, const int blk){
     }
     /* Rematrixing operation in the 2/0 mode */
     if (s->channel_mode == AC3_CHMODE_STEREO && (!blk || get_bits1(gbc))) {
-            /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf */
-            // TODO spx in one channel
-            int end = (s->cpl_in_use[blk] || s->spxinu) ?
-                FFMIN(s->end_freq[1], s->end_freq[2]) : (ff_ac3_rematrix_band_tab[4]-1);
-            for (bnd = 0; ff_ac3_rematrix_band_tab[bnd] <= end; bnd++) {
-                s->rematflg[bnd] = get_bits1(gbc);
-            }
-            s->nrematbnds = bnd;
+        /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf */
+        // TODO spx in one channel
+        int end = (s->cpl_in_use[blk] || s->spxinu) ?
+            FFMIN(s->end_freq[1], s->end_freq[2]) : (ff_ac3_rematrix_band_tab[4]-1);
+        for (bnd = 0; ff_ac3_rematrix_band_tab[bnd] <= end; bnd++) {
+            s->rematflg[bnd] = get_bits1(gbc);
+        }
+        s->nrematbnds = bnd;
     }
     /* Channel bandwidth code */
     for (ch = 1; ch <= s->fbw_channels; ch++) {
