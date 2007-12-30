@@ -155,7 +155,7 @@ static void spectral_extension(EAC3Context *s){
 
 static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
     int bin, blk, gs;
-    int hebap, end_bap, gaq_mode, bits, pre_mantissa, remap, log_gain, gain;
+    int hebap, end_bap, gaq_mode, bits, pre_mantissa, remap, log_gain;
     float mant;
     GetBitContext *gbc = &s->gbc;
 
@@ -208,17 +208,16 @@ static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
             } else {
                 log_gain = 0;
             }
-            gain = 1 << log_gain;
 
             for (blk = 0; blk < 6; blk++) {
                 pre_mantissa = get_sbits(gbc, bits-log_gain);
-                if (gain == 1) {
+                if (log_gain == 0) {
                     // Gk = 1, GAQ mode = 0, or hebap is outside of GAQ range
                     mant = pre_mantissa * gaq_scale_factors[0][bits];
                     remap = 1;
                 } else if (pre_mantissa == -(1 << (bits-log_gain-1))) {
                     // large mantissa
-                    pre_mantissa = get_sbits(gbc, bits-(gain==2));
+                    pre_mantissa = get_sbits(gbc, bits-(log_gain==1));
                     mant = pre_mantissa * gaq_scale_factors[log_gain][bits];
                     remap = 1;
                 } else {
