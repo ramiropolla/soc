@@ -208,18 +208,26 @@ static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
             }
 
             for (blk = 0; blk < 6; blk++) {
-                pre_mantissa = get_sbits(gbc, bits-log_gain);
+                int gbits = bits - log_gain;
+                pre_mantissa = get_sbits(gbc, gbits);
                 if (log_gain == 0) {
                     // Gk = 1, GAQ mode = 0, or hebap is outside of GAQ range
                     mant = pre_mantissa * ff_ac3_scale_factors[bits-1];
                     remap = 1;
-                } else if (pre_mantissa == -(1 << (bits-log_gain-1))) {
+                } else if (pre_mantissa == -(1 << (gbits-1))) {
                     // large mantissa
-                    pre_mantissa = get_sbits(gbc, bits-(log_gain==1));
-                    mant = pre_mantissa * ff_ac3_scale_factors[bits-(log_gain==1)-1];
+                    if(log_gain == 1) {
+                        // Gk = 2
+                        pre_mantissa = get_sbits(gbc, bits-1);
+                        mant = pre_mantissa * ff_ac3_scale_factors[bits-2];
+                    } else {
+                        // Gk = 4
+                        pre_mantissa = get_sbits(gbc, bits);
+                        mant = pre_mantissa * ff_ac3_scale_factors[bits-1];
+                    }
                     remap = 1;
                 } else {
-                    // small mantissa
+                    // small mantissa, Gk = 2 or 4
                     mant = pre_mantissa * ff_ac3_scale_factors[bits-1];
                     remap = 0;
                 }
