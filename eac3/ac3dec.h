@@ -254,8 +254,7 @@ void ff_ac3_do_rematrixing(AC3DecodeContext *s);
 
 void ff_ac3_do_imdct(AC3DecodeContext *s);
 
-void ff_ac3_downmix(float samples[AC3_MAX_CHANNELS][256], int nfchans,
-                        int output_mode, float coef[AC3_MAX_CHANNELS][2]);
+void ff_ac3_downmix(AC3DecodeContext *s);
 
 /** Adjustments in dB gain */
 #define LEVEL_PLUS_3DB          1.4142135623730950

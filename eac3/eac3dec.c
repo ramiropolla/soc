@@ -1232,7 +1232,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         if(c->channels != c->out_channels && !((c->output_mode & AC3_OUTPUT_LFEON) &&
                 c->fbw_channels == c->out_channels)) {
-            ff_ac3_downmix(c->output, c->fbw_channels, c->output_mode, c->downmix_coeffs);
+            ff_ac3_downmix(c);
         }
 
         // convert float to 16-bit integer
