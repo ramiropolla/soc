@@ -249,8 +249,6 @@ static int ac3_parse_header(AC3DecodeContext *s)
     /* get decoding parameters from header info */
     s->bit_alloc_params.sr_code     = hdr.sr_code;
     s->channel_mode                 = hdr.channel_mode;
-    center_mix_level                = ff_ac3_mix_levels[center_levels[hdr.center_mix_level]];
-    surround_mix_level              = ff_ac3_mix_levels[surround_levels[hdr.surround_mix_level]];
     s->lfe_on                       = hdr.lfe_on;
     s->bit_alloc_params.sr_shift    = hdr.sr_shift;
     s->sample_rate                  = hdr.sample_rate;
@@ -266,6 +264,10 @@ static int ac3_parse_header(AC3DecodeContext *s)
     if(s->lfe_on)
         s->output_mode |= AC3_OUTPUT_LFEON;
 
+    /* set default mix levels */
+    center_mix_level = LEVEL_MINUS_4POINT5DB;
+    surround_mix_level = LEVEL_MINUS_6DB;
+
     /* skip over portion of header which has already been read */
     skip_bits(gbc, 16); // skip the sync_word
     skip_bits(gbc, 16); // skip crc1
@@ -275,9 +277,9 @@ static int ac3_parse_header(AC3DecodeContext *s)
         skip_bits(gbc, 2); // skip dsurmod
     } else {
         if((s->channel_mode & 1) && s->channel_mode != AC3_CHMODE_MONO)
-            skip_bits(gbc, 2); // skip cmixlev
+            center_mix_level = ff_ac3_mix_levels[center_levels[get_bits(gbc, 2)]];
         if(s->channel_mode & 4)
-            skip_bits(gbc, 2); // skip surmixlev
+            surround_mix_level = ff_ac3_mix_levels[surround_levels[get_bits(gbc, 2)]];
     }
     skip_bits1(gbc); // skip lfeon
 

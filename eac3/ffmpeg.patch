@@ -1,6 +1,6 @@
 Index: libavcodec/aac_ac3_parser.c
 ===================================================================
---- libavcodec/aac_ac3_parser.c	(revision 11346)
+--- libavcodec/aac_ac3_parser.c	(revision 11360)
 +++ libavcodec/aac_ac3_parser.c	(working copy)
 @@ -50,7 +50,7 @@
  
@@ -22,7 +22,7 @@ Index: libavcodec/aac_ac3_parser.c
                          }
 Index: libavcodec/aac_ac3_parser.h
 ===================================================================
---- libavcodec/aac_ac3_parser.h	(revision 11346)
+--- libavcodec/aac_ac3_parser.h	(revision 11360)
 +++ libavcodec/aac_ac3_parser.h	(working copy)
 @@ -30,7 +30,7 @@
      uint8_t *inbuf_ptr;
@@ -35,7 +35,7 @@ Index: libavcodec/aac_ac3_parser.h
  } AACAC3ParseContext;
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 11346)
+--- libavcodec/Makefile	(revision 11360)
 +++ libavcodec/Makefile	(working copy)
 @@ -67,6 +67,7 @@
  OBJS-$(CONFIG_DVVIDEO_DECODER)         += dv.o
@@ -55,7 +55,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_H264_PARSER)             += h264_parser.o
 Index: libavcodec/aac_parser.c
 ===================================================================
---- libavcodec/aac_parser.c	(revision 11346)
+--- libavcodec/aac_parser.c	(revision 11360)
 +++ libavcodec/aac_parser.c	(working copy)
 @@ -38,7 +38,7 @@
  };
@@ -68,7 +68,7 @@ Index: libavcodec/aac_parser.c
      GetBitContext bits;
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 11346)
+--- libavcodec/allcodecs.c	(revision 11360)
 +++ libavcodec/allcodecs.c	(working copy)
 @@ -180,6 +180,7 @@
      REGISTER_DECODER (COOK, cook);
@@ -88,8 +88,25 @@ Index: libavcodec/allcodecs.c
      REGISTER_PARSER  (H264, h264);
 Index: libavcodec/ac3_parser.c
 ===================================================================
---- libavcodec/ac3_parser.c	(revision 11346)
+--- libavcodec/ac3_parser.c	(revision 11360)
 +++ libavcodec/ac3_parser.c	(working copy)
+@@ -65,13 +65,13 @@
+     hdr->bitstream_mode = get_bits(&gbc, 3);
+     hdr->channel_mode = get_bits(&gbc, 3);
+     if((hdr->channel_mode & 1) && hdr->channel_mode != AC3_CHMODE_MONO) {
+-        hdr->center_mix_level = get_bits(&gbc, 2);
++        skip_bits(&gbc, 2); // skip center mix level
+     }
+     if(hdr->channel_mode & 4) {
+-        hdr->surround_mix_level = get_bits(&gbc, 2);
++        skip_bits(&gbc, 2); // skip surround mix level
+     }
+     if(hdr->channel_mode == AC3_CHMODE_STEREO) {
+-        hdr->dolby_surround_mode = get_bits(&gbc, 2);
++        skip_bits(&gbc, 2); // skip dolby surround mode
+     }
+     hdr->lfe_on = get_bits1(&gbc);
+ 
 @@ -84,7 +84,7 @@
      return 0;
  }
@@ -130,7 +147,7 @@ Index: libavcodec/ac3_parser.c
 +};
 Index: libavcodec/avcodec.h
 ===================================================================
---- libavcodec/avcodec.h	(revision 11346)
+--- libavcodec/avcodec.h	(revision 11360)
 +++ libavcodec/avcodec.h	(working copy)
 @@ -276,6 +276,7 @@
      CODEC_ID_APE,
@@ -142,7 +159,7 @@ Index: libavcodec/avcodec.h
      CODEC_ID_DVD_SUBTITLE= 0x17000,
 Index: libavcodec/ac3enc.c
 ===================================================================
---- libavcodec/ac3enc.c	(revision 11346)
+--- libavcodec/ac3enc.c	(revision 11360)
 +++ libavcodec/ac3enc.c	(working copy)
 @@ -479,7 +479,8 @@
          for(ch=0;ch<s->nb_all_channels;ch++) {
