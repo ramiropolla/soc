@@ -174,7 +174,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, window[256]);                         ///< window coefficients
 
     /* Miscellaneous. */
-    GetBitContext gb;                       ///< bitstream reader
+    GetBitContext gbc;                      ///< bitstream reader
     AVRandomState dith_state;               ///< for dither generation
     AVCodecContext *avctx;                  ///< parent context
 } AC3DecodeContext;
@@ -308,11 +308,11 @@ static int ac3_decode_init(AVCodecContext *avctx)
 static int ac3_parse_header(AC3DecodeContext *ctx)
 {
     AC3HeaderInfo hdr;
-    GetBitContext *gb = &ctx->gb;
+    GetBitContext *gbc = &ctx->gbc;
     float center_mix_level, surround_mix_level;
     int err, i;
 
-    err = ff_ac3_parse_header(gb->buffer, &hdr);
+    err = ff_ac3_parse_header(gbc->buffer, &hdr);
     if(err)
         return err;
 
@@ -337,46 +337,46 @@ static int ac3_parse_header(AC3DecodeContext *ctx)
         ctx->output_mode |= AC3_OUTPUT_LFEON;
 
     /* skip over portion of header which has already been read */
-    skip_bits(gb, 16); // skip the sync_word
-    skip_bits(gb, 16); // skip crc1
-    skip_bits(gb, 8);  // skip fscod and frmsizecod
-    skip_bits(gb, 11); // skip bsid, bsmod, and acmod
+    skip_bits(gbc, 16); // skip the sync_word
+    skip_bits(gbc, 16); // skip crc1
+    skip_bits(gbc, 8);  // skip fscod and frmsizecod
+    skip_bits(gbc, 11); // skip bsid, bsmod, and acmod
     if(ctx->channel_mode == AC3_CHMODE_STEREO) {
-        skip_bits(gb, 2); // skip dsurmod
+        skip_bits(gbc, 2); // skip dsurmod
     } else {
         if((ctx->channel_mode & 1) && ctx->channel_mode != AC3_CHMODE_MONO)
-            skip_bits(gb, 2); // skip cmixlev
+            skip_bits(gbc, 2); // skip cmixlev
         if(ctx->channel_mode & 4)
-            skip_bits(gb, 2); // skip surmixlev
+            skip_bits(gbc, 2); // skip surmixlev
     }
-    skip_bits1(gb); // skip lfeon
+    skip_bits1(gbc); // skip lfeon
 
     /* read the rest of the bsi. read twice for dual mono mode. */
     i = !(ctx->channel_mode);
     do {
-        skip_bits(gb, 5); // skip dialog normalization
-        if (get_bits1(gb))
-            skip_bits(gb, 8); //skip compression
-        if (get_bits1(gb))
-            skip_bits(gb, 8); //skip language code
-        if (get_bits1(gb))
-            skip_bits(gb, 7); //skip audio production information
+        skip_bits(gbc, 5); // skip dialog normalization
+        if (get_bits1(gbc))
+            skip_bits(gbc, 8); //skip compression
+        if (get_bits1(gbc))
+            skip_bits(gbc, 8); //skip language code
+        if (get_bits1(gbc))
+            skip_bits(gbc, 7); //skip audio production information
     } while (i--);
 
-    skip_bits(gb, 2); //skip copyright bit and original bitstream bit
+    skip_bits(gbc, 2); //skip copyright bit and original bitstream bit
 
     /* skip the timecodes (or extra bitstream information for Alternate Syntax)
        TODO: read & use the xbsi1 downmix levels */
-    if (get_bits1(gb))
-        skip_bits(gb, 14); //skip timecode1 / xbsi1
-    if (get_bits1(gb))
-        skip_bits(gb, 14); //skip timecode2 / xbsi2
+    if (get_bits1(gbc))
+        skip_bits(gbc, 14); //skip timecode1 / xbsi1
+    if (get_bits1(gbc))
+        skip_bits(gbc, 14); //skip timecode2 / xbsi2
 
     /* skip additional bitstream info */
-    if (get_bits1(gb)) {
-        i = get_bits(gb, 6);
+    if (get_bits1(gbc)) {
+        i = get_bits(gbc, 6);
         do {
-            skip_bits(gb, 8);
+            skip_bits(gbc, 8);
         } while(i--);
     }
 
@@ -405,7 +405,7 @@ static int ac3_parse_header(AC3DecodeContext *ctx)
  * Decode the grouped exponents according to exponent strategy.
  * reference: Section 7.1.3 Exponent Decoding
  */
-void ff_ac3_decode_exponents(GetBitContext *gb, int exp_strategy, int ngrps,
+void ff_ac3_decode_exponents(GetBitContext *gbc, int exp_strategy, int ngrps,
                              uint8_t absexp, int8_t *dexps)
 {
     int i, j, grp, group_size;
@@ -415,7 +415,7 @@ void ff_ac3_decode_exponents(GetBitContext *gb, int exp_strategy, int ngrps,
     /* unpack groups */
     group_size = exp_strategy + (exp_strategy == EXP_D45);
     for(grp=0,i=0; grp<ngrps; grp++) {
-        expacc = get_bits(gb, 7);
+        expacc = get_bits(gbc, 7);
         dexp[i++] = exp_ungroup_tab[expacc][0];
         dexp[i++] = exp_ungroup_tab[expacc][1];
         dexp[i++] = exp_ungroup_tab[expacc][2];
@@ -465,7 +465,7 @@ void ff_ac3_uncouple_channels(int fbw_channels, int cpl_start_freq,
  * Get the transform coefficients for a particular channel
  * reference: Section 7.3 Quantization and Decoding of Mantissas
  */
-int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *exps,
+int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gbc, uint8_t *exps,
                                    uint8_t *bap, float *coeffs, int start,
                                    int end, AVRandomState *dith_state)
 {
@@ -480,7 +480,7 @@ int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *e
 
             case 1:
                 if(m->b1ptr > 2) {
-                    gcode = get_bits(gb, 5);
+                    gcode = get_bits(gbc, 5);
                     m->b1_mant[0] = b1_mantissas[gcode][0];
                     m->b1_mant[1] = b1_mantissas[gcode][1];
                     m->b1_mant[2] = b1_mantissas[gcode][2];
@@ -491,7 +491,7 @@ int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *e
 
             case 2:
                 if(m->b2ptr > 2) {
-                    gcode = get_bits(gb, 7);
+                    gcode = get_bits(gbc, 7);
                     m->b2_mant[0] = b2_mantissas[gcode][0];
                     m->b2_mant[1] = b2_mantissas[gcode][1];
                     m->b2_mant[2] = b2_mantissas[gcode][2];
@@ -501,12 +501,12 @@ int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *e
                 break;
 
             case 3:
-                coeffs[i] = b3_mantissas[get_bits(gb, 3)];
+                coeffs[i] = b3_mantissas[get_bits(gbc, 3)];
                 break;
 
             case 4:
                 if(m->b4ptr > 1) {
-                    gcode = get_bits(gb, 7);
+                    gcode = get_bits(gbc, 7);
                     m->b4_mant[0] = b4_mantissas[gcode][0];
                     m->b4_mant[1] = b4_mantissas[gcode][1];
                     m->b4ptr = 0;
@@ -515,12 +515,12 @@ int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gb, uint8_t *e
                 break;
 
             case 5:
-                coeffs[i] = b5_mantissas[get_bits(gb, 4)];
+                coeffs[i] = b5_mantissas[get_bits(gbc, 4)];
                 break;
 
             default:
                 /* asymmetric dequantization */
-                coeffs[i] = get_sbits(gb, quantization_tab[tbap]) * ff_ac3_scale_factors[quantization_tab[tbap]-1];
+                coeffs[i] = get_sbits(gbc, quantization_tab[tbap]) * ff_ac3_scale_factors[quantization_tab[tbap]-1];
                 break;
         }
         coeffs[i] *= ff_ac3_scale_factors[exps[i]];
@@ -576,7 +576,7 @@ static int get_transform_coeffs(AC3DecodeContext * ctx)
     for (ch = 1; ch <= ctx->channels; ch++) {
         /* transform coefficients for full-bandwidth channel */
         //if (get_transform_coeffs_ch(ctx, ch, &m))
-        if(ff_ac3_get_transform_coeffs_ch(&m, &ctx->gb, ctx->dexps[ch],
+        if(ff_ac3_get_transform_coeffs_ch(&m, &ctx->gbc, ctx->dexps[ch],
                     ctx->bap[ch], ctx->transform_coeffs[ch], ctx->start_freq[ch],
                     ctx->end_freq[ch], &ctx->dith_state))
             return -1;
@@ -584,7 +584,7 @@ static int get_transform_coeffs(AC3DecodeContext * ctx)
            coefficients for the first coupled channel*/
         if (ctx->channel_in_cpl[ch])  {
             if (!got_cplchan) {
-                if (ff_ac3_get_transform_coeffs_ch(&m, &ctx->gb,
+                if (ff_ac3_get_transform_coeffs_ch(&m, &ctx->gbc,
                                 ctx->dexps[CPL_CH], ctx->bap[CPL_CH],
                                 ctx->transform_coeffs[CPL_CH],
                                 ctx->start_freq[CPL_CH], ctx->end_freq[CPL_CH],
@@ -750,19 +750,19 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
     int fbw_channels = ctx->fbw_channels;
     int channel_mode = ctx->channel_mode;
     int i, bnd, seg, ch;
-    GetBitContext *gb = &ctx->gb;
+    GetBitContext *gbc = &ctx->gbc;
     uint8_t bit_alloc_stages[AC3_MAX_CHANNELS];
 
     memset(bit_alloc_stages, 0, AC3_MAX_CHANNELS);
 
     /* block switch flags */
     for (ch = 1; ch <= fbw_channels; ch++)
-        ctx->block_switch[ch] = get_bits1(gb);
+        ctx->block_switch[ch] = get_bits1(gbc);
 
     /* dithering flags */
     ctx->dither_all = 1;
     for (ch = 1; ch <= fbw_channels; ch++) {
-        ctx->dither_flag[ch] = get_bits1(gb);
+        ctx->dither_flag[ch] = get_bits1(gbc);
         if(!ctx->dither_flag[ch])
             ctx->dither_all = 0;
     }
@@ -770,8 +770,8 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
     /* dynamic range */
     i = !(ctx->channel_mode);
     do {
-        if(get_bits1(gb)) {
-            ctx->dynamic_range[i] = ((ff_ac3_dynamic_range_tab[get_bits(gb, 8)]-1.0) *
+        if(get_bits1(gbc)) {
+            ctx->dynamic_range[i] = ((ff_ac3_dynamic_range_tab[get_bits(gbc, 8)]-1.0) *
                                     ctx->avctx->drc_scale)+1.0;
         } else if(blk == 0) {
             ctx->dynamic_range[i] = 1.0f;
@@ -779,24 +779,24 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
     } while(i--);
 
     /* coupling strategy */
-    if (get_bits1(gb)) {
+    if (get_bits1(gbc)) {
         memset(bit_alloc_stages, 3, AC3_MAX_CHANNELS);
-        ctx->cpl_in_use = get_bits1(gb);
+        ctx->cpl_in_use = get_bits1(gbc);
         if (ctx->cpl_in_use) {
             /* coupling in use */
             int cpl_begin_freq, cpl_end_freq;
 
             /* determine which channels are coupled */
             for (ch = 1; ch <= fbw_channels; ch++)
-                ctx->channel_in_cpl[ch] = get_bits1(gb);
+                ctx->channel_in_cpl[ch] = get_bits1(gbc);
 
             /* phase flags in use */
             if (channel_mode == AC3_CHMODE_STEREO)
-                ctx->phase_flags_in_use = get_bits1(gb);
+                ctx->phase_flags_in_use = get_bits1(gbc);
 
             /* coupling frequency range and band structure */
-            cpl_begin_freq = get_bits(gb, 4);
-            cpl_end_freq = get_bits(gb, 4);
+            cpl_begin_freq = get_bits(gbc, 4);
+            cpl_end_freq = get_bits(gbc, 4);
             if (3 + cpl_end_freq - cpl_begin_freq < 0) {
                 av_log(ctx->avctx, AV_LOG_ERROR, "3+cplendf = %d < cplbegf = %d\n", 3+cpl_end_freq, cpl_begin_freq);
                 return -1;
@@ -805,7 +805,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
             ctx->start_freq[CPL_CH] = cpl_begin_freq * 12 + 37;
             ctx->end_freq[CPL_CH] = cpl_end_freq * 12 + 73;
             for (bnd = 0; bnd < ctx->num_cpl_subbands - 1; bnd++) {
-                if (get_bits1(gb)) {
+                if (get_bits1(gbc)) {
                     ctx->cpl_band_struct[bnd] = 1;
                     ctx->num_cpl_bands--;
                 }
@@ -823,13 +823,13 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
 
         for (ch = 1; ch <= fbw_channels; ch++) {
             if (ctx->channel_in_cpl[ch]) {
-                if (get_bits1(gb)) {
+                if (get_bits1(gbc)) {
                     int master_cpl_coord, cpl_coord_exp, cpl_coord_mant;
                     cpl_coords_exist = 1;
-                    master_cpl_coord = 3 * get_bits(gb, 2);
+                    master_cpl_coord = 3 * get_bits(gbc, 2);
                     for (bnd = 0; bnd < ctx->num_cpl_bands; bnd++) {
-                        cpl_coord_exp = get_bits(gb, 4);
-                        cpl_coord_mant = get_bits(gb, 4);
+                        cpl_coord_exp = get_bits(gbc, 4);
+                        cpl_coord_mant = get_bits(gbc, 4);
                         if (cpl_coord_exp == 15)
                             ctx->cpl_coords[ch][bnd] = cpl_coord_mant / 16.0f;
                         else
@@ -842,7 +842,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
         /* phase flags */
         if (channel_mode == AC3_CHMODE_STEREO && ctx->phase_flags_in_use && cpl_coords_exist) {
             for (bnd = 0; bnd < ctx->num_cpl_bands; bnd++) {
-                if (get_bits1(gb))
+                if (get_bits1(gbc))
                     ctx->cpl_coords[2][bnd] = -ctx->cpl_coords[2][bnd];
             }
         }
@@ -850,13 +850,13 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
 
     /* stereo rematrixing strategy and band structure */
     if (channel_mode == AC3_CHMODE_STEREO) {
-        ctx->rematrixing_strategy = get_bits1(gb);
+        ctx->rematrixing_strategy = get_bits1(gbc);
         if (ctx->rematrixing_strategy) {
             ctx->num_rematrixing_bands = 4;
             if(ctx->cpl_in_use && ctx->start_freq[CPL_CH] <= 61)
                 ctx->num_rematrixing_bands -= 1 + (ctx->start_freq[CPL_CH] == 37);
             for(bnd=0; bnd<ctx->num_rematrixing_bands; bnd++)
-                ctx->rematrixing_flags[bnd] = get_bits1(gb);
+                ctx->rematrixing_flags[bnd] = get_bits1(gbc);
         }
     }
 
@@ -865,9 +865,9 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
     ctx->exp_strategy[ctx->lfe_ch] = EXP_REUSE;
     for (ch = !ctx->cpl_in_use; ch <= ctx->channels; ch++) {
         if(ch == ctx->lfe_ch)
-            ctx->exp_strategy[ch] = get_bits(gb, 1);
+            ctx->exp_strategy[ch] = get_bits(gbc, 1);
         else
-            ctx->exp_strategy[ch] = get_bits(gb, 2);
+            ctx->exp_strategy[ch] = get_bits(gbc, 2);
         if(ctx->exp_strategy[ch] != EXP_REUSE)
             bit_alloc_stages[ch] = 3;
     }
@@ -880,7 +880,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
             if (ctx->channel_in_cpl[ch])
                 ctx->end_freq[ch] = ctx->start_freq[CPL_CH];
             else {
-                int bandwidth_code = get_bits(gb, 6);
+                int bandwidth_code = get_bits(gbc, 6);
                 if (bandwidth_code > 60) {
                     av_log(ctx->avctx, AV_LOG_ERROR, "bandwidth code = %d > 60", bandwidth_code);
                     return -1;
@@ -905,49 +905,49 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
                 num_groups = 2;
             else
                 num_groups = (ctx->end_freq[ch] + group_size - 4) / group_size;
-            ctx->dexps[ch][0] = get_bits(gb, 4) << !ch;
-            ff_ac3_decode_exponents(gb, ctx->exp_strategy[ch], num_groups, ctx->dexps[ch][0],
+            ctx->dexps[ch][0] = get_bits(gbc, 4) << !ch;
+            ff_ac3_decode_exponents(gbc, ctx->exp_strategy[ch], num_groups, ctx->dexps[ch][0],
                              &ctx->dexps[ch][ctx->start_freq[ch]+!!ch]);
             if(ch != CPL_CH && ch != ctx->lfe_ch)
-                skip_bits(gb, 2); /* skip gainrng */
+                skip_bits(gbc, 2); /* skip gainrng */
         }
     }
 
     /* bit allocation information */
-    if (get_bits1(gb)) {
-        ctx->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[get_bits(gb, 2)] >> ctx->bit_alloc_params.sr_shift;
-        ctx->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[get_bits(gb, 2)] >> ctx->bit_alloc_params.sr_shift;
-        ctx->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab[get_bits(gb, 2)];
-        ctx->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[get_bits(gb, 2)];
-        ctx->bit_alloc_params.floor  = ff_ac3_floor_tab[get_bits(gb, 3)];
+    if (get_bits1(gbc)) {
+        ctx->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[get_bits(gbc, 2)] >> ctx->bit_alloc_params.sr_shift;
+        ctx->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[get_bits(gbc, 2)] >> ctx->bit_alloc_params.sr_shift;
+        ctx->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab[get_bits(gbc, 2)];
+        ctx->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[get_bits(gbc, 2)];
+        ctx->bit_alloc_params.floor  = ff_ac3_floor_tab[get_bits(gbc, 3)];
         for(ch=!ctx->cpl_in_use; ch<=ctx->channels; ch++) {
             bit_alloc_stages[ch] = FFMAX(bit_alloc_stages[ch], 2);
         }
     }
 
     /* signal-to-noise ratio offsets and fast gains (signal-to-mask ratios) */
-    if (get_bits1(gb)) {
+    if (get_bits1(gbc)) {
         int csnr;
-        csnr = (get_bits(gb, 6) - 15) << 4;
+        csnr = (get_bits(gbc, 6) - 15) << 4;
         for (ch = !ctx->cpl_in_use; ch <= ctx->channels; ch++) { /* snr offset and fast gain */
-            ctx->snr_offset[ch] = (csnr + get_bits(gb, 4)) << 2;
-            ctx->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gb, 3)];
+            ctx->snr_offset[ch] = (csnr + get_bits(gbc, 4)) << 2;
+            ctx->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
         }
         memset(bit_alloc_stages, 3, AC3_MAX_CHANNELS);
     }
 
     /* coupling leak information */
-    if (ctx->cpl_in_use && get_bits1(gb)) {
-        ctx->bit_alloc_params.cpl_fast_leak = get_bits(gb, 3);
-        ctx->bit_alloc_params.cpl_slow_leak = get_bits(gb, 3);
+    if (ctx->cpl_in_use && get_bits1(gbc)) {
+        ctx->bit_alloc_params.cpl_fast_leak = get_bits(gbc, 3);
+        ctx->bit_alloc_params.cpl_slow_leak = get_bits(gbc, 3);
         bit_alloc_stages[CPL_CH] = FFMAX(bit_alloc_stages[CPL_CH], 2);
     }
 
     /* delta bit allocation information */
-    if (get_bits1(gb)) {
+    if (get_bits1(gbc)) {
         /* delta bit allocation exists (strategy) */
         for (ch = !ctx->cpl_in_use; ch <= fbw_channels; ch++) {
-            ctx->dba_mode[ch] = get_bits(gb, 2);
+            ctx->dba_mode[ch] = get_bits(gbc, 2);
             if (ctx->dba_mode[ch] == DBA_RESERVED) {
                 av_log(ctx->avctx, AV_LOG_ERROR, "delta bit allocation strategy reserved\n");
                 return -1;
@@ -957,11 +957,11 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
         /* channel delta offset, len and bit allocation */
         for (ch = !ctx->cpl_in_use; ch <= fbw_channels; ch++) {
             if (ctx->dba_mode[ch] == DBA_NEW) {
-                ctx->dba_nsegs[ch] = get_bits(gb, 3);
+                ctx->dba_nsegs[ch] = get_bits(gbc, 3);
                 for (seg = 0; seg <= ctx->dba_nsegs[ch]; seg++) {
-                    ctx->dba_offsets[ch][seg] = get_bits(gb, 5);
-                    ctx->dba_lengths[ch][seg] = get_bits(gb, 4);
-                    ctx->dba_values[ch][seg] = get_bits(gb, 3);
+                    ctx->dba_offsets[ch][seg] = get_bits(gbc, 5);
+                    ctx->dba_lengths[ch][seg] = get_bits(gbc, 4);
+                    ctx->dba_values[ch][seg] = get_bits(gbc, 3);
                 }
             }
         }
@@ -1000,10 +1000,10 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
     }
 
     /* unused dummy data */
-    if (get_bits1(gb)) {
-        int skipl = get_bits(gb, 9);
+    if (get_bits1(gbc)) {
+        int skipl = get_bits(gbc, 9);
         while(skipl--)
-            skip_bits(gb, 8);
+            skip_bits(gbc, 8);
     }
 
     /* unpack the transform coefficients
@@ -1063,7 +1063,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
     int i, blk, ch, err;
 
     /* initialize the GetBitContext with the start of valid AC-3 Frame */
-    init_get_bits(&ctx->gb, buf, buf_size * 8);
+    init_get_bits(&ctx->gbc, buf, buf_size * 8);
 
     /* parse the syncinfo */
     err = ac3_parse_header(ctx);
