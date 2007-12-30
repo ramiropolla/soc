@@ -467,29 +467,23 @@ void ff_ac3_remove_dithering(AC3DecodeContext *s) {
     int end=0;
     float *coeffs;
     uint8_t *bap;
-    uint8_t *hebap;
-    int aht;
 
     for(ch=1; ch<=s->fbw_channels; ch++) {
         if(!s->dither_flag[ch]) {
             coeffs = s->transform_coeffs[ch];
-            bap = s->bap[ch];
-            hebap = s->hebap[ch];
-            aht = s->channel_uses_aht[ch];
+            bap = s->channel_uses_aht[ch] ? s->hebap[ch] : s->bap[ch];
             if(s->channel_in_cpl[ch])
                 end = s->start_freq[CPL_CH];
             else
                 end = s->end_freq[ch];
             for(i=0; i<end; i++) {
-                if(aht ? !hebap[i] : !bap[i])
+                if(!bap[i])
                     coeffs[i] = 0.0f;
             }
             if(s->channel_in_cpl[ch]) {
-                bap = s->bap[CPL_CH];
-                hebap = s->hebap[CPL_CH];
-                aht = s->channel_uses_aht[CPL_CH];
+                bap = s->channel_uses_aht[CPL_CH] ? s->hebap[CPL_CH] : s->bap[CPL_CH];
                 for(; i<s->end_freq[CPL_CH]; i++) {
-                    if(aht ? !hebap[i] : !bap[i])
+                    if(!bap[i])
                         coeffs[i] = 0.0f;
                 }
             }
