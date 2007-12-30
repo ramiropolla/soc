@@ -22,10 +22,8 @@ Features:
       E-AC3 dependent stream(s) for extra channels.
 
 General:
-* Merge decoding contexts for AC3 and E-AC3 decoders
-* Remove duplicated code between AC3 and E-AC3 decoders
+* Merge the AC3 and E-AC3 decoders into a single decoder which handles both
 * Try to simplify and document AHT decoding
-* Add raw E-AC3 format with proper extension and MIME type
 
 Cosmetic:
 * Continue renaming variables which are poorly named
