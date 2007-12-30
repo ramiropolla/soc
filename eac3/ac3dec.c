@@ -248,9 +248,9 @@ static int ac3_parse_header(AC3DecodeContext *s)
     /* get decoding parameters from header info */
     s->bit_alloc_params.sr_code     = hdr.sr_code;
     s->channel_mode                 = hdr.channel_mode;
-    center_mix_level                  = ff_ac3_mix_levels[center_levels[hdr.center_mix_level]];
-    surround_mix_level                = ff_ac3_mix_levels[surround_levels[hdr.surround_mix_level]];
-    s->lfe_on                        = hdr.lfe_on;
+    center_mix_level                = ff_ac3_mix_levels[center_levels[hdr.center_mix_level]];
+    surround_mix_level              = ff_ac3_mix_levels[surround_levels[hdr.surround_mix_level]];
+    s->lfe_on                       = hdr.lfe_on;
     s->bit_alloc_params.sr_shift    = hdr.sr_shift;
     s->sample_rate                  = hdr.sample_rate;
     s->bit_rate                     = hdr.bit_rate;
@@ -622,8 +622,7 @@ void ff_ac3_do_imdct(AC3DecodeContext *s)
             do_imdct_256(s, ch);
         } else {
             s->imdct_512.fft.imdct_calc(&s->imdct_512, s->tmp_output,
-                                          s->transform_coeffs[ch],
-                                          s->tmp_imdct);
+                                        s->transform_coeffs[ch], s->tmp_imdct);
         }
         /* For the first half of the block, apply the window, add the delay
            from the previous block, and send to output */
@@ -632,7 +631,7 @@ void ff_ac3_do_imdct(AC3DecodeContext *s)
         /* For the second half of the block, apply the window and store the
            samples to delay, to be combined with the next block */
         s->dsp.vector_fmul_reverse(s->delay[ch-1], s->tmp_output+256,
-                                     s->window, 256);
+                                   s->window, 256);
     }
 }
 
@@ -693,7 +692,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
     do {
         if(get_bits1(gbc)) {
             s->dynamic_range[i] = ((ff_ac3_dynamic_range_tab[get_bits(gbc, 8)]-1.0) *
-                                    s->avctx->drc_scale)+1.0;
+                                  s->avctx->drc_scale)+1.0;
         } else if(blk == 0) {
             s->dynamic_range[i] = 1.0f;
         }
