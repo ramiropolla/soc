@@ -1237,9 +1237,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         /* recover coefficients if rematrixing is in use */
         if (c->channel_mode == AC3_CHMODE_STEREO)
-            ff_ac3_do_rematrixing(c->transform_coeffs,
-                    FFMIN(c->end_freq[1], c->end_freq[2]),
-                    c->num_rematrixing_bands, c->rematrixing_flags);
+            ff_ac3_do_rematrixing(c);
 
         /* apply scaling to coefficients (dialnorm, dynrng) */
         for (ch = 1; ch <= c->fbw_channels + c->lfe_on; ch++) {

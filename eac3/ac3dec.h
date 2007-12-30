@@ -250,7 +250,7 @@ void ff_ac3_uncouple_channels(AC3DecodeContext *s);
 
 void ff_ac3_remove_dithering(AC3DecodeContext *s);
 
-void ff_ac3_do_rematrixing(float (*transform_coeffs)[256], int end, int nrematbnd, int *rematflg);
+void ff_ac3_do_rematrixing(AC3DecodeContext *s);
 
 void ff_ac3_do_imdct_256(float *tmp_output, float *transform_coeffs,
         MDCTContext *imdct_256, float *tmp_imdct);
