@@ -564,21 +564,21 @@ void ff_ac3_do_rematrixing(AC3DecodeContext *ctx)
 /**
  * Perform the 256-point IMDCT
  */
-void ff_ac3_do_imdct_256(float *o_ptr, float *transform_coeffs,
-                         MDCTContext *imdct_256, float *tmp_imdct)
+static void do_imdct_256(AC3DecodeContext *ctx, int chindex)
 {
     int i, k;
     DECLARE_ALIGNED_16(float, x[128]);
     FFTComplex z[2][64];
+    float *o_ptr = ctx->tmp_output;
 
     for(i=0; i<2; i++) {
         /* de-interleave coefficients */
         for(k=0; k<128; k++) {
-            x[k] = transform_coeffs[2*k+i];
+            x[k] = ctx->transform_coeffs[chindex][2*k+i];
         }
 
         /* run standard IMDCT */
-        imdct_256->fft.imdct_calc(imdct_256, o_ptr, x, tmp_imdct);
+        ctx->imdct_256.fft.imdct_calc(&ctx->imdct_256, o_ptr, x, ctx->tmp_imdct);
 
         /* reverse the post-rotation & reordering from standard IMDCT */
         for(k=0; k<32; k++) {
@@ -607,7 +607,7 @@ void ff_ac3_do_imdct_256(float *o_ptr, float *transform_coeffs,
  * Convert frequency domain coefficients to time-domain audio samples.
  * reference: Section 7.9.4 Transformation Equations
  */
-static inline void do_imdct(AC3DecodeContext *ctx)
+void ff_ac3_do_imdct(AC3DecodeContext *ctx)
 {
     int ch;
     int channels;
@@ -619,8 +619,7 @@ static inline void do_imdct(AC3DecodeContext *ctx)
 
     for (ch=1; ch<=channels; ch++) {
         if (ctx->block_switch[ch]) {
-            ff_ac3_do_imdct_256(ctx->tmp_output, ctx->transform_coeffs[ch],
-                                &ctx->imdct_256, ctx->tmp_imdct);
+            do_imdct_256(ctx, ch);
         } else {
             ctx->imdct_512.fft.imdct_calc(&ctx->imdct_512, ctx->tmp_output,
                                           ctx->transform_coeffs[ch],
@@ -955,7 +954,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *ctx, int blk)
         }
     }
 
-    do_imdct(ctx);
+    ff_ac3_do_imdct(ctx);
 
     /* downmix output if needed */
     if(ctx->channels != ctx->out_channels && !((ctx->output_mode & AC3_OUTPUT_LFEON) &&

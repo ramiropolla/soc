@@ -1167,32 +1167,6 @@ static int parse_audblk(AC3DecodeContext *s, const int blk){
     return 0;
 }
 
-/**
- * Performs Inverse MDCT transform
- */
-static void do_imdct(AC3DecodeContext *ctx){
-    int ch;
-
-    for (ch = 1; ch <= ctx->fbw_channels + ctx->lfe_on; ch++) {
-        if (ctx->block_switch[ch]) {
-            /* 256-point IMDCT */
-            ff_ac3_do_imdct_256(ctx->tmp_output, ctx->transform_coeffs[ch],
-                    &ctx->imdct_256, ctx->tmp_imdct);
-        } else {
-            /* 512-point IMDCT */
-            ctx->imdct_512.fft.imdct_calc(&ctx->imdct_512, ctx->tmp_output,
-                    ctx->transform_coeffs[ch],
-                    ctx->tmp_imdct);
-        }
-        /* apply window function, overlap/add output, save delay */
-        ctx->dsp.vector_fmul_add_add(ctx->output[ch-1], ctx->tmp_output,
-                ctx->window, ctx->delay[ch-1], 0,
-                AC3_BLOCK_SIZE, 1);
-        ctx->dsp.vector_fmul_reverse(ctx->delay[ch-1], ctx->tmp_output+256,
-                ctx->window, AC3_BLOCK_SIZE);
-    }
-}
-
 static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         uint8_t *buf, int buf_size){
     int16_t *out_samples = (int16_t *)data;
@@ -1252,7 +1226,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             }
         }
 
-        do_imdct(c);
+        ff_ac3_do_imdct(c);
 
         // TODO: Transient Pre-Noise Cross-Fading
 

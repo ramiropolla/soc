@@ -252,8 +252,7 @@ void ff_ac3_remove_dithering(AC3DecodeContext *s);
 
 void ff_ac3_do_rematrixing(AC3DecodeContext *s);
 
-void ff_ac3_do_imdct_256(float *tmp_output, float *transform_coeffs,
-        MDCTContext *imdct_256, float *tmp_imdct);
+void ff_ac3_do_imdct(AC3DecodeContext *s);
 
 void ff_ac3_downmix(float samples[AC3_MAX_CHANNELS][256], int nfchans,
                         int output_mode, float coef[AC3_MAX_CHANNELS][2]);
