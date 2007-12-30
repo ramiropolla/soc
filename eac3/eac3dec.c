@@ -341,6 +341,8 @@ static int parse_bsi(EAC3Context *s){
     } else {
         s->num_blocks = ff_eac3_blocks[get_bits(gbc, 2)];
     }
+    s->sample_rate = ff_ac3_sample_rate_tab[s->sr_code];
+    s->bit_rate = s->frame_size * s->sample_rate * 8 / (s->num_blocks * 256);
     s->channel_mode = get_bits(gbc, 3);
     s->lfe_on = get_bits1(gbc);
 
@@ -1233,13 +1235,8 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         return -1;
     }
 
-    if (c->sr_code == EAC3_SR_CODE_REDUCED) {
-        avctx->sample_rate = ff_ac3_sample_rate_tab[c->sr_code2] / 2;
-    } else {
-        avctx->sample_rate = ff_ac3_sample_rate_tab[c->sr_code];
-    }
-
-    avctx->bit_rate = (c->frame_size * avctx->sample_rate * 8 / (c->num_blocks * 256)) / 1000;
+    avctx->sample_rate = c->sample_rate;
+    avctx->bit_rate = c->bit_rate;
 
     /* channel config */
     if (!avctx->request_channels && !avctx->channels) {
