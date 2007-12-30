@@ -277,9 +277,7 @@ static void idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk){
 static void get_eac3_transform_coeffs_ch(AC3DecodeContext *s, int blk,
         int ch, mant_groups *m){
     if (!s->channel_uses_aht[ch]) {
-        ff_ac3_get_transform_coeffs_ch(m, &s->gbc, s->dexps[ch], s->bap[ch],
-                s->transform_coeffs[ch], s->start_freq[ch], s->end_freq[ch],
-                &s->dith_state);
+        ff_ac3_get_transform_coeffs_ch(s, ch, m);
     } else if (s->channel_uses_aht[ch] == 1) {
         get_transform_coeffs_aht_ch(s, ch);
         s->channel_uses_aht[ch] = -1; /* AHT info for this frame has been read - do not read again */

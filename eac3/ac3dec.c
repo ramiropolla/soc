@@ -394,17 +394,25 @@ void ff_ac3_uncouple_channels(int fbw_channels, int cpl_start_freq,
  * Get the transform coefficients for a particular channel
  * reference: Section 7.3 Quantization and Decoding of Mantissas
  */
-int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gbc, uint8_t *exps,
-                                   uint8_t *bap, float *coeffs, int start,
-                                   int end, AVRandomState *dith_state)
+int ff_ac3_get_transform_coeffs_ch(AC3DecodeContext *ctx, int ch_index, mant_groups *m)
 {
-    int i, gcode, tbap;
+    GetBitContext *gbc = &ctx->gbc;
+    int i, gcode, tbap, start, end;
+    uint8_t *exps;
+    uint8_t *bap;
+    float *coeffs;
+
+    exps = ctx->dexps[ch_index];
+    bap = ctx->bap[ch_index];
+    coeffs = ctx->transform_coeffs[ch_index];
+    start = ctx->start_freq[ch_index];
+    end = ctx->end_freq[ch_index];
 
     for (i = start; i < end; i++) {
         tbap = bap[i];
         switch (tbap) {
             case 0:
-                coeffs[i] = ((av_random(dith_state) & 0xFFFF) / 65535.0f) - 0.5f;
+                coeffs[i] = ((av_random(&ctx->dith_state) & 0xFFFF) / 65535.0f) - 0.5f;
                 break;
 
             case 1:
@@ -504,20 +512,13 @@ static int get_transform_coeffs(AC3DecodeContext * ctx)
 
     for (ch = 1; ch <= ctx->channels; ch++) {
         /* transform coefficients for full-bandwidth channel */
-        //if (get_transform_coeffs_ch(ctx, ch, &m))
-        if(ff_ac3_get_transform_coeffs_ch(&m, &ctx->gbc, ctx->dexps[ch],
-                    ctx->bap[ch], ctx->transform_coeffs[ch], ctx->start_freq[ch],
-                    ctx->end_freq[ch], &ctx->dith_state))
+        if(ff_ac3_get_transform_coeffs_ch(ctx, ch, &m))
             return -1;
         /* tranform coefficients for coupling channel come right after the
            coefficients for the first coupled channel*/
         if (ctx->channel_in_cpl[ch])  {
             if (!got_cplchan) {
-                if (ff_ac3_get_transform_coeffs_ch(&m, &ctx->gbc,
-                                ctx->dexps[CPL_CH], ctx->bap[CPL_CH],
-                                ctx->transform_coeffs[CPL_CH],
-                                ctx->start_freq[CPL_CH], ctx->end_freq[CPL_CH],
-                                &ctx->dith_state)) {
+                if (ff_ac3_get_transform_coeffs_ch(ctx, CPL_CH, &m)) {
                     av_log(ctx->avctx, AV_LOG_ERROR, "error in decoupling channels\n");
                     return -1;
                 }
