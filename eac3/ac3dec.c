@@ -935,39 +935,6 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
         return -1;
     }
 
-    /* recover coefficients if rematrixing is in use */
-    if(s->channel_mode == AC3_CHMODE_STEREO)
-        ff_ac3_do_rematrixing(s);
-
-    /* apply scaling to coefficients (headroom, dynrng) */
-    for(ch=1; ch<=s->channels; ch++) {
-        float gain = 2.0f * s->mul_bias;
-        if(s->channel_mode == AC3_CHMODE_DUALMONO) {
-            gain *= s->dynamic_range[ch-1];
-        } else {
-            gain *= s->dynamic_range[0];
-        }
-        for(i=0; i<s->end_freq[ch]; i++) {
-            s->transform_coeffs[ch][i] *= gain;
-        }
-    }
-
-    ff_ac3_do_imdct(s);
-
-    /* downmix output if needed */
-    if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
-            s->fbw_channels == s->out_channels)) {
-        ff_ac3_downmix(s);
-    }
-
-    /* convert float to 16-bit integer */
-    for(ch=0; ch<s->out_channels; ch++) {
-        for(i=0; i<256; i++) {
-            s->output[ch][i] += s->add_bias;
-        }
-        s->dsp.float_to_int16(s->int_output[ch], s->output[ch], 256);
-    }
-
     return 0;
 }
 
@@ -1031,6 +998,41 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
             *data_size = 0;
             return s->frame_size;
         }
+
+        /* recover coefficients if rematrixing is in use */
+        if(s->channel_mode == AC3_CHMODE_STEREO)
+            ff_ac3_do_rematrixing(s);
+
+        /* apply scaling to coefficients (headroom, dynrng) */
+        for(ch=1; ch<=s->channels; ch++) {
+            float gain = 2.0f * s->mul_bias;
+            if(s->channel_mode == AC3_CHMODE_DUALMONO) {
+                gain *= s->dynamic_range[ch-1];
+            } else {
+                gain *= s->dynamic_range[0];
+            }
+            for(i=0; i<s->end_freq[ch]; i++) {
+                s->transform_coeffs[ch][i] *= gain;
+            }
+        }
+
+        ff_ac3_do_imdct(s);
+
+        /* downmix output if needed */
+        if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
+                s->fbw_channels == s->out_channels)) {
+            ff_ac3_downmix(s);
+        }
+
+        /* convert float to 16-bit integer */
+        for(ch=0; ch<s->out_channels; ch++) {
+            for(i=0; i<256; i++) {
+                s->output[ch][i] += s->add_bias;
+            }
+            s->dsp.float_to_int16(s->int_output[ch], s->output[ch], 256);
+        }
+
+        /* interleave output samples */
         for (i = 0; i < 256; i++)
             for (ch = 0; ch < s->out_channels; ch++)
                 *(out_samples++) = s->int_output[ch][i];
