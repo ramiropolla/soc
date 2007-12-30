@@ -1153,9 +1153,7 @@ static int parse_audblk(AC3DecodeContext *s, const int blk){
     }
 
     if (s->cpl_in_use[blk]) {
-        ff_ac3_uncouple_channels(s->fbw_channels, s->start_freq[CPL_CH],
-                s->num_cpl_bands, s->channel_in_cpl, s->cpl_band_struct,
-                s->transform_coeffs, s->cpl_coords);
+        ff_ac3_uncouple_channels(s);
     }
 
     if(!s->dither_all)
