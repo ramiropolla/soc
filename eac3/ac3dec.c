@@ -114,7 +114,6 @@ const uint8_t ff_ac3_default_coeffs[8][5][2] = {
 
 typedef struct {
     int channel_mode;                       ///< channel mode (acmod)
-    int dolby_surround_mode;                ///< dolby surround mode
     int block_switch[AC3_MAX_CHANNELS];     ///< block switch flags
     int dither_flag[AC3_MAX_CHANNELS];      ///< dither flags
     int dither_all;                         ///< true if all channels are dithered
@@ -324,7 +323,6 @@ static int ac3_parse_header(AC3DecodeContext *ctx)
     ctx->channel_mode                 = hdr.channel_mode;
     center_mix_level                  = ff_ac3_mix_levels[center_levels[hdr.center_mix_level]];
     surround_mix_level                = ff_ac3_mix_levels[surround_levels[hdr.surround_mix_level]];
-    ctx->dolby_surround_mode          = hdr.dolby_surround_mode;
     ctx->lfe_on                        = hdr.lfe_on;
     ctx->bit_alloc_params.sr_shift    = hdr.sr_shift;
     ctx->sampling_rate                = hdr.sample_rate;
