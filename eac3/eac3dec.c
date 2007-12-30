@@ -1022,7 +1022,6 @@ static int parse_audblk(AC3DecodeContext *s, const int blk){
             return -1;
         }
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
-            grpsize = 3 << (s->exp_strategy[blk][ch] - 1);
             s->start_freq[ch] = 0;
             if ((!s->channel_in_cpl[ch]) && (!s->chinspx[ch])) {
                 chbwcod = get_bits(gbc, 6);
