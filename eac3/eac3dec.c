@@ -346,14 +346,14 @@ static int parse_bsi(EAC3Context *s){
 
     // calculate number of channels
     s->fbw_channels = ff_ac3_channels_tab[s->channel_mode];
-    s->num_channels = s->fbw_channels;
-    s->lfe_ch = s->num_channels+1;
+    s->channels = s->fbw_channels;
+    s->lfe_ch = s->channels+1;
     if (s->lfe_on) {
         s->start_freq[s->lfe_ch] = 0;
         s->end_freq [s->lfe_ch] = 7;
         s->nchgrps [s->lfe_ch] = 2;
         s->channel_in_cpl [s->lfe_ch] = 0;
-        s->num_channels++;
+        s->channels++;
     }
 
     s->bitstream_id = get_bits(gbc, 5);
@@ -604,7 +604,7 @@ static int parse_audfrm(EAC3Context *s){
         /* ncplregs derived from cplstre and cplexpstr - see Section E3.3.2 */
         int nchregs;
         s->channel_uses_aht[CPL_CH]=0;
-        for (ch = (num_cpl_blocks != 6); ch <= s->num_channels; ch++) {
+        for (ch = (num_cpl_blocks != 6); ch <= s->channels; ch++) {
             nchregs = 0;
             for (blk = 0; blk < 6; blk++)
                 nchregs += (s->exp_strategy[blk][ch] != EXP_REUSE);
@@ -617,7 +617,7 @@ static int parse_audfrm(EAC3Context *s){
     if (!s->snr_offset_strategy) {
         int csnroffst = (get_bits(gbc, 6) - 15) << 4;
         int snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
-        for (ch = 0; ch <= s->num_channels; ch++)
+        for (ch = 0; ch <= s->channels; ch++)
             s->snr_offset[ch] = snroffst;
     }
     /* Audio frame transient pre-noise processing data */
@@ -1050,7 +1050,7 @@ static int parse_audblk(EAC3Context *s, const int blk){
         }
     }
     /* Exponents */
-    for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++) {
+    for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
             s->dexps[ch][0] = get_bits(gbc, 4) << !ch;
             ff_ac3_decode_exponents(gbc, s->exp_strategy[blk][ch], s->nchgrps[ch],
@@ -1077,7 +1077,7 @@ static int parse_audblk(EAC3Context *s, const int blk){
     if (s->snr_offset_strategy && (!blk || get_bits1(gbc))) {
             int csnroffst = (get_bits(gbc, 6) - 15) << 4;
             int snroffst = 0;
-            for (i = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++){
+            for (i = !s->cpl_in_use[blk]; ch <= s->channels; ch++){
                 if (ch == !s->cpl_in_use[blk] || s->snr_offset_strategy == 2)
                     snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
                 s->snr_offset[ch] = snroffst;
@@ -1085,10 +1085,10 @@ static int parse_audblk(EAC3Context *s, const int blk){
     }
 
     if (s->fast_gain_syntax && get_bits1(gbc)) {
-        for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++)
+        for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++)
             s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
     } else if (!blk) {
-        for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++)
+        for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++)
             s->fast_gain[ch] = ff_ac3_fast_gain_tab[4];
     }
     if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT && get_bits1(gbc)) {
@@ -1118,7 +1118,7 @@ static int parse_audblk(EAC3Context *s, const int blk){
             }
         }
     } else if (!blk) {
-        for (ch = 0; ch <= s->num_channels; ch++) {
+        for (ch = 0; ch <= s->channels; ch++) {
             s->dba_mode[ch] = DBA_NONE;
         }
     }
@@ -1130,7 +1130,7 @@ static int parse_audblk(EAC3Context *s, const int blk){
     }
 
     /* run bit allocation */
-    for (ch = !s->cpl_in_use[blk]; ch <= s->num_channels; ch++) {
+    for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
         ff_ac3_bit_alloc_calc_psd((int8_t *)s->dexps[ch], s->start_freq[ch],
                 s->end_freq[ch], s->psd[ch], s->band_psd[ch]);
 
@@ -1157,7 +1157,7 @@ static int parse_audblk(EAC3Context *s, const int blk){
     got_cplchan = 0;
 
     /* Quantized mantissa values */
-    for (ch = 1; ch <= s->num_channels; ch++) {
+    for (ch = 1; ch <= s->channels; ch++) {
         get_eac3_transform_coeffs_ch(s, blk, ch, &m);
         if (s->cpl_in_use[blk] && s->channel_in_cpl[ch] && !got_cplchan) {
             get_eac3_transform_coeffs_ch(s, blk, CPL_CH, &m);
@@ -1243,17 +1243,17 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
     /* channel config */
     if (!avctx->request_channels && !avctx->channels) {
-        avctx->channels = c->num_channels;
+        avctx->channels = c->channels;
     } else {
-        if (c->num_channels < avctx->request_channels) {
+        if (c->channels < avctx->request_channels) {
             av_log(avctx, AV_LOG_ERROR, "Cannot upmix EAC3 from %d to %d channels.\n",
-                    c->num_channels, avctx->request_channels);
+                    c->channels, avctx->request_channels);
             return -1;
         } else {
             if (avctx->request_channels > 2
-                    && avctx->request_channels != c->num_channels) {
+                    && avctx->request_channels != c->channels) {
                 av_log(avctx, AV_LOG_ERROR, "Cannot downmix EAC3 from %d to %d channels.\n",
-                        c->num_channels, avctx->request_channels);
+                        c->channels, avctx->request_channels);
                 return -1;
             }
             avctx->channels = avctx->request_channels;
@@ -1289,7 +1289,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         // TODO: Transient Pre-Noise Cross-Fading
 
-        if (avctx->channels != c->num_channels) {
+        if (avctx->channels != c->channels) {
             ff_ac3_downmix(c->output, c->fbw_channels, avctx->channels, c->downmix_coeffs);
         }
 

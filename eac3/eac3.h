@@ -121,7 +121,7 @@ typedef struct EAC3Context{
 
 ///@defgroup channel Channel
     int fbw_channels;                           ///< Number of fbw channels
-    int num_channels;                           ///< Total of all channels
+    int channels;                               ///< Total of all channels
     int lfe_ch;                                 ///< Index of LFE channel
     float downmix_coeffs[AC3_MAX_CHANNELS][2];  ///< stereo downmix coefficients
 ///@}
