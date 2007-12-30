@@ -293,42 +293,6 @@ static void get_eac3_transform_coeffs_ch(AC3DecodeContext *s, int blk,
            s->end_freq[ch] * sizeof(*s->transform_coeffs[ch]));
 }
 
-static void remove_dithering(AC3DecodeContext *s) {
-    /* TODO: merge with same function in ac3dec.c */
-    int ch, i;
-    int end=0;
-    float *coeffs;
-    uint8_t *bap;
-    uint8_t *hebap;
-    int aht;
-
-    for(ch=1; ch<=s->fbw_channels; ch++) {
-        if(!s->dither_flag[ch]) {
-            coeffs = s->transform_coeffs[ch];
-            bap = s->bap[ch];
-            hebap = s->hebap[ch];
-            aht = s->channel_uses_aht[ch];
-            if(s->channel_in_cpl[ch])
-                end = s->start_freq[CPL_CH];
-            else
-                end = s->end_freq[ch];
-            for(i=0; i<end; i++) {
-                if(aht ? !hebap[i] : !bap[i])
-                    coeffs[i] = 0.0f;
-            }
-            if(s->channel_in_cpl[ch]) {
-                bap = s->bap[CPL_CH];
-                hebap = s->hebap[CPL_CH];
-                aht = s->channel_uses_aht[CPL_CH];
-                for(; i<s->end_freq[CPL_CH]; i++) {
-                    if(aht ? !hebap[i] : !bap[i])
-                        coeffs[i] = 0.0f;
-                }
-            }
-        }
-    }
-}
-
 static int parse_bsi(AC3DecodeContext *s){
     int i, blk;
     GetBitContext *gbc = &s->gbc;
@@ -1197,7 +1161,7 @@ static int parse_audblk(AC3DecodeContext *s, const int blk){
     }
 
     if(!s->dither_all)
-        remove_dithering(s);
+        ff_ac3_remove_dithering(s);
 
 #if 0
     //apply spectral extension

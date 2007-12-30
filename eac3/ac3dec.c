@@ -205,6 +205,8 @@ void ff_ac3_tables_init(void)
 static int ac3_decode_init(AVCodecContext *avctx)
 {
     AC3DecodeContext *ctx = avctx->priv_data;
+
+    memset(ctx, 0, sizeof(*ctx));
     ctx->avctx = avctx;
 
     ac3_common_init();
@@ -460,28 +462,34 @@ int ff_ac3_get_transform_coeffs_ch(mant_groups *m, GetBitContext *gbc, uint8_t *
  * Remove random dithering from coefficients with zero-bit mantissas
  * reference: Section 7.3.4 Dither for Zero Bit Mantissas (bap=0)
  */
-static void remove_dithering(AC3DecodeContext *ctx) {
+void ff_ac3_remove_dithering(AC3DecodeContext *s) {
     int ch, i;
     int end=0;
     float *coeffs;
     uint8_t *bap;
+    uint8_t *hebap;
+    int aht;
 
-    for(ch=1; ch<=ctx->fbw_channels; ch++) {
-        if(!ctx->dither_flag[ch]) {
-            coeffs = ctx->transform_coeffs[ch];
-            bap = ctx->bap[ch];
-            if(ctx->channel_in_cpl[ch])
-                end = ctx->start_freq[CPL_CH];
+    for(ch=1; ch<=s->fbw_channels; ch++) {
+        if(!s->dither_flag[ch]) {
+            coeffs = s->transform_coeffs[ch];
+            bap = s->bap[ch];
+            hebap = s->hebap[ch];
+            aht = s->channel_uses_aht[ch];
+            if(s->channel_in_cpl[ch])
+                end = s->start_freq[CPL_CH];
             else
-                end = ctx->end_freq[ch];
+                end = s->end_freq[ch];
             for(i=0; i<end; i++) {
-                if(bap[i] == 0)
+                if(aht ? !hebap[i] : !bap[i])
                     coeffs[i] = 0.0f;
             }
-            if(ctx->channel_in_cpl[ch]) {
-                bap = ctx->bap[CPL_CH];
-                for(; i<ctx->end_freq[CPL_CH]; i++) {
-                    if(bap[i] == 0)
+            if(s->channel_in_cpl[ch]) {
+                bap = s->bap[CPL_CH];
+                hebap = s->hebap[CPL_CH];
+                aht = s->channel_uses_aht[CPL_CH];
+                for(; i<s->end_freq[CPL_CH]; i++) {
+                    if(aht ? !hebap[i] : !bap[i])
                         coeffs[i] = 0.0f;
                 }
             }
@@ -536,7 +544,7 @@ static int get_transform_coeffs(AC3DecodeContext * ctx)
 
     /* if any channel doesn't use dithering, zero appropriate coefficients */
     if(!ctx->dither_all)
-        remove_dithering(ctx);
+        ff_ac3_remove_dithering(ctx);
 
     return 0;
 }

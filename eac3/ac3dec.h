@@ -253,6 +253,8 @@ void ff_ac3_uncouple_channels(int fbw_channels, int cpl_start_freq,
             float transform_coeffs[AC3_MAX_CHANNELS][256],
             float cpl_coords[AC3_MAX_CHANNELS][18]);
 
+void ff_ac3_remove_dithering(AC3DecodeContext *s);
+
 void ff_ac3_do_rematrixing(float (*transform_coeffs)[256], int end, int nrematbnd, int *rematflg);
 
 void ff_ac3_do_imdct_256(float *tmp_output, float *transform_coeffs,
