@@ -23,6 +23,7 @@
 #include "eac3.h"
 #include "ac3dec.h"
 #include "ac3.h"
+#include "random.h"
 
 static float idct_cos_tab[6][5];
 
@@ -189,9 +190,9 @@ static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
         hebap = s->hebap[ch][bin];
         bits = ff_bits_vs_hebap[hebap];
         if (!hebap) {
-            /* hebap=0  TODO:dithering */
+            /* hebap=0 */
             for (blk = 0; blk < 6; blk++) {
-                s->pre_mantissa[blk][ch][bin] = 0;
+                s->pre_mantissa[blk][ch][bin] = ((av_random(&s->dith_state) & 0xFFFF) / 65535.0f) - 0.5f;
             }
         } else if (hebap < 8) {
             /* Vector Quantization */
@@ -273,6 +274,36 @@ static void get_eac3_transform_coeffs_ch(EAC3Context *s, int blk,
     memset(s->transform_coeffs[ch]+s->end_freq[ch], 0,
            sizeof(s->transform_coeffs[ch]) -
            s->end_freq[ch] * sizeof(*s->transform_coeffs[ch]));
+}
+
+static void remove_dithering(EAC3Context *s) {
+    /* TODO: merge with same function in ac3dec.c */
+    int ch, i;
+    int end=0;
+    float *coeffs;
+    uint8_t *bap;
+
+    for(ch=1; ch<=s->fbw_channels; ch++) {
+        if(!s->dither_flag[ch]) {
+            coeffs = s->transform_coeffs[ch];
+            bap = s->bap[ch];
+            if(s->channel_in_cpl[ch])
+                end = s->start_freq[CPL_CH];
+            else
+                end = s->end_freq[ch];
+            for(i=0; i<end; i++) {
+                if(bap[i] == 0)
+                    coeffs[i] = 0.0f;
+            }
+            if(s->channel_in_cpl[ch]) {
+                bap = s->bap[CPL_CH];
+                for(; i<s->end_freq[CPL_CH]; i++) {
+                    if(bap[i] == 0)
+                        coeffs[i] = 0.0f;
+                }
+            }
+        }
+    }
 }
 
 static int parse_bsi(EAC3Context *s){
@@ -488,6 +519,7 @@ static int parse_audfrm(EAC3Context *s){
     }
     s->dither_flag_syntax = get_bits1(gbc);
     if (!s->dither_flag_syntax) {
+        s->dither_all = 1;
         for (ch = 1; ch <= s->fbw_channels; ch++)
             s->dither_flag[ch] = 1; /* dither on */
     }
@@ -639,8 +671,11 @@ static int parse_audblk(EAC3Context *s, const int blk){
         }
     }
     if (s->dither_flag_syntax) {
+        s->dither_all = 1;
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             s->dither_flag[ch] = get_bits1(gbc);
+            if(!s->dither_flag[ch])
+                s->dither_all = 0;
         }
     }
 
@@ -1129,6 +1164,9 @@ static int parse_audblk(EAC3Context *s, const int blk){
                 s->num_cpl_bands, s->channel_in_cpl, s->cpl_band_struct,
                 s->transform_coeffs, s->cpl_coords);
     }
+
+    if(!s->dither_all)
+        remove_dithering(s);
 
 #if 0
     //apply spectral extension

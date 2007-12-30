@@ -164,6 +164,7 @@ typedef struct EAC3Context{
 ///@}
 
 ///@defgroup dithering Zero-Mantissa Dithering
+    int dither_all;                     ///< Indicates whether all channels use dithering
     int dither_flag[AC3_MAX_CHANNELS];  ///< Dither flag (dithflag)
     AVRandomState dith_state;           ///< for dither generation
 ///@}

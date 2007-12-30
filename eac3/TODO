@@ -22,7 +22,6 @@ Features:
       E-AC3 dependent stream(s) for extra channels.
 
 General:
-* Use dither flags
 * Merge decoding contexts for AC3 and E-AC3 decoders
 * Remove duplicated code between AC3 and E-AC3 decoders
 * Try to simplify and document AHT decoding
