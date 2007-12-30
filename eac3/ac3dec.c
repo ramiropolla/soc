@@ -48,6 +48,7 @@ float ff_ac3_scale_factors[25];
 /** table for grouping exponents */
 static uint8_t exp_ungroup_tab[128][3];
 
+
 /** tables for ungrouping mantissas */
 static float b1_mantissas[32][3];
 static float b2_mantissas[128][3];
@@ -935,9 +936,8 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
     }
 
     /* recover coefficients if rematrixing is in use */
-    if(s->channel_mode == AC3_CHMODE_STEREO) {
+    if(s->channel_mode == AC3_CHMODE_STEREO)
         ff_ac3_do_rematrixing(s);
-    }
 
     /* apply scaling to coefficients (headroom, dynrng) */
     for(ch=1; ch<=s->channels; ch++) {
