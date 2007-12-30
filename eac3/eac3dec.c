@@ -20,10 +20,27 @@
  */
 
 #include "avcodec.h"
-#include "eac3.h"
-#include "ac3dec.h"
 #include "ac3.h"
+#include "ac3dec.h"
 #include "random.h"
+
+/** Channel gain adaptive quantization mode */
+typedef enum {
+    EAC3_GAQ_NO =0,
+    EAC3_GAQ_12,
+    EAC3_GAQ_14,
+    EAC3_GAQ_124
+} EAC3GaqMode;
+
+/** Stream Type */
+typedef enum {
+    EAC3_STREAM_TYPE_INDEPENDENT = 0,
+    EAC3_STREAM_TYPE_DEPENDENT,
+    EAC3_STREAM_TYPE_AC3_CONVERT,
+    EAC3_STREAM_TYPE_RESERVED
+} EAC3StreamType;
+
+#define EAC3_SR_CODE_REDUCED  3
 
 static float idct_cos_tab[6][5];
 
@@ -40,7 +57,7 @@ static void log_missing_feature(AVCodecContext *avctx, const char *log){
 }
 
 #if 0
-static void spectral_extension(EAC3Context *s){
+static void spectral_extension(AC3DecodeContext *s){
     //Now turned off, because there are no samples for testing it.
     int copystartmant, copyendmant, copyindex, insertindex;
     int wrapflag[18];
@@ -152,7 +169,7 @@ static void spectral_extension(EAC3Context *s){
 }
 #endif
 
-static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
+static void get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
     int bin, blk, gs;
     int hebap, end_bap, gaq_mode, bits, pre_mantissa, remap, log_gain;
     float mant;
@@ -244,7 +261,7 @@ static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
     }
 }
 
-static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
+static void idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk){
     // TODO fast IDCT
     int bin, i;
     float tmp;
@@ -257,7 +274,7 @@ static void idct_transform_coeffs_ch(EAC3Context *s, int ch, int blk){
     }
 }
 
-static void get_eac3_transform_coeffs_ch(EAC3Context *s, int blk,
+static void get_eac3_transform_coeffs_ch(AC3DecodeContext *s, int blk,
         int ch, mant_groups *m){
     if (!s->channel_uses_aht[ch]) {
         ff_ac3_get_transform_coeffs_ch(m, &s->gbc, s->dexps[ch], s->bap[ch],
@@ -276,7 +293,7 @@ static void get_eac3_transform_coeffs_ch(EAC3Context *s, int blk,
            s->end_freq[ch] * sizeof(*s->transform_coeffs[ch]));
 }
 
-static void remove_dithering(EAC3Context *s) {
+static void remove_dithering(AC3DecodeContext *s) {
     /* TODO: merge with same function in ac3dec.c */
     int ch, i;
     int end=0;
@@ -312,7 +329,7 @@ static void remove_dithering(EAC3Context *s) {
     }
 }
 
-static int parse_bsi(EAC3Context *s){
+static int parse_bsi(AC3DecodeContext *s){
     int i, blk;
     GetBitContext *gbc = &s->gbc;
 
@@ -507,7 +524,7 @@ static int parse_bsi(EAC3Context *s){
     return 0;
 } /* end of bsi */
 
-static int parse_audfrm(EAC3Context *s){
+static int parse_audfrm(AC3DecodeContext *s){
     int blk, ch;
     int ac3_exponent_strategy, parse_aht_info, parse_spx_atten_data;
     int parse_transient_proc_info;
@@ -668,7 +685,7 @@ static int parse_audfrm(EAC3Context *s){
     return 0;
 } /* end of audfrm */
 
-static int parse_audblk(EAC3Context *s, const int blk){
+static int parse_audblk(AC3DecodeContext *s, const int blk){
     //int grp, sbnd, n, bin;
     int seg, bnd, ch, i, chbwcod, grpsize;
     int got_cplchan;
@@ -1194,7 +1211,7 @@ static int parse_audblk(EAC3Context *s, const int blk){
 /**
  * Performs Inverse MDCT transform
  */
-static void do_imdct(EAC3Context *ctx){
+static void do_imdct(AC3DecodeContext *ctx){
     int ch;
 
     for (ch = 1; ch <= ctx->fbw_channels + ctx->lfe_on; ch++) {
@@ -1220,7 +1237,7 @@ static void do_imdct(EAC3Context *ctx){
 static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         uint8_t *buf, int buf_size){
     int16_t *out_samples = (int16_t *)data;
-    EAC3Context *c = (EAC3Context *)avctx->priv_data;
+    AC3DecodeContext *c = (AC3DecodeContext *)avctx->priv_data;
     int k, i, blk, ch;
 
     *data_size = 0;
@@ -1327,7 +1344,7 @@ static void eac3_tables_init(void) {
 }
 
 static int eac3_decode_init(AVCodecContext *avctx){
-    EAC3Context *ctx = avctx->priv_data;
+    AC3DecodeContext *ctx = avctx->priv_data;
 
     ctx->avctx = avctx;
     ac3_common_init();
@@ -1349,7 +1366,7 @@ static int eac3_decode_init(AVCodecContext *avctx){
 }
 
 static int eac3_decode_end(AVCodecContext *avctx){
-    EAC3Context *ctx = avctx->priv_data;
+    AC3DecodeContext *ctx = avctx->priv_data;
     ff_mdct_end(&ctx->imdct_512);
     ff_mdct_end(&ctx->imdct_256);
 
@@ -1360,7 +1377,7 @@ AVCodec eac3_decoder = {
     .name = "E-AC3",
     .type = CODEC_TYPE_AUDIO,
     .id = CODEC_ID_EAC3,
-    .priv_data_size = sizeof (EAC3Context),
+    .priv_data_size = sizeof (AC3DecodeContext),
     .init = eac3_decode_init,
     .close = eac3_decode_end,
     .decode = eac3_decode_frame,
