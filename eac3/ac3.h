@@ -43,6 +43,8 @@
 #define EXP_D25   2
 #define EXP_D45   3
 
+#define AC3_OUTPUT_LFEON  8
+
 /** Delta bit allocation strategy */
 typedef enum {
     DBA_REUSE = 0,

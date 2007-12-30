@@ -110,8 +110,6 @@ const uint8_t ff_ac3_default_coeffs[8][5][2] = {
 #undef AC3_MAX_CHANNELS
 #define AC3_MAX_CHANNELS 7
 
-#define AC3_OUTPUT_LFEON  8
-
 typedef struct {
     int channel_mode;                       ///< channel mode (acmod)
     int block_switch[AC3_MAX_CHANNELS];     ///< block switch flags

@@ -358,6 +358,12 @@ static int parse_bsi(EAC3Context *s){
         s->channels++;
     }
 
+    /* set default output to all source channels */
+    s->out_channels = s->channels;
+    s->output_mode = s->channel_mode;
+    if(s->lfe_on)
+        s->output_mode |= AC3_OUTPUT_LFEON;
+
     s->bitstream_id = get_bits(gbc, 5);
     if (s->bitstream_id < 11 || s->bitstream_id > 16) {
         av_log(s->avctx, AV_LOG_ERROR, "bitstream id is not within 11 and 16\n");
@@ -1239,23 +1245,13 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     avctx->bit_rate = c->bit_rate;
 
     /* channel config */
-    if (!avctx->request_channels && !avctx->channels) {
-        avctx->channels = c->channels;
-    } else {
-        if (c->channels < avctx->request_channels) {
-            av_log(avctx, AV_LOG_ERROR, "Cannot upmix EAC3 from %d to %d channels.\n",
-                    c->channels, avctx->request_channels);
-            return -1;
-        } else {
-            if (avctx->request_channels > 2
-                    && avctx->request_channels != c->channels) {
-                av_log(avctx, AV_LOG_ERROR, "Cannot downmix EAC3 from %d to %d channels.\n",
-                        c->channels, avctx->request_channels);
-                return -1;
-            }
-            avctx->channels = avctx->request_channels;
-        }
+    c->out_channels = c->channels;
+    if (avctx->request_channels > 0 && avctx->request_channels <= 2 &&
+        avctx->request_channels < c->channels) {
+        c->out_channels = avctx->request_channels;
+        c->output_mode  = avctx->request_channels == 1 ? AC3_CHMODE_MONO : AC3_CHMODE_STEREO;
     }
+    avctx->channels = c->out_channels;
 
     for (blk = 0; blk < c->num_blocks; blk++) {
         if (parse_audblk(c, blk)) {
@@ -1286,8 +1282,9 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         // TODO: Transient Pre-Noise Cross-Fading
 
-        if (avctx->channels != c->channels) {
-            ff_ac3_downmix(c->output, c->fbw_channels, avctx->channels, c->downmix_coeffs);
+        if(c->channels != c->out_channels && !((c->output_mode & AC3_OUTPUT_LFEON) &&
+                c->fbw_channels == c->out_channels)) {
+            ff_ac3_downmix(c->output, c->fbw_channels, c->output_mode, c->downmix_coeffs);
         }
 
         // convert float to 16-bit integer

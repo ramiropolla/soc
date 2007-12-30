@@ -126,6 +126,8 @@ typedef struct EAC3Context{
     int channels;                               ///< Total of all channels
     int lfe_ch;                                 ///< Index of LFE channel
     float downmix_coeffs[AC3_MAX_CHANNELS][2];  ///< stereo downmix coefficients
+    int output_mode;                            ///< output channel configuration
+    int out_channels;                           ///< number of output channels
 ///@}
 
 ///@defgroup dynrng Dynamic Range
