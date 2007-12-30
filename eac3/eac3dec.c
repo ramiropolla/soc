@@ -28,8 +28,6 @@ static float idct_cos_tab[6][5];
 
 static int gaq_ungroup_tab[32][3];
 
-static float gaq_scale_factors[3][17];
-
 static void log_missing_feature(AVCodecContext *avctx, const char *log){
     av_log(avctx, AV_LOG_ERROR, "%s is not implemented. If you want to help, "
             "update your FFmpeg version to the newest one from SVN. If the "
@@ -213,12 +211,12 @@ static void get_transform_coeffs_aht_ch(EAC3Context *s, int ch){
                 pre_mantissa = get_sbits(gbc, bits-log_gain);
                 if (log_gain == 0) {
                     // Gk = 1, GAQ mode = 0, or hebap is outside of GAQ range
-                    mant = pre_mantissa * gaq_scale_factors[0][bits];
+                    mant = pre_mantissa * ff_ac3_scale_factors[bits-1];
                     remap = 1;
                 } else if (pre_mantissa == -(1 << (bits-log_gain-1))) {
                     // large mantissa
                     pre_mantissa = get_sbits(gbc, bits-(log_gain==1));
-                    mant = pre_mantissa * gaq_scale_factors[log_gain][bits];
+                    mant = pre_mantissa * ff_ac3_scale_factors[bits-(log_gain==1)-1];
                     remap = 1;
                 } else {
                     // small mantissa
@@ -1279,13 +1277,6 @@ static void eac3_tables_init(void) {
         gaq_ungroup_tab[i][0] = i / 9;
         gaq_ungroup_tab[i][1] = (i % 9) / 3;
         gaq_ungroup_tab[i][2] = i % 3;
-    }
-
-    // initialize GAQ scale factors
-    for(i=1; i<17; i++) {
-        gaq_scale_factors[0][i] = 2.0f/((1<<i)-1);
-        gaq_scale_factors[1][i] = 1.0f/((1<<(i-1))-1);
-        gaq_scale_factors[2][i] = 3.0f/((1<<(i+1))-2);
     }
 }
 
