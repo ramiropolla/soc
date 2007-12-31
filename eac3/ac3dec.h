@@ -85,6 +85,7 @@ typedef struct AC3DecodeContext {
     int bitstream_id;   ///< Bit stream identification (bsid)
     int center_mix_level;   ///< Center mix level index
     int surround_mix_level; ///< Surround mix level index
+    int eac3;               ///< indicates if current frame is E-AC3
 ///@}
 
 ///@defgroup audfrm Frame Syntax Parameters

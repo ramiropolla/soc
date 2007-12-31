@@ -330,8 +330,10 @@ int ff_ac3_parse_frame_header(AC3DecodeContext *s)
     s->surround_mix_level = 6;  // -6.0dB
 
     if(s->bitstream_id <= 10) {
+        s->eac3 = 0;
         return ac3_parse_header(s);
     } else {
+        s->eac3 = 1;
         return ff_eac3_parse_header(s);
     }
 }
@@ -970,7 +972,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
 
 static int parse_audio_block(AC3DecodeContext *s, int blk)
 {
-    if(s->bitstream_id <= 10)
+    if(!s->eac3)
         return ac3_parse_audio_block(s, blk);
     else
         return ff_eac3_parse_audio_block(s, blk);
