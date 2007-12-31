@@ -980,6 +980,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
     init_get_bits(&s->gbc, buf, buf_size * 8);
 
     /* parse the syncinfo */
+    *data_size = 0;
     err = ff_ac3_parse_frame_header(s);
     if(err) {
         switch(err) {
