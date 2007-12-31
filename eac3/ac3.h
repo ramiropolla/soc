@@ -81,9 +81,7 @@ typedef struct {
     uint16_t sync_word;
     uint16_t crc1;
     uint8_t sr_code;
-    uint8_t frame_size_code;
     uint8_t bitstream_id;
-    uint8_t bitstream_mode;
     uint8_t channel_mode;
     uint8_t lfe_on;
     /** @} */
