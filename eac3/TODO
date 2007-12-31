@@ -22,7 +22,7 @@ Features:
       E-AC3 dependent stream(s) for extra channels.
 
 General:
-* Merge the AC3 and E-AC3 decoders into a single decoder which handles both
+* Merge the block parsing functions for AC3 and E-AC3
 * Try to simplify and document AHT decoding
 
 Cosmetic:
