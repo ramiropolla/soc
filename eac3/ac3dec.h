@@ -246,6 +246,8 @@ typedef struct {
     int b4ptr;
 } mant_groups;
 
+int ff_ac3_parse_frame_header(AC3DecodeContext *s);
+
 int ff_ac3_get_transform_coeffs_ch(AC3DecodeContext *s, int ch, mant_groups *m);
 
 void ff_ac3_uncouple_channels(AC3DecodeContext *s);

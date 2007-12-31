@@ -237,35 +237,8 @@ static int ac3_decode_init(AVCodecContext *avctx)
  */
 static int ac3_parse_header(AC3DecodeContext *s)
 {
-    AC3HeaderInfo hdr;
     GetBitContext *gbc = &s->gbc;
-    int err, i;
-
-    err = ff_ac3_parse_header(gbc->buffer, &hdr);
-    if(err)
-        return err;
-
-    /* get decoding parameters from header info */
-    s->bit_alloc_params.sr_code     = hdr.sr_code;
-    s->channel_mode                 = hdr.channel_mode;
-    s->lfe_on                       = hdr.lfe_on;
-    s->bit_alloc_params.sr_shift    = hdr.sr_shift;
-    s->sample_rate                  = hdr.sample_rate;
-    s->bit_rate                     = hdr.bit_rate;
-    s->channels                     = hdr.channels;
-    s->fbw_channels                 = s->channels - s->lfe_on;
-    s->lfe_ch                       = s->fbw_channels + 1;
-    s->frame_size                   = hdr.frame_size;
-
-    /* set default output to all source channels */
-    s->out_channels = s->channels;
-    s->output_mode = s->channel_mode;
-    if(s->lfe_on)
-        s->output_mode |= AC3_OUTPUT_LFEON;
-
-    /* set default mix levels */
-    s->center_mix_level = 5;    // -4.5dB
-    s->surround_mix_level = 6;  // -6.0dB
+    int i;
 
     /* skip over portion of header which has already been read */
     skip_bits(gbc, 16); // skip the sync_word
@@ -312,6 +285,48 @@ static int ac3_parse_header(AC3DecodeContext *s)
     }
 
     return 0;
+}
+
+/**
+ * Common function to parse AC3 or E-AC3 frame header
+ */
+int ff_ac3_parse_frame_header(AC3DecodeContext *s)
+{
+    AC3HeaderInfo hdr;
+    int err;
+
+    err = ff_ac3_parse_header(s->gbc.buffer, &hdr);
+    if(err)
+        return err;
+
+    /* get decoding parameters from header info */
+    s->bit_alloc_params.sr_code     = hdr.sr_code;
+    s->channel_mode                 = hdr.channel_mode;
+    s->lfe_on                       = hdr.lfe_on;
+    s->bit_alloc_params.sr_shift    = hdr.sr_shift;
+    s->sample_rate                  = hdr.sample_rate;
+    s->bit_rate                     = hdr.bit_rate;
+    s->channels                     = hdr.channels;
+    s->fbw_channels                 = s->channels - s->lfe_on;
+    s->lfe_ch                       = s->fbw_channels + 1;
+    s->frame_size                   = hdr.frame_size;
+
+    /* set default output to all source channels */
+    s->out_channels = s->channels;
+    s->output_mode = s->channel_mode;
+    if(s->lfe_on)
+        s->output_mode |= AC3_OUTPUT_LFEON;
+
+    /* set default mix levels */
+    s->center_mix_level = 5;    // -4.5dB
+    s->surround_mix_level = 6;  // -6.0dB
+
+    if(hdr.bitstream_id <= 10) {
+        return ac3_parse_header(s);
+    } else {
+        av_log(s->avctx, AV_LOG_ERROR, "E-AC3 misdetected as AC-3\n");
+        return AC3_PARSE_ERROR_BSID;
+    }
 }
 
 /**
@@ -961,7 +976,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
     init_get_bits(&s->gbc, buf, buf_size * 8);
 
     /* parse the syncinfo */
-    err = ac3_parse_header(s);
+    err = ff_ac3_parse_frame_header(s);
     if(err) {
         switch(err) {
             case AC3_PARSE_ERROR_SYNC:
