@@ -295,6 +295,7 @@ static int parse_bsi(AC3DecodeContext *s){
     int i, blk;
     GetBitContext *gbc = &s->gbc;
 
+    skip_bits(gbc, 16); // skip the sync word
     s->stream_type = get_bits(gbc, 2);
     if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
         log_missing_feature(s->avctx, "Dependent substream");
@@ -303,9 +304,17 @@ static int parse_bsi(AC3DecodeContext *s){
         av_log(s->avctx, AV_LOG_ERROR, "Reserved stream type\n");
         return -1;
     }
+
     s->substreamid = get_bits(gbc, 3);
-    s->frame_size = (get_bits(gbc, 11) + 1) * 2;
-    s->sr_code = get_bits(gbc, 2);
+    if (s->substreamid) {
+        // TODO: allow user to select which substream to decode
+        av_log(s->avctx, AV_LOG_INFO, "Skipping additional substream #%d\n",
+               s->substreamid);
+        return -1;
+    }
+
+    skip_bits(gbc, 11); // skip frame size
+    skip_bits(gbc, 2);  // skip samplerate code
     if (s->sr_code == EAC3_SR_CODE_REDUCED) {
         /* The E-AC3 specification does not tell how to handle reduced sample
            rates in bit allocation.  The best assumption would be that it is
@@ -318,36 +327,11 @@ static int parse_bsi(AC3DecodeContext *s){
         s->num_blocks = 6;
 #endif
     } else {
-        s->num_blocks = ff_eac3_blocks[get_bits(gbc, 2)];
+        skip_bits(gbc, 2); // skip number of blocks code
     }
-    s->sample_rate = ff_ac3_sample_rate_tab[s->sr_code];
-    s->bit_rate = s->frame_size * s->sample_rate * 8 / (s->num_blocks * 256);
-    s->channel_mode = get_bits(gbc, 3);
-    s->lfe_on = get_bits1(gbc);
-
-    // calculate number of channels
-    s->fbw_channels = ff_ac3_channels_tab[s->channel_mode];
-    s->channels = s->fbw_channels;
-    s->lfe_ch = s->channels+1;
-    if (s->lfe_on) {
-        s->start_freq[s->lfe_ch] = 0;
-        s->end_freq [s->lfe_ch] = 7;
-        s->nchgrps [s->lfe_ch] = 2;
-        s->channel_in_cpl [s->lfe_ch] = 0;
-        s->channels++;
-    }
-
-    /* set default output to all source channels */
-    s->out_channels = s->channels;
-    s->output_mode = s->channel_mode;
-    if(s->lfe_on)
-        s->output_mode |= AC3_OUTPUT_LFEON;
-
-    s->bitstream_id = get_bits(gbc, 5);
-    if (s->bitstream_id < 11 || s->bitstream_id > 16) {
-        av_log(s->avctx, AV_LOG_ERROR, "bitstream id is not within 11 and 16\n");
-        return -1;
-    }
+    skip_bits(gbc, 3); // skip channel mode
+    skip_bits1(gbc); // skip lfe indicator
+    skip_bits(gbc, 5); // skip bitstream id
 
     for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
         skip_bits(gbc, 5); // skip dialog normalization
@@ -365,10 +349,6 @@ static int parse_bsi(AC3DecodeContext *s){
         }
     }
 #endif
-
-    /* set default mix levels */
-    s->center_mix_level = 5;    // -4.5dB
-    s->surround_mix_level = 6;  // -6.0dB
 
     if (get_bits1(gbc)) {
         /* Mixing metadata */
@@ -634,6 +614,17 @@ static int parse_audfrm(AC3DecodeContext *s){
 
     return 0;
 } /* end of audfrm */
+
+int ff_eac3_parse_header(AC3DecodeContext *s)
+{
+    int err;
+
+    err = parse_bsi(s);
+    if(err)
+        return err;
+    err = parse_audfrm(s);
+    return err;
+}
 
 static int parse_audblk(AC3DecodeContext *s, const int blk){
     //int grp, sbnd, n, bin;
@@ -1164,18 +1155,13 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     *data_size = 0;
     c->syncword = 0;
     init_get_bits(&c->gbc, buf, buf_size*8);
-    c->syncword = get_bits(&c->gbc, 16);
 
-    if (c->syncword != 0x0B77)
+    if(ff_ac3_parse_frame_header(c)) {
         return -1;
+    }
 
-    if (parse_bsi(c) || parse_audfrm(c))
-        return -1;
-
-    if (c->substreamid) {
-        // TODO: allow user to select which substream to decode
-        av_log(avctx, AV_LOG_INFO, "Skipping additional substream #%d\n",
-               c->substreamid);
+    if(c->bitstream_id <= 10) {
+        av_log(avctx, AV_LOG_ERROR, "AC3 misdetected as E-AC3\n");
         return -1;
     }
 

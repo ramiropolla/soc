@@ -248,6 +248,9 @@ typedef struct {
 
 int ff_ac3_parse_frame_header(AC3DecodeContext *s);
 
+/* TEMPORARY SOLUTION */
+int ff_eac3_parse_header(AC3DecodeContext *s);
+
 int ff_ac3_get_transform_coeffs_ch(AC3DecodeContext *s, int ch, mant_groups *m);
 
 void ff_ac3_uncouple_channels(AC3DecodeContext *s);

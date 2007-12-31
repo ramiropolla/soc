@@ -310,22 +310,28 @@ int ff_ac3_parse_frame_header(AC3DecodeContext *s)
     s->fbw_channels                 = s->channels - s->lfe_on;
     s->lfe_ch                       = s->fbw_channels + 1;
     s->frame_size                   = hdr.frame_size;
+    s->bitstream_id                 = hdr.bitstream_id;
+    s->num_blocks                   = hdr.num_blocks;
 
     /* set default output to all source channels */
     s->out_channels = s->channels;
     s->output_mode = s->channel_mode;
-    if(s->lfe_on)
+    if(s->lfe_on) {
         s->output_mode |= AC3_OUTPUT_LFEON;
+        s->start_freq[s->lfe_ch] = 0;
+        s->end_freq[s->lfe_ch] = 7;
+        s->nchgrps[s->lfe_ch] = 2;
+        s->channel_in_cpl[s->lfe_ch] = 0;
+    }
 
     /* set default mix levels */
     s->center_mix_level = 5;    // -4.5dB
     s->surround_mix_level = 6;  // -6.0dB
 
-    if(hdr.bitstream_id <= 10) {
+    if(s->bitstream_id <= 10) {
         return ac3_parse_header(s);
     } else {
-        av_log(s->avctx, AV_LOG_ERROR, "E-AC3 misdetected as AC-3\n");
-        return AC3_PARSE_ERROR_BSID;
+        return ff_eac3_parse_header(s);
     }
 }
 
@@ -838,8 +844,6 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
                 memset(bit_alloc_stages, 3, AC3_MAX_CHANNELS);
         }
     }
-    s->start_freq[s->lfe_ch] = 0;
-    s->end_freq[s->lfe_ch] = 7;
 
     /* decode exponents for each channel */
     for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
@@ -995,6 +999,11 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
                 av_log(avctx, AV_LOG_ERROR, "invalid header\n");
                 break;
         }
+        return -1;
+    }
+
+    if(s->bitstream_id > 10) {
+        av_log(avctx, AV_LOG_ERROR, "E-AC3 misdetected as AC3\n");
         return -1;
     }
 
