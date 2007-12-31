@@ -49,9 +49,10 @@ int ff_ac3_parse_header(const uint8_t buf[7], AC3HeaderInfo *hdr)
 
     /* read ahead to bsid to make sure this is AC-3, not E-AC-3 */
     hdr->bitstream_id = show_bits_long(&gbc, 29) & 0x1F;
-    if(hdr->bitstream_id > 10)
+    if(hdr->bitstream_id > 16)
         return AC3_PARSE_ERROR_BSID;
 
+    if(hdr->bitstream_id <= 10) {
     hdr->crc1 = get_bits(&gbc, 16);
     hdr->sr_code = get_bits(&gbc, 2);
     if(hdr->sr_code == 3)
@@ -82,6 +83,35 @@ int ff_ac3_parse_header(const uint8_t buf[7], AC3HeaderInfo *hdr)
     hdr->channels = ff_ac3_channels_tab[hdr->channel_mode] + hdr->lfe_on;
     hdr->frame_size = ff_ac3_frame_size_tab[frame_size_code][hdr->sr_code] * 2;
     hdr->num_blocks = 6;
+    } else {
+        hdr->crc1 = 0;
+        skip_bits(&gbc, 2); // skip stream type
+        skip_bits(&gbc, 3); // skip substream id
+
+        hdr->frame_size = (get_bits(&gbc, 11) + 1) << 1;
+        if(hdr->frame_size < AC3_HEADER_SIZE)
+            return AC3_PARSE_ERROR_FRAME_SIZE;
+
+        hdr->sr_code = get_bits(&gbc, 2);
+        if (hdr->sr_code == 3) {
+            int sr_code2 = get_bits(&gbc, 2);
+            if(sr_code2 == 3)
+                return AC3_PARSE_ERROR_SAMPLE_RATE;
+            hdr->sample_rate = ff_ac3_sample_rate_tab[sr_code2] / 2;
+            hdr->sr_shift = 1;
+            hdr->num_blocks = 6;
+        } else {
+            hdr->num_blocks = eac3_blocks[get_bits(&gbc, 2)];
+            hdr->sample_rate = ff_ac3_sample_rate_tab[hdr->sr_code];
+        }
+
+        hdr->channel_mode = get_bits(&gbc, 3);
+        hdr->lfe_on = get_bits1(&gbc);
+
+        hdr->bit_rate = (uint32_t)(16.0 * hdr->frame_size * hdr->sample_rate /
+                        (hdr->num_blocks * 256.0));
+        hdr->channels = ff_ac3_channels_tab[hdr->channel_mode] + hdr->lfe_on;
+    }
 
     return 0;
 }
@@ -90,66 +120,24 @@ static int ac3_sync(AVCodecContext *avctx, const uint8_t *buf, int *channels, in
                     int *bit_rate, int *samples)
 {
     int err;
-    unsigned int sr_code, channel_mode, bitstream_id, lfe_on;
-    unsigned int stream_type, substream_id, frame_size, sr_code2, num_blocks_code;
-    GetBitContext bits;
     AC3HeaderInfo hdr;
 
     err = ff_ac3_parse_header(buf, &hdr);
 
-    if(err < 0 && err != -2)
-        return 0;
+    if(err)
+        return err;
 
-    bitstream_id = hdr.bitstream_id;
-    if(bitstream_id <= 10) {             /* Normal AC-3 */
-        if(avctx->codec_id == CODEC_ID_EAC3)
-            avctx->codec_id = CODEC_ID_AC3;
+    if(hdr.bitstream_id <= 10) {
+        avctx->codec_id = CODEC_ID_AC3;
+    } else {
+        avctx->codec_id = CODEC_ID_EAC3;
+    }
+
         *sample_rate = hdr.sample_rate;
         *bit_rate = hdr.bit_rate;
         *channels = hdr.channels;
-        *samples = AC3_FRAME_SIZE;
+        *samples = hdr.num_blocks * 256;
         return hdr.frame_size;
-    } else if (bitstream_id > 10 && bitstream_id <= 16) { /* Enhanced AC-3 */
-        if(avctx->codec_id == CODEC_ID_AC3)
-            avctx->codec_id = CODEC_ID_EAC3;
-        init_get_bits(&bits, &buf[2], (AC3_HEADER_SIZE-2) * 8);
-        stream_type = get_bits(&bits, 2);
-        substream_id = get_bits(&bits, 3);
-
-        if (stream_type != 0 || substream_id != 0)
-            return 0;   /* Currently don't support additional streams */
-
-        frame_size = get_bits(&bits, 11) + 1;
-        if(frame_size*2 < AC3_HEADER_SIZE)
-            return 0;
-
-        sr_code = get_bits(&bits, 2);
-        if (sr_code == 3) {
-            sr_code2 = get_bits(&bits, 2);
-            num_blocks_code = 3;
-
-            if(sr_code2 == 3)
-                return 0;
-
-            *sample_rate = ff_ac3_sample_rate_tab[sr_code2] / 2;
-        } else {
-            num_blocks_code = get_bits(&bits, 2);
-
-            *sample_rate = ff_ac3_sample_rate_tab[sr_code];
-        }
-
-        channel_mode = get_bits(&bits, 3);
-        lfe_on = get_bits1(&bits);
-
-        *samples = eac3_blocks[num_blocks_code] * 256;
-        *bit_rate = frame_size * (*sample_rate) * 16 / (*samples);
-        *channels = ff_ac3_channels_tab[channel_mode] + lfe_on;
-
-        return frame_size * 2;
-    }
-
-    /* Unsupported bitstream version */
-    return 0;
 }
 
 static int ac3_parse_init(AVCodecParserContext *s1)
