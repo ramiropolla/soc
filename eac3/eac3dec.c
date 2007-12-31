@@ -1153,7 +1153,6 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     int k, i, blk, ch;
 
     *data_size = 0;
-    c->syncword = 0;
     init_get_bits(&c->gbc, buf, buf_size*8);
 
     if(ff_ac3_parse_frame_header(c)) {

@@ -72,7 +72,6 @@ typedef struct AC3DecodeContext {
 
 ///@defgroup bsi Bit Stream Information
 ///@{
-    int syncword;       ///< AC3 frame sync word
     int stream_type;    ///< Stream type (strmtyp)
     int substreamid;    ///< Substream identification
     int frame_size;     ///< Frame size, in bytes
