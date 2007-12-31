@@ -1149,85 +1149,85 @@ static int parse_audblk(AC3DecodeContext *s, const int blk){
 static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         uint8_t *buf, int buf_size){
     int16_t *out_samples = (int16_t *)data;
-    AC3DecodeContext *c = (AC3DecodeContext *)avctx->priv_data;
+    AC3DecodeContext *s = (AC3DecodeContext *)avctx->priv_data;
     int k, i, blk, ch;
 
     *data_size = 0;
-    init_get_bits(&c->gbc, buf, buf_size*8);
+    init_get_bits(&s->gbc, buf, buf_size*8);
 
-    if(ff_ac3_parse_frame_header(c)) {
+    if(ff_ac3_parse_frame_header(s)) {
         return -1;
     }
 
-    if(c->bitstream_id <= 10) {
+    if(s->bitstream_id <= 10) {
         av_log(avctx, AV_LOG_ERROR, "AC3 misdetected as E-AC3\n");
         return -1;
     }
 
-    avctx->sample_rate = c->sample_rate;
-    avctx->bit_rate = c->bit_rate;
+    avctx->sample_rate = s->sample_rate;
+    avctx->bit_rate = s->bit_rate;
 
     /* channel config */
-    c->out_channels = c->channels;
+    s->out_channels = s->channels;
     if (avctx->request_channels > 0 && avctx->request_channels <= 2 &&
-        avctx->request_channels < c->channels) {
-        c->out_channels = avctx->request_channels;
-        c->output_mode  = avctx->request_channels == 1 ? AC3_CHMODE_MONO : AC3_CHMODE_STEREO;
+        avctx->request_channels < s->channels) {
+        s->out_channels = avctx->request_channels;
+        s->output_mode  = avctx->request_channels == 1 ? AC3_CHMODE_MONO : AC3_CHMODE_STEREO;
     }
-    avctx->channels = c->out_channels;
+    avctx->channels = s->out_channels;
 
-    for (blk = 0; blk < c->num_blocks; blk++) {
-        if (parse_audblk(c, blk)) {
-            av_log(c->avctx, AV_LOG_ERROR, "Error in parse_audblk\n");
+    for (blk = 0; blk < s->num_blocks; blk++) {
+        if (parse_audblk(s, blk)) {
+            av_log(avctx, AV_LOG_ERROR, "Error in parse_audblk\n");
             return -1;
         }
 
         /* recover coefficients if rematrixing is in use */
-        if (c->channel_mode == AC3_CHMODE_STEREO)
-            ff_ac3_do_rematrixing(c);
+        if (s->channel_mode == AC3_CHMODE_STEREO)
+            ff_ac3_do_rematrixing(s);
 
         /* apply scaling to coefficients (dialnorm, dynrng) */
-        for (ch = 1; ch <= c->fbw_channels + c->lfe_on; ch++) {
+        for (ch = 1; ch <= s->fbw_channels + s->lfe_on; ch++) {
             float gain=2.0f;
-            if (c->channel_mode == AC3_CHMODE_DUALMONO) {
-                gain *= c->dynamic_range[ch-1];
+            if (s->channel_mode == AC3_CHMODE_DUALMONO) {
+                gain *= s->dynamic_range[ch-1];
             } else {
-                gain *= c->dynamic_range[0];
+                gain *= s->dynamic_range[0];
             }
-            for (i = 0; i < c->end_freq[ch]; i++) {
-                c->transform_coeffs[ch][i] *= gain;
+            for (i = 0; i < s->end_freq[ch]; i++) {
+                s->transform_coeffs[ch][i] *= gain;
             }
         }
 
-        ff_ac3_do_imdct(c);
+        ff_ac3_do_imdct(s);
 
         // TODO: Transient Pre-Noise Cross-Fading
 
-        if(c->channels != c->out_channels && !((c->output_mode & AC3_OUTPUT_LFEON) &&
-                c->fbw_channels == c->out_channels)) {
-            ff_ac3_set_downmix_coeffs(c);
-            ff_ac3_downmix(c);
+        if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
+                s->fbw_channels == s->out_channels)) {
+            ff_ac3_set_downmix_coeffs(s);
+            ff_ac3_downmix(s);
         }
 
         // convert float to 16-bit integer
         for (ch = 0; ch < avctx->channels; ch++) {
             for (i = 0; i < AC3_BLOCK_SIZE; i++) {
-                c->output[ch][i] = c->output[ch][i] * c->mul_bias +
-                    c->add_bias;
+                s->output[ch][i] = s->output[ch][i] * s->mul_bias +
+                                   s->add_bias;
             }
-            c->dsp.float_to_int16(c->int_output[ch], c->output[ch],
+            s->dsp.float_to_int16(s->int_output[ch], s->output[ch],
                     AC3_BLOCK_SIZE);
         }
         for (k = 0; k < AC3_BLOCK_SIZE; k++) {
             for (i = 0; i < avctx->channels; i++) {
-                *(out_samples++) = c->int_output[i][k];
+                *(out_samples++) = s->int_output[i][k];
             }
         }
     }
 
-    *data_size = c->num_blocks * 256 * avctx->channels * sizeof (int16_t); // TODO is ok?
+    *data_size = s->num_blocks * 256 * avctx->channels * sizeof(int16_t);
 
-    return c->frame_size;
+    return s->frame_size;
 }
 
 static void eac3_tables_init(void) {
