@@ -94,6 +94,7 @@ typedef struct {
     uint32_t bit_rate;
     uint8_t channels;
     uint16_t frame_size;
+    uint8_t num_blocks;
     /** @} */
 } AC3HeaderInfo;
 

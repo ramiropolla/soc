@@ -81,6 +81,7 @@ int ff_ac3_parse_header(const uint8_t buf[7], AC3HeaderInfo *hdr)
     hdr->bit_rate = (ff_ac3_bitrate_tab[frame_size_code>>1] * 1000) >> hdr->sr_shift;
     hdr->channels = ff_ac3_channels_tab[hdr->channel_mode] + hdr->lfe_on;
     hdr->frame_size = ff_ac3_frame_size_tab[frame_size_code][hdr->sr_code] * 2;
+    hdr->num_blocks = 6;
 
     return 0;
 }
