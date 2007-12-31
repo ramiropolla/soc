@@ -25,6 +25,9 @@
 
 #include "avfilter.h"
 
+/* default to 25 fps */
+static const AVRational default_rate = (AVRational) {25,1};
+
 typedef struct {
     uint64_t timebase;
     uint64_t pts;
@@ -34,15 +37,16 @@ typedef struct {
 static int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     FPSContext *fps = ctx->priv;
-    int framerate;
+    AVRational rate;
 
-    /* TODO: support framerates specified as decimals or fractions */
-    if(args && sscanf(args, "%d", &framerate))
-        fps->timebase = AV_TIME_BASE / framerate;
-    else
-        /* default to 25 fps */
-        fps->timebase = AV_TIME_BASE / 25;
+    rate = default_rate;
 
+    if (args && (av_parse_video_frame_rate(&rate, args) < 0)) {
+        av_log(ctx, AV_LOG_ERROR, "Invalid frame rate: \"%s\"\n", args);
+        rate = default_rate;
+    }
+
+    fps->timebase = ((int64_t)AV_TIME_BASE * rate.den) / rate.num;
     return 0;
 }
 
