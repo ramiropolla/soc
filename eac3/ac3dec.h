@@ -84,6 +84,8 @@ typedef struct AC3DecodeContext {
     int channel_mode;   ///< Channel mode (acmod)
     int lfe_on;         ///< Low frequency effect channel on (lfeon)
     int bitstream_id;   ///< Bit stream identification (bsid)
+    int center_mix_level;   ///< Center mix level index
+    int surround_mix_level; ///< Surround mix level index
 ///@}
 
 ///@defgroup audfrm Frame Syntax Parameters
@@ -255,6 +257,8 @@ void ff_ac3_do_rematrixing(AC3DecodeContext *s);
 void ff_ac3_do_imdct(AC3DecodeContext *s);
 
 void ff_ac3_downmix(AC3DecodeContext *s);
+
+void ff_ac3_set_downmix_coeffs(AC3DecodeContext *s);
 
 /** Adjustments in dB gain */
 #define LEVEL_PLUS_3DB          1.4142135623730950

@@ -239,7 +239,6 @@ static int ac3_parse_header(AC3DecodeContext *s)
 {
     AC3HeaderInfo hdr;
     GetBitContext *gbc = &s->gbc;
-    float center_mix_level, surround_mix_level;
     int err, i;
 
     err = ff_ac3_parse_header(gbc->buffer, &hdr);
@@ -265,8 +264,8 @@ static int ac3_parse_header(AC3DecodeContext *s)
         s->output_mode |= AC3_OUTPUT_LFEON;
 
     /* set default mix levels */
-    center_mix_level = LEVEL_MINUS_4POINT5DB;
-    surround_mix_level = LEVEL_MINUS_6DB;
+    s->center_mix_level = 5;    // -4.5dB
+    s->surround_mix_level = 6;  // -6.0dB
 
     /* skip over portion of header which has already been read */
     skip_bits(gbc, 16); // skip the sync_word
@@ -277,9 +276,9 @@ static int ac3_parse_header(AC3DecodeContext *s)
         skip_bits(gbc, 2); // skip dsurmod
     } else {
         if((s->channel_mode & 1) && s->channel_mode != AC3_CHMODE_MONO)
-            center_mix_level = ff_ac3_mix_levels[center_levels[get_bits(gbc, 2)]];
+            s->center_mix_level = center_levels[get_bits(gbc, 2)];
         if(s->channel_mode & 4)
-            surround_mix_level = ff_ac3_mix_levels[surround_levels[get_bits(gbc, 2)]];
+            s->surround_mix_level = surround_levels[get_bits(gbc, 2)];
     }
     skip_bits1(gbc); // skip lfeon
 
@@ -312,25 +311,34 @@ static int ac3_parse_header(AC3DecodeContext *s)
         } while(i--);
     }
 
-    /* set stereo downmixing coefficients
-       reference: Section 7.8.2 Downmixing Into Two Channels */
+    return 0;
+}
+
+/**
+ * Set stereo downmixing coefficients based on frame header info.
+ * reference: Section 7.8.2 Downmixing Into Two Channels
+ */
+void ff_ac3_set_downmix_coeffs(AC3DecodeContext *s)
+{
+    int i;
+    float cmix = ff_ac3_mix_levels[s->center_mix_level];
+    float smix = ff_ac3_mix_levels[s->surround_mix_level];
+
     for(i=0; i<s->fbw_channels; i++) {
         s->downmix_coeffs[i][0] = ff_ac3_mix_levels[ff_ac3_default_coeffs[s->channel_mode][i][0]];
         s->downmix_coeffs[i][1] = ff_ac3_mix_levels[ff_ac3_default_coeffs[s->channel_mode][i][1]];
     }
     if(s->channel_mode > 1 && s->channel_mode & 1) {
-        s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = center_mix_level;
+        s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = cmix;
     }
     if(s->channel_mode == AC3_CHMODE_2F1R || s->channel_mode == AC3_CHMODE_3F1R) {
         int nf = s->channel_mode - 2;
-        s->downmix_coeffs[nf][0] = s->downmix_coeffs[nf][1] = surround_mix_level * LEVEL_MINUS_3DB;
+        s->downmix_coeffs[nf][0] = s->downmix_coeffs[nf][1] = smix * LEVEL_MINUS_3DB;
     }
     if(s->channel_mode == AC3_CHMODE_2F2R || s->channel_mode == AC3_CHMODE_3F2R) {
         int nf = s->channel_mode - 4;
-        s->downmix_coeffs[nf][0] = s->downmix_coeffs[nf+1][1] = surround_mix_level;
+        s->downmix_coeffs[nf][0] = s->downmix_coeffs[nf+1][1] = smix;
     }
-
-    return 0;
 }
 
 /**
@@ -1023,6 +1031,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
         /* downmix output if needed */
         if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
                 s->fbw_channels == s->out_channels)) {
+            ff_ac3_set_downmix_coeffs(s);
             ff_ac3_downmix(s);
         }
 

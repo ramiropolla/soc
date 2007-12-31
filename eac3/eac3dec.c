@@ -366,12 +366,9 @@ static int parse_bsi(AC3DecodeContext *s){
     }
 #endif
 
-    /* set stereo downmixing coefficients
-       reference: Section 7.8.2 Downmixing Into Two Channels */
-    for (i = 0; i < s->fbw_channels; i++) {
-        s->downmix_coeffs[i][0] = ff_ac3_mix_levels[ff_ac3_default_coeffs[s->channel_mode][i][0]];
-        s->downmix_coeffs[i][1] = ff_ac3_mix_levels[ff_ac3_default_coeffs[s->channel_mode][i][1]];
-    }
+    /* set default mix levels */
+    s->center_mix_level = 5;    // -4.5dB
+    s->surround_mix_level = 6;  // -6.0dB
 
     if (get_bits1(gbc)) {
         /* Mixing metadata */
@@ -382,21 +379,12 @@ static int parse_bsi(AC3DecodeContext *s){
             if (s->channel_mode & 1) {
                 /* if three front channels exist */
                 skip_bits(gbc, 3); //skip Lt/Rt center mix level
-                s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = ff_ac3_mix_levels[get_bits(gbc, 3)];
+                s->center_mix_level = get_bits(gbc, 3);
             }
             if (s->channel_mode & 4) {
                 /* if a surround channel exists */
-                float surmixlev;
                 skip_bits(gbc, 3); //skip Lt/Rt surround mix level
-                surmixlev = ff_ac3_mix_levels[get_bits(gbc, 3)];
-                if (s->channel_mode & 2) {
-                    //two surround channels
-                    s->downmix_coeffs[s->channel_mode-4][0] = s->downmix_coeffs[s->channel_mode-3][1] =
-                        surmixlev;
-                } else {
-                    s->downmix_coeffs[s->channel_mode-2][0] = s->downmix_coeffs[s->channel_mode-2][1] =
-                        surmixlev * LEVEL_MINUS_3DB;
-                }
+                s->surround_mix_level = get_bits(gbc, 3);
             }
         }
         if (s->lfe_on && get_bits1(gbc)) {
@@ -1232,6 +1220,7 @@ static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         if(c->channels != c->out_channels && !((c->output_mode & AC3_OUTPUT_LFEON) &&
                 c->fbw_channels == c->out_channels)) {
+            ff_ac3_set_downmix_coeffs(c);
             ff_ac3_downmix(c);
         }
 
