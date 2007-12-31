@@ -127,12 +127,6 @@ static int ac3_sync(AVCodecContext *avctx, const uint8_t *buf, int *channels, in
     if(err)
         return err;
 
-    if(hdr.bitstream_id <= 10) {
-        avctx->codec_id = CODEC_ID_AC3;
-    } else {
-        avctx->codec_id = CODEC_ID_EAC3;
-    }
-
     *sample_rate = hdr.sample_rate;
     *bit_rate = hdr.bit_rate;
     *channels = hdr.channels;
@@ -152,14 +146,6 @@ static int ac3_parse_init(AVCodecParserContext *s1)
 
 AVCodecParser ac3_parser = {
     { CODEC_ID_AC3 },
-    sizeof(AACAC3ParseContext),
-    ac3_parse_init,
-    ff_aac_ac3_parse,
-    NULL,
-};
-
-AVCodecParser eac3_parser = {
-    { CODEC_ID_EAC3 },
     sizeof(AACAC3ParseContext),
     ac3_parse_init,
     ff_aac_ac3_parse,

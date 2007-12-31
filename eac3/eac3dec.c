@@ -626,7 +626,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     return err;
 }
 
-static int parse_audblk(AC3DecodeContext *s, const int blk){
+int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     //int grp, sbnd, n, bin;
     int seg, bnd, ch, i, chbwcod, grpsize;
     int got_cplchan;
@@ -1146,91 +1146,7 @@ static int parse_audblk(AC3DecodeContext *s, const int blk){
     return 0;
 }
 
-static int eac3_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
-        uint8_t *buf, int buf_size){
-    int16_t *out_samples = (int16_t *)data;
-    AC3DecodeContext *s = (AC3DecodeContext *)avctx->priv_data;
-    int k, i, blk, ch;
-
-    *data_size = 0;
-    init_get_bits(&s->gbc, buf, buf_size*8);
-
-    if(ff_ac3_parse_frame_header(s)) {
-        return -1;
-    }
-
-    if(s->bitstream_id <= 10) {
-        av_log(avctx, AV_LOG_ERROR, "AC3 misdetected as E-AC3\n");
-        return -1;
-    }
-
-    avctx->sample_rate = s->sample_rate;
-    avctx->bit_rate = s->bit_rate;
-
-    /* channel config */
-    s->out_channels = s->channels;
-    if (avctx->request_channels > 0 && avctx->request_channels <= 2 &&
-        avctx->request_channels < s->channels) {
-        s->out_channels = avctx->request_channels;
-        s->output_mode  = avctx->request_channels == 1 ? AC3_CHMODE_MONO : AC3_CHMODE_STEREO;
-    }
-    avctx->channels = s->out_channels;
-
-    for (blk = 0; blk < s->num_blocks; blk++) {
-        if (parse_audblk(s, blk)) {
-            av_log(avctx, AV_LOG_ERROR, "Error in parse_audblk\n");
-            return -1;
-        }
-
-        /* recover coefficients if rematrixing is in use */
-        if (s->channel_mode == AC3_CHMODE_STEREO)
-            ff_ac3_do_rematrixing(s);
-
-        /* apply scaling to coefficients (dialnorm, dynrng) */
-        for (ch = 1; ch <= s->fbw_channels + s->lfe_on; ch++) {
-            float gain=2.0f;
-            if (s->channel_mode == AC3_CHMODE_DUALMONO) {
-                gain *= s->dynamic_range[ch-1];
-            } else {
-                gain *= s->dynamic_range[0];
-            }
-            for (i = 0; i < s->end_freq[ch]; i++) {
-                s->transform_coeffs[ch][i] *= gain;
-            }
-        }
-
-        ff_ac3_do_imdct(s);
-
-        // TODO: Transient Pre-Noise Cross-Fading
-
-        if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
-                s->fbw_channels == s->out_channels)) {
-            ff_ac3_set_downmix_coeffs(s);
-            ff_ac3_downmix(s);
-        }
-
-        // convert float to 16-bit integer
-        for (ch = 0; ch < avctx->channels; ch++) {
-            for (i = 0; i < AC3_BLOCK_SIZE; i++) {
-                s->output[ch][i] = s->output[ch][i] * s->mul_bias +
-                                   s->add_bias;
-            }
-            s->dsp.float_to_int16(s->int_output[ch], s->output[ch],
-                    AC3_BLOCK_SIZE);
-        }
-        for (k = 0; k < AC3_BLOCK_SIZE; k++) {
-            for (i = 0; i < avctx->channels; i++) {
-                *(out_samples++) = s->int_output[i][k];
-            }
-        }
-    }
-
-    *data_size = s->num_blocks * 256 * avctx->channels * sizeof(int16_t);
-
-    return s->frame_size;
-}
-
-static void eac3_tables_init(void) {
+void ff_eac3_tables_init(void) {
     int blk, i;
 
     // initialize IDCT cosine table for use with AHT
@@ -1247,44 +1163,3 @@ static void eac3_tables_init(void) {
         gaq_ungroup_tab[i][2] = i % 3;
     }
 }
-
-static int eac3_decode_init(AVCodecContext *avctx){
-    AC3DecodeContext *ctx = avctx->priv_data;
-
-    ctx->avctx = avctx;
-    ac3_common_init();
-    ff_ac3_tables_init();
-    eac3_tables_init();
-    av_init_random(0, &ctx->dith_state);
-    ff_mdct_init(&ctx->imdct_256, 8, 1);
-    ff_mdct_init(&ctx->imdct_512, 9, 1);
-    dsputil_init(&ctx->dsp, avctx);
-    if (ctx->dsp.float_to_int16 == ff_float_to_int16_c) {
-        ctx->add_bias = 385.0f;
-        ctx->mul_bias = 1.0f;
-    } else {
-        ctx->add_bias = 0.0f;
-        ctx->mul_bias = 32767.0f;
-    }
-    ff_ac3_window_init(ctx->window);
-    return 0;
-}
-
-static int eac3_decode_end(AVCodecContext *avctx){
-    AC3DecodeContext *ctx = avctx->priv_data;
-    ff_mdct_end(&ctx->imdct_512);
-    ff_mdct_end(&ctx->imdct_256);
-
-    return 0;
-}
-
-AVCodec eac3_decoder = {
-    .name = "E-AC3",
-    .type = CODEC_TYPE_AUDIO,
-    .id = CODEC_ID_EAC3,
-    .priv_data_size = sizeof (AC3DecodeContext),
-    .init = eac3_decode_init,
-    .close = eac3_decode_end,
-    .decode = eac3_decode_frame,
-
-};

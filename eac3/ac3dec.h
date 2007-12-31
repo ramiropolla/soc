@@ -249,6 +249,8 @@ int ff_ac3_parse_frame_header(AC3DecodeContext *s);
 
 /* TEMPORARY SOLUTION */
 int ff_eac3_parse_header(AC3DecodeContext *s);
+int ff_eac3_parse_audio_block(AC3DecodeContext *s, int blk);
+void ff_eac3_tables_init(void);
 
 int ff_ac3_get_transform_coeffs_ch(AC3DecodeContext *s, int ch, mant_groups *m);
 

@@ -212,6 +212,7 @@ static int ac3_decode_init(AVCodecContext *avctx)
 
     ac3_common_init();
     ff_ac3_tables_init();
+    ff_eac3_tables_init();
     ff_mdct_init(&s->imdct_256, 8, 1);
     ff_mdct_init(&s->imdct_512, 9, 1);
     ff_ac3_window_init(s->window);
@@ -967,6 +968,14 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
     return 0;
 }
 
+static int parse_audio_block(AC3DecodeContext *s, int blk)
+{
+    if(s->bitstream_id <= 10)
+        return ac3_parse_audio_block(s, blk);
+    else
+        return ff_eac3_parse_audio_block(s, blk);
+}
+
 /**
  * Decode a single AC-3 frame.
  */
@@ -1003,11 +1012,6 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
         return -1;
     }
 
-    if(s->bitstream_id > 10) {
-        av_log(avctx, AV_LOG_ERROR, "E-AC3 misdetected as AC3\n");
-        return -1;
-    }
-
     avctx->sample_rate = s->sample_rate;
     avctx->bit_rate = s->bit_rate;
 
@@ -1027,8 +1031,8 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
     avctx->channels = s->out_channels;
 
     /* parse the audio blocks */
-    for (blk = 0; blk < NB_BLOCKS; blk++) {
-        if (ac3_parse_audio_block(s, blk)) {
+    for (blk = 0; blk <  s->num_blocks; blk++) {
+        if (parse_audio_block(s, blk)) {
             av_log(avctx, AV_LOG_ERROR, "error parsing the audio block\n");
             *data_size = 0;
             return s->frame_size;
@@ -1073,7 +1077,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
             for (ch = 0; ch < s->out_channels; ch++)
                 *(out_samples++) = s->int_output[ch][i];
     }
-    *data_size = NB_BLOCKS * 256 * avctx->channels * sizeof (int16_t);
+    *data_size =  s->num_blocks * 256 * avctx->channels * sizeof (int16_t);
     return s->frame_size;
 }
 
