@@ -169,7 +169,7 @@ static void spectral_extension(AC3DecodeContext *s){
 }
 #endif
 
-static void get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
+void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
     int bin, blk, gs;
     int hebap, end_bap, gaq_mode, bits, pre_mantissa, remap, log_gain;
     float mant;
@@ -261,7 +261,7 @@ static void get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
     }
 }
 
-static void idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk){
+void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk){
     // TODO fast IDCT
     int bin, i;
     float tmp;
@@ -272,23 +272,6 @@ static void idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk){
         }
         s->transform_coeffs[ch][bin] = tmp * ff_ac3_scale_factors[s->dexps[ch][bin]];
     }
-}
-
-static void get_eac3_transform_coeffs_ch(AC3DecodeContext *s, int blk,
-        int ch, mant_groups *m){
-    if (!s->channel_uses_aht[ch]) {
-        ff_ac3_get_transform_coeffs_ch(s, ch, m);
-    } else if (s->channel_uses_aht[ch] == 1) {
-        get_transform_coeffs_aht_ch(s, ch);
-        s->channel_uses_aht[ch] = -1; /* AHT info for this frame has been read - do not read again */
-    }
-    if (s->channel_uses_aht[ch]) {
-        idct_transform_coeffs_ch(s, ch, blk);
-    }
-
-    memset(s->transform_coeffs[ch]+s->end_freq[ch], 0,
-           sizeof(s->transform_coeffs[ch]) -
-           s->end_freq[ch] * sizeof(*s->transform_coeffs[ch]));
 }
 
 static int parse_bsi(AC3DecodeContext *s){
@@ -1122,20 +1105,10 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     got_cplchan = 0;
 
     /* Quantized mantissa values */
-    for (ch = 1; ch <= s->channels; ch++) {
-        get_eac3_transform_coeffs_ch(s, blk, ch, &m);
-        if (s->cpl_in_use[blk] && s->channel_in_cpl[ch] && !got_cplchan) {
-            get_eac3_transform_coeffs_ch(s, blk, CPL_CH, &m);
-            got_cplchan = 1;
-        }
+    if(ff_ac3_get_transform_coeffs(s, blk)) {
+        av_log(s->avctx, AV_LOG_ERROR, "error decoding transform coefficients\n");
+        return -1;
     }
-
-    if (s->cpl_in_use[blk]) {
-        ff_ac3_uncouple_channels(s);
-    }
-
-    if(!s->dither_all)
-        ff_ac3_remove_dithering(s);
 
 #if 0
     //apply spectral extension
