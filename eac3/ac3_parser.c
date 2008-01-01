@@ -125,7 +125,7 @@ static int ac3_sync(AVCodecContext *avctx, const uint8_t *buf, int *channels, in
     err = ff_ac3_parse_header(buf, &hdr);
 
     if(err)
-        return err;
+        return 0;
 
     *sample_rate = hdr.sample_rate;
     *bit_rate = hdr.bit_rate;
