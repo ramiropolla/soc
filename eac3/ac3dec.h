@@ -176,7 +176,7 @@ typedef struct AC3DecodeContext {
 ///@}
 
 ///@defgroup exponents Exponents
-    int nchgrps[AC3_MAX_CHANNELS];                  ///< Number of fbw channel exponent groups
+    int num_exp_groups[AC3_MAX_CHANNELS];           ///< Number of exponent groups
     uint8_t dexps[AC3_MAX_CHANNELS][AC3_MAX_COEFS]; ///< Differential exponents
     int exp_strategy[MAX_BLOCKS][AC3_MAX_CHANNELS]; ///< Channel exponent strategy (chexpstr)
 ///@}

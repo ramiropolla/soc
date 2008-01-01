@@ -997,7 +997,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                 s->exp_strategy[blk][ch] = get_bits(gbc, 2);
         }
     }
-    s->nchgrps[CPL_CH] = (s->end_freq[CPL_CH] - s->start_freq[CPL_CH]) /
+    s->num_exp_groups[CPL_CH] = (s->end_freq[CPL_CH] - s->start_freq[CPL_CH]) /
                          (3 << (s->exp_strategy[blk][CPL_CH] - 1));
 
     /* Channel bandwidth code */
@@ -1017,14 +1017,14 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                 s->end_freq[ch] = ((chbwcod + 12) * 3) + 37; /* (ch is not coupled) */
             }
             grpsize = 3 << (s->exp_strategy[blk][ch] - 1);
-            s->nchgrps[ch] = (s->end_freq[ch] + grpsize - 4) / grpsize;
+            s->num_exp_groups[ch] = (s->end_freq[ch] + grpsize - 4) / grpsize;
         }
     }
     /* Exponents */
     for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
             s->dexps[ch][0] = get_bits(gbc, 4) << !ch;
-            ff_ac3_decode_exponents(gbc, s->exp_strategy[blk][ch], s->nchgrps[ch],
+            ff_ac3_decode_exponents(gbc, s->exp_strategy[blk][ch], s->num_exp_groups[ch],
                     s->dexps[ch][0], s->dexps[ch]+s->start_freq[ch]+!!ch);
             if (ch != CPL_CH && ch != s->lfe_ch)
                 skip_bits(gbc, 2); /* skip gainrng */
