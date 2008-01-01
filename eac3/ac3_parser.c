@@ -103,6 +103,7 @@ int ff_ac3_parse_header(const uint8_t buf[7], AC3HeaderInfo *hdr)
         } else {
             hdr->num_blocks = eac3_blocks[get_bits(&gbc, 2)];
             hdr->sample_rate = ff_ac3_sample_rate_tab[hdr->sr_code];
+            hdr->sr_shift = 0;
         }
 
         hdr->channel_mode = get_bits(&gbc, 3);
