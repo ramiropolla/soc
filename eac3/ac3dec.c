@@ -989,14 +989,6 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
     return 0;
 }
 
-static int parse_audio_block(AC3DecodeContext *s, int blk)
-{
-    if(!s->eac3)
-        return ac3_parse_audio_block(s, blk);
-    else
-        return ff_eac3_parse_audio_block(s, blk);
-}
-
 /**
  * Decode a single AC-3 frame.
  */
@@ -1053,7 +1045,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
 
     /* parse the audio blocks */
     for (blk = 0; blk <  s->num_blocks; blk++) {
-        if (parse_audio_block(s, blk)) {
+        if (ff_eac3_parse_audio_block(s, blk)) {
             av_log(avctx, AV_LOG_ERROR, "error parsing the audio block\n");
             *data_size = 0;
             return s->frame_size;

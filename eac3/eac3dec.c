@@ -620,12 +620,12 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     m.b1ptr = m.b2ptr = m.b4ptr = 3;
 
     /* Block switch and dither flags */
-    if (s->block_switch_syntax) {
+    if (!s->eac3 || s->block_switch_syntax) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             s->block_switch[ch] = get_bits1(gbc);
         }
     }
-    if (s->dither_flag_syntax) {
+    if (!s->eac3 || s->dither_flag_syntax) {
         s->dither_all = 1;
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             s->dither_flag[ch] = get_bits1(gbc);
@@ -643,7 +643,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
         }
     }
     /* Spectral extension strategy information */
-    if ((!blk) || get_bits1(gbc)) {
+    if (s->eac3 && (!blk || get_bits1(gbc))) {
         s->spxinu = get_bits1(gbc);
         if (s->spxinu) {
             log_missing_feature(s->avctx, "Spectral extension");
@@ -754,10 +754,20 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
 #endif
 
     /* Coupling strategy and enhanced coupling strategy information */
+    if(!s->eac3) {
+        s->cpl_strategy_exists[blk] = get_bits1(gbc);
+        if(blk)
+            s->cpl_in_use[blk] = s->cpl_in_use[blk-1];
+    }
     if (s->cpl_strategy_exists[blk]) {
+        if (!s->eac3)
+            s->cpl_in_use[blk] = get_bits1(gbc);
         if (s->cpl_in_use[blk]) {
+            if (s->eac3)
             ecpl_in_use = get_bits1(gbc);
-            if (s->channel_mode == AC3_CHMODE_STEREO) {
+            else
+                ecpl_in_use = 0;
+            if (s->eac3 && s->channel_mode == AC3_CHMODE_STEREO) {
                 s->channel_in_cpl[1] = 1;
                 s->channel_in_cpl[2] = 1;
             } else {
@@ -776,7 +786,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
 
                 /* get start and end subbands for coupling */
                 cpl_begin = get_bits(gbc, 4);
-                if (!s->spxinu) {
+                if (!s->eac3 || !s->spxinu) {
                     cpl_end = get_bits(gbc, 4) + 3;
                 } else {
                     cpl_end = s->spxbegf - 1;
@@ -796,7 +806,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                 }
 
                 /* read coupling band structure or use default */
-                if (get_bits1(gbc)) {
+                if (!s->eac3 || get_bits1(gbc)) {
                     for (bnd = 0; bnd < s->num_cpl_subbands-1; bnd++) {
                         s->cpl_band_struct[bnd] = get_bits1(gbc);
                     }
@@ -876,7 +886,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                     int cpl_coords_ch = 0;
 
                     /* determine if coupling coordinates are new or reused */
-                    if (s->first_cpl_coords[ch]) {
+                    if (s->eac3 && s->first_cpl_coords[ch]) {
                         cpl_coords_ch = 1;
                         s->first_cpl_coords[ch] = 0;
                     } else {
@@ -913,8 +923,6 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                         s->cpl_coords[2][bnd] = -s->cpl_coords[2][bnd];
                 }
             }
-            s->nchgrps[CPL_CH] = (s->end_freq[CPL_CH] - s->start_freq[CPL_CH]) /
-                (3 << (s->exp_strategy[blk][CPL_CH] - 1));
         } else {
             /* enhanced coupling in use */
             //TODO calc nchgrps[CPL_CH]
@@ -967,16 +975,31 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
         }
     }
     /* Rematrixing operation in the 2/0 mode */
-    if (s->channel_mode == AC3_CHMODE_STEREO && (!blk || get_bits1(gbc))) {
+    if (s->channel_mode == AC3_CHMODE_STEREO && ((s->eac3 && !blk) || get_bits1(gbc))) {
         /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf */
         // TODO spx in one channel
-        int end = (s->cpl_in_use[blk] || s->spxinu) ?
+        int end = (s->cpl_in_use[blk] || (s->eac3 && s->spxinu)) ?
             FFMIN(s->end_freq[1], s->end_freq[2]) : (ff_ac3_rematrix_band_tab[4]-1);
         for (bnd = 0; ff_ac3_rematrix_band_tab[bnd] <= end; bnd++) {
             s->rematrixing_flags[bnd] = get_bits1(gbc);
         }
         s->num_rematrixing_bands = bnd;
     }
+
+    /* AC-3 exponent strategy */
+    if(!s->eac3) {
+        s->exp_strategy[blk][CPL_CH] = EXP_REUSE;
+        s->exp_strategy[blk][s->lfe_ch] = EXP_REUSE;
+        for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
+            if(ch == s->lfe_ch)
+                s->exp_strategy[blk][ch] = get_bits(gbc, 1);
+            else
+                s->exp_strategy[blk][ch] = get_bits(gbc, 2);
+        }
+    }
+    s->nchgrps[CPL_CH] = (s->end_freq[CPL_CH] - s->start_freq[CPL_CH]) /
+                         (3 << (s->exp_strategy[blk][CPL_CH] - 1));
+
     /* Channel bandwidth code */
     for (ch = 1; ch <= s->fbw_channels; ch++) {
         if (!blk && s->exp_strategy[blk][ch] == EXP_REUSE) {
@@ -985,7 +1008,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
         }
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
             s->start_freq[ch] = 0;
-            if ((!s->channel_in_cpl[ch]) && (!s->chinspx[ch])) {
+            if ((!s->channel_in_cpl[ch]) && (!s->eac3 || !s->chinspx[ch])) {
                 chbwcod = get_bits(gbc, 6);
                 if (chbwcod > 60) {
                     av_log(s->avctx, AV_LOG_ERROR, "chbwcod > 60\n");
@@ -1009,7 +1032,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     }
 
     /* Bit-allocation parametric information */
-    if (s->bit_allocation_syntax) {
+    if (!s->eac3 || s->bit_allocation_syntax) {
         if (get_bits1(gbc)) {
             s->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[get_bits(gbc, 2)];   /* Table 7.6 */
             s->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[get_bits(gbc, 2)];   /* Table 7.7 */
@@ -1022,16 +1045,19 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
         }
     }
 
-    if (s->snr_offset_strategy && (!blk || get_bits1(gbc))) {
+    if ((!s->eac3 || (s->snr_offset_strategy && !blk)) && get_bits1(gbc)) {
             int csnroffst = (get_bits(gbc, 6) - 15) << 4;
             int snroffst = 0;
             for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++){
-                if (ch == !s->cpl_in_use[blk] || s->snr_offset_strategy == 2)
+                if (!s->eac3 || ch == !s->cpl_in_use[blk] || s->snr_offset_strategy == 2)
                     snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
                 s->snr_offset[ch] = snroffst;
+                if(!s->eac3)
+                    s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
             }
     }
 
+    if(s->eac3) {
     if (s->fast_gain_syntax && get_bits1(gbc)) {
         for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++)
             s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
@@ -1042,8 +1068,9 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT && get_bits1(gbc)) {
         skip_bits(gbc, 10); //Converter SNR offset
     }
+    }
     if (s->cpl_in_use[blk]) {
-        if (s->first_cpl_leak || get_bits1(gbc)) {
+        if ((s->eac3 && s->first_cpl_leak) || get_bits1(gbc)) {
             s->bit_alloc_params.cpl_fast_leak = get_bits(gbc, 3);
             s->bit_alloc_params.cpl_slow_leak = get_bits(gbc, 3);
         }
@@ -1051,7 +1078,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
             s->first_cpl_leak = 0;
     }
     /* Delta bit allocation information */
-    if (s->dba_syntax && get_bits1(gbc)) {
+    if ((!s->eac3 || s->dba_syntax) && get_bits1(gbc)) {
         for (ch = !s->cpl_in_use[blk]; ch <= s->fbw_channels; ch++) {
             s->dba_mode[ch] = get_bits(gbc, 2);
         }
@@ -1072,7 +1099,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     }
 
     /* Inclusion of unused dummy data */
-    if (s->skip_syntax && get_bits1(gbc)) {
+    if ((!s->eac3 || s->skip_syntax) && get_bits1(gbc)) {
         int skipl = get_bits(gbc, 9);
         while(skipl--) skip_bits(gbc, 8);
     }
@@ -1083,6 +1110,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                 s->end_freq[ch], s->psd[ch], s->band_psd[ch]);
 
         s->bit_alloc_params.sr_code = s->sr_code;
+        if (s->eac3)
         s->bit_alloc_params.sr_shift = 0;
 
         ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params, s->band_psd[ch],
@@ -1091,7 +1119,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                 s->dba_offsets[ch], s->dba_lengths[ch], s->dba_values[ch],
                 s->mask[ch]);
 
-        if (s->channel_uses_aht[ch] == 0)
+        if (!s->eac3 || s->channel_uses_aht[ch] == 0)
             ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
                     s->start_freq[ch], s->end_freq[ch], s->snr_offset[ch],
                     s->bit_alloc_params.floor, ff_ac3_bap_tab, s->bap[ch]);

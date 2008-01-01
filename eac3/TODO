@@ -21,7 +21,7 @@ Features:
       E-AC3 dependent stream(s) for extra channels.
 
 General:
-* Merge the block parsing functions for AC3 and E-AC3
+* Get the AC3 block decoder working with E-AC3
 * Try to simplify and document AHT decoding
 
 Cosmetic:
