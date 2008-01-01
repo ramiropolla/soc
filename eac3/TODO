@@ -4,9 +4,8 @@ Enhanced AC-3 Decoder TODO List
 Features:
 
 * Enhanced Coupling
-    - We now have one sample which uses enhanced coupling, so testing
-      and debugging can now be done.
-      http://samples.mplayerhq.hu/A-codecs/AC3/eac3/enhancedcoupling.eac3
+    - We do not have a sample which uses enhanced coupling. I thought we
+      had a sample, but it was just a bug in the decoder.
 
 * Spectral Extension
     - We do not currently have any samples which use spectral extension.
