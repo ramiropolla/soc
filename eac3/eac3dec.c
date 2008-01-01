@@ -759,7 +759,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
             s->cpl_in_use[blk] = get_bits1(gbc);
         if (s->cpl_in_use[blk]) {
             if (s->eac3)
-            ecpl_in_use = get_bits1(gbc);
+                ecpl_in_use = get_bits1(gbc);
             else
                 ecpl_in_use = 0;
             if (s->eac3 && s->channel_mode == AC3_CHMODE_STEREO) {
@@ -1044,28 +1044,28 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     }
 
     if ((!s->eac3 || (s->snr_offset_strategy && !blk)) && get_bits1(gbc)) {
-            int csnroffst = (get_bits(gbc, 6) - 15) << 4;
-            int snroffst = 0;
-            for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++){
-                if (!s->eac3 || ch == !s->cpl_in_use[blk] || s->snr_offset_strategy == 2)
-                    snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
-                s->snr_offset[ch] = snroffst;
-                if(!s->eac3)
-                    s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
-            }
+        int csnroffst = (get_bits(gbc, 6) - 15) << 4;
+        int snroffst = 0;
+        for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++){
+            if (!s->eac3 || ch == !s->cpl_in_use[blk] || s->snr_offset_strategy == 2)
+                snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
+            s->snr_offset[ch] = snroffst;
+            if(!s->eac3)
+                s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
+        }
     }
 
     if(s->eac3) {
-    if (s->fast_gain_syntax && get_bits1(gbc)) {
-        for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++)
-            s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
-    } else if (!blk) {
-        for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++)
-            s->fast_gain[ch] = ff_ac3_fast_gain_tab[4];
-    }
-    if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT && get_bits1(gbc)) {
-        skip_bits(gbc, 10); //Converter SNR offset
-    }
+        if (s->fast_gain_syntax && get_bits1(gbc)) {
+            for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++)
+                s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
+        } else if (!blk) {
+            for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++)
+                s->fast_gain[ch] = ff_ac3_fast_gain_tab[4];
+        }
+        if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT && get_bits1(gbc)) {
+            skip_bits(gbc, 10); //Converter SNR offset
+        }
     }
     if (s->cpl_in_use[blk]) {
         if ((s->eac3 && s->first_cpl_leak) || get_bits1(gbc)) {
