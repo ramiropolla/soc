@@ -1042,7 +1042,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     if (s->snr_offset_strategy && (!blk || get_bits1(gbc))) {
             int csnroffst = (get_bits(gbc, 6) - 15) << 4;
             int snroffst = 0;
-            for (i = !s->cpl_in_use[blk]; ch <= s->channels; ch++){
+            for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++){
                 if (ch == !s->cpl_in_use[blk] || s->snr_offset_strategy == 2)
                     snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
                 s->snr_offset[ch] = snroffst;
