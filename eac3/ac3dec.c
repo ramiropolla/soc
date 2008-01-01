@@ -851,6 +851,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
     for (ch = 1; ch <= fbw_channels; ch++) {
         s->start_freq[ch] = 0;
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
+            int group_size;
             int prev = s->end_freq[ch];
             if (s->channel_in_cpl[ch])
                 s->end_freq[ch] = s->start_freq[CPL_CH];
@@ -862,24 +863,22 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
                 }
                 s->end_freq[ch] = bandwidth_code * 3 + 73;
             }
+            group_size = 3 << (s->exp_strategy[blk][ch] - 1);
+            s->num_exp_groups[ch] = (s->end_freq[ch]+group_size-4) / group_size;
             if(blk > 0 && s->end_freq[ch] != prev)
                 memset(bit_alloc_stages, 3, AC3_MAX_CHANNELS);
         }
+    }
+    if (s->cpl_in_use[blk]) {
+        s->num_exp_groups[CPL_CH] = (s->end_freq[CPL_CH] - s->start_freq[CPL_CH]) /
+                                    (3 << (s->exp_strategy[blk][CPL_CH] - 1));
     }
 
     /* decode exponents for each channel */
     for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
-            int group_size, num_groups;
-            group_size = 3 << (s->exp_strategy[blk][ch] - 1);
-            if(ch == CPL_CH)
-                num_groups = (s->end_freq[ch] - s->start_freq[ch]) / group_size;
-            else if(ch == s->lfe_ch)
-                num_groups = 2;
-            else
-                num_groups = (s->end_freq[ch] + group_size - 4) / group_size;
             s->dexps[ch][0] = get_bits(gbc, 4) << !ch;
-            ff_ac3_decode_exponents(gbc, s->exp_strategy[blk][ch], num_groups, s->dexps[ch][0],
+            ff_ac3_decode_exponents(gbc, s->exp_strategy[blk][ch], s->num_exp_groups[ch], s->dexps[ch][0],
                              &s->dexps[ch][s->start_freq[ch]+!!ch]);
             if(ch != CPL_CH && ch != s->lfe_ch)
                 skip_bits(gbc, 2); /* skip gainrng */
