@@ -754,12 +754,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
 #endif
 
     /* Coupling strategy and enhanced coupling strategy information */
-    if(!s->eac3) {
-        s->cpl_strategy_exists[blk] = get_bits1(gbc);
-        if(blk)
-            s->cpl_in_use[blk] = s->cpl_in_use[blk-1];
-    }
-    if (s->cpl_strategy_exists[blk]) {
+    if ((s->eac3 && s->cpl_strategy_exists[blk]) || (!s->eac3 && get_bits1(gbc))) {
         if (!s->eac3)
             s->cpl_in_use[blk] = get_bits1(gbc);
         if (s->cpl_in_use[blk]) {
@@ -875,6 +870,9 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
             s->phase_flags_in_use = 0;
             ecpl_in_use = 0;
         }
+    } else if (!s->eac3 && blk) {
+        /* for AC3, copy coupling use strategy from last block */
+        s->cpl_in_use[blk] = s->cpl_in_use[blk-1];
     }
     /* Coupling coordinates */
     if (s->cpl_in_use[blk]) {
