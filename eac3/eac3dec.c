@@ -614,10 +614,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     int seg, bnd, ch, i, chbwcod, grpsize;
     int got_cplchan;
     int ecpl_in_use=0;
-    mant_groups m;
     GetBitContext *gbc = &s->gbc;
-
-    m.b1ptr = m.b2ptr = m.b4ptr = 3;
 
     /* Block switch and dither flags */
     if (!s->eac3 || s->block_switch_syntax) {
