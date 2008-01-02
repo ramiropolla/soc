@@ -20,6 +20,9 @@ Features:
     - Blu-ray uses AC3 for the independent stream, interleaved with
       E-AC3 dependent stream(s) for extra channels.
 
+* Adaptive Hybrid Transform (w/ GAQ and VQ)
+    - Works most of the time, but is still buggy.
+
 General:
 * Get the AC3 block decoder working with E-AC3
 * Try to simplify and document AHT decoding
