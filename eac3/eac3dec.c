@@ -183,7 +183,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
         gs = 0;
         for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
             if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < end_bap)
-                s->gaq_gain[gs++] = ff_gaq_gk[gaq_mode][get_bits1(gbc)];
+                s->gaq_gain[gs++] = ff_eac3_gaq_gk[gaq_mode][get_bits1(gbc)];
         }
     } else if (gaq_mode == EAC3_GAQ_124) {
         /* read 1.67-bit GAQ gain codes (3 codes in 5 bits) */
@@ -193,9 +193,9 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
             if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < end_bap) {
                 if(gc++ == 2) {
                     int group_gain = get_bits(gbc, 5);
-                    s->gaq_gain[gs++] = ff_gaq_gk[gaq_mode][gaq_ungroup_tab[group_gain][0]];
-                    s->gaq_gain[gs++] = ff_gaq_gk[gaq_mode][gaq_ungroup_tab[group_gain][1]];
-                    s->gaq_gain[gs++] = ff_gaq_gk[gaq_mode][gaq_ungroup_tab[group_gain][2]];
+                    s->gaq_gain[gs++] = ff_eac3_gaq_gk[gaq_mode][gaq_ungroup_tab[group_gain][0]];
+                    s->gaq_gain[gs++] = ff_eac3_gaq_gk[gaq_mode][gaq_ungroup_tab[group_gain][1]];
+                    s->gaq_gain[gs++] = ff_eac3_gaq_gk[gaq_mode][gaq_ungroup_tab[group_gain][2]];
                     gc = 0;
                 }
             }
@@ -205,7 +205,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
     gs=0;
     for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
         hebap = s->hebap[ch][bin];
-        bits = ff_bits_vs_hebap[hebap];
+        bits = ff_eac3_bits_vs_hebap[hebap];
         if (!hebap) {
             /* hebap=0 */
             for (blk = 0; blk < 6; blk++) {
@@ -215,7 +215,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
             /* Vector Quantization */
             int v = get_bits(gbc, bits);
             for (blk = 0; blk < 6; blk++) {
-                s->pre_mantissa[blk][ch][bin] = ff_vq_hebap[hebap][v][blk] / 32768.0f;
+                s->pre_mantissa[blk][ch][bin] = ff_eac3_vq_hebap[hebap][v][blk] / 32768.0f;
             }
         } else {
             /* Gain Adaptive Quantization */
@@ -1121,7 +1121,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
         else if (s->channel_uses_aht[ch] == 1)
             ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
                     s->start_freq[ch], s->end_freq[ch], s->snr_offset[ch],
-                    s->bit_alloc_params.floor, ff_ac3_hebaptab,
+                    s->bit_alloc_params.floor, ff_eac3_hebap_tab,
                     s->hebap[ch]);
     }
 
