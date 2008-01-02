@@ -48,9 +48,11 @@ extern const uint8_t ff_eac3_gaq_gk[4][3];
 extern const int16_t (*ff_eac3_vq_hebap[8])[6];
 extern const uint8_t ff_eac3_frm_expstr[32][6];
 extern const uint8_t ff_eac3_default_cpl_band_struct[18];
+#if 0
 extern const uint8_t ff_eac3_defspxbndstrc[17];
 extern const uint8_t ff_eac3_defecplbndstrc[22];
 extern const float   ff_eac3_spxattentab[32][3];
+#endif
 
 extern const uint8_t ff_ac3_rematrix_band_tab[5];
 

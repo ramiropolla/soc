@@ -1336,6 +1336,7 @@ const uint8_t ff_eac3_frm_expstr[32][6] = {
 const uint8_t ff_eac3_default_cpl_band_struct[18] =
 { 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1 };
 
+#if 0
 /**
  * Table E2.15 Default Spectral Extension Banding Structure
  */
@@ -1387,6 +1388,7 @@ const float ff_eac3_spxattentab[32][3] = {
     {0.238710401, 0.056982656, 0.013602353},
     {0.227930622, 0.051952369, 0.011841536}
 };
+#endif
 
 /**
  * Table of bin locations for rematrixing bands
