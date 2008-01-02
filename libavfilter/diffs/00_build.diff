@@ -1,6 +1,6 @@
 Index: configure
 ===================================================================
---- configure	(revision 11283)
+--- configure	(revision 11367)
 +++ configure	(working copy)
 @@ -70,6 +70,7 @@
    echo "                           and ffmpeg will be under GPL [default=no]"
@@ -10,7 +10,7 @@ Index: configure
    echo "  --enable-beosthreads     use BeOS threads [default=no]"
    echo "  --enable-os2threads      use OS/2 threads [default=no]"
    echo "  --enable-pthreads        use pthreads [default=no]"
-@@ -604,6 +605,7 @@
+@@ -621,6 +622,7 @@
  
  CONFIG_LIST="
      $COMPONENT_LIST
@@ -18,7 +18,7 @@ Index: configure
      avisynth
      beos_netserver
      ffmpeg
-@@ -1837,6 +1839,7 @@
+@@ -1873,6 +1875,7 @@
  echo "shared                    ${shared-no}"
  echo "postprocessing support    ${pp-no}"
  echo "software scaler enabled   ${swscaler-no}"
@@ -26,7 +26,7 @@ Index: configure
  echo "video hooking             ${vhook-no}"
  if enabled vhook; then
      echo "Imlib2 support            ${imlib2-no}"
-@@ -2031,6 +2034,7 @@
+@@ -2067,6 +2070,7 @@
          libavcodec/sh4    \
          libavcodec/sparc  \
          libavdevice       \
@@ -34,7 +34,7 @@ Index: configure
          libavformat       \
          libavutil         \
          libpostproc       \
-@@ -2045,6 +2049,7 @@
+@@ -2081,6 +2085,7 @@
          doc/texi2pod.pl      \
          libavcodec/Makefile  \
          libavdevice/Makefile \
@@ -42,7 +42,7 @@ Index: configure
          libavformat/Makefile \
          libavutil/Makefile   \
          libpostproc/Makefile \
-@@ -2133,3 +2138,8 @@
+@@ -2169,3 +2174,8 @@
      apply libswscale.pc sed s/^Libs:.*$/Libs:/
      apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
  fi
