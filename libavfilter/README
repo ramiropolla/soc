@@ -1,6 +1,6 @@
 This is the libavfilter SoC project!
 
-Here's what you do to try it out:
+Here is what to do to try it out:
 
 1) download current ffmpeg SVN
 2) put the directory containing this README file under the newly checked out
@@ -14,9 +14,9 @@ Here's what you do to try it out:
 WRITING FILTERS:
 
 There is some documentation on writing basic filters over at the multimedia
-wiki.  See http://wiki.multimedia.cx/index.php?title=FFmpeg_filter_howto
+wiki. See http://wiki.multimedia.cx/index.php?title=FFmpeg_filter_howto
 
-THE RIGTH DEVELOPMENT DIRECTION:
+THE RIGHT DEVELOPMENT DIRECTION:
 
 libavfilter IS a graphics library; therefore for:
 
@@ -36,7 +36,7 @@ And for the rest use ANSI C.
 THE WRONG DIRECTION:
 
 libavfilter IS NOT a wrapper around another graphics library.
-Its libavfilter's job to work with pixels; it IS NOT its job to call
+It is libavfilter's job to work with pixels; it IS NOT its job to call
 a random_lib(). That would be the last resort if all else fails.
 
 And in that remote case, there must be a need, a specific thing we
@@ -80,7 +80,7 @@ input --> split ---> fifo ----------------------> overlay --> output
             |------> fifo --> crop --> vflip --------|
 
 splits the stream into two streams, sends one stream through the crop filter
-and the vflip filter before merging is back with the other stream by overlaying
+and the vflip filter before merging it back with the other stream by overlaying
 it on top.  If you put the following text into a file graph.desc:
 
 ;-----------------------------------------------------------------------
@@ -118,5 +118,5 @@ KNOWN ISSUES:
 - if for some reason the filter chain cannot be setup (due to an unknown
   filter, bad parameters to a filter, or for some reason two filters cannot
   be linked together successfully, for example), ffplay will not display any
-  video.  It is also somewhat lacking in error messages to tell you what the
+  video.  It is also somewhat lacking error messages to tell you what the
   problem was.
