@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 11312)
+--- ffmpeg.c	(revision 11370)
 +++ ffmpeg.c	(working copy)
 @@ -36,6 +36,11 @@
  #include "avstring.h"
@@ -342,7 +342,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1275,6 +1553,10 @@
+@@ -1273,6 +1551,10 @@
                      }
                  }
              }
@@ -353,7 +353,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1680,10 +1962,21 @@
+@@ -1678,10 +1960,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          exit(1);
                      }
@@ -375,7 +375,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3782,6 +4075,9 @@
+@@ -3785,6 +4078,9 @@
  #ifdef CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
