@@ -804,7 +804,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                     }
                 } else if (!blk) {
                     for (bnd = 0; bnd < s->num_cpl_subbands-1; bnd++)
-                        s->cpl_band_struct[bnd] = ff_eac3_defcplbndstrc[bnd+cpl_begin+1];
+                        s->cpl_band_struct[bnd] = ff_eac3_default_cpl_band_struct[bnd+cpl_begin+1];
                 }
                 s->cpl_band_struct[17] = 0;
 
