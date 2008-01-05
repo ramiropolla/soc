@@ -1,0 +1,89 @@
+Index: Changelog
+===================================================================
+--- Changelog
++++ Changelog
+@@ -105,6 +105,7 @@
+ - libvorbis Vorbis decoding removed in favor of native decoder
+ - IntraX8 (J-Frame) subdecoder for WMV2 and VC-1
+ - Ogg muxer
++- RealVideo 3 and 4 decoder
+ 
+ version 0.4.9-pre1:
+ 
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile
++++ libavcodec/Makefile
+@@ -158,6 +158,8 @@
+ OBJS-$(CONFIG_RV10_ENCODER)            += rv10.o mpegvideo_enc.o motion_est.o ratecontrol.o h263.o
+ OBJS-$(CONFIG_RV20_DECODER)            += rv10.o h263.o
+ OBJS-$(CONFIG_RV20_ENCODER)            += rv10.o mpegvideo_enc.o motion_est.o ratecontrol.o h263.o
++OBJS-$(CONFIG_RV30_DECODER)            += rv30.o rv34.o h264pred.o rv30dsp.o
++OBJS-$(CONFIG_RV40_DECODER)            += rv40.o rv34.o h264pred.o
+ OBJS-$(CONFIG_SGI_DECODER)             += sgidec.o
+ OBJS-$(CONFIG_SGI_ENCODER)             += sgienc.o rle.o
+ OBJS-$(CONFIG_SHORTEN_DECODER)         += shorten.o golomb.o
+Index: libavcodec/dsputil.c
+===================================================================
+--- libavcodec/dsputil.c
++++ libavcodec/dsputil.c
+@@ -2566,6 +2566,8 @@
+ /* H264 specific */
+ void ff_h264dspenc_init(DSPContext* c, AVCodecContext *avctx);
+ 
++void ff_rv30dsp_init(DSPContext* c, AVCodecContext *avctx);
++
+ static void wmv2_mspel8_v_lowpass(uint8_t *dst, uint8_t *src, int dstStride, int srcStride, int w){
+     uint8_t *cm = ff_cropTbl + MAX_NEG_CROP;
+     int i;
+@@ -4149,6 +4151,9 @@
+ #if defined(CONFIG_H264_ENCODER)
+     ff_h264dspenc_init(c,avctx);
+ #endif
++#if defined(CONFIG_RV30_DECODER)
++    ff_rv30dsp_init(c,avctx);
++#endif
+ 
+     c->put_mspel_pixels_tab[0]= put_mspel8_mc00_c;
+     c->put_mspel_pixels_tab[1]= put_mspel8_mc10_c;
+Index: libavcodec/dsputil.h
+===================================================================
+--- libavcodec/dsputil.h
++++ libavcodec/dsputil.h
+@@ -422,6 +422,10 @@
+     void (*x8_setup_spatial_compensation)(uint8_t *src, uint8_t *dst, int linesize,
+            int * range, int * sum,  int edges);
+ 
++    /* rv30 functions */
++    qpel_mc_func put_rv30_tpel_pixels_tab[4][16];
++    qpel_mc_func avg_rv30_tpel_pixels_tab[4][16];
++
+ } DSPContext;
+ 
+ void dsputil_static_init(void);
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c
++++ libavcodec/allcodecs.c
+@@ -131,6 +131,8 @@
+     REGISTER_DECODER (RPZA, rpza);
+     REGISTER_ENCDEC  (RV10, rv10);
+     REGISTER_ENCDEC  (RV20, rv20);
++    REGISTER_DECODER (RV30, rv30);
++    REGISTER_DECODER (RV40, rv40);
+     REGISTER_ENCDEC  (SGI, sgi);
+     REGISTER_DECODER (SMACKER, smacker);
+     REGISTER_DECODER (SMC, smc);
+Index: doc/general.texi
+===================================================================
+--- doc/general.texi
++++ doc/general.texi
+@@ -164,6 +164,8 @@
+ @item H.264                  @tab     @tab  X
+ @item RealVideo 1.0          @tab  X  @tab  X
+ @item RealVideo 2.0          @tab  X  @tab  X
++@item RealVideo 3.0          @tab     @tab  X @tab not completely working
++@item RealVideo 4.0          @tab     @tab  X @tab not completely working
+ @item MJPEG                  @tab  X  @tab  X
+ @item lossless MJPEG         @tab  X  @tab  X
+ @item JPEG-LS                @tab  X  @tab  X @tab fourcc: MJLS, lossless and near-lossless is supported
