@@ -1145,32 +1145,32 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     /* run bit allocation */
     for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
         if(bit_alloc_stages[ch] > 2) {
-        ff_ac3_bit_alloc_calc_psd((int8_t *)s->dexps[ch], s->start_freq[ch],
-                s->end_freq[ch], s->psd[ch], s->band_psd[ch]);
+            ff_ac3_bit_alloc_calc_psd((int8_t *)s->dexps[ch], s->start_freq[ch],
+                    s->end_freq[ch], s->psd[ch], s->band_psd[ch]);
         }
 
         if(bit_alloc_stages[ch] > 1) {
-        s->bit_alloc_params.sr_code = s->sr_code;
-        if (s->eac3)
-        s->bit_alloc_params.sr_shift = 0;
+            s->bit_alloc_params.sr_code = s->sr_code;
+            if (s->eac3)
+            s->bit_alloc_params.sr_shift = 0;
 
-        ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params, s->band_psd[ch],
-                s->start_freq[ch], s->end_freq[ch], s->fast_gain[ch],
-                (ch == s->lfe_ch), s->dba_mode[ch], s->dba_nsegs[ch],
-                s->dba_offsets[ch], s->dba_lengths[ch], s->dba_values[ch],
-                s->mask[ch]);
+            ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params, s->band_psd[ch],
+                    s->start_freq[ch], s->end_freq[ch], s->fast_gain[ch],
+                    (ch == s->lfe_ch), s->dba_mode[ch], s->dba_nsegs[ch],
+                    s->dba_offsets[ch], s->dba_lengths[ch], s->dba_values[ch],
+                    s->mask[ch]);
         }
 
         if(bit_alloc_stages[ch] > 0) {
-        if (!s->eac3 || s->channel_uses_aht[ch] == 0)
-            ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
-                    s->start_freq[ch], s->end_freq[ch], s->snr_offset[ch],
-                    s->bit_alloc_params.floor, ff_ac3_bap_tab, s->bap[ch]);
-        else if (s->channel_uses_aht[ch] == 1)
-            ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
-                    s->start_freq[ch], s->end_freq[ch], s->snr_offset[ch],
-                    s->bit_alloc_params.floor, ff_eac3_hebap_tab,
-                    s->hebap[ch]);
+            if (!s->eac3 || s->channel_uses_aht[ch] == 0)
+                ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
+                        s->start_freq[ch], s->end_freq[ch], s->snr_offset[ch],
+                        s->bit_alloc_params.floor, ff_ac3_bap_tab, s->bap[ch]);
+            else if (s->channel_uses_aht[ch] == 1)
+                ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
+                        s->start_freq[ch], s->end_freq[ch], s->snr_offset[ch],
+                        s->bit_alloc_params.floor, ff_eac3_hebap_tab,
+                        s->hebap[ch]);
         }
     }
 
