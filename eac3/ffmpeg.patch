@@ -1,6 +1,6 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 11416)
+--- libavcodec/Makefile	(revision 11421)
 +++ libavcodec/Makefile	(working copy)
 @@ -33,7 +33,7 @@
  HEADERS = avcodec.h opt.h
@@ -11,9 +11,59 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
+Index: libavcodec/ac3_parser.c
+===================================================================
+--- libavcodec/ac3_parser.c	(revision 11421)
++++ libavcodec/ac3_parser.c	(working copy)
+@@ -38,7 +38,6 @@
+ {
+     GetBitContext gbc;
+     int frame_size_code;
+-    int num_blocks;
+ 
+     memset(hdr, 0, sizeof(*hdr));
+ 
+@@ -84,6 +83,7 @@
+         hdr->bit_rate = (ff_ac3_bitrate_tab[frame_size_code>>1] * 1000) >> hdr->sr_shift;
+         hdr->channels = ff_ac3_channels_tab[hdr->channel_mode] + hdr->lfe_on;
+         hdr->frame_size = ff_ac3_frame_size_tab[frame_size_code][hdr->sr_code] * 2;
++        hdr->num_blocks = 6;
+     } else {
+         /* Enhanced AC-3 */
+         hdr->crc1 = 0;
+@@ -101,9 +101,9 @@
+                 return AC3_PARSE_ERROR_SAMPLE_RATE;
+             hdr->sample_rate = ff_ac3_sample_rate_tab[sr_code2] / 2;
+             hdr->sr_shift = 1;
+-            num_blocks = 6;
++            hdr->num_blocks = 6;
+         } else {
+-            num_blocks = eac3_blocks[get_bits(&gbc, 2)];
++            hdr->num_blocks = eac3_blocks[get_bits(&gbc, 2)];
+             hdr->sample_rate = ff_ac3_sample_rate_tab[hdr->sr_code];
+             hdr->sr_shift = 0;
+         }
+@@ -112,7 +112,7 @@
+         hdr->lfe_on = get_bits1(&gbc);
+ 
+         hdr->bit_rate = (uint32_t)(8.0 * hdr->frame_size * hdr->sample_rate /
+-                        (num_blocks * 256.0));
++                        (hdr->num_blocks * 256.0));
+         hdr->channels = ff_ac3_channels_tab[hdr->channel_mode] + hdr->lfe_on;
+     }
+ 
+@@ -133,7 +133,7 @@
+     *sample_rate = hdr.sample_rate;
+     *bit_rate = hdr.bit_rate;
+     *channels = hdr.channels;
+-    *samples = AC3_FRAME_SIZE;
++    *samples = hdr.num_blocks * 256;
+     return hdr.frame_size;
+ }
+ 
 Index: libavcodec/ac3enc.c
 ===================================================================
---- libavcodec/ac3enc.c	(revision 11416)
+--- libavcodec/ac3enc.c	(revision 11421)
 +++ libavcodec/ac3enc.c	(working copy)
 @@ -479,7 +479,8 @@
          for(ch=0;ch<s->nb_all_channels;ch++) {
