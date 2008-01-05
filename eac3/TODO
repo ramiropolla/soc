@@ -23,6 +23,12 @@ Features:
 * Adaptive Hybrid Transform (w/ GAQ and VQ)
     - Works most of the time, but is still buggy.
 
+* Reduced Sample Rates
+    - E-AC3 has the ability to use 1/2 sample rates
+      (16kHz,22.05kHz,24kHz), but the specification does not say how to
+      handle them (if at all) in the bit allocation. It is probably
+      similar to RealAudio DolbyNet, but we need a sample to test.
+
 General:
 * Get the AC3 block decoder working with E-AC3
 * Try to simplify and document AHT decoding
