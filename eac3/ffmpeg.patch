@@ -1,32 +1,6 @@
-Index: libavcodec/aac_ac3_parser.c
-===================================================================
---- libavcodec/aac_ac3_parser.c	(revision 11360)
-+++ libavcodec/aac_ac3_parser.c	(working copy)
-@@ -50,7 +50,7 @@
- 
-         if (s->frame_size == 0) {
-             if ((s->inbuf_ptr - s->inbuf) == s->header_size) {
--                len = s->sync(s->inbuf, &channels, &sample_rate, &bit_rate,
-+                len = s->sync(avctx, s->inbuf, &channels, &sample_rate, &bit_rate,
-                               &samples);
-                 if (len == 0) {
-                     /* no sync found : move by one byte (inefficient, but simple!) */
-Index: libavcodec/aac_ac3_parser.h
-===================================================================
---- libavcodec/aac_ac3_parser.h	(revision 11360)
-+++ libavcodec/aac_ac3_parser.h	(working copy)
-@@ -30,7 +30,7 @@
-     uint8_t *inbuf_ptr;
-     int frame_size;
-     int header_size;
--    int (*sync)(const uint8_t *buf, int *channels, int *sample_rate,
-+    int (*sync)(AVCodecContext *avctx, const uint8_t *buf, int *channels, int *sample_rate,
-                 int *bit_rate, int *samples);
-     uint8_t inbuf[8192]; /* input buffer */
- } AACAC3ParseContext;
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 11360)
+--- libavcodec/Makefile	(revision 11416)
 +++ libavcodec/Makefile	(working copy)
 @@ -33,7 +33,7 @@
  HEADERS = avcodec.h opt.h
@@ -37,30 +11,9 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
-@@ -318,6 +318,7 @@
- OBJS-$(CONFIG_DCA_PARSER)              += dca_parser.o
- OBJS-$(CONFIG_DVBSUB_PARSER)           += dvbsub_parser.o
- OBJS-$(CONFIG_DVDSUB_PARSER)           += dvdsub_parser.o
-+OBJS-$(CONFIG_EAC3_PARSER)             += ac3_parser.o ac3tab.o aac_ac3_parser.o
- OBJS-$(CONFIG_H261_PARSER)             += h261_parser.o
- OBJS-$(CONFIG_H263_PARSER)             += h263_parser.o
- OBJS-$(CONFIG_H264_PARSER)             += h264_parser.o
-Index: libavcodec/aac_parser.c
-===================================================================
---- libavcodec/aac_parser.c	(revision 11360)
-+++ libavcodec/aac_parser.c	(working copy)
-@@ -38,7 +38,7 @@
- };
- 
- 
--static int aac_sync(const uint8_t *buf, int *channels, int *sample_rate,
-+static int aac_sync(AVCodecContext *avctx, const uint8_t *buf, int *channels, int *sample_rate,
-                     int *bit_rate, int *samples)
- {
-     GetBitContext bits;
 Index: libavcodec/ac3enc.c
 ===================================================================
---- libavcodec/ac3enc.c	(revision 11360)
+--- libavcodec/ac3enc.c	(revision 11416)
 +++ libavcodec/ac3enc.c	(working copy)
 @@ -479,7 +479,8 @@
          for(ch=0;ch<s->nb_all_channels;ch++) {
