@@ -298,7 +298,7 @@ static int parse_bsi(AC3DecodeContext *s){
 
     skip_bits(gbc, 11); // skip frame size
     skip_bits(gbc, 2);  // skip samplerate code
-    if (s->sr_code == EAC3_SR_CODE_REDUCED) {
+    if (s->bit_alloc_params.sr_code == EAC3_SR_CODE_REDUCED) {
         /* The E-AC3 specification does not tell how to handle reduced sample
            rates in bit allocation.  The best assumption would be that it is
            handled like AC3 DolbyNet, but we cannot be sure until we have a
@@ -306,7 +306,8 @@ static int parse_bsi(AC3DecodeContext *s){
         log_missing_feature(s->avctx, "Reduced Sampling Rates");
         return -1;
 #if 0
-        s->sr_code2 = get_bits(gbc, 2);
+        s->bit_alloc_params.sr_code = get_bits(gbc, 2);
+        s->bit_alloc_params.sr_shift = 1;
         s->num_blocks = 6;
 #endif
     } else {
@@ -416,7 +417,7 @@ static int parse_bsi(AC3DecodeContext *s){
                 skip_bits(gbc, 8); //skip Mix level, Room type and A/D converter type
             }
         }
-        if (s->sr_code != EAC3_SR_CODE_REDUCED) {
+        if (s->bit_alloc_params.sr_code != EAC3_SR_CODE_REDUCED) {
             skip_bits1(gbc); //skip Source sample rate code
         }
     }
@@ -1150,10 +1151,6 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
         }
 
         if(bit_alloc_stages[ch] > 1) {
-            s->bit_alloc_params.sr_code = s->sr_code;
-            if (s->eac3)
-            s->bit_alloc_params.sr_shift = 0;
-
             ff_ac3_bit_alloc_calc_mask(&s->bit_alloc_params, s->band_psd[ch],
                     s->start_freq[ch], s->end_freq[ch], s->fast_gain[ch],
                     (ch == s->lfe_ch), s->dba_mode[ch], s->dba_nsegs[ch],

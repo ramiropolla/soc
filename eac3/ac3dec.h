@@ -76,8 +76,6 @@ typedef struct AC3DecodeContext {
     int substreamid;    ///< Substream identification
     int frame_size;     ///< Frame size, in bytes
     int bit_rate;       ///< Bitrate, in bits-per-second
-    int sr_code;        ///< Sample rate code (fscod)
-    int sr_code2;       ///< Sample rate code 2 (fscod2)
     int sample_rate;    ///< Sample rate, in Hz
     int num_blocks;     ///< Number of audio blocks
     int channel_mode;   ///< Channel mode (acmod)
