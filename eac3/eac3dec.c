@@ -822,7 +822,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                     for (bnd = 0; bnd < s->num_cpl_subbands-1; bnd++)
                         s->cpl_band_struct[bnd] = ff_eac3_default_cpl_band_struct[bnd+cpl_begin+1];
                 }
-                s->cpl_band_struct[17] = 0;
+                s->cpl_band_struct[s->num_cpl_subbands-1] = 0;
 
                 /* calculate number of coupling bands based on band structure */
                 s->num_cpl_bands = s->num_cpl_subbands;
