@@ -28,9 +28,9 @@ typedef struct
 
 static int config_props_input(AVFilterLink *link)
 {
-    TransContext *neg = link->dst->priv;
+    TransContext *trans = link->dst->priv;
 
-    avcodec_get_chroma_sub_sample(link->format, &neg->hsub, &neg->vsub);
+    avcodec_get_chroma_sub_sample(link->format, &trans->hsub, &trans->vsub);
 
     return 0;
 }
