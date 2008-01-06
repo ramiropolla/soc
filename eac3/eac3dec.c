@@ -929,11 +929,9 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                     s->first_cpl_coords[ch] = 1;
                 }
             }
-            if ((s->channel_mode == AC3_CHMODE_STEREO) && s->phase_flags_in_use
-                    && cpl_coords_exist) {
+            if (s->channel_mode == AC3_CHMODE_STEREO && cpl_coords_exist) {
                 for (bnd = 0; bnd < s->num_cpl_bands; bnd++) {
-                    if (get_bits1(gbc))
-                        s->cpl_coords[2][bnd] = -s->cpl_coords[2][bnd];
+                    s->phase_flags[bnd] = s->phase_flags_in_use? get_bits1(gbc) : 0;
                 }
             }
         } else {
