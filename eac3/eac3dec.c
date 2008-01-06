@@ -649,8 +649,8 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     }
     /* Spectral extension strategy information */
     if (s->eac3 && (!blk || get_bits1(gbc))) {
-        s->spxinu = get_bits1(gbc);
-        if (s->spxinu) {
+        s->spx_in_use = get_bits1(gbc);
+        if (s->spx_in_use) {
 #if TEST_SPX
             if (s->channel_mode == AC3_CHMODE_MONO) {
                 s->chinspx[1] = 1;
@@ -711,7 +711,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
 #endif
 #if TEST_SPX
         } else {
-            /* !spxinu */
+            /* !spx_in_use */
             for (ch = 1; ch <= s->fbw_channels; ch++) {
                 s->chinspx[ch] = 0;
                 s->firstspxcos[ch] = 1;
@@ -722,7 +722,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
 
 #if TEST_SPX
     /* Spectral extension coordinates */
-    if (s->spxinu) {
+    if (s->spx_in_use) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             if (s->chinspx[ch]) {
                 if (s->firstspxcos[ch]) {
@@ -791,7 +791,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                 /* get start and end subbands for coupling */
                 cpl_begin = get_bits(gbc, 4);
 #if TEST_SPX
-                if (!s->eac3 || !s->spxinu) {
+                if (!s->eac3 || !s->spx_in_use) {
                     cpl_end = get_bits(gbc, 4) + 3;
                 } else {
                     cpl_end = s->spxbegf - 1;
@@ -843,7 +843,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                         s->ecpl_start_subbnd = s->ecplbegf * 2 - 10;
                     }
                 }
-                if (!s->spxinu) {
+                if (!s->spx_in_use) {
                     /* if SPX not in use */
                     s->ecplendf = get_bits(gbc, 4);
                     s->ecpl_end_subbnd = s->ecplendf + 7;
@@ -989,9 +989,9 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     }
     /* Rematrixing operation in the 2/0 mode */
     if (s->channel_mode == AC3_CHMODE_STEREO && ((s->eac3 && !blk) || get_bits1(gbc))) {
-        /* nrematbnds determined from cplinu, ecplinu, spxinu, cplbegf, ecplbegf and spxbegf */
+        /* nrematbnds determined from cplinu, ecplinu, spx_in_use, cplbegf, ecplbegf and spxbegf */
         // TODO spx in one channel
-        int end = (s->cpl_in_use[blk] || (s->eac3 && s->spxinu)) ?
+        int end = (s->cpl_in_use[blk] || (s->eac3 && s->spx_in_use)) ?
             FFMIN(s->end_freq[1], s->end_freq[2]) : (ff_ac3_rematrix_band_tab[4]-1);
         for (bnd = 0; ff_ac3_rematrix_band_tab[bnd] <= end; bnd++) {
             s->rematrixing_flags[bnd] = get_bits1(gbc);
@@ -1198,7 +1198,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
 
 #if 0
     //apply spectral extension
-    if (s->spxinu)
+    if (s->spx_in_use)
         spectral_extension(s);
 #endif
 
