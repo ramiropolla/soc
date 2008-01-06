@@ -19,7 +19,7 @@ OBJS-yes = vf_crop.o \
            vf_scale.o \
            vf_slicify.o \
            vf_split.o \
-           vf_trans.o \
+           vf_transpose.o \
            vf_vflip.o \
            avfiltergraphfile.o \
 
