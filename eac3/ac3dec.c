@@ -122,7 +122,7 @@ static const uint8_t ac3_default_coeffs[8][5][2] = {
 /**
  * Generate a Kaiser-Bessel Derived Window.
  */
-void ff_ac3_window_init(float *window)
+static void ac3_window_init(float *window)
 {
    int i, j;
    double sum = 0.0, bessel, tmp;
@@ -157,7 +157,7 @@ symmetric_dequant(int code, int levels)
 /*
  * Initialize tables at runtime.
  */
-void ff_ac3_tables_init(void)
+static void ac3_tables_init(void)
 {
     int i;
 
@@ -223,11 +223,11 @@ static int ac3_decode_init(AVCodecContext *avctx)
     s->avctx = avctx;
 
     ac3_common_init();
-    ff_ac3_tables_init();
+    ac3_tables_init();
     ff_eac3_tables_init();
     ff_mdct_init(&s->imdct_256, 8, 1);
     ff_mdct_init(&s->imdct_512, 9, 1);
-    ff_ac3_window_init(s->window);
+    ac3_window_init(s->window);
     dsputil_init(&s->dsp, avctx);
     av_init_random(0, &s->dith_state);
 
@@ -310,7 +310,7 @@ static int ac3_parse_header(AC3DecodeContext *s)
 /**
  * Common function to parse AC3 or E-AC3 frame header
  */
-int ff_ac3_parse_frame_header(AC3DecodeContext *s)
+static int parse_frame_header(AC3DecodeContext *s)
 {
     AC3HeaderInfo hdr;
     int err;
@@ -361,7 +361,7 @@ int ff_ac3_parse_frame_header(AC3DecodeContext *s)
  * Set stereo downmixing coefficients based on frame header info.
  * reference: Section 7.8.2 Downmixing Into Two Channels
  */
-void ff_ac3_set_downmix_coeffs(AC3DecodeContext *s)
+static void set_downmix_coeffs(AC3DecodeContext *s)
 {
     int i;
     float cmix = gain_levels[s->center_mix_level];
@@ -419,7 +419,7 @@ void ff_ac3_decode_exponents(GetBitContext *gbc, int exp_strategy, int ngrps,
  * range using the coupling coefficients and coupling coordinates.
  * reference: Section 7.4.3 Coupling Coordinate Format
  */
-void ff_ac3_uncouple_channels(AC3DecodeContext *s)
+static void uncouple_channels(AC3DecodeContext *s)
 {
     int i, j, ch, bnd, subbnd;
 
@@ -532,7 +532,7 @@ static int ac3_get_transform_coeffs_ch(AC3DecodeContext *s, int ch_index,
  * Remove random dithering from coefficients with zero-bit mantissas
  * reference: Section 7.3.4 Dither for Zero Bit Mantissas (bap=0)
  */
-void ff_ac3_remove_dithering(AC3DecodeContext *s) {
+static void remove_dithering(AC3DecodeContext *s) {
     int ch, i;
     int end=0;
     float *coeffs;
@@ -612,11 +612,11 @@ int ff_ac3_get_transform_coeffs(AC3DecodeContext *s, int blk)
 
     /* calculate transform coefficients for coupling range */
     if(s->cpl_in_use[blk])
-        ff_ac3_uncouple_channels(s);
+        uncouple_channels(s);
 
     /* if any channel doesn't use dithering, zero appropriate coefficients */
     if(!s->dither_all)
-        ff_ac3_remove_dithering(s);
+        remove_dithering(s);
 
     return 0;
 }
@@ -625,7 +625,7 @@ int ff_ac3_get_transform_coeffs(AC3DecodeContext *s, int blk)
  * Stereo rematrixing.
  * reference: Section 7.5.4 Rematrixing : Decoding Technique
  */
-void ff_ac3_do_rematrixing(AC3DecodeContext *s)
+static void do_rematrixing(AC3DecodeContext *s)
 {
     int bnd, i;
     int end, bndend;
@@ -692,7 +692,7 @@ static void do_imdct_256(AC3DecodeContext *s, int chindex)
  * Convert frequency domain coefficients to time-domain audio samples.
  * reference: Section 7.9.4 Transformation Equations
  */
-void ff_ac3_do_imdct(AC3DecodeContext *s)
+static void do_imdct(AC3DecodeContext *s)
 {
     int ch;
     int channels;
@@ -723,7 +723,7 @@ void ff_ac3_do_imdct(AC3DecodeContext *s)
 /**
  * Downmix the output to mono or stereo.
  */
-void ff_ac3_downmix(AC3DecodeContext *s)
+static void ac3_downmix(AC3DecodeContext *s)
 {
     int i, j;
     float v0, v1, s0, s1;
@@ -1034,7 +1034,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
 
     /* parse the syncinfo */
     *data_size = 0;
-    err = ff_ac3_parse_frame_header(s);
+    err = parse_frame_header(s);
     if(err) {
         switch(err) {
             case AC3_PARSE_ERROR_SYNC:
@@ -1093,7 +1093,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
 
         /* recover coefficients if rematrixing is in use */
         if(s->channel_mode == AC3_CHMODE_STEREO)
-            ff_ac3_do_rematrixing(s);
+            do_rematrixing(s);
 
         /* apply scaling to coefficients (headroom, dynrng) */
         for(ch=1; ch<=s->channels; ch++) {
@@ -1108,13 +1108,13 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
             }
         }
 
-        ff_ac3_do_imdct(s);
+        do_imdct(s);
 
         /* downmix output if needed */
         if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
                 s->fbw_channels == s->out_channels)) {
-            ff_ac3_set_downmix_coeffs(s);
-            ff_ac3_downmix(s);
+            set_downmix_coeffs(s);
+            ac3_downmix(s);
         }
 
         /* convert float to 16-bit integer */
