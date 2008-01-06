@@ -56,7 +56,7 @@ static void log_missing_feature(AVCodecContext *avctx, const char *log){
             "mailing list.\n", log);
 }
 
-#if 0
+#if TEST_SPX
 static void spectral_extension(AC3DecodeContext *s){
     //Now turned off, because there are no samples for testing it.
     int copystartmant, copyendmant, copyindex, insertindex;
@@ -1196,7 +1196,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
         return -1;
     }
 
-#if 0
+#if TEST_SPX
     //apply spectral extension
     if (s->spx_in_use)
         spectral_extension(s);
