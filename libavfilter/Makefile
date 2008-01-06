@@ -15,8 +15,8 @@ OBJS-yes = vf_crop.o \
            vf_hflip.o \
            vf_negate.o \
            vf_format.o \
-           vf_rot90.o \
            vf_overlay.o \
+           vf_rot90.o \
            vf_scale.o \
            vf_slicify.o \
            vf_split.o \
