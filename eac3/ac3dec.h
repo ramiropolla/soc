@@ -32,6 +32,9 @@
 #include "dsputil.h"
 #include "random.h"
 
+#define TEST_SPX 0
+#define TEST_ECPL 0
+
 /* override ac3.h to include coupling channel */
 #undef AC3_MAX_CHANNELS
 #define AC3_MAX_CHANNELS 7
@@ -116,10 +119,13 @@ typedef struct AC3DecodeContext {
     float pre_mantissa[6][AC3_MAX_CHANNELS][256];   ///< Pre-IDCT mantissas
 ///@}
 
+#if TEST_SPX
 ///@defgroup spx Spectral Extension
     int channel_uses_spx[AC3_MAX_CHANNELS]; ///< Channel in spectral extension attenuation process (chinspxatten)
     int spx_atten_code[AC3_MAX_CHANNELS];   ///< spectral extension attenuation code (spxattencod)
+#endif
     int spxinu;                             ///< spectral extension in use
+#if TEST_SPX
     int chinspx[AC3_MAX_CHANNELS];          ///< Channel in spectral extension
     int spxstrtf;                           ///< Spectral extension start copy frequency code
     int spxbegf;                            ///< Spectral extension begin frequency code
@@ -132,7 +138,9 @@ typedef struct AC3DecodeContext {
     int firstspxcos[AC3_MAX_CHANNELS];      ///< First spectral extension coordinates states
     float spxco[AC3_MAX_CHANNELS][18];      ///< Spectral extension coordinates
 ///@}
+#endif
 
+#if TEST_ECPL
 ///@defgroup ecpl Enhanced Coupling
     int ecpl_in_use;                        ///< Enhanced coupling in use
     int ecplbegf;                           ///< Enhanced coupling begin frequency code
@@ -149,6 +157,7 @@ typedef struct AC3DecodeContext {
     int ecplchaos[AC3_MAX_CHANNELS][23];    ///< Enhanced coupling chaos
     int ecpltrans[AC3_MAX_CHANNELS];        ///< Enhanced coupling transient present
 ///@}
+#endif
 
 ///@defgroup channel Channel
     int fbw_channels;                           ///< Number of fbw channels

@@ -569,6 +569,7 @@ static int parse_audfrm(AC3DecodeContext *s){
         }
     }
     /* Spectral extension attenuation data */
+#if TEST_SPX
     if (parse_spx_atten_data) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             s->channel_uses_spx[ch] = get_bits1(gbc);
@@ -580,6 +581,7 @@ static int parse_audfrm(AC3DecodeContext *s){
         for (ch = 1; ch <= s->fbw_channels; ch++)
             s->channel_uses_spx[ch]=0;
     }
+#endif
     /* Block start information */
     if (s->num_blocks > 1 && get_bits1(gbc)) {
         /* reference: Section E2.3.2.27
@@ -591,7 +593,9 @@ static int parse_audfrm(AC3DecodeContext *s){
     }
     /* Syntax state initialization */
     for (ch = 1; ch <= s->fbw_channels; ch++) {
+#if TEST_SPX
         s->firstspxcos[ch] = 1;
+#endif
         s->first_cpl_coords[ch] = 1;
     }
     s->first_cpl_leak = 1;
@@ -647,9 +651,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     if (s->eac3 && (!blk || get_bits1(gbc))) {
         s->spxinu = get_bits1(gbc);
         if (s->spxinu) {
-            log_missing_feature(s->avctx, "Spectral extension");
-            return -1;
-#if 0
+#if TEST_SPX
             if (s->channel_mode == AC3_CHMODE_MONO) {
                 s->chinspx[1] = 1;
             } else {
@@ -703,17 +705,22 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                     s->spxbndsztab[s->nspxbnds - 1] += 12;
                 }
             }
+#else
+            log_missing_feature(s->avctx, "Spectral extension");
+            return -1;
 #endif
+#if TEST_SPX
         } else {
             /* !spxinu */
             for (ch = 1; ch <= s->fbw_channels; ch++) {
                 s->chinspx[ch] = 0;
                 s->firstspxcos[ch] = 1;
             }
+#endif
         }
     }
 
-#if 0
+#if TEST_SPX
     /* Spectral extension coordinates */
     if (s->spxinu) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
@@ -783,11 +790,15 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
 
                 /* get start and end subbands for coupling */
                 cpl_begin = get_bits(gbc, 4);
+#if TEST_SPX
                 if (!s->eac3 || !s->spxinu) {
                     cpl_end = get_bits(gbc, 4) + 3;
                 } else {
                     cpl_end = s->spxbegf - 1;
                 }
+#else
+                cpl_end = get_bits(gbc, 4) + 3;
+#endif
                 s->num_cpl_subbands =  cpl_end - cpl_begin;
 
                 /* calculate start and end frequency bins for coupling */
@@ -820,9 +831,8 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                 }
             } else {
                 /* enhanced coupling in use */
-                log_missing_feature(s->avctx, "Enhanced coupling");
-                return -1;
-#if 0
+#if TEST_ECPL
+                int sbnd;
                 s->ecplbegf = get_bits(gbc, 4);
                 if (s->ecplbegf < 3) {
                     s->ecpl_start_subbnd = s->ecplbegf * 2;
@@ -860,6 +870,9 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                 for (bnd = s->ecpl_start_subbnd; bnd < s->ecpl_end_subbnd; bnd++) {
                     s->necplbnd -= s->ecplbndstrc[bnd];
                 }
+#else
+                log_missing_feature(s->avctx, "Enhanced coupling");
+                return -1;
 #endif
             }
         } else {
@@ -926,11 +939,11 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
         } else {
             /* enhanced coupling in use */
             //TODO calc nchgrps[CPL_CH]
-#if 0
+#if TEST_ECPL
             s->firstchincpl = -1;
             s->ecplangleintrp = get_bits1(gbc);
             for (ch = 1; ch <= s->fbw_channels; ch++) {
-                if (s->chincpl[ch]) {
+                if (s->channel_in_cpl[ch]) {
                     if (s->firstchincpl == -1) {
                         s->firstchincpl = ch;
                     }
@@ -1014,7 +1027,11 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
         }
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
             s->start_freq[ch] = 0;
+#if TEST_SPX
             if ((!s->channel_in_cpl[ch]) && (!s->eac3 || !s->chinspx[ch])) {
+#else
+            if (!s->channel_in_cpl[ch]) {
+#endif
                 int prev = s->end_freq[ch];
                 chbwcod = get_bits(gbc, 6);
                 if (chbwcod > 60) {
