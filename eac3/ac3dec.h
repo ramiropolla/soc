@@ -48,26 +48,14 @@
 #define MAX_BLOCKS 6
 #define MAX_SPX_CODES 18
 
-void ff_ac3_window_init(float *window);
-void ff_ac3_tables_init(void);
-
 /** dynamic range table. converts codes to scale factors. */
 extern float ff_ac3_dynamic_range_tab[256];
-
-/** dialog normalization table */
-extern float ff_ac3_dialog_norm_tab[32];
 
 /**
  * table for exponent to scale_factor mapping
  * ff_ac3_scale_factors[i] = 2 ^ -i
  */
 extern float ff_ac3_scale_factors[25];
-
-/** channel mix levels */
-extern const float ff_ac3_mix_levels[9];
-
-/** default stereo downmixing coefficients */
-extern const uint8_t ff_ac3_default_coeffs[8][5][2];
 
 typedef struct AC3DecodeContext {
     AVCodecContext *avctx;  ///< Parent context
@@ -241,20 +229,6 @@ typedef struct AC3DecodeContext {
 void ff_ac3_decode_exponents(GetBitContext *gb, int exp_strategy, int ngrps,
                              uint8_t absexp, int8_t *dexps);
 
-/**
- * Grouped mantissas for 3-level 5-level and 11-level quantization
- */
-typedef struct {
-    float b1_mant[3];
-    float b2_mant[3];
-    float b4_mant[2];
-    int b1ptr;
-    int b2ptr;
-    int b4ptr;
-} mant_groups;
-
-int ff_ac3_parse_frame_header(AC3DecodeContext *s);
-
 /* TEMPORARY SOLUTION */
 int ff_eac3_parse_header(AC3DecodeContext *s);
 int ff_eac3_parse_audio_block(AC3DecodeContext *s, int blk);
@@ -263,29 +237,5 @@ void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk);
 void ff_eac3_tables_init(void);
 
 int ff_ac3_get_transform_coeffs(AC3DecodeContext *s, int blk);
-
-void ff_ac3_uncouple_channels(AC3DecodeContext *s);
-
-void ff_ac3_remove_dithering(AC3DecodeContext *s);
-
-void ff_ac3_do_rematrixing(AC3DecodeContext *s);
-
-void ff_ac3_do_imdct(AC3DecodeContext *s);
-
-void ff_ac3_downmix(AC3DecodeContext *s);
-
-void ff_ac3_set_downmix_coeffs(AC3DecodeContext *s);
-
-/** Adjustments in dB gain */
-#define LEVEL_PLUS_3DB          1.4142135623730950
-#define LEVEL_PLUS_1POINT5DB    1.1892071150027209
-#define LEVEL_MINUS_1POINT5DB   0.8408964152537145
-#define LEVEL_MINUS_3DB         0.7071067811865476
-#define LEVEL_MINUS_4POINT5DB   0.5946035575013605
-#define LEVEL_MINUS_6DB         0.5000000000000000
-#define LEVEL_MINUS_9DB         0.3535533905932738
-#define LEVEL_ZERO              0.0000000000000000
-#define LEVEL_ONE               1.0000000000000000
-
 
 #endif /* AC3DEC_H */

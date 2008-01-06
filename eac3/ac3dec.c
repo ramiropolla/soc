@@ -69,7 +69,18 @@ static const uint8_t quantization_tab[16] = {
 /** dynamic range table. converts codes to scale factors. */
 float ff_ac3_dynamic_range_tab[256];
 
-const float ff_ac3_mix_levels[9] = {
+/** Adjustments in dB gain */
+#define LEVEL_PLUS_3DB          1.4142135623730950
+#define LEVEL_PLUS_1POINT5DB    1.1892071150027209
+#define LEVEL_MINUS_1POINT5DB   0.8408964152537145
+#define LEVEL_MINUS_3DB         0.7071067811865476
+#define LEVEL_MINUS_4POINT5DB   0.5946035575013605
+#define LEVEL_MINUS_6DB         0.5000000000000000
+#define LEVEL_MINUS_9DB         0.3535533905932738
+#define LEVEL_ZERO              0.0000000000000000
+#define LEVEL_ONE               1.0000000000000000
+
+static const float gain_levels[9] = {
     LEVEL_PLUS_3DB,
     LEVEL_PLUS_1POINT5DB,
     LEVEL_ONE,
@@ -97,7 +108,7 @@ static const uint8_t surround_levels[4] = { 4, 6, 7, 6 };
  * Table for default stereo downmixing coefficients
  * reference: Section 7.8.2 Downmixing Into Two Channels
  */
-const uint8_t ff_ac3_default_coeffs[8][5][2] = {
+static const uint8_t ac3_default_coeffs[8][5][2] = {
     { { 2, 7 }, { 7, 2 },                               },
     { { 4, 4 },                                         },
     { { 2, 7 }, { 7, 2 },                               },
@@ -353,12 +364,12 @@ int ff_ac3_parse_frame_header(AC3DecodeContext *s)
 void ff_ac3_set_downmix_coeffs(AC3DecodeContext *s)
 {
     int i;
-    float cmix = ff_ac3_mix_levels[s->center_mix_level];
-    float smix = ff_ac3_mix_levels[s->surround_mix_level];
+    float cmix = gain_levels[s->center_mix_level];
+    float smix = gain_levels[s->surround_mix_level];
 
     for(i=0; i<s->fbw_channels; i++) {
-        s->downmix_coeffs[i][0] = ff_ac3_mix_levels[ff_ac3_default_coeffs[s->channel_mode][i][0]];
-        s->downmix_coeffs[i][1] = ff_ac3_mix_levels[ff_ac3_default_coeffs[s->channel_mode][i][1]];
+        s->downmix_coeffs[i][0] = gain_levels[ac3_default_coeffs[s->channel_mode][i][0]];
+        s->downmix_coeffs[i][1] = gain_levels[ac3_default_coeffs[s->channel_mode][i][1]];
     }
     if(s->channel_mode > 1 && s->channel_mode & 1) {
         s->downmix_coeffs[1][0] = s->downmix_coeffs[1][1] = cmix;
@@ -427,6 +438,18 @@ void ff_ac3_uncouple_channels(AC3DecodeContext *s)
         } while(s->cpl_band_struct[subbnd]);
     }
 }
+
+/**
+ * Grouped mantissas for 3-level 5-level and 11-level quantization
+ */
+typedef struct {
+    float b1_mant[3];
+    float b2_mant[3];
+    float b4_mant[2];
+    int b1ptr;
+    int b2ptr;
+    int b4ptr;
+} mant_groups;
 
 /**
  * Get the transform coefficients for a particular channel
