@@ -1,5 +1,5 @@
 /*
- * 90 degree counter-clock-wise rotation filter
+ * Transpose (line => column) video filter
  * Copyright (c) 2008 Vitor Sessak
  *
  * This file is part of FFmpeg.
@@ -24,11 +24,11 @@
 typedef struct
 {
     int hsub, vsub;
-} RotContext;
+} TransContext;
 
 static int config_props_input(AVFilterLink *link)
 {
-    RotContext *neg = link->dst->priv;
+    TransContext *neg = link->dst->priv;
 
     avcodec_get_chroma_sub_sample(link->format, &neg->hsub, &neg->vsub);
 
@@ -45,7 +45,7 @@ static int config_props_output(AVFilterLink *link)
 
 static void draw_slice(AVFilterLink *link, int y, int h)
 {
-    RotContext *rot = link->dst->priv;
+    TransContext *trans = link->dst->priv;
     AVFilterPicRef *in  = link->cur_pic;
     AVFilterPicRef *out = link->dst->outputs[0]->outpic;
     int i, j, plane;
@@ -58,8 +58,8 @@ static void draw_slice(AVFilterLink *link, int y, int h)
 
     /* chroma planes */
     for(plane = 1; plane < 3; plane ++) {
-        for(i = y >> rot->vsub; i < h >> rot->vsub; i++) {
-            for(j = 0; j < link->w >> rot->hsub; j++)
+        for(i = y >> trans->vsub; i < h >> trans->vsub; i++) {
+            for(j = 0; j < link->w >> trans->hsub; j++)
                 *(out->data[plane] +   j *out->linesize[plane] + i) =
                     *(in->data[plane]+ i * in->linesize[plane] + j);
         }
@@ -68,12 +68,12 @@ static void draw_slice(AVFilterLink *link, int y, int h)
     avfilter_draw_slice(link->dst->outputs[0], y, h);
 }
 
-AVFilter avfilter_vf_rot90 =
+AVFilter avfilter_vf_transpose =
 {
-    .name      = "rot90",
+    .name      = "transpose",
     .author    = "Vitor Sessak",
 
-    .priv_size = sizeof(RotContext),
+    .priv_size = sizeof(TransContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
