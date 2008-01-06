@@ -599,6 +599,8 @@ int ff_ac3_get_transform_coeffs(AC3DecodeContext *s, int blk)
                 if (get_transform_coeffs_ch(s, blk, CPL_CH, &m)) {
                     return -1;
                 }
+                /* calculate transform coefficients for coupling range */
+                uncouple_channels(s);
                 got_cplchan = 1;
             }
             end = s->end_freq[CPL_CH];
@@ -609,10 +611,6 @@ int ff_ac3_get_transform_coeffs(AC3DecodeContext *s, int blk)
             s->transform_coeffs[ch][end] = 0;
         while(++end < 256);
     }
-
-    /* calculate transform coefficients for coupling range */
-    if(s->cpl_in_use[blk])
-        uncouple_channels(s);
 
     /* if any channel doesn't use dithering, zero appropriate coefficients */
     if(!s->dither_all)
