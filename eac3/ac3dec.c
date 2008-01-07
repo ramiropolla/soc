@@ -856,8 +856,12 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
             }
         } else {
             /* coupling not in use */
-            for (ch = 1; ch <= fbw_channels; ch++)
+            for (ch = 1; ch <= fbw_channels; ch++) {
                 s->channel_in_cpl[ch] = 0;
+                s->first_cpl_coords[ch] = 1;
+            }
+            s->first_cpl_leak = 1;
+            s->phase_flags_in_use = 0;
         }
     } else if (!s->eac3 && blk) {
         /* for AC3, copy coupling use strategy from last block */
