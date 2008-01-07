@@ -606,6 +606,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     return err;
 }
 
+#if 0
 int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
     //int grp, sbnd, n, bin;
     int seg, bnd, ch, i, chbwcod, grpsize;
@@ -1194,6 +1195,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
 
     return 0;
 }
+#endif
 
 void ff_eac3_tables_init(void) {
     int blk, i;

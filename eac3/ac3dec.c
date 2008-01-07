@@ -67,7 +67,7 @@ static const uint8_t quantization_tab[16] = {
 };
 
 /** dynamic range table. converts codes to scale factors. */
-float ff_ac3_dynamic_range_tab[256];
+static float dynamic_range_tab[256];
 
 /** Adjustments in dB gain */
 #define LEVEL_PLUS_3DB          1.4142135623730950
@@ -194,7 +194,7 @@ static void ac3_tables_init(void)
        reference: Section 7.7.1 Dynamic Range Control */
     for(i=0; i<256; i++) {
         int v = (i >> 5) - ((i >> 7) << 3) - 5;
-        ff_ac3_dynamic_range_tab[i] = powf(2.0f, v) * ((i & 0x1F) | 0x20);
+        dynamic_range_tab[i] = powf(2.0f, v) * ((i & 0x1F) | 0x20);
     }
 
     /* generate scale factors for exponents and asymmetrical dequantization
@@ -388,7 +388,7 @@ static void set_downmix_coeffs(AC3DecodeContext *s)
  * Decode the grouped exponents according to exponent strategy.
  * reference: Section 7.1.3 Exponent Decoding
  */
-void ff_ac3_decode_exponents(GetBitContext *gbc, int exp_strategy, int ngrps,
+static void decode_exponents(GetBitContext *gbc, int exp_strategy, int ngrps,
                              uint8_t absexp, int8_t *dexps)
 {
     int i, j, grp, group_size;
@@ -458,8 +458,7 @@ typedef struct {
  * Get the transform coefficients for a particular channel
  * reference: Section 7.3 Quantization and Decoding of Mantissas
  */
-static int ac3_get_transform_coeffs_ch(AC3DecodeContext *s, int ch_index,
-                                       mant_groups *m)
+static int get_transform_coeffs_ch(AC3DecodeContext *s, int ch_index, mant_groups *m)
 {
     GetBitContext *gbc = &s->gbc;
     int i, gcode, tbap, start, end;
@@ -568,7 +567,7 @@ static int get_transform_coeffs_ch(AC3DecodeContext *s, int blk, int ch,
                                    mant_groups *m)
 {
     if (!s->eac3 || !s->channel_uses_aht[ch]) {
-        if(ac3_get_transform_coeffs_ch(s, ch, m))
+        if(get_transform_coeffs_ch(s, ch, m))
             return -1;
     } else if (s->channel_uses_aht[ch] == 1) {
         ff_eac3_get_transform_coeffs_aht_ch(s, ch);
@@ -583,7 +582,7 @@ static int get_transform_coeffs_ch(AC3DecodeContext *s, int blk, int ch,
 /**
  * Get the transform coefficients.
  */
-int ff_ac3_get_transform_coeffs(AC3DecodeContext *s, int blk)
+static int get_transform_coeffs(AC3DecodeContext *s, int blk)
 {
     int ch, end;
     int got_cplchan = 0;
@@ -781,7 +780,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
     i = !(s->channel_mode);
     do {
         if(get_bits1(gbc)) {
-            s->dynamic_range[i] = ((ff_ac3_dynamic_range_tab[get_bits(gbc, 8)]-1.0) *
+            s->dynamic_range[i] = ((dynamic_range_tab[get_bits(gbc, 8)]-1.0) *
                                   s->avctx->drc_scale)+1.0;
         } else if(blk == 0) {
             s->dynamic_range[i] = 1.0f;
@@ -965,7 +964,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
     for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
             s->dexps[ch][0] = get_bits(gbc, 4) << !ch;
-            ff_ac3_decode_exponents(gbc, s->exp_strategy[blk][ch],
+            decode_exponents(gbc, s->exp_strategy[blk][ch],
                                     s->num_exp_groups[ch], s->dexps[ch][0],
                                     &s->dexps[ch][s->start_freq[ch]+!!ch]);
             if(ch != CPL_CH && ch != s->lfe_ch)
@@ -1126,7 +1125,7 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
 
     /* unpack the transform coefficients
        this also uncouples channels if coupling is in use. */
-    if (ff_ac3_get_transform_coeffs(s, blk)) {
+    if (get_transform_coeffs(s, blk)) {
         av_log(s->avctx, AV_LOG_ERROR, "Error decoding transform coefficients\n");
         return -1;
     }

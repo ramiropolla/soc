@@ -56,9 +56,6 @@ typedef enum {
     EAC3_STREAM_TYPE_RESERVED
 } EAC3StreamType;
 
-/** dynamic range table. converts codes to scale factors. */
-extern float ff_ac3_dynamic_range_tab[256];
-
 /**
  * table for exponent to scale_factor mapping
  * ff_ac3_scale_factors[i] = 2 ^ -i
@@ -230,21 +227,11 @@ typedef struct AC3DecodeContext {
 ///@}
 } AC3DecodeContext;
 
-/**
- * Decode the grouped exponents according to exponent strategy.
- * reference: Section 7.1.3 Exponent Decoding
- */
-void ff_ac3_decode_exponents(GetBitContext *gb, int exp_strategy, int ngrps,
-                             uint8_t absexp, int8_t *dexps);
-
 /* TEMPORARY SOLUTION */
 int ff_eac3_parse_header(AC3DecodeContext *s);
-int ff_eac3_parse_audio_block(AC3DecodeContext *s, int blk);
 void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
 void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk);
 void ff_eac3_tables_init(void);
 void ff_eac3_log_missing_feature(AVCodecContext *avctx, const char *log);
-
-int ff_ac3_get_transform_coeffs(AC3DecodeContext *s, int blk);
 
 #endif /* AC3DEC_H */
