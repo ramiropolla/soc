@@ -447,6 +447,7 @@ static int parse_bsi(AC3DecodeContext *s){
     return 0;
 }
 
+/** Audio frame syntax flags, strategy data, and per-frame data */
 static int parse_audfrm(AC3DecodeContext *s){
     int blk, ch;
     int ac3_exponent_strategy, parse_aht_info, parse_spx_atten_data;
@@ -454,7 +455,6 @@ static int parse_audfrm(AC3DecodeContext *s){
     int num_cpl_blocks;
     GetBitContext *gbc = &s->gbc;
 
-    /* Audio frame exist flags and strategy data */
     if (s->num_blocks == 6) {
         /* LUT-based exponent strategy syntax */
         ac3_exponent_strategy = get_bits1(gbc);
@@ -493,7 +493,8 @@ static int parse_audfrm(AC3DecodeContext *s){
     s->dba_syntax = get_bits1(gbc);
     s->skip_syntax = get_bits1(gbc);
     parse_spx_atten_data = get_bits1(gbc);
-    /* Coupling data */
+
+    /* coupling strategy occurance and coupling use per block */
     num_cpl_blocks = 0;
     if (s->channel_mode > 1) {
         for (blk = 0; blk < s->num_blocks; blk++) {
@@ -507,7 +508,7 @@ static int parse_audfrm(AC3DecodeContext *s){
             num_cpl_blocks += s->cpl_in_use[blk];
         }
     } else {
-        memset(s->cpl_in_use, 0, sizeof(*s->cpl_in_use) * s->num_blocks);
+        memset(s->cpl_in_use, 0, sizeof(s->cpl_in_use));
     }
 
     /* Exponent strategy data */
@@ -534,14 +535,15 @@ static int parse_audfrm(AC3DecodeContext *s){
             s->exp_strategy[blk][s->lfe_ch] = get_bits1(gbc);
         }
     }
-    /* Converter exponent strategy data */
+    /* original exponent strategies if this stream was converted from AC3 */
     if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             skip_bits(gbc, 5); //skip Converter channel exponent strategy
         }
     }
-    /* AHT data */
+
+    /* determine which channels use AHT */
     if (parse_aht_info) {
         /* AHT is only available in 6 block mode (numblkscod ==3) */
         /* coupling can use AHT only when coupling in use for all blocks */
@@ -557,14 +559,16 @@ static int parse_audfrm(AC3DecodeContext *s){
     } else {
         memset(s->channel_uses_aht, 0, sizeof(s->channel_uses_aht));
     }
-    /* Audio frame SNR offset data */
+
+    /* per-frame SNR offset */
     if (!s->snr_offset_strategy) {
         int csnroffst = (get_bits(gbc, 6) - 15) << 4;
         int snroffst = (csnroffst + get_bits(gbc, 4)) << 2;
         for (ch = 0; ch <= s->channels; ch++)
             s->snr_offset[ch] = snroffst;
     }
-    /* Audio frame transient pre-noise processing data */
+
+    /* transient pre-noise processing data */
     if (parse_transient_proc_info) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             if (get_bits1(gbc)) { // channel in transient processing
@@ -573,8 +577,9 @@ static int parse_audfrm(AC3DecodeContext *s){
             }
         }
     }
-    /* Spectral extension attenuation data */
+
 #if TEST_SPX
+    /* Spectral extension attenuation data */
     if (parse_spx_atten_data) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             s->channel_uses_spx[ch] = get_bits1(gbc);
@@ -587,6 +592,7 @@ static int parse_audfrm(AC3DecodeContext *s){
             s->channel_uses_spx[ch]=0;
     }
 #endif
+
     /* Block start information */
     if (s->num_blocks > 1 && get_bits1(gbc)) {
         /* reference: Section E2.3.2.27
@@ -596,6 +602,7 @@ static int parse_audfrm(AC3DecodeContext *s){
         int block_start_bits = (s->num_blocks-1) * (4 + av_log2(s->frame_size-2));
         skip_bits(gbc, block_start_bits);
     }
+
     /* Syntax state initialization */
     for (ch = 1; ch <= s->fbw_channels; ch++) {
 #if TEST_SPX
@@ -606,7 +613,7 @@ static int parse_audfrm(AC3DecodeContext *s){
     s->first_cpl_leak = 1;
 
     return 0;
-} /* end of audfrm */
+}
 
 int ff_eac3_parse_header(AC3DecodeContext *s)
 {
