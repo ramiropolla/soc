@@ -218,8 +218,6 @@ static void ac3_tables_init(void)
 static int ac3_decode_init(AVCodecContext *avctx)
 {
     AC3DecodeContext *s = avctx->priv_data;
-
-    memset(s, 0, sizeof(*s));
     s->avctx = avctx;
 
     ac3_common_init();
