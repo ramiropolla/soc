@@ -1084,6 +1084,12 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
     }
     avctx->channels = s->out_channels;
 
+    /* set downmixing coefficients if needed */
+    if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
+            s->fbw_channels == s->out_channels)) {
+        set_downmix_coeffs(s);
+    }
+
     /* parse the audio blocks */
     for (blk = 0; blk <  s->num_blocks; blk++) {
         if (ff_eac3_parse_audio_block(s, blk)) {
@@ -1114,7 +1120,6 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
         /* downmix output if needed */
         if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
                 s->fbw_channels == s->out_channels)) {
-            set_downmix_coeffs(s);
             ac3_downmix(s);
         }
 
