@@ -32,21 +32,13 @@ typedef enum {
     EAC3_GAQ_124
 } EAC3GaqMode;
 
-/** Stream Type */
-typedef enum {
-    EAC3_STREAM_TYPE_INDEPENDENT = 0,
-    EAC3_STREAM_TYPE_DEPENDENT,
-    EAC3_STREAM_TYPE_AC3_CONVERT,
-    EAC3_STREAM_TYPE_RESERVED
-} EAC3StreamType;
-
 #define EAC3_SR_CODE_REDUCED  3
 
 static float idct_cos_tab[6][5];
 
 static int gaq_ungroup_tab[32][3];
 
-static void log_missing_feature(AVCodecContext *avctx, const char *log){
+void ff_eac3_log_missing_feature(AVCodecContext *avctx, const char *log){
     av_log(avctx, AV_LOG_ERROR, "%s is not implemented. If you want to help, "
             "update your FFmpeg version to the newest one from SVN. If the "
             "problem still occurs, it means that your file has extension "
@@ -281,7 +273,7 @@ static int parse_bsi(AC3DecodeContext *s){
     skip_bits(gbc, 16); // skip the sync word
     s->stream_type = get_bits(gbc, 2);
     if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
-        log_missing_feature(s->avctx, "Dependent substream");
+        ff_eac3_log_missing_feature(s->avctx, "Dependent substream");
         return -1;
     } else if (s->stream_type == EAC3_STREAM_TYPE_RESERVED) {
         av_log(s->avctx, AV_LOG_ERROR, "Reserved stream type\n");
@@ -303,7 +295,7 @@ static int parse_bsi(AC3DecodeContext *s){
            rates in bit allocation.  The best assumption would be that it is
            handled like AC3 DolbyNet, but we cannot be sure until we have a
            sample which utilizes this feature. */
-        log_missing_feature(s->avctx, "Reduced Sampling Rates");
+        ff_eac3_log_missing_feature(s->avctx, "Reduced Sampling Rates");
         return -1;
 #if 0
         s->bit_alloc_params.sr_code = get_bits(gbc, 2);
@@ -706,7 +698,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                 }
             }
 #else
-            log_missing_feature(s->avctx, "Spectral extension");
+            ff_eac3_log_missing_feature(s->avctx, "Spectral extension");
             return -1;
 #endif
 #if TEST_SPX
@@ -871,7 +863,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
                     s->necplbnd -= s->ecplbndstrc[bnd];
                 }
 #else
-                log_missing_feature(s->avctx, "Enhanced coupling");
+                ff_eac3_log_missing_feature(s->avctx, "Enhanced coupling");
                 return -1;
 #endif
             }

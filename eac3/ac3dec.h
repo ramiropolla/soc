@@ -48,6 +48,14 @@
 #define MAX_BLOCKS 6
 #define MAX_SPX_CODES 18
 
+/** Stream Type */
+typedef enum {
+    EAC3_STREAM_TYPE_INDEPENDENT = 0,
+    EAC3_STREAM_TYPE_DEPENDENT,
+    EAC3_STREAM_TYPE_AC3_CONVERT,
+    EAC3_STREAM_TYPE_RESERVED
+} EAC3StreamType;
+
 /** dynamic range table. converts codes to scale factors. */
 extern float ff_ac3_dynamic_range_tab[256];
 
@@ -235,6 +243,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, int blk);
 void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
 void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk);
 void ff_eac3_tables_init(void);
+void ff_eac3_log_missing_feature(AVCodecContext *avctx, const char *log);
 
 int ff_ac3_get_transform_coeffs(AC3DecodeContext *s, int blk);
 

@@ -30,7 +30,6 @@ Features:
       similar to RealAudio DolbyNet, but we need a sample to test.
 
 General:
-* Get the AC3 block decoder working with E-AC3
 * Try to simplify and document AHT decoding
 
 Cosmetic:
