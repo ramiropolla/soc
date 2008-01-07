@@ -32,6 +32,7 @@ extern AVFilter avfilter_vf_hflip;
 extern AVFilter avfilter_vf_negate;
 extern AVFilter avfilter_vf_noformat;
 extern AVFilter avfilter_vf_overlay;
+extern AVFilter avfilter_vf_rotate;
 extern AVFilter avfilter_vf_scale;
 extern AVFilter avfilter_vf_slicify;
 extern AVFilter avfilter_vf_split;
