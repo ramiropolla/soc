@@ -458,7 +458,7 @@ typedef struct {
  * Get the transform coefficients for a particular channel
  * reference: Section 7.3 Quantization and Decoding of Mantissas
  */
-static int get_transform_coeffs_ch(AC3DecodeContext *s, int ch_index, mant_groups *m)
+static int ac3_get_transform_coeffs_ch(AC3DecodeContext *s, int ch_index, mant_groups *m)
 {
     GetBitContext *gbc = &s->gbc;
     int i, gcode, tbap, start, end;
@@ -567,7 +567,7 @@ static int get_transform_coeffs_ch(AC3DecodeContext *s, int blk, int ch,
                                    mant_groups *m)
 {
     if (!s->eac3 || !s->channel_uses_aht[ch]) {
-        if(get_transform_coeffs_ch(s, ch, m))
+        if(ac3_get_transform_coeffs_ch(s, ch, m))
             return -1;
     } else if (s->channel_uses_aht[ch] == 1) {
         ff_eac3_get_transform_coeffs_aht_ch(s, ch);
