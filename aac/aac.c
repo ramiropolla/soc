@@ -875,9 +875,9 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     ac->num_swb_128 = num_swb_128[ac->sampling_index];
     ac->tns_max_bands_128 = tns_max_bands_128[ac->sampling_index];
 
-    init_vlc(&ac->mainvlc, 7, sizeof(aac_scalefactor_huffman_table)/sizeof(aac_scalefactor_huffman_table[0]),
-            &aac_scalefactor_huffman_table[0][1], sizeof(aac_scalefactor_huffman_table[0]), sizeof(aac_scalefactor_huffman_table[0][1]),
-            &aac_scalefactor_huffman_table[0][0], sizeof(aac_scalefactor_huffman_table[0]), sizeof(aac_scalefactor_huffman_table[0][0]),
+    init_vlc(&ac->mainvlc, 7, sizeof(scalefactor_huffman_table)/sizeof(scalefactor_huffman_table[0]),
+            &scalefactor_huffman_table[0][1], sizeof(scalefactor_huffman_table[0]), sizeof(scalefactor_huffman_table[0][1]),
+            &scalefactor_huffman_table[0][0], sizeof(scalefactor_huffman_table[0]), sizeof(scalefactor_huffman_table[0][0]),
             0);
 
     if (ac->audioObjectType == AOT_AAC_SSR) {

@@ -232,7 +232,7 @@ static float ssr_q_table[] = {
      1.0737914947736096E+00
 };
 
-static const unsigned int aac_scalefactor_huffman_table[][2] = {
+static const unsigned int scalefactor_huffman_table[][2] = {
     /* codeword, code length */
     { 0x3FFE8, 18 },
     { 0x3FFE6, 18 },
