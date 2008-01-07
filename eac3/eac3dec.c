@@ -477,12 +477,10 @@ static int parse_audfrm(AC3DecodeContext *s){
     s->skip_syntax = get_bits1(gbc);
     parse_spx_atten_data = get_bits1(gbc);
     /* Coupling data */
+    num_cpl_blocks = 0;
     if (s->channel_mode > 1) {
-        s->cpl_strategy_exists[0] = 1;
-        s->cpl_in_use[0] = get_bits1(gbc);
-        num_cpl_blocks = s->cpl_in_use[0];
-        for (blk = 1; blk < s->num_blocks; blk++) {
-            s->cpl_strategy_exists[blk] = get_bits1(gbc);
+        for (blk = 0; blk < s->num_blocks; blk++) {
+            s->cpl_strategy_exists[blk] = (!blk || get_bits1(gbc));
 
             if (s->cpl_strategy_exists[blk]) {
                 s->cpl_in_use[blk] = get_bits1(gbc);
@@ -493,7 +491,6 @@ static int parse_audfrm(AC3DecodeContext *s){
         }
     } else {
         memset(s->cpl_in_use, 0, sizeof(*s->cpl_in_use) * s->num_blocks);
-        num_cpl_blocks = 0;
     }
 
     /* Exponent strategy data */
@@ -508,7 +505,7 @@ static int parse_audfrm(AC3DecodeContext *s){
         /* LUT-based exponent strategy syntax */
         int frmchexpstr;
         /* cplexpstr[blk] and chexpstr[blk][ch] derived from table lookups. see Table E2.14 */
-        for (ch = !((s->channel_mode > 1) && num_cpl_blocks); ch <= s->fbw_channels; ch++) {
+        for (ch = !num_cpl_blocks; ch <= s->fbw_channels; ch++) {
             frmchexpstr = get_bits(gbc, 5);
             for (blk = 0; blk < 6; blk++) {
                 s->exp_strategy[blk][ch] = ff_eac3_frm_expstr[frmchexpstr][blk];
