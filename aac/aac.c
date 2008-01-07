@@ -34,8 +34,6 @@
  *  after each other. And then try to do the interleaving inplace.
  */
 
-#define V_DEBUG
-
 #include "avcodec.h"
 #include "bitstream.h"
 #include "dsputil.h"
@@ -43,11 +41,6 @@
 
 #include "aactab.h"
 
-#ifndef V_DEBUG
-#define AV_DEBUG(...)
-#endif
-
-#undef NDEBUG
 #include <assert.h>
 
 #define MAX_CHANNELS 64
