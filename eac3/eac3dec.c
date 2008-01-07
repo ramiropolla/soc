@@ -271,6 +271,10 @@ static int parse_bsi(AC3DecodeContext *s){
     GetBitContext *gbc = &s->gbc;
 
     skip_bits(gbc, 16); // skip the sync word
+
+    /* an E-AC3 stream can have multiple independent streams which the
+       application can select from. each independent stream can also contain
+       dependent streams which are used to add or replace channels. */
     s->stream_type = get_bits(gbc, 2);
     if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
         ff_eac3_log_missing_feature(s->avctx, "Dependent substream");
@@ -280,6 +284,9 @@ static int parse_bsi(AC3DecodeContext *s){
         return -1;
     }
 
+    /* the substream id indicates which substream this frame belongs to. each
+       independent stream has its own substream id, and the dependent streams
+       associated to an independent stream have matching substream id's */
     s->substreamid = get_bits(gbc, 3);
     if (s->substreamid) {
         // TODO: allow user to select which substream to decode
@@ -288,6 +295,7 @@ static int parse_bsi(AC3DecodeContext *s){
         return -1;
     }
 
+    /* skip parameters which have already been read */
     skip_bits(gbc, 11); // skip frame size
     skip_bits(gbc, 2);  // skip samplerate code
     if (s->bit_alloc_params.sr_code == EAC3_SR_CODE_REDUCED) {
@@ -297,26 +305,23 @@ static int parse_bsi(AC3DecodeContext *s){
            sample which utilizes this feature. */
         ff_eac3_log_missing_feature(s->avctx, "Reduced Sampling Rates");
         return -1;
-#if 0
-        s->bit_alloc_params.sr_code = get_bits(gbc, 2);
-        s->bit_alloc_params.sr_shift = 1;
-        s->num_blocks = 6;
-#endif
     } else {
         skip_bits(gbc, 2); // skip number of blocks code
     }
     skip_bits(gbc, 3); // skip channel mode
-    skip_bits1(gbc); // skip lfe indicator
+    skip_bits1(gbc);   // skip lfe indicator
     skip_bits(gbc, 5); // skip bitstream id
 
+    /* dialog normalization and compression gain are volume control params */
     for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
         skip_bits(gbc, 5); // skip dialog normalization
         if (get_bits1(gbc)) {
             skip_bits(gbc, 8); //skip Compression gain word
         }
     }
+
 #if 0
-    /* TODO: Add support for dependent streams */
+    /* dependent stream channel map */
     if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
         if (get_bits1(gbc)) {
             skip_bits(gbc, 16); // skip custom channel map
@@ -326,12 +331,11 @@ static int parse_bsi(AC3DecodeContext *s){
     }
 #endif
 
+    /* mixing metadata */
     if (get_bits1(gbc)) {
-        /* Mixing metadata */
-        if (s->channel_mode > 2) {
-            /* if more than 2 channels */
+        /* center and surround mix levels */
+        if (s->channel_mode > AC3_CHMODE_STEREO) {
             skip_bits(gbc, 2);  // skip preferred stereo downmix mode
-
             if (s->channel_mode & 1) {
                 /* if three front channels exist */
                 skip_bits(gbc, 3); //skip Lt/Rt center mix level
@@ -343,10 +347,14 @@ static int parse_bsi(AC3DecodeContext *s){
                 s->surround_mix_level = get_bits(gbc, 3);
             }
         }
+
+        /* lfe mix level */
         if (s->lfe_on && get_bits1(gbc)) {
             // TODO: use LFE mix level
             skip_bits(gbc, 5); // skip LFE mix level code
         }
+
+        /* info for mixing with other streams and substreams */
         if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT) {
             for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
                 // TODO: apply program scale factor
@@ -368,7 +376,7 @@ static int parse_bsi(AC3DecodeContext *s){
                 }
             }
             /* skip pan information for mono or dual mono source */
-            if (s->channel_mode < 2) {
+            if (s->channel_mode < AC3_CHMODE_STEREO) {
                 for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
                     if (get_bits1(gbc)) {
                         /* note: this is not in the ATSC A/52B specification
@@ -393,15 +401,15 @@ static int parse_bsi(AC3DecodeContext *s){
             }
         }
     }
+
+    /* informational metadata */
     if (get_bits1(gbc)) {
-        /* Informational metadata */
         skip_bits(gbc, 3); //skip Bit stream mode
         skip_bits(gbc, 2); //skip copyright bit and original bitstream bit
-        if (s->channel_mode == AC3_CHMODE_STEREO) { /* if in 2/0 mode */
+        if (s->channel_mode == AC3_CHMODE_STEREO) {
             skip_bits(gbc, 4); //skip Dolby surround and headphone mode
         }
-        if (s->channel_mode >= 6) {
-            /* if both surround channels exist */
+        if (s->channel_mode >= AC3_CHMODE_2F2R) {
             skip_bits(gbc, 2); //skip Dolby surround EX mode
         }
         for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
@@ -413,22 +421,31 @@ static int parse_bsi(AC3DecodeContext *s){
             skip_bits1(gbc); //skip Source sample rate code
         }
     }
+
+    /* converter synchronization flag
+       if frames are less than six blocks, this bit should be turned on
+       once every 6 blocks to indicate the start of a frame set.
+       reference: RFC 4598, Section 2.1.3  Frame Sets */
     if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT && s->num_blocks != 6) {
         skip_bits1(gbc); //converter synchronization flag
     }
+
+    /* original frame size code if this stream was converted from AC3 */
     if (s->stream_type == EAC3_STREAM_TYPE_AC3_CONVERT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
         skip_bits(gbc, 6); // skip Frame size code
     }
+
+    /* additional bitstream info */
     if (get_bits1(gbc)) {
         int addbsil = get_bits(gbc, 6);
         for (i = 0; i < addbsil + 1; i++) {
-            skip_bits(gbc, 8); // Additional bit stream information
+            skip_bits(gbc, 8); // skip additional bit stream information
         }
     }
 
     return 0;
-} /* end of bsi */
+}
 
 static int parse_audfrm(AC3DecodeContext *s){
     int blk, ch;
@@ -504,7 +521,6 @@ static int parse_audfrm(AC3DecodeContext *s){
     } else {
         /* LUT-based exponent strategy syntax */
         int frmchexpstr;
-        /* cplexpstr[blk] and chexpstr[blk][ch] derived from table lookups. see Table E2.14 */
         for (ch = !num_cpl_blocks; ch <= s->fbw_channels; ch++) {
             frmchexpstr = get_bits(gbc, 5);
             for (blk = 0; blk < 6; blk++) {
