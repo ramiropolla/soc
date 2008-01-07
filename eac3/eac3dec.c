@@ -594,13 +594,7 @@ static int parse_audfrm(AC3DecodeContext *s){
 
 int ff_eac3_parse_header(AC3DecodeContext *s)
 {
-    int err;
-
-    err = parse_bsi(s);
-    if(err)
-        return err;
-    err = parse_audfrm(s);
-    return err;
+    return (parse_bsi(s) || parse_audfrm(s));
 }
 
 #if 0
