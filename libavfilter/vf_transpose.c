@@ -19,6 +19,13 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+/**
+ * @file vf_transpose.c
+ * Transposition filter
+ *
+ * @todo Handle packed pixel formats
+ */
+
 #include "avfilter.h"
 
 typedef struct
@@ -32,6 +39,17 @@ static int config_props_input(AVFilterLink *link)
 
     avcodec_get_chroma_sub_sample(link->format, &trans->hsub, &trans->vsub);
 
+    return 0;
+}
+
+static int query_formats(AVFilterContext *ctx)
+{
+    avfilter_set_common_formats(ctx,
+        avfilter_make_format_list(10,
+                PIX_FMT_YUV444P,  PIX_FMT_YUV422P,  PIX_FMT_YUV420P,
+                PIX_FMT_YUV411P,  PIX_FMT_YUV410P,
+                PIX_FMT_YUVJ444P, PIX_FMT_YUVJ422P, PIX_FMT_YUVJ420P,
+                PIX_FMT_YUV440P,  PIX_FMT_YUVJ440P));
     return 0;
 }
 
@@ -74,6 +92,8 @@ AVFilter avfilter_vf_transpose =
     .author    = "Vitor Sessak",
 
     .priv_size = sizeof(TransContext),
+
+    .query_formats = query_formats,
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
