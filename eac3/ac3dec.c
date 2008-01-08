@@ -746,9 +746,9 @@ static void ac3_downmix(AC3DecodeContext *s)
 }
 
 /**
- * Parse an audio block from AC-3 bitstream.
+ * Decode a single audio block from the AC-3 bitstream.
  */
-static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
+static int decode_audio_block(AC3DecodeContext *s, int blk)
 {
     int fbw_channels = s->fbw_channels;
     int channel_mode = s->channel_mode;
@@ -1132,6 +1132,43 @@ static int ac3_parse_audio_block(AC3DecodeContext *s, int blk)
         return -1;
     }
 
+        /* TODO: generate enhanced coupling coordinates and uncouple */
+
+        /* TODO: apply spectral extension */
+
+        /* recover coefficients if rematrixing is in use */
+        if(s->channel_mode == AC3_CHMODE_STEREO)
+            do_rematrixing(s);
+
+        /* apply scaling to coefficients (headroom, dynrng) */
+        for(ch=1; ch<=s->channels; ch++) {
+            float gain = 2.0f * s->mul_bias;
+            if(s->channel_mode == AC3_CHMODE_DUALMONO) {
+                gain *= s->dynamic_range[ch-1];
+            } else {
+                gain *= s->dynamic_range[0];
+            }
+            for(i=0; i<s->end_freq[ch]; i++) {
+                s->transform_coeffs[ch][i] *= gain;
+            }
+        }
+
+        do_imdct(s);
+
+        /* downmix output if needed */
+        if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
+                s->fbw_channels == s->out_channels)) {
+            ac3_downmix(s);
+        }
+
+        /* convert float to 16-bit integer */
+        for(ch=0; ch<s->out_channels; ch++) {
+            for(i=0; i<256; i++) {
+                s->output[ch][i] += s->add_bias;
+            }
+            s->dsp.float_to_int16(s->int_output[ch], s->output[ch], 256);
+        }
+
     return 0;
 }
 
@@ -1206,47 +1243,10 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size, 
 
     /* parse the audio blocks */
     for (blk = 0; blk <  s->num_blocks; blk++) {
-        if (ac3_parse_audio_block(s, blk)) {
+        if (decode_audio_block(s, blk)) {
             av_log(avctx, AV_LOG_ERROR, "error parsing the audio block\n");
             *data_size = 0;
             return s->frame_size;
-        }
-
-        /* TODO: generate enhanced coupling coordinates and uncouple */
-
-        /* TODO: apply spectral extension */
-
-        /* recover coefficients if rematrixing is in use */
-        if(s->channel_mode == AC3_CHMODE_STEREO)
-            do_rematrixing(s);
-
-        /* apply scaling to coefficients (headroom, dynrng) */
-        for(ch=1; ch<=s->channels; ch++) {
-            float gain = 2.0f * s->mul_bias;
-            if(s->channel_mode == AC3_CHMODE_DUALMONO) {
-                gain *= s->dynamic_range[ch-1];
-            } else {
-                gain *= s->dynamic_range[0];
-            }
-            for(i=0; i<s->end_freq[ch]; i++) {
-                s->transform_coeffs[ch][i] *= gain;
-            }
-        }
-
-        do_imdct(s);
-
-        /* downmix output if needed */
-        if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
-                s->fbw_channels == s->out_channels)) {
-            ac3_downmix(s);
-        }
-
-        /* convert float to 16-bit integer */
-        for(ch=0; ch<s->out_channels; ch++) {
-            for(i=0; i<256; i++) {
-                s->output[ch][i] += s->add_bias;
-            }
-            s->dsp.float_to_int16(s->int_output[ch], s->output[ch], 256);
         }
 
         /* interleave output samples */
