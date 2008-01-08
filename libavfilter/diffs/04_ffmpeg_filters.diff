@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 11370)
+--- ffmpeg.c	(revision 11293)
 +++ ffmpeg.c	(working copy)
 @@ -36,6 +36,11 @@
  #include "avstring.h"
@@ -37,7 +37,7 @@ Index: ffmpeg.c
  } AVInputStream;
  
  typedef struct AVInputFile {
-@@ -290,6 +304,257 @@
+@@ -290,6 +304,259 @@
  static struct termios oldtty;
  #endif
  
@@ -230,7 +230,9 @@ Index: ffmpeg.c
 +    if(ost->video_crop) {
 +        char crop_args[255];
 +        AVFilterContext *filt_crop;
-+        snprintf(crop_args, 255, "%d:%d:%d:%d", ost->topBand, ost->topBand, codec->height - frame_topBand, codec->width- frame_bottomBand);
++        snprintf(crop_args, 255, "%d:%d:%d:%d", ost->topBand, ost->topBand,
++                 codec->width -  (frame_padleft + frame_padright),
++                 codec->height - (frame_padtop + frame_padbottom));
 +        filt_crop = avfilter_open(avfilter_get_by_name("crop"), NULL);
 +        if (!filt_crop)
 +            return -1;
@@ -295,7 +297,7 @@ Index: ffmpeg.c
  static void term_exit(void)
  {
  #ifdef HAVE_TERMIOS_H
-@@ -635,6 +900,13 @@
+@@ -635,6 +902,13 @@
          frame_hook_process(picture2, dec->pix_fmt, dec->width, dec->height,
                             1000000 * ist->pts / AV_TIME_BASE);
  
@@ -309,7 +311,7 @@ Index: ffmpeg.c
      if (picture != picture2)
          *picture = *picture2;
      *bufp = buf;
-@@ -745,6 +1017,9 @@
+@@ -745,6 +1019,9 @@
      if (nb_frames <= 0)
          return;
  
@@ -319,7 +321,7 @@ Index: ffmpeg.c
      if (ost->video_crop) {
          if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
              av_log(NULL, AV_LOG_ERROR, "error cropping picture\n");
-@@ -754,6 +1029,7 @@
+@@ -754,6 +1031,7 @@
      } else {
          formatted_picture = in_picture;
      }
@@ -327,7 +329,7 @@ Index: ffmpeg.c
  
      final_picture = formatted_picture;
      padding_src = formatted_picture;
-@@ -769,12 +1045,14 @@
+@@ -769,12 +1047,14 @@
          }
      }
  
@@ -342,7 +344,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1273,6 +1551,10 @@
+@@ -1275,6 +1555,10 @@
                      }
                  }
              }
@@ -353,7 +355,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1678,10 +1960,21 @@
+@@ -1680,10 +1964,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          exit(1);
                      }
@@ -375,7 +377,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3785,6 +4078,9 @@
+@@ -3782,6 +4077,9 @@
  #ifdef CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
