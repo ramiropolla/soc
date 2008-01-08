@@ -41,13 +41,6 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
     return 0;
 }
 
-static int query_formats(AVFilterContext *ctx)
-{
-    avfilter_set_common_formats(ctx,
-        avfilter_make_format_list(1, PIX_FMT_RGB24));
-    return 0;
-}
-
 static int config_props(AVFilterLink *link)
 {
     SliceContext *slice = link->dst->priv;
@@ -91,8 +84,6 @@ AVFilter avfilter_vf_slicify =
     .author    = "Bobby Bingham",
 
     .init      = init,
-
-    .query_formats = query_formats,
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
