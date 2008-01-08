@@ -750,20 +750,21 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
 
 static int aac_decode_init(AVCodecContext * avccontext) {
     static const struct {
-        const uint16_t (*a)[2];
+        const uint16_t     *a_code;
         const unsigned int s;
+        const uint8_t      *a_bits;
     } tmp[] = {
-        { codebook1 , sizeof codebook1  },
-        { codebook2 , sizeof codebook2  },
-        { codebook3 , sizeof codebook3  },
-        { codebook4 , sizeof codebook4  },
-        { codebook5 , sizeof codebook5  },
-        { codebook6 , sizeof codebook6  },
-        { codebook7 , sizeof codebook7  },
-        { codebook8 , sizeof codebook8  },
-        { codebook9 , sizeof codebook9  },
-        { codebook10, sizeof codebook10 },
-        { codebook11, sizeof codebook11 },
+        { code1 , sizeof code1 , bits1  },
+        { code2 , sizeof code2 , bits2  },
+        { code3 , sizeof code3 , bits3  },
+        { code4 , sizeof code4 , bits4  },
+        { code5 , sizeof code5 , bits5  },
+        { code6 , sizeof code6 , bits6  },
+        { code7 , sizeof code7 , bits7  },
+        { code8 , sizeof code8 , bits8  },
+        { code9 , sizeof code9 , bits9  },
+        { code10, sizeof code10, bits10 },
+        { code11, sizeof code11, bits11 },
     };
     AACContext * ac = avccontext->priv_data;
     int i;
@@ -805,13 +806,15 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         static const int mod_cb[11] = { 3, 3, 3, 3, 9, 9, 8, 8, 13, 13, 17 };
         static const int off_cb[11] = { 1, 1, 0, 0, 4, 4, 0, 0,  0,  0,  0 };
 
-        int j, values = tmp[i].s/sizeof(tmp[i].a[0]);
+        int a_bits_size = sizeof(tmp[i].a_bits[0]);
+        int a_code_size = sizeof(tmp[i].a_code[0]);
+        int j, values = tmp[i].s/a_code_size;
         int dim = (i >= 4 ? 2 : 4);
         int mod = mod_cb[i], off = off_cb[i], index = 0;
         int ret;
         ret = init_vlc(&ac->books[i], 6, values,
-                &tmp[i].a[0][1], sizeof(tmp[i].a[0]), sizeof(tmp[i].a[0][1]),
-                &tmp[i].a[0][0], sizeof(tmp[i].a[0]), sizeof(tmp[i].a[0][0]),
+                tmp[i].a_bits, a_bits_size, a_bits_size,
+                tmp[i].a_code, a_code_size, a_code_size,
                 0);
         assert(!ret);
         ac->vq[i] = av_malloc(dim * values * sizeof(int));
@@ -868,9 +871,9 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     ac->num_swb_128 = num_swb_128[ac->sampling_index];
     ac->tns_max_bands_128 = tns_max_bands_128[ac->sampling_index];
 
-    init_vlc(&ac->mainvlc, 7, sizeof(scalefactor_huffman_table)/sizeof(scalefactor_huffman_table[0]),
-            &scalefactor_huffman_table[0][1], sizeof(scalefactor_huffman_table[0]), sizeof(scalefactor_huffman_table[0][1]),
-            &scalefactor_huffman_table[0][0], sizeof(scalefactor_huffman_table[0]), sizeof(scalefactor_huffman_table[0][0]),
+    init_vlc(&ac->mainvlc, 7, sizeof(code)/sizeof(code[0]),
+            bits, sizeof(bits[0]), sizeof(bits[0]),
+            code, sizeof(code[0]), sizeof(code[0]),
             0);
 
     if (ac->audioObjectType == AOT_AAC_SSR) {
