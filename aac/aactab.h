@@ -52,11 +52,6 @@ static const uint16_t swb_offset_1024_64[] = {
     864, 904, 944, 984, 1024
 };
 
-static const uint16_t swb_offset_128_64[] = {
-    0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 92, 128
-};
-
-
 static const uint16_t swb_offset_1024_48[] = {
     0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72,
     80, 88, 96, 108, 120, 132, 144, 160, 176, 196, 216, 240, 264, 292,
@@ -119,7 +114,9 @@ static const uint8_t num_swb_1024[] = {
 };
 
 static const uint16_t *swb_offset_128[] = {
-    swb_offset_128_96, swb_offset_128_96, swb_offset_128_64,
+    /* the last entry on the following row is swb_offset_128_64 but is a
+       duplicate of swb_offset_128_96 */
+    swb_offset_128_96, swb_offset_128_96, swb_offset_128_96,
     swb_offset_128_48, swb_offset_128_48, swb_offset_128_48,
     swb_offset_128_24, swb_offset_128_24, swb_offset_128_16,
     swb_offset_128_16, swb_offset_128_16, swb_offset_128_8
