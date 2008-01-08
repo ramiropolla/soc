@@ -21,7 +21,7 @@ Features:
       E-AC3 dependent stream(s) for extra channels.
 
 * Adaptive Hybrid Transform (w/ GAQ and VQ)
-    - Works most of the time, but is still buggy.
+    - Works for the 2 samples we have which utilize it.
 
 * Reduced Sample Rates
     - E-AC3 has the ability to use 1/2 sample rates
