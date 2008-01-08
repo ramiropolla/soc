@@ -552,12 +552,13 @@ static int parse_audfrm(AC3DecodeContext *s){
         s->channel_uses_aht[CPL_CH]=0;
         for (ch = (num_cpl_blocks != 6); ch <= s->channels; ch++) {
             nchregs = 0;
-            for (blk = 0; blk < 6; blk++)
+            for (blk = 0; blk < 6; blk++) {
                 if (ch)
-                nchregs += (s->exp_strategy[blk][ch] != EXP_REUSE);
+                    nchregs += (s->exp_strategy[blk][ch] != EXP_REUSE);
                 else
                     nchregs += s->cpl_strategy_exists[blk] ||
                                (s->exp_strategy[blk][CPL_CH] != EXP_REUSE);
+            }
             s->channel_uses_aht[ch] = (nchregs == 1) && get_bits1(gbc);
         }
     } else {
