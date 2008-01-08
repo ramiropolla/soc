@@ -522,7 +522,7 @@ static int parse_audfrm(AC3DecodeContext *s){
     } else {
         /* LUT-based exponent strategy syntax */
         int frmchexpstr;
-        for (ch = !num_cpl_blocks; ch <= s->fbw_channels; ch++) {
+        for (ch = !((s->channel_mode > 1) && num_cpl_blocks); ch <= s->fbw_channels; ch++) {
             frmchexpstr = get_bits(gbc, 5);
             for (blk = 0; blk < 6; blk++) {
                 s->exp_strategy[blk][ch] = ff_eac3_frm_expstr[frmchexpstr][blk];
