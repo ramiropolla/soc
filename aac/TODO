@@ -3,6 +3,8 @@ General:
 * Find and remove duplicate code and tables
 * Move variables that are unnecessarily included in the context into function or
   more isolated code blocks
+* Swap scale_bias values for C/SIMD and multiply by scale_bias as appropriate
+  rather than divide
 
 Cosmetic:
 
