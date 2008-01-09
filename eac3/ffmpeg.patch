@@ -1,6 +1,6 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 11479)
+--- libavcodec/Makefile	(revision 11483)
 +++ libavcodec/Makefile	(working copy)
 @@ -33,7 +33,7 @@
  HEADERS = avcodec.h opt.h
@@ -13,7 +13,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
 Index: libavcodec/ac3_parser.c
 ===================================================================
---- libavcodec/ac3_parser.c	(revision 11479)
+--- libavcodec/ac3_parser.c	(revision 11483)
 +++ libavcodec/ac3_parser.c	(working copy)
 @@ -38,7 +38,6 @@
  {
@@ -61,9 +61,42 @@ Index: libavcodec/ac3_parser.c
      return hdr.frame_size;
  }
  
+Index: libavcodec/ac3.c
+===================================================================
+--- libavcodec/ac3.c	(revision 11483)
++++ libavcodec/ac3.c	(working copy)
+@@ -173,7 +173,8 @@
+ }
+ 
+ void ff_ac3_bit_alloc_calc_bap(int16_t *mask, int16_t *psd, int start, int end,
+-                               int snr_offset, int floor, uint8_t *bap)
++                               int snr_offset, int floor,
++                               const uint8_t *bap_tab, uint8_t *bap)
+ {
+     int i, j, k, end1, v, address;
+ 
+@@ -190,7 +191,7 @@
+         end1 = FFMIN(band_start_tab[j] + ff_ac3_critical_band_size_tab[j], end);
+         for (k = i; k < end1; k++) {
+             address = av_clip((psd[i] - v) >> 5, 0, 63);
+-            bap[i] = ff_ac3_bap_tab[address];
++            bap[i] = bap_tab[address];
+             i++;
+         }
+     } while (end > band_start_tab[j++]);
+@@ -215,7 +216,8 @@
+                                dba_mode, dba_nsegs, dba_offsets, dba_lengths, dba_values,
+                                mask);
+ 
+-    ff_ac3_bit_alloc_calc_bap(mask, psd, start, end, snr_offset, s->floor, bap);
++    ff_ac3_bit_alloc_calc_bap(mask, psd, start, end, snr_offset, s->floor,
++                              ff_ac3_bap_tab, bap);
+ }
+ 
+ /**
 Index: libavcodec/ac3.h
 ===================================================================
---- libavcodec/ac3.h	(revision 11479)
+--- libavcodec/ac3.h	(revision 11483)
 +++ libavcodec/ac3.h	(working copy)
 @@ -94,6 +94,7 @@
      uint32_t bit_rate;
@@ -89,7 +122,7 @@ Index: libavcodec/ac3.h
                                     int8_t *exp, int start, int end,
 Index: libavcodec/ac3enc.c
 ===================================================================
---- libavcodec/ac3enc.c	(revision 11479)
+--- libavcodec/ac3enc.c	(revision 11483)
 +++ libavcodec/ac3enc.c	(working copy)
 @@ -479,7 +479,8 @@
          for(ch=0;ch<s->nb_all_channels;ch++) {
