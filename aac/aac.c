@@ -356,8 +356,8 @@ typedef struct {
     AVRandomState random_state;
 
     //bias values
-    int add_bias;
-    int scale_bias;
+    float add_bias;
+    float scale_bias;
 
     // statistics
     int num_frame;
@@ -847,11 +847,11 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         ac->ivquant_tab[i] = pow(i, 4./3);
 
     if(ac->dsp.float_to_int16 == ff_float_to_int16_c) {
-        ac->add_bias = 385;
-        ac->scale_bias = 32768;
+        ac->add_bias = 385.0f;
+        ac->scale_bias = 32768.0f;
     } else {
-        ac->add_bias = 0;
-        ac->scale_bias = 1;
+        ac->add_bias = 0.0f;
+        ac->scale_bias = 1.0f;
     }
     for (i = 0; i < 256; i++)
         ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./ac->scale_bias;
