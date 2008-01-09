@@ -28,6 +28,7 @@
 #define AC3DEC_H
 
 #include "ac3tab.h"
+#include "ac3dec_data.h"
 #include "bitstream.h"
 #include "dsputil.h"
 #include "random.h"
