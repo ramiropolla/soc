@@ -61,6 +61,32 @@ Index: libavcodec/ac3_parser.c
      return hdr.frame_size;
  }
  
+Index: libavcodec/ac3.h
+===================================================================
+--- libavcodec/ac3.h	(revision 11479)
++++ libavcodec/ac3.h	(working copy)
+@@ -94,6 +94,7 @@
+     uint32_t bit_rate;
+     uint8_t channels;
+     uint16_t frame_size;
++    uint8_t num_blocks;
+     /** @} */
+ } AC3HeaderInfo;
+ 
+@@ -156,10 +157,12 @@
+  * @param[in]  end        ending bin location
+  * @param[in]  snr_offset SNR adjustment
+  * @param[in]  floor      noise floor
++ * @param[in]  bap_tab    look-up table for bit allocation pointers
+  * @param[out] bap        bit allocation pointers
+  */
+ void ff_ac3_bit_alloc_calc_bap(int16_t *mask, int16_t *psd, int start, int end,
+-                               int snr_offset, int floor, uint8_t *bap);
++                               int snr_offset, int floor,
++                               const uint8_t *bap_tab, uint8_t *bap);
+ 
+ void ac3_parametric_bit_allocation(AC3BitAllocParameters *s, uint8_t *bap,
+                                    int8_t *exp, int start, int end,
 Index: libavcodec/ac3enc.c
 ===================================================================
 --- libavcodec/ac3enc.c	(revision 11479)
