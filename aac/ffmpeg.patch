@@ -1,20 +1,20 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 10970)
+--- libavcodec/Makefile	(revision 11482)
 +++ libavcodec/Makefile	(working copy)
-@@ -31,6 +31,7 @@
+@@ -32,6 +32,7 @@
  
  HEADERS = avcodec.h opt.h
  
-+OBJS-$(CONFIG_AAC_DECODER)             += aac.o
++OBJS-$(CONFIG_AAC_DECODER)             += aac.o mdct.o
  OBJS-$(CONFIG_AASC_DECODER)            += aasc.o
  OBJS-$(CONFIG_AC3_DECODER)             += ac3dec.o ac3tab.o ac3.o mdct.o fft.o
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 10970)
+--- libavcodec/allcodecs.c	(revision 11482)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -170,6 +170,7 @@
+@@ -172,6 +172,7 @@
      REGISTER_ENCDEC  (ZMBV, zmbv);
  
      /* audio codecs */
