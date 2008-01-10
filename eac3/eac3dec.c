@@ -38,6 +38,13 @@ static float idct_cos_tab[6][5];
 
 static int gaq_ungroup_tab[32][3];
 
+#if TEST_SPX
+/**
+ * Table E3.14 Spectral Extension Attenuation Table
+ */
+static float spx_attenuation_tab[32][3];
+#endif
+
 void ff_eac3_log_missing_feature(AVCodecContext *avctx, const char *log){
     av_log(avctx, AV_LOG_ERROR, "%s is not implemented. If you want to help, "
             "update your FFmpeg version to the newest one from SVN. If the "
@@ -1232,4 +1239,17 @@ void ff_eac3_tables_init(void) {
         gaq_ungroup_tab[i][1] = (i % 9) / 3;
         gaq_ungroup_tab[i][2] = i % 3;
     }
+
+#if TEST_SPX
+    {
+    int j;
+    /* initialize spectral extension attenuation table */
+    for (j = 0; j < 3; j++) {
+        for (i = 0; i < 32; i++) {
+            spx_attenuation_tab[i][j] = pow(2.0, (i+1.0)*(j+1.0)/-15.0);
+            av_log(NULL, AV_LOG_DEBUG, "spxattentab[%d][%d] = %1.9f\n", j, i, spx_attenuation_tab[i][j]);
+        }
+    }
+    }
+#endif
 }
