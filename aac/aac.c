@@ -1215,10 +1215,13 @@ static void pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_stru
 static void quant_to_spec_tool(AACContext * ac, const ics_struct * ics, const int * icoef, const int cb[][64], const float sf[][64], float * coef) {
     const uint16_t * offsets = ics->swb_offset;
     int g, i, group, k;
-    for (g = 0; g < ics->num_window_groups; g++) {
-        int total = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 128 : 1024;
-        memset(coef + g*total + offsets[ics->max_sfb], 0, sizeof(float)*(total - offsets[ics->max_sfb]));
-    }
+
+    if(ics->window_sequence == EIGHT_SHORT_SEQUENCE)
+      for(g = 0; g < 8; g++)
+        memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(128 - offsets[ics->max_sfb]));
+    else
+      memset(coef + offsets[ics->max_sfb], 0, sizeof(float)*(1024 - offsets[ics->max_sfb]));
+
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
             if (cb[g][i] == NOISE_HCB) {
