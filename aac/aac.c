@@ -1135,10 +1135,7 @@ static void spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct 
     static const int unsigned_cb[] = { 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
-    for (g = 0; g < ics->num_window_groups; g++) {
-        int total = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 128 : 1024;
-        memset(icoef + g*total + offsets[ics->max_sfb], 0, sizeof(int)*(total - offsets[ics->max_sfb]));
-    }
+
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
             const int cur_cb = cb[g][i];
