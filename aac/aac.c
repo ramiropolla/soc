@@ -1755,20 +1755,17 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
             ac->dsp.vector_fmul_reverse(ac->revers + i/2, buf + i + 128, swindow, 128);
         }
         for (i = 0; i < 448; i++)   out[i] = saved[i] + ac->add_bias;
-        out += 448; saved += 448;
-        ac->dsp.vector_fmul_add_add(out + 0*128, buf + 0*128, swindow_prev, saved, ac->add_bias, 128, 1);
-        vector_fmul_add_add_add(ac, out + 1*128, buf + 2*128, swindow, saved + 1*128, ac->revers + 0*128, ac->add_bias, 128);
-        vector_fmul_add_add_add(ac, out + 2*128, buf + 4*128, swindow, saved + 2*128, ac->revers + 1*128, ac->add_bias, 128);
-        vector_fmul_add_add_add(ac, out + 3*128, buf + 6*128, swindow, saved + 3*128, ac->revers + 2*128, ac->add_bias, 128);
-        vector_fmul_add_add_add(ac, out + 4*128, buf + 8*128, swindow, saved + 4*128, ac->revers + 3*128, ac->add_bias, 64);
-        //for (i = -448; i < 1024 - 448; i++)
-        //    out[i] = ac->add_bias;
-        saved -= 448;
-        buf += 1024;
-        ac->dsp.vector_fmul_add_add(saved,       buf + 64, swindow + 64, ac->revers + 3*128+64,  0, 64, 1);
-        ac->dsp.vector_fmul_add_add(saved + 64,  buf + 2*128, swindow, ac->revers + 4*128, 0, 128, 1);
-        ac->dsp.vector_fmul_add_add(saved + 192, buf + 4*128, swindow, ac->revers + 5*128, 0, 128, 1);
-        ac->dsp.vector_fmul_add_add(saved + 320, buf + 6*128, swindow, ac->revers + 6*128, 0, 128, 1);
+
+        ac->dsp.vector_fmul_add_add(out + 448 + 0*128, buf + 0*128, swindow_prev, saved + 448 ,                            ac->add_bias, 128, 1);
+        vector_fmul_add_add_add(ac, out + 448 + 1*128, buf + 2*128, swindow,      saved + 448 + 1*128, ac->revers + 0*128, ac->add_bias, 128);
+        vector_fmul_add_add_add(ac, out + 448 + 2*128, buf + 4*128, swindow,      saved + 448 + 2*128, ac->revers + 1*128, ac->add_bias, 128);
+        vector_fmul_add_add_add(ac, out + 448 + 3*128, buf + 6*128, swindow,      saved + 448 + 3*128, ac->revers + 2*128, ac->add_bias, 128);
+        vector_fmul_add_add_add(ac, out + 448 + 4*128, buf + 8*128, swindow,      saved + 448 + 4*128, ac->revers + 3*128, ac->add_bias, 64);
+
+        ac->dsp.vector_fmul_add_add(saved,       buf + 1024 + 64,    swindow + 64, ac->revers + 3*128+64,  0, 64, 1);
+        ac->dsp.vector_fmul_add_add(saved + 64,  buf + 1024 + 2*128, swindow,      ac->revers + 4*128,     0, 128, 1);
+        ac->dsp.vector_fmul_add_add(saved + 192, buf + 1024 + 4*128, swindow,      ac->revers + 5*128,     0, 128, 1);
+        ac->dsp.vector_fmul_add_add(saved + 320, buf + 1024 + 6*128, swindow,      ac->revers + 6*128,     0, 128, 1);
         memcpy(                     saved + 448, ac->revers + 7*128, 128 * sizeof(float));
         for (i = 576; i < 1024; i++) saved[i] = 0.0;
     }
