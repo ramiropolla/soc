@@ -1726,8 +1726,9 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
     const float * lwindow_prev = (ics->window_shape_prev) ? ac->kbd_long_1024 : ac->sine_long_1024;
     const float * swindow_prev = (ics->window_shape_prev) ? ac->kbd_short_128 : ac->sine_short_128;
     float * buf = ac->buf_mdct;
+    int i;
+
     if (ics->window_sequence != EIGHT_SHORT_SEQUENCE) {
-        int i;
         ff_imdct_calc(&ac->mdct, buf, in, out); // out can be abused for now as a temp buffer
         if (ac->is_saved) {
             if (ics->window_sequence != LONG_STOP_SEQUENCE) {
@@ -1748,8 +1749,6 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
             memset(saved + 576, 0, 448 * sizeof(float));
         }
     } else {
-        int i;
-
         for (i = 0; i < 2048; i += 256) {
             ff_imdct_calc(&ac->mdct_small, buf + i, in + i/2, out);
             ac->dsp.vector_fmul_reverse(ac->revers + i/2, buf + i + 128, swindow, 128);
