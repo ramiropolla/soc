@@ -34,6 +34,7 @@ extern AVFilter avfilter_vf_noformat;
 extern AVFilter avfilter_vf_overlay;
 extern AVFilter avfilter_vf_rotate;
 extern AVFilter avfilter_vf_scale;
+extern AVFilter avfilter_vf_setpts;
 extern AVFilter avfilter_vf_slicify;
 extern AVFilter avfilter_vf_split;
 extern AVFilter avfilter_vf_transpose;
