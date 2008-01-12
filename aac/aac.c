@@ -1736,7 +1736,7 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
                 for (i = 0; i < 448; i++) out[i] = saved[i] + ac->add_bias;
                 for (i = 448; i < 576; i++) buf[i] *= 0.125; // normalize
                 ac->dsp.vector_fmul_add_add(out + 448, buf + 448, swindow_prev, saved + 448, ac->add_bias, 128, 1);
-                for (i = 576; i < 1024; i++)   out[i] = buf[i] + ac->add_bias;
+                for (i = 576; i < 1024; i++)   out[i] = buf[i] + saved[i] + ac->add_bias;
             }
         }
         if (ics->window_sequence != LONG_START_SEQUENCE) {
@@ -1765,7 +1765,7 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
         //    out[i] = ac->add_bias;
         saved -= 448;
         buf += 1024;
-        ac->dsp.vector_fmul_add_add(saved,       buf + 64, swindow, ac->revers + 3*128+64,  0, 64, 1);
+        ac->dsp.vector_fmul_add_add(saved,       buf + 64, swindow + 64, ac->revers + 3*128+64,  0, 64, 1);
         ac->dsp.vector_fmul_add_add(saved + 64,  buf + 2*128, swindow, ac->revers + 4*128, 0, 128, 1);
         ac->dsp.vector_fmul_add_add(saved + 192, buf + 4*128, swindow, ac->revers + 5*128, 0, 128, 1);
         ac->dsp.vector_fmul_add_add(saved + 320, buf + 6*128, swindow, ac->revers + 6*128, 0, 128, 1);
