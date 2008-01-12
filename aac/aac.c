@@ -1745,7 +1745,7 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
             memcpy(saved, buf + 1024, 448 * sizeof(float));
             for (i = 448; i < 576; i++) buf[i + 1024] *= 0.125; // normalize
             ac->dsp.vector_fmul_reverse(saved + 448, buf + 1024 + 448, swindow, 128);
-            for (i = 576; i < 1024; i++)   saved[i] = 0.0;
+            memset(saved + 576, 0, 448 * sizeof(float));
         }
     } else {
         int i;
@@ -1767,7 +1767,7 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
         ac->dsp.vector_fmul_add_add(saved + 192, buf + 1024 + 4*128, swindow,      ac->revers + 5*128,     0, 128, 1);
         ac->dsp.vector_fmul_add_add(saved + 320, buf + 1024 + 6*128, swindow,      ac->revers + 6*128,     0, 128, 1);
         memcpy(                     saved + 448, ac->revers + 7*128, 128 * sizeof(float));
-        for (i = 576; i < 1024; i++) saved[i] = 0.0;
+        memset(                     saved + 576, 0,                  448 * sizeof(float));
     }
 }
 
