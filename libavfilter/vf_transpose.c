@@ -86,6 +86,19 @@ static void draw_slice(AVFilterLink *link, int y, int h)
     avfilter_draw_slice(link->dst->outputs[0], y, h);
 }
 
+static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
+{
+    AVFilterLink *out = link->dst->outputs[0];
+
+    out->outpic      = avfilter_get_video_buffer(out, AV_PERM_WRITE);
+    out->outpic->pts = picref->pts;
+
+    out->outpic->pixel_aspect.num = picref->pixel_aspect.den;
+    out->outpic->pixel_aspect.den = picref->pixel_aspect.num;
+
+    avfilter_start_frame(out, avfilter_ref_pic(out->outpic, ~0));
+}
+
 AVFilter avfilter_vf_transpose =
 {
     .name      = "transpose",
@@ -97,6 +110,7 @@ AVFilter avfilter_vf_transpose =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
+                                    .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .config_props    = config_props_input,
                                     .min_perms       = AV_PERM_READ, },
