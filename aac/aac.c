@@ -2259,16 +2259,16 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     // parse
     while ((id = get_bits(gb, 3)) != ID_END) {
         switch (id) {
-            case ID_SCE: {
-                         if (!single_channel_struct(ac, gb))
-                             num_decoded += 1;
-                         break;
-                     }
-            case ID_CPE: {
-                         if (!channel_pair_element(ac, gb))
-                             num_decoded += 2;
-                         break;
-                     }
+            case ID_SCE:
+                if (!single_channel_struct(ac, gb))
+                    num_decoded += 1;
+                break;
+
+            case ID_CPE:
+                if (!channel_pair_element(ac, gb))
+                    num_decoded += 2;
+                break;
+
             case ID_FIL: {
                          int cnt = get_bits(gb, 4);
                          if (cnt == 15) cnt += get_bits(gb, 8) - 1;
