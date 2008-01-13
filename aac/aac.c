@@ -1213,11 +1213,12 @@ static void quant_to_spec_tool(AACContext * ac, const ics_struct * ics, const in
     const uint16_t * offsets = ics->swb_offset;
     int g, i, group, k;
 
-    if(ics->window_sequence == EIGHT_SHORT_SEQUENCE)
-      for(g = 0; g < 8; g++)
-        memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(128 - offsets[ics->max_sfb]));
-    else
-      memset(coef + offsets[ics->max_sfb], 0, sizeof(float)*(1024 - offsets[ics->max_sfb]));
+    if(ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
+        for(g = 0; g < 8; g++)
+            memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(128 - offsets[ics->max_sfb]));
+    } else {
+        memset(coef + offsets[ics->max_sfb], 0, sizeof(float)*(1024 - offsets[ics->max_sfb]));
+    }
 
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
