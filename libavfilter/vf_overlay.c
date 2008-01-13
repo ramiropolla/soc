@@ -87,13 +87,6 @@ static int config_input_main(AVFilterLink *link)
     return 0;
 }
 
-static int config_input_sub(AVFilterLink *link)
-{
-    if(!link->dst->inputs[0])
-        return -1;
-    return link->format != link->dst->inputs[0]->format;
-}
-
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     OverlayContext *over = link->dst->priv;
@@ -207,7 +200,6 @@ AVFilter avfilter_vf_overlay =
                                   { .name            = "sub",
                                     .type            = AV_PAD_VIDEO,
                                     .start_frame     = start_frame,
-                                    .config_props    = config_input_sub,
                                     .end_frame       = end_frame,
                                     .min_perms       = AV_PERM_READ,
                                     .rej_perms       = AV_PERM_REUSE2, },
