@@ -3,8 +3,6 @@
  * Copyright (c) 2005-2006 Oded Shimon ( ods15 ods15 dyndns org )
  * Copyright (c) 2006-2007 Maxim Gavrilov ( maxim.gavrilov gmail com )
  *
- * Kaiser-Bessel Derived Window by Justin Ruggles
- *
  * This file is part of FFmpeg.
  *
  * FFmpeg is free software; you can redistribute it and/or
@@ -405,47 +403,6 @@ static inline int16_t LTP_ROUND(float x) {
 
 
 // aux
-/**
- * Generate a Kaiser Window.
- */
-static void k_window_init(int alpha, float *window, int n, int iter) {
-    int j, k;
-    float a, x;
-    a = alpha * M_PI / n;
-    a = a*a;
-    for(k=0; k<n; k++) {
-        x = k * (n - k) * a;
-        window[k] = 1.0;
-        for(j=iter; j>0; j--) {
-            window[k] = (window[k] * x / (j*j)) + 1.0;
-        }
-    }
-}
-
-/**
- * Generate a Kaiser-Bessel Derived Window.
- * @param alpha  determines window shape
- * @param window array to fill with window values
- * @param n      length of the window
- * @param iter   number of iterations to use in BesselI0
- */
-static void kbd_window_init(int alpha, float *window, int n, int iter) {
-    int k, n2;
-    float *kwindow;
-
-    n2 = n >> 1;
-    kwindow = &window[n2];
-    k_window_init(alpha, kwindow, n2, iter);
-    window[0] = kwindow[0];
-    for(k=1; k<n2; k++) {
-        window[k] = window[k-1] + kwindow[k];
-    }
-    for(k=0; k<n2; k++) {
-        window[k] = sqrt(window[k] / (window[n2-1]+1));
-        //window[n-1-k] = window[k];
-    }
-}
-
 /**
  * Generate a sine Window.
  */
@@ -880,8 +837,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         ff_mdct_init(&ac->mdct, 9, 1);
         ff_mdct_init(&ac->mdct_small, 6, 1);
         // windows init
-        kbd_window_init(4, ac->kbd_long_1024, 512, 50);
-        kbd_window_init(6, ac->kbd_short_128, 64, 50);
+        ff_kbd_window_init(ac->kbd_long_1024, 4.0, 256);
+        ff_kbd_window_init(ac->kbd_short_128, 6.0, 32);
         sine_window_init(ac->sine_long_1024, 512);
         sine_window_init(ac->sine_short_128, 64);
         ac->ssrctx = av_malloc(sizeof(ssr_context));
@@ -890,8 +847,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         ff_mdct_init(&ac->mdct, 11, 1);
         ff_mdct_init(&ac->mdct_small, 8, 1);
         // windows init
-        kbd_window_init(4, ac->kbd_long_1024, 2048, 50);
-        kbd_window_init(6, ac->kbd_short_128, 256, 50);
+        ff_kbd_window_init(ac->kbd_long_1024, 4.0, 1024);
+        ff_kbd_window_init(ac->kbd_short_128, 6.0, 128);
         sine_window_init(ac->sine_long_1024, 2048);
         sine_window_init(ac->sine_short_128, 256);
         ac->ssrctx = NULL;
