@@ -933,10 +933,11 @@ static void ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, ltp_struc
     }
 }
 
-static void ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_struct * ics) {
-    int reserved;
-    reserved = get_bits1(gb);
-    assert(reserved == 0);
+static int ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_struct * ics) {
+    if (get_bits1(gb)) {
+        av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set\n");
+        return -1;
+    }
     ics->window_sequence = get_bits(gb, 2);
     ics->window_shape_prev = ics->window_shape;
     ics->window_shape = get_bits1(gb);
@@ -986,6 +987,7 @@ static void ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics
             ics->ltp2.present = 0;
         }
     }
+    return 0;
 }
 
 static inline float ivquant(AACContext * ac, int a) {
@@ -998,7 +1000,7 @@ static inline float ivquant(AACContext * ac, int a) {
         return sign[tmp+1] * pow(abs_a, 4./3);
 }
 
-static void section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, int cb[][64]) {
+static int section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, int cb[][64]) {
     int g;
     for (g = 0; g < ics->num_window_groups; g++) {
         int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
@@ -1007,7 +1009,10 @@ static void section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, 
             int sect_len = 0;
             int sect_len_incr = 1;
             int sect_cb = get_bits(gb, 4);
-            assert(sect_cb < 12 || sect_cb == INTENSITY_HCB || sect_cb == INTENSITY_HCB2 || sect_cb == NOISE_HCB);
+            if (sect_cb == 12) {
+                av_log(ac->avccontext, AV_LOG_ERROR, "Invalid code book\n");
+                return -1;
+            }
             while ((sect_len_incr = get_bits(gb, bits)) == (1 << bits)-1)
                 sect_len += sect_len_incr;
             sect_len += sect_len_incr;
@@ -1017,6 +1022,7 @@ static void section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, 
             assert(k == sect_len);
         }
     }
+    return 0;
 }
 
 static void scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, int global_gain, ics_struct * ics, const int cb[][64], float sf[][64]) {
@@ -1074,7 +1080,6 @@ static void tns_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics
             tns->length[w][filt] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 4 : 6);
             if ((tns->order[w][filt] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5))) {
                 tns->direction[w][filt] = get_bits1(gb);
-                assert(coef_res == 3 || coef_res == 4);
                 coef_compress = get_bits1(gb);
                 coef_len = coef_res - coef_compress;
                 tns->tmp2_map[w] = tns_tmp2_map[(coef_compress << 1) + (coef_res - 3)];
@@ -1131,7 +1136,7 @@ static int ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
     return 0;
 }
 
-static void spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], const float sf[][64], int * icoef) {
+static int spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], const float sf[][64], int * icoef) {
     static const int unsigned_cb[] = { 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
@@ -1163,9 +1168,11 @@ static void spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct 
                     int j;
                     int sign[4] = {1,1,1,1};
                     int ptr[4];
+                    if (index == -1) {
+                        av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data\n");
+                        return -1;
+                    }
                     memcpy(ptr, &ac->vq[cur_cb - 1][index * dim], dim*sizeof(int));
-                    //if (index == -1) av_log(ac->avccontext, AV_LOG_INFO, " tried book %d, at pos %d\n", cb[g][i]-1, before);
-                    assert(index != -1);
                     if (unsigned_cb[cur_cb - 1]) {
                         for (j = 0; j < dim; j++)
                             if (ptr[j] && get_bits1(gb))
@@ -1191,12 +1198,16 @@ static void spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct 
         }
         icoef += ics->group_len[g]*128;
     }
+    return 0;
 }
 
-static void pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef) {
+static int pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef) {
     int i, off;
     if (pulse->present) {
-        assert(ics->window_sequence != EIGHT_SHORT_SEQUENCE);
+        if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
+            av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in EIGHT SHORT SEUQUENCE\n");
+            return -1;
+        }
         off = ics->swb_offset[pulse->start];
         for (i = 0; i <= pulse->num_pulse; i++) {
             off += pulse->offset[i];
@@ -1206,6 +1217,7 @@ static void pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_stru
                 icoef[off] -= pulse->amp[i];
         }
     }
+    return 0;
 }
 
 // Tools implementation
@@ -1257,11 +1269,13 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
     sce->global_gain = get_bits(gb, 8);
 
     if (!common_window && !scale_flag) {
-        ics_info(ac, gb, 0, ics);
+        if (ics_info(ac, gb, 0, ics) < 0)
+            return -1;
     }
 
     //av_log(ac->avccontext, AV_LOG_INFO, " global_gain: %d, groups: %d\n", global_gain, ics->window_sequence);
-    section_data(ac, gb, ics, sce->cb);
+    if (section_data(ac, gb, ics, sce->cb) < 0)
+        return -1;
     scale_factor_data(ac, gb, sce->mixing_gain, sce->global_gain, ics, sce->cb, sce->sf);
 
     if (!scale_flag) {
@@ -1273,8 +1287,10 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
             if (gain_control_data(ac, gb, sce)) return -1;
     }
 
-    spectral_data(ac, gb, ics, sce->cb, sce->sf, icoeffs);
-    pulse_tool(ac, ics, &pulse, icoeffs);
+    if (spectral_data(ac, gb, ics, sce->cb, sce->sf, icoeffs) < 0)
+        return -1;
+    if (pulse_tool(ac, ics, &pulse, icoeffs) < 0)
+        return -1;
     quant_to_spec_tool(ac, ics, icoeffs, sce->cb, sce->sf, out);
     return 0;
 }
@@ -1361,7 +1377,8 @@ static int channel_pair_element(AACContext * ac, GetBitContext * gb) {
     cpe->ch[1].mixing_gain = ac->mix.cpe_gain[id][1];
     cpe->common_window = get_bits1(gb);
     if (cpe->common_window) {
-        ics_info(ac, gb, 1, &cpe->ch[0].ics);
+        if (ics_info(ac, gb, 1, &cpe->ch[0].ics))
+            return -1;
         i = cpe->ch[1].ics.window_shape;
         cpe->ch[1].ics = cpe->ch[0].ics;
         cpe->ch[1].ics.window_shape_prev = i;
