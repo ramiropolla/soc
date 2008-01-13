@@ -2277,39 +2277,39 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     // parse
     while ((id = get_bits(gb, 3)) != ID_END) {
         switch (id) {
-            case ID_SCE:
-                if (!single_channel_struct(ac, gb))
-                    num_decoded += 1;
-                break;
+        case ID_SCE:
+            if (!single_channel_struct(ac, gb))
+                num_decoded += 1;
+            break;
 
-            case ID_CPE:
-                if (!channel_pair_element(ac, gb))
-                    num_decoded += 2;
-                break;
+        case ID_CPE:
+            if (!channel_pair_element(ac, gb))
+                num_decoded += 2;
+            break;
 
-            case ID_FIL: {
-                         int cnt = get_bits(gb, 4);
-                         if (cnt == 15) cnt += get_bits(gb, 8) - 1;
-                         while (cnt > 0)
-                            cnt -= extension_payload(ac, gb, cnt);
-                         break;
-                     }
-            case ID_PCE:
-                     program_config_element(ac, gb);
-                     break;
-            case ID_DSE:
-                     data_stream_element(ac, gb);
-                     break;
-            case ID_CCE:
-                     coupling_channel_element(ac, gb);
-                     break;
-            case ID_LFE:
-                     if (!lfe_channel_struct(ac, gb))
-                         num_decoded += 1;
-                     break;
-            default:
-                     assert(0 && 0);
-                     break;
+        case ID_FIL: {
+            int cnt = get_bits(gb, 4);
+            if (cnt == 15) cnt += get_bits(gb, 8) - 1;
+            while (cnt > 0)
+                cnt -= extension_payload(ac, gb, cnt);
+            break;
+        }
+        case ID_PCE:
+            program_config_element(ac, gb);
+            break;
+        case ID_DSE:
+            data_stream_element(ac, gb);
+            break;
+        case ID_CCE:
+            coupling_channel_element(ac, gb);
+            break;
+        case ID_LFE:
+            if (!lfe_channel_struct(ac, gb))
+                num_decoded += 1;
+            break;
+        default:
+            assert(0 && 0);
+            break;
         }
     }
 
