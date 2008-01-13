@@ -1361,7 +1361,7 @@ static int channel_pair_element(AACContext * ac, GetBitContext * gb) {
     cpe->common_window = get_bits1(gb);
     if (cpe->common_window) {
         ics_info(ac, gb, 1, &cpe->ch[0].ics);
-        i = cpe->ch[1].ics.window_shape_prev;
+        i = cpe->ch[1].ics.window_shape;
         cpe->ch[1].ics = cpe->ch[0].ics;
         cpe->ch[1].ics.window_shape_prev = i;
         cpe->ch[1].ics.ltp = cpe->ch[0].ics.ltp2;
