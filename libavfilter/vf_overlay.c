@@ -104,11 +104,11 @@ static int lower_timestamp(OverlayContext *over)
 {
     if(!over->pics[0][0] &&
        !over->pics[1][0]) return 2;
-    if(!over->pics[0][0]) return 0;
-    if(!over->pics[1][0]) return 1;
+    if(!over->pics[0][1]) return 0;
+    if(!over->pics[1][1]) return 1;
 
-    if(over->pics[0][0]->pts == over->pics[1][0]->pts) return 2;
-    return (over->pics[0][0]->pts > over->pics[1][0]->pts);
+    if(over->pics[0][1]->pts == over->pics[1][1]->pts) return 2;
+    return (over->pics[0][1]->pts > over->pics[1][1]->pts);
 }
 
 static void copy_image(AVFilterPicRef *dst, int x, int y,
@@ -169,7 +169,7 @@ static int request_frame(AVFilterLink *link)
                    over->bpp, over->hsub, over->vsub);
 
     /* we give the output frame the higher of the two current pts values */
-    pic->pts = over->pics[!lower_timestamp(over)][0]->pts;
+    pic->pts = FFMAX(over->pics[0][0]->pts, over->pics[1][0]->pts);
 
     /* and send it to the next filter */
     avfilter_start_frame(link, avfilter_ref_pic(pic, ~0));
