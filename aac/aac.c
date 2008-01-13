@@ -568,7 +568,7 @@ lab3:
             break;
     }
     pcs->generated = 0;
-    return 1;
+    return -1;
 }
 
 static int program_config_element(AACContext * ac, GetBitContext * gb) {
@@ -703,7 +703,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     ac->audioObjectType = GetAudioObjectType(gb);
     assert(ac->audioObjectType == AOT_AAC_LC || //ac->audioObjectType == AOT_AAC_MAIN ||
             ac->audioObjectType == AOT_AAC_LTP || ac->audioObjectType == AOT_AAC_SSR);
-    if (GetSampleRate(gb, &ac->sampling_index, &ac->sample_rate)) return 1;
+    if (GetSampleRate(gb, &ac->sampling_index, &ac->sample_rate)) return -1;
     ac->channels = get_bits(gb, 4);
     //assert(ac->channels == 2);
 
@@ -711,7 +711,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     if (ac->audioObjectType == AOT_SBR) {
         ac->ext_audioObjectType = ac->audioObjectType;
         ac->sbr_present = 1;
-        if (GetSampleRate(gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return 1;
+        if (GetSampleRate(gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return -1;
         ac->audioObjectType = GetAudioObjectType(gb);
     } else {
         ac->ext_audioObjectType = 0;
@@ -725,10 +725,10 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
         case AOT_AAC_SCALABLE:
         case AOT_TWINVQ:
             if (GASpecificConfig(ac, gb))
-                return 1;
+                return -1;
             break;
         case AOT_SBR:
-            return 1;
+            return -1;
         case AOT_CELP:
         case AOT_HVXC:
             assert(0);
@@ -740,7 +740,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
             if (ac->ext_audioObjectType == AOT_SBR) {
                 ac->sbr_present = get_bits1(gb);
                 if (ac->sbr_present) {
-                    if (GetSampleRate(gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return 1;
+                    if (GetSampleRate(gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return -1;
                 }
             }
         }
@@ -773,7 +773,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     ac->is_saved = 0;
 
     if (AudioSpecificConfig(ac, avccontext->extradata, avccontext->extradata_size))
-        return 1;
+        return -1;
 
     if (avccontext->channels == 0) {
         avccontext->channels = ac->channels;
@@ -1270,7 +1270,7 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
         if ((tns->present = get_bits1(gb)))
             tns_data(ac, gb, ics, tns);
         if (get_bits1(gb))
-            if (gain_control_data(ac, gb, sce)) return 1;
+            if (gain_control_data(ac, gb, sce)) return -1;
     }
 
     spectral_data(ac, gb, ics, sce->cb, sce->sf, icoeffs);
@@ -1317,7 +1317,7 @@ static int single_channel_struct(AACContext * ac, GetBitContext * gb) {
     sce = ac->che_sce[id];
     sce->mixing_gain = ac->mix.sce_gain[id];
     if (individual_channel_stream(ac, gb, 0, 0, sce))
-        return 1;
+        return -1;
     return 0;
 }
 
@@ -1371,9 +1371,9 @@ static int channel_pair_element(AACContext * ac, GetBitContext * gb) {
         cpe->ms.present = 0;
     }
     if (individual_channel_stream(ac, gb, cpe->common_window, 0, &cpe->ch[0]))
-        return 1;
+        return -1;
     if (individual_channel_stream(ac, gb, cpe->common_window, 0, &cpe->ch[1]))
-        return 1;
+        return -1;
 
     // M/S tool
     if (cpe->common_window) {
@@ -1423,7 +1423,7 @@ static int coupling_channel_element(AACContext * ac, GetBitContext * gb) {
     scale = cc_scale[get_bits(gb, 2)];
 
     if (individual_channel_stream(ac, gb, 0, 0, sce))
-        return 1;
+        return -1;
 
     for (c = 0; c < num_gain; c++) {
         int cge = 1;
@@ -1467,7 +1467,7 @@ static int lfe_channel_struct(AACContext * ac, GetBitContext * gb) {
     sce = ac->che_lfe[id];
     sce->mixing_gain = ac->mix.lfe_gain[id];
     if (individual_channel_stream(ac, gb, 0, 0, sce))
-        return 1;
+        return -1;
     return 0;
 }
 
