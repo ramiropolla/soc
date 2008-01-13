@@ -2261,8 +2261,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
 static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data_size, uint8_t * buf, int buf_size) {
     AACContext * ac = avccontext->priv_data;
     GetBitContext * gb = &ac->gb;
-    int id;
-    int num_decoded = 0;
+    int id, err;
 
     ac->num_frame++;
     //if (ac->num_frame == 40)
@@ -2278,39 +2277,37 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     while ((id = get_bits(gb, 3)) != ID_END) {
         switch (id) {
         case ID_SCE:
-            if (!single_channel_struct(ac, gb))
-                num_decoded += 1;
+            err = single_channel_struct(ac, gb);
             break;
-
         case ID_CPE:
-            if (!channel_pair_element(ac, gb))
-                num_decoded += 2;
+            err = channel_pair_element(ac, gb);
             break;
-
         case ID_FIL: {
             int cnt = get_bits(gb, 4);
             if (cnt == 15) cnt += get_bits(gb, 8) - 1;
             while (cnt > 0)
                 cnt -= extension_payload(ac, gb, cnt);
+            err = 0; /* FIXME */
             break;
         }
         case ID_PCE:
-            program_config_element(ac, gb);
+            err = program_config_element(ac, gb);
             break;
         case ID_DSE:
-            data_stream_element(ac, gb);
+            err = data_stream_element(ac, gb);
             break;
         case ID_CCE:
-            coupling_channel_element(ac, gb);
+            err = coupling_channel_element(ac, gb);
             break;
         case ID_LFE:
-            if (!lfe_channel_struct(ac, gb))
-                num_decoded += 1;
+            err = lfe_channel_struct(ac, gb);
             break;
         default:
-            assert(0 && 0);
+            err = -1; /* should not happen, but keeps compiler happy */
             break;
         }
+        if(err)
+            return -1;
     }
 
     spec_to_sample(ac);
