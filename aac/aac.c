@@ -528,6 +528,12 @@ lab3:
     return -1;
 }
 
+/**
+ * Parse program config element
+ * reference: Table 4.2
+ *
+ * XXX: Needs fixup
+ */
 static int program_config_element(AACContext * ac, GetBitContext * gb) {
     program_config_struct * pcs = &ac->pcs;
     int id, object_type, i;
@@ -603,6 +609,10 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
     return 0;
 }
 
+/**
+ * Parse GA specific configuration
+ * reference: Table 4.1
+ */
 static int GASpecificConfig(AACContext * ac, GetBitContext * gb) {
     int ext = 0;
     ac->frame_length = get_bits1(gb);
@@ -631,6 +641,10 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb) {
     return 0;
 }
 
+/**
+ * Parse audio object type
+ * reference: Table 1.14
+ */
 static inline int GetAudioObjectType(GetBitContext * gb) {
     int result = get_bits(gb, 5);
     if (result == 31)
@@ -650,6 +664,10 @@ static inline int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
     return 0;
 }
 
+/**
+ * Parse audio specific configuration
+ * reference: Table 1.13
+ */
 static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     GetBitContext * gb = &ac->gb;
 
@@ -864,6 +882,11 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 }
 
 // Parsers implementation
+
+/**
+ * Decode a data_stream_element
+ * reference: Table 4.10
+ */
 static int data_stream_element(AACContext * ac, GetBitContext * gb) {
     int id, byte_align;
     int count;
@@ -890,6 +913,10 @@ static void ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, ltp_struc
     }
 }
 
+/**
+ * Decode Individual Channel Stream info
+ * reference: table 4.6
+ */
 static int ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_struct * ics) {
     if (get_bits1(gb)) {
         av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set\n");
@@ -957,6 +984,10 @@ static inline float ivquant(AACContext * ac, int a) {
         return sign[tmp+1] * pow(abs_a, 4./3);
 }
 
+/**
+ * Decode section_data payload
+ * reference: Table 4.46
+ */
 static int section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, int cb[][64]) {
     int g;
     for (g = 0; g < ics->num_window_groups; g++) {
@@ -982,6 +1013,10 @@ static int section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, i
     return 0;
 }
 
+/**
+ * Decode scale_factor_data
+ * reference: Table 4.47
+ */
 static void scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, int global_gain, ics_struct * ics, const int cb[][64], float sf[][64]) {
     int g, i;
     int intensity = 100; // normalization for intensity_tab lookup table
@@ -1093,6 +1128,10 @@ static int ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
     return 0;
 }
 
+/**
+ * Decode spectral data
+ * reference: Table 4.50
+ */
 static int spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], const float sf[][64], int * icoef) {
     static const int unsigned_cb[] = { 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     int i, k, g;
@@ -1214,6 +1253,10 @@ static void quant_to_spec_tool(AACContext * ac, const ics_struct * ics, const in
     }
 }
 
+/**
+ * Decode an individual_channel_stream payload
+ * reference: Table 4.44
+ */
 static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int common_window, int scale_flag, sce_struct * sce) {
     int icoeffs[1024];
     pulse_struct pulse;
@@ -1321,6 +1364,10 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
     }
 }
 
+/**
+ * Decode a channel_pair_element
+ * reference: Table 4.4
+ */
 static int channel_pair_element(AACContext * ac, GetBitContext * gb) {
     int i;
     cpe_struct * cpe;
