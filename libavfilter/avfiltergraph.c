@@ -488,12 +488,12 @@ static int graph_load_from_desc(AVFilterContext *ctx, AVFilterGraphDesc *desc)
     for(curfilt = desc->filters; curfilt; curfilt = curfilt->next) {
         if(!(filterdef = avfilter_get_by_name(curfilt->filter)) ||
            !(filt = avfilter_open(filterdef, curfilt->name))) {
-            av_log(ctx, AV_LOG_ERROR, "error creating filter\n");
+            av_log(ctx, AV_LOG_ERROR, "error creating filter '%s'\n", curfilt->name);
             goto fail;
         }
         avfilter_graph_add_filter(ctx, filt);
         if(avfilter_init_filter(filt, curfilt->args, NULL)) {
-            av_log(ctx, AV_LOG_ERROR, "error initializing filter\n");
+            av_log(ctx, AV_LOG_ERROR, "error initializing filter '%s'\n", curfilt->name);
             goto fail;
         }
     }
