@@ -1,0 +1,1108 @@
+Index: libavformat/mpeg_pes_enc.c
+===================================================================
+--- libavformat/mpeg_pes_enc.c	(revision 0)
++++ libavformat/mpeg_pes_enc.c	(revision 0)
+@@ -0,0 +1,351 @@
++/*
++ * MPEG PES muxer
++ * Copyright (c) 2000-2002 Fabrice Bellard
++ * Copyright (c) 2007 Xiaohui Sun <sunxiaohui@dsp.ac.cn>
++ *
++ * This file is part of FFmpeg.
++ *
++ * FFmpeg is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * FFmpeg is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with FFmpeg; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
++ */
++
++#include "mpeg_pes.h"
++#include "bytestream.h"
++
++/**
++ * Initialization of PES muxer.
++ * @param[in] ctx the AVFormatContext which contains streams
++ * @return  On error a negative value is returned, on success zero.
++ */
++int ff_pes_muxer_init(AVFormatContext *ctx)
++{
++    AVStream *st;
++    PESStream *stream;
++    int i;
++
++    for(i=0;i<ctx->nb_streams;i++) {
++        st = ctx->streams[i];
++        stream = st->priv_data;
++        av_set_pts_info(st, 64, 1, 90000);
++
++        switch(st->codec->codec_type) {
++        case CODEC_TYPE_AUDIO:
++            /* This value HAS to be used for VCD (see VCD standard, p. IV-7).
++               Right now it is also used for everything else.*/
++            stream->max_buffer_size = 4 * 1024;
++            break;
++        case CODEC_TYPE_VIDEO:
++#if 0
++                /* see VCD standard, p. IV-7*/
++                stream->max_buffer_size = 46 * 1024;
++            else
++                /* This value HAS to be used for SVCD (see SVCD standard, p. 26 V.2.3.2).
++                   Right now it is also used for everything else.*/
++                stream->max_buffer_size = 230 * 1024;
++#endif
++            if (st->codec->rc_buffer_size)
++                stream->max_buffer_size = 6*1024 + st->codec->rc_buffer_size/8;
++            else
++                stream->max_buffer_size = 230*1024; //FIXME this is probably too small as default
++            break;
++        case CODEC_TYPE_SUBTITLE:
++            stream->max_buffer_size = 16 * 1024;
++            break;
++        default:
++            return -1;
++        }
++        av_fifo_init(&stream->fifo, 16);
++    }
++    return 0;
++}
++
++static inline void insert_timestamp(uint8_t** p, int id, int64_t timestamp)
++{
++    bytestream_put_byte(p,
++        (id << 4) |
++        (((timestamp >> 30) & 0x07) << 1) |
++        1);
++    bytestream_put_be16(p, (uint16_t)((((timestamp >> 15) & 0x7fff) << 1) | 1));
++    bytestream_put_be16(p, (uint16_t)((((timestamp) & 0x7fff) << 1) | 1));
++}
++
++/**
++ * Get total number of frames that have been muxed.
++ * @param[in] ctx    the AVFormatContext
++ * @param[in] stream the PES stream
++ * @param[in] len    PES packet size
++ * @return  the number of frames have been muxed.
++ */
++int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
++    int nb_frames=0;
++    PacketDesc *pkt_desc= stream->premux_packet;
++
++    while(len>0){
++        if(pkt_desc->size == pkt_desc->unwritten_size)
++            nb_frames++;
++        len -= pkt_desc->unwritten_size;
++        pkt_desc= pkt_desc->next;
++    }
++
++    return nb_frames;
++}
++
++/**
++ * Mux one stream into PES stream.
++ * @param [in]      ctx            the AVFormatContext which contains streams
++ * @param [in]      stream_index   the stream index to write
++ * @param [in]      pes_buffer     PES payload data
++ * @param [in]      pts            packet presentation timestamp
++ * @param [in]      dts            packet decoding timestamp
++ * @param [in]      id             stream ID
++ * @param [in]      start_code     PES packet start code
++ * @param [in]      header_len     PES header size
++ * @param [in]      packet_size    total packet size
++ * @param [in]      payload_size   packet payload size
++ * @param [in]      stuffing_size  packet stuffing size
++ * @return   bytes written to PES stream.
++ */
++int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t* pes_buffer,
++    int64_t pts,int64_t dts, int  id, int startcode,
++    uint8_t* pes_content, int pes_content_len,
++    int header_len, int packet_size, int payload_size, int stuffing_size)
++{
++    PESStream *stream = ctx->streams[stream_index]->priv_data;
++    PESContext *context = ctx->priv_data;
++    int pes_flags, i;
++    int data_size = payload_size - stuffing_size;
++    uint8_t *q = pes_buffer;
++
++    bytestream_put_be32(&q, startcode);
++
++    bytestream_put_be16(&q, packet_size);
++    bytestream_put_byte(&q, 0x80); /* mpeg2 id */
++
++    pes_flags=0;
++
++    if (pts != AV_NOPTS_VALUE) {
++        pes_flags |= 0x80;
++        if (dts != pts)
++           pes_flags |= 0x40;
++    }
++
++    /* Both the MPEG-2 and the SVCD standards demand that the
++       P-STD_buffer_size field be included in the first packet of
++       every stream. (see SVCD standard p. 26 V.2.3.1 and V.2.3.2
++       and MPEG-2 standard 2.7.7) */
++    if (context->packet_number == 0 && context->muxer_type == PESMUXER_PS)
++        pes_flags |= 0x01;
++
++    bytestream_put_byte(&q, pes_flags); /* flags */
++    bytestream_put_byte(&q, header_len - 3 + stuffing_size);
++
++    if (pes_flags & 0x80)  /*write pts*/
++        insert_timestamp(&q, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
++    if (pes_flags & 0x40)  /*write dts*/
++        insert_timestamp(&q, 0x01, dts);
++
++    if (pes_flags & 0x01) {  /*write pes extension*/
++        bytestream_put_byte(&q, 0x10); /* flags */
++
++        /* P-STD buffer info */
++        if (id == AUDIO_ID)
++            bytestream_put_be16(&q, 0x4000 | stream->max_buffer_size/128);
++        else
++            bytestream_put_be16(&q, 0x6000 | stream->max_buffer_size/1024);
++    }
++
++    /* special stuffing byte that is always written
++       to prevent accidental generation of startcodes. */
++    bytestream_put_byte(&q, 0xff);
++
++    for(i=0;i<stuffing_size;i++)
++        bytestream_put_byte(&q, 0xff);
++
++    if(pes_content != NULL)
++        bytestream_put_buffer(&q, pes_content, pes_content_len);
++
++    /* output data */
++    if(av_fifo_read(&stream->fifo, q, data_size) < 0)
++        return -1;
++    return (q - pes_buffer + data_size);
++}
++
++/**
++ * Remove decoded packets of each stream.
++ * @param[in] ctx  the AVFormatContext
++ * @param[in] scr  System Clock Reference of PES stream
++ * @return  On error a negative or zero value is returned, on success 1 is returned.
++ */
++int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
++{
++    int i;
++
++    for(i=0; i<ctx->nb_streams; i++){
++        AVStream *st = ctx->streams[i];
++        PESStream  *stream = st->priv_data;
++        PacketDesc *pkt_desc;
++
++        while((pkt_desc= stream->predecode_packet)
++              && scr > pkt_desc->dts){ //FIXME > vs >=
++            if(stream->buffer_index < pkt_desc->size ||
++               stream->predecode_packet == stream->premux_packet){
++                av_log(ctx, AV_LOG_ERROR,
++                       "buffer underflow i=%d bufi=%d size=%d\n",
++                       i, stream->buffer_index, pkt_desc->size);
++                break;
++            }
++            stream->buffer_index -= pkt_desc->size;
++
++            stream->predecode_packet= pkt_desc->next;
++            av_freep(&pkt_desc);
++        }
++    }
++
++    return 0;
++}
++
++/**
++ * Find the stream to mux into the PES stream.
++ * @param[in] ctx          the AVFormatContext
++ * @param[in] packet_size  PES stream packet size
++ * @param[in] flush        Flush after every single subtitle packet.
++ * @param[out] best_i      index of stream to be muxed
++ * @return  On error a negative or zero value is returned, on success 1 is returned.
++ */
++int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int* best_i)
++{
++    int i, avail_space;
++    int best_score= INT_MIN;
++    int ignore_constraints=0;
++    const int64_t max_delay= av_rescale(ctx->max_delay, 90000, AV_TIME_BASE);
++
++retry:
++    for(i=0; i<ctx->nb_streams; i++){
++        AVStream *st = ctx->streams[i];
++        PESStream*stream = st->priv_data;
++        const int avail_data=  av_fifo_size(&stream->fifo);
++        const int space= stream->max_buffer_size - stream->buffer_index;
++        int rel_space= 1024*space / stream->max_buffer_size;
++        PacketDesc *next_pkt= stream->premux_packet;
++
++        /* for subtitle, a single PES packet must be generated,
++           so we flush after every single subtitle packet */
++        if(packet_size > avail_data && !flush
++           && st->codec->codec_type != CODEC_TYPE_SUBTITLE)
++            return 0;
++        if(avail_data==0)
++            continue;
++        assert(avail_data>0);
++
++        if(space < packet_size && !ignore_constraints)
++            continue;
++
++        if(next_pkt && next_pkt->dts - *scr > max_delay)
++            continue;
++
++        if(rel_space > best_score){
++            best_score= rel_space;
++            *best_i = i;
++            avail_space= space;
++        }
++    }
++
++    if(*best_i < 0){
++        int64_t best_dts= INT64_MAX;
++
++        for(i=0; i<ctx->nb_streams; i++){
++            AVStream *st = ctx->streams[i];
++            PESStream *stream = st->priv_data;
++            PacketDesc *pkt_desc= stream->predecode_packet;
++            if(pkt_desc && pkt_desc->dts < best_dts)
++                best_dts= pkt_desc->dts;
++        }
++
++#if 0
++        av_log(ctx, AV_LOG_DEBUG, "bumping scr, scr:%f, dts:%f\n",
++               scr/90000.0, best_dts/90000.0);
++#endif
++        if(best_dts == INT64_MAX)
++            return 0;
++
++        if(*scr >= best_dts+1 && !ignore_constraints){
++            av_log(ctx, AV_LOG_ERROR, "packet too large, ignoring buffer limits to mux it\n");
++            ignore_constraints= 1;
++        }
++        *scr= FFMAX(best_dts+1, *scr);
++        if(ff_pes_remove_decoded_packets(ctx, *scr) < 0)
++            return -1;
++        goto retry;
++    }
++    assert(avail_space >= packet_size || ignore_constraints);
++    return 1;
++}
++
++/**
++ * Write packet into PES FIFO.
++ * @param [in] ctx  the AVFormatContext which contains streams.
++ * @param [in] pkt  the packet to write.
++ * @return  NULL
++ */
++void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
++{
++    int stream_index= pkt->stream_index;
++    int size= pkt->size;
++    uint8_t *buf= pkt->data;
++    AVStream *st = ctx->streams[stream_index];
++    PESStream *stream = st->priv_data;
++    int64_t pts, dts;
++    PacketDesc *pkt_desc;
++    const int preload= av_rescale(ctx->preload, 90000, AV_TIME_BASE);
++
++    pts= pkt->pts;
++    dts= pkt->dts;
++
++    if(pts != AV_NOPTS_VALUE) pts += preload;
++    if(dts != AV_NOPTS_VALUE) dts += preload;
++
++//av_log(ctx, AV_LOG_DEBUG, "dts:%f pts:%f flags:%d stream:%d nopts:%d\n", dts/90000.0, pts/90000.0, pkt->flags, pkt->stream_index, pts != AV_NOPTS_VALUE);
++    if (!stream->premux_packet)
++        stream->next_packet = &stream->premux_packet;
++    *stream->next_packet=
++    pkt_desc= av_mallocz(sizeof(PacketDesc));
++    pkt_desc->pts= pts;
++    pkt_desc->dts= dts;
++    pkt_desc->unwritten_size=
++    pkt_desc->size= size;
++    if(!stream->predecode_packet)
++        stream->predecode_packet= pkt_desc;
++    stream->next_packet= &pkt_desc->next;
++
++    av_fifo_realloc(&stream->fifo, av_fifo_size(&stream->fifo) + size + 1);
++    av_fifo_write(&stream->fifo, buf, size);
++}
++
++/**
++ * Finalization of PES muxer.
++ * @param [in] ctx the AVFormatContext which contains streams.
++ * @return  NULL
++ */
++void ff_pes_muxer_end(AVFormatContext *ctx)
++{
++    PESStream *stream;
++    int i;
++
++    for(i=0;i<ctx->nb_streams;i++) {
++        stream = ctx->streams[i]->priv_data;
++
++        assert(av_fifo_size(&stream->fifo) == 0);
++        av_fifo_free(&stream->fifo);
++    }
++}
+Index: libavformat/Makefile
+===================================================================
+--- libavformat/Makefile	(revision 11662)
++++ libavformat/Makefile	(working copy)
+@@ -97,7 +97,7 @@
+ OBJS-$(CONFIG_MPEGPS_DEMUXER)            += mpeg.o
+ OBJS-$(CONFIG_MPEGTS_DEMUXER)            += mpegts.o
+ OBJS-$(CONFIG_MPEGTSRAW_DEMUXER)         += mpegts.o
+-OBJS-$(CONFIG_MPEGTS_MUXER)              += mpegtsenc.o
++OBJS-$(CONFIG_MPEGTS_MUXER)              += mpegtsenc.o mpeg_pes_enc.o
+ OBJS-$(CONFIG_MPEGVIDEO_DEMUXER)         += raw.o
+ OBJS-$(CONFIG_MPJPEG_MUXER)              += mpjpeg.o
+ OBJS-$(CONFIG_MTV_DEMUXER)               += mtv.o
+Index: libavformat/mpegtsenc.c
+===================================================================
+--- libavformat/mpegtsenc.c	(revision 11662)
++++ libavformat/mpegtsenc.c	(working copy)
+@@ -21,6 +21,8 @@
+ #include "avformat.h"
+ #include "crc.h"
+ #include "mpegts.h"
++#include "bytestream.h"
++#include "mpeg_pes.h"
+ 
+ /* write DVB SI sections */
+ 
+@@ -60,8 +62,9 @@
+             b |= 0x40;
+         *q++ = b;
+         *q++ = s->pid;
+-        s->cc = (s->cc + 1) & 0xf;
++        s->cc = (s->cc) & 0xf;
+         *q++ = 0x10 | s->cc;
++        s->cc++;
+         if (first)
+             *q++ = 0; /* 0 offset */
+         len1 = TS_PACKET_SIZE - (q - packet);
+@@ -136,8 +139,26 @@
+ #define SDT_RETRANS_TIME 500
+ #define PAT_RETRANS_TIME 100
+ #define PCR_RETRANS_TIME 20
++#define MAX_DELTA_PCR 4500 /**< 90000 / PCR_RETRANS_TIME */
+ 
++
++/**
++ *  lookup table from codec id to pes stream id
++ */
++static int pes_streamid[5] = {
++   0xe0,        /**< CODEC_TYPE_VIDEO    */
++   0xc0,        /**< CODEC_TYPE_AUDIO    */
++   0xbd,        /**< CODEC_TYPE_DATA     */
++   0xbd,        /**< CODEC_TYPE_SUBTITLE */
++   0xbd         /**< CODEC_TYPE_NB       */
++};
++
+ typedef struct MpegTSWriteStream {
++    PESStream pes_stream;
++    int packet_size;
++    int packet_number;
++    int startcode;  /**< PES header start code */
++    uint8_t id;
+     struct MpegTSService *service;
+     int pid; /* stream associated pid */
+     int cc;
+@@ -158,6 +179,7 @@
+ } MpegTSService;
+ 
+ typedef struct MpegTSWrite {
++    PESContext pes_context;
+     MpegTSSection pat; /* MPEG2 pat table */
+     MpegTSSection sdt; /* MPEG2 sdt table context */
+     MpegTSService **services;
+@@ -168,6 +190,11 @@
+     int nb_services;
+     int onid;
+     int tsid;
++    int packet_number;
++    int64_t last_pcr; /* last programme clock reference */
++    int64_t cur_pcr; /* current programme clock reference */
++    int mux_rate;
++    int packet_size;
+ } MpegTSWrite;
+ 
+ static void mpegts_write_pat(AVFormatContext *s)
+@@ -353,7 +380,7 @@
+ static void section_write_packet(MpegTSSection *s, const uint8_t *packet)
+ {
+     AVFormatContext *ctx = s->opaque;
+-    put_buffer(ctx->pb, packet, TS_PACKET_SIZE);
++    put_buffer(&ctx->pb, packet, TS_PACKET_SIZE);
+ }
+ 
+ static int mpegts_write_header(AVFormatContext *s)
+@@ -362,7 +389,8 @@
+     MpegTSWriteStream *ts_st;
+     MpegTSService *service;
+     AVStream *st;
+-    int i, total_bit_rate;
++    int bitrate;
++    int i;
+     const char *service_name;
+ 
+     ts->tsid = DEFAULT_TSID;
+@@ -376,6 +404,14 @@
+     service->pmt.write_packet = section_write_packet;
+     service->pmt.opaque = s;
+ 
++    ts->packet_number = 0;
++
++    if(s->packet_size)
++        ts->packet_size = s->packet_size;
++    else
++        ts->packet_size = DEFAULT_PES_PAYLOAD_SIZE;
++
++
+     ts->pat.pid = PAT_PID;
+     ts->pat.cc = 0;
+     ts->pat.write_packet = section_write_packet;
+@@ -387,7 +423,6 @@
+     ts->sdt.opaque = s;
+ 
+     /* assign pids to each stream */
+-    total_bit_rate = 0;
+     for(i = 0;i < s->nb_streams; i++) {
+         st = s->streams[i];
+         ts_st = av_mallocz(sizeof(MpegTSWriteStream));
+@@ -402,7 +437,13 @@
+         if (st->codec->codec_type == CODEC_TYPE_VIDEO &&
+             service->pcr_pid == 0x1fff)
+             service->pcr_pid = ts_st->pid;
+-        total_bit_rate += st->codec->bit_rate;
++
++        ts_st->id = pes_streamid[st->codec->codec_type];
++
++        if(ts_st->id < 0xc0)
++            ts_st->startcode = PRIVATE_STREAM_1;
++        else
++            ts_st->startcode = 0x100 + ts_st->id;
+     }
+ 
+     /* if no video stream, use the first stream as PCR */
+@@ -411,13 +452,40 @@
+         service->pcr_pid = ts_st->pid;
+     }
+ 
+-    if (total_bit_rate <= 8 * 1024)
+-        total_bit_rate = 8 * 1024;
+-    service->pcr_packet_freq = (total_bit_rate * PCR_RETRANS_TIME) /
++    if(ff_pes_muxer_init(s) != 0)
++        goto fail;
++
++    bitrate = 0;
++    for(i=0;i<s->nb_streams;i++) {
++        int codec_rate;
++        st = s->streams[i];
++        ts_st = (MpegTSWriteStream*) st->priv_data;
++        if(st->codec->rc_max_rate)
++            codec_rate= st->codec->rc_max_rate;
++        else
++            codec_rate= st->codec->bit_rate;
++
++        if(!codec_rate)
++            bitrate= (1<<21) * 8/s->nb_streams;
++        bitrate += codec_rate;
++    }
++
++    if(s->mux_rate) {
++        ts->mux_rate= s->mux_rate;
++    } else {
++        bitrate += bitrate * 25 / (8 *  DEFAULT_PES_PAYLOAD_SIZE) +  /* PES header size */
++                   bitrate * 4 / (8 * TS_PACKET_SIZE) +             /* TS  header size */
++                   500 * 12 +                                       /* SDT size */
++                   100 * 16;                                        /* PAT size */
++        ts->mux_rate = bitrate;
++    }
++    ts->last_pcr = ts->cur_pcr = 0;
++
++    service->pcr_packet_freq = (ts->mux_rate * PCR_RETRANS_TIME) /
+         (TS_PACKET_SIZE * 8 * 1000);
+-    ts->sdt_packet_freq = (total_bit_rate * SDT_RETRANS_TIME) /
++    ts->sdt_packet_freq = (ts->mux_rate * SDT_RETRANS_TIME) /
+         (TS_PACKET_SIZE * 8 * 1000);
+-    ts->pat_packet_freq = (total_bit_rate * PAT_RETRANS_TIME) /
++    ts->pat_packet_freq = (ts->mux_rate * PAT_RETRANS_TIME) /
+         (TS_PACKET_SIZE * 8 * 1000);
+ #if 0
+     printf("%d %d %d\n",
+@@ -431,7 +499,7 @@
+     for(i = 0; i < ts->nb_services; i++) {
+         mpegts_write_pmt(s, ts->services[i]);
+     }
+-    put_flush_packet(s->pb);
++    put_flush_packet(&s->pb);
+ 
+     return 0;
+ 
+@@ -462,46 +530,32 @@
+     }
+ }
+ 
+-static void write_pts(uint8_t *q, int fourbits, int64_t pts)
++static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
++                             const uint8_t *payload, int payload_size)
+ {
+-    int val;
+-
+-    val = fourbits << 4 | (((pts >> 30) & 0x07) << 1) | 1;
+-    *q++ = val;
+-    val = (((pts >> 15) & 0x7fff) << 1) | 1;
+-    *q++ = val >> 8;
+-    *q++ = val;
+-    val = (((pts) & 0x7fff) << 1) | 1;
+-    *q++ = val >> 8;
+-    *q++ = val;
+-}
+-
+-/* NOTE: pes_data contains all the PES packet */
+-static void mpegts_write_pes(AVFormatContext *s, AVStream *st,
+-                             const uint8_t *payload, int payload_size,
+-                             int64_t pts, int64_t dts)
+-{
+-    MpegTSWriteStream *ts_st = st->priv_data;
++    MpegTSWrite *ts = s->priv_data;
+     uint8_t buf[TS_PACKET_SIZE];
+     uint8_t *q;
+-    int val, is_start, len, header_len, write_pcr, private_code, flags;
++    int val, is_start, len, header_len, write_pcr;
+     int afc_len, stuffing_len;
+     int64_t pcr = -1; /* avoid warning */
++    int64_t delta_pcr;
+ 
++    int offset = 0;
+     is_start = 1;
+     while (payload_size > 0) {
+         retransmit_si_info(s);
+-
+         write_pcr = 0;
+         if (ts_st->pid == ts_st->service->pcr_pid) {
+             ts_st->service->pcr_packet_count++;
++            delta_pcr = ts->cur_pcr - ts->last_pcr;
+             if (ts_st->service->pcr_packet_count >=
+-                ts_st->service->pcr_packet_freq) {
++                ts_st->service->pcr_packet_freq || delta_pcr > MAX_DELTA_PCR) {
++                pcr = delta_pcr > MAX_DELTA_PCR ? ts->last_pcr + MAX_DELTA_PCR : ts->cur_pcr;
++                pcr += offset* 8*90000LL / ts->mux_rate;
+                 ts_st->service->pcr_packet_count = 0;
+                 write_pcr = 1;
+-                /* XXX: this is incorrect, but at least we have a PCR
+-                   value */
+-                pcr = pts;
++                ts->last_pcr = pcr;
+             }
+         }
+ 
+@@ -509,8 +563,10 @@
+         q = buf;
+         *q++ = 0x47;
+         val = (ts_st->pid >> 8);
+-        if (is_start)
++        if (is_start) {
+             val |= 0x40;
++            is_start = 0;
++        }
+         *q++ = val;
+         *q++ = ts_st->pid;
+         *q++ = 0x10 | ts_st->cc | (write_pcr ? 0x20 : 0);
+@@ -525,58 +581,6 @@
+             *q++ = (pcr & 1) << 7;
+             *q++ = 0;
+         }
+-        if (is_start) {
+-            /* write PES header */
+-            *q++ = 0x00;
+-            *q++ = 0x00;
+-            *q++ = 0x01;
+-            private_code = 0;
+-            if (st->codec->codec_type == CODEC_TYPE_VIDEO) {
+-                *q++ = 0xe0;
+-            } else if (st->codec->codec_type == CODEC_TYPE_AUDIO &&
+-                       (st->codec->codec_id == CODEC_ID_MP2 ||
+-                        st->codec->codec_id == CODEC_ID_MP3)) {
+-                *q++ = 0xc0;
+-            } else {
+-                *q++ = 0xbd;
+-                if (st->codec->codec_type == CODEC_TYPE_SUBTITLE) {
+-                    private_code = 0x20;
+-                }
+-            }
+-            header_len = 0;
+-            flags = 0;
+-            if (pts != AV_NOPTS_VALUE) {
+-                header_len += 5;
+-                flags |= 0x80;
+-            }
+-            if (dts != AV_NOPTS_VALUE) {
+-                header_len += 5;
+-                flags |= 0x40;
+-            }
+-            len = payload_size + header_len + 3;
+-            if (private_code != 0)
+-                len++;
+-            *q++ = len >> 8;
+-            *q++ = len;
+-            val = 0x80;
+-            /* data alignment indicator is required for subtitle data */
+-            if (st->codec->codec_type == CODEC_TYPE_SUBTITLE)
+-                val |= 0x04;
+-            *q++ = val;
+-            *q++ = flags;
+-            *q++ = header_len;
+-            if (pts != AV_NOPTS_VALUE) {
+-                write_pts(q, flags >> 6, pts);
+-                q += 5;
+-            }
+-            if (dts != AV_NOPTS_VALUE) {
+-                write_pts(q, 1, dts);
+-                q += 5;
+-            }
+-            if (private_code != 0)
+-                *q++ = private_code;
+-            is_start = 0;
+-        }
+         /* header size */
+         header_len = q - buf;
+         /* data len */
+@@ -605,71 +609,217 @@
+                 }
+             }
+         }
+-        memcpy(buf + TS_PACKET_SIZE - len, payload, len);
+-        payload += len;
++        memcpy(buf + TS_PACKET_SIZE - len, payload + offset, len);
++        offset += len;
+         payload_size -= len;
+-        put_buffer(s->pb, buf, TS_PACKET_SIZE);
++        put_buffer(&s->pb, buf, TS_PACKET_SIZE);
+     }
+-    put_flush_packet(s->pb);
++    if(pcr != -1)
++        ts->cur_pcr = pcr;
++    put_flush_packet(&s->pb);
+ }
+ 
+-static int mpegts_write_packet(AVFormatContext *s, AVPacket *pkt)
++/* Write an MPEG padding packet header. */
++static void put_padding_packet(uint8_t** pes_payload, int packet_bytes)
+ {
+-    AVStream *st = s->streams[pkt->stream_index];
+-    int size= pkt->size;
+-    uint8_t *buf= pkt->data;
+-    MpegTSWriteStream *ts_st = st->priv_data;
+-    int len, max_payload_size;
++    int i;
+ 
+-    if (st->codec->codec_type == CODEC_TYPE_SUBTITLE) {
+-        /* for subtitle, a single PES packet must be generated */
+-        mpegts_write_pes(s, st, buf, size, pkt->pts, AV_NOPTS_VALUE);
+-        return 0;
+-    }
++    bytestream_put_be32(pes_payload, PADDING_STREAM);
++    bytestream_put_be16(pes_payload, packet_bytes - 6);
++    packet_bytes -= 6;
+ 
+-    max_payload_size = DEFAULT_PES_PAYLOAD_SIZE;
+-    while (size > 0) {
+-        len = max_payload_size - ts_st->payload_index;
+-        if (len > size)
+-            len = size;
+-        memcpy(ts_st->payload + ts_st->payload_index, buf, len);
+-        buf += len;
+-        size -= len;
+-        ts_st->payload_index += len;
+-        if (ts_st->payload_pts == AV_NOPTS_VALUE)
+-            ts_st->payload_pts = pkt->pts;
+-        if (ts_st->payload_dts == AV_NOPTS_VALUE)
+-            ts_st->payload_dts = pkt->dts;
+-        if (ts_st->payload_index >= max_payload_size) {
+-            mpegts_write_pes(s, st, ts_st->payload, ts_st->payload_index,
+-                             ts_st->payload_pts, ts_st->payload_dts);
+-            ts_st->payload_pts = AV_NOPTS_VALUE;
+-            ts_st->payload_dts = AV_NOPTS_VALUE;
+-            ts_st->payload_index = 0;
++    for(i=0;i<packet_bytes;i++)
++        bytestream_put_byte(pes_payload, 0xff);
++}
++/* flush the packet on stream stream_index */
++static int flush_packet(AVFormatContext *ctx, int stream_index,
++                         int64_t pts, int64_t dts, int64_t pcr, int trailer_size)
++{
++    MpegTSWrite *s = ctx->priv_data;
++    MpegTSWriteStream *stream = ctx->streams[stream_index]->priv_data;
++    PESContext* pes_context = &s->pes_context;
++    PESStream *pes_stream = &stream->pes_stream;
++    int payload_size, id, stuffing_size, i, header_len;
++    int packet_size, es_size;
++    int zero_trail_bytes = 0;
++    int pad_packet_bytes = 0;
++    int general_pack = 0;  /*"general" pack without data specific to one stream?*/
++    int pes_size;
++    uint8_t* q = stream->payload;
++
++    id = stream->id;
++    packet_size = s->packet_size;
++
++    if (packet_size > 0) {
++
++        /* packet header size */
++        packet_size -= 6;
++
++        /* packet header */
++        header_len = 3;
++        header_len += 1; /* obligatory stuffing byte */
++        if (pts != AV_NOPTS_VALUE) {
++            if (dts != pts)
++                header_len += 5 + 5;
++            else
++                header_len += 5;
+         }
++        payload_size = packet_size - header_len;
++
++        stuffing_size = payload_size - av_fifo_size(&pes_stream->fifo);
++
++        // first byte does not fit -> reset pts/dts + stuffing
++        if(payload_size <= trailer_size && pts != AV_NOPTS_VALUE){
++            int timestamp_len=0;
++            if(dts != pts)
++                timestamp_len += 5;
++            if(pts != AV_NOPTS_VALUE)
++                timestamp_len += 5;
++            pts=dts= AV_NOPTS_VALUE;
++            header_len -= timestamp_len;
++            payload_size += timestamp_len;
++            stuffing_size += timestamp_len;
++            if(payload_size > trailer_size)
++                stuffing_size += payload_size - trailer_size;
++        }
++
++        if (stuffing_size < 0)
++            stuffing_size = 0;
++        if (stuffing_size > 16) {    /*<=16 for MPEG-1, <=32 for MPEG-2*/
++            pad_packet_bytes += stuffing_size;
++            packet_size -= stuffing_size;
++            payload_size -= stuffing_size;
++            stuffing_size = 0;
++        }
++        pes_context->packet_number = s->packet_number;
++        pes_context->muxer_type = PESMUXER_TS;
++        pes_size = ff_pes_muxer_write(ctx, stream_index, stream->payload, pts, dts, id, stream->startcode, NULL, 0,
++                 header_len, packet_size, payload_size, stuffing_size);
++        if(pes_size < 0)
++            return -1;
++        q += pes_size;
++    }else{
++        payload_size=
++        stuffing_size= 0;
+     }
+-    return 0;
++
++    if (pad_packet_bytes > 0)
++        put_padding_packet(&q, pad_packet_bytes);
++
++    for(i=0;i<zero_trail_bytes;i++)
++        bytestream_put_byte(&q, 0x00);
++
++    mpegts_write_pes(ctx, stream, stream->payload, q - stream->payload);
++    put_flush_packet(&ctx->pb);
++
++    s->packet_number++;
++
++    /* only increase the stream packet number if this pack actually contains
++       something that is specific to this stream! I.e. a dedicated header
++       or some data.*/
++    if (!general_pack)
++        stream->packet_number++;
++
++    es_size = payload_size - stuffing_size;
++    pes_stream->buffer_index += payload_size - stuffing_size;
++    while(pes_stream->premux_packet && pes_stream->premux_packet->unwritten_size <= es_size){
++        es_size -= pes_stream->premux_packet->unwritten_size;
++        pes_stream->premux_packet= pes_stream->premux_packet->next;
++    }
++
++    if(es_size)
++        pes_stream->premux_packet->unwritten_size -= es_size;
++
++    return payload_size - stuffing_size;
+ }
+ 
++static int output_packet(AVFormatContext *ctx, int flush){
++    MpegTSWrite *s = ctx->priv_data;
++    AVStream *st;
++    PESStream *stream;
++    int es_size, trailer_size;
++    int result;
++    int best_i= -1;
++    int64_t pcr = s->cur_pcr;
++    MpegTSWriteStream *ts_st;
++    PacketDesc *timestamp_packet;
++
++    if((result = ff_pes_find_beststream(ctx, s->packet_size, flush, &pcr, &best_i)) <= 0)
++        return result;
++
++    ts_st = ctx->streams[best_i]->priv_data;
++    if (ts_st->pid == ts_st->service->pcr_pid) {
++        s->cur_pcr = pcr;
++    }
++    assert(best_i >= 0);
++
++    st = ctx->streams[best_i];
++    stream = st->priv_data;
++
++    assert(av_fifo_size(&stream->fifo) > 0);
++
++    timestamp_packet= stream->premux_packet;
++    if(s->cur_pcr == 0)
++        s->cur_pcr = timestamp_packet->dts;
++    if(timestamp_packet->unwritten_size == timestamp_packet->size){
++        trailer_size= 0;
++    }else{
++        trailer_size= timestamp_packet->unwritten_size;
++        timestamp_packet= timestamp_packet->next;
++    }
++
++    if(timestamp_packet){
++//av_log(ctx, AV_LOG_DEBUG, "dts:%f pts:%f pcr:%f stream:%d\n", timestamp_packet->dts/90000.0, timestamp_packet->pts/90000.0, pcr/90000.0, best_i);
++        es_size= flush_packet(ctx, best_i, timestamp_packet->pts, timestamp_packet->dts, pcr, trailer_size);
++    }else{
++        assert(av_fifo_size(&stream->fifo) == trailer_size);
++        es_size= flush_packet(ctx, best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, pcr, trailer_size);
++    }
++
++
++    if(ff_pes_remove_decoded_packets(ctx, s->last_pcr) < 0)
++        return -1;
++
++    return 1;
++}
++
++
++static int mpegts_write_packet(AVFormatContext *ctx, AVPacket *pkt)
++{
++    int stream_index= pkt->stream_index;
++    int size = pkt->size;
++    static int total_size = 0;
++    AVStream *st = ctx->streams[stream_index];
++    MpegTSWriteStream *stream = st->priv_data;
++    PESStream *pes_stream = &stream->pes_stream;
++    int64_t pts;
++
++    total_size += size;
++    ff_pes_write_packet(ctx, pkt);
++    pts= pes_stream->predecode_packet->pts;
++
++    for(;;){
++        int ret = output_packet(ctx, 0);
++        if(ret<=0)
++            return ret;
++    }
++}
++
+ static int mpegts_write_end(AVFormatContext *s)
+ {
+     MpegTSWrite *ts = s->priv_data;
+-    MpegTSWriteStream *ts_st;
+     MpegTSService *service;
+-    AVStream *st;
+     int i;
+ 
+-    /* flush current packets */
+-    for(i = 0; i < s->nb_streams; i++) {
+-        st = s->streams[i];
+-        ts_st = st->priv_data;
+-        if (ts_st->payload_index > 0) {
+-            mpegts_write_pes(s, st, ts_st->payload, ts_st->payload_index,
+-                             ts_st->payload_pts, ts_st->payload_dts);
+-        }
++    for(;;){
++        int ret= output_packet(s, 1);
++        if(ret<0)
++            return ret;
++        else if(ret==0)
++            break;
+     }
+-    put_flush_packet(s->pb);
+ 
++    ff_pes_muxer_end(s);
+     for(i = 0; i < ts->nb_services; i++) {
+         service = ts->services[i];
+         av_freep(&service->provider_name);
+Index: libavformat/mpeg_pes.h
+===================================================================
+--- libavformat/mpeg_pes.h	(revision 0)
++++ libavformat/mpeg_pes.h	(revision 0)
+@@ -0,0 +1,158 @@
++/*
++ * Copyright (c) 2000-2002 Fabrice Bellard
++ * Copyright (c) 2007 Xiaohui Sun <sunxiaohui@dsp.ac.cn>
++ *
++ * This file is part of FFmpeg.
++ *
++ * FFmpeg is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation; either
++ * version 2.1 of the License, or (at your option) any later version.
++ *
++ * FFmpeg is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with FFmpeg; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
++ */
++
++/**
++ * @file mpeg_pes.h
++ * MPEG PES packetizer API header
++ */
++
++#ifndef AVFORMAT_MPEG_PES_H
++#define AVFORMAT_MPEG_PES_H
++
++#include "avformat.h"
++#include "fifo.h"
++
++/**
++ * PES packet description
++ */
++typedef struct PacketDesc {
++    int64_t pts;
++    int64_t dts;
++    int size;
++    int unwritten_size;
++    int flags;
++    struct PacketDesc *next;
++} PacketDesc;
++
++/**
++ * muxer type for PES
++ */
++typedef enum {
++    PESMUXER_PS,
++    PESMUXER_TS,
++    PESMUXER_PES
++} PESMuxerType;
++
++/**
++ * PES context
++ */
++typedef struct {
++    PESMuxerType muxer_type;
++    int packet_number;
++} PESContext;
++
++/**
++ * PES stream structure
++ */
++typedef struct {
++    AVFifoBuffer fifo;
++    int max_buffer_size; /**< in bytes */
++    int buffer_index;
++    PacketDesc *predecode_packet;
++    PacketDesc *premux_packet;
++    PacketDesc **next_packet;
++} PESStream;
++
++
++#define AUDIO_ID 0xc0
++#define VIDEO_ID 0xe0
++#define AC3_ID   0x80
++#define DTS_ID   0x8a
++#define LPCM_ID  0xa0
++#define SUB_ID   0x20
++
++#define PROGRAM_STREAM_MAP 0x1bc
++#define PRIVATE_STREAM_1   0x1bd
++#define PADDING_STREAM     0x1be
++#define PRIVATE_STREAM_2   0x1bf
++
++
++
++/**
++ * Initialization of PES muxer.
++ * @param[in] ctx the AVFormatContext which contains streams
++ * @return  On error a negative value is returned, on success zero.
++ */
++int ff_pes_muxer_init(AVFormatContext *ctx);
++
++/**
++ * Finalization of PES muxer.
++ * @param [in] ctx the AVFormatContext which contains streams.
++ * @return  NULL
++ */
++void ff_pes_muxer_end(AVFormatContext *ctx);
++
++/**
++ * Write packet into PES FIFO.
++ * @param [in] ctx  the AVFormatContext which contains streams.
++ * @param [in] pkt  the packet to write.
++ * @return  NULL
++ */
++void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
++
++/**
++ * Find the stream to mux into the PES stream.
++ * @param[in] ctx          the AVFormatContext
++ * @param[in] packet_size  PES stream packet size
++ * @param[in] flush        Flush after every single subtitle packet.
++ * @param[out] best_i      index of stream to be muxed
++ * @return  On error a negative or zero value is returned, on success 1 is returned.
++ */
++int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int* best_i);
++
++/**
++ * Get total number of frames that have been muxed.
++ * @param[in] ctx    the AVFormatContext
++ * @param[in] stream the PES stream
++ * @param[in] len    PES packet size
++ * @return  the number of frames have been muxed.
++ */
++int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
++
++/**
++ * Mux one stream into PES stream.
++ * @param [in]      ctx            the AVFormatContext which contains streams
++ * @param [in]      stream_index   the stream index to write
++ * @param [in]      pes_buffer     PES payload data
++ * @param [in]      pts            packet presentation timestamp
++ * @param [in]      dts            packet decoding timestamp
++ * @param [in]      id             stream ID
++ * @param [in]      start_code     PES packet start code
++ * @param [in]      header_len     PES header size
++ * @param [in]      packet_size    total packet size
++ * @param [in]      payload_size   packet payload size
++ * @param [in]      stuffing_size  packet stuffing size
++ * @return   bytes written to PES stream.
++ */
++int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buffer,
++          int64_t pts,int64_t dts, int  id, int startcode,
++          uint8_t* pes_content, int pes_content_len,
++          int header_len, int packet_size, int payload_size, int stuffing_size);
++
++/**
++ * Remove decoded packets of each stream.
++ * @param[in] ctx  the AVFormatContext
++ * @param[in] scr  System Clock Reference of PES stream
++ * @return  On error a negative or zero value is returned, on success 1 is returned.
++ */
++int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
++
++#endif/* AVFORMAT_MPEG_PES_H */
