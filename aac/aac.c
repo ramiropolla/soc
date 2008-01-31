@@ -619,26 +619,29 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb) {
         return -1;
     }
 
-    if (get_bits1(gb))
-        get_bits(gb, 14);
+    if (get_bits1(gb))       // dependsOnCoreCoder
+        get_bits(gb, 14);    // coreCoderDelay
     ext = get_bits1(gb);
     assert(ext == 0);
     if (ac->channels == 0)
         program_config_element(ac, gb);
     if (ext) {
         switch (ac->audioObjectType) {
-            case 22:
-                get_bits(gb, 5);
-                get_bits(gb, 11);
+            case AOT_ER_BSAC:
+                get_bits(gb, 5);    // numOfSubFrame
+                get_bits(gb, 11);   // layer_length
                 break;
-            case 17:
-            case 19:
-            case 20:
-            case 23:
-                get_bits(gb, 3);
+            case AOT_ER_AAC_LC:
+            case AOT_ER_AAC_LTP:
+            case AOT_ER_AAC_SCALABLE:
+            case AOT_ER_AAC_LD:
+                get_bits(gb, 3);   /* aacSectionDataResilienceFlag
+                                    * aacScalefactorDataResilienceFlag
+                                    * aacSpectralDataResilienceFlag
+                                    */
                 break;
         }
-        if (get_bits1(gb)) ;
+        get_bits1(gb);    // extensionFlag3 (TBD in version 3)
     }
     return 0;
 }
