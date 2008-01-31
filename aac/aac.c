@@ -622,7 +622,11 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb) {
     if (get_bits1(gb))       // dependsOnCoreCoder
         get_bits(gb, 14);    // coreCoderDelay
     ext = get_bits1(gb);
-    assert(ext == 0);
+
+    if(ac->audioObjectType == AOT_AAC_SCALABLE ||
+       ac->audioObjectType == AOT_ER_AAC_SCALABLE)
+        get_bits(gb, 3);     // layerNr
+
     if (ac->channels == 0)
         program_config_element(ac, gb);
     if (ext) {
