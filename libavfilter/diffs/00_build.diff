@@ -1,32 +1,35 @@
 Index: configure
 ===================================================================
---- configure	(revision 11668)
+--- configure	(revision 11671)
 +++ configure	(working copy)
-@@ -72,6 +72,7 @@
+@@ -72,6 +72,8 @@
    echo "                           and ffmpeg will be unredistributable [default=no]"
    echo "  --enable-pp              enable GPLed postprocessing support [default=no]"
    echo "  --enable-swscaler        software scaler support [default=no]"
 +  echo "  --enable-avfilter        video filter support (replaces vhook) [default=no]"
++  echo "  --enable-avfilter-lavf   video filters dependant on avformat [default=no]"
    echo "  --enable-beosthreads     use BeOS threads [default=no]"
    echo "  --enable-os2threads      use OS/2 threads [default=no]"
    echo "  --enable-pthreads        use pthreads [default=no]"
-@@ -624,6 +625,7 @@
+@@ -624,6 +626,8 @@
  
  CONFIG_LIST="
      $COMPONENT_LIST
 +    avfilter
++    avfilter_lavf
      avisynth
      beos_netserver
      ffmpeg
-@@ -1890,6 +1892,7 @@
+@@ -1890,6 +1894,8 @@
  echo "shared                    ${shared-no}"
  echo "postprocessing support    ${pp-no}"
  echo "software scaler enabled   ${swscaler-no}"
 +echo "new filter support        ${avfilter-no}"
++echo "filters using lavformat   ${avfilter-lavf-no}"
  echo "video hooking             ${vhook-no}"
  if enabled vhook; then
      echo "Imlib2 support            ${imlib2-no}"
-@@ -2087,6 +2090,7 @@
+@@ -2087,6 +2093,7 @@
          libavcodec/sh4    \
          libavcodec/sparc  \
          libavdevice       \
@@ -34,7 +37,7 @@ Index: configure
          libavformat       \
          libavutil         \
          libpostproc       \
-@@ -2101,6 +2105,7 @@
+@@ -2101,6 +2108,7 @@
          doc/texi2pod.pl      \
          libavcodec/Makefile  \
          libavdevice/Makefile \
@@ -42,7 +45,7 @@ Index: configure
          libavformat/Makefile \
          libavutil/Makefile   \
          libpostproc/Makefile \
-@@ -2189,3 +2194,8 @@
+@@ -2189,3 +2197,8 @@
      apply libswscale.pc sed s/^Libs:.*$/Libs:/
      apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
  fi
@@ -53,7 +56,7 @@ Index: configure
 +fi
 Index: Makefile
 ===================================================================
---- Makefile	(revision 11668)
+--- Makefile	(revision 11671)
 +++ Makefile	(working copy)
 @@ -8,7 +8,7 @@
  

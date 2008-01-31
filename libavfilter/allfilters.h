@@ -39,3 +39,6 @@ extern AVFilter avfilter_vf_slicify;
 extern AVFilter avfilter_vf_split;
 extern AVFilter avfilter_vf_transpose;
 extern AVFilter avfilter_vf_vflip;
+#ifdef CONFIG_AVFILTER_LAVF
+extern AVFilter avfilter_vsrc_movie;
+#endif //CONFIG_AVFILTER_LAVF
