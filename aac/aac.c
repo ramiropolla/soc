@@ -310,7 +310,6 @@ typedef struct {
     int sample_rate;
     int ext_sample_rate;
     int channels;
-    int frame_length;
 
     // decoder param
     program_config_struct pcs;
@@ -614,11 +613,15 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
  */
 static int GASpecificConfig(AACContext * ac, GetBitContext * gb) {
     int ext = 0;
-    ac->frame_length = get_bits1(gb);
+
+    if(get_bits1(gb)) {  // frameLengthFlag
+        av_log(ac, AV_LOG_ERROR, "960/120 MDCT window is not supported");
+        return -1;
+    }
+
     if (get_bits1(gb))
         get_bits(gb, 14);
     ext = get_bits1(gb);
-    assert(ac->frame_length == 0);
     assert(ext == 0);
     if (ac->channels == 0)
         program_config_element(ac, gb);
