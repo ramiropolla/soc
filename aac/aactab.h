@@ -33,6 +33,7 @@
 #define TNS_MAX_ORDER 20
 
 static const int sampling_table[] = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
+static const int inv_sampling_table[] = { 92017, 75132, 55426, 46009, 37655, 27713, 23004, 18783, 13856, 11502, 9391 };
 
 // scalefactor bands
 static const uint16_t swb_offset_1024_96[] = {

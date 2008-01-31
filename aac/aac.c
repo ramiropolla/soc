@@ -659,15 +659,25 @@ static int GetAudioObjectType(GetBitContext * gb) {
     return result == 31 ? 32 + get_bits(gb, 6) : result;
 }
 
-static inline int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
+/**
+ * Parse sample rate
+ * reference: Table 1.16 and 4.68
+ */
+static int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
+    int i;
     *index = get_bits(gb, 4);
-    if (*index == 0xf) {
-        *index = -1;
+    if(*index == 0xf) {
+        /* Explicit rate */
         *rate = get_bits(gb, 24);
-    } else {
-        assert(*index <= 12);
-        *rate = sampling_table[*index];
+        for(i = 10; i >= 0; i--)
+            if(*rate < inv_sampling_table[i])
+                break;
+        *index = i + 1;
+        return 0;
     }
+    if(*index > 12)
+        return -1;
+    *rate = sampling_table[*index];
     return 0;
 }
 
