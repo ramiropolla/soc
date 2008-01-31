@@ -654,11 +654,9 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb) {
  * Parse audio object type
  * reference: Table 1.14
  */
-static inline int GetAudioObjectType(GetBitContext * gb) {
+static int GetAudioObjectType(GetBitContext * gb) {
     int result = get_bits(gb, 5);
-    if (result == 31)
-        result = 32 + get_bits(gb, 6);
-    return result;
+    return result == 31 ? 32 + get_bits(gb, 6) : result;
 }
 
 static inline int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
