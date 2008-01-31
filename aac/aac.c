@@ -298,7 +298,6 @@ typedef struct {
 typedef struct {
     // objects
     AVCodecContext * avccontext;
-    GetBitContext gb;
     VLC mainvlc;
     VLC books[11];
 
@@ -669,25 +668,25 @@ static inline int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
  * reference: Table 1.13
  */
 static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
-    GetBitContext * gb = &ac->gb;
+    GetBitContext gb;
 
-    init_get_bits(gb, data, data_size * 8);
+    init_get_bits(&gb, data, data_size * 8);
 
     memset(&ac->pcs, 0, sizeof(ac->pcs));
 
-    ac->audioObjectType = GetAudioObjectType(gb);
+    ac->audioObjectType = GetAudioObjectType(&gb);
     assert(ac->audioObjectType == AOT_AAC_LC || //ac->audioObjectType == AOT_AAC_MAIN ||
             ac->audioObjectType == AOT_AAC_LTP || ac->audioObjectType == AOT_AAC_SSR);
-    if (GetSampleRate(gb, &ac->sampling_index, &ac->sample_rate)) return -1;
-    ac->channels = get_bits(gb, 4);
+    if (GetSampleRate(&gb, &ac->sampling_index, &ac->sample_rate)) return -1;
+    ac->channels = get_bits(&gb, 4);
     //assert(ac->channels == 2);
 
     ac->sbr_present = 0;
     if (ac->audioObjectType == AOT_SBR) {
         ac->ext_audioObjectType = ac->audioObjectType;
         ac->sbr_present = 1;
-        if (GetSampleRate(gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return -1;
-        ac->audioObjectType = GetAudioObjectType(gb);
+        if (GetSampleRate(&gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return -1;
+        ac->audioObjectType = GetAudioObjectType(&gb);
     } else {
         ac->ext_audioObjectType = 0;
     }
@@ -699,7 +698,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
         case AOT_AAC_LTP:
         case AOT_AAC_SCALABLE:
         case AOT_TWINVQ:
-            if (GASpecificConfig(ac, gb))
+            if (GASpecificConfig(ac, &gb))
                 return -1;
             break;
         case AOT_SBR:
@@ -709,13 +708,13 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
             assert(0);
             break;
     };
-    if ((ac->ext_audioObjectType != 5) && (8 * data_size - get_bits_count(gb) >= 16)) {
-        if (get_bits(gb, 11) == 0x2b7) { // syncExtensionType
-            ac->ext_audioObjectType = GetAudioObjectType(gb);
+    if ((ac->ext_audioObjectType != 5) && (8 * data_size - get_bits_count(&gb) >= 16)) {
+        if (get_bits(&gb, 11) == 0x2b7) { // syncExtensionType
+            ac->ext_audioObjectType = GetAudioObjectType(&gb);
             if (ac->ext_audioObjectType == AOT_SBR) {
-                ac->sbr_present = get_bits1(gb);
+                ac->sbr_present = get_bits1(&gb);
                 if (ac->sbr_present) {
-                    if (GetSampleRate(gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return -1;
+                    if (GetSampleRate(&gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return -1;
                 }
             }
         }
@@ -2264,47 +2263,47 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
 
 static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data_size, uint8_t * buf, int buf_size) {
     AACContext * ac = avccontext->priv_data;
-    GetBitContext * gb = &ac->gb;
+    GetBitContext gb;
     int id, err;
 
     ac->num_frame++;
     //if (ac->num_frame == 40)
     //    __asm int 3;
 
-    init_get_bits(gb, buf, buf_size*8);
+    init_get_bits(&gb, buf, buf_size*8);
     //av_log(avccontext, AV_LOG_INFO, "%d ", buf_size);
 
     if (!ac->is_saved) {
         output_coefs(avccontext);
     }
     // parse
-    while ((id = get_bits(gb, 3)) != ID_END) {
+    while ((id = get_bits(&gb, 3)) != ID_END) {
         switch (id) {
         case ID_SCE:
-            err = single_channel_struct(ac, gb);
+            err = single_channel_struct(ac, &gb);
             break;
         case ID_CPE:
-            err = channel_pair_element(ac, gb);
+            err = channel_pair_element(ac, &gb);
             break;
         case ID_FIL: {
-            int cnt = get_bits(gb, 4);
-            if (cnt == 15) cnt += get_bits(gb, 8) - 1;
+            int cnt = get_bits(&gb, 4);
+            if (cnt == 15) cnt += get_bits(&gb, 8) - 1;
             while (cnt > 0)
-                cnt -= extension_payload(ac, gb, cnt);
+                cnt -= extension_payload(ac, &gb, cnt);
             err = 0; /* FIXME */
             break;
         }
         case ID_PCE:
-            err = program_config_element(ac, gb);
+            err = program_config_element(ac, &gb);
             break;
         case ID_DSE:
-            err = data_stream_element(ac, gb);
+            err = data_stream_element(ac, &gb);
             break;
         case ID_CCE:
-            err = coupling_channel_element(ac, gb);
+            err = coupling_channel_element(ac, &gb);
             break;
         case ID_LFE:
-            err = lfe_channel_struct(ac, gb);
+            err = lfe_channel_struct(ac, &gb);
             break;
         default:
             err = -1; /* should not happen, but keeps compiler happy */
