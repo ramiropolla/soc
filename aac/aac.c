@@ -695,7 +695,6 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     ac->audioObjectType = GetAudioObjectType(&gb);
     if (GetSampleRate(&gb, &ac->sampling_index, &ac->sample_rate)) return -1;
     ac->channels = get_bits(&gb, 4);
-    //assert(ac->channels == 2);
 
     ac->sbr_present = 0;
     if (ac->audioObjectType == AOT_SBR) {
@@ -708,17 +707,17 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     }
 
     switch (ac->audioObjectType) {
-        case AOT_AAC_LC:
-        case AOT_AAC_SSR:
-        case AOT_AAC_LTP:
-            if (GASpecificConfig(ac, &gb))
-                return -1;
-            break;
-        default:
-            av_log(ac->avccontext, AV_LOG_ERROR, "Audio object type %s%d is not supported",
-                   ac->sbr_present ? "SBR+" : "", ac->audioObjectType);
+    case AOT_AAC_LC:
+    case AOT_AAC_SSR:
+    case AOT_AAC_LTP:
+        if (GASpecificConfig(ac, &gb))
             return -1;
-    };
+        break;
+    default:
+        av_log(ac->avccontext, AV_LOG_ERROR, "Audio object type %s%d is not supported",
+               ac->sbr_present ? "SBR+" : "", ac->audioObjectType);
+        return -1;
+    }
     if ((ac->ext_audioObjectType != 5) && (8 * data_size - get_bits_count(&gb) >= 16)) {
         if (get_bits(&gb, 11) == 0x2b7) { // syncExtensionType
             ac->ext_audioObjectType = GetAudioObjectType(&gb);
