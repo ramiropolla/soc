@@ -1141,7 +1141,7 @@ static int ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
  * Decode spectral data
  * reference: Table 4.50
  */
-static int spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], const float sf[][64], int * icoef) {
+static int spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], int * icoef) {
     static const int unsigned_cb[] = { 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
@@ -1296,7 +1296,7 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
             if (gain_control_data(ac, gb, sce)) return -1;
     }
 
-    if (spectral_data(ac, gb, ics, sce->cb, sce->sf, icoeffs) < 0)
+    if (spectral_data(ac, gb, ics, sce->cb, icoeffs) < 0)
         return -1;
     if (pulse_tool(ac, ics, &pulse, icoeffs) < 0)
         return -1;
