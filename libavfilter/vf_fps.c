@@ -32,6 +32,8 @@ typedef struct {
     uint64_t timebase;
     uint64_t pts;
     AVFilterPicRef *pic;
+    int videoend;
+    int has_frame;
 } FPSContext;
 
 static int init(AVFilterContext *ctx, const char *args, void *opaque)
@@ -63,6 +65,23 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     fps->pic = picref;
 }
 
+static int poll_frame(AVFilterLink *link)
+{
+    FPSContext *fps = link->src->priv;
+
+    if (fps->has_frame)
+        return 1;
+
+    if(avfilter_poll_frame(link->src->inputs[0]) &&
+       avfilter_request_frame(link->src->inputs[0])) {
+        fps->videoend = 1;
+        return 1;
+    }
+
+    fps->has_frame = !!(fps->pic && fps->pic->pts >= fps->pts);
+    return fps->has_frame;
+}
+
 static void end_frame(AVFilterLink *link)
 {
 }
@@ -71,13 +90,21 @@ static int request_frame(AVFilterLink *link)
 {
     FPSContext *fps = link->src->priv;
 
-    while(!fps->pic || fps->pic->pts < fps->pts)
-        if(avfilter_request_frame(link->src->inputs[0]))
-            return -1;
+    if (fps->videoend)
+        return -1;
 
+    if (!fps->has_frame) // Support for filtering without poll_frame usage
+        while(!fps->pic || fps->pic->pts < fps->pts)
+            if(avfilter_request_frame(link->src->inputs[0]))
+                return -1;
+
+    fps->has_frame=0;
     avfilter_start_frame(link, avfilter_ref_pic(fps->pic, ~AV_PERM_WRITE));
     avfilter_draw_slice (link, 0, fps->pic->h);
     avfilter_end_frame  (link);
+
+    avfilter_unref_pic(fps->pic);
+    fps->pic = NULL;
 
     fps->pts += fps->timebase;
 
@@ -101,6 +128,7 @@ AVFilter avfilter_vf_fps =
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = AV_PAD_VIDEO,
+                                    .poll_frame      = poll_frame,
                                     .request_frame   = request_frame, },
                                   { .name = NULL}},
 };
