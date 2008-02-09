@@ -78,7 +78,7 @@ Index: ffmpeg.c
 +
 +    /* This picture will be needed unmodified later for decoding the next
 +     * frame */
-+    picref = avfilter_get_video_buffer(link, AV_PERM_PRESERVE |
++    picref = avfilter_get_video_buffer(link, AV_PERM_WRITE | AV_PERM_PRESERVE |
 +                                             AV_PERM_REUSE2);
 +
 +    memcpy(picref->data,     priv->ist->filter_frame->data,
