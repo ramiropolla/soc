@@ -1,5 +1,5 @@
 /*
- * Filter to overlay one video on top of another
+ * filter to overlay one video on top of another
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.

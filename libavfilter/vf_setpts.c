@@ -1,5 +1,5 @@
 /*
- * Video presentation timestamp (PTS) modification filter
+ * video presentation timestamp (PTS) modification filter
  * copyright (c) 2008 Victor Paesa
  *
  * This file is part of FFmpeg.

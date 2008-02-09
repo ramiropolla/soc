@@ -1,5 +1,5 @@
 /*
- * Video scaling/colorspace conversion
+ * video scaling/colorspace conversion
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.

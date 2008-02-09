@@ -1,5 +1,5 @@
 /*
- * Video crop filter
+ * video crop filter
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.

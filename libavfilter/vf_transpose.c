@@ -1,5 +1,5 @@
 /*
- * Transpose (line => column) video filter
+ * transpose (line => column) video filter
  * Copyright (c) 2008 Vitor Sessak
  *
  * This file is part of FFmpeg.
@@ -23,7 +23,7 @@
  * @file vf_transpose.c
  * Transposition filter
  *
- * @todo Handle packed pixel formats
+ * @todo handle packed pixel formats
  */
 
 #include "avfilter.h"

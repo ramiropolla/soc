@@ -23,9 +23,9 @@
  * @file vf_rotate.c
  * rotation filter
  *
- * @todo Copy code from rotozoom.c to remove use of floating-point
- * @todo Handle packed pixel formats
- * @todo Make backcolor configurable
+ * @todo copy code from rotozoom.c to remove use of floating-point
+ * @todo handle packed pixel formats
+ * @todo make backcolor configurable
 */
 
 #include <math.h>
@@ -35,7 +35,7 @@ typedef struct
 {
     int ang;
     int hsub, vsub;
-    float transx, transy; ///< How much to translate (in pixels)
+    float transx, transy; ///< how much to translate (in pixels)
     float sinx, cosx;
     int output_h, output_w;
     int backcolor[3];

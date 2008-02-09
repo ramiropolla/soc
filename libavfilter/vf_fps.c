@@ -1,5 +1,5 @@
 /*
- * Video framerate modification filter
+ * video framerate modification filter
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.
@@ -93,7 +93,7 @@ static int request_frame(AVFilterLink *link)
     if (fps->videoend)
         return -1;
 
-    if (!fps->has_frame) // Support for filtering without poll_frame usage
+    if (!fps->has_frame) // support for filtering without poll_frame usage
         while(!fps->pic || fps->pic->pts < fps->pts)
             if(avfilter_request_frame(link->src->inputs[0]))
                 return -1;

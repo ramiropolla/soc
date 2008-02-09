@@ -1,5 +1,5 @@
 /*
- * Loading filter graph descriptions from files
+ * loading filter graph descriptions from files
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.

@@ -1,5 +1,5 @@
 /*
- * Horizontal flip filter
+ * horizontal flip filter
  * Copyright (c) 2007 Benoit Fouet
  *
  * This file is part of FFmpeg.
