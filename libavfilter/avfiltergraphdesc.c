@@ -39,7 +39,7 @@ static inline int is_line_comment(char *line)
 static AVFilterGraphDescSection parse_section_name(char *line)
 {
     struct {
-        char *str;
+        const char *str;
         int section;
     } *sec, sections[] = { { "[filters]", SEC_FILTERS },
                            { "[links]",   SEC_LINKS   },
