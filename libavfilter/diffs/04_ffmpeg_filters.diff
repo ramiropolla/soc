@@ -132,7 +132,7 @@ Index: ffmpeg.c
 +
 +    .inputs    = (AVFilterPad[]) {{ .name = NULL }},
 +    .outputs   = (AVFilterPad[]) {{ .name = "default",
-+                                    .type = AV_PAD_VIDEO,
++                                    .type = CODEC_TYPE_VIDEO,
 +                                    .request_frame = input_request_frame,
 +                                    .poll_frame = poll_frame,
 +                                    .config_props  = input_config_props, },
@@ -199,7 +199,7 @@ Index: ffmpeg.c
 +    .query_formats = output_query_formats,
 +
 +    .inputs    = (AVFilterPad[]) {{ .name          = "default",
-+                                    .type          = AV_PAD_VIDEO,
++                                    .type          = CODEC_TYPE_VIDEO,
 +                                    .end_frame     = output_end_frame,
 +                                    .min_perms     = AV_PERM_READ, },
 +                                  { .name = NULL }},
