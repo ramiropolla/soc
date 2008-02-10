@@ -126,10 +126,10 @@ AVFilter avfilter_vf_setpts =
     .priv_size = sizeof(SetPTSContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,},
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,},
+                                    .type            = CODEC_TYPE_VIDEO,},
                                   { .name = NULL}},
 };

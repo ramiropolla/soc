@@ -148,13 +148,13 @@ AVFilter avfilter_vf_crop =
     .init      = init,
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .config_props    = config_input, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .config_props    = config_output, },
                                   { .name = NULL}},
 };

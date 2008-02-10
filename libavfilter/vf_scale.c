@@ -153,13 +153,13 @@ AVFilter avfilter_vf_scale =
     .priv_size = sizeof(ScaleContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .end_frame       = end_frame,
                                     .min_perms       = AV_PERM_READ, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .config_props    = config_props, },
                                   { .name = NULL}},
 };

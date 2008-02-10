@@ -85,14 +85,14 @@ AVFilter avfilter_vf_slicify =
     .init      = init,
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .config_props    = config_props,
                                     .end_frame       = end_frame, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO, },
+                                    .type            = CODEC_TYPE_VIDEO, },
                                   { .name = NULL}},
 };
 

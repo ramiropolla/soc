@@ -118,13 +118,13 @@ AVFilter avfilter_vf_noformat =
     .priv_size = sizeof(FormatContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .end_frame       = end_frame, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO },
+                                    .type            = CODEC_TYPE_VIDEO },
                                   { .name = NULL}},
 };
 
@@ -140,13 +140,13 @@ AVFilter avfilter_vf_format =
     .priv_size = sizeof(FormatContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .end_frame       = end_frame, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO },
+                                    .type            = CODEC_TYPE_VIDEO },
                                   { .name = NULL}},
 };
 

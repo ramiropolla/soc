@@ -80,13 +80,13 @@ AVFilter avfilter_vf_hflip =
     .priv_size = sizeof(FlipContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .draw_slice      = draw_slice,
                                     .config_props    = config_props,
                                     .min_perms       = AV_PERM_READ, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO, },
+                                    .type            = CODEC_TYPE_VIDEO, },
                                   { .name = NULL}},
 };
 

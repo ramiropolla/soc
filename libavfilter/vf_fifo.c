@@ -107,14 +107,14 @@ AVFilter avfilter_vf_fifo =
     .priv_size = sizeof(BufferContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .end_frame       = end_frame,
                                     .rej_perms       = AV_PERM_REUSE2, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .request_frame   = request_frame, },
                                   { .name = NULL}},
 };

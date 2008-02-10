@@ -165,14 +165,14 @@ AVFilter avfilter_vf_rotate =
     .query_formats = query_formats,
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .draw_slice      = draw_slice,
                                     .config_props    = config_props_input,
                                     .min_perms       = AV_PERM_READ, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .config_props    = config_props_output,
-                                    .type            = AV_PAD_VIDEO, },
+                                    .type            = CODEC_TYPE_VIDEO, },
                                   { .name = NULL}},
 };
 

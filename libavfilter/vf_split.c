@@ -49,15 +49,15 @@ AVFilter avfilter_vf_split =
     .author    = "Bobby Bingham",
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .end_frame       = end_frame, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO, },
+                                    .type            = CODEC_TYPE_VIDEO, },
                                   { .name            = "default2",
-                                    .type            = AV_PAD_VIDEO, },
+                                    .type            = CODEC_TYPE_VIDEO, },
                                   { .name = NULL}},
 };
 
