@@ -21,8 +21,6 @@
 
 /* TODO: improve handling of non-continuous timestamps (mpeg, seeking, etc) */
 
-#include <stdio.h>
-
 #include "avfilter.h"
 
 /* default to 25 fps */
