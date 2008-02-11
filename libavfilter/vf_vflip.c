@@ -65,7 +65,6 @@ static void draw_slice(AVFilterLink *link, int y, int h)
 AVFilter avfilter_vf_vflip =
 {
     .name      = "vflip",
-    .author    = "Bobby Bingham",
     .priv_size = sizeof(FlipContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",

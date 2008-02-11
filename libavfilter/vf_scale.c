@@ -143,7 +143,6 @@ static void end_frame(AVFilterLink *link)
 AVFilter avfilter_vf_scale =
 {
     .name      = "scale",
-    .author    = "Bobby Bingham",
 
     .init      = init,
     .uninit    = uninit,

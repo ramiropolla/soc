@@ -156,7 +156,6 @@ static void draw_slice(AVFilterLink *link, int y, int h)
 AVFilter avfilter_vf_rotate =
 {
     .name      = "rotate",
-    .author    = "Vitor Sessak",
 
     .init      = init,
 

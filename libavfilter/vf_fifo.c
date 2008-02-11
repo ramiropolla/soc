@@ -99,7 +99,6 @@ static int request_frame(AVFilterLink *link)
 AVFilter avfilter_vf_fifo =
 {
     .name      = "fifo",
-    .author    = "Bobby Bingham",
 
     .init      = init,
     .uninit    = uninit,

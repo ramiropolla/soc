@@ -102,7 +102,6 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 AVFilter avfilter_vf_transpose =
 {
     .name      = "transpose",
-    .author    = "Vitor Sessak",
 
     .priv_size = sizeof(TransContext),
 

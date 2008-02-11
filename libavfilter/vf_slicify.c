@@ -80,7 +80,6 @@ static void draw_slice(AVFilterLink *link, int y, int h)
 AVFilter avfilter_vf_slicify =
 {
     .name      = "slicify",
-    .author    = "Bobby Bingham",
 
     .init      = init,
 

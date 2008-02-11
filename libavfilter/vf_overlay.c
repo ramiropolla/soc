@@ -183,7 +183,6 @@ static int request_frame(AVFilterLink *link)
 AVFilter avfilter_vf_overlay =
 {
     .name      = "overlay",
-    .author    = "Bobby Bingham",
 
     .init      = init,
     .uninit    = uninit,

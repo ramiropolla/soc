@@ -46,7 +46,6 @@ static void draw_slice(AVFilterLink *link, int y, int h)
 AVFilter avfilter_vf_split =
 {
     .name      = "split",
-    .author    = "Bobby Bingham",
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,

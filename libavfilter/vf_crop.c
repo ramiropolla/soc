@@ -142,7 +142,6 @@ static void draw_slice(AVFilterLink *link, int y, int h)
 AVFilter avfilter_vf_crop =
 {
     .name      = "crop",
-    .author    = "Bobby Bingham",
     .priv_size = sizeof(CropContext),
 
     .init      = init,

@@ -118,7 +118,6 @@ static void uninit(AVFilterContext *ctx)
 AVFilter avfilter_vf_setpts =
 {
     .name      = "setpts",
-    .author    = "Victor Paesa",
 
     .init      = init,
     .uninit    = uninit,

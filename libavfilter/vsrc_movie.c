@@ -289,7 +289,6 @@ static void uninit(AVFilterContext *ctx)
 AVFilter avfilter_vsrc_movie =
 {
     .name      = "movie",
-    .author    = "Victor Paesa",
     .priv_size = sizeof(MovieContext),
     .query_formats = query_formats,
 

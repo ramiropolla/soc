@@ -109,7 +109,6 @@ static void draw_slice(AVFilterLink *link, int y, int h)
 AVFilter avfilter_vf_noformat =
 {
     .name      = "noformat",
-    .author    = "Bobby Bingham",
 
     .init      = init,
 
@@ -131,7 +130,6 @@ AVFilter avfilter_vf_noformat =
 AVFilter avfilter_vf_format =
 {
     .name      = "format",
-    .author    = "Bobby Bingham",
 
     .init      = init,
 

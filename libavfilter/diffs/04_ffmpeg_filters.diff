@@ -38,7 +38,7 @@ Index: ffmpeg.c
  } AVInputStream;
  
  typedef struct AVInputFile {
-@@ -292,6 +307,271 @@
+@@ -292,6 +307,269 @@
  static struct termios oldtty;
  #endif
  
@@ -121,7 +121,6 @@ Index: ffmpeg.c
 +static AVFilter input_filter =
 +{
 +    .name      = "ffmpeg_input",
-+    .author    = "Vitor Sessak",
 +
 +    .priv_size = sizeof(FilterInPriv),
 +
@@ -191,7 +190,6 @@ Index: ffmpeg.c
 +static AVFilter output_filter =
 +{
 +    .name      = "ffmpeg_output",
-+    .author    = "Vitor Sessak",
 +
 +    .priv_size = sizeof(FilterOutPriv),
 +    .init      = output_init,
@@ -310,7 +308,7 @@ Index: ffmpeg.c
  static void term_exit(void)
  {
  #ifdef HAVE_TERMIOS_H
-@@ -752,6 +1032,9 @@
+@@ -752,6 +1030,9 @@
      if (nb_frames <= 0)
          return;
  
@@ -320,7 +318,7 @@ Index: ffmpeg.c
      if (ost->video_crop) {
          if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
              av_log(NULL, AV_LOG_ERROR, "error cropping picture\n");
-@@ -761,6 +1044,7 @@
+@@ -761,6 +1042,7 @@
      } else {
          formatted_picture = in_picture;
      }
@@ -328,7 +326,7 @@ Index: ffmpeg.c
  
      final_picture = formatted_picture;
      padding_src = formatted_picture;
-@@ -776,12 +1060,14 @@
+@@ -776,12 +1058,14 @@
          }
      }
  
@@ -343,7 +341,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1161,6 +1447,17 @@
+@@ -1161,6 +1445,17 @@
                                      &buffer_to_free);
          }
  
@@ -361,7 +359,7 @@ Index: ffmpeg.c
          // preprocess audio (volume)
          if (ist->st->codec->codec_type == CODEC_TYPE_AUDIO) {
              if (audio_volume != 256) {
-@@ -1223,10 +1520,23 @@
+@@ -1223,10 +1518,23 @@
                              do_audio_out(os, ost, ist, data_buf, data_size);
                              break;
                          case CODEC_TYPE_VIDEO:
@@ -385,7 +383,7 @@ Index: ffmpeg.c
                              break;
                          case CODEC_TYPE_SUBTITLE:
                              do_subtitle_out(os, ost, ist, &subtitle,
-@@ -1687,10 +1997,21 @@
+@@ -1687,10 +1995,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          exit(1);
                      }
@@ -407,7 +405,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3803,6 +4124,9 @@
+@@ -3803,6 +4122,9 @@
  #ifdef CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
