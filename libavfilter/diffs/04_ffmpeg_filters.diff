@@ -415,3 +415,23 @@ Index: ffmpeg.c
      { "intra_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_intra_matrix}, "specify intra matrix coeffs", "matrix" },
      { "inter_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_inter_matrix}, "specify inter matrix coeffs", "matrix" },
      { "top", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_top_field_first}, "top=1/bottom=0/auto=-1 field first", "" },
+Index: cmdutils.c
+===================================================================
+--- cmdutils.c	(revision 11882)
++++ cmdutils.c	(working copy)
+@@ -24,6 +24,7 @@
+ #include <errno.h>
+ 
+ #include "avformat.h"
++#include "avfilter.h"
+ #include "avdevice.h"
+ #include "cmdutils.h"
+ #include "avstring.h"
+@@ -164,6 +165,7 @@
+     fprintf(stderr, "  libavcodec version: " AV_STRINGIFY(LIBAVCODEC_VERSION) "\n");
+     fprintf(stderr, "  libavformat version: " AV_STRINGIFY(LIBAVFORMAT_VERSION) "\n");
+     fprintf(stderr, "  libavdevice version: " AV_STRINGIFY(LIBAVDEVICE_VERSION) "\n");
++    fprintf(stderr, "  libavfilter version: " AV_STRINGIFY(LIBAVFILTER_VERSION) "\n");
+     fprintf(stderr, "  built on " __DATE__ " " __TIME__);
+ #ifdef __GNUC__
+     fprintf(stderr, ", gcc: " __VERSION__ "\n");
