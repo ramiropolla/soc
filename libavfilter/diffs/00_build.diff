@@ -185,7 +185,24 @@ Index: configure
      echo "Enabled ${type}s:"
      ucname="\$`toupper $type`_LIST"
      list="`eval echo $ucname`"
-@@ -2047,6 +2063,7 @@
+@@ -2009,6 +2025,7 @@
+ lavd_version=`grep '#define LIBAVDEVICE_VERSION ' "$source_path/libavdevice/avdevice.h" | sed 's/[^0-9\.]//g'`
+ lavf_version=`grep '#define LIBAVFORMAT_VERSION ' "$source_path/libavformat/avformat.h" | sed 's/[^0-9\.]//g'`
+ lavu_version=`grep '#define LIBAVUTIL_VERSION ' "$source_path/libavutil/avutil.h" | sed 's/[^0-9\.]//g'`
++lavfi_version=`grep '#define LIBAVFILTER_VERSION ' "$source_path/libavfilter/avfilter.h" | sed 's/[^0-9\.]//g'`
+ 
+ 
+ 
+@@ -2025,6 +2042,8 @@
+     echo "LAVFVERSION=$lavf_version" >> config.mak
+     echo "LAVUMAJOR=${lavu_version%%.*}" >> config.mak
+     echo "LAVUVERSION=$lavu_version" >> config.mak
++    echo "LAVFILTERMAJOR=${lavfi_version%%.*}" >> config.mak
++    echo "LAVFILTERVERSION=$lavfi_version" >> config.mak
+     echo "SWSMAJOR=${sws_version%%.*}" >> config.mak
+     echo "SWSVERSION=$sws_version" >> config.mak
+     echo "SLIBNAME=${SLIBNAME}" >> config.mak
+@@ -2047,6 +2066,7 @@
                                        $BSF_LIST          \
                                        $DEMUXER_LIST      \
                                        $MUXER_LIST        \
@@ -193,7 +210,7 @@ Index: configure
                                        $PROTOCOL_LIST     \
                                        $INDEV_LIST        \
                                        $OUTDEV_LIST       \
-@@ -2090,6 +2107,7 @@
+@@ -2090,6 +2110,7 @@
          libavcodec/sh4    \
          libavcodec/sparc  \
          libavdevice       \
@@ -201,7 +218,7 @@ Index: configure
          libavformat       \
          libavutil         \
          libpostproc       \
-@@ -2104,6 +2122,7 @@
+@@ -2104,6 +2125,7 @@
          doc/texi2pod.pl      \
          libavcodec/Makefile  \
          libavdevice/Makefile \
@@ -209,7 +226,7 @@ Index: configure
          libavformat/Makefile \
          libavutil/Makefile   \
          libpostproc/Makefile \
-@@ -2192,3 +2211,8 @@
+@@ -2192,3 +2214,8 @@
      apply libswscale.pc sed s/^Libs:.*$/Libs:/
      apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
  fi
