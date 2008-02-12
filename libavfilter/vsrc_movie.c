@@ -297,7 +297,7 @@ AVFilter avfilter_vsrc_movie =
 
     .inputs    = (AVFilterPad[]) {{ .name = NULL }},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = AV_PAD_VIDEO,
+                                    .type            = CODEC_TYPE_VIDEO,
                                     .request_frame   = request_frame,
                                     .config_props    = config_props, },
                                   { .name = NULL}},
