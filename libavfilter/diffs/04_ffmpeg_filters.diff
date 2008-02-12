@@ -214,7 +214,7 @@ Index: ffmpeg.c
 +    AVCodecContext *codec = ost->st->codec;
 +    AVCodecContext *icodec = ist->st->codec;
 +
-+    avfilter_init();
++    avfilter_register_all();
 +
 +    /* create the overall filter graph */
 +    if(!(filt_graph_all = avfilter_open(avfilter_get_by_name("graph"), NULL)))
