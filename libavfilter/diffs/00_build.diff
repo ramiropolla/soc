@@ -1,62 +1,6 @@
-Index: configure
-===================================================================
---- configure	(revision 11671)
-+++ configure	(working copy)
-@@ -72,6 +72,8 @@
-   echo "                           and ffmpeg will be unredistributable [default=no]"
-   echo "  --enable-pp              enable GPLed postprocessing support [default=no]"
-   echo "  --enable-swscaler        software scaler support [default=no]"
-+  echo "  --enable-avfilter        video filter support (replaces vhook) [default=no]"
-+  echo "  --enable-avfilter-lavf   video filters dependant on avformat [default=no]"
-   echo "  --enable-beosthreads     use BeOS threads [default=no]"
-   echo "  --enable-os2threads      use OS/2 threads [default=no]"
-   echo "  --enable-pthreads        use pthreads [default=no]"
-@@ -624,6 +626,8 @@
- 
- CONFIG_LIST="
-     $COMPONENT_LIST
-+    avfilter
-+    avfilter_lavf
-     avisynth
-     beos_netserver
-     ffmpeg
-@@ -1890,6 +1894,8 @@
- echo "shared                    ${shared-no}"
- echo "postprocessing support    ${pp-no}"
- echo "software scaler enabled   ${swscaler-no}"
-+echo "new filter support        ${avfilter-no}"
-+echo "filters using lavformat   ${avfilter-lavf-no}"
- echo "video hooking             ${vhook-no}"
- if enabled vhook; then
-     echo "Imlib2 support            ${imlib2-no}"
-@@ -2087,6 +2093,7 @@
-         libavcodec/sh4    \
-         libavcodec/sparc  \
-         libavdevice       \
-+        libavfilter       \
-         libavformat       \
-         libavutil         \
-         libpostproc       \
-@@ -2101,6 +2108,7 @@
-         doc/texi2pod.pl      \
-         libavcodec/Makefile  \
-         libavdevice/Makefile \
-+        libavfilter/Makefile \
-         libavformat/Makefile \
-         libavutil/Makefile   \
-         libpostproc/Makefile \
-@@ -2189,3 +2197,8 @@
-     apply libswscale.pc sed s/^Libs:.*$/Libs:/
-     apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
- fi
-+
-+if enabled avfilter; then
-+  pkgconfig_generate libavfilter "FFmpeg video filtering library" "$avfilter_version" "-lavfilter $extralibs" "$pkg_requires libavutil = $lavu=version" ffmpeg
-+  pkgconfig_generate_uninstalled libavfilter "FFmpeg video filtering library" "$avfilter_version" "$extralibs" "$pkg_requires libavutil = $libavu_version"
-+fi
 Index: Makefile
 ===================================================================
---- Makefile	(revision 11671)
+--- Makefile	(revision 11882)
 +++ Makefile	(working copy)
 @@ -8,7 +8,7 @@
  
@@ -143,3 +87,134 @@ Index: Makefile
  	rm -f .depend .vhookdep version.h config.* *.pc
  
  TAGS:
+Index: configure
+===================================================================
+--- configure	(revision 11882)
++++ configure	(working copy)
+@@ -72,6 +72,8 @@
+   echo "                           and ffmpeg will be unredistributable [default=no]"
+   echo "  --enable-pp              enable GPLed postprocessing support [default=no]"
+   echo "  --enable-swscaler        software scaler support [default=no]"
++  echo "  --enable-avfilter        video filter support (replaces vhook) [default=no]"
++  echo "  --enable-avfilter-lavf   video filters dependant on avformat [default=no]"
+   echo "  --enable-beosthreads     use BeOS threads [default=no]"
+   echo "  --enable-os2threads      use OS/2 threads [default=no]"
+   echo "  --enable-pthreads        use pthreads [default=no]"
+@@ -620,10 +622,13 @@
+     outdevs
+     parsers
+     protocols
++    filters
+ "
+ 
+ CONFIG_LIST="
+     $COMPONENT_LIST
++    avfilter
++    avfilter_lavf
+     avisynth
+     beos_netserver
+     ffmpeg
+@@ -959,6 +964,9 @@
+ OUTDEV_LIST=`sed -n 's/^[^#]*_MUX.*(.*, *\(.*\)).*/\1_muxer/p' "$source_path/libavdevice/alldevices.c"`
+ INDEV_LIST=`sed -n 's/^[^#]*DEMUX.*(.*, *\(.*\)).*/\1_demuxer/p' "$source_path/libavdevice/alldevices.c"`
+ PROTOCOL_LIST=`sed -n 's/^[^#]*PROTOCOL.*(.*, *\(.*\)).*/\1_protocol/p' "$source_path/libavformat/allformats.c"`
++VIDEO_FILTER_LIST=`sed -n 's/^[^#]*_VF.*(.*, *\(.*\)).*/vf_\1/p' "$source_path/libavfilter/allfilters.c"`
++SRC_FILTER_LIST=`sed -n 's/^[^#]*_VSRC.*(.*, *\(.*\)).*/vsrc_\1/p' "$source_path/libavfilter/allfilters.c"`
++FILTER_LIST="$SRC_FILTER_LIST $VIDEO_FILTER_LIST"
+ 
+ enable $ARCH_EXT_LIST \
+        $DECODER_LIST \
+@@ -967,6 +975,7 @@
+        $BSF_LIST \
+        $DEMUXER_LIST \
+        $MUXER_LIST \
++       $FILTER_LIST \
+        $PROTOCOL_LIST \
+        $INDEV_LIST \
+        $OUTDEV_LIST \
+@@ -1035,6 +1044,8 @@
+     ;;
+     --disable-muxers) disable $MUXER_LIST
+     ;;
++    --disable-filters) disable $FILTER_LIST
++    ;;
+     --disable-demuxers) disable $DEMUXER_LIST
+     ;;
+     --disable-parsers) disable $PARSER_LIST
+@@ -1048,7 +1059,8 @@
+     --enable-*=*|--disable-*=*)
+     eval `echo "$opt" | sed 's/=/-/;s/--/action=/;s/-/ thing=/;s/-/ name=/'`
+     case "$thing" in
+-        encoder|decoder|muxer|demuxer|parser|bsf|protocol) $action ${optval}_${thing} ;;
++        encoder|decoder|muxer|demuxer|parser|bsf|protocol) $action ${optval}_${thing} ;;	
++	filter) $action ${optval} ;;	
+         *) die_unknown "$opt" ;;
+     esac
+     ;;
+@@ -1834,6 +1846,7 @@
+ enabled_any $BSF_LIST          && enable bsfs
+ enabled_any $DEMUXER_LIST      && enable demuxers
+ enabled_any $MUXER_LIST        && enable muxers
++enabled_any $FILTER_LIST       && enable filters
+ enabled_any $INDEV_LIST        && enable demuxers
+ enabled_any $OUTDEV_LIST       && enable muxers
+ enabled_any $PROTOCOL_LIST     && enable protocols
+@@ -1848,6 +1861,7 @@
+            $BSF_LIST          \
+            $DEMUXER_LIST      \
+            $MUXER_LIST        \
++           $FILTER_LIST       \
+            $INDEV_LIST        \
+            $OUTDEV_LIST       \
+            $PROTOCOL_LIST     \
+@@ -1893,6 +1907,8 @@
+ echo "shared                    ${shared-no}"
+ echo "postprocessing support    ${pp-no}"
+ echo "software scaler enabled   ${swscaler-no}"
++echo "new filter support        ${avfilter-no}"
++echo "filters using lavformat   ${avfilter-lavf-no}"
+ echo "video hooking             ${vhook-no}"
+ if enabled vhook; then
+     echo "Imlib2 support            ${imlib2-no}"
+@@ -1926,7 +1942,7 @@
+ echo "XviD enabled              ${libxvid-no}"
+ echo "zlib enabled              ${zlib-no}"
+ 
+-for type in decoder encoder parser demuxer muxer protocol bsf indev outdev; do
++for type in decoder encoder parser demuxer muxer protocol filter bsf indev outdev; do
+     echo "Enabled ${type}s:"
+     ucname="\$`toupper $type`_LIST"
+     list="`eval echo $ucname`"
+@@ -2047,6 +2063,7 @@
+                                       $BSF_LIST          \
+                                       $DEMUXER_LIST      \
+                                       $MUXER_LIST        \
++                                      $FILTER_LIST       \
+                                       $PROTOCOL_LIST     \
+                                       $INDEV_LIST        \
+                                       $OUTDEV_LIST       \
+@@ -2090,6 +2107,7 @@
+         libavcodec/sh4    \
+         libavcodec/sparc  \
+         libavdevice       \
++        libavfilter       \
+         libavformat       \
+         libavutil         \
+         libpostproc       \
+@@ -2104,6 +2122,7 @@
+         doc/texi2pod.pl      \
+         libavcodec/Makefile  \
+         libavdevice/Makefile \
++        libavfilter/Makefile \
+         libavformat/Makefile \
+         libavutil/Makefile   \
+         libpostproc/Makefile \
+@@ -2192,3 +2211,8 @@
+     apply libswscale.pc sed s/^Libs:.*$/Libs:/
+     apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
+ fi
++
++if enabled avfilter; then
++  pkgconfig_generate libavfilter "FFmpeg video filtering library" "$avfilter_version" "-lavfilter $extralibs" "$pkg_requires libavutil = $lavu=version" ffmpeg
++  pkgconfig_generate_uninstalled libavfilter "FFmpeg video filtering library" "$avfilter_version" "$extralibs" "$pkg_requires libavutil = $libavu_version"
++fi
