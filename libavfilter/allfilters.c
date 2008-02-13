@@ -57,6 +57,5 @@ void avfilter_register_all(void)
     REGISTER_VF(TRANSPOSE,transpose);
     REGISTER_VF(VFLIP,vflip);
 
-    if (ENABLE_AVFILTER_LAVF)
-        REGISTER_VSRC(MOVIE,movie);
+    REGISTER_VSRC(MOVIE,movie);
 }

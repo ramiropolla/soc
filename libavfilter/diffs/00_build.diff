@@ -114,7 +114,17 @@ Index: configure
      avisynth
      beos_netserver
      ffmpeg
-@@ -959,6 +964,9 @@
+@@ -851,6 +856,9 @@
+ tcp_protocol_deps="network"
+ udp_protocol_deps="network"
+ 
++# filters
++vsrc_movie_deps="avfilter_lavf"
++
+ # programs
+ ffplay_deps="sdl"
+ ffserver_deps="ffm_muxer rtp_protocol rtsp_demuxer"
+@@ -959,6 +967,9 @@
  OUTDEV_LIST=`sed -n 's/^[^#]*_MUX.*(.*, *\(.*\)).*/\1_muxer/p' "$source_path/libavdevice/alldevices.c"`
  INDEV_LIST=`sed -n 's/^[^#]*DEMUX.*(.*, *\(.*\)).*/\1_demuxer/p' "$source_path/libavdevice/alldevices.c"`
  PROTOCOL_LIST=`sed -n 's/^[^#]*PROTOCOL.*(.*, *\(.*\)).*/\1_protocol/p' "$source_path/libavformat/allformats.c"`
@@ -124,7 +134,7 @@ Index: configure
  
  enable $ARCH_EXT_LIST \
         $DECODER_LIST \
-@@ -967,6 +975,7 @@
+@@ -967,6 +978,7 @@
         $BSF_LIST \
         $DEMUXER_LIST \
         $MUXER_LIST \
@@ -132,7 +142,7 @@ Index: configure
         $PROTOCOL_LIST \
         $INDEV_LIST \
         $OUTDEV_LIST \
-@@ -1035,6 +1044,8 @@
+@@ -1035,6 +1047,8 @@
      ;;
      --disable-muxers) disable $MUXER_LIST
      ;;
@@ -141,7 +151,7 @@ Index: configure
      --disable-demuxers) disable $DEMUXER_LIST
      ;;
      --disable-parsers) disable $PARSER_LIST
-@@ -1048,7 +1059,8 @@
+@@ -1048,7 +1062,8 @@
      --enable-*=*|--disable-*=*)
      eval `echo "$opt" | sed 's/=/-/;s/--/action=/;s/-/ thing=/;s/-/ name=/'`
      case "$thing" in
@@ -151,7 +161,7 @@ Index: configure
          *) die_unknown "$opt" ;;
      esac
      ;;
-@@ -1834,6 +1846,7 @@
+@@ -1834,6 +1849,7 @@
  enabled_any $BSF_LIST          && enable bsfs
  enabled_any $DEMUXER_LIST      && enable demuxers
  enabled_any $MUXER_LIST        && enable muxers
@@ -159,7 +169,7 @@ Index: configure
  enabled_any $INDEV_LIST        && enable demuxers
  enabled_any $OUTDEV_LIST       && enable muxers
  enabled_any $PROTOCOL_LIST     && enable protocols
-@@ -1848,6 +1861,7 @@
+@@ -1848,6 +1864,7 @@
             $BSF_LIST          \
             $DEMUXER_LIST      \
             $MUXER_LIST        \
@@ -167,7 +177,7 @@ Index: configure
             $INDEV_LIST        \
             $OUTDEV_LIST       \
             $PROTOCOL_LIST     \
-@@ -1893,6 +1907,8 @@
+@@ -1893,6 +1910,8 @@
  echo "shared                    ${shared-no}"
  echo "postprocessing support    ${pp-no}"
  echo "software scaler enabled   ${swscaler-no}"
@@ -176,7 +186,7 @@ Index: configure
  echo "video hooking             ${vhook-no}"
  if enabled vhook; then
      echo "Imlib2 support            ${imlib2-no}"
-@@ -1926,7 +1942,7 @@
+@@ -1926,7 +1945,7 @@
  echo "XviD enabled              ${libxvid-no}"
  echo "zlib enabled              ${zlib-no}"
  
@@ -185,7 +195,7 @@ Index: configure
      echo "Enabled ${type}s:"
      ucname="\$`toupper $type`_LIST"
      list="`eval echo $ucname`"
-@@ -2009,6 +2025,7 @@
+@@ -2009,6 +2028,7 @@
  lavd_version=`grep '#define LIBAVDEVICE_VERSION ' "$source_path/libavdevice/avdevice.h" | sed 's/[^0-9\.]//g'`
  lavf_version=`grep '#define LIBAVFORMAT_VERSION ' "$source_path/libavformat/avformat.h" | sed 's/[^0-9\.]//g'`
  lavu_version=`grep '#define LIBAVUTIL_VERSION ' "$source_path/libavutil/avutil.h" | sed 's/[^0-9\.]//g'`
@@ -193,7 +203,7 @@ Index: configure
  
  
  
-@@ -2025,6 +2042,8 @@
+@@ -2025,6 +2045,8 @@
      echo "LAVFVERSION=$lavf_version" >> config.mak
      echo "LAVUMAJOR=${lavu_version%%.*}" >> config.mak
      echo "LAVUVERSION=$lavu_version" >> config.mak
@@ -202,7 +212,7 @@ Index: configure
      echo "SWSMAJOR=${sws_version%%.*}" >> config.mak
      echo "SWSVERSION=$sws_version" >> config.mak
      echo "SLIBNAME=${SLIBNAME}" >> config.mak
-@@ -2047,6 +2066,7 @@
+@@ -2047,6 +2069,7 @@
                                        $BSF_LIST          \
                                        $DEMUXER_LIST      \
                                        $MUXER_LIST        \
@@ -210,7 +220,7 @@ Index: configure
                                        $PROTOCOL_LIST     \
                                        $INDEV_LIST        \
                                        $OUTDEV_LIST       \
-@@ -2090,6 +2110,7 @@
+@@ -2090,6 +2113,7 @@
          libavcodec/sh4    \
          libavcodec/sparc  \
          libavdevice       \
@@ -218,7 +228,7 @@ Index: configure
          libavformat       \
          libavutil         \
          libpostproc       \
-@@ -2104,6 +2125,7 @@
+@@ -2104,6 +2128,7 @@
          doc/texi2pod.pl      \
          libavcodec/Makefile  \
          libavdevice/Makefile \
@@ -226,7 +236,7 @@ Index: configure
          libavformat/Makefile \
          libavutil/Makefile   \
          libpostproc/Makefile \
-@@ -2192,3 +2214,8 @@
+@@ -2192,3 +2217,8 @@
      apply libswscale.pc sed s/^Libs:.*$/Libs:/
      apply libswscale-uninstalled.pc sed s/^Libs:.*$/Libs:/
  fi
