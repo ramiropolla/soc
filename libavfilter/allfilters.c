@@ -1,5 +1,5 @@
 /*
- * Provides registration of all filters for libavfilter.
+ * filter registration
  * copyright (c) 2008 Vitor Sessak
  *
  * This file is part of FFmpeg.
@@ -32,11 +32,11 @@
 
 void avfilter_register_all(void)
 {
-    static int inited;
+    static int initialized;
 
-    if (inited)
+    if (initialized)
         return;
-    inited = 1;
+    initialized = 1;
 
     REGISTER_VF(CROP,crop);
     REGISTER_VF(FIFO,fifo);
