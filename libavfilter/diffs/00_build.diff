@@ -1,6 +1,6 @@
 Index: Makefile
 ===================================================================
---- Makefile	(revision 11882)
+--- Makefile	(revision 11933)
 +++ Makefile	(working copy)
 @@ -8,7 +8,7 @@
  
@@ -89,7 +89,7 @@ Index: Makefile
  TAGS:
 Index: configure
 ===================================================================
---- configure	(revision 11882)
+--- configure	(revision 11933)
 +++ configure	(working copy)
 @@ -72,6 +72,8 @@
    echo "                           and ffmpeg will be unredistributable [default=no]"
@@ -100,12 +100,15 @@ Index: configure
    echo "  --enable-beosthreads     use BeOS threads [default=no]"
    echo "  --enable-os2threads      use OS/2 threads [default=no]"
    echo "  --enable-pthreads        use pthreads [default=no]"
-@@ -620,10 +622,13 @@
-     outdevs
-     parsers
-     protocols
+@@ -615,6 +617,7 @@
+     decoders
+     demuxers
+     encoders
 +    filters
- "
+     indevs
+     muxers
+     outdevs
+@@ -624,6 +627,8 @@
  
  CONFIG_LIST="
      $COMPONENT_LIST
@@ -151,13 +154,11 @@ Index: configure
      --disable-demuxers) disable $DEMUXER_LIST
      ;;
      --disable-parsers) disable $PARSER_LIST
-@@ -1048,7 +1062,8 @@
-     --enable-*=*|--disable-*=*)
+@@ -1049,6 +1063,7 @@
      eval `echo "$opt" | sed 's/=/-/;s/--/action=/;s/-/ thing=/;s/-/ name=/'`
      case "$thing" in
--        encoder|decoder|muxer|demuxer|parser|bsf|protocol) $action ${optval}_${thing} ;;
-+        encoder|decoder|muxer|demuxer|parser|bsf|protocol) $action ${optval}_${thing} ;;	
-+	filter) $action ${optval} ;;	
+         encoder|decoder|muxer|demuxer|parser|bsf|protocol) $action ${optval}_${thing} ;;
++        filter) $action ${optval} ;;
          *) die_unknown "$opt" ;;
      esac
      ;;
