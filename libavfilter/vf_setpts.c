@@ -70,7 +70,7 @@ typedef struct {
 static int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     SetPTSContext *setpts = ctx->priv;
-    char *error;
+    const char *error;
 
     setpts->expr = ff_parse(args ? args : "PTS",
                         const_names, NULL, NULL, NULL, NULL, &error);
