@@ -120,30 +120,6 @@ static const uint8_t ac3_default_coeffs[8][5][2] = {
 };
 
 /**
- * Generate a Kaiser-Bessel Derived Window.
- */
-static void ac3_window_init(float *window)
-{
-   int i, j;
-   double sum = 0.0, bessel, tmp;
-   double local_window[256];
-   double alpha2 = (5.0 * M_PI / 256.0) * (5.0 * M_PI / 256.0);
-
-   for (i = 0; i < 256; i++) {
-       tmp = i * (256 - i) * alpha2;
-       bessel = 1.0;
-       for (j = 100; j > 0; j--) /* default to 100 iterations */
-           bessel = bessel * tmp / (j * j) + 1;
-       sum += bessel;
-       local_window[i] = sum;
-   }
-
-   sum++;
-   for (i = 0; i < 256; i++)
-       window[i] = sqrt(local_window[i] / sum);
-}
-
-/**
  * Symmetrical Dequantization
  * reference: Section 7.3.3 Expansion of Mantissas for Symmetrical Quantization
  *            Tables 7.19 to 7.23
@@ -225,7 +201,7 @@ static int ac3_decode_init(AVCodecContext *avctx)
     ff_eac3_tables_init();
     ff_mdct_init(&s->imdct_256, 8, 1);
     ff_mdct_init(&s->imdct_512, 9, 1);
-    ac3_window_init(s->window);
+    ff_kbd_window_init(s->window, 5.0, 256);
     dsputil_init(&s->dsp, avctx);
     av_init_random(0, &s->dith_state);
 
