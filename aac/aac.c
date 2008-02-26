@@ -1894,7 +1894,6 @@ static void ssr_ipqf_tool(AACContext * ac, sce_struct * sce, float * preret) {
 }
 
 static void ssr_trans(AACContext * ac, sce_struct * sce) {
-    ics_struct * ics = &sce->ics;
     float * in = sce->coeffs;
     DECLARE_ALIGNED_16(float, tmp_buf[512]);
     DECLARE_ALIGNED_16(float, tmp_ret[1024]);
