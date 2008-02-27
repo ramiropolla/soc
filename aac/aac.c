@@ -603,7 +603,7 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
         pcs->cc_tag[i] = get_bits(gb, 4);
     }
     align_get_bits(gb);
-    skip_bits(gb, 8 * get_bits(gb, 8));
+    skip_bits_long(gb, 8 * get_bits(gb, 8));
     return 0;
 }
 
@@ -906,7 +906,7 @@ static int data_stream_element(AACContext * ac, GetBitContext * gb) {
         count += get_bits(gb, 8);
     if (byte_align)
         align_get_bits(gb);
-    skip_bits(gb, 8 * count);
+    skip_bits_long(gb, 8 * count);
     return 0;
 }
 
@@ -1504,7 +1504,7 @@ static int lfe_channel_struct(AACContext * ac, GetBitContext * gb) {
 static int sbr_extension_data(AACContext * ac, GetBitContext * gb, int crc, int cnt) {
     // TODO : sbr_extension implementation
     av_log(ac->avccontext, AV_LOG_DEBUG, "aac: SBR not yet supported.\n");
-    skip_bits(gb, 8*cnt - 4);
+    skip_bits_long(gb, 8*cnt - 4);
     return cnt;
 }
 
@@ -1596,7 +1596,7 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
         case EXT_FILL_DATA:
         case EXT_DATA_ELEMENT:
         default:
-            skip_bits(gb, 8*cnt - 4);
+            skip_bits_long(gb, 8*cnt - 4);
             break;
     };
     return res;
