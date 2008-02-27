@@ -620,12 +620,12 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb) {
     }
 
     if (get_bits1(gb))       // dependsOnCoreCoder
-        get_bits(gb, 14);    // coreCoderDelay
+        skip_bits(gb, 14);   // coreCoderDelay
     ext = get_bits1(gb);
 
     if(ac->audioObjectType == AOT_AAC_SCALABLE ||
        ac->audioObjectType == AOT_ER_AAC_SCALABLE)
-        get_bits(gb, 3);     // layerNr
+        skip_bits(gb, 3);     // layerNr
 
     if (ac->channels == 0)
         program_config_element(ac, gb);
@@ -639,13 +639,13 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb) {
             case AOT_ER_AAC_LTP:
             case AOT_ER_AAC_SCALABLE:
             case AOT_ER_AAC_LD:
-                get_bits(gb, 3);   /* aacSectionDataResilienceFlag
+                skip_bits(gb, 3);  /* aacSectionDataResilienceFlag
                                     * aacScalefactorDataResilienceFlag
                                     * aacSpectralDataResilienceFlag
                                     */
                 break;
         }
-        get_bits1(gb);    // extensionFlag3 (TBD in version 3)
+        skip_bits1(gb);    // extensionFlag3 (TBD in version 3)
     }
     return 0;
 }
