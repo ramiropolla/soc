@@ -117,7 +117,7 @@ int movie_init(AVFilterContext *ctx)
         if (mv->pFormatCtx->start_time != AV_NOPTS_VALUE)
             timestamp += mv->pFormatCtx->start_time;
         if (av_seek_frame(mv->pFormatCtx, -1, timestamp, AVSEEK_FLAG_BACKWARD) < 0) {
-            av_log(ctx, AV_LOG_ERROR, "%s: could not seek to position %lld\n",
+            av_log(ctx, AV_LOG_ERROR, "%s: could not seek to position %"PRId64"\n",
                 mv->file_name, timestamp);
         }
     }
@@ -171,7 +171,7 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
     MovieContext *mv = ctx->priv;
 
     if(args) {
-        int num_fields = sscanf(args, "%lld:%15[^:]:%255s",
+        int num_fields = sscanf(args, "%"PRId64":%15[^:]:%255s",
                             &mv->seek_point, mv->format_name, mv->file_name);
         if (3 == num_fields)
             /* av_log(ctx, AV_LOG_INFO,
