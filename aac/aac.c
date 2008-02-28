@@ -872,7 +872,6 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     int i;
 
     ac->avccontext = avccontext;
-    ac->is_saved = 0;
 
     if (AudioSpecificConfig(ac, avccontext->extradata, avccontext->extradata_size))
         return -1;
