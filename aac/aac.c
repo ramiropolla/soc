@@ -819,6 +819,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         }
     }
 
+    dsputil_init(&ac->dsp, avccontext);
+
     /* Initialize RNG dither */
     av_init_random(0x1f2e3d4c, &ac->random_state);
 
@@ -885,7 +887,6 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         ac->kbd_short_128[i] *= 8.;
     }
     ac->mdct_ltp = NULL;
-    dsputil_init(&ac->dsp, avccontext);
 
     return 0;
 }
