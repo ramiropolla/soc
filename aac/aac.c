@@ -878,6 +878,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         return -1;
 
     avccontext->sample_rate = ac->sample_rate;
+    avccontext->frame_size  = 1024;
 
     for (i = 0; i < 11; i++) {
         static const int mod_cb[11] = { 3, 3, 3, 3, 9, 9, 8, 8, 13, 13, 17 };
