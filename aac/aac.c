@@ -2136,7 +2136,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
 }
 
 
-static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data_size, uint8_t * buf, int buf_size) {
+static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data_size, const uint8_t * buf, int buf_size) {
     AACContext * ac = avccontext->priv_data;
     GetBitContext gb;
     int id, err;
