@@ -119,60 +119,24 @@ enum {
 //ltp
 #define MAX_LTP_LONG_SFB 40
 
+#define AAC_CHANNEL_FRONT       1
+#define AAC_CHANNEL_SIDE        2
+#define AAC_CHANNEL_BACK        3
+#define AAC_CHANNEL_LFE         4
+#define AAC_CHANNEL_CC          5
+
 typedef struct {
-    int present;
-    int generated;
+    int sce_type[MAX_TAGID];
+    int cpe_type[MAX_TAGID];
+    int lfe_type[MAX_TAGID];
+    int  cc_type[MAX_TAGID];
 
-    int num_channels;
+    int mono_mixdown;         //< The SCE tag to use if user requests mono output,   -1 if not available
+    int stereo_mixdown;       //< The CPE tag to use if user requests stereo output, -1 if not available
+    int mixdown_coeff_index;  //< 0-3
+    int pseudo_surround;      //< Mix surround channels out of phase
 
-    int num_front;
-    int front_cpe;
-    int front_tag[MAX_TAGID];
-
-    int num_side;
-    int side_cpe;
-    int side_tag[MAX_TAGID];
-
-    int num_back;
-    int back_cpe;
-    int back_tag[MAX_TAGID];
-
-    int num_lfe;
-    int lfe_tag[MAX_TAGID];
-
-    int num_assoc_data;
-    int assoc_data_tag[MAX_TAGID];
-
-    int num_cc;
-    int cc_ind_sw;
-    int cc_tag[MAX_TAGID];
-
-    int mono_mixdown;
-    int stereo_mixdown;
-    int matrix_mixdown;
-    int pseudo_surround;
 } program_config_struct;
-
-enum {
-    MIXMODE_DEFAULT = 0,
-    MIXMODE_1TO1,
-    MIXMODE_2TO1,
-    MIXMODE_1TO2,
-    MIXMODE_2TO2,
-    MIXMODE_MATRIX1,
-    MIXMODE_MATRIX2,
-    MIXMODE_UNKNOWN
-};
-
-typedef struct {
-    int mode;
-    int c_tag;
-    int lr_tag;
-    int sur_tag;
-    float sce_gain[MAX_TAGID];
-    float cpe_gain[MAX_TAGID][2];
-    float lfe_gain[MAX_TAGID];
-} mix_config_struct;
 
 typedef struct {
     int present;
@@ -309,11 +273,9 @@ typedef struct {
     int ext_sampling_index;
     int sample_rate;
     int ext_sample_rate;
-    int channels;
 
     // decoder param
     program_config_struct pcs;
-    mix_config_struct mix;
     sce_struct * che_sce[MAX_TAGID];
     cpe_struct * che_cpe[MAX_TAGID];
     sce_struct * che_lfe[MAX_TAGID];
@@ -341,7 +303,10 @@ typedef struct {
     DECLARE_ALIGNED_16(float, ivquant_tab[256]);
     DECLARE_ALIGNED_16(float, revers[1024]);
     float* interleaved_output;
-    float* iop;
+    float *output_data[MAX_CHANNELS];
+    sce_struct *mm_center;            //< Center SCE to use for matrix mixdown
+    cpe_struct *mm_front;             //< Front  CPE to use for matrix mixdown
+    cpe_struct *mm_back;              //< Back   CPE to use for matrix mixdown
 
     MDCTContext mdct;
     MDCTContext mdct_small;
@@ -468,184 +433,297 @@ static void cc_freep(cc_struct **s) {
     av_freep(s);
 }
 
-// General functions
-#define TAG_MASK 0x00f
-#define FLAG_SCE 0x100
-#define FLAG_CPE 0x200
-#define FLAG_LFE 0x400
-#define FLAG_CCE 0x800
-
-static int program_config_element_add_channel(AACContext * ac, int flag_tag) {
+/**
+ * Configure output channel order and optional mixing based on the current
+ * program config element and user requested channels.
+ *
+ * \param nwepcs New program config struct. We only do somthing if it differs from the current one.
+ */
+static int output_configure(AACContext *ac, program_config_struct *newpcs) {
+    AVCodecContext *avctx = ac->avccontext;
     program_config_struct * pcs = &ac->pcs;
-    if (pcs->present)
-        return 0;
-    pcs->generated = 1;
-    switch (ac->channels) {
-        case 8:
-        case 7:
-            if ((pcs->num_channels == 3) && (FLAG_CPE & flag_tag)) {
-                pcs->num_side = 1;
-                pcs->side_cpe = 1;
-                pcs->side_tag[0] = flag_tag & TAG_MASK;
-                pcs->num_channels = 5;
-                return 0;
-            }
-            if ((pcs->num_channels == 5) && (FLAG_CPE & flag_tag)) {
-                pcs->num_back = 1;
-                pcs->back_cpe = 1;
-                pcs->back_tag[0] = flag_tag & TAG_MASK;
-                pcs->num_channels = 7;
-                return 0;
-            }
-            if ((pcs->num_channels == 7) && (FLAG_LFE & flag_tag)) {
-                pcs->num_lfe = 1;
-                pcs->lfe_tag[0] = flag_tag & TAG_MASK;
-                pcs->num_channels = 8;
-                return 0;
-            }
-            goto lab3;
-        case 6:
-            if ((pcs->num_channels == 5) && (FLAG_LFE & flag_tag)) {
-                pcs->num_lfe = 1;
-                pcs->lfe_tag[0] = flag_tag & TAG_MASK;
-                pcs->num_channels = 6;
-                return 0;
-            }
-        case 5:
-            if ((pcs->num_channels == 3) && (FLAG_CPE & flag_tag)) {
-                pcs->num_back = 1;
-                pcs->back_cpe = 1;
-                pcs->back_tag[0] = flag_tag & TAG_MASK;
-                pcs->num_channels = 5;
-                return 0;
-            }
-            goto lab3;
-        case 4:
-            if ((pcs->num_channels == 3) && (FLAG_SCE & flag_tag)) {
-                pcs->num_back = 1;
-                pcs->back_cpe = 0;
-                pcs->back_tag[0] = flag_tag & TAG_MASK;
-                pcs->num_channels = 4;
-                return 0;
-            }
-lab3:
-        case 3:
-            if ((pcs->num_channels == 1) && (FLAG_CPE & flag_tag)) {
-                pcs->num_front = 2;
-                pcs->front_cpe = 2;
-                pcs->front_tag[1] = flag_tag & TAG_MASK;
-                pcs->num_channels = 3;
-                return 0;
-            }
-        case 1:
-            if ((pcs->num_channels == 0) && (FLAG_SCE & flag_tag)) {
-                pcs->num_front = 1;
-                pcs->front_cpe = 0;
-                pcs->front_tag[0] = flag_tag & TAG_MASK;
-                pcs->num_channels = 1;
-                return 0;
-            }
-            break;
-        case 2:
-            if ((pcs->num_channels == 0) && (FLAG_CPE & flag_tag)) {
-                pcs->num_front = 1;
-                pcs->front_cpe = 1;
-                pcs->front_tag[0] = flag_tag & TAG_MASK;
-                pcs->num_channels = 2;
-                return 0;
-            }
-            break;
+    int i, channels = 0, ch;
+    float a, b;
+    cpe_struct *front = NULL, *back = NULL;
+    sce_struct *center = NULL;
+
+    static const float mixdowncoeff[4] = {
+        /* Matrix mixdown coefficient, Table 4.70 */
+        1. / M_SQRT2,
+        1. / 2.,
+        1. / (2 * M_SQRT2),
+        0
+    };
+
+    if(!memcmp(&ac->pcs, newpcs, sizeof(program_config_struct)))
+        return 0; /* no change */
+
+    memcpy(pcs, newpcs, sizeof(program_config_struct));
+
+    /* Allocate or free elements depending on if they are in the
+       current program config struct */
+
+    for(i = 0; i < MAX_TAGID; i++) {
+        channels += !!pcs->sce_type[i] + !!pcs->cpe_type[i] * 2 + !!pcs->lfe_type[i];
+
+        if(pcs->sce_type[i]) {
+            if(!ac->che_sce[i]) ac->che_sce[i] = av_mallocz(sizeof(sce_struct));
+        } else
+            sce_freep(&ac->che_sce[i]);
+
+        if(pcs->cpe_type[i]) {
+            if(!ac->che_cpe[i]) ac->che_cpe[i] = av_mallocz(sizeof(cpe_struct));
+        } else
+            cpe_freep(&ac->che_cpe[i]);
+
+        if(pcs->lfe_type[i]) {
+            if(!ac->che_lfe[i]) ac->che_lfe[i] = av_mallocz(sizeof(sce_struct));
+        } else
+            sce_freep(&ac->che_lfe[i]);
+
+        if(pcs->cc_type[i]) {
+            if(!ac->che_cc[i]) ac->che_cc[i] = av_mallocz(sizeof(cc_struct));
+        } else
+            cc_freep(&ac->che_cc[i]);
     }
-    pcs->generated = 0;
-    return -1;
+
+    /* Setup default 1:1 output mapping.
+     *
+     * For a 5.1 stream the output order will be:
+     *    [ Front Left ] [ Front Right ] [ Center ] [ LFE ] [ Surround Left ] [ Surround Right ]
+     *
+     * While at it: locate front, center and back for matrix mixdown further down
+     */
+
+    ch = 0;
+    for(i = 0; i < MAX_TAGID; i++) {
+
+        if(pcs->cpe_type[i]) {
+            ac->output_data[ch++] = ac->che_cpe[i]->ch[0].ret;
+            ac->output_data[ch++] = ac->che_cpe[i]->ch[1].ret;
+
+            ac->che_cpe[i]->ch[0].mixing_gain = 1.0f;
+            ac->che_cpe[i]->ch[1].mixing_gain = 1.0f;
+
+            if(front == NULL && pcs->cpe_type[i] == AAC_CHANNEL_FRONT)
+                front = ac->che_cpe[i];
+
+            if(back  == NULL && pcs->cpe_type[i] == AAC_CHANNEL_BACK)
+                back = ac->che_cpe[i];
+        }
+
+        if(pcs->sce_type[i]) {
+            ac->output_data[ch++] = ac->che_sce[i]->ret;
+            ac->che_sce[i]->mixing_gain = 1.0f;
+
+            if(center == NULL && pcs->sce_type[i] == AAC_CHANNEL_FRONT)
+                center = ac->che_sce[i];
+        }
+        if(ac->che_lfe[i]) {
+            ac->output_data[ch++] = ac->che_lfe[i]->ret;
+            ac->che_sce[i]->mixing_gain = 1.0f;
+        }
+    }
+    assert(ch == channels);
+
+    ac->mm_front = ac->mm_back = NULL;
+    ac->mm_center = NULL;
+
+    /* Check for matrix mixdown to mono or stereo */
+
+    if(avctx->request_channels != 0 && avctx->request_channels <= 2 &&
+       avctx->request_channels != channels) {
+
+        if((avctx->request_channels == 1 && pcs->mono_mixdown   != -1) ||
+           (avctx->request_channels == 2 && pcs->stereo_mixdown != -1)) {
+            /* Add support for this as soon as we get a sample so we can figure out
+               exactly how this is supposed to work */
+            av_log(avctx, AV_LOG_ERROR,
+                   "Mixdown using pre-mixed elements is not supported, please file a bug. "
+                   "Reverting to matrix mixdown\n");
+        }
+
+        /* We need 'center + L + R + sL + sR' for matrix mixdown */
+        if(front && center && back) {
+            a = mixdowncoeff[pcs->mixdown_coeff_index];
+
+            if(avctx->request_channels == 2) {
+                b = 1. / (1. + (1. / M_SQRT2) + a * (pcs->pseudo_surround ? 2. : 1.));
+
+                front->ch[0].mixing_gain = b;
+                front->ch[1].mixing_gain = b;
+                center->mixing_gain      = b / M_SQRT2;
+                back->ch[0].mixing_gain  = b * a;
+                back->ch[1].mixing_gain  = b * a;
+            } else {
+                b = 1. / (3. + 2. * a);
+                front->ch[0].mixing_gain = b;
+                front->ch[1].mixing_gain = b;
+                center->mixing_gain      = b;
+                back->ch[0].mixing_gain  = b * a;
+                back->ch[1].mixing_gain  = b * a;
+            }
+            ac->mm_front  = front;
+            ac->mm_center = center;
+            ac->mm_back   = back;
+
+            channels = avctx->request_channels;
+        } else {
+            av_log(avctx, AV_LOG_WARNING, "Matrix mixing from %d to %d channels in not supported",
+                   channels, avctx->request_channels);
+        }
+    }
+
+    avctx->channels = channels;
+    ac->interleaved_output = av_realloc(ac->interleaved_output, channels * 1024 * sizeof(float));
+    return ac->interleaved_output ? 0 : -1;
 }
+
+
+/**
+ * Decode an array of 4 bit tag IDs, optionally interleaved with a stereo/mono switching bit.
+ *
+ * @param cpe_map Stereo (Channel Pair Element) map, NULL if stereo bit is not present
+ * @param sce_map Mono (Single Channel Element) map
+ * @param type Speaker type/position for these channels
+ */
+static void program_config_element_parse_tags(GetBitContext * gb, int *cpe_map,
+                                              int *sce_map, int n, int type) {
+    int *map;
+    while(n--) {
+        map = cpe_map && get_bits1(gb) ? cpe_map : sce_map; // stereo or mono map
+        map[get_bits(gb, 4)] = type;
+    }
+}
+
 
 /**
  * Parse program config element
  * reference: Table 4.2
- *
- * XXX: Needs fixup
  */
 static int program_config_element(AACContext * ac, GetBitContext * gb) {
-    program_config_struct * pcs = &ac->pcs;
-    int id, object_type, i;
-    assert(ac->channels == 0);
-    pcs->present = 1;
-    id = get_bits(gb, 4);
-    object_type = get_bits(gb, 2);
+    program_config_struct pcs;
+    int i, num_front, num_side, num_back, num_lfe, num_assoc_data, num_cc;
+
+    memset(&pcs, 0, sizeof(program_config_struct));
+
+    skip_bits(gb, 4);  // element_instance_tag
+    skip_bits(gb, 2);  // object_type
 
     ac->sampling_index = get_bits(gb, 4);
-    assert(ac->sampling_index <= 12);
+    if(ac->sampling_index > 12) {
+        av_log(ac->avccontext, AV_LOG_ERROR, "Invalid sampling rate index %d", ac->sampling_index);
+        return -1;
+    }
     ac->sample_rate = sampling_table[ac->sampling_index];
-    pcs->num_front = get_bits(gb, 4);
-    pcs->num_side = get_bits(gb, 4);
-    pcs->num_back = get_bits(gb, 4);
-    pcs->num_lfe = get_bits(gb, 2);
-    pcs->num_assoc_data = get_bits(gb, 3);
-    pcs->num_cc = get_bits(gb, 4);
+    num_front       = get_bits(gb, 4);
+    num_side        = get_bits(gb, 4);
+    num_back        = get_bits(gb, 4);
+    num_lfe         = get_bits(gb, 2);
+    num_assoc_data  = get_bits(gb, 3);
+    num_cc          = get_bits(gb, 4);
 
-    pcs->mono_mixdown = get_bits1(gb) ? get_bits(gb, 4) + 1: 0;
-    pcs->stereo_mixdown = get_bits1(gb) ? get_bits(gb, 4) + 1: 0;
-    assert(pcs->mono_mixdown == 0 && pcs->stereo_mixdown == 0);
+    pcs.mono_mixdown   = get_bits1(gb) ? get_bits(gb, 4) : -1;
+    pcs.stereo_mixdown = get_bits1(gb) ? get_bits(gb, 4) : -1;
 
     if (get_bits1(gb)) {
-        pcs->matrix_mixdown = get_bits(gb, 2) + 1;
-        pcs->pseudo_surround = get_bits1(gb);
+        pcs.mixdown_coeff_index = get_bits(gb, 2);
+        pcs.pseudo_surround     = get_bits1(gb);
     } else {
-        pcs->matrix_mixdown = 0;
-        pcs->pseudo_surround = 0;
+        pcs.mixdown_coeff_index = 0;
+        pcs.pseudo_surround     = 0;
     }
 
-    pcs->front_cpe = 0;
-    ac->channels += pcs->num_front;
-    for (i = 0; i < pcs->num_front; i++) {
-        if (get_bits1(gb)) {
-            pcs->front_cpe |= (1 << i);
-            ac->channels++;
-        }
-        pcs->front_tag[i] = get_bits(gb, 4);
-    }
-    pcs->side_cpe = 0;
-    ac->channels += pcs->num_side;
-    for (i = 0; i < pcs->num_side; i++) {
-        if (get_bits1(gb)) {
-            pcs->side_cpe |= (1 << i);
-            ac->channels++;
-        }
-        pcs->side_tag[i] = get_bits(gb, 4);
-    }
-    pcs->back_cpe = 0;
-    ac->channels += pcs->num_back;
-    for (i = 0; i < pcs->num_back; i++) {
-        if (get_bits1(gb)) {
-            pcs->back_cpe |= (1 << i);
-            ac->channels++;
-        }
-        pcs->back_tag[i] = get_bits(gb, 4);
-    }
-    ac->channels += pcs->num_lfe;
-    for (i = 0; i < pcs->num_lfe; i++)
-        pcs->lfe_tag[i] = get_bits(gb, 4);
+    program_config_element_parse_tags(gb, pcs.cpe_type, pcs.sce_type, num_front, AAC_CHANNEL_FRONT);
+    program_config_element_parse_tags(gb, pcs.cpe_type, pcs.sce_type, num_side,  AAC_CHANNEL_SIDE );
+    program_config_element_parse_tags(gb, pcs.cpe_type, pcs.sce_type, num_back,  AAC_CHANNEL_BACK );
+    program_config_element_parse_tags(gb, NULL,         pcs.lfe_type, num_lfe,   AAC_CHANNEL_LFE  );
 
-    pcs->num_channels = ac->channels;
     // not a real audio channel
-    for (i = 0; i < pcs->num_assoc_data; i++)
-        pcs->assoc_data_tag[i] = get_bits(gb, 4);
-    pcs->cc_ind_sw = 0;
-    for (i = 0; i < pcs->num_cc; i++) {
-        pcs->cc_ind_sw |= (get_bits1(gb) << i);
-        pcs->cc_tag[i] = get_bits(gb, 4);
+    for (i = 0; i < num_assoc_data; i++)
+        skip_bits(gb, 4);
+
+    for (i = 0; i < num_cc; i++) {
+        skip_bits1(gb);    // cc_ind_sw
+        pcs.cc_type[get_bits(gb, 4)] = AAC_CHANNEL_CC;
     }
+
     align_get_bits(gb);
+
+    /* comment field, first byte is length */
     skip_bits_long(gb, 8 * get_bits(gb, 8));
-    return 0;
+    return output_configure(ac, &pcs);
 }
+
+/**
+ * Set up program_config_struct, but based on a default channel configuration
+ * as specified in Table 1.17
+ */
+static int program_config_element_default(AACContext *ac, int channels)
+{
+    program_config_struct pcs;
+
+    memset(&pcs, 0, sizeof(program_config_struct));
+
+    /* Premixed downmix outputs are not available */
+    pcs.mono_mixdown   = -1;
+    pcs.stereo_mixdown = -1;
+
+    switch(channels) {
+    case 1: /* Mono */
+        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
+        break;
+
+    case 2: /* Stereo */
+        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
+        break;
+
+    case 3: /* Front Center + L + R  */
+        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
+        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
+        break;
+
+    case 4: /* Front Center + L + R + Back Center */
+        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
+        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
+        pcs.sce_type[1] = AAC_CHANNEL_BACK;
+        break;
+
+    case 5: /* Front Center + L + R + Back Stereo */
+        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
+        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
+        pcs.cpe_type[1] = AAC_CHANNEL_BACK;
+        break;
+
+    case 6: /* Front Center + L + R + Back Stereo + LFE */
+        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
+        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
+        pcs.cpe_type[1] = AAC_CHANNEL_BACK;
+        pcs.lfe_type[0] = AAC_CHANNEL_LFE;
+        break;
+
+    case 7: /* Front Center + L + R + Outer Front Left + Outer Front Right + Back Stereo + LFE */
+        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
+        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
+        pcs.cpe_type[1] = AAC_CHANNEL_FRONT;
+        pcs.cpe_type[2] = AAC_CHANNEL_BACK;
+        pcs.lfe_type[0] = AAC_CHANNEL_LFE;
+        break;
+
+    default:
+        av_log(ac->avccontext, AV_LOG_ERROR, "Invalid default channel configuration (%d channels)",
+               channels);
+        return -1;
+    }
+    return output_configure(ac, &pcs);
+}
+
 
 /**
  * Parse GA specific configuration
  * reference: Table 4.1
  */
-static int GASpecificConfig(AACContext * ac, GetBitContext * gb) {
+static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
     int ext = 0;
 
     if(get_bits1(gb)) {  // frameLengthFlag
@@ -661,8 +739,13 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb) {
        ac->audioObjectType == AOT_ER_AAC_SCALABLE)
         skip_bits(gb, 3);     // layerNr
 
-    if (ac->channels == 0)
-        program_config_element(ac, gb);
+    if (channels == 0) {
+        if(program_config_element(ac, gb) < 0)
+            return -1;
+    } else {
+        program_config_element_default(ac, channels);
+    }
+
     if (ext) {
         switch (ac->audioObjectType) {
             case AOT_ER_BSAC:
@@ -721,6 +804,7 @@ static int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
  */
 static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     GetBitContext gb;
+    int channels;
 
     init_get_bits(&gb, data, data_size * 8);
 
@@ -728,7 +812,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
 
     ac->audioObjectType = GetAudioObjectType(&gb);
     if (GetSampleRate(&gb, &ac->sampling_index, &ac->sample_rate)) return -1;
-    ac->channels = get_bits(&gb, 4);
+    channels = get_bits(&gb, 4);
 
     ac->sbr_present = 0;
     if (ac->audioObjectType == AOT_SBR) {
@@ -744,7 +828,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     case AOT_AAC_LC:
     case AOT_AAC_SSR:
     case AOT_AAC_LTP:
-        if (GASpecificConfig(ac, &gb))
+        if (GASpecificConfig(ac, &gb, channels))
             return -1;
         break;
     default:
@@ -793,32 +877,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     if (AudioSpecificConfig(ac, avccontext->extradata, avccontext->extradata_size))
         return -1;
 
-    if (avccontext->channels == 0) {
-        avccontext->channels = ac->channels;
-    } else if ((avccontext->channels == 1) && ((ac->channels == 7) || (ac->channels == 6) || (ac->channels == 5))) {
-        av_log(avccontext, AV_LOG_INFO, "aac: Downmix from %d to mono\n", ac->channels);
-        if (!ac->pcs.matrix_mixdown) {
-            ac->pcs.matrix_mixdown = 1;
-            ac->pcs.pseudo_surround = 0;
-        }
-    } else if ((avccontext->channels == 2) && ((ac->channels == 7) || (ac->channels == 6) || (ac->channels == 5))){
-        av_log(avccontext, AV_LOG_INFO, "aac: Downmix from %d to stereo\n", ac->channels);
-        if (!ac->pcs.matrix_mixdown) {
-            ac->pcs.matrix_mixdown = 1;
-            ac->pcs.pseudo_surround = 0;
-        }
-    } else if (((avccontext->channels == 2) || (avccontext->channels == 1)) && ((ac->channels == 2) || (ac->channels == 1))){
-        // it's ok stereo <-> mono
-    } else {
-        if (avccontext->channels < ac->channels)
-            av_log(avccontext, AV_LOG_INFO, "aac: AAC stream has %d channels but output to %d channels\n",
-                    ac->channels, avccontext->channels);
-        avccontext->channels = ac->channels;
-    }
     avccontext->sample_rate = ac->sample_rate;
-
-    /* Allocate aligned reorder buffer */
-    ac->interleaved_output = av_malloc(ac->channels * 1024 * sizeof(float));
 
     for (i = 0; i < 11; i++) {
         static const int mod_cb[11] = { 3, 3, 3, 3, 9, 9, 8, 8, 13, 13, 17 };
@@ -1359,11 +1418,9 @@ static int single_channel_struct(AACContext * ac, GetBitContext * gb) {
     sce_struct * sce;
     int id = get_bits(gb, 4);
     if (ac->che_sce[id] == NULL) {
-        ac->che_sce[id] = av_mallocz(sizeof(sce_struct));
-        program_config_element_add_channel(ac, FLAG_SCE | id);
+        return -1;
     }
     sce = ac->che_sce[id];
-    sce->mixing_gain = ac->mix.sce_gain[id];
     if (individual_channel_stream(ac, gb, 0, 0, sce))
         return -1;
     return 0;
@@ -1405,12 +1462,9 @@ static int channel_pair_element(AACContext * ac, GetBitContext * gb) {
     cpe_struct * cpe;
     int id = get_bits(gb, 4);
     if (ac->che_cpe[id] == NULL) {
-        ac->che_cpe[id] = av_mallocz(sizeof(cpe_struct));
-        program_config_element_add_channel(ac, FLAG_CPE | id);
+        return -1;
     }
     cpe = ac->che_cpe[id];
-    cpe->ch[0].mixing_gain = ac->mix.cpe_gain[id][0];
-    cpe->ch[1].mixing_gain = ac->mix.cpe_gain[id][1];
     cpe->common_window = get_bits1(gb);
     if (cpe->common_window) {
         if (ics_info(ac, gb, 1, &cpe->ch[0].ics))
@@ -1448,8 +1502,7 @@ static int coupling_channel_element(AACContext * ac, GetBitContext * gb) {
     coupling_struct * coup;
     int id = get_bits(gb, 4);
     if (ac->che_cc[id] == NULL) {
-        ac->che_cc[id] = av_mallocz(sizeof(cc_struct));
-        program_config_element_add_channel(ac, FLAG_CCE | id);
+        return -1;
     }
     sce = &ac->che_cc[id]->ch;
     sce->mixing_gain = 1.0;
@@ -1514,11 +1567,9 @@ static int lfe_channel_struct(AACContext * ac, GetBitContext * gb) {
     sce_struct * sce;
     int id = get_bits(gb, 4);
     if (ac->che_lfe[id] == NULL) {
-        ac->che_lfe[id] = av_mallocz(sizeof(sce_struct));
-        program_config_element_add_channel(ac, FLAG_LFE | id);
+        return -1;
     }
     sce = ac->che_lfe[id];
-    sce->mixing_gain = ac->mix.lfe_gain[id];
     if (individual_channel_stream(ac, gb, 0, 0, sce))
         return -1;
     return 0;
@@ -2031,267 +2082,59 @@ static void spec_to_sample(AACContext * ac) {
         transform_sce_tool(ac, ltp_update_trans);
 }
 
-static int output_coefs(AVCodecContext * avccontext) {
-    AACContext * ac = avccontext->priv_data;
-    program_config_struct * pcs = &ac->pcs;
-    mix_config_struct * mix = &ac->mix;
-    int ichannels = ac->channels;
-    int ochannels = avccontext->channels;
-    int i;
-    for (i = 0; i < MAX_TAGID; i++) {
-        mix->sce_gain[i] = 1.;
-        mix->cpe_gain[i][0] = 1.;
-        mix->cpe_gain[i][1] = 1.;
-        mix->lfe_gain[i] = 1.;
-    }
-    mix->c_tag = 0;
-    mix->lr_tag = 0;
-    mix->sur_tag = 0;
-    mix->mode = MIXMODE_UNKNOWN;
-    if ((ochannels == 1) && ((ichannels == 2) || (ichannels == 1) || (pcs->mono_mixdown))) {
-        int tag = pcs->mono_mixdown ? pcs->mono_mixdown - 1 : ((pcs->num_front == 1) ? pcs->front_tag[0] : 0);
-        if (ichannels == 2) {
-            mix->mode = MIXMODE_2TO1;
-            mix->lr_tag = tag;
-            mix->cpe_gain[tag][0] = mix->cpe_gain[tag][1] = 0.5;
-        } else {
-            mix->mode = MIXMODE_1TO1;
-            mix->c_tag = tag;
-        }
-    } else if ((ochannels == 2) && ((ichannels == 1) || (ichannels == 2) || (pcs->stereo_mixdown))) {
-        int tag = pcs->stereo_mixdown ? pcs->stereo_mixdown - 1 :  ((pcs->num_front == 1) ? pcs->front_tag[0] : 0);
-        if (ichannels == 1) {
-            mix->mode = MIXMODE_1TO2;
-            mix->c_tag = tag;
-        } else {
-            mix->mode = MIXMODE_2TO2;
-            mix->lr_tag = tag;
-        }
-    } else if (((ochannels == 1) || (ochannels == 2)) && (pcs->matrix_mixdown)) {
-        float alpha_tab[] = {sqrt(2)/2, 1./2, sqrt(2)/4., 0};
-        float alpha = alpha_tab[pcs->matrix_mixdown - 1];
-        float ialpha = 0;
-        if (ochannels == 1) {
-            mix->mode = MIXMODE_MATRIX1;
-            ialpha = 1. / (3 + 2 * alpha);
-        } else {
-            mix->mode = MIXMODE_MATRIX2;
-            ialpha = pcs->pseudo_surround ? 1. / (1. + sqrt(2) / 2 + 2 * alpha) : 1. / (1. + sqrt(2) / 2 + alpha);
-        }
-        for (i = 0; i < pcs->num_front; i++) {
-            if (pcs->front_cpe & (1 << i)) {
-                mix->lr_tag = pcs->front_tag[i];
-                mix->cpe_gain[mix->lr_tag][0] = mix->cpe_gain[mix->lr_tag][1] = ialpha;
-                break;
-            }
-        }
-        for (i = 0; i < pcs->num_front; i++) {
-            if (!(pcs->front_cpe & (1 << i))) {
-                mix->c_tag = pcs->front_tag[i];
-                mix->sce_gain[mix->c_tag] = ialpha * sqrt(2) / 2.;
-                break;
-            }
-        }
-        mix->sur_tag = -1;
-        for (i = 0; i < pcs->num_back; i++) {
-            if (pcs->back_cpe & (1 << i)) {
-                mix->sur_tag = pcs->back_tag[i];
-                break;
-            }
-        }
-        if (mix->sur_tag == -1) {
-            for (i = 0; i < pcs->num_side; i++) {
-                if (pcs->side_cpe & (1 << i)) {
-                    mix->sur_tag = pcs->back_tag[i];
-                    break;
-                }
-            }
-        }
-        if (mix->sur_tag != -1) {
-            mix->cpe_gain[mix->sur_tag][0] = ialpha * alpha;
-            mix->cpe_gain[mix->sur_tag][1] = ialpha * alpha;
-        }
-    } else if (ochannels >= ichannels) {
-        mix->mode = MIXMODE_DEFAULT;
-    }
-    return 0;
-}
 
 static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
     AACContext * ac = avccontext->priv_data;
-    program_config_struct * pcs = &ac->pcs;
-    mix_config_struct * mix = &ac->mix;
-    int ichannels = ac->channels;
-    int ochannels = avccontext->channels;
-    int size = ochannels * 1024 * sizeof(uint16_t);
-    int i;
-
-    /* set a default float2int16 buffer */
-    ac->iop = ac->interleaved_output;
+    int i, ch;
+    float *c, *l, *r, *sl, *sr, *out;
 
     if (!ac->is_saved) {
         ac->is_saved = 1;
         *data_size = 0;
         return 0;
     }
-    *data_size = size;
 
-    /* the matrixmix modes are probably broken and they shouldn't be here anyway */
-    switch (mix->mode) {
-        case MIXMODE_DEFAULT:
-            break;
-        case MIXMODE_1TO1:
-            ac->iop = ac->che_sce[mix->c_tag]->ret;
-            break;
-        case MIXMODE_2TO1:
-            for (i = 0; i < 1024; i++)
-                ac->interleaved_output[i] = ac->che_cpe[0]->ch[mix->lr_tag].ret[i] + ac->che_cpe[mix->lr_tag]->ch[1].ret[i];
-            break;
-        case MIXMODE_1TO2:
-            for (i = 0; i < 1024; i++)
-                ac->interleaved_output[i*2] = ac->interleaved_output[i*2+1] = ac->che_sce[mix->c_tag]->ret[i];
-            break;
-        case MIXMODE_2TO2:
-            for (i = 0; i < 1024; i++) {
-                ac->interleaved_output[i*2]    = ac->che_cpe[mix->lr_tag]->ch[0].ret[i];
-                ac->interleaved_output[i*2+1]  = ac->che_cpe[mix->lr_tag]->ch[1].ret[i];
-            }
-            break;
-        case MIXMODE_MATRIX1:
-            {
-                cpe_struct *ch_lr = ac->che_cpe[mix->lr_tag];
-                sce_struct *ch_c = ac->che_sce[mix->c_tag];
-                cpe_struct *ch_sur = ac->che_cpe[mix->sur_tag];
-                float cBIAS = - ac->add_bias;
-                float out[1024];
-                if (ch_c) {
-                    cBIAS += ac->add_bias;
-                    for (i = 0; i < 1024; i++)
-                        out[i] = ch_c->ret[i];
-                } else {
-                    memset(out, 0, sizeof(out));
+    if(ac->mm_center) {
+        /* Matrix mixdown */
+        l   = ac->mm_front->ch[0].ret;
+        r   = ac->mm_front->ch[1].ret;
+        c   = ac->mm_center->ret;
+        sl  = ac->mm_back->ch[0].ret;
+        sr  = ac->mm_back->ch[1].ret;
+        out = ac->interleaved_output;
+
+        if(avccontext->channels == 2) {
+            if(ac->pcs.pseudo_surround) {
+                for(i = 0; i < 1024; i++) {
+                    *out++ = *l++ + *c   - *sl   - *sr   - ac->add_bias * 3;
+                    *out++ = *r++ + *c++ + *sl++ + *sr++ - ac->add_bias * 3;
                 }
-                if (ch_lr) {
-                    cBIAS += 2 * ac->add_bias;
-                    for (i = 0; i < 1024; i++)
-                        out[i] += ch_lr->ch[0].ret[i] + ch_lr->ch[1].ret[i];
-                }
-                if (ch_sur) {
-                    cBIAS += 2 * ac->add_bias;
-                    for (i = 0; i < 1024; i++)
-                        out[i] += ch_sur->ch[0].ret[i] + ch_sur->ch[1].ret[i];
-                }
-                for (i = 0; i < 1024; i++)
-                    ac->interleaved_output[i] = out[i] - cBIAS;
-            }
-            break;
-        case MIXMODE_MATRIX2:
-            {
-                cpe_struct *ch_lr = ac->che_cpe[mix->lr_tag];
-                sce_struct *ch_c = ac->che_sce[mix->c_tag];
-                cpe_struct *ch_sur = ac->che_cpe[mix->sur_tag];
-                float lBIAS = -ac->add_bias, rBIAS = -ac->add_bias;
-                float out[1024][2];
-                if (ch_c) {
-                    lBIAS += ac->add_bias; rBIAS += ac->add_bias;
-                    for (i = 0; i < 1024; i++) {
-                        out[i][0] = out[i][1] = ch_c->ret[i];
-                    }
-                } else {
-                    memset(out, 0, sizeof(out));
-                }
-                if (ch_lr) {
-                    lBIAS += ac->add_bias; rBIAS += ac->add_bias;
-                    for (i = 0; i < 1024; i++) {
-                        out[i][0] += ch_lr->ch[0].ret[i];
-                        out[i][1] += ch_lr->ch[1].ret[i];
-                    }
-                }
-                if (ch_sur) {
-                    if (pcs->pseudo_surround) {
-                        lBIAS -= 2 * ac->add_bias; rBIAS += 2 * ac->add_bias;
-                        for (i = 0; i < 1024; i++) {
-                            out[i][0] -= (ch_sur->ch[0].ret[i] + ch_sur->ch[1].ret[i]);
-                            out[i][1] += (ch_sur->ch[1].ret[i] + ch_sur->ch[0].ret[i]);
-                        }
-                    } else {
-                        lBIAS += ac->add_bias; rBIAS += ac->add_bias;
-                        for (i = 0; i < 1024; i++) {
-                            out[i][0] += ch_sur->ch[0].ret[i];
-                            out[i][1] += ch_sur->ch[1].ret[i];
-                        }
-                    }
-                }
-                for (i = 0; i < 1024; i++) {
-                    ac->interleaved_output[i*2]   = out[i][0] - lBIAS;
-                    ac->interleaved_output[i*2+1] = out[i][1] - rBIAS;
-                }
-            }
-            break;
-        case MIXMODE_UNKNOWN:
-        default:
-            *data_size = 0;
-            return 1;
-    }
-    if (mix->mode == MIXMODE_DEFAULT) {
-        float *order[MAX_CHANNELS];
-        int i, j = 0;
-        if (pcs->present || pcs->generated) {
-            for (i = 0; i < pcs->num_front; i++)
-                if (!(pcs->front_cpe & (1 << i)))
-                    order[j++] = ac->che_sce[pcs->front_tag[i]]->ret;
-            for (i = 0; i < pcs->num_front; i++)
-                if (pcs->front_cpe & (1 << i)) {
-                    order[j++] = ac->che_cpe[pcs->front_tag[i]]->ch[0].ret;
-                    order[j++] = ac->che_cpe[pcs->front_tag[i]]->ch[1].ret;
-                }
-            for (i = 0; i < pcs->num_side; i++)
-                if (!(pcs->side_cpe & (1 << i))) {
-                    order[j++] = ac->che_sce[pcs->side_tag[i]]->ret;
-                } else {
-                    order[j++] = ac->che_cpe[pcs->side_tag[i]]->ch[0].ret;
-                    order[j++] = ac->che_cpe[pcs->side_tag[i]]->ch[1].ret;
-                }
-            for (i = 0; i < pcs->num_back; i++)
-                if (pcs->back_cpe & (1 << i)) {
-                    order[j++] = ac->che_cpe[pcs->back_tag[i]]->ch[0].ret;
-                    order[j++] = ac->che_cpe[pcs->back_tag[i]]->ch[1].ret;
-                }
-            for (i = 0; i < pcs->num_back; i++)
-                if (!(pcs->back_cpe & (1 << i)))
-                    order[j++] = ac->che_sce[pcs->back_tag[i]]->ret;
-            for (i = 0; i < pcs->num_lfe; i++)
-                order[j++] = ac->che_lfe[pcs->lfe_tag[i]]->ret;
-        } else {
-            for (i = 0; i < MAX_TAGID; i++)
-                if (ac->che_sce[i] != NULL)
-                    order[j++] = ac->che_sce[i]->ret;
-            for (i = 0; i < MAX_TAGID; i++)
-                if (ac->che_cpe[i] != NULL) {
-                    order[j++] = ac->che_cpe[i]->ch[0].ret;
-                    order[j++] = ac->che_cpe[i]->ch[1].ret;
-                }
-            for (i = 0; i < MAX_TAGID; i++)
-                if (ac->che_lfe[i] != NULL)
-                    order[j++] = ac->che_lfe[i]->ret;
-        }
-        assert(j == ichannels);
-        for (i = 0; i < ochannels; i++) {
-            if (i < ichannels) {
-                for (j = 0; j < 1024; j++)
-                    ac->interleaved_output[j * ochannels + i] = order[i][j];
             } else {
-                for (j = 0; j < 1024; j++)
-                    ac->interleaved_output[j * ochannels + i] = 0.0;
+                for(i = 0; i < 1024; i++) {
+                    *out++ = *l++ + *c   + *sl++ - ac->add_bias * 2;
+                    *out++ = *r++ + *c++ + *sr++ - ac->add_bias * 2;
+                }
+            }
+
+        } else {
+            assert(avccontext->channels == 1);
+            for(i = 0; i < 1024; i++) {
+                *out++ = *l++ + *r++ + *c++ + *sl++ + *sr++ - ac->add_bias * 4;
             }
         }
-    }
 
-    /* Convert from float to int16 */
-    ac->dsp.float_to_int16(data, ac->iop, 1024*ochannels);
+    } else {
+         for(i = 0; i < 1024; i++)
+            for(ch = 0; ch < avccontext->channels; ch++) {
+                ac->interleaved_output[i * avccontext->channels + ch] = ac->output_data[ch][i];
+            }
+     }
 
-    return 0;
+    *data_size = 1024 * avccontext->channels * sizeof(uint16_t);
+    ac->dsp.float_to_int16(data, ac->interleaved_output, *data_size);
+   return 0;
 }
+
 
 static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data_size, uint8_t * buf, int buf_size) {
     AACContext * ac = avccontext->priv_data;
@@ -2302,9 +2145,6 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
 
     init_get_bits(&gb, buf, buf_size*8);
 
-    if (!ac->is_saved) {
-        output_coefs(avccontext);
-    }
     // parse
     while ((id = get_bits(&gb, 3)) != ID_END) {
         switch (id) {
