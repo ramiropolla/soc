@@ -844,10 +844,6 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 
 
     // general init
-    memset(ac->che_sce, 0, sizeof(ac->che_sce));
-    memset(ac->che_cpe, 0, sizeof(ac->che_cpe));
-    memset(ac->che_lfe, 0, sizeof(ac->che_lfe));
-    memset(ac->che_cc, 0, sizeof(ac->che_cc));
     ac->num_frame = -1;
 
     ac->swb_offset_1024 = swb_offset_1024[ac->sampling_index];
