@@ -951,7 +951,6 @@ static int ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_
         ics->num_swb = ac->num_swb_128;
         ics->num_windows = 8;
         ics->tns_max_bands = ac->tns_max_bands_128;
-        //av_log(ac->avccontext, AV_LOG_INFO, " %d groups for %d\n", ics->num_window_groups, ics->grouping);
     } else {
         ics->max_sfb = get_bits(gb, 6);
         ics->swb_offset = ac->swb_offset_1024;
@@ -1191,10 +1190,7 @@ static int spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct *
                     }
                     for (j = 0; j < dim; j++)
                         icoef[group*128+k+j] = sign[j] * ptr[j];
-                    //out[group*128+j+k] = ivquant(ac, icoef[group*128+j+k]) * sf[g][i];
-                    //for (j = 0; j < dim; j++) av_log(ac->avccontext, AV_LOG_INFO, " %4d: %5d %10.3lf => %10.3lf\n", j+k, ptr[j]*sign[j], sf[g][i]*1024*32768, out[group*128+j+k]*1024*32768);
                 }
-                //av_log(ac->avccontext, AV_LOG_INFO, " checking escape %d[%d] %d\n", ptr[j], j, index);
                 assert(k == offsets[i+1]);
             }
         }
@@ -1270,7 +1266,6 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
     ics_struct * ics = &sce->ics;
     float * out = sce->coeffs;
 
-    //memset(sf, 0, sizeof(sf));
     memset(&pulse, 0, sizeof(pulse));
     sce->global_gain = get_bits(gb, 8);
 
@@ -1279,7 +1274,6 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
             return -1;
     }
 
-    //av_log(ac->avccontext, AV_LOG_INFO, " global_gain: %d, groups: %d\n", global_gain, ics->window_sequence);
     if (section_data(ac, gb, ics, sce->cb) < 0)
         return -1;
     scale_factor_data(ac, gb, sce->mixing_gain, sce->global_gain, ics, sce->cb, sce->sf);
@@ -1310,7 +1304,6 @@ static void ms_tool(AACContext * ac, cpe_struct * cpe) {
         int g, i, k, gp;
         const uint16_t * offsets = ics->swb_offset;
         for (g = 0; g < ics->num_window_groups; g++) {
-            //av_log(ac->avccontext, AV_LOG_INFO, " masking[%d]: ", g);
             for (gp = 0; gp < ics->group_len[g]; gp++) {
                 for (i = 0; i < ics->max_sfb; i++) {
                     if (ms->mask[g][i]) {
@@ -1324,7 +1317,6 @@ static void ms_tool(AACContext * ac, cpe_struct * cpe) {
                 ch0 += 128;
                 ch1 += 128;
             }
-            //av_log(ac->avccontext, AV_LOG_INFO, "\n");
         }
     }
 }
@@ -1608,7 +1600,7 @@ static void tns_filter_tool(AACContext * ac, int decode, sce_struct * sce, float
     float tmp;
     float lpc[TNS_MAX_ORDER + 1], b[2 * TNS_MAX_ORDER];
     if (!tns->present) return;
-    //av_log(ac->avccontext, AV_LOG_INFO, "%d ", ac->num_frame);
+
     for (w = 0; w < ics->num_windows; w++) {
         bottom = ics->num_swb;
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
@@ -2273,11 +2265,8 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     int id, err;
 
     ac->num_frame++;
-    //if (ac->num_frame == 40)
-    //    __asm int 3;
 
     init_get_bits(&gb, buf, buf_size*8);
-    //av_log(avccontext, AV_LOG_INFO, "%d ", buf_size);
 
     if (!ac->is_saved) {
         output_coefs(avccontext);
