@@ -521,7 +521,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
         }
         if(ac->che_lfe[i]) {
             ac->output_data[ch++] = ac->che_lfe[i]->ret;
-            ac->che_sce[i]->mixing_gain = 1.0f;
+            ac->che_lfe[i]->mixing_gain = 1.0f;
         }
     }
     assert(ch == channels);
