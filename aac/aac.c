@@ -434,6 +434,40 @@ static void ssr_context_init(ssr_context * ctx) {
     }
 }
 
+/**
+ * Free a Single Channel Element
+ */
+static void sce_freep(sce_struct **s) {
+    if(*s == NULL)
+        return;
+    av_free((*s)->ssr);
+    av_free((*s)->ltp_state);
+    av_freep(s);
+}
+
+/**
+ * Free a Channel Pair Element
+ */
+static void cpe_freep(cpe_struct **s) {
+    if(*s == NULL)
+        return;
+    av_free((*s)->ch[0].ssr);
+    av_free((*s)->ch[1].ssr);
+    av_free((*s)->ch[0].ltp_state);
+    av_free((*s)->ch[1].ltp_state);
+    av_freep(s);
+}
+
+/**
+ * Free a Coupling Channel
+ */
+static void cc_freep(cc_struct **s) {
+    if(*s == NULL)
+        return;
+    av_free((*s)->ch.ssr);
+    av_freep(s);
+}
+
 // General functions
 #define TAG_MASK 0x00f
 #define FLAG_SCE 0x100
@@ -2319,28 +2353,10 @@ static int aac_decode_close(AVCodecContext * avccontext) {
     int i;
 
     for (i = 0; i < MAX_TAGID; i++) {
-        if (ac->che_sce[i]) {
-            av_free(ac->che_sce[i]->ssr);
-            av_free(ac->che_sce[i]->ltp_state);
-            av_free(ac->che_sce[i]);
-        }
-        if (ac->che_cpe[i]) {
-            av_free(ac->che_cpe[i]->ch[0].ssr);
-            av_free(ac->che_cpe[i]->ch[1].ssr);
-            av_free(ac->che_cpe[i]->ch[0].ltp_state);
-            av_free(ac->che_cpe[i]->ch[1].ltp_state);
-            av_free(ac->che_cpe[i]);
-        }
-        if (ac->che_lfe[i]) {
-            av_free(ac->che_lfe[i]->ssr);
-            av_free(ac->che_lfe[i]->ltp_state);
-            av_free(ac->che_lfe[i]);
-        }
-        if (ac->che_cc[i]) {
-            av_free(ac->che_cc[i]->ch.ssr);
-            // ltp never used in cc
-            av_free(ac->che_cc[i]);
-        }
+        sce_freep(&ac->che_sce[i]);
+        cpe_freep(&ac->che_cpe[i]);
+        sce_freep(&ac->che_lfe[i]);
+        cc_freep(&ac->che_cc[i]);
     }
 
     for (i = 0; i < 11; i++) {
