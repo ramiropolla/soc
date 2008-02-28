@@ -1413,16 +1413,6 @@ static void ms_tool(AACContext * ac, cpe_struct * cpe) {
     }
 }
 
-static int single_channel_struct(AACContext * ac, GetBitContext * gb, int id) {
-    sce_struct * sce;
-    if (ac->che_sce[id] == NULL) {
-        return -1;
-    }
-    sce = ac->che_sce[id];
-    if (individual_channel_stream(ac, gb, 0, 0, sce))
-        return -1;
-    return 0;
-}
 
 static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
     const ics_struct * ics = &cpe->ch[1].ics;
@@ -1556,17 +1546,6 @@ static int coupling_channel_element(AACContext * ac, GetBitContext * gb, int id)
                     }
                 }
     }
-    return 0;
-}
-
-static int lfe_channel_struct(AACContext * ac, GetBitContext * gb, int id) {
-    sce_struct * sce;
-    if (ac->che_lfe[id] == NULL) {
-        return -1;
-    }
-    sce = ac->che_lfe[id];
-    if (individual_channel_stream(ac, gb, 0, 0, sce))
-        return -1;
     return 0;
 }
 
@@ -2145,7 +2124,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         tag = get_bits(&gb, 4);
         switch (id) {
         case ID_SCE:
-            err = single_channel_struct(ac, &gb, tag);
+            err = ac->che_sce[tag] && !individual_channel_stream(ac, &gb, 0, 0, ac->che_sce[tag]) ? 0 : -1;
             break;
         case ID_CPE:
             err = channel_pair_element(ac, &gb, tag);
@@ -2167,7 +2146,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             err = coupling_channel_element(ac, &gb, tag);
             break;
         case ID_LFE:
-            err = lfe_channel_struct(ac, &gb, tag);
+            err = ac->che_lfe[tag] && !individual_channel_stream(ac, &gb, 0, 0, ac->che_lfe[tag]) ? 0 : -1;
             break;
         default:
             err = -1; /* should not happen, but keeps compiler happy */
