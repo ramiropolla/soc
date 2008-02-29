@@ -889,13 +889,16 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         int j, values = tmp[i].s/a_code_size;
         int dim = (i >= 4 ? 2 : 4);
         int mod = mod_cb[i], off = off_cb[i], index = 0;
-        int ret;
-        ret = init_vlc(&ac->books[i], 6, values,
+
+        if(init_vlc(&ac->books[i], 6, values,
                 tmp[i].a_bits, a_bits_size, a_bits_size,
                 tmp[i].a_code, a_code_size, a_code_size,
-                0);
-        assert(!ret);
-        ac->vq[i] = av_malloc(dim * values * sizeof(int));
+                0) < 0)
+            return -1;
+
+        if((ac->vq[i] = av_malloc(dim * values * sizeof(int))) == NULL)
+            return -1;
+
         if (dim == 2) {
             for (j = 0; j < values * dim; j += dim) {
                 index = j/dim;
@@ -947,10 +950,11 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     ac->num_swb_128 = num_swb_128[ac->sampling_index];
     ac->tns_max_bands_128 = tns_max_bands_128[ac->sampling_index];
 
-    init_vlc(&ac->mainvlc, 7, sizeof(code)/sizeof(code[0]),
+    if(init_vlc(&ac->mainvlc, 7, sizeof(code)/sizeof(code[0]),
             bits, sizeof(bits[0]), sizeof(bits[0]),
             code, sizeof(code[0]), sizeof(code[0]),
-            0);
+            0) < 0)
+        return -1;
 
     if (ac->audioObjectType == AOT_AAC_SSR) {
         ff_mdct_init(&ac->mdct, 9, 1);
@@ -960,7 +964,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         ff_kbd_window_init(ac->kbd_short_128, 6.0, 32);
         sine_window_init(ac->sine_long_1024, 512);
         sine_window_init(ac->sine_short_128, 64);
-        ac->ssrctx = av_malloc(sizeof(ssr_context));
+        if((ac->ssrctx = av_malloc(sizeof(ssr_context))) == NULL)
+            return -1;
         ssr_context_init(ac->ssrctx);
     } else {
         ff_mdct_init(&ac->mdct, 11, 1);
