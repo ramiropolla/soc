@@ -1,5 +1,5 @@
---- ffplay.c.old	2007-12-20 13:17:23.241265187 -0500
-+++ ffplay.c	2007-12-20 14:15:32.174812061 -0500
+--- ffplay.c.old	2008-02-29 21:39:16.000000000 +0100
++++ ffplay.c	2008-02-29 21:40:36.000000000 +0100
 @@ -27,6 +27,11 @@
  #include "swscale.h"
  #include "avstring.h"
@@ -183,7 +183,7 @@
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1382,6 +1452,140 @@
+@@ -1382,6 +1452,138 @@
      return 0;
  }
  
@@ -257,7 +257,6 @@
 +static AVFilter input_filter =
 +{
 +    .name      = "ffplay_input",
-+    .author    = "Bobby Bingham",
 +
 +    .priv_size = sizeof(FilterPriv),
 +
@@ -268,7 +267,7 @@
 +
 +    .inputs    = (AVFilterPad[]) {{ .name = NULL }},
 +    .outputs   = (AVFilterPad[]) {{ .name = "default",
-+                                    .type = AV_PAD_VIDEO,
++                                    .type = CODEC_TYPE_VIDEO,
 +                                    .request_frame = input_request_frame,
 +                                    .config_props  = input_config_props, },
 +                                  { .name = NULL }},
@@ -308,12 +307,11 @@
 +static AVFilter output_filter =
 +{
 +    .name      = "ffplay_output",
-+    .author    = "Bobby Bingham",
 +
 +    .query_formats = output_query_formats,
 +
 +    .inputs    = (AVFilterPad[]) {{ .name          = "default",
-+                                    .type          = AV_PAD_VIDEO,
++                                    .type          = CODEC_TYPE_VIDEO,
 +                                    .end_frame     = output_end_frame,
 +                                    .min_perms     = AV_PERM_READ, },
 +                                  { .name = NULL }},
@@ -324,7 +322,7 @@
  static int video_thread(void *arg)
  {
      VideoState *is = arg;
-@@ -1390,10 +1594,52 @@
+@@ -1390,10 +1592,52 @@
      double pts;
      int ret;
  
@@ -333,7 +331,7 @@
 +    AVFilterContext *filt_src = NULL, *filt_out = NULL, *filt_graph = NULL;
 +    AVFilterContext *graph = NULL;
 +
-+    avfilter_init();
++    avfilter_register_all();
 +
 +    if(!(filt_src = avfilter_open(&input_filter,  "src")))   goto the_end;
 +    if(!(filt_out = avfilter_open(&output_filter, "out")))   goto the_end;
@@ -377,7 +375,7 @@
  
          if (ret < 0) goto the_end;
  
-@@ -1410,6 +1656,9 @@
+@@ -1410,6 +1654,9 @@
                  stream_pause(cur_stream);
      }
   the_end:
@@ -387,7 +385,7 @@
      av_free(frame);
      return 0;
  }
-@@ -2144,6 +2393,12 @@
+@@ -2149,6 +2396,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -400,8 +398,8 @@
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2500,6 +2755,9 @@
- #endif
+@@ -2494,6 +2747,9 @@
+     { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
 +#if ENABLE_AVFILTER
