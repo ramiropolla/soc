@@ -970,14 +970,11 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         ff_kbd_window_init(ac->kbd_short_128, 6.0, 128);
         sine_window_init(ac->sine_long_1024, 2048);
         sine_window_init(ac->sine_short_128, 256);
-        ac->ssrctx = NULL;
     }
     for (i = 0; i < 128; i++) {
         ac->sine_short_128[i] *= 8.;
         ac->kbd_short_128[i] *= 8.;
     }
-    ac->mdct_ltp = NULL;
-
     return 0;
 }
 
