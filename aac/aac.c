@@ -2125,7 +2125,20 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         tag = get_bits(&gb, 4);
         switch (id) {
         case ID_SCE:
-            err = ac->che_sce[tag] && !individual_channel_stream(ac, &gb, 0, 0, ac->che_sce[tag]) ? 0 : -1;
+            if(ac->che_sce[tag] == NULL) {
+                if(tag == 1 && ac->che_lfe[0] != NULL) {
+                    /* Some streams incorrectly code 5.1 audio as SCE[0] CPE[0] CPE[1] SCE[1]
+                       instead of SCE[0] CPE[0] CPE[0] LFE[0].
+                       If we seem to have encountered such a stream,
+                       transfer the LFE[0] element to SCE[1] */
+                    ac->che_sce[tag] = ac->che_lfe[0];
+                    ac->che_lfe[0] = NULL;
+                } else {
+                    err = 1;
+                    break;
+                }
+            }
+            err = individual_channel_stream(ac, &gb, 0, 0, ac->che_sce[tag]);
             break;
         case ID_CPE:
             err = channel_pair_element(ac, &gb, tag);
