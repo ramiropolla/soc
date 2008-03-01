@@ -39,6 +39,7 @@ void avfilter_register_all(void)
     initialized = 1;
 
     REGISTER_VF(CROP,crop);
+    REGISTER_VF(DRAWBOX,drawbox);
     REGISTER_VF(FIFO,fifo);
     REGISTER_VF(FORMAT,format);
     REGISTER_VF(FPS,fps);

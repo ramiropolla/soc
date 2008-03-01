@@ -14,6 +14,7 @@ OBJS = allfilters.o \
 
 
 OBJS-$(CONFIG_VF_CROP)       += vf_crop.o
+OBJS-$(CONFIG_VF_DRAWBOX)    += vf_drawbox.o
 OBJS-$(CONFIG_VF_FPS)        += vf_fps.o
 OBJS-$(CONFIG_VF_HFLIP)      += vf_hflip.o
 OBJS-$(CONFIG_VF_NEGATE)     += vf_negate.o
