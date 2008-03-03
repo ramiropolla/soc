@@ -10,25 +10,24 @@ OBJS = allfilters.o \
        formats.o \
        avfiltergraphfile.o \
 
-# TODO: real conditional compilation
 
+OBJS-$(CONFIG_CROP_FILTER)       += vf_crop.o
+OBJS-$(CONFIG_DRAWBOX_FILTER)    += vf_drawbox.o
+OBJS-$(CONFIG_FPS_FILTER)        += vf_fps.o
+OBJS-$(CONFIG_HFLIP_FILTER)      += vf_hflip.o
+OBJS-$(CONFIG_NEGATE_FILTER)     += vf_negate.o
+OBJS-$(CONFIG_FIFO_FILTER)       += vf_fifo.o
+OBJS-$(CONFIG_FORMAT_FILTER)     += vf_format.o
+OBJS-$(CONFIG_OVERLAY_FILTER)    += vf_overlay.o
+OBJS-$(CONFIG_ROTATE_FILTER)     += vf_rotate.o
+OBJS-$(CONFIG_SCALE_FILTER)      += vf_scale.o
+OBJS-$(CONFIG_SETPTS_FILTER)     += vf_setpts.o
+OBJS-$(CONFIG_SLICIFY_FILTER)    += vf_slicify.o
+OBJS-$(CONFIG_SPLIT_FILTER)      += vf_split.o
+OBJS-$(CONFIG_TRANSPOSE_FILTER)  += vf_transpose.o
+OBJS-$(CONFIG_VFLIP_FILTER)      += vf_vflip.o
 
-OBJS-$(CONFIG_VF_CROP)       += vf_crop.o
-OBJS-$(CONFIG_VF_DRAWBOX)    += vf_drawbox.o
-OBJS-$(CONFIG_VF_FPS)        += vf_fps.o
-OBJS-$(CONFIG_VF_HFLIP)      += vf_hflip.o
-OBJS-$(CONFIG_VF_NEGATE)     += vf_negate.o
-OBJS-$(CONFIG_VF_FIFO)       += vf_fifo.o
-OBJS-$(CONFIG_VF_FORMAT)     += vf_format.o
-OBJS-$(CONFIG_VF_OVERLAY)    += vf_overlay.o
-OBJS-$(CONFIG_VF_ROTATE)     += vf_rotate.o
-OBJS-$(CONFIG_VF_SCALE)      += vf_scale.o
-OBJS-$(CONFIG_VF_SETPTS)     += vf_setpts.o
-OBJS-$(CONFIG_VF_SLICIFY)    += vf_slicify.o
-OBJS-$(CONFIG_VF_SPLIT)      += vf_split.o
-OBJS-$(CONFIG_VF_TRANSPOSE)  += vf_transpose.o
-OBJS-$(CONFIG_VF_VFLIP)      += vf_vflip.o
-OBJS-$(CONFIG_VSRC_MOVIE)    += vsrc_movie.o
+OBJS-$(CONFIG_MOVIE_FILTER)      += vsrc_movie.o
 
 HEADERS = avfilter.h
 

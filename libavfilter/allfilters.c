@@ -21,14 +21,10 @@
 
 #include "avfilter.h"
 
-#define REGISTER_VF(X,x) { \
-          extern AVFilter avfilter_vf_##x ; \
-          if(ENABLE_VF_##X )  avfilter_register(&avfilter_vf_##x ); }
 
-
-#define REGISTER_VSRC(X,x) { \
-          extern AVFilter avfilter_vsrc_##x ; \
-          if(ENABLE_VSRC_##X )  avfilter_register(&avfilter_vsrc_##x ); }
+#define REGISTER_FILTER(X,x,y) { \
+          extern AVFilter avfilter_##y##_##x ; \
+          if(ENABLE_##X##_FILTER )  avfilter_register(&avfilter_##y##_##x ); }
 
 void avfilter_register_all(void)
 {
@@ -38,25 +34,25 @@ void avfilter_register_all(void)
         return;
     initialized = 1;
 
-    REGISTER_VF(CROP,crop);
-    REGISTER_VF(DRAWBOX,drawbox);
-    REGISTER_VF(FIFO,fifo);
-    REGISTER_VF(FORMAT,format);
-    REGISTER_VF(FPS,fps);
-    REGISTER_VF(GRAPH,graph);
-    REGISTER_VF(GRAPHDESC,graphdesc);
-    REGISTER_VF(GRAPHFILE,graphfile);
-    REGISTER_VF(HFLIP,hflip);
-    REGISTER_VF(NEGATE,negate);
-    REGISTER_VF(NOFORMAT,noformat);
-    REGISTER_VF(OVERLAY,overlay);
-    REGISTER_VF(ROTATE,rotate);
-    REGISTER_VF(SCALE,scale);
-    REGISTER_VF(SETPTS,setpts);
-    REGISTER_VF(SLICIFY,slicify);
-    REGISTER_VF(SPLIT,split);
-    REGISTER_VF(TRANSPOSE,transpose);
-    REGISTER_VF(VFLIP,vflip);
+    REGISTER_FILTER(CROP,crop,vf);
+    REGISTER_FILTER(DRAWBOX,drawbox,vf);
+    REGISTER_FILTER(FIFO,fifo,vf);
+    REGISTER_FILTER(FORMAT,format,vf);
+    REGISTER_FILTER(FPS,fps,vf);
+    REGISTER_FILTER(GRAPH,graph,vf);
+    REGISTER_FILTER(GRAPHDESC,graphdesc,vf);
+    REGISTER_FILTER(GRAPHFILE,graphfile,vf);
+    REGISTER_FILTER(HFLIP,hflip,vf);
+    REGISTER_FILTER(NEGATE,negate,vf);
+    REGISTER_FILTER(NOFORMAT,noformat,vf);
+    REGISTER_FILTER(OVERLAY,overlay,vf);
+    REGISTER_FILTER(ROTATE,rotate,vf);
+    REGISTER_FILTER(SCALE,scale,vf);
+    REGISTER_FILTER(SETPTS,setpts,vf);
+    REGISTER_FILTER(SLICIFY,slicify,vf);
+    REGISTER_FILTER(SPLIT,split,vf);
+    REGISTER_FILTER(TRANSPOSE,transpose,vf);
+    REGISTER_FILTER(VFLIP,vflip,vf);
 
-    REGISTER_VSRC(MOVIE,movie);
+    REGISTER_FILTER(MOVIE,movie,vsrc);
 }
