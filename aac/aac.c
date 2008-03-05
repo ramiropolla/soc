@@ -1201,7 +1201,7 @@ static int gain_control_data(AACContext * ac, GetBitContext * gb, sce_struct * s
         {1, 0, 5}, //ONLY_LONG_SEQUENCE = 0,
         {2, 1, 2}, //LONG_START_SEQUENCE,
         {8, 0, 2}, //EIGHT_SHORT_SEQUENCE,
-        {2, 1, 5} //LONG_STOP_SEQUENCE
+        {2, 1, 5}, //LONG_STOP_SEQUENCE
     };
     const int mode = sce->ics.window_sequence;
     int bd, wd, ad;
