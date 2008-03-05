@@ -333,12 +333,6 @@ typedef struct {
 
 //aux
 // TODO: Maybe add to dsputil?!
-static void vector_add_dst(AACContext * ac, float * dst, const float * src0, const float * src1, int len) {
-    int i;
-    for (i = 0; i < len; i++)
-        dst[i] = src0[i] + src1[i];
-}
-
 static void vector_fmul_dst(AACContext * ac, float * dst, const float * src0, const float * src1, int len) {
     memcpy(dst, src0, len * sizeof(float));
     ac->dsp.vector_fmul(dst, src1, len);
@@ -349,12 +343,6 @@ static void vector_fmul_add_add_add(AACContext * ac, float * dst, const float * 
     ac->dsp.vector_fmul_add_add(dst, src0, src1, src2, src4, len, 1);
     for (i = 0; i < len; i++)
         dst[i] += src3[i];
-}
-
-static void vector_reverse(AACContext * ac, float * dst, const float * src, int len) {
-    int i;
-    for (i = 0; i < len; i++)
-        dst[i] = src[len - i];
 }
 
 static inline int16_t LTP_ROUND(float x) {
@@ -1892,6 +1880,12 @@ static void window_ssr_tool(AACContext * ac, sce_struct * sce, float * in, float
     }
 }
 
+static void vector_add_dst(AACContext * ac, float * dst, const float * src0, const float * src1, int len) {
+    int i;
+    for (i = 0; i < len; i++)
+        dst[i] = src0[i] + src1[i];
+}
+
 static void ssr_gain_tool(AACContext * ac, sce_struct * sce, int band, float * in, float * preret, float * saved) {
     // TODO: 'in' buffer gain normalization
     if (sce->ics.window_sequence != EIGHT_SHORT_SEQUENCE) {
@@ -1946,6 +1940,12 @@ static void ssr_ipqf_tool(AACContext * ac, sce_struct * sce, float * preret) {
             sce->ret[4*i + 3-b] = x + ac->add_bias;
         }
     }
+}
+
+static void vector_reverse(AACContext * ac, float * dst, const float * src, int len) {
+    int i;
+    for (i = 0; i < len; i++)
+        dst[i] = src[len - i];
 }
 
 static void ssr_trans(AACContext * ac, sce_struct * sce) {
