@@ -32,6 +32,15 @@
  *  after each other. And then try to do the interleaving inplace.
  */
 
+
+/**
+ * AAC SSR (Scalable Sample Rate) is currently not working, and therefore
+ * not compiled in. SSR files play without crashing but produces audible
+ * artifacts that seems to be related to EIGHT_SHORT_SEQUENCE windows.
+ */
+//#define AAC_SSR
+
+
 #include "avcodec.h"
 #include "bitstream.h"
 #include "dsputil.h"
