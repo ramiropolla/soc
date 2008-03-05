@@ -2054,10 +2054,10 @@ static void spec_to_sample(AACContext * ac) {
         transform_sce_tool(ac, ltp_trans);
     transform_sce_tool(ac, tns_trans);
     coupling_tool(ac, 0, 1);
-    if (ac->audioObjectType != AOT_AAC_SSR)
-        transform_sce_tool(ac, window_trans);
-    else
+    if (ac->audioObjectType == AOT_AAC_SSR)
         transform_sce_tool(ac, ssr_trans);
+    else
+        transform_sce_tool(ac, window_trans);
     coupling_tool(ac, 1, 1);
     if (ac->audioObjectType == AOT_AAC_LTP)
         transform_sce_tool(ac, ltp_update_trans);
