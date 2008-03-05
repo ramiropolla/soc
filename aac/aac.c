@@ -1129,7 +1129,7 @@ static int section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, i
  * Decode scale_factor_data
  * reference: Table 4.47
  */
-static void scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, int global_gain, ics_struct * ics, const int cb[][64], float sf[][64]) {
+static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, int global_gain, ics_struct * ics, const int cb[][64], float sf[][64]) {
     int g, i;
     int intensity = 100; // normalization for intensity_tab lookup table
     int noise = global_gain - 90;
@@ -1143,7 +1143,11 @@ static void scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gai
             } else if ((cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
                 ics->intensity_present = 1;
                 intensity += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
-                assert(!(intensity & (~255)));
+                if(intensity & ~255) {
+                    av_log(ac->avccontext, AV_LOG_ERROR,
+                           "Intensity (%d) out of range", intensity);
+                    return -1;
+                }
                 sf[g][i] = ac->intensity_tab[intensity];
             } else if (cb[g][i] == NOISE_HCB) {
                 ics->noise_present = 1;
@@ -1156,12 +1160,17 @@ static void scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gai
                 sf[g][i] = pow(2.0, 0.25 * noise)/1024./ac->scale_bias;
             } else {
                 global_gain += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
-                assert(!(global_gain & (~255)));
+                if(global_gain & ~255) {
+                    av_log(ac->avccontext, AV_LOG_ERROR,
+                           "Global gain (%d) out of range", global_gain);
+                    return -1;
+                }
                 sf[g][i] = ac->pow2sf_tab[global_gain];
             }
             sf[g][i] *= mix_gain;
         }
     }
+    return 0;
 }
 
 static void pulse_data(AACContext * ac, GetBitContext * gb, pulse_struct * pulse) {
@@ -1385,7 +1394,8 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
 
     if (section_data(ac, gb, ics, sce->cb) < 0)
         return -1;
-    scale_factor_data(ac, gb, sce->mixing_gain, sce->global_gain, ics, sce->cb, sce->sf);
+    if (scale_factor_data(ac, gb, sce->mixing_gain, sce->global_gain, ics, sce->cb, sce->sf) < 0)
+        return -1;
 
     if (!scale_flag) {
         if ((pulse.present = get_bits1(gb)))
