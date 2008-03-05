@@ -40,6 +40,14 @@
  */
 //#define AAC_SSR
 
+/**
+ * AAC LTP (Long Term Preditction) is currently not working, and therefore
+ * not compiled in. Playing LTP files with LTP support compiled in results
+ * in crashes due to SSE alignment issues. Also, there are major audible
+ * artifacts.
+ */
+//#define AAC_LTP
+
 
 #include "avcodec.h"
 #include "bitstream.h"
@@ -818,7 +826,9 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
 #ifdef AAC_SSR
     case AOT_AAC_SSR:
 #endif /* AAC_SSR */
+#ifdef AAC_LTP
     case AOT_AAC_LTP:
+#endif /* AAC_LTP */
         if (GASpecificConfig(ac, &gb, channels))
             return -1;
         break;
@@ -994,6 +1004,7 @@ static int data_stream_element(AACContext * ac, GetBitContext * gb, int id) {
     return 0;
 }
 
+#ifdef AAC_LTP
 static void ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, ltp_struct * ltp) {
     int sfb;
     if (ac->audioObjectType == AOT_ER_AAC_LD) {
@@ -1005,6 +1016,7 @@ static void ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, ltp_struc
             ltp->used[sfb] = get_bits1(gb);
     }
 }
+#endif /* AAC_LTP */
 
 /**
  * Decode Individual Channel Stream info
@@ -1046,6 +1058,7 @@ static int ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_
         ics->tns_max_bands = ac->tns_max_bands_1024;
         ics->predictor = get_bits1(gb);
         if (ics->predictor) {
+#ifdef AAC_LTP
             if (ac->audioObjectType == AOT_AAC_MAIN) {
                 assert(0);
             } else {
@@ -1058,6 +1071,11 @@ static int ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_
                     }
                 }
             }
+#else /* AAC_LTP */
+            av_log(ac->avccontext, AV_LOG_ERROR,
+                   "Predictor bit set but LTP is not supported\n");
+            return -1;
+#endif /* AAC_LTP */
         } else {
             ics->ltp.present = 0;
             ics->ltp2.present = 0;
@@ -1729,6 +1747,7 @@ static void tns_trans(AACContext * ac, sce_struct * sce) {
     tns_filter_tool(ac, 1, sce, sce->coeffs);
 }
 
+#ifdef AAC_LTP
 static void window_ltp_tool(AACContext * ac, sce_struct * sce, float * in, float * out) {
     ics_struct * ics = &sce->ics;
     const float * lwindow = (ics->window_shape) ? ac->kbd_long_1024 : ac->sine_long_1024;
@@ -1815,6 +1834,7 @@ static void ltp_update_trans(AACContext * ac, sce_struct * sce) {
         }
     }
 }
+#endif /* AAC_LTP */
 
 static void window_trans(AACContext * ac, sce_struct * sce) {
     ics_struct * ics = &sce->ics;
@@ -2078,8 +2098,10 @@ static void transform_sce_tool(AACContext * ac, void (*sce_trans)(AACContext * a
 
 static void spec_to_sample(AACContext * ac) {
     coupling_tool(ac, 0, 0);
+#ifdef AAC_LTP
     if (ac->audioObjectType == AOT_AAC_LTP)
         transform_sce_tool(ac, ltp_trans);
+#endif /* AAC_LTP */
     transform_sce_tool(ac, tns_trans);
     coupling_tool(ac, 0, 1);
 #ifdef AAC_SSR
@@ -2089,8 +2111,10 @@ static void spec_to_sample(AACContext * ac) {
 #endif /* AAC_SSR */
         transform_sce_tool(ac, window_trans);
     coupling_tool(ac, 1, 1);
+#ifdef AAC_LTP
     if (ac->audioObjectType == AOT_AAC_LTP)
         transform_sce_tool(ac, ltp_update_trans);
+#endif /* AAC_LTP */
 }
 
 
