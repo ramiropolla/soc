@@ -945,12 +945,12 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     // general init
     ac->num_frame = -1;
 
-    ac->swb_offset_1024 = swb_offset_1024[ac->sampling_index];
-    ac->num_swb_1024 = num_swb_1024[ac->sampling_index];
-    ac->tns_max_bands_1024 = tns_max_bands_1024[ac->sampling_index];
-    ac->swb_offset_128 = swb_offset_128[ac->sampling_index];
-    ac->num_swb_128 = num_swb_128[ac->sampling_index];
-    ac->tns_max_bands_128 = tns_max_bands_128[ac->sampling_index];
+    ac->swb_offset_1024    = swb_offset_1024    [ac->sampling_index];
+    ac->num_swb_1024       = num_swb_1024       [ac->sampling_index];
+    ac->tns_max_bands_1024 = tns_max_bands_1024 [ac->sampling_index];
+    ac->swb_offset_128     = swb_offset_128     [ac->sampling_index];
+    ac->num_swb_128        = num_swb_128        [ac->sampling_index];
+    ac->tns_max_bands_128  = tns_max_bands_128  [ac->sampling_index];
 
     if(init_vlc(&ac->mainvlc, 7, sizeof(code)/sizeof(code[0]),
             bits, sizeof(bits[0]), sizeof(bits[0]),
@@ -1762,8 +1762,8 @@ static void tns_trans(AACContext * ac, sce_struct * sce) {
 #ifdef AAC_LTP
 static void window_ltp_tool(AACContext * ac, sce_struct * sce, float * in, float * out) {
     ics_struct * ics = &sce->ics;
-    const float * lwindow = ics->window_shape ? ac->kbd_long_1024 : ac->sine_long_1024;
-    const float * swindow = ics->window_shape ? ac->kbd_short_128 : ac->sine_short_128;
+    const float * lwindow      = ics->window_shape      ? ac->kbd_long_1024 : ac->sine_long_1024;
+    const float * swindow      = ics->window_shape      ? ac->kbd_short_128 : ac->sine_short_128;
     const float * lwindow_prev = ics->window_shape_prev ? ac->kbd_long_1024 : ac->sine_long_1024;
     const float * swindow_prev = ics->window_shape_prev ? ac->kbd_short_128 : ac->sine_short_128;
     float * buf = ac->buf_mdct;
@@ -1853,8 +1853,8 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
     float * in = sce->coeffs;
     float * out = sce->ret;
     float * saved = sce->saved;
-    const float * lwindow = ics->window_shape ? ac->kbd_long_1024 : ac->sine_long_1024;
-    const float * swindow = ics->window_shape ? ac->kbd_short_128 : ac->sine_short_128;
+    const float * lwindow      = ics->window_shape      ? ac->kbd_long_1024 : ac->sine_long_1024;
+    const float * swindow      = ics->window_shape      ? ac->kbd_short_128 : ac->sine_short_128;
     const float * lwindow_prev = ics->window_shape_prev ? ac->kbd_long_1024 : ac->sine_long_1024;
     const float * swindow_prev = ics->window_shape_prev ? ac->kbd_short_128 : ac->sine_short_128;
     float * buf = ac->buf_mdct;
@@ -1905,8 +1905,8 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
 #ifdef AAC_SSR
 static void window_ssr_tool(AACContext * ac, sce_struct * sce, float * in, float * out) {
     ics_struct * ics = &sce->ics;
-    const float * lwindow = ics->window_shape ? ac->kbd_long_1024 : ac->sine_long_1024;
-    const float * swindow = ics->window_shape ? ac->kbd_short_128 : ac->sine_short_128;
+    const float * lwindow      = ics->window_shape      ? ac->kbd_long_1024 : ac->sine_long_1024;
+    const float * swindow      = ics->window_shape      ? ac->kbd_short_128 : ac->sine_short_128;
     const float * lwindow_prev = ics->window_shape_prev ? ac->kbd_long_1024 : ac->sine_long_1024;
     const float * swindow_prev = ics->window_shape_prev ? ac->kbd_short_128 : ac->sine_short_128;
     float * buf = ac->buf_mdct;
