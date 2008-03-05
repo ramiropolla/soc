@@ -2020,7 +2020,11 @@ static void coupling_dependent_trans(AACContext * ac, cc_struct * cc, sce_struct
     float * dest = sce->coeffs;
     float * src = cc->ch.coeffs;
     int g, i, group, k;
-    assert(ac->audioObjectType != AOT_AAC_LTP);
+    if(ac->audioObjectType == AOT_AAC_LTP) {
+        av_log(ac->avccontext, AV_LOG_ERROR,
+               "Dependent coupling is not supported together with LTP\n");
+        return;
+    }
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
             if (cc->ch.cb[g][i] != ZERO_HCB) {
