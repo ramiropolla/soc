@@ -41,7 +41,7 @@
 //#define AAC_SSR
 
 /**
- * AAC LTP (Long Term Preditction) is currently not working, and therefore
+ * AAC LTP (Long Term Prediction) is currently not working, and therefore
  * not compiled in. Playing LTP files with LTP support compiled in results
  * in crashes due to SSE alignment issues. Also, there are major audible
  * artifacts.
@@ -1396,7 +1396,7 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
 #ifdef AAC_SSR
             if (gain_control_data(ac, gb, sce)) return -1;
 #else
-            av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supprted\n");
+            av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supported\n");
             return -1;
 #endif
         }
