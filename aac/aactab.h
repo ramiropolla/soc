@@ -179,7 +179,7 @@ static const float *tns_tmp2_map[4] = {
     tns_tmp2_map_1_4
 };
 
-
+#ifdef AAC_SSR
 static const float ssr_q_table[] = {
      9.7655291007575512E-05,
      1.3809589379038567E-04,
@@ -230,6 +230,7 @@ static const float ssr_q_table[] = {
      1.0068321641150089E+00,
      1.0737914947736096E+00
 };
+#endif /* AAC_SSR */
 
 static const uint32_t code[121] = {
     0x3ffe8, 0x3ffe6, 0x3ffe7, 0x3ffe5, 0x7fff5, 0x7fff1, 0x7ffed, 0x7fff6,
