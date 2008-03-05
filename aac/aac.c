@@ -205,6 +205,18 @@ typedef struct {
     int amp[4];
 } pulse_struct;
 
+/**
+ * Parameters for the SSR Inverse Polyphase Quadrature Filter
+ */
+typedef struct {
+    float q[4][4];
+    float t0[4][12];
+    float t1[4][12];
+} ssr_context;
+
+/**
+ * Per-element gain control for SSR
+ */
 typedef struct {
     int max_band;
     int adjust_num[4][8];
@@ -252,12 +264,6 @@ typedef struct {
     coupling_struct coup;
     sce_struct ch;
 } cc_struct;
-
-typedef struct {
-    float q[4][4];
-    float t0[4][12];
-    float t1[4][12];
-} ssr_context;
 
 typedef struct {
     // objects
