@@ -1129,9 +1129,9 @@ static int section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, i
  * Decode scale_factor_data
  * reference: Table 4.47
  */
-static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, int global_gain, ics_struct * ics, const int cb[][64], float sf[][64]) {
+static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, ics_struct * ics, const int cb[][64], float sf[][64]) {
     int g, i;
-    int intensity = 100; // normalization for intensity_tab lookup table
+    unsigned int intensity = 100; // normalization for intensity_tab lookup table
     int noise = global_gain - 90;
     int noise_flag = 1;
     ics->intensity_present = 0;
@@ -1143,7 +1143,7 @@ static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain
             } else if ((cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
                 ics->intensity_present = 1;
                 intensity += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
-                if(intensity & ~255) {
+                if(intensity > 255) {
                     av_log(ac->avccontext, AV_LOG_ERROR,
                            "Intensity (%d) out of range", intensity);
                     return -1;
@@ -1160,7 +1160,7 @@ static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain
                 sf[g][i] = pow(2.0, 0.25 * noise)/1024./ac->scale_bias;
             } else {
                 global_gain += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
-                if(global_gain & ~255) {
+                if(global_gain > 255) {
                     av_log(ac->avccontext, AV_LOG_ERROR,
                            "Global gain (%d) out of range", global_gain);
                     return -1;
