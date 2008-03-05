@@ -567,7 +567,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
 
             channels = avctx->request_channels;
         } else {
-            av_log(avctx, AV_LOG_WARNING, "Matrix mixing from %d to %d channels in not supported",
+            av_log(avctx, AV_LOG_WARNING, "Matrix mixing from %d to %d channels in not supported\n",
                    channels, avctx->request_channels);
         }
     }
@@ -609,7 +609,7 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
 
     ac->sampling_index = get_bits(gb, 4);
     if(ac->sampling_index > 12) {
-        av_log(ac->avccontext, AV_LOG_ERROR, "Invalid sampling rate index %d", ac->sampling_index);
+        av_log(ac->avccontext, AV_LOG_ERROR, "Invalid sampling rate index %d\n", ac->sampling_index);
         return -1;
     }
     ac->sample_rate = sampling_table[ac->sampling_index];
@@ -708,7 +708,7 @@ static int program_config_element_default(AACContext *ac, int channels)
         break;
 
     default:
-        av_log(ac->avccontext, AV_LOG_ERROR, "Invalid default channel configuration (%d channels)",
+        av_log(ac->avccontext, AV_LOG_ERROR, "Invalid default channel configuration (%d channels)\n",
                channels);
         return -1;
     }
@@ -724,7 +724,7 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
     int ext = 0;
 
     if(get_bits1(gb)) {  // frameLengthFlag
-        av_log(ac->avccontext, AV_LOG_ERROR, "960/120 MDCT window is not supported");
+        av_log(ac->avccontext, AV_LOG_ERROR, "960/120 MDCT window is not supported\n");
         return -1;
     }
 
@@ -835,7 +835,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
             return -1;
         break;
     default:
-        av_log(ac->avccontext, AV_LOG_ERROR, "Audio object type %s%d is not supported",
+        av_log(ac->avccontext, AV_LOG_ERROR, "Audio object type %s%d is not supported\n",
                ac->sbr_present ? "SBR+" : "", ac->audioObjectType);
         return -1;
     }
@@ -1396,7 +1396,7 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
 #ifdef AAC_SSR
             if (gain_control_data(ac, gb, sce)) return -1;
 #else
-            av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supprted");
+            av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supprted\n");
             return -1;
 #endif
         }
