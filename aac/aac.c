@@ -839,7 +839,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
                ac->sbr_present ? "SBR+" : "", ac->audioObjectType);
         return -1;
     }
-    if ((ac->ext_audioObjectType != 5) && (8 * data_size - get_bits_count(&gb) >= 16)) {
+    if (ac->ext_audioObjectType != 5 && 8 * data_size - get_bits_count(&gb) >= 16) {
         if (get_bits(&gb, 11) == 0x2b7) { // syncExtensionType
             ac->ext_audioObjectType = GetAudioObjectType(&gb);
             if (ac->ext_audioObjectType == AOT_SBR) {
@@ -1186,12 +1186,12 @@ static void pulse_data(AACContext * ac, GetBitContext * gb, pulse_struct * pulse
 static void tns_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, tns_struct * tns) {
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
     for (w = 0; w < ics->num_windows; w++) {
-        tns->n_filt[w] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 1 : 2);
+        tns->n_filt[w] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 1 : 2);
         if (tns->n_filt[w])
             coef_res = get_bits1(gb) + 3;
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
-            tns->length[w][filt] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 4 : 6);
-            if ((tns->order[w][filt] = get_bits(gb, (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5))) {
+            tns->length[w][filt] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 4 : 6);
+            if ((tns->order[w][filt] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 3 : 5))) {
                 tns->direction[w][filt] = get_bits1(gb);
                 coef_compress = get_bits1(gb);
                 coef_len = coef_res - coef_compress;
@@ -1263,9 +1263,9 @@ static int spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct *
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
             const int cur_cb = cb[g][i];
-            const int dim = (cur_cb >= FIRST_PAIR_HCB) ? 2 : 4;
+            const int dim = cur_cb >= FIRST_PAIR_HCB ? 2 : 4;
             int group;
-            if ((cur_cb == INTENSITY_HCB2) || (cur_cb == INTENSITY_HCB)) {
+            if (cur_cb == INTENSITY_HCB2 || cur_cb == INTENSITY_HCB) {
                 continue;
             }
             if (cur_cb == NOISE_HCB) {
@@ -1459,7 +1459,7 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
         for (g = 0; g < ics->num_window_groups; g++) {
             for (gp = 0; gp < ics->group_len[g]; gp++) {
                 for (i = 0; i < ics->max_sfb; i++) {
-                    if ((sce1->cb[g][i] == INTENSITY_HCB) || (sce1->cb[g][i] == INTENSITY_HCB2)) {
+                    if (sce1->cb[g][i] == INTENSITY_HCB || sce1->cb[g][i] == INTENSITY_HCB2) {
                         c = (-1 + 2 * (sce1->cb[g][i] - 14));
                         if (cpe->ms.present)
                             c *= (1 - 2 * cpe->ms.mask[g][i]);
@@ -1762,10 +1762,10 @@ static void tns_trans(AACContext * ac, sce_struct * sce) {
 #ifdef AAC_LTP
 static void window_ltp_tool(AACContext * ac, sce_struct * sce, float * in, float * out) {
     ics_struct * ics = &sce->ics;
-    const float * lwindow = (ics->window_shape) ? ac->kbd_long_1024 : ac->sine_long_1024;
-    const float * swindow = (ics->window_shape) ? ac->kbd_short_128 : ac->sine_short_128;
-    const float * lwindow_prev = (ics->window_shape_prev) ? ac->kbd_long_1024 : ac->sine_long_1024;
-    const float * swindow_prev = (ics->window_shape_prev) ? ac->kbd_short_128 : ac->sine_short_128;
+    const float * lwindow = ics->window_shape ? ac->kbd_long_1024 : ac->sine_long_1024;
+    const float * swindow = ics->window_shape ? ac->kbd_short_128 : ac->sine_short_128;
+    const float * lwindow_prev = ics->window_shape_prev ? ac->kbd_long_1024 : ac->sine_long_1024;
+    const float * swindow_prev = ics->window_shape_prev ? ac->kbd_short_128 : ac->sine_short_128;
     float * buf = ac->buf_mdct;
     int i;
     assert(ics->window_sequence != EIGHT_SHORT_SEQUENCE);
@@ -1800,7 +1800,7 @@ static void ltp_trans(AACContext * ac, sce_struct * sce) {
         return;
     if (!sce->ltp_state)
         sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t));
-    if ((sce->ics.window_sequence != EIGHT_SHORT_SEQUENCE) && (ac->is_saved)) {
+    if (sce->ics.window_sequence != EIGHT_SHORT_SEQUENCE && ac->is_saved) {
         float x_est[2 * 1024], X_est[2 * 1024];
         for (i = 0; i < 2 * 1024; i++)
             x_est[i] = (float)sce->ltp_state[i + 2 * 1024 - ltp->lag] * ltp->coef;
@@ -1853,10 +1853,10 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
     float * in = sce->coeffs;
     float * out = sce->ret;
     float * saved = sce->saved;
-    const float * lwindow = (ics->window_shape) ? ac->kbd_long_1024 : ac->sine_long_1024;
-    const float * swindow = (ics->window_shape) ? ac->kbd_short_128 : ac->sine_short_128;
-    const float * lwindow_prev = (ics->window_shape_prev) ? ac->kbd_long_1024 : ac->sine_long_1024;
-    const float * swindow_prev = (ics->window_shape_prev) ? ac->kbd_short_128 : ac->sine_short_128;
+    const float * lwindow = ics->window_shape ? ac->kbd_long_1024 : ac->sine_long_1024;
+    const float * swindow = ics->window_shape ? ac->kbd_short_128 : ac->sine_short_128;
+    const float * lwindow_prev = ics->window_shape_prev ? ac->kbd_long_1024 : ac->sine_long_1024;
+    const float * swindow_prev = ics->window_shape_prev ? ac->kbd_short_128 : ac->sine_short_128;
     float * buf = ac->buf_mdct;
     int i;
 
@@ -1905,10 +1905,10 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
 #ifdef AAC_SSR
 static void window_ssr_tool(AACContext * ac, sce_struct * sce, float * in, float * out) {
     ics_struct * ics = &sce->ics;
-    const float * lwindow = (ics->window_shape) ? ac->kbd_long_1024 : ac->sine_long_1024;
-    const float * swindow = (ics->window_shape) ? ac->kbd_short_128 : ac->sine_short_128;
-    const float * lwindow_prev = (ics->window_shape_prev) ? ac->kbd_long_1024 : ac->sine_long_1024;
-    const float * swindow_prev = (ics->window_shape_prev) ? ac->kbd_short_128 : ac->sine_short_128;
+    const float * lwindow = ics->window_shape ? ac->kbd_long_1024 : ac->sine_long_1024;
+    const float * swindow = ics->window_shape ? ac->kbd_short_128 : ac->sine_short_128;
+    const float * lwindow_prev = ics->window_shape_prev ? ac->kbd_long_1024 : ac->sine_long_1024;
+    const float * swindow_prev = ics->window_shape_prev ? ac->kbd_short_128 : ac->sine_short_128;
     float * buf = ac->buf_mdct;
     if (ics->window_sequence != EIGHT_SHORT_SEQUENCE) {
         int i;
