@@ -347,10 +347,12 @@ typedef struct {
 
 //aux
 // TODO: Maybe add to dsputil?!
+#if defined(AAC_LTP) || defined(AAC_SSR)
 static void vector_fmul_dst(AACContext * ac, float * dst, const float * src0, const float * src1, int len) {
     memcpy(dst, src0, len * sizeof(float));
     ac->dsp.vector_fmul(dst, src1, len);
 }
+#endif
 
 static void vector_fmul_add_add_add(AACContext * ac, float * dst, const float * src0, const float * src1, const float * src2, const float * src3, float src4, int len) {
     int i;
