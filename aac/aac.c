@@ -182,7 +182,7 @@ typedef struct {
     int length[8][4];
     int direction[8][4];
     int order[8][4];
-    float *tmp2_map[8];
+    const float *tmp2_map[8];
     int coef[8][4][TNS_MAX_ORDER];
 } tns_struct;
 

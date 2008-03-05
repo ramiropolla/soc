@@ -140,7 +140,7 @@ static const uint8_t tns_max_bands_128[] = {
     9, 9, 10, 14, 14, 14, 14, 14, 14, 14, 14, 14
 };
 
-static float tns_tmp2_map_1_3[TNS_MAX_ORDER] = {
+static const float tns_tmp2_map_1_3[TNS_MAX_ORDER] = {
     0.00000000,    0.43388373, -0.64278758, -0.34202015,
     0.97492790, 0.78183150, -0.64278758, -0.34202015,
     -0.43388373, -0.78183150, -0.64278758, -0.34202015,
@@ -148,7 +148,7 @@ static float tns_tmp2_map_1_3[TNS_MAX_ORDER] = {
     0.78183150, 0.97492790, -0.64278758, -0.34202015
 };
 
-static float tns_tmp2_map_0_3[TNS_MAX_ORDER] = {
+static const float tns_tmp2_map_0_3[TNS_MAX_ORDER] = {
     0.00000000, 0.43388373, 0.78183150, 0.97492790,
     -0.98480773, -0.86602539, -0.64278758, -0.34202015,
     -0.43388373, -0.78183150, -0.97492790, -0.97492790,
@@ -156,7 +156,7 @@ static float tns_tmp2_map_0_3[TNS_MAX_ORDER] = {
     0.78183150, 0.97492790, 0.97492790, 0.78183150
 };
 
-static float tns_tmp2_map_1_4[TNS_MAX_ORDER] = {
+static const float tns_tmp2_map_1_4[TNS_MAX_ORDER] = {
     0.00000000, 0.20791170, 0.40673664, 0.58778524,
     -0.67369562, -0.52643216, -0.36124167, -0.18374951,
     0.99452192, 0.95105648, 0.86602539, 0.74314481,
@@ -164,7 +164,7 @@ static float tns_tmp2_map_1_4[TNS_MAX_ORDER] = {
     -0.20791176, -0.40673670, -0.58778530, -0.74314487
 };
 
-static float tns_tmp2_map_0_4[TNS_MAX_ORDER] = {
+static const float tns_tmp2_map_0_4[TNS_MAX_ORDER] = {
     0.00000000, 0.20791170, 0.40673664, 0.58778524,
     0.74314481, 0.86602539, 0.95105654, 0.99452192,
     -0.99573416, -0.96182561, -0.89516330, -0.79801720,
@@ -172,14 +172,15 @@ static float tns_tmp2_map_0_4[TNS_MAX_ORDER] = {
     -0.20791176, -0.40673670, -0.58778530, -0.74314487
 };
 
-static float *tns_tmp2_map[4] = {
+static const float *tns_tmp2_map[4] = {
     tns_tmp2_map_0_3,
     tns_tmp2_map_0_4,
     tns_tmp2_map_1_3,
     tns_tmp2_map_1_4
 };
 
-static float ssr_q_table[] = {
+
+static const float ssr_q_table[] = {
      9.7655291007575512E-05,
      1.3809589379038567E-04,
      9.8400749256623534E-05,
