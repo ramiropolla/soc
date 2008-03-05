@@ -2055,11 +2055,9 @@ static void transform_coupling_tool(AACContext * ac, cc_struct * cc,
     int index = 0;
     coupling_struct * coup = &cc->coup;
     for (c = 0; c <= coup->num_coupled; c++) {
-        if (!coup->is_cpe[c]) {
-            assert(ac->che_sce[coup->tag_select[c]] != NULL);
+        if (     !coup->is_cpe[c] && ac->che_sce[coup->tag_select[c]]) {
             cc_trans(ac, cc, ac->che_sce[coup->tag_select[c]], index++);
-        } else {
-            assert(ac->che_cpe[coup->tag_select[c]] != NULL);
+        } else if(coup->is_cpe[c] && ac->che_cpe[coup->tag_select[c]]) {
             if (!coup->l[c] && !coup->r[c]) {
                 cc_trans(ac, cc, &ac->che_cpe[coup->tag_select[c]]->ch[0], index);
                 cc_trans(ac, cc, &ac->che_cpe[coup->tag_select[c]]->ch[1], index++);
@@ -2068,6 +2066,11 @@ static void transform_coupling_tool(AACContext * ac, cc_struct * cc,
                 cc_trans(ac, cc, &ac->che_cpe[coup->tag_select[c]]->ch[0], index++);
             if (coup->r[c])
                 cc_trans(ac, cc, &ac->che_cpe[coup->tag_select[c]]->ch[1], index++);
+        } else {
+            av_log(ac->avccontext, AV_LOG_ERROR,
+                   "Coupling target %sE[%d] not available\n",
+                   coup->is_cpe[c] ? "CP" : "SC", coup->tag_select[c]);
+            break;
         }
     }
 }
