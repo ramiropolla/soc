@@ -1809,7 +1809,7 @@ static void ltp_trans(AACContext * ac, sce_struct * sce) {
 /**
  * @todo: Replace this with float_to_int16()
  */
-static inline int16_t LTP_ROUND(float x) {
+static inline int16_t ltp_round(float x) {
     if (x >= 0)
     {
         if (x >= 1.0f)
@@ -1830,8 +1830,8 @@ static void ltp_update_trans(AACContext * ac, sce_struct * sce) {
     if (ac->is_saved) {
         for (i = 0; i < 1024; i++) {
             sce->ltp_state[i] = sce->ltp_state[i + 1024];
-            sce->ltp_state[i + 1024] = LTP_ROUND(sce->ret[i] - ac->add_bias);
-            sce->ltp_state[i + 2 * 1024] = LTP_ROUND(sce->saved[i]);
+            sce->ltp_state[i + 1024] = ltp_round(sce->ret[i] - ac->add_bias);
+            sce->ltp_state[i + 2 * 1024] = ltp_round(sce->saved[i]);
             //sce->ltp_state[i + 3 * 1024] = 0;
         }
     }
