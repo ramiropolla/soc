@@ -313,7 +313,7 @@ typedef struct {
     MDCTContext *mdct_ltp;
     DSPContext dsp;
     int * vq[11];
-    ssr_context * ssrctx;
+    ssr_context ssrctx;
     AVRandomState random_state;
 
     //bias values
@@ -964,9 +964,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         ff_kbd_window_init(ac->kbd_short_128, 6.0, 32);
         sine_window_init(ac->sine_long_1024, 512);
         sine_window_init(ac->sine_short_128, 64);
-        if((ac->ssrctx = av_malloc(sizeof(ssr_context))) == NULL)
-            return -1;
-        ssr_context_init(ac->ssrctx);
+        ssr_context_init(&ac->ssrctx);
     } else {
         ff_mdct_init(&ac->mdct, 11, 1);
         ff_mdct_init(&ac->mdct_small, 8, 1);
@@ -1912,7 +1910,7 @@ static void ssr_gain_tool(AACContext * ac, sce_struct * sce, int band, float * i
 }
 
 static void ssr_ipqf_tool(AACContext * ac, sce_struct * sce, float * preret) {
-    ssr_context * ctx = ac->ssrctx;
+    ssr_context * ctx = &ac->ssrctx;
     ssr_struct * ssr = sce->ssr;
     int i, b, j;
     float x;
@@ -2193,7 +2191,6 @@ static int aac_decode_close(AVCodecContext * avccontext) {
         free_vlc(&ac->books[i]);
         av_free(ac->vq[i]);
     }
-    av_free(ac->ssrctx);
     free_vlc(&ac->mainvlc);
     ff_mdct_end(&ac->mdct);
     ff_mdct_end(&ac->mdct_small);
