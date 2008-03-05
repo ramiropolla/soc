@@ -370,6 +370,7 @@ static void sine_window_init(float *window, int n) {
         window[i] = sin((i + 0.5) * alpha);
 }
 
+#ifdef AAC_SSR
 static void ssr_context_init(ssr_context * ctx) {
     int b, i;
     for (b = 0; b < 2; b++) {
@@ -392,6 +393,7 @@ static void ssr_context_init(ssr_context * ctx) {
         }
     }
 }
+#endif /* AAC_SSR */
 
 /**
  * Free a Single Channel Element
@@ -821,7 +823,9 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
 
     switch (ac->audioObjectType) {
     case AOT_AAC_LC:
+#ifdef AAC_SSR
     case AOT_AAC_SSR:
+#endif /* AAC_SSR */
     case AOT_AAC_LTP:
         if (GASpecificConfig(ac, &gb, channels))
             return -1;
@@ -950,6 +954,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
             0) < 0)
         return -1;
 
+#ifdef AAC_SSR
     if (ac->audioObjectType == AOT_AAC_SSR) {
         ff_mdct_init(&ac->mdct, 9, 1);
         ff_mdct_init(&ac->mdct_small, 6, 1);
@@ -960,6 +965,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         sine_window_init(ac->sine_short_128, 64);
         ssr_context_init(&ac->ssrctx);
     } else {
+#endif /* AAC_SSR */
         ff_mdct_init(&ac->mdct, 11, 1);
         ff_mdct_init(&ac->mdct_small, 8, 1);
         // windows init
@@ -967,7 +973,9 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         ff_kbd_window_init(ac->kbd_short_128, 6.0, 128);
         sine_window_init(ac->sine_long_1024, 2048);
         sine_window_init(ac->sine_short_128, 256);
+#ifdef AAC_SSR
     }
+#endif /* AAC_SSR */
     for (i = 0; i < 128; i++) {
         ac->sine_short_128[i] *= 8.;
         ac->kbd_short_128[i] *= 8.;
@@ -1174,6 +1182,7 @@ static void tns_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics
     }
 }
 
+#ifdef AAC_SSR
 static int gain_control_data(AACContext * ac, GetBitContext * gb, sce_struct * sce) {
     // wd_num wd_test aloc_size
     static const int gain_mode[4][3] = {
@@ -1202,6 +1211,7 @@ static int gain_control_data(AACContext * ac, GetBitContext * gb, sce_struct * s
     }
     return 0;
 }
+#endif /* AAC_SSR */
 
 static int ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
     ms_struct * ms = &cpe->ms;
@@ -1370,8 +1380,14 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
             pulse_data(ac, gb, &pulse);
         if ((tns->present = get_bits1(gb)))
             tns_data(ac, gb, ics, tns);
-        if (get_bits1(gb))
+        if (get_bits1(gb)) {
+#ifdef AAC_SSR
             if (gain_control_data(ac, gb, sce)) return -1;
+#else
+            av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supprted");
+            return -1;
+#endif
+        }
     }
 
     if (spectral_data(ac, gb, ics, sce->cb, icoeffs) < 0)
@@ -1844,6 +1860,7 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
     }
 }
 
+#ifdef AAC_SSR
 static void window_ssr_tool(AACContext * ac, sce_struct * sce, float * in, float * out) {
     ics_struct * ics = &sce->ics;
     const float * lwindow = (ics->window_shape) ? ac->kbd_long_1024 : ac->sine_long_1024;
@@ -1963,6 +1980,7 @@ static void ssr_trans(AACContext * ac, sce_struct * sce) {
     }
     ssr_ipqf_tool(ac, sce, tmp_ret);
 }
+#endif /* AAC_SSR */
 
 static void coupling_dependent_trans(AACContext * ac, cc_struct * cc, sce_struct * sce, int index) {
     ics_struct * ics = &cc->ch.ics;
@@ -2054,9 +2072,11 @@ static void spec_to_sample(AACContext * ac) {
         transform_sce_tool(ac, ltp_trans);
     transform_sce_tool(ac, tns_trans);
     coupling_tool(ac, 0, 1);
+#ifdef AAC_SSR
     if (ac->audioObjectType == AOT_AAC_SSR)
         transform_sce_tool(ac, ssr_trans);
     else
+#endif /* AAC_SSR */
         transform_sce_tool(ac, window_trans);
     coupling_tool(ac, 1, 1);
     if (ac->audioObjectType == AOT_AAC_LTP)
