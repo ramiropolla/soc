@@ -351,20 +351,6 @@ static void vector_fmul_add_add_add(AACContext * ac, float * dst, const float * 
         dst[i] += src3[i];
 }
 
-static inline int16_t LTP_ROUND(float x) {
-    if (x >= 0)
-    {
-        if (x >= 1.0f)
-            return 32767;
-    } else {
-        if (x <= -1.0f)
-            return -32768;
-    }
-
-    return lrintf(32768 * x);
-}
-
-
 // aux
 /**
  * Generate a sine Window.
@@ -1797,6 +1783,24 @@ static void ltp_trans(AACContext * ac, sce_struct * sce) {
                     sce->coeffs[i] += X_est[i];
     }
 }
+
+
+/**
+ * @todo: Replace this with float_to_int16()
+ */
+static inline int16_t LTP_ROUND(float x) {
+    if (x >= 0)
+    {
+        if (x >= 1.0f)
+            return 32767;
+    } else {
+        if (x <= -1.0f)
+            return -32768;
+    }
+
+    return lrintf(32768 * x);
+}
+
 
 static void ltp_update_trans(AACContext * ac, sce_struct * sce) {
     int i;
