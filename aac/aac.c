@@ -299,7 +299,7 @@ typedef struct {
     sce_struct * che_sce[MAX_TAGID];
     cpe_struct * che_cpe[MAX_TAGID];
     sce_struct * che_lfe[MAX_TAGID];
-    cc_struct * che_cc[MAX_TAGID];
+    cc_struct  * che_cc[MAX_TAGID];
     drc_struct * che_drc;
 
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
