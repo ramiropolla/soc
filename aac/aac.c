@@ -122,9 +122,6 @@ enum {
 #define INTENSITY_HCB 15
 #define ESC_FLAG 16
 
-//tns
-#define TNS_MAX_ORDER 20
-
 //ltp
 #define MAX_LTP_LONG_SFB 40
 
