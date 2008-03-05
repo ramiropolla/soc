@@ -297,7 +297,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
     int is_saved;
 
-    //cashes
+    //caches
     const uint16_t *swb_offset_1024;
     const uint16_t *swb_offset_128;
     int num_swb_1024;
@@ -1537,11 +1537,11 @@ static int coupling_channel_element(AACContext * ac, GetBitContext * gb, int id)
     for (c = 0; c < num_gain; c++) {
         int cge = 1;
         int gain = 0;
-        float gain_cash = 1.;
+        float gain_cache = 1.;
         if (c != 0) {
             cge = coup->ind_sw ? 1 : get_bits1(gb);
             gain = cge ? get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60: 0;
-            gain_cash = pow(scale, (float)gain);
+            gain_cache = pow(scale, (float)gain);
         }
         for (g = 0; g < sce->ics.num_window_groups; g++)
             for (sfb = 0; sfb < sce->ics.max_sfb; sfb++)
@@ -1549,7 +1549,7 @@ static int coupling_channel_element(AACContext * ac, GetBitContext * gb, int id)
                     coup->gain[c][g][sfb] = 0;
                 } else {
                     if (cge) {
-                        coup->gain[c][g][sfb] = gain_cash;
+                        coup->gain[c][g][sfb] = gain_cache;
                     } else {
                         if (sign) {
                             int t = get_vlc2(gb, ac->mainvlc.table, 7, 3);
