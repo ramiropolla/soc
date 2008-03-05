@@ -401,7 +401,7 @@ static void ssr_context_init(ssr_context * ctx) {
  * Free a Single Channel Element
  */
 static void sce_freep(sce_struct **s) {
-    if(*s == NULL)
+    if(!*s)
         return;
     av_free((*s)->ssr);
     av_free((*s)->ltp_state);
@@ -412,7 +412,7 @@ static void sce_freep(sce_struct **s) {
  * Free a Channel Pair Element
  */
 static void cpe_freep(cpe_struct **s) {
-    if(*s == NULL)
+    if(!*s)
         return;
     av_free((*s)->ch[0].ssr);
     av_free((*s)->ch[1].ssr);
@@ -425,7 +425,7 @@ static void cpe_freep(cpe_struct **s) {
  * Free a Coupling Channel
  */
 static void cc_freep(cc_struct **s) {
-    if(*s == NULL)
+    if(!*s)
         return;
     av_free((*s)->ch.ssr);
     av_freep(s);
@@ -503,10 +503,10 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
             ac->che_cpe[i]->ch[0].mixing_gain = 1.0f;
             ac->che_cpe[i]->ch[1].mixing_gain = 1.0f;
 
-            if(front == NULL && pcs->cpe_type[i] == AAC_CHANNEL_FRONT)
+            if(!front && pcs->cpe_type[i] == AAC_CHANNEL_FRONT)
                 front = ac->che_cpe[i];
 
-            if(back  == NULL && pcs->cpe_type[i] == AAC_CHANNEL_BACK)
+            if(!back  && pcs->cpe_type[i] == AAC_CHANNEL_BACK)
                 back = ac->che_cpe[i];
         }
 
@@ -514,7 +514,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
             ac->output_data[ch++] = ac->che_sce[i]->ret;
             ac->che_sce[i]->mixing_gain = 1.0f;
 
-            if(center == NULL && pcs->sce_type[i] == AAC_CHANNEL_FRONT)
+            if(!center && pcs->sce_type[i] == AAC_CHANNEL_FRONT)
                 center = ac->che_sce[i];
         }
         if(ac->che_lfe[i]) {
@@ -898,7 +898,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
                 0) < 0)
             return -1;
 
-        if((ac->vq[i] = av_malloc(dim * values * sizeof(int))) == NULL)
+        if(!(ac->vq[i] = av_malloc(dim * values * sizeof(int))))
             return -1;
 
         if (dim == 2) {
@@ -1206,7 +1206,7 @@ static int gain_control_data(AACContext * ac, GetBitContext * gb, sce_struct * s
     const int mode = sce->ics.window_sequence;
     int bd, wd, ad;
     ssr_struct * ssr = sce->ssr;
-    if (ssr == NULL)
+    if (!ssr)
         ssr = sce->ssr = av_mallocz(sizeof(ssr_struct));
     ssr->max_band = get_bits(gb, 2);
     for (bd = 0; bd < ssr->max_band; bd++) {
@@ -1471,7 +1471,7 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
 static int channel_pair_element(AACContext * ac, GetBitContext * gb, int id) {
     int i;
     cpe_struct * cpe;
-    if (ac->che_cpe[id] == NULL) {
+    if (!ac->che_cpe[id]) {
         return -1;
     }
     cpe = ac->che_cpe[id];
@@ -1510,7 +1510,7 @@ static int coupling_channel_element(AACContext * ac, GetBitContext * gb, int id)
     float scale;
     sce_struct * sce;
     coupling_struct * coup;
-    if (ac->che_cc[id] == NULL) {
+    if (!ac->che_cc[id]) {
         return -1;
     }
     sce = &ac->che_cc[id]->ch;
@@ -1606,7 +1606,7 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
     int drc_num_bands = 1;
     int i;
 
-    if (ac->che_drc == NULL)
+    if (!ac->che_drc)
         ac->che_drc = av_mallocz(sizeof(drc_struct));
 
     /* pce_tag_present? */
@@ -1759,7 +1759,7 @@ static void window_ltp_tool(AACContext * ac, sce_struct * sce, float * in, float
     float * buf = ac->buf_mdct;
     int i;
     assert(ics->window_sequence != EIGHT_SHORT_SEQUENCE);
-    if (ac->mdct_ltp == NULL) {
+    if (!ac->mdct_ltp) {
         ac->mdct_ltp = av_malloc(sizeof(MDCTContext));
         ff_mdct_init(ac->mdct_ltp, 11, 0);
     }
@@ -1788,7 +1788,7 @@ static void ltp_trans(AACContext * ac, sce_struct * sce) {
     int i, sfb;
     if (!ltp->present)
         return;
-    if (sce->ltp_state == NULL)
+    if (!sce->ltp_state)
         sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t));
     if ((sce->ics.window_sequence != EIGHT_SHORT_SEQUENCE) && (ac->is_saved)) {
         float x_est[2 * 1024], X_est[2 * 1024];
@@ -1825,7 +1825,7 @@ static inline int16_t LTP_ROUND(float x) {
 
 static void ltp_update_trans(AACContext * ac, sce_struct * sce) {
     int i;
-    if (sce->ltp_state == NULL)
+    if (!sce->ltp_state)
         sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t));
     if (ac->is_saved) {
         for (i = 0; i < 1024; i++) {
@@ -2079,7 +2079,7 @@ static void coupling_tool(AACContext * ac, int independent, int domain) {
     int i;
     for (i = 0; i < MAX_TAGID; i++) {
         cc_struct * cc = ac->che_cc[i];
-        if (cc != NULL) {
+        if (cc) {
             if (cc->coup.ind_sw && independent) {
                 transform_coupling_tool(ac, cc, coupling_independent_trans);
             } else if (!cc->coup.ind_sw && !independent && (cc->coup.domain == domain)) {
@@ -2092,15 +2092,15 @@ static void coupling_tool(AACContext * ac, int independent, int domain) {
 static void transform_sce_tool(AACContext * ac, void (*sce_trans)(AACContext * ac, sce_struct * sce)) {
     int i;
     for (i = 0; i < MAX_TAGID; i++) {
-        if (ac->che_sce[i] != NULL)
+        if (ac->che_sce[i])
             sce_trans(ac, ac->che_sce[i]);
-        if (ac->che_cpe[i] != NULL) {
+        if (ac->che_cpe[i]) {
             sce_trans(ac, &ac->che_cpe[i]->ch[0]);
             sce_trans(ac, &ac->che_cpe[i]->ch[1]);
         }
-        if (ac->che_lfe[i] != NULL)
+        if (ac->che_lfe[i])
             sce_trans(ac, ac->che_lfe[i]);
-        if (ac->che_cc[i] != NULL)
+        if (ac->che_cc[i])
             sce_trans(ac, &ac->che_cc[i]->ch);
     }
 }
@@ -2194,8 +2194,8 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         tag = get_bits(&gb, 4);
         switch (id) {
         case ID_SCE:
-            if(ac->che_sce[tag] == NULL) {
-                if(tag == 1 && ac->che_lfe[0] != NULL) {
+            if(!ac->che_sce[tag]) {
+                if(tag == 1 && ac->che_lfe[0]) {
                     /* Some streams incorrectly code 5.1 audio as SCE[0] CPE[0] CPE[1] SCE[1]
                        instead of SCE[0] CPE[0] CPE[0] LFE[0].
                        If we seem to have encountered such a stream,
