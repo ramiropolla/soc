@@ -145,10 +145,10 @@ typedef struct {
     int lfe_type[MAX_TAGID];
     int  cc_type[MAX_TAGID];
 
-    int mono_mixdown;         //< The SCE tag to use if user requests mono output,   -1 if not available
-    int stereo_mixdown;       //< The CPE tag to use if user requests stereo output, -1 if not available
-    int mixdown_coeff_index;  //< 0-3
-    int pseudo_surround;      //< Mix surround channels out of phase
+    int mono_mixdown;         ///< The SCE tag to use if user requests mono output,   -1 if not available
+    int stereo_mixdown;       ///< The CPE tag to use if user requests stereo output, -1 if not available
+    int mixdown_coeff_index;  ///< 0-3
+    int pseudo_surround;      ///< Mix surround channels out of phase
 
 } program_config_struct;
 
@@ -159,15 +159,18 @@ typedef struct {
     int used[MAX_LTP_LONG_SFB];
 } ltp_struct;
 
+/**
+ * Individual Channel Stream
+ */
 typedef struct {
     int intensity_present;
     int noise_present;
 
     int max_sfb;
     int window_sequence;
-    int window_shape;
+    int window_shape;             ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
     int window_shape_prev;
-    int predictor;
+    int predictor;                ///< XXX: Remove this
     int num_window_groups;
     uint8_t grouping;
     uint8_t group_len[8];
@@ -239,41 +242,54 @@ typedef struct {
     float buf[4][24];
 } ssr_struct;
 
+/**
+ * Coupling parameters
+ */
 typedef struct {
-    int ind_sw;
-    int domain;
+    int ind_sw;            ///< Set if independant coupling (i.e. after IMDCT)
+    int domain;            ///< Controls if coupling is performed before (0) or after (1) the TNS decoding of the target channels
 
-    int num_coupled;
-    int is_cpe[9];
-    int tag_select[9];
-    int l[9];
-    int r[9];
+
+    int num_coupled;       ///< Number of target elements
+    int is_cpe[9];         ///< Set if target is an CPE (otherwise it's an SCE)
+    int tag_select[9];     ///< Element tag index
+    int l[9];              ///< Apply gain to left channel of an CPE
+    int r[9];              ///< Apply gain to right channel of an CPE
 
     float gain[18][8][64];
 } coupling_struct;
 
-// individual channel element
+
+/**
+ * Single Channel Element
+ * Used for both SCE and LFE elements
+ */
 typedef struct {
     int global_gain;
     float mixing_gain;
     ics_struct ics;
     tns_struct tns;
-    int cb[8][64];   // codebooks
-    float sf[8][64];
-    DECLARE_ALIGNED_16(float, coeffs[1024]);
-    DECLARE_ALIGNED_16(float, saved[1024]);
-    DECLARE_ALIGNED_16(float, ret[1024]);
+    int cb[8][64];                            ///< Codebooks
+    float sf[8][64];                          ///< Scalefactors
+    DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< Coefficients for IMDCT
+    DECLARE_ALIGNED_16(float, saved[1024]);   ///< Overlap
+    DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
     int16_t *ltp_state;
     ssr_struct *ssr;
 } sce_struct;
 
-// channel element
+/**
+ * Channel Pair Element
+ */
 typedef struct {
-    int common_window;
+    int common_window;     ///< Set if channels share a common 'ics_struct' in bitstream
     ms_struct ms;
     sce_struct ch[2];
 } cpe_struct;
 
+/**
+ * Channel Coupling
+ */
 typedef struct {
     coupling_struct coup;
     sce_struct ch;
@@ -322,11 +338,11 @@ typedef struct {
     DECLARE_ALIGNED_16(float, intensity_tab[256]);
     DECLARE_ALIGNED_16(float, ivquant_tab[256]);
     DECLARE_ALIGNED_16(float, revers[1024]);
-    float* interleaved_output;
-    float *output_data[MAX_CHANNELS];
-    sce_struct *mm_center;            //< Center SCE to use for matrix mixdown
-    cpe_struct *mm_front;             //< Front  CPE to use for matrix mixdown
-    cpe_struct *mm_back;              //< Back   CPE to use for matrix mixdown
+    float* interleaved_output;                        ///< Interim buffer for interleaving PCM samples
+    float *output_data[MAX_CHANNELS];                 ///< Points to each channels 'ret' buffer (PCM output)
+    sce_struct *mm_center;                            ///< Center SCE to use for matrix mixdown
+    cpe_struct *mm_front;                             ///< Front  CPE to use for matrix mixdown
+    cpe_struct *mm_back;                              ///< Back   CPE to use for matrix mixdown
 
     MDCTContext mdct;
     MDCTContext mdct_small;
