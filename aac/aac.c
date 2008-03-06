@@ -354,9 +354,6 @@ typedef struct {
     //bias values
     float add_bias;
     float scale_bias;
-
-    // statistics
-    int num_frame;
 } AACContext;
 
 
@@ -958,8 +955,6 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 
 
     // general init
-    ac->num_frame = -1;
-
     ac->swb_offset_1024    = swb_offset_1024    [ac->sampling_index];
     ac->num_swb_1024       = num_swb_1024       [ac->sampling_index];
     ac->tns_max_bands_1024 = tns_max_bands_1024 [ac->sampling_index];
@@ -2208,8 +2203,6 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     AACContext * ac = avccontext->priv_data;
     GetBitContext gb;
     int id, err, tag;
-
-    ac->num_frame++;
 
     init_get_bits(&gb, buf, buf_size*8);
 
