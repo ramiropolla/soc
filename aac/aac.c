@@ -170,7 +170,6 @@ typedef struct {
     int window_sequence;
     int window_shape;             ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
     int window_shape_prev;
-    int predictor;                ///< XXX: Remove this
     int num_window_groups;
     uint8_t grouping;
     uint8_t group_len[8];
@@ -1074,8 +1073,7 @@ static int ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_
         ics->num_swb = ac->num_swb_1024;
         ics->num_windows = 1;
         ics->tns_max_bands = ac->tns_max_bands_1024;
-        ics->predictor = get_bits1(gb);
-        if (ics->predictor) {
+        if (get_bits1(gb)) {
 #ifdef AAC_LTP
             if (ac->audioObjectType == AOT_AAC_MAIN) {
                 assert(0);
