@@ -319,14 +319,6 @@ typedef struct {
     DECLARE_ALIGNED_16(float, revers[1024]);
     int is_saved;
 
-    //caches
-    const uint16_t *swb_offset_1024;
-    const uint16_t *swb_offset_128;
-    int num_swb_1024;
-    int num_swb_128;
-    int tns_max_bands_1024;
-    int tns_max_bands_128;
-
     /**
      * @defgroup tables   Computed / setup during init
      * @{
@@ -870,6 +862,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
             }
         }
     }
+    av_log(NULL, AV_LOG_ERROR, "sbr=%d, samplerate=%d, ext_samplerate=%d\n", ac->sbr_present, ac->sample_rate, ac->ext_sample_rate);
     return 0;
 }
 
@@ -960,15 +953,6 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     }
     for (i = 0; i < 256; i++)
         ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./ac->scale_bias;
-
-
-    // general init
-    ac->swb_offset_1024    = swb_offset_1024    [ac->sampling_index];
-    ac->num_swb_1024       = num_swb_1024       [ac->sampling_index];
-    ac->tns_max_bands_1024 = tns_max_bands_1024 [ac->sampling_index];
-    ac->swb_offset_128     = swb_offset_128     [ac->sampling_index];
-    ac->num_swb_128        = num_swb_128        [ac->sampling_index];
-    ac->tns_max_bands_128  = tns_max_bands_128  [ac->sampling_index];
 
     if(init_vlc(&ac->mainvlc, 7, sizeof(code)/sizeof(code[0]),
             bits, sizeof(bits[0]), sizeof(bits[0]),
@@ -1066,16 +1050,16 @@ static int ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_
                 ics->group_len[ics->num_window_groups-1] = 1;
             }
         }
-        ics->swb_offset = ac->swb_offset_128;
-        ics->num_swb = ac->num_swb_128;
+        ics->swb_offset = swb_offset_128[ac->sampling_index];
+        ics->num_swb = num_swb_128[ac->sampling_index];
         ics->num_windows = 8;
-        ics->tns_max_bands = ac->tns_max_bands_128;
+        ics->tns_max_bands = tns_max_bands_128[ac->sampling_index];
     } else {
         ics->max_sfb = get_bits(gb, 6);
-        ics->swb_offset = ac->swb_offset_1024;
-        ics->num_swb = ac->num_swb_1024;
+        ics->swb_offset = swb_offset_1024[ac->sampling_index];
+        ics->num_swb = num_swb_1024[ac->sampling_index];
         ics->num_windows = 1;
-        ics->tns_max_bands = ac->tns_max_bands_1024;
+        ics->tns_max_bands = tns_max_bands_1024[ac->sampling_index];
         if (get_bits1(gb)) {
 #ifdef AAC_LTP
             if (ac->audioObjectType == AOT_AAC_MAIN) {
