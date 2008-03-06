@@ -862,7 +862,6 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
             }
         }
     }
-    av_log(NULL, AV_LOG_ERROR, "sbr=%d, samplerate=%d, ext_samplerate=%d\n", ac->sbr_present, ac->sample_rate, ac->ext_sample_rate);
     return 0;
 }
 
