@@ -297,8 +297,6 @@ typedef struct {
 typedef struct {
     // objects
     AVCodecContext * avccontext;
-    VLC mainvlc;
-    VLC books[11];
 
     // main config
     int audioObjectType;
@@ -318,6 +316,7 @@ typedef struct {
     drc_struct * che_drc;
 
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
+    DECLARE_ALIGNED_16(float, revers[1024]);
     int is_saved;
 
     //caches
@@ -328,7 +327,12 @@ typedef struct {
     int tns_max_bands_1024;
     int tns_max_bands_128;
 
-    // tables
+    /**
+     * @defgroup tables   Computed / setup during init
+     * @{
+     */
+    VLC mainvlc;
+    VLC books[11];
     DECLARE_ALIGNED_16(float, kbd_long_1024[1024]);
     DECLARE_ALIGNED_16(float, kbd_short_128[128]);
     DECLARE_ALIGNED_16(float, sine_long_1024[1024]);
@@ -336,13 +340,6 @@ typedef struct {
     DECLARE_ALIGNED_16(float, pow2sf_tab[256]);
     DECLARE_ALIGNED_16(float, intensity_tab[256]);
     DECLARE_ALIGNED_16(float, ivquant_tab[256]);
-    DECLARE_ALIGNED_16(float, revers[1024]);
-    float* interleaved_output;                        ///< Interim buffer for interleaving PCM samples
-    float *output_data[MAX_CHANNELS];                 ///< Points to each channels 'ret' buffer (PCM output)
-    sce_struct *mm_center;                            ///< Center SCE to use for matrix mixdown
-    cpe_struct *mm_front;                             ///< Front  CPE to use for matrix mixdown
-    cpe_struct *mm_back;                              ///< Back   CPE to use for matrix mixdown
-
     MDCTContext mdct;
     MDCTContext mdct_small;
     MDCTContext *mdct_ltp;
@@ -350,10 +347,21 @@ typedef struct {
     int * vq[11];
     ssr_context ssrctx;
     AVRandomState random_state;
+    /** @} */
 
-    //bias values
-    float add_bias;
-    float scale_bias;
+    /**
+     * @defgroup output   Members used for output interleaving and downmixing
+     * @{
+     */
+    float* interleaved_output;                        ///< Interim buffer for interleaving PCM samples
+    float *output_data[MAX_CHANNELS];                 ///< Points to each elements 'ret' buffer (PCM output)
+    sce_struct *mm_center;                            ///< Center SCE to use for matrix mixdown
+    cpe_struct *mm_front;                             ///< Front  CPE to use for matrix mixdown
+    cpe_struct *mm_back;                              ///< Back   CPE to use for matrix mixdown
+    float add_bias;                                   ///< Offset for dsp.float_to_int16
+    float scale_bias;                                 ///< Bias for dsp.float_to_int16
+    /** @} */
+
 } AACContext;
 
 
