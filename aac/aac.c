@@ -198,7 +198,11 @@ typedef struct {
     int mask[8][64];
 } ms_struct;
 
-// dynamic range compression
+/**
+ * Dyanmic Range Control
+ *
+ * DRC is decoded from bitstream but not further processed.
+ */
 typedef struct {
     int pce_instance_tag;
     int drc_tag_reserved_bits;
