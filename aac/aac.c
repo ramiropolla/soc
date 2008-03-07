@@ -1143,7 +1143,7 @@ static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain
         for (i = 0; i < ics->max_sfb; i++) {
             if (cb[g][i] == ZERO_HCB) {
                 sf[g][i] = 0.;
-            } else if ((cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
+            } else if (cb[g][i] == INTENSITY_HCB || cb[g][i] == INTENSITY_HCB2) {
                 ics->intensity_present = 1;
                 intensity += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
                 if(intensity > 255) {
@@ -1464,9 +1464,9 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
             for (gp = 0; gp < ics->group_len[g]; gp++) {
                 for (i = 0; i < ics->max_sfb; i++) {
                     if (sce1->cb[g][i] == INTENSITY_HCB || sce1->cb[g][i] == INTENSITY_HCB2) {
-                        c = (-1 + 2 * (sce1->cb[g][i] - 14));
+                        c = -1 + 2 * (sce1->cb[g][i] - 14);
                         if (cpe->ms.present)
-                            c *= (1 - 2 * cpe->ms.mask[g][i]);
+                            c *= 1 - 2 * cpe->ms.mask[g][i];
                         scale = c * sce1->sf[g][i];
                         for (k = offsets[i] + gp*128; k < offsets[i+1] + gp*128; k++) {
                             sce1->coeffs[k] = scale * sce0->coeffs[k];
