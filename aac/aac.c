@@ -61,7 +61,9 @@
 #define MAX_CHANNELS 64
 #define MAX_TAGID 16
 
-// Audio Object Types
+/**
+ * Audio Object Types
+ */
 enum {
     AOT_NULL = 0x0,
     AOT_AAC_MAIN,
@@ -91,7 +93,9 @@ enum {
     AOT_SSC
 };
 
-// IDs for raw_data_block
+/**
+ * IDs for raw_data_block
+ */
 enum {
     ID_SCE = 0x0,
     ID_CPE,
@@ -103,7 +107,9 @@ enum {
     ID_END
 };
 
-// IDs for extension_payload
+/**
+ * IDs for extension_payload
+ */
 enum {
     EXT_FILL = 0x0,
     EXT_FILL_DATA,
@@ -113,7 +119,9 @@ enum {
     EXT_SBR_DATA_CRC = 0xe
 };
 
-// window sequences
+/**
+ * Window sequences
+ */
 enum {
     ONLY_LONG_SEQUENCE = 0,
     LONG_START_SEQUENCE,
@@ -121,7 +129,9 @@ enum {
     LONG_STOP_SEQUENCE
 };
 
-// special codebooks
+/**
+ * Special codebooks
+ */
 #define ZERO_HCB 0
 #define FIRST_PAIR_HCB 5
 #define ESC_HCB 11
@@ -130,15 +140,22 @@ enum {
 #define INTENSITY_HCB 15
 #define ESC_FLAG 16
 
-//ltp
-#define MAX_LTP_LONG_SFB 40
-
+/**
+ * Channel types
+ */
 #define AAC_CHANNEL_FRONT       1
 #define AAC_CHANNEL_SIDE        2
 #define AAC_CHANNEL_BACK        3
 #define AAC_CHANNEL_LFE         4
 #define AAC_CHANNEL_CC          5
 
+
+/**
+ * Program config. This describes how channels are arranged.
+ *
+ * Either read from stream (ID_PCE) or created based on a default
+ * fixed channel arrangement.
+ */
 typedef struct {
     int sce_type[MAX_TAGID];
     int cpe_type[MAX_TAGID];
@@ -152,6 +169,11 @@ typedef struct {
 
 } program_config_struct;
 
+
+/**
+ * Long Term Prediction
+ */
+#define MAX_LTP_LONG_SFB 40
 typedef struct {
     int present;
     int lag;
@@ -173,16 +195,17 @@ typedef struct {
     int num_window_groups;
     uint8_t grouping;
     uint8_t group_len[8];
-    // ltp
     ltp_struct ltp;
     ltp_struct ltp2;
-    // calculated
     const uint16_t *swb_offset;
     int num_swb;
     int num_windows;
     int tns_max_bands;
 } ics_struct;
 
+/**
+ * Temporal Noise Shaping
+ */
 typedef struct {
     int present;
     int n_filt[8];
@@ -193,6 +216,9 @@ typedef struct {
     int coef[8][4][TNS_MAX_ORDER];
 } tns_struct;
 
+/**
+ * M/S joint channel coding
+ */
 typedef struct {
     int present;
     int mask[8][64];
@@ -217,6 +243,9 @@ typedef struct {
     int prog_ref_level_reserved_bits;
 } drc_struct;
 
+/**
+ * Pulse tool
+ */
 typedef struct {
     int present;
     int num_pulse;
@@ -251,14 +280,11 @@ typedef struct {
 typedef struct {
     int ind_sw;            ///< Set if independant coupling (i.e. after IMDCT)
     int domain;            ///< Controls if coupling is performed before (0) or after (1) the TNS decoding of the target channels
-
-
     int num_coupled;       ///< Number of target elements
     int is_cpe[9];         ///< Set if target is an CPE (otherwise it's an SCE)
     int tag_select[9];     ///< Element tag index
     int l[9];              ///< Apply gain to left channel of an CPE
     int r[9];              ///< Apply gain to right channel of an CPE
-
     float gain[18][8][64];
 } coupling_struct;
 
@@ -268,7 +294,10 @@ typedef struct {
  * Used for both SCE and LFE elements
  */
 typedef struct {
-    float mixing_gain;
+    float mixing_gain;                        /**< Channel gain (not used by AAC bitstream).
+                                               *   Note that this is applied before joint stereo decoding.
+                                               *   Thus, when used inside CPE elements, both channels must have equal gain.
+                                               */
     ics_struct ics;
     tns_struct tns;
     int cb[8][64];                            ///< Codebooks
@@ -297,30 +326,46 @@ typedef struct {
     sce_struct ch;
 } cc_struct;
 
+/**
+ * Main AAC context
+ */
 typedef struct {
-    // objects
     AVCodecContext * avccontext;
 
-    // main config
     int audioObjectType;
-    int ext_audioObjectType;
-    int sbr_present;
     int sampling_index;
-    int ext_sampling_index;
     int sample_rate;
-    int ext_sample_rate;
+    int is_saved;                 ///< Set if elements have stored overlap from previous frame.
+    drc_struct * che_drc;
 
-    // decoder param
+    /**
+     * @defgroup sbr   These are applicable if the bitstream uses SBR.
+     * @{
+     */
+    int sbr_present;
+    int ext_audioObjectType;
+    int ext_sampling_index;       ///< index after SBR is applied
+    int ext_sample_rate;          ///<  rate after SBR is applied
+    /** @} */
+
+    /**
+     * @defgroup elements
+     * @{
+     */
     program_config_struct pcs;
     sce_struct * che_sce[MAX_TAGID];
     cpe_struct * che_cpe[MAX_TAGID];
     sce_struct * che_lfe[MAX_TAGID];
     cc_struct  * che_cc[MAX_TAGID];
-    drc_struct * che_drc;
+    /** @} */
 
+    /**
+     * @defgroup temporary Aligned temporary buffers (We do not want to have these on stack)
+     * @{
+     */
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
     DECLARE_ALIGNED_16(float, revers[1024]);
-    int is_saved;
+    /** @} */
 
     /**
      * @defgroup tables   Computed / setup during init
