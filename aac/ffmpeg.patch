@@ -1,8 +1,8 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 12224)
+--- libavcodec/Makefile	(revision 12357)
 +++ libavcodec/Makefile	(working copy)
-@@ -31,6 +31,7 @@
+@@ -26,6 +26,7 @@
  
  OBJS-$(CONFIG_ENCODERS)                += faandct.o jfdctfst.o jfdctint.o
  
@@ -12,7 +12,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 12224)
+--- libavcodec/allcodecs.c	(revision 12357)
 +++ libavcodec/allcodecs.c	(working copy)
 @@ -172,6 +172,7 @@
      REGISTER_ENCDEC  (ZMBV, zmbv);
@@ -24,14 +24,14 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (ALAC, alac);
 Index: libavformat/mov.c
 ===================================================================
---- libavformat/mov.c	(revision 12224)
+--- libavformat/mov.c	(revision 12357)
 +++ libavformat/mov.c	(working copy)
-@@ -817,7 +817,7 @@
-         st->codec->width= 0; /* let decoder init width/height */
-         st->codec->height= 0;
-         break;
+@@ -1556,7 +1556,7 @@
+             st->codec->width= 0; /* let decoder init width/height */
+             st->codec->height= 0;
+             break;
 -#ifdef CONFIG_LIBFAAD
 +#if defined(CONFIG_LIBFAAD) || defined(CONFIG_AAC_DECODER)
-     case CODEC_ID_AAC:
+         case CODEC_ID_AAC:
  #endif
  #ifdef CONFIG_VORBIS_DECODER
