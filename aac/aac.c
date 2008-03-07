@@ -27,12 +27,6 @@
  * @author Maxim Gavrilov ( maxim.gavrilov gmail com )
  */
 
-/** TODO
- *  To reduce the memory required, reorder the ret buffer so all buffers are
- *  after each other. And then try to do the interleaving inplace.
- */
-
-
 /**
  * AAC SSR (Scalable Sample Rate) is currently not working, and therefore
  * not compiled in. SSR files play without crashing but produce audible
