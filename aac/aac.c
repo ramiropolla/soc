@@ -268,7 +268,6 @@ typedef struct {
  * Used for both SCE and LFE elements
  */
 typedef struct {
-    int global_gain;
     float mixing_gain;
     ics_struct ics;
     tns_struct tns;
@@ -1387,9 +1386,10 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
     tns_struct * tns = &sce->tns;
     ics_struct * ics = &sce->ics;
     float * out = sce->coeffs;
+    int global_gain;
 
     memset(&pulse, 0, sizeof(pulse));
-    sce->global_gain = get_bits(gb, 8);
+    global_gain = get_bits(gb, 8);
 
     if (!common_window && !scale_flag) {
         if (ics_info(ac, gb, 0, ics) < 0)
@@ -1398,7 +1398,7 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
 
     if (section_data(ac, gb, ics, sce->cb) < 0)
         return -1;
-    if (scale_factor_data(ac, gb, sce->mixing_gain, sce->global_gain, ics, sce->cb, sce->sf) < 0)
+    if (scale_factor_data(ac, gb, sce->mixing_gain, global_gain, ics, sce->cb, sce->sf) < 0)
         return -1;
 
     if (!scale_flag) {
