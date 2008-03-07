@@ -186,8 +186,6 @@ typedef struct {
  */
 typedef struct {
     int intensity_present;
-    int noise_present;
-
     int max_sfb;
     int window_sequence;
     int window_shape;             ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
@@ -1183,7 +1181,6 @@ static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain
     int noise = global_gain - 90;
     int noise_flag = 1;
     ics->intensity_present = 0;
-    ics->noise_present = 0;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
             if (cb[g][i] == ZERO_HCB) {
@@ -1198,7 +1195,6 @@ static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain
                 }
                 sf[g][i] = ac->intensity_tab[intensity];
             } else if (cb[g][i] == NOISE_HCB) {
-                ics->noise_present = 1;
                 if (noise_flag) {
                     noise_flag = 0;
                     noise += get_bits(gb, 9) - 256;
