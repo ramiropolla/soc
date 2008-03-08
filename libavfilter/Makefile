@@ -1,5 +1,10 @@
 include ../config.mak
 
+NAME = avfilter
+FFLIBS = avcodec avutil
+FFLIBS-$(CONFIG_SWSCALER)      += swscale
+FFLIBS-$(CONFIG_AVFILTER_LAVF) += avformat
+
 OBJS = allfilters.o \
        avfilter.o \
        avfiltergraph.o \
@@ -28,12 +33,5 @@ OBJS-$(CONFIG_VFLIP_FILTER)      += vf_vflip.o
 OBJS-$(CONFIG_MOVIE_FILTER)      += vsrc_movie.o
 
 HEADERS = avfilter.h
-
-FFLIBS = avcodec avutil
-
-FFLIBS-$(CONFIG_SWSCALER)      += swscale
-FFLIBS-$(CONFIG_AVFILTER_LAVF) += avformat
-
-NAME=avfilter
 
 include ../common.mak
