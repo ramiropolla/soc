@@ -55,7 +55,7 @@ typedef struct
     int vsub,hsub;   //< chroma subsampling
 } BoxContext;
 
-static void strlwr(char *str)
+static void box_strlwr(char *str)
 {
     int i = 0;
     while(str[i] != '\0') {
@@ -70,7 +70,7 @@ static box_color get_color(char *color)
 {
     box_color tmp;
     int i;
-    strlwr(color);
+    box_strlwr(color);
     for(i = NUM_COLORS - 1; i >= 0; i--) {
         tmp = colors[i];
         if(!strcmp(color, colors[i].name))
