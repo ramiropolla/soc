@@ -20,7 +20,7 @@
  */
 
 /**
- * @file mpeg_pes.h
+ * @file mpegpes.h
  * MPEG PES packetizer API header
  */
 

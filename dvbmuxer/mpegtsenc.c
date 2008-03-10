@@ -22,7 +22,7 @@
 #include "crc.h"
 #include "mpegts.h"
 #include "bytestream.h"
-#include "mpeg_pes.h"
+#include "mpegpes.h"
 
 /* write DVB SI sections */
 

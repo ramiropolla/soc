@@ -20,7 +20,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include "mpeg_pes.h"
+#include "mpegpes.h"
 #include "bytestream.h"
 
 /**
