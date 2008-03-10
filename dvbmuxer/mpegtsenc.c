@@ -786,18 +786,7 @@ static int output_packet(AVFormatContext *ctx, int flush){
 
 static int mpegts_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 {
-    int stream_index= pkt->stream_index;
-    int size = pkt->size;
-    static int total_size = 0;
-    AVStream *st = ctx->streams[stream_index];
-    MpegTSWriteStream *stream = st->priv_data;
-    PESStream *pes_stream = &stream->pes_stream;
-    int64_t pts;
-
-    total_size += size;
     ff_pes_write_packet(ctx, pkt);
-    pts= pes_stream->predecode_packet->pts;
-
     for(;;){
         int ret = output_packet(ctx, 0);
         if(ret<=0)
