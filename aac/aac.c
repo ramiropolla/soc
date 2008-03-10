@@ -391,7 +391,7 @@ typedef struct {
     cpe_struct *mm_front;                             ///< Front  CPE to use for matrix mixdown
     cpe_struct *mm_back;                              ///< Back   CPE to use for matrix mixdown
     float add_bias;                                   ///< Offset for dsp.float_to_int16
-    float scale_bias;                                 ///< Bias for dsp.float_to_int16
+    float sf_scale;                                   ///< Prescale for correct IMDCT and dsp.float_to_int16
     /** @} */
 
 } AACContext;
@@ -975,7 +975,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     /* Initialize RNG dither */
     av_init_random(0x1f2e3d4c, &ac->random_state);
 
-    // 1024  - compensate wrong IMDCT method
+    // -1024 - compensate wrong IMDCT method
     // 32768 - values in AAC build for ready float->int 16 bit audio, using
     // BIAS method instead needs values -1<x<1
     for (i = 0; i < 256; i++)
@@ -985,13 +985,13 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 
     if(ac->dsp.float_to_int16 == ff_float_to_int16_c) {
         ac->add_bias = 385.0f;
-        ac->scale_bias = -32768.0f;
+        ac->sf_scale = 1. / (-1024. * 32768.);
     } else {
         ac->add_bias = 0.0f;
-        ac->scale_bias = -1.0f;
+        ac->sf_scale = 1. / -1024.;
     }
     for (i = 0; i < 256; i++)
-        ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./ac->scale_bias;
+        ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) * ac->sf_scale;
 
     if(init_vlc(&ac->mainvlc, 7, sizeof(code)/sizeof(code[0]),
             bits, sizeof(bits[0]), sizeof(bits[0]),
@@ -1054,7 +1054,7 @@ static void ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, ltp_struc
         assert(0);
     } else {
         ltp->lag = get_bits(gb, 11);
-        ltp->coef = ltp_coef[get_bits(gb, 3)] * (-2./ac->scale_bias/1024.); // wrong mdct method
+        ltp->coef = ltp_coef[get_bits(gb, 3)] * (-2 * ac->sf_scale);
         for (sfb = 0; sfb < FFMIN(max_sfb, MAX_LTP_LONG_SFB); sfb++)
             ltp->used[sfb] = get_bits1(gb);
     }
@@ -1195,7 +1195,7 @@ static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain
                 } else {
                     noise += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
                 }
-                sf[g][i] = pow(2.0, 0.25 * noise)/1024./ac->scale_bias;
+                sf[g][i] = pow(2.0, 0.25 * noise) * ac->sf_scale;
             } else {
                 global_gain += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
                 if(global_gain > 255) {
