@@ -2,7 +2,7 @@
  * Box drawing filter. Also a nice template for a filter that needs to write
  * in the input frame.
  *
- * Copyright (c) 2008 Mike Sullivan
+ * Copyright (c) 2008 Affine Systems, Inc (Michael Sullivan, Bobby Impollonia)
  *
  * This file is part of FFmpeg.
  *
