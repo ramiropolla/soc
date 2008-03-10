@@ -985,10 +985,10 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 
     if(ac->dsp.float_to_int16 == ff_float_to_int16_c) {
         ac->add_bias = 385.0f;
-        ac->scale_bias = 32768.0f;
+        ac->scale_bias = -32768.0f;
     } else {
         ac->add_bias = 0.0f;
-        ac->scale_bias = 1.0f;
+        ac->scale_bias = -1.0f;
     }
     for (i = 0; i < 256; i++)
         ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) /1024./ac->scale_bias;
