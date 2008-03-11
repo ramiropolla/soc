@@ -46,6 +46,10 @@ int ff_pes_muxer_init(AVFormatContext *ctx)
             stream->max_buffer_size = 4 * 1024;
             break;
         case CODEC_TYPE_VIDEO:
+            if (st->codec->rc_buffer_size)
+                stream->max_buffer_size = 6*1024 + st->codec->rc_buffer_size/8;
+            else
+                stream->max_buffer_size = 230*1024; //FIXME this is probably too small as default
 #if 0
                 /* see VCD standard, p. IV-7*/
                 stream->max_buffer_size = 46 * 1024;
@@ -54,10 +58,6 @@ int ff_pes_muxer_init(AVFormatContext *ctx)
                    Right now it is also used for everything else.*/
                 stream->max_buffer_size = 230 * 1024;
 #endif
-            if (st->codec->rc_buffer_size)
-                stream->max_buffer_size = 6*1024 + st->codec->rc_buffer_size/8;
-            else
-                stream->max_buffer_size = 230*1024; //FIXME this is probably too small as default
             break;
         case CODEC_TYPE_SUBTITLE:
             stream->max_buffer_size = 16 * 1024;
