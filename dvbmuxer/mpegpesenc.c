@@ -116,9 +116,9 @@ int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
  * @param [in]      stuffing_size  packet stuffing size
  * @return   bytes written to PES stream.
  */
-int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t* pes_buffer,
-    int64_t pts,int64_t dts, int id, int startcode,
-    uint8_t* pes_content, int pes_content_len,
+int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buffer,
+    int64_t pts, int64_t dts, int id, int startcode,
+    uint8_t *pes_content, int pes_content_len,
     int header_len, int packet_size, int payload_size, int stuffing_size)
 {
     PESStream *stream = ctx->streams[stream_index]->priv_data;
@@ -192,7 +192,7 @@ int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
 
     for(i=0; i<ctx->nb_streams; i++){
         AVStream *st = ctx->streams[i];
-        PESStream  *stream = st->priv_data;
+        PESStream *stream = st->priv_data;
         PacketDesc *pkt_desc;
 
         while((pkt_desc= stream->predecode_packet)
@@ -222,7 +222,7 @@ int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
  * @param[out] best_i      index of stream to be muxed
  * @return  On error a negative or zero value is returned, on success 1 is returned.
  */
-int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int* best_i)
+int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int *best_i)
 {
     int i, avail_space;
     int best_score= INT_MIN;
