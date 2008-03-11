@@ -410,7 +410,6 @@ static int mpegts_write_header(AVFormatContext *s)
     else
         ts->packet_size = DEFAULT_PES_PAYLOAD_SIZE;
 
-
     ts->pat.pid = PAT_PID;
     ts->pat.cc = 0;
     ts->pat.write_packet = section_write_packet;
@@ -538,8 +537,8 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
     int afc_len, stuffing_len;
     int64_t pcr = -1; /* avoid warning */
     int64_t delta_pcr;
-
     int offset = 0;
+
     is_start = 1;
     while (payload_size > 0) {
         retransmit_si_info(s);
@@ -647,7 +646,6 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     packet_size = s->packet_size;
 
     if (packet_size > 0) {
-
         /* packet header size */
         packet_size -= 6;
 
@@ -761,7 +759,6 @@ static int output_packet(AVFormatContext *ctx, int flush){
         assert(av_fifo_size(&stream->fifo) == trailer_size);
         es_size= flush_packet(ctx, best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, trailer_size);
     }
-
 
     if(ff_pes_remove_decoded_packets(ctx, s->last_pcr) < 0)
         return -1;

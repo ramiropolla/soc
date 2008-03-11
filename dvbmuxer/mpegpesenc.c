@@ -117,7 +117,7 @@ int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
  * @return   bytes written to PES stream.
  */
 int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t* pes_buffer,
-    int64_t pts,int64_t dts, int  id, int startcode,
+    int64_t pts,int64_t dts, int id, int startcode,
     uint8_t* pes_content, int pes_content_len,
     int header_len, int packet_size, int payload_size, int stuffing_size)
 {
@@ -232,8 +232,8 @@ int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int
 retry:
     for(i=0; i<ctx->nb_streams; i++){
         AVStream *st = ctx->streams[i];
-        PESStream*stream = st->priv_data;
-        const int avail_data=  av_fifo_size(&stream->fifo);
+        PESStream *stream = st->priv_data;
+        const int avail_data= av_fifo_size(&stream->fifo);
         const int space= stream->max_buffer_size - stream->buffer_index;
         int rel_space= 1024*space / stream->max_buffer_size;
         PacketDesc *next_pkt= stream->premux_packet;
