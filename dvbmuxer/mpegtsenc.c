@@ -631,7 +631,7 @@ static void put_padding_packet(uint8_t** pes_payload, int packet_bytes)
 }
 /* flush the packet on stream stream_index */
 static int flush_packet(AVFormatContext *ctx, int stream_index,
-                         int64_t pts, int64_t dts, int64_t pcr, int trailer_size)
+                         int64_t pts, int64_t dts, int trailer_size)
 {
     MpegTSWrite *s = ctx->priv_data;
     MpegTSWriteStream *stream = ctx->streams[stream_index]->priv_data;
@@ -765,10 +765,10 @@ static int output_packet(AVFormatContext *ctx, int flush){
 
     if(timestamp_packet){
 //av_log(ctx, AV_LOG_DEBUG, "dts:%f pts:%f pcr:%f stream:%d\n", timestamp_packet->dts/90000.0, timestamp_packet->pts/90000.0, pcr/90000.0, best_i);
-        es_size= flush_packet(ctx, best_i, timestamp_packet->pts, timestamp_packet->dts, pcr, trailer_size);
+        es_size= flush_packet(ctx, best_i, timestamp_packet->pts, timestamp_packet->dts, trailer_size);
     }else{
         assert(av_fifo_size(&stream->fifo) == trailer_size);
-        es_size= flush_packet(ctx, best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, pcr, trailer_size);
+        es_size= flush_packet(ctx, best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, trailer_size);
     }
 
 
