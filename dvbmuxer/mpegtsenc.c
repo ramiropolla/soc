@@ -179,7 +179,6 @@ typedef struct MpegTSService {
 } MpegTSService;
 
 typedef struct MpegTSWrite {
-    PESContext pes_context;
     MpegTSSection pat; /* MPEG2 pat table */
     MpegTSSection sdt; /* MPEG2 sdt table context */
     MpegTSService **services;
@@ -459,7 +458,6 @@ static int mpegts_write_header(AVFormatContext *s)
     for(i=0;i<s->nb_streams;i++) {
         int codec_rate;
         st = s->streams[i];
-        ts_st = (MpegTSWriteStream*) st->priv_data;
         if(st->codec->rc_max_rate)
             codec_rate= st->codec->rc_max_rate;
         else
@@ -637,7 +635,6 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
 {
     MpegTSWrite *s = ctx->priv_data;
     MpegTSWriteStream *stream = ctx->streams[stream_index]->priv_data;
-    PESContext* pes_context = &s->pes_context;
     PESStream *pes_stream = &stream->pes_stream;
     int payload_size, id, stuffing_size, i, header_len;
     int packet_size, es_size;
@@ -691,8 +688,6 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
             payload_size -= stuffing_size;
             stuffing_size = 0;
         }
-        pes_context->packet_number = s->packet_number;
-        pes_context->muxer_type = PESMUXER_TS;
         pes_size = ff_pes_muxer_write(ctx, stream_index, stream->payload, pts, dts, id, stream->startcode, NULL, 0,
                  header_len, packet_size, payload_size, stuffing_size);
         if(pes_size < 0)

@@ -122,7 +122,6 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t* pes_buff
     int header_len, int packet_size, int payload_size, int stuffing_size)
 {
     PESStream *stream = ctx->streams[stream_index]->priv_data;
-    PESContext *context = ctx->priv_data;
     int pes_flags, i;
     int data_size = payload_size - stuffing_size;
     uint8_t *q = pes_buffer;
@@ -144,7 +143,7 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t* pes_buff
        P-STD_buffer_size field be included in the first packet of
        every stream. (see SVCD standard p. 26 V.2.3.1 and V.2.3.2
        and MPEG-2 standard 2.7.7) */
-    if (context->packet_number == 0 && context->muxer_type == PESMUXER_PS)
+    if (stream->packet_counter == 0 && strcmp(ctx->oformat->name, "mpegts"))
         pes_flags |= 0x01;
 
     bytestream_put_byte(&q, pes_flags); /* flags */

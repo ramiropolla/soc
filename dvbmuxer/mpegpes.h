@@ -43,29 +43,13 @@ typedef struct PacketDesc {
 } PacketDesc;
 
 /**
- * muxer type for PES
- */
-typedef enum {
-    PESMUXER_PS,
-    PESMUXER_TS,
-    PESMUXER_PES
-} PESMuxerType;
-
-/**
- * PES context
- */
-typedef struct {
-    PESMuxerType muxer_type;
-    int packet_number;
-} PESContext;
-
-/**
  * PES stream structure
  */
 typedef struct {
     AVFifoBuffer fifo;
     int max_buffer_size; /**< in bytes */
     int buffer_index;
+    int packet_counter;
     PacketDesc *predecode_packet;
     PacketDesc *premux_packet;
     PacketDesc **next_packet;
