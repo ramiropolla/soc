@@ -467,7 +467,7 @@ static int mpegts_write_header(AVFormatContext *s)
     if(s->mux_rate) {
         ts->mux_rate= s->mux_rate;
     } else {
-        bitrate += bitrate * 25 / (8 *  DEFAULT_PES_PAYLOAD_SIZE) +  /* PES header size */
+        bitrate += bitrate * 25 / (8 * DEFAULT_PES_PAYLOAD_SIZE) +  /* PES header size */
                    bitrate * 4 / (8 * TS_PACKET_SIZE) +             /* TS  header size */
                    500 * 12 +                                       /* SDT size */
                    100 * 16;                                        /* PAT size */
