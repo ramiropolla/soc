@@ -549,11 +549,8 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
             delta_pcr = ts->cur_pcr - ts->last_pcr;
             if (ts_st->service->pcr_packet_count >=
                 ts_st->service->pcr_packet_freq || delta_pcr > MAX_DELTA_PCR) {
-                pcr = delta_pcr > MAX_DELTA_PCR ? ts->last_pcr + MAX_DELTA_PCR : ts->cur_pcr;
-                pcr += offset* 8*90000LL / ts->mux_rate;
                 ts_st->service->pcr_packet_count = 0;
                 write_pcr = 1;
-                ts->last_pcr = pcr;
             }
         }
 
@@ -570,6 +567,8 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
         *q++ = 0x10 | ts_st->cc | (write_pcr ? 0x20 : 0);
         ts_st->cc = (ts_st->cc + 1) & 0xf;
         if (write_pcr) {
+            /* add header and pcr bytes to pcr according to specs */
+            pcr = ts->cur_pcr + (32+64) * 90000 / ts->mux_rate;
             *q++ = 7; /* AFC length */
             *q++ = 0x10; /* flags: PCR present */
             *q++ = pcr >> 25;
@@ -578,6 +577,7 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
             *q++ = pcr >> 1;
             *q++ = (pcr & 1) << 7;
             *q++ = 0;
+            ts->last_pcr = pcr;
         }
         /* header size */
         header_len = q - buf;
@@ -611,9 +611,8 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
         offset += len;
         payload_size -= len;
         put_buffer(s->pb, buf, TS_PACKET_SIZE);
+        ts->cur_pcr += TS_PACKET_SIZE*8*90000LL / ts->mux_rate;
     }
-    if(pcr != -1)
-        ts->cur_pcr = pcr;
     put_flush_packet(s->pb);
 }
 
@@ -735,17 +734,11 @@ static int output_packet(AVFormatContext *ctx, int flush){
     int es_size, trailer_size;
     int result;
     int best_i= -1;
-    int64_t pcr = s->cur_pcr;
-    MpegTSWriteStream *ts_st;
+    int64_t pcr = s->last_pcr;
     PacketDesc *timestamp_packet;
 
     if((result = ff_pes_find_beststream(ctx, s->packet_size, flush, &pcr, &best_i)) <= 0)
         return result;
-
-    ts_st = ctx->streams[best_i]->priv_data;
-    if (ts_st->pid == ts_st->service->pcr_pid) {
-        s->cur_pcr = pcr;
-    }
     assert(best_i >= 0);
 
     st = ctx->streams[best_i];
@@ -754,8 +747,6 @@ static int output_packet(AVFormatContext *ctx, int flush){
     assert(av_fifo_size(&stream->fifo) > 0);
 
     timestamp_packet= stream->premux_packet;
-    if(s->cur_pcr == 0)
-        s->cur_pcr = timestamp_packet->dts;
     if(timestamp_packet->unwritten_size == timestamp_packet->size){
         trailer_size= 0;
     }else{
