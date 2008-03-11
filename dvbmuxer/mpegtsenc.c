@@ -138,8 +138,7 @@ static int mpegts_write_section1(MpegTSSection *s, int tid, int id,
 /* we retransmit the SI info at this rate */
 #define SDT_RETRANS_TIME 500
 #define PAT_RETRANS_TIME 100
-#define PCR_RETRANS_TIME 20
-#define MAX_DELTA_PCR 4500 /**< 90000 / PCR_RETRANS_TIME */
+#define MAX_DELTA_PCR 9000 /**< 0.1s according to ISO 13818-1 */
 
 
 /**
@@ -174,8 +173,6 @@ typedef struct MpegTSService {
     char *name;
     char *provider_name;
     int pcr_pid;
-    int pcr_packet_count;
-    int pcr_packet_freq;
 } MpegTSService;
 
 typedef struct MpegTSWrite {
@@ -478,8 +475,6 @@ static int mpegts_write_header(AVFormatContext *s)
     }
     ts->last_pcr = ts->cur_pcr = 0;
 
-    service->pcr_packet_freq = (ts->mux_rate * PCR_RETRANS_TIME) /
-        (TS_PACKET_SIZE * 8 * 1000);
     ts->sdt_packet_freq = (ts->mux_rate * SDT_RETRANS_TIME) /
         (TS_PACKET_SIZE * 8 * 1000);
     ts->pat_packet_freq = (ts->mux_rate * PAT_RETRANS_TIME) /
@@ -536,7 +531,6 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
     int val, is_start, len, header_len, write_pcr;
     int afc_len, stuffing_len;
     int64_t pcr = -1; /* avoid warning */
-    int64_t delta_pcr;
     int offset = 0;
 
     is_start = 1;
@@ -544,13 +538,9 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
         retransmit_si_info(s);
         write_pcr = 0;
         if (ts_st->pid == ts_st->service->pcr_pid) {
-            ts_st->service->pcr_packet_count++;
-            delta_pcr = ts->cur_pcr - ts->last_pcr;
-            if (ts_st->service->pcr_packet_count >=
-                ts_st->service->pcr_packet_freq || delta_pcr > MAX_DELTA_PCR) {
-                ts_st->service->pcr_packet_count = 0;
+            pcr = ts->cur_pcr + TS_PACKET_SIZE*90000LL / ts->mux_rate;
+            if (pcr - ts->last_pcr > MAX_DELTA_PCR)
                 write_pcr = 1;
-            }
         }
 
         /* prepare packet header */
