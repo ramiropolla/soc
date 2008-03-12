@@ -62,9 +62,8 @@ static void mpegts_write_section(MpegTSSection *s, uint8_t *buf, int len)
             b |= 0x40;
         *q++ = b;
         *q++ = s->pid;
-        s->cc = (s->cc) & 0xf;
+        s->cc = (s->cc + 1) & 0xf;
         *q++ = 0x10 | s->cc;
-        s->cc++;
         if (first)
             *q++ = 0; /* 0 offset */
         len1 = TS_PACKET_SIZE - (q - packet);
@@ -531,11 +530,11 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
     int val, is_start, len, header_len, write_pcr;
     int afc_len, stuffing_len;
     int64_t pcr = -1; /* avoid warning */
-    int offset = 0;
 
     is_start = 1;
     while (payload_size > 0) {
         retransmit_si_info(s);
+
         write_pcr = 0;
         if (ts_st->pid == ts_st->service->pcr_pid) {
             pcr = ts->cur_pcr + TS_PACKET_SIZE*90000LL / ts->mux_rate;
@@ -596,8 +595,8 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
                 }
             }
         }
-        memcpy(buf + TS_PACKET_SIZE - len, payload + offset, len);
-        offset += len;
+        memcpy(buf + TS_PACKET_SIZE - len, payload, len);
+        payload += len;
         payload_size -= len;
         put_buffer(s->pb, buf, TS_PACKET_SIZE);
         ts->cur_pcr += TS_PACKET_SIZE*8*90000LL / ts->mux_rate;
