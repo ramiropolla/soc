@@ -597,20 +597,6 @@ static void put_padding_packet(AVFormatContext *ctx, ByteIOContext *pb,int packe
         put_byte(pb, 0xff);
 }
 
-static int get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
-    int nb_frames=0;
-    PacketDesc *pkt_desc= stream->premux_packet;
-
-    while(len>0){
-        if(pkt_desc->size == pkt_desc->unwritten_size)
-            nb_frames++;
-        len -= pkt_desc->unwritten_size;
-        pkt_desc= pkt_desc->next;
-    }
-
-    return nb_frames;
-}
-
 /* flush the packet on stream stream_index */
 static int flush_packet(AVFormatContext *ctx, int stream_index,
                          int64_t pts, int64_t dts, int64_t scr, int trailer_size)
@@ -804,7 +790,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
             stuffing_size = 0;
         }
 
-        nb_frames= get_nb_frames(ctx, stream, payload_size - stuffing_size);
+        nb_frames= ff_pes_get_nb_frames(ctx, stream, payload_size - stuffing_size);
 
         put_be32(ctx->pb, startcode);
 
