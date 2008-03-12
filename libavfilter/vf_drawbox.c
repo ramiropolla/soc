@@ -38,14 +38,14 @@ typedef struct
 #define NUM_COLORS 8
 static box_color colors[] =
 {
-    {.name = "blue", .y = 40, .cr = 109, .cb = 240},
-    {.name = "red", .y = 81, .cr = 240, .cb = 90},
-    {.name = "black", .y = 16, .cr = 128, .cb = 128},
-    {.name = "white", .y = 255, .cr = 128, .cb = 128},
-    {.name = "green", .y = 144, .cr = 34, .cb = 53},
-    {.name = "yellow", .y = 210, .cr = 146, .cb = 16},
-    {.name = "gray", .y = 128, .cr = 128, .cb = 128},
-    {.name = "grey", .y = 128, .cr = 128, .cb = 128}
+    {.name = "blue",   .y =  40, .cr = 109, .cb = 240},
+    {.name = "red",    .y =  81, .cr = 240, .cb =  90},
+    {.name = "black",  .y =  16, .cr = 128, .cb = 128},
+    {.name = "white",  .y = 255, .cr = 128, .cb = 128},
+    {.name = "green",  .y = 144, .cr =  34, .cb =  53},
+    {.name = "yellow", .y = 210, .cr = 146, .cb =  16},
+    {.name = "gray",   .y = 128, .cr = 128, .cb = 128},
+    {.name = "grey",   .y = 128, .cr = 128, .cb = 128}
 };
 
 typedef struct
