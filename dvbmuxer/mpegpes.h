@@ -47,12 +47,18 @@ typedef struct PacketDesc {
  */
 typedef struct {
     AVFifoBuffer fifo;
+    uint8_t id;
     int max_buffer_size; /**< in bytes */
     int buffer_index;
-    int packet_counter;
     PacketDesc *predecode_packet;
     PacketDesc *premux_packet;
     PacketDesc **next_packet;
+    int packet_number;
+    uint8_t lpcm_header[3];
+    int lpcm_align;
+    int bytes_to_iframe;
+    int align_iframe;
+    int64_t vobu_start_pts;
 } PESStream;
 
 

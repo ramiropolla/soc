@@ -23,37 +23,13 @@
 #include "bitstream.h"
 #include "fifo.h"
 #include "mpeg.h"
+#include "mpegpes.h"
 
 #define MAX_PAYLOAD_SIZE 4096
 //#define DEBUG_SEEK
 
 #undef NDEBUG
 #include <assert.h>
-
-typedef struct PacketDesc {
-    int64_t pts;
-    int64_t dts;
-    int size;
-    int unwritten_size;
-    int flags;
-    struct PacketDesc *next;
-} PacketDesc;
-
-typedef struct {
-    AVFifoBuffer fifo;
-    uint8_t id;
-    int max_buffer_size; /* in bytes */
-    int buffer_index;
-    PacketDesc *predecode_packet;
-    PacketDesc *premux_packet;
-    PacketDesc **next_packet;
-    int packet_number;
-    uint8_t lpcm_header[3];
-    int lpcm_align;
-    int bytes_to_iframe;
-    int align_iframe;
-    int64_t vobu_start_pts;
-} StreamInfo;
 
 typedef struct {
     int packet_size; /* required packet size */
@@ -181,7 +157,7 @@ static int put_system_header(AVFormatContext *ctx, uint8_t *buf,int only_for_str
         int P_STD_max_mpeg_PS1 = 0;
 
         for(i=0;i<ctx->nb_streams;i++) {
-            StreamInfo *stream = ctx->streams[i]->priv_data;
+            PESStream *stream = ctx->streams[i]->priv_data;
 
             id = stream->id;
             if (id == 0xbd && stream->max_buffer_size > P_STD_max_mpeg_PS1) {
@@ -223,7 +199,7 @@ static int put_system_header(AVFormatContext *ctx, uint8_t *buf,int only_for_str
         /* audio stream info */
         private_stream_coded = 0;
         for(i=0;i<ctx->nb_streams;i++) {
-            StreamInfo *stream = ctx->streams[i]->priv_data;
+            PESStream *stream = ctx->streams[i]->priv_data;
 
 
             /* For VCDs, only include the stream info for the stream
@@ -267,7 +243,7 @@ static int put_system_header(AVFormatContext *ctx, uint8_t *buf,int only_for_str
 static int get_system_header_size(AVFormatContext *ctx)
 {
     int buf_index, i, private_stream_coded;
-    StreamInfo *stream;
+    PESStream *stream;
     MpegMuxContext *s = ctx->priv_data;
 
     if (s->is_dvd)
@@ -292,7 +268,7 @@ static int mpeg_mux_init(AVFormatContext *ctx)
     MpegMuxContext *s = ctx->priv_data;
     int bitrate, i, mpa_id, mpv_id, mps_id, ac3_id, dts_id, lpcm_id, j;
     AVStream *st;
-    StreamInfo *stream;
+    PESStream *stream;
     int audio_bitrate;
     int video_bitrate;
 
@@ -322,7 +298,7 @@ static int mpeg_mux_init(AVFormatContext *ctx)
     lpcm_id = LPCM_ID;
     for(i=0;i<ctx->nb_streams;i++) {
         st = ctx->streams[i];
-        stream = av_mallocz(sizeof(StreamInfo));
+        stream = av_mallocz(sizeof(PESStream));
         if (!stream)
             goto fail;
         st->priv_data = stream;
@@ -389,7 +365,7 @@ static int mpeg_mux_init(AVFormatContext *ctx)
     for(i=0;i<ctx->nb_streams;i++) {
         int codec_rate;
         st = ctx->streams[i];
-        stream = (StreamInfo*) st->priv_data;
+        stream = (PESStream*) st->priv_data;
 
         if(st->codec->rc_max_rate || stream->id==VIDEO_ID)
             codec_rate= st->codec->rc_max_rate;
@@ -526,7 +502,7 @@ static int get_packet_payload_size(AVFormatContext *ctx, int stream_index,
 {
     MpegMuxContext *s = ctx->priv_data;
     int buf_index;
-    StreamInfo *stream;
+    PESStream *stream;
 
     stream = ctx->streams[stream_index]->priv_data;
 
@@ -621,7 +597,7 @@ static void put_padding_packet(AVFormatContext *ctx, ByteIOContext *pb,int packe
         put_byte(pb, 0xff);
 }
 
-static int get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len){
+static int get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
     int nb_frames=0;
     PacketDesc *pkt_desc= stream->premux_packet;
 
@@ -640,7 +616,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
                          int64_t pts, int64_t dts, int64_t scr, int trailer_size)
 {
     MpegMuxContext *s = ctx->priv_data;
-    StreamInfo *stream = ctx->streams[stream_index]->priv_data;
+    PESStream *stream = ctx->streams[stream_index]->priv_data;
     uint8_t *buf_ptr;
     int size, payload_size, startcode, id, stuffing_size, i, header_len;
     int packet_size;
@@ -993,7 +969,7 @@ static int remove_decoded_packets(AVFormatContext *ctx, int64_t scr){
 
     for(i=0; i<ctx->nb_streams; i++){
         AVStream *st = ctx->streams[i];
-        StreamInfo *stream = st->priv_data;
+        PESStream *stream = st->priv_data;
         PacketDesc *pkt_desc;
 
         while((pkt_desc= stream->predecode_packet)
@@ -1018,7 +994,7 @@ static int remove_decoded_packets(AVFormatContext *ctx, int64_t scr){
 static int output_packet(AVFormatContext *ctx, int flush){
     MpegMuxContext *s = ctx->priv_data;
     AVStream *st;
-    StreamInfo *stream;
+    PESStream *stream;
     int i, avail_space=0, es_size, trailer_size;
     int best_i= -1;
     int best_score= INT_MIN;
@@ -1030,7 +1006,7 @@ static int output_packet(AVFormatContext *ctx, int flush){
 retry:
     for(i=0; i<ctx->nb_streams; i++){
         AVStream *st = ctx->streams[i];
-        StreamInfo *stream = st->priv_data;
+        PESStream *stream = st->priv_data;
         const int avail_data=  av_fifo_size(&stream->fifo);
         const int space= stream->max_buffer_size - stream->buffer_index;
         int rel_space= 1024*space / stream->max_buffer_size;
@@ -1063,7 +1039,7 @@ retry:
 
         for(i=0; i<ctx->nb_streams; i++){
             AVStream *st = ctx->streams[i];
-            StreamInfo *stream = st->priv_data;
+            PESStream *stream = st->priv_data;
             PacketDesc *pkt_desc= stream->predecode_packet;
             if(pkt_desc && pkt_desc->dts < best_dts)
                 best_dts= pkt_desc->dts;
@@ -1145,7 +1121,7 @@ static int mpeg_mux_write_packet(AVFormatContext *ctx, AVPacket *pkt)
     int size= pkt->size;
     uint8_t *buf= pkt->data;
     AVStream *st = ctx->streams[stream_index];
-    StreamInfo *stream = st->priv_data;
+    PESStream *stream = st->priv_data;
     int64_t pts, dts;
     PacketDesc *pkt_desc;
     const int preload= av_rescale(ctx->preload, 90000, AV_TIME_BASE);
@@ -1192,7 +1168,7 @@ static int mpeg_mux_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 static int mpeg_mux_end(AVFormatContext *ctx)
 {
 //    MpegMuxContext *s = ctx->priv_data;
-    StreamInfo *stream;
+    PESStream *stream;
     int i;
 
     for(;;){
