@@ -77,6 +77,7 @@ typedef struct AC3DecodeContext {
     int num_blocks;     ///< Number of audio blocks
     int channel_mode;   ///< Channel mode (acmod)
     int lfe_on;         ///< Low frequency effect channel on (lfeon)
+    int channel_map;    ///< Custom channel map
     int bitstream_id;   ///< Bit stream identification (bsid)
     int center_mix_level;   ///< Center mix level index
     int surround_mix_level; ///< Surround mix level index

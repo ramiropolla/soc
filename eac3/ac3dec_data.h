@@ -37,4 +37,18 @@ extern const uint8_t ff_eac3_defecplbndstrc[22];
 
 extern const uint8_t ff_ac3_rematrix_band_tab[5];
 
+extern const uint16_t ff_eac3_default_chmap[8];
+
+/** Custom channel map locations bitmask
+ *  Other channels described in documentation: Lc/Rc pair, Lrs/Rrs pair, Ts, Lsd/Rsd pair, Lw/Rw pair, Lvh/Rvh pair, Cvh, Reserved, LFE2 */
+enum {
+    AC3_CHMAP_LEFT =            1<<0,
+    AC3_CHMAP_CENTRE =          1<<1,
+    AC3_CHMAP_RIGHT =           1<<2,
+    AC3_CHMAP_LEFT_SURROUND =   1<<3,
+    AC3_CHMAP_RIGHT_SURROUND =  1<<4,
+    AC3_CHMAP_CENTRE_SURROUND = 1<<7,
+    AC3_CHMAP_LFE =             1<<15
+};
+
 #endif /* FFMPEG_AC3DEC_DATA_H */

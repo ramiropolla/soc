@@ -331,9 +331,12 @@ static int parse_bsi(AC3DecodeContext *s){
     /* dependent stream channel map */
     if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
         if (get_bits1(gbc)) {
-            skip_bits(gbc, 16); // skip custom channel map
+            s->channel_map = get_bits(gbc, 16); //custom channel map
         } else {
-            //TODO default channel map based on acmod and lfeon
+            //default channel map based on acmod and lfeon
+            s->channel_map = ff_eac3_default_chmap[s->channel_mode];
+            if(s->lfe_on)
+                s->channel_map |= AC3_CHMAP_LFE;
         }
     }
 #endif
