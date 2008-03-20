@@ -1,0 +1,63 @@
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(revision 12509)
++++ libavcodec/Makefile	(working copy)
+@@ -53,6 +53,7 @@
+ OBJS-$(CONFIG_CSCD_DECODER)            += cscd.o
+ OBJS-$(CONFIG_CYUV_DECODER)            += cyuv.o
+ OBJS-$(CONFIG_DCA_DECODER)             += dca.o
++OBJS-$(CONFIG_DCA_ENCODER)             += dcaenc.o
+ OBJS-$(CONFIG_DNXHD_DECODER)           += dnxhddec.o dnxhddata.o
+ OBJS-$(CONFIG_DNXHD_ENCODER)           += dnxhdenc.o dnxhddata.o mpegvideo_enc.o motion_est.o ratecontrol.o mpeg12data.o mpegvideo.o
+ OBJS-$(CONFIG_DSICINAUDIO_DECODER)     += dsicinav.o
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c	(revision 12509)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -179,7 +179,7 @@
+     REGISTER_DECODER (APE, ape);
+     REGISTER_DECODER (ATRAC3, atrac3);
+     REGISTER_DECODER (COOK, cook);
+-    REGISTER_DECODER (DCA, dca);
++    REGISTER_ENCDEC  (DCA, dca);
+     REGISTER_DECODER (DSICINAUDIO, dsicinaudio);
+     REGISTER_ENCDEC  (FLAC, flac);
+     REGISTER_DECODER (IMC, imc);
+Index: libavformat/raw.c
+===================================================================
+--- libavformat/raw.c	(revision 12509)
++++ libavformat/raw.c	(working copy)
+@@ -513,6 +513,20 @@
+     raw_write_packet,
+     .flags= AVFMT_NOTIMESTAMPS,
+ };
++
++AVOutputFormat dts_muxer = {
++    "dts",
++    "raw dts",
++    "audio/x-dca",
++    "dts",
++    0,
++    CODEC_ID_DTS,
++    0,
++    NULL,
++    raw_write_packet,
++    .flags= AVFMT_NOTIMESTAMPS,
++};
++
+ #endif //CONFIG_MUXERS
+ 
+ AVInputFormat dts_demuxer = {
+Index: libavformat/allformats.c
+===================================================================
+--- libavformat/allformats.c	(revision 12509)
++++ libavformat/allformats.c	(working copy)
+@@ -69,7 +69,7 @@
+     REGISTER_MUXER    (CRC, crc);
+     REGISTER_DEMUXER  (DAUD, daud);
+     REGISTER_DEMUXER  (DSICIN, dsicin);
+-    REGISTER_DEMUXER  (DTS, dts);
++    REGISTER_MUXDEMUX (DTS, dts);
+     REGISTER_MUXDEMUX (DV, dv);
+     REGISTER_DEMUXER  (DXA, dxa);
+     REGISTER_DEMUXER  (EA, ea);
