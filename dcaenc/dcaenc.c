@@ -4,7 +4,7 @@
  *
  * This file is not yet part of FFmpeg.
  *
- * When this file is part of FFmpeg it can be licensed under the LGPL 2.1
+ * When this file is part of FFmpeg it can be licensed under the LGPL version 2 or later
  */
 
 /* FFmpeg port by Benjamin Larsson */
