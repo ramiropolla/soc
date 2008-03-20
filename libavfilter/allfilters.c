@@ -40,8 +40,6 @@ void avfilter_register_all(void)
     REGISTER_FILTER(FORMAT,format,vf);
     REGISTER_FILTER(FPS,fps,vf);
     REGISTER_FILTER(GRAPH,graph,vf);
-    REGISTER_FILTER(GRAPHDESC,graphdesc,vf);
-    REGISTER_FILTER(GRAPHFILE,graphfile,vf);
     REGISTER_FILTER(HFLIP,hflip,vf);
     REGISTER_FILTER(NEGATE,negate,vf);
     REGISTER_FILTER(NOFORMAT,noformat,vf);

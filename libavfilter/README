@@ -82,38 +82,13 @@ input --> split ---> fifo ----------------------> overlay --> output
 
 splits the stream into two streams, sends one stream through the crop filter
 and the vflip filter before merging it back with the other stream by overlaying
-it on top.  If you put the following text into a file graph.desc:
+it on top. You can use the following command to do this filtering
 
-;-----------------------------------------------------------------------
-[filters]
-split=split
-buf0=fifo
-buf1=fifo
-crop=crop=0:0:-1:240
-vflip=vflip
-overlay=overlay=0:240
-
-[links]
-split:0=buf0:0
-buf0:0=overlay:0
-split:1=buf1:0
-buf1:0=crop:0
-crop:0=vflip:0
-vflip:0=overlay:1
-
-[inputs]
-default=split:0
-
-[outputs]
-default=overlay:0
-;-----------------------------------------------------------------------
-
-and run the following command:
-
-./ffplay -vfilters graph_file=graph.desc input_video.avi
+./ffmpeg -i input_video.avi -s 240x320 -vfilters "(in)split (T1), fifo, (T2)overlay='0:240'(out); (T1)fifo, crop=0:0:-1:240, vflip(T2)" out.avi
 
 where input_video.avi has a vertical resolution of 480 pixels, the result
-should be that ffplay mirrors the top half of the video onto the bottom half.
+should be that in output the top half of the video is mirroed onto the bottom
+half.
 
 KNOWN ISSUES:
 - if for some reason the filter chain cannot be setup (due to an unknown

@@ -20,47 +20,22 @@
  */
 
  /*
- # One usage example follows, usable too as test scenario.
- #TODO Eventually move it into FFmpeg docs.
+ One usage example follows, usable too as test scenario.
 
-;----------------------------movie.desc------------------------------
-;
-; Parameters of movie filter are
-; seekpoint in microseconds : string format : string filename
-;
-; We can overlay a second movie on top of a main one
-;
-; input -----------> deltapts0 --> overlay --> output
-;                                    ^
-; movie --> scale--> deltapts1 ------|
-;
+ TODO Eventually move it into FFmpeg docs.
 
-[filters]
-movie=movie=3200000:avi:input.avi
+ Parameters of movie filter are
+ seekpoint in microseconds : string format : string filename
 
-; We make both the main movie and the overlaid one start at the same time
-deltapts0=setpts=PTS-STARTPTS
-deltapts1=setpts=PTS-STARTPTS
+ We can overlay a second movie on top of a main one
 
-scale=scale=180:144
-overlay=overlay=16:16
+ input -----------> deltapts0 --> overlay --> output
+                                    ^
+ movie --> scale--> deltapts1 ------|
 
-[links]
-deltapts0:0=overlay:0
+ To do that
 
-movie:0=scale:0
-scale:0=deltapts1:0
-deltapts1:0=overlay:1
-
-[inputs]
-default=deltapts0:0
-
-[outputs]
-default=overlay:0
-;----------------------------movie.desc------------------------------
-
-# Then launch it from command line
-ffmpeg -i input.avi -vfilters graph_file=movie.desc output.avi
+ ffmpeg -i in.avi -s 240x320 -vfilters "(in)setpts=PTS-STARTPTS,(T1)overlay=16:16(out);movie=3200000:avi:in.avi,scale=180:144,setpts=PTS-STARTPTS(T1)" -y out.avi
 
  */
 

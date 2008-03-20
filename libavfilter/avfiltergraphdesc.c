@@ -1,5 +1,6 @@
 /*
  * filter graph descriptions
+ * copyright (c) 2008 Vitor Sessak
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.
@@ -25,365 +26,329 @@
 #include "avfilter.h"
 #include "avfiltergraph.h"
 
-#define LINESIZE    240             ///< maximum length of an input line
 
-/** a comment is a line which is empty, or starts with whitespace, ';' or '#' */
-static inline int is_line_comment(char *line)
+/**
+ * For use in av_log
+ */
+static const char *log_name(void *p)
 {
-    return line[0] == 0     ||
-           isspace(line[0]) ||
-           line[0] == ';'   ||
-           line[0] == '#';
+    return "Filter parser";
 }
 
-static AVFilterGraphDescSection parse_section_name(char *line)
+static const AVClass filter_parser_class = {
+    "Filter parser",
+    log_name
+};
+
+static const AVClass *log_ctx = &filter_parser_class;
+
+static void consume_whitespace(const char **buf)
 {
-    struct {
-        const char *str;
-        int section;
-    } *sec, sections[] = { { "[filters]", SEC_FILTERS },
-                           { "[links]",   SEC_LINKS   },
-                           { "[inputs]",  SEC_INPUTS  },
-                           { "[outputs]", SEC_OUTPUTS },
-                           { NULL, 0 } };
-
-    for(sec = sections; sec->str; sec ++)
-        if(!strncmp(line, sec->str, strlen(sec->str)))
-            return sec->section;
-
-    av_log(NULL, AV_LOG_ERROR, "unknown section name in graph description\n");
-    return SEC_NONE;
+    *buf += strspn(*buf, " \n\t");
 }
 
-static AVFilterGraphDescFilter *parse_filter(char *line)
-{
-    AVFilterGraphDescFilter *ret = av_mallocz(sizeof(AVFilterGraphDescFilter));
-    char *tok;
-
-    if(!(tok = strchr(line, '='))) {
-        av_log(NULL, AV_LOG_ERROR, "filter line missing type of filter");
-        goto fail;
-    }
-    *tok = '\0';
-    ret->name = av_strdup(line);
-    line = tok+1;
-
-    if((tok = strchr(line, '='))) {
-        *tok ++ = '\0';
-        ret->args = av_strdup(tok);
-    }
-    ret->filter = av_strdup(line);
-
-    return ret;
-
-fail:
-    av_free(ret->name);
-    av_free(ret->filter);
-    av_free(ret->args);
-    av_free(ret);
-    return NULL;
-}
-
-/* TODO: allow referencing pad names, not just indices */
-static AVFilterGraphDescLink *parse_link(char *line)
-{
-    AVFilterGraphDescLink *ret = av_mallocz(sizeof(AVFilterGraphDescLink));
-    ret->src = av_malloc(32);
-    ret->dst = av_malloc(32);
-
-    if(sscanf(line, "%31[a-zA-Z0-9]:%u=%31[a-zA-Z0-9]:%u",
-              ret->src, &ret->srcpad, ret->dst, &ret->dstpad) < 4) {
-        av_free(ret->src);
-        av_free(ret->dst);
-        av_free(ret);
-        return NULL;
-    }
-
-    return ret;
-}
-
-/* TODO: allow referencing pad names, not just indices */
-static AVFilterGraphDescExport *parse_export(char *line)
-{
-    AVFilterGraphDescExport *ret = av_mallocz(sizeof(AVFilterGraphDescLink));
-    ret->name   = av_malloc(32);
-    ret->filter = av_malloc(32);
-
-    if(sscanf(line, "%31[a-zA-Z0-9]=%31[a-zA-Z0-9]:%u",
-              ret->name, ret->filter, &ret->pad) < 3) {
-        av_free(ret->name);
-        av_free(ret->filter);
-        av_free(ret);
-        return NULL;
-    }
-
-    return ret;
-}
-
-int avfilter_graph_parse_desc(AVFilterGraphDesc **desc,
-                              AVFilterGraphDescParser **parser,
-                              char *line)
-{
-    void *next;
-    int len;
-
-    if(!*desc)
-        if(!(*desc = av_mallocz(sizeof(AVFilterGraphDesc))))
-            return AVERROR_NOMEM;
-
-    if(!*parser) {
-        if(!(*parser = av_mallocz(sizeof(AVFilterGraphDescParser))))
-            return AVERROR_NOMEM;
-
-        (*parser)->filterp = &(*desc)->filters;
-        (*parser)->linkp   = &(*desc)->links;
-        (*parser)->inputp  = &(*desc)->inputs;
-        (*parser)->outputp = &(*desc)->outputs;
-    }
-
-    /* ignore comments */
-    if(is_line_comment(line)) return 0;
-
-    /* check if a new section is starting */
-    if(line[0] == '[') {
-        if(((*parser)->section = parse_section_name(line)) == SEC_NONE)
-            return AVERROR_INVALIDDATA;
-        return 0;
-    }
-
-    /* remove any trailing newline characters */
-    for(len = strlen(line); len && (line[len-1]=='\n'||line[len-1]=='\r');)
-        line[--len] = '\0';
-
-    switch((*parser)->section) {
-    case SEC_FILTERS:
-        if(!(next = parse_filter(line)))
-            return AVERROR_INVALIDDATA;
-        *(*parser)->filterp = next;
-        (*parser)->filterp  = &(*(*parser)->filterp)->next;
-        break;
-    case SEC_LINKS:
-        if(!(next = parse_link(line)))
-            return AVERROR_INVALIDDATA;
-        *(*parser)->linkp = next;
-        (*parser)->linkp  = &(*(*parser)->linkp)->next;
-        break;
-    case SEC_INPUTS:
-        if(!(next = parse_export(line)))
-            return AVERROR_INVALIDDATA;
-        *(*parser)->inputp = next;
-        (*parser)->inputp  = &(*(*parser)->inputp)->next;
-        break;
-    case SEC_OUTPUTS:
-        if(!(next = parse_export(line)))
-            return AVERROR_INVALIDDATA;
-        *(*parser)->outputp = next;
-        (*parser)->outputp  = &(*(*parser)->outputp)->next;
-        break;
-    default:
-        return AVERROR_INVALIDDATA;
-    }
-
-    return 0;
-}
-
-typedef struct Parser
-{
-    char next_chr;
-    char *buf;
-} Parser;
-
-static void consume_whitespace(Parser *p)
-{
-    while (p->next_chr == ' ' || p->next_chr == '\n' || p->next_chr == '\t') {
-        p->buf++;
-        p->next_chr = p->buf[0];
-    }
-}
-
-static void init_parser(Parser *p, char *buf)
-{
-    p->buf = buf;
-    p->next_chr = buf[0];
-    consume_whitespace(p);
-}
-
-static char consume_char(Parser *p)
+/**
+ * get the next non-whitespace char
+ */
+static char consume_char(const char **buf)
 {
     char out;
-    consume_whitespace(p);
+    consume_whitespace(buf);
 
-    out = p->next_chr;
+    out = **buf;
 
-    if (out) {
-        p->buf++;
-        p->next_chr = p->buf[0];
-    }
+    if (out)
+        (*buf)++;
 
     return out;
 }
 
+/**
+ * remove the quotation marks from a string. Ex: "aaa'bb'cc" -> "aaabbcc"
+ */
 static void unquote(char *str)
 {
     char *p1, *p2;
     p1=p2=str;
-    while (p1[0] != 0) {
-        if (p1[0] == '\'') p1++;
-        p2[0] = p1[0];
+    while (*p1 != 0) {
+        if (*p1 != '\'')
+            *p2++ = *p1;
         p1++;
-        p2++;
     }
 
-    p2[0] = 0;
+    *p2 = 0;
 }
 
-static char *consume_string(Parser *p, int escaped)
+/**
+ * Consumes a string from *buf.
+ * @return a copy of the consumed string, which should be free'd after use
+ */
+static char *consume_string(const char **buf)
 {
-    char *out;
-    int has_quoted=0;
-    int quit=0;
+    const char *start;
+    char *ret;
+    int size;
 
-    while (p->buf[0] == ' ' || p->buf[0] == '\n' || p->buf[0] == '\t')
-        p->buf++;
+    consume_whitespace(buf);
 
-    if (!p->buf[0]) {
-        p->next_chr = 0;
-        return p->buf;
+    if (!(**buf))
+        return av_mallocz(1);
+
+    start = *buf;
+
+    *buf += strcspn(*buf, " ()=,'");
+
+    if (**buf == '\'') {
+        char *p = strchr(*buf + 1, '\'');
+        if (p)
+            *buf = p + 1;
+        else
+            *buf += strlen(*buf); // Move the pointer to the null end byte
     }
 
-    out = p->buf;
+    size = *buf - start + 1;
+    ret = av_malloc(size);
+    memcpy(ret, start, size - 1);
+    ret[size-1] = 0;
 
-    while(!quit) {
-        switch(p->buf[0]) {
-        case   0:
-        case ' ':
-        case '(':
-        case ')':
-        case '=':
-        case ',':
-            quit=1;
-            break;
-        case '\'':
-            has_quoted = has_quoted || escaped;
-            do {
-                p->buf++;
-            } while(escaped && p->buf[0] && p->buf[0] != '\'');
-            if (p->buf[0] == '\'') p->buf++;
-            break;
-        default:
-            p->buf++;
-            break;
-        }
-    }
-    p->next_chr = p->buf[0];
-    p->buf[0]=0;
+    unquote(ret);
 
-    if(has_quoted)
-        unquote(out);
-    return out;
+    return ret;
 }
 
-static int parse_link_name(Parser *p, char **name)
+/**
+ * Parse "(linkname)"
+ * @arg name a pointer (that need to be free'd after use) to the name between
+ *           parenthesis
+ */
+static void parse_link_name(const char **buf, char **name)
 {
-    if (consume_char(p) != '(')
-        goto fail;
+    consume_char(buf);
 
-    *name = consume_string(p,0);
+    *name = consume_string(buf);
 
     if (!*name[0])
         goto fail;
 
-    if (consume_char(p) != ')')
+    if (consume_char(buf) != ')')
         goto fail;
 
-    return 0;
-
+    return;
  fail:
-    *name = NULL;
-    return AVERROR_INVALIDDATA;
+    av_freep(name);
+    av_log(&log_ctx, AV_LOG_ERROR, "Could not parse link name!\n");
 }
 
-static int parse_filter2(Parser *p, char **name, char **opts)
+/**
+ * Parse "filter=params"
+ * @arg name a pointer (that need to be free'd after use) to the name of the
+ *           filter
+ * @arg ars  a pointer (that need to be free'd after use) to the args of the
+ *           filter
+ */
+static void parse_filter(const char **buf, char **name, char **opts)
 {
-    char *null_str;
+    *name = consume_string(buf);
 
-    *name = consume_string(p,0);
-
-    null_str = p->buf;
-
-    if (p->next_chr == '=') {
-        consume_char(p);
-        *opts = consume_string(p,1);
+    if (**buf == '=') {
+        consume_char(buf);
+        *opts = consume_string(buf);
     } else {
-        *opts = null_str;
+        *opts = NULL;
     }
-    return 0;
+
 }
 
-AVFilterGraphDesc *avfilter_graph_parse_chain(const char *filters)
+enum LinkType {
+    LinkTypeIn,
+    LinkTypeOut,
+};
+
+/**
+ * A linked-list of the inputs/outputs of the filter chain.
+ */
+typedef struct AVFilterInOut {
+    enum LinkType type;
+    char *name;
+    int instance;
+    int pad_idx;
+
+    struct AVFilterInOut *next;
+} AVFilterInOut;
+
+static void free_inout(AVFilterInOut *head)
+{
+    while (head) {
+        AVFilterInOut *next;
+        next = head->next;
+        av_free(head);
+        head = next;
+    }
+}
+
+/**
+ * Parse "(a1)(link2) ... (etc)"
+ */
+static int parse_inouts(const char **buf, AVFilterInOut **inout, int firstpad,
+                        enum LinkType type, int instance)
+{
+    int pad = firstpad;
+    while (**buf == '(') {
+        AVFilterInOut *inoutn = av_malloc(sizeof(AVFilterInOut));
+        parse_link_name(buf, &inoutn->name);
+        inoutn->type = type;
+        inoutn->instance = instance;
+        inoutn->pad_idx = pad++;
+        inoutn->next = *inout;
+        *inout = inoutn;
+    }
+    return pad;
+}
+
+static AVFilterGraphDesc *parse_chain(const char *filters, int has_in)
 {
     AVFilterGraphDesc        *ret;
     AVFilterGraphDescFilter **filterp, *filtern;
     AVFilterGraphDescLink   **linkp,   *linkn;
-    Parser p;
-    char *str;
+    AVFilterInOut           *inout=NULL;
+    AVFilterInOut           *head;
+
     int index = 0;
+    char chr = 0;
+    int pad = 0;
+    int has_out = 0;
+
+    consume_whitespace(&filters);
 
     if(!(ret = av_mallocz(sizeof(AVFilterGraphDesc))))
         return NULL;
-
-    str = av_strdup(filters);
-    init_parser(&p, str);
 
     filterp = &ret->filters;
     linkp   = &ret->links;
 
     do {
-        char *filter;
-        char *args;
-
-        filtern = av_mallocz(sizeof(AVFilterGraphDescFilter));
-        filtern->name = av_malloc(8);
-        snprintf(filtern->name, 8, "%d", index);
-        parse_filter2(&p, &filter, &args);
-        filtern->filter = av_strdup(filter);
-        filtern->args = av_strdup(args);
-        *filterp = filtern;
-        filterp = &filtern->next;
-
-        if(index > 0) {
+        if(chr == ',') {
             linkn = av_mallocz(sizeof(AVFilterGraphDescLink));
-            linkn->src = av_malloc(8);
-            snprintf(linkn->src, 8, "%d", index-1);
-            linkn->dst = av_malloc(8);
-            snprintf(linkn->dst, 8, "%d", index);
+            linkn->src = index-1;
+            linkn->srcpad = pad;
+            linkn->dst = index;
+            linkn->dstpad = 0;
 
             *linkp = linkn;
             linkp = &linkn->next;
         }
-        index ++;
-    } while (consume_char(&p) == ',');
+        pad = parse_inouts(&filters, &inout, chr == ',' || (!has_in),
+                           LinkTypeIn, index);
 
-    av_free(str);
+        filtern = av_mallocz(sizeof(AVFilterGraphDescFilter));
+        filtern->index = index;
+        parse_filter(&filters, &filtern->filter, &filtern->args);
+        *filterp = filtern;
+        filterp = &filtern->next;
 
-    ret->inputs = av_mallocz(sizeof(AVFilterGraphDescExport));
-    ret->inputs->filter = av_malloc(8);
-    snprintf(ret->inputs->filter, 8, "%d", 0);
+        pad = parse_inouts(&filters, &inout, 0,
+                           LinkTypeOut, index);
+        chr = consume_char(&filters);
+        index++;
+    } while (chr == ',' || chr == ';');
 
-    ret->outputs = av_mallocz(sizeof(AVFilterGraphDescExport));
-    ret->outputs->filter = av_malloc(8);
-    snprintf(ret->outputs->filter, 8, "%d", index-1);
+    head = inout;
+    for (; inout != NULL; inout = inout->next) {
+        if (inout->instance == -1)
+            continue; // Already processed
+
+        if (!strcmp(inout->name, "in")) {
+            if (!has_in)
+                goto fail;
+            ret->inputs = av_mallocz(sizeof(AVFilterGraphDescExport));
+            ret->inputs->filter = inout->instance;
+            ret->inputs->pad = inout->pad_idx;
+        } else if (!strcmp(inout->name, "out")) {
+            has_out = 1;
+            ret->outputs = av_mallocz(sizeof(AVFilterGraphDescExport));
+            ret->outputs->filter = inout->instance;
+            ret->outputs->pad = inout->pad_idx;
+        } else {
+            AVFilterInOut *p, *src, *dst;
+            for (p = inout->next;
+                 p && strcmp(p->name,inout->name); p = p->next);
+
+            if (!p) {
+                av_log(&log_ctx, AV_LOG_ERROR, "Unmatched link: %s.\n",
+                       inout->name);
+                goto fail;
+            }
+
+            if (p->type == LinkTypeIn && inout->type == LinkTypeOut) {
+                src = inout;
+                dst = p;
+            } else if (p->type == LinkTypeOut && inout->type == LinkTypeIn) {
+                src = p;
+                dst = inout;
+            } else {
+                av_log(&log_ctx, AV_LOG_ERROR, "Two links named '%s' are either both input or both output\n",
+                       inout->name);
+                goto fail;
+            }
+            linkn = av_mallocz(sizeof(AVFilterGraphDescLink));
+
+            linkn->src = src->instance;
+            linkn->srcpad = src->pad_idx;
+            linkn->dst = dst->instance;
+            linkn->dstpad = dst->pad_idx;
+
+            *linkp = linkn;
+            linkp = &linkn->next;
+
+            src->instance = -1;
+            dst->instance = -1;
+        }
+    }
+
+    free_inout(head);
+
+    if (!has_in) {
+        ret->inputs = av_mallocz(sizeof(AVFilterGraphDescExport));
+        ret->inputs->filter = 0;
+    }
+    if (!has_out) {
+        ret->outputs = av_mallocz(sizeof(AVFilterGraphDescExport));
+        ret->outputs->filter = index-1;
+    }
 
     return ret;
+
+ fail:
+    free_inout(head);
+
+    avfilter_graph_free_desc(ret);
+    return NULL;
 }
 
+/**
+ * Parse a string describing a filter graph.
+ */
+AVFilterGraphDesc *avfilter_graph_parse_chain(const char *filters)
+{
+    AVFilterGraphDesc *ret;
+
+    /* Try first to parse supposing there is no (in) element */
+    if ((ret = parse_chain(filters, 0)))
+        return ret;
+
+    /* Parse supposing there is an (in) element */
+    return parse_chain(filters, 1);
+}
+
+/**
+ * Free a graph description.
+ */
 void avfilter_graph_free_desc(AVFilterGraphDesc *desc)
 {
     void *next;
 
     while(desc->filters) {
         next = desc->filters->next;
-        av_free(desc->filters->name);
         av_free(desc->filters->filter);
         av_free(desc->filters->args);
         av_free(desc->filters);
@@ -392,22 +357,18 @@ void avfilter_graph_free_desc(AVFilterGraphDesc *desc)
 
     while(desc->links) {
         next = desc->links->next;
-        av_free(desc->links->src);
-        av_free(desc->links->dst);
         av_free(desc->links);
         desc->links = next;
     }
 
     while(desc->inputs) {
         next = desc->inputs->next;
-        av_free(desc->inputs->filter);
         av_free(desc->inputs);
         desc->inputs = next;
     }
 
     while(desc->outputs) {
         next = desc->outputs->next;
-        av_free(desc->outputs->filter);
         av_free(desc->outputs);
         desc->outputs = next;
     }
