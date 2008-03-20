@@ -2,10 +2,9 @@
  * DCA encoder
  * Copyright (C) 2008 Alexander E. Patrakov
  *
- * This file is part of FFmpeg.
+ * This file is not yet part of FFmpeg.
  *
  * When this file is part of FFmpeg it can be licensed under the LGPL 2.1
- * currently it is a wip
  */
 
 /* FFmpeg port by Benjamin Larsson */
