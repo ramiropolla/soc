@@ -38,7 +38,7 @@ Index: ffmpeg.c
  } AVInputStream;
  
  typedef struct AVInputFile {
-@@ -288,6 +303,260 @@
+@@ -288,6 +303,254 @@
  static struct termios oldtty;
  #endif
  
@@ -208,17 +208,11 @@ Index: ffmpeg.c
 +{
 +    AVFilterContext *curr_filter;
 +    /** filter graph containing all filters including input & output */
-+    AVFilterContext *filt_graph_all;
++    GraphContext *filt_graph_all = av_mallocz(sizeof(GraphContext));
 +    AVCodecContext *codec = ost->st->codec;
 +    AVCodecContext *icodec = ist->st->codec;
 +
 +    avfilter_register_all();
-+
-+    /* create the overall filter graph */
-+    if(!(filt_graph_all = avfilter_open(avfilter_get_by_name("graph"), NULL)))
-+        return -1;
-+    if(avfilter_init_filter(filt_graph_all, NULL, NULL))
-+        return -1;
 +
 +    if(!(ist->input_video_filter = avfilter_open(&input_filter,  "src")))
 +        return -1;
@@ -299,7 +293,7 @@ Index: ffmpeg.c
  static void term_exit(void)
  {
  #ifdef HAVE_TERMIOS_H
-@@ -754,6 +1023,9 @@
+@@ -754,6 +1017,9 @@
      if (nb_frames <= 0)
          return;
  
@@ -309,7 +303,7 @@ Index: ffmpeg.c
      if (ost->video_crop) {
          if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
              av_log(NULL, AV_LOG_ERROR, "error cropping picture\n");
-@@ -763,6 +1035,7 @@
+@@ -763,6 +1029,7 @@
      } else {
          formatted_picture = in_picture;
      }
@@ -317,7 +311,7 @@ Index: ffmpeg.c
  
      final_picture = formatted_picture;
      padding_src = formatted_picture;
-@@ -778,12 +1051,14 @@
+@@ -778,12 +1045,14 @@
          }
      }
  
@@ -332,7 +326,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1165,6 +1440,17 @@
+@@ -1165,6 +1434,17 @@
                                      &buffer_to_free);
          }
  
@@ -350,7 +344,7 @@ Index: ffmpeg.c
          // preprocess audio (volume)
          if (ist->st->codec->codec_type == CODEC_TYPE_AUDIO) {
              if (audio_volume != 256) {
-@@ -1227,10 +1513,23 @@
+@@ -1227,10 +1507,23 @@
                              do_audio_out(os, ost, ist, data_buf, data_size);
                              break;
                          case CODEC_TYPE_VIDEO:
@@ -374,7 +368,7 @@ Index: ffmpeg.c
                              break;
                          case CODEC_TYPE_SUBTITLE:
                              do_subtitle_out(os, ost, ist, &subtitle,
-@@ -1693,10 +1992,21 @@
+@@ -1693,10 +1986,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          exit(1);
                      }
@@ -396,7 +390,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3804,6 +4114,9 @@
+@@ -3804,6 +4108,9 @@
  #ifdef CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
