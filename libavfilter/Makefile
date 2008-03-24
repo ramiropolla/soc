@@ -8,7 +8,6 @@ FFLIBS-$(CONFIG_AVFILTER_LAVF) += avformat
 OBJS = allfilters.o \
        avfilter.o \
        avfiltergraph.o \
-       avfiltergraphdesc.o \
        defaults.o \
        formats.o \
 
