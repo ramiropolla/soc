@@ -11,7 +11,6 @@ OBJS = allfilters.o \
        avfiltergraphdesc.o \
        defaults.o \
        formats.o \
-       avfiltergraphfile.o \
 
 
 OBJS-$(CONFIG_CROP_FILTER)       += vf_crop.o
