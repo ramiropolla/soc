@@ -1470,7 +1470,8 @@ static void ms_tool(AACContext * ac, cpe_struct * cpe) {
         for (g = 0; g < ics->num_window_groups; g++) {
             for (gp = 0; gp < ics->group_len[g]; gp++) {
                 for (i = 0; i < ics->max_sfb; i++) {
-                    if (ms->mask[g][i]) {
+                    if (ms->mask[g][i] &&
+                        cpe->ch[0].cb[g][i] < NOISE_HCB && cpe->ch[1].cb[g][i] < NOISE_HCB) {
                         for (k = offsets[i]; k < offsets[i+1]; k++) {
                             float tmp = ch0[k] - ch1[k];
                             ch0[k] += ch1[k];
