@@ -1489,8 +1489,8 @@ static void ms_tool(AACContext * ac, cpe_struct * cpe) {
 
 static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
     const ics_struct * ics = &cpe->ch[1].ics;
-    sce_struct * sce0 = &cpe->ch[0];
     sce_struct * sce1 = &cpe->ch[1];
+    float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
     if (ics->intensity_present) {
         const uint16_t * offsets = ics->swb_offset;
         int g, gp, i, k;
@@ -1504,11 +1504,13 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
                         if (cpe->ms.present)
                             c *= 1 - 2 * cpe->ms.mask[g][i];
                         scale = c * sce1->sf[g][i];
-                        for (k = offsets[i] + gp*128; k < offsets[i+1] + gp*128; k++) {
-                            sce1->coeffs[k] = scale * sce0->coeffs[k];
+                        for (k = offsets[i]; k < offsets[i+1]; k++) {
+                            coef1[k] = scale * coef0[k];
                         }
                     }
                 }
+                coef0 += 128;
+                coef1 += 128;
             }
         }
     }
