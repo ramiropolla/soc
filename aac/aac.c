@@ -2262,13 +2262,12 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         case ID_CPE:
             err = channel_pair_element(ac, &gb, tag);
             break;
-        case ID_FIL: {
+        case ID_FIL:
             if (tag == 15) tag += get_bits(&gb, 8) - 1;
             while (tag > 0)
                 tag -= extension_payload(ac, &gb, tag);
             err = 0; /* FIXME */
             break;
-        }
         case ID_PCE:
             err = program_config_element(ac, &gb);
             break;
