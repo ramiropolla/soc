@@ -339,7 +339,7 @@ static int DCA_encode_frame(AVCodecContext *avctx,
 }
 
 static int DCA_encode_init(AVCodecContext *avctx) {
-    DCAContext *c = avctx->priv_data;
+    //DCAContext *c = avctx->priv_data;
 
     if(avctx->channels != 2 || avctx->sample_rate != 44100) {
         av_log(avctx, AV_LOG_ERROR, "Only 44.1 kHz stereo is supported at the moment!\n");
