@@ -329,9 +329,9 @@ static int DCA_encode_frame(AVCodecContext *avctx,
             for (k = 0; k < 32; k++) { /* k is the sample number in a 32-sample block */
                 c->pcm[k] = samples[2 * (32*i+k) + channel] << 16;
             }
-        /* Put subband samples into the proper place */
-        qmf_decompose(c, c->pcm, &c->subband[i][channel][0], channel);
-    }
+            /* Put subband samples into the proper place */
+            qmf_decompose(c, c->pcm, &c->subband[i][channel][0], channel);
+        }
 
     put_frame(c, c->subband, frame);
 
