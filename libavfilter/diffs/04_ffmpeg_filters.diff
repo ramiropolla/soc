@@ -208,7 +208,7 @@ Index: ffmpeg.c
 +{
 +    AVFilterContext *curr_filter;
 +    /** filter graph containing all filters including input & output */
-+    GraphContext *filt_graph_all = av_mallocz(sizeof(GraphContext));
++    AVFilterGraph *filt_graph_all = av_mallocz(sizeof(AVFilterGraph));
 +    AVCodecContext *codec = ost->st->codec;
 +    AVCodecContext *icodec = ist->st->codec;
 +
