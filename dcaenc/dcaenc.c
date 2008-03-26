@@ -26,8 +26,6 @@ typedef struct {
 
     int32_t pcm[DCA_SUBBANDS_32];
     int32_t subband[64][MAX_CHANNELS][DCA_SUBBANDS_32]; /* [sample][channel][subband] */
-    int16_t st_samples[4096];
-    int     fill_samples;
 } DCAContext;
 
 static int32_t cos_table[128];
@@ -321,26 +319,16 @@ static int DCA_encode_frame(AVCodecContext *avctx,
 {
     int i,k,channel;
     DCAContext *c = avctx->priv_data;
-//    int16_t *samples = data;
+    int16_t *samples = data;
 
 //    if (buf_size < MAX_CHANNELS*2048*sizeof(int16_t))
 //        return -1;
-
-    // We always get 2048 16bit samples per call so save then until next call
-
-    if (c->fill_samples) {
-        memcpy(c->st_samples, data, 2048*sizeof(int16_t));
-        c->fill_samples = 0;
-        return 0;
-    }
-    memcpy(&c->st_samples[2048], data, 2048*sizeof(int16_t));
-    c->fill_samples = 0;
 
     for (i = 0; i < 64; i ++) /* i is the decimated sample number */
         for (channel=0; channel<2 ; channel++) {
             /* Get 32 PCM samples */
             for (k = 0; k < 32; k++) { /* k is the sample number in a 32-sample block */
-                c->pcm[k] = c->st_samples[4 * (32*i+k) + 2 * channel] << 16;
+                c->pcm[k] = samples[4 * (32*i+k) + 2 * channel] << 16;
             }
         /* Put subband samples into the proper place */
         qmf_decompose(c, c->pcm, &c->subband[i][channel][0], channel);
@@ -359,8 +347,7 @@ static int DCA_encode_init(AVCodecContext *avctx) {
         return -1;
     }
 
-    // Make sure that the first call to encode is a fill call
-    c->fill_samples = 1;
+    avctx->frame_size = 2048;
 
     qmf_init();
     return 0;
