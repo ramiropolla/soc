@@ -297,7 +297,6 @@ static void put_subframe(DCAContext *c, int32_t subband_data[32][2][32])
                 for (i = 0; i < 8; i++)
                     put_bits(&c->pb, 16, quantize(subband_data[ss * 8 + i][ch][sub]));
     /* DSYNC */
-    align_put_bits(&c->pb);
     put_bits(&c->pb, 0xffff, 16);
 }
 
