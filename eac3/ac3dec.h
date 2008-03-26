@@ -28,6 +28,7 @@
 #define AC3DEC_H
 
 #include "ac3tab.h"
+#include "ac3.h"
 #include "ac3dec_data.h"
 #include "bitstream.h"
 #include "dsputil.h"
@@ -48,14 +49,6 @@
 #define AC3_BLOCK_SIZE  256
 #define MAX_BLOCKS 6
 #define MAX_SPX_CODES 18
-
-/** Stream Type */
-typedef enum {
-    EAC3_STREAM_TYPE_INDEPENDENT = 0,
-    EAC3_STREAM_TYPE_DEPENDENT,
-    EAC3_STREAM_TYPE_AC3_CONVERT,
-    EAC3_STREAM_TYPE_RESERVED
-} EAC3StreamType;
 
 /**
  * table for exponent to scale_factor mapping
