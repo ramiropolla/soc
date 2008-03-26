@@ -335,7 +335,7 @@ static int DCA_encode_frame(AVCodecContext *avctx,
 
     put_frame(c, c->subband, frame);
 
-    return 4000;
+    return put_bits_count(&c->pb)>>3;
 }
 
 static int DCA_encode_init(AVCodecContext *avctx) {
