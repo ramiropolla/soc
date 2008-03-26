@@ -92,7 +92,7 @@ static void qmf_decompose(DCAContext *c, int32_t in[32], int32_t out[32], int ch
        (0.0, 0.0, ..., 0.0, -1.0, 1.0, 0.0, ..., 0.0)
        so that -1.0 cancels 1.0 from the previous step */
 
-    memset(accum,0,sizeof(int32_t));
+    memset(accum,0,sizeof(accum));
 
     for (k = 48, j = 0, i = c->start[channel]; i < 512; k++, j++, i++)
         accum[(k & 32) ? (31 - (k & 31)) : (k & 31)] += mul32(c->history[channel][i], UnQMF[j]);
