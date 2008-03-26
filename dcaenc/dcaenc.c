@@ -246,7 +246,7 @@ static void put_primary_audio_header(DCAContext *c)
 static uint32_t quantize(int32_t d)
 {
     d = d >> 16;
-    return d & 0xffff;
+    return d & 0xfffe; //XXX: this is done to avoid false syncwords
 }
 
 
