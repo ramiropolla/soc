@@ -1,5 +1,5 @@
---- ffplay.c.old	2008-02-29 21:39:16.000000000 +0100
-+++ ffplay.c	2008-02-29 21:40:36.000000000 +0100
+--- ffplay.c	2008-03-27 20:31:38.000000000 +0100
++++ ffplay.c.new	2008-03-27 20:31:22.000000000 +0100
 @@ -27,6 +27,11 @@
  #include "swscale.h"
  #include "avstring.h"
@@ -322,14 +322,14 @@
  static int video_thread(void *arg)
  {
      VideoState *is = arg;
-@@ -1390,10 +1592,52 @@
+@@ -1390,10 +1592,42 @@
      double pts;
      int ret;
  
 +
 +#if ENABLE_AVFILTER
-+    AVFilterContext *filt_src = NULL, *filt_out = NULL, *filt_graph = NULL;
-+    AVFilterContext *graph = NULL;
++    AVFilterContext *filt_src = NULL, *filt_out = NULL;
++    AVFilterGraph *graph = av_mallocz(sizeof(AVFilterGraph));
 +
 +    avfilter_register_all();
 +
@@ -339,22 +339,12 @@
 +    if(avfilter_init_filter(filt_src, NULL, is))             goto the_end;
 +    if(avfilter_init_filter(filt_out, NULL, frame))          goto the_end;
 +
-+    if(!(graph = avfilter_open(avfilter_get_by_name("graph"), NULL)))
-+        goto the_end;
-+    if(avfilter_init_filter(graph, NULL, NULL))
-+        goto the_end;
 +
 +    if(vfilters) {
-+        if(!(filt_graph = avfilter_open(avfilter_get_by_name("graph"), NULL)))
-+            goto the_end;
-+        if(avfilter_init_filter(filt_graph, vfilters, NULL))
-+            goto the_end;
-+        if(avfilter_link(filt_src, 0, filt_graph, 0))        goto the_end;
-+        if(avfilter_link(filt_graph, 0, filt_out, 0))        goto the_end;
-+
-+        avfilter_graph_add_filter(graph, filt_graph);
++        avfilter_graph_parse_chain(graph, vfilters,
++                              filt_src, 0, filt_out, 0);
 +    } else {
-+    if(avfilter_link(filt_src, 0, filt_out, 0) < 0)          goto the_end;
++        if(avfilter_link(filt_src, 0, filt_out, 0) < 0)          goto the_end;
 +    }
 +    avfilter_graph_add_filter(graph, filt_src);
 +    avfilter_graph_add_filter(graph, filt_out);
@@ -375,17 +365,17 @@
  
          if (ret < 0) goto the_end;
  
-@@ -1410,6 +1654,9 @@
+@@ -1410,6 +1644,9 @@
                  stream_pause(cur_stream);
      }
   the_end:
 + #if ENABLE_AVFILTER
-+    if(graph) avfilter_destroy(graph);
++    avfilter_destroy_graph(graph);
 + #endif
      av_free(frame);
      return 0;
  }
-@@ -2149,6 +2396,12 @@
+@@ -2149,6 +2386,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -398,7 +388,7 @@
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2494,6 +2747,9 @@
+@@ -2486,6 +2729,9 @@
      { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
