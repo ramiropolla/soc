@@ -326,7 +326,15 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1165,6 +1434,17 @@
+@@ -1053,6 +1322,7 @@
+     static short *samples= NULL;
+     AVSubtitle subtitle, *subtitle_to_free;
+     int got_subtitle;
++    int loop;
+ 
+     if(ist->next_pts == AV_NOPTS_VALUE)
+         ist->next_pts= ist->pts;
+@@ -1165,6 +1435,17 @@
                                      &buffer_to_free);
          }
  
@@ -344,19 +352,24 @@ Index: ffmpeg.c
          // preprocess audio (volume)
          if (ist->st->codec->codec_type == CODEC_TYPE_AUDIO) {
              if (audio_volume != 256) {
-@@ -1205,6 +1485,11 @@
+@@ -1202,9 +1483,16 @@
+             }
+         }
+ #endif
++        loop = ist->st->codec->codec_type != CODEC_TYPE_VIDEO ||
++            avfilter_poll_frame(ist->out_video_filter->inputs[0]);
          /* if output time reached then transcode raw format,
             encode packets and output them */
          if (start_time == 0 || ist->pts >= start_time)
 +#if ENABLE_AVFILTER
-+        while(ist->st->codec->codec_type == CODEC_TYPE_VIDEO &&
-+              avfilter_poll_frame(ist->out_video_filter->inputs[0])) {
-+            get_filtered_video_pic(ist->out_video_filter, &ist->picref, &picture, &ist->pts);
++        while(loop) {
++            if (ist->st->codec->codec_type == CODEC_TYPE_VIDEO)
++                get_filtered_video_pic(ist->out_video_filter, &ist->picref, &picture, &ist->pts);
 +#endif
              for(i=0;i<nb_ostreams;i++) {
                  int frame_size;
  
-@@ -1227,6 +1512,9 @@
+@@ -1227,6 +1515,9 @@
                              do_audio_out(os, ost, ist, data_buf, data_size);
                              break;
                          case CODEC_TYPE_VIDEO:
@@ -366,9 +379,12 @@ Index: ffmpeg.c
                              do_video_out(os, ost, ist, &picture, &frame_size);
                              video_size += frame_size;
                              if (vstats_filename && frame_size)
-@@ -1286,6 +1574,12 @@
+@@ -1285,7 +1576,15 @@
+                         av_free_packet(&opkt);
                      }
                  }
++                loop =  (ist->st->codec->codec_type == CODEC_TYPE_VIDEO) &&
++                        avfilter_poll_frame(ist->out_video_filter->inputs[0]);
              }
 +
 +#if ENABLE_AVFILTER
@@ -379,7 +395,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1693,10 +1987,21 @@
+@@ -1693,10 +1992,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          exit(1);
                      }
@@ -401,7 +417,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3804,6 +4109,9 @@
+@@ -3804,6 +4114,9 @@
  #ifdef CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
