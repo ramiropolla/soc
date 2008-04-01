@@ -49,6 +49,7 @@
 #include "random.h"
 
 #include "aactab.h"
+#include "mpeg4audio.h"
 
 #include <assert.h>
 
@@ -324,21 +325,10 @@ typedef struct {
 typedef struct {
     AVCodecContext * avccontext;
 
-    int audioObjectType;
-    int sampling_index;
-    int sample_rate;
+    MPEG4AudioConfig m4ac;
+
     int is_saved;                 ///< Set if elements have stored overlap from previous frame.
     drc_struct * che_drc;
-
-    /**
-     * @defgroup sbr   These are applicable if the bitstream uses SBR.
-     * @{
-     */
-    int sbr_present;
-    int ext_audioObjectType;
-    int ext_sampling_index;       ///< index after SBR is applied
-    int ext_sample_rate;          ///<  rate after SBR is applied
-    /** @} */
 
     /**
      * @defgroup elements
@@ -659,12 +649,12 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
 
     skip_bits(gb, 2);  // object_type
 
-    ac->sampling_index = get_bits(gb, 4);
-    if(ac->sampling_index > 12) {
-        av_log(ac->avccontext, AV_LOG_ERROR, "Invalid sampling rate index %d\n", ac->sampling_index);
+    ac->m4ac.sampling_index = get_bits(gb, 4);
+    if(ac->m4ac.sampling_index > 12) {
+        av_log(ac->avccontext, AV_LOG_ERROR, "Invalid sampling rate index %d\n", ac->m4ac.sampling_index);
         return -1;
     }
-    ac->sample_rate = sampling_table[ac->sampling_index];
+    ac->m4ac.sample_rate = sampling_table[ac->m4ac.sampling_index];
     num_front       = get_bits(gb, 4);
     num_side        = get_bits(gb, 4);
     num_back        = get_bits(gb, 4);
@@ -784,8 +774,8 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
         skip_bits(gb, 14);   // coreCoderDelay
     ext = get_bits1(gb);
 
-    if(ac->audioObjectType == AOT_AAC_SCALABLE ||
-       ac->audioObjectType == AOT_ER_AAC_SCALABLE)
+    if(ac->m4ac.object_type == AOT_AAC_SCALABLE ||
+       ac->m4ac.object_type == AOT_ER_AAC_SCALABLE)
         skip_bits(gb, 3);     // layerNr
 
     if (channels == 0) {
@@ -798,7 +788,7 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
     }
 
     if (ext) {
-        switch (ac->audioObjectType) {
+        switch (ac->m4ac.object_type) {
             case AOT_ER_BSAC:
                 get_bits(gb, 5);    // numOfSubFrame
                 get_bits(gb, 11);   // layer_length
@@ -818,36 +808,6 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
     return 0;
 }
 
-/**
- * Parse audio object type
- * reference: Table 1.14
- */
-static int GetAudioObjectType(GetBitContext * gb) {
-    int result = get_bits(gb, 5);
-    return result == 31 ? 32 + get_bits(gb, 6) : result;
-}
-
-/**
- * Parse sample rate
- * reference: Table 1.16 and 4.68
- */
-static int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
-    int i;
-    *index = get_bits(gb, 4);
-    if(*index == 0xf) {
-        /* Explicit rate */
-        *rate = get_bits(gb, 24);
-        for(i = 10; i >= 0; i--)
-            if(*rate < inv_sampling_table[i])
-                break;
-        *index = i + 1;
-        return 0;
-    }
-    if(*index > 12)
-        return -1;
-    *rate = sampling_table[*index];
-    return 0;
-}
 
 /**
  * Parse audio specific configuration
@@ -855,27 +815,16 @@ static int GetSampleRate(GetBitContext * gb, int *index, int *rate) {
  */
 static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     GetBitContext gb;
-    int channels;
+    int i;
 
     init_get_bits(&gb, data, data_size * 8);
 
-    memset(&ac->pcs, 0, sizeof(ac->pcs));
+    if((i = ff_mpeg4audio_get_config(&ac->m4ac, data, data_size)) < 0)
+        return -1;
 
-    ac->audioObjectType = GetAudioObjectType(&gb);
-    if (GetSampleRate(&gb, &ac->sampling_index, &ac->sample_rate)) return -1;
-    channels = get_bits(&gb, 4);
+    skip_bits_long(&gb, i);
 
-    ac->sbr_present = 0;
-    if (ac->audioObjectType == AOT_SBR) {
-        ac->ext_audioObjectType = ac->audioObjectType;
-        ac->sbr_present = 1;
-        if (GetSampleRate(&gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return -1;
-        ac->audioObjectType = GetAudioObjectType(&gb);
-    } else {
-        ac->ext_audioObjectType = 0;
-    }
-
-    switch (ac->audioObjectType) {
+    switch (ac->m4ac.object_type) {
     case AOT_AAC_LC:
 #ifdef AAC_SSR
     case AOT_AAC_SSR:
@@ -883,24 +832,13 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
 #ifdef AAC_LTP
     case AOT_AAC_LTP:
 #endif /* AAC_LTP */
-        if (GASpecificConfig(ac, &gb, channels))
+        if (GASpecificConfig(ac, &gb, ac->m4ac.chan_config))
             return -1;
         break;
     default:
         av_log(ac->avccontext, AV_LOG_ERROR, "Audio object type %s%d is not supported\n",
-               ac->sbr_present ? "SBR+" : "", ac->audioObjectType);
+               ac->m4ac.sbr == 1? "SBR+" : "", ac->m4ac.object_type);
         return -1;
-    }
-    if (ac->ext_audioObjectType != 5 && 8 * data_size - get_bits_count(&gb) >= 16) {
-        if (get_bits(&gb, 11) == 0x2b7) { // syncExtensionType
-            ac->ext_audioObjectType = GetAudioObjectType(&gb);
-            if (ac->ext_audioObjectType == AOT_SBR) {
-                ac->sbr_present = get_bits1(&gb);
-                if (ac->sbr_present) {
-                    if (GetSampleRate(&gb, &ac->ext_sampling_index, &ac->ext_sample_rate)) return -1;
-                }
-            }
-        }
     }
     return 0;
 }
@@ -931,7 +869,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     if (AudioSpecificConfig(ac, avccontext->extradata, avccontext->extradata_size))
         return -1;
 
-    avccontext->sample_rate = ac->sample_rate;
+    avccontext->sample_rate = ac->m4ac.sample_rate;
     avccontext->frame_size  = 1024;
 
     for (i = 0; i < 11; i++) {
@@ -1089,16 +1027,16 @@ static int ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_
                 ics->group_len[ics->num_window_groups-1] = 1;
             }
         }
-        ics->swb_offset = swb_offset_128[ac->sampling_index];
-        ics->num_swb = num_swb_128[ac->sampling_index];
+        ics->swb_offset = swb_offset_128[ac->m4ac.sampling_index];
+        ics->num_swb = num_swb_128[ac->m4ac.sampling_index];
         ics->num_windows = 8;
-        ics->tns_max_bands = tns_max_bands_128[ac->sampling_index];
+        ics->tns_max_bands = tns_max_bands_128[ac->m4ac.sampling_index];
     } else {
         ics->max_sfb = get_bits(gb, 6);
-        ics->swb_offset = swb_offset_1024[ac->sampling_index];
-        ics->num_swb = num_swb_1024[ac->sampling_index];
+        ics->swb_offset = swb_offset_1024[ac->m4ac.sampling_index];
+        ics->num_swb = num_swb_1024[ac->m4ac.sampling_index];
         ics->num_windows = 1;
-        ics->tns_max_bands = tns_max_bands_1024[ac->sampling_index];
+        ics->tns_max_bands = tns_max_bands_1024[ac->m4ac.sampling_index];
         if (get_bits1(gb)) {
 #ifdef AAC_LTP
             if (ac->audioObjectType == AOT_AAC_MAIN) {
@@ -2072,7 +2010,7 @@ static void coupling_dependent_trans(AACContext * ac, cc_struct * cc, sce_struct
     float * dest = sce->coeffs;
     float * src = cc->ch.coeffs;
     int g, i, group, k;
-    if(ac->audioObjectType == AOT_AAC_LTP) {
+    if(ac->m4ac.object_type == AOT_AAC_LTP) {
         av_log(ac->avccontext, AV_LOG_ERROR,
                "Dependent coupling is not supported together with LTP\n");
         return;
