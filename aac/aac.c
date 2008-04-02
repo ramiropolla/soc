@@ -654,7 +654,7 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
         av_log(ac->avccontext, AV_LOG_ERROR, "Invalid sampling rate index %d\n", ac->m4ac.sampling_index);
         return -1;
     }
-    ac->m4ac.sample_rate = sampling_table[ac->m4ac.sampling_index];
+    ac->m4ac.sample_rate = ff_mpeg4audio_sample_rates[ac->m4ac.sampling_index];
     num_front       = get_bits(gb, 4);
     num_side        = get_bits(gb, 4);
     num_back        = get_bits(gb, 4);
