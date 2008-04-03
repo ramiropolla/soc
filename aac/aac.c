@@ -643,7 +643,7 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
     program_config_struct pcs;
     int i, num_front, num_side, num_back, num_lfe, num_assoc_data, num_cc;
 
-    memset(&pcs, 0, sizeof(program_config_struct));
+    memset(&pcs, 0, sizeof(pcs));
 
     skip_bits(gb, 2);  // object_type
 
