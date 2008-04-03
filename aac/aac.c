@@ -666,9 +666,6 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
     if (get_bits1(gb)) {
         pcs.mixdown_coeff_index = get_bits(gb, 2);
         pcs.pseudo_surround     = get_bits1(gb);
-    } else {
-        pcs.mixdown_coeff_index = 0;
-        pcs.pseudo_surround     = 0;
     }
 
     program_config_element_parse_tags(gb, pcs.cpe_type, pcs.sce_type, num_front, AAC_CHANNEL_FRONT);
