@@ -673,9 +673,7 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
     program_config_element_parse_tags(gb, pcs.cpe_type, pcs.sce_type, num_back,  AAC_CHANNEL_BACK );
     program_config_element_parse_tags(gb, NULL,         pcs.lfe_type, num_lfe,   AAC_CHANNEL_LFE  );
 
-    // not a real audio channel
-    for (i = 0; i < num_assoc_data; i++)
-        skip_bits(gb, 4);
+    skip_bits_long(gb, 4 * num_assoc_data);
 
     for (i = 0; i < num_cc; i++) {
         skip_bits1(gb);    // cc_ind_sw
