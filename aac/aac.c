@@ -752,7 +752,7 @@ static int program_config_element_default(AACContext *ac, int channels)
 
 
 /**
- * Parse GA specific configuration
+ * Parse GA "General Audio" specific configuration
  * reference: Table 4.1
  */
 static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
@@ -1305,7 +1305,6 @@ static int pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_struc
     return 0;
 }
 
-// Tools implementation
 static void quant_to_spec_tool(AACContext * ac, const ics_struct * ics, const int * icoef, const int cb[][64], const float sf[][64], float * coef) {
     const uint16_t * offsets = ics->swb_offset;
     int g, i, group, k;
