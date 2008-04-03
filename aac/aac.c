@@ -977,7 +977,7 @@ static int data_stream_element(AACContext * ac, GetBitContext * gb, int id) {
 }
 
 #ifdef AAC_LTP
-static void ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, ltp_struct * ltp) {
+static void decode_ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, ltp_struct * ltp) {
     int sfb;
     if (ac->audioObjectType == AOT_ER_AAC_LD) {
         assert(0);
@@ -994,7 +994,7 @@ static void ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, ltp_struc
  * Decode Individual Channel Stream info
  * reference: table 4.6
  */
-static int ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_struct * ics) {
+static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_struct * ics) {
     if (get_bits1(gb)) {
         av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set\n");
         return -1;
@@ -1034,11 +1034,11 @@ static int ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_
                 assert(0);
             } else {
                 if ((ics->ltp.present = get_bits(gb, 1))) {
-                    ltp_data(ac, gb, ics->max_sfb, &ics->ltp);
+                    decode_ltp_data(ac, gb, ics->max_sfb, &ics->ltp);
                 }
                 if (common_window) {
                     if ((ics->ltp2.present = get_bits(gb, 1))) {
-                        ltp_data(ac, gb, ics->max_sfb, &ics->ltp2);
+                        decode_ltp_data(ac, gb, ics->max_sfb, &ics->ltp2);
                     }
                 }
             }
@@ -1069,7 +1069,7 @@ static inline float ivquant(AACContext * ac, int a) {
  * Decode section_data payload
  * reference: Table 4.46
  */
-static int section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, int cb[][64]) {
+static int decode_section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, int cb[][64]) {
     int g;
     for (g = 0; g < ics->num_window_groups; g++) {
         int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
@@ -1098,7 +1098,7 @@ static int section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, i
  * Decode scale_factor_data
  * reference: Table 4.47
  */
-static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, ics_struct * ics, const int cb[][64], float sf[][64]) {
+static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, ics_struct * ics, const int cb[][64], float sf[][64]) {
     int g, i;
     unsigned int intensity = 100; // normalization for intensity_tab lookup table
     int noise = global_gain - 90;
@@ -1140,7 +1140,7 @@ static int scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain
     return 0;
 }
 
-static void pulse_data(AACContext * ac, GetBitContext * gb, pulse_struct * pulse) {
+static void decode_pulse_data(AACContext * ac, GetBitContext * gb, pulse_struct * pulse) {
     int i;
     pulse->num_pulse = get_bits(gb, 2);
     pulse->start = get_bits(gb, 6);
@@ -1150,7 +1150,7 @@ static void pulse_data(AACContext * ac, GetBitContext * gb, pulse_struct * pulse
     }
 }
 
-static void tns_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, tns_struct * tns) {
+static void decode_tns_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, tns_struct * tns) {
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
     for (w = 0; w < ics->num_windows; w++) {
         tns->n_filt[w] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 1 : 2);
@@ -1171,7 +1171,7 @@ static void tns_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics
 }
 
 #ifdef AAC_SSR
-static int gain_control_data(AACContext * ac, GetBitContext * gb, sce_struct * sce) {
+static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, sce_struct * sce) {
     // wd_num wd_test aloc_size
     static const int gain_mode[4][3] = {
         {1, 0, 5}, //ONLY_LONG_SEQUENCE = 0,
@@ -1201,7 +1201,7 @@ static int gain_control_data(AACContext * ac, GetBitContext * gb, sce_struct * s
 }
 #endif /* AAC_SSR */
 
-static int ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
+static int decode_ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
     ms_struct * ms = &cpe->ms;
     ms->present = get_bits(gb, 2);
     if (ms->present == 1) {
@@ -1222,7 +1222,7 @@ static int ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
  * Decode spectral data
  * reference: Table 4.50
  */
-static int spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], int * icoef) {
+static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], int * icoef) {
     static const int unsigned_cb[] = { 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
@@ -1343,7 +1343,7 @@ static void quant_to_spec_tool(AACContext * ac, const ics_struct * ics, const in
  * Decode an individual_channel_stream payload
  * reference: Table 4.44
  */
-static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int common_window, int scale_flag, sce_struct * sce) {
+static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, int scale_flag, sce_struct * sce) {
     int icoeffs[1024];
     pulse_struct pulse;
     tns_struct * tns = &sce->tns;
@@ -1355,23 +1355,23 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
     global_gain = get_bits(gb, 8);
 
     if (!common_window && !scale_flag) {
-        if (ics_info(ac, gb, 0, ics) < 0)
+        if (decode_ics_info(ac, gb, 0, ics) < 0)
             return -1;
     }
 
-    if (section_data(ac, gb, ics, sce->cb) < 0)
+    if (decode_section_data(ac, gb, ics, sce->cb) < 0)
         return -1;
-    if (scale_factor_data(ac, gb, sce->mixing_gain, global_gain, ics, sce->cb, sce->sf) < 0)
+    if (decode_scale_factor_data(ac, gb, sce->mixing_gain, global_gain, ics, sce->cb, sce->sf) < 0)
         return -1;
 
     if (!scale_flag) {
         if ((pulse.present = get_bits1(gb)))
-            pulse_data(ac, gb, &pulse);
+            decode_pulse_data(ac, gb, &pulse);
         if ((tns->present = get_bits1(gb)))
-            tns_data(ac, gb, ics, tns);
+            decode_tns_data(ac, gb, ics, tns);
         if (get_bits1(gb)) {
 #ifdef AAC_SSR
-            if (gain_control_data(ac, gb, sce)) return -1;
+            if (decode_gain_control_data(ac, gb, sce)) return -1;
 #else
             av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supported\n");
             return -1;
@@ -1379,7 +1379,7 @@ static int individual_channel_stream(AACContext * ac, GetBitContext * gb, int co
         }
     }
 
-    if (spectral_data(ac, gb, ics, sce->cb, icoeffs) < 0)
+    if (decode_spectral_data(ac, gb, ics, sce->cb, icoeffs) < 0)
         return -1;
     if (pulse_tool(ac, ics, &pulse, icoeffs) < 0)
         return -1;
@@ -1448,7 +1448,7 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
  * Decode a channel_pair_element
  * reference: Table 4.4
  */
-static int channel_pair_element(AACContext * ac, GetBitContext * gb, int id) {
+static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     int i;
     cpe_struct * cpe;
     if (!ac->che_cpe[id]) {
@@ -1457,19 +1457,19 @@ static int channel_pair_element(AACContext * ac, GetBitContext * gb, int id) {
     cpe = ac->che_cpe[id];
     cpe->common_window = get_bits1(gb);
     if (cpe->common_window) {
-        if (ics_info(ac, gb, 1, &cpe->ch[0].ics))
+        if (decode_ics_info(ac, gb, 1, &cpe->ch[0].ics))
             return -1;
         i = cpe->ch[1].ics.window_shape;
         cpe->ch[1].ics = cpe->ch[0].ics;
         cpe->ch[1].ics.window_shape_prev = i;
         cpe->ch[1].ics.ltp = cpe->ch[0].ics.ltp2;
-        ms_data(ac, gb, cpe);
+        decode_ms_data(ac, gb, cpe);
     } else {
         cpe->ms.present = 0;
     }
-    if (individual_channel_stream(ac, gb, cpe->common_window, 0, &cpe->ch[0]))
+    if (decode_ics(ac, gb, cpe->common_window, 0, &cpe->ch[0]))
         return -1;
-    if (individual_channel_stream(ac, gb, cpe->common_window, 0, &cpe->ch[1]))
+    if (decode_ics(ac, gb, cpe->common_window, 0, &cpe->ch[1]))
         return -1;
 
     // M/S tool
@@ -1480,7 +1480,7 @@ static int channel_pair_element(AACContext * ac, GetBitContext * gb, int id) {
     return 0;
 }
 
-static int coupling_channel_element(AACContext * ac, GetBitContext * gb, int id) {
+static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
     float cc_scale[] = {
         pow(2, 1/8.), pow(2, 1/4.), pow(2, 0.5), 2.
     };
@@ -1517,7 +1517,7 @@ static int coupling_channel_element(AACContext * ac, GetBitContext * gb, int id)
     sign = get_bits(gb, 1);
     scale = cc_scale[get_bits(gb, 2)];
 
-    if (individual_channel_stream(ac, gb, 0, 0, sce))
+    if (decode_ics(ac, gb, 0, 0, sce))
         return -1;
 
     for (c = 0; c < num_gain; c++) {
@@ -2185,10 +2185,10 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
                     break;
                 }
             }
-            err = individual_channel_stream(ac, &gb, 0, 0, ac->che_sce[tag]);
+            err = decode_ics(ac, &gb, 0, 0, ac->che_sce[tag]);
             break;
         case ID_CPE:
-            err = channel_pair_element(ac, &gb, tag);
+            err = decode_cpe(ac, &gb, tag);
             break;
         case ID_FIL:
             if (tag == 15) tag += get_bits(&gb, 8) - 1;
@@ -2203,10 +2203,10 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             err = data_stream_element(ac, &gb, tag);
             break;
         case ID_CCE:
-            err = coupling_channel_element(ac, &gb, tag);
+            err = decode_cce(ac, &gb, tag);
             break;
         case ID_LFE:
-            err = ac->che_lfe[tag] && !individual_channel_stream(ac, &gb, 0, 0, ac->che_lfe[tag]) ? 0 : -1;
+            err = ac->che_lfe[tag] && !decode_ics(ac, &gb, 0, 0, ac->che_lfe[tag]) ? 0 : -1;
             break;
         default:
             err = -1; /* should not happen, but keeps compiler happy */
