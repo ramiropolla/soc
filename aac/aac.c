@@ -966,10 +966,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
  * reference: Table 4.10
  */
 static int data_stream_element(AACContext * ac, GetBitContext * gb, int id) {
-    int byte_align;
-    int count;
-    byte_align = get_bits1(gb);
-    count = get_bits(gb, 8);
+    int byte_align = get_bits1(gb);
+    int count = get_bits(gb, 8);
     if (count == 255)
         count += get_bits(gb, 8);
     if (byte_align)
