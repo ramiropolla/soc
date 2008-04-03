@@ -127,23 +127,26 @@ enum {
 /**
  * Special codebooks
  */
-#define ZERO_HCB 0
-#define FIRST_PAIR_HCB 5
-#define ESC_HCB 11
-#define NOISE_HCB 13
-#define INTENSITY_HCB2 14
-#define INTENSITY_HCB 15
-#define ESC_FLAG 16
+enum {
+    ZERO_HCB       = 0,
+    FIRST_PAIR_HCB = 5,
+    ESC_HCB        = 11,
+    NOISE_HCB      = 13,
+    INTENSITY_HCB2 = 14,
+    INTENSITY_HCB  = 15,
+    ESC_FLAG       = 16,
+};
 
 /**
  * Channel types
  */
-#define AAC_CHANNEL_FRONT       1
-#define AAC_CHANNEL_SIDE        2
-#define AAC_CHANNEL_BACK        3
-#define AAC_CHANNEL_LFE         4
-#define AAC_CHANNEL_CC          5
-
+enum {
+    AAC_CHANNEL_FRONT = 1,
+    AAC_CHANNEL_SIDE  = 2,
+    AAC_CHANNEL_BACK  = 3,
+    AAC_CHANNEL_LFE   = 4,
+    AAC_CHANNEL_CC    = 5,
+};
 
 /**
  * Program config. This describes how channels are arranged.
