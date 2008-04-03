@@ -1268,7 +1268,13 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                         for (j = 0; j < 2; j++) {
                             if (ptr[j] == 16) {
                                 int n = 4;
-                                while (get_bits1(gb)) n++;
+                                /* Total length of escape_sequence must be < 22 bits according to spec. */
+                                /* ie. max is 11111111110xxxxxxxxxx */
+                                while (get_bits1(gb) && n < 15) n++;
+                                if(n == 15) {
+                                    av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data, ESC overflow\n");
+                                    return -1;
+                                }
                                 ptr[j] = (1<<n) + get_bits(gb, n);
                             }
                         }
