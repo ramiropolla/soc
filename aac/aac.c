@@ -756,7 +756,7 @@ static int program_config_element_default(AACContext *ac, int channels)
  * reference: Table 4.1
  */
 static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
-    int ext = 0;
+    int ext;
 
     if(get_bits1(gb)) {  // frameLengthFlag
         av_log(ac->avccontext, AV_LOG_ERROR, "960/120 MDCT window is not supported\n");
