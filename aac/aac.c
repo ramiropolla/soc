@@ -592,20 +592,15 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
 
             if(avctx->request_channels == 2) {
                 b = 1. / (1. + (1. / M_SQRT2) + a * (pcs->pseudo_surround ? 2. : 1.));
-
-                front->ch[0].mixing_gain = b;
-                front->ch[1].mixing_gain = b;
                 center->mixing_gain      = b / M_SQRT2;
-                back->ch[0].mixing_gain  = b * a;
-                back->ch[1].mixing_gain  = b * a;
             } else {
                 b = 1. / (3. + 2. * a);
-                front->ch[0].mixing_gain = b;
-                front->ch[1].mixing_gain = b;
                 center->mixing_gain      = b;
-                back->ch[0].mixing_gain  = b * a;
-                back->ch[1].mixing_gain  = b * a;
             }
+            front->ch[0].mixing_gain = b;
+            front->ch[1].mixing_gain = b;
+            back->ch[0].mixing_gain  = b * a;
+            back->ch[1].mixing_gain  = b * a;
             ac->mm_front  = front;
             ac->mm_center = center;
             ac->mm_back   = back;
