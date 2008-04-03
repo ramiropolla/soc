@@ -783,8 +783,8 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
     if (ext) {
         switch (ac->m4ac.object_type) {
             case AOT_ER_BSAC:
-                get_bits(gb, 5);    // numOfSubFrame
-                get_bits(gb, 11);   // layer_length
+                skip_bits(gb, 5);    // numOfSubFrame
+                skip_bits(gb, 11);   // layer_length
                 break;
             case AOT_ER_AAC_LC:
             case AOT_ER_AAC_LTP:
