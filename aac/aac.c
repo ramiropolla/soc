@@ -1264,7 +1264,7 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                             if (ptr[j] && get_bits1(gb))
                                 sign[j] = -1;
                     }
-                    if (cur_cb == 11) {
+                    if (cur_cb == ESC_HCB) {
                         for (j = 0; j < 2; j++) {
                             if (ptr[j] == 16) {
                                 int n = 4;
