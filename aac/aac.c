@@ -574,7 +574,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
 
     /* Check for matrix mixdown to mono or stereo */
 
-    if(avctx->request_channels != 0 && avctx->request_channels <= 2 &&
+    if(avctx->request_channels && avctx->request_channels <= 2 &&
        avctx->request_channels != channels) {
 
         if((avctx->request_channels == 1 && pcs->mono_mixdown   != -1) ||
@@ -1537,7 +1537,7 @@ static int coupling_channel_element(AACContext * ac, GetBitContext * gb, int id)
         int cge = 1;
         int gain = 0;
         float gain_cache = 1.;
-        if (c != 0) {
+        if (c) {
             cge = coup->ind_sw ? 1 : get_bits1(gb);
             gain = cge ? get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60: 0;
             gain_cache = pow(scale, (float)gain);
