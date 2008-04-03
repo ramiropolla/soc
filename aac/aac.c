@@ -501,7 +501,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
     if(!memcmp(&ac->pcs, newpcs, sizeof(program_config_struct)))
         return 0; /* no change */
 
-    memcpy(pcs, newpcs, sizeof(program_config_struct));
+    *pcs = *newpcs;
 
     /* Allocate or free elements depending on if they are in the
        current program config struct */
