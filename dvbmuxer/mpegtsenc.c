@@ -623,7 +623,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     MpegTSWrite *s = ctx->priv_data;
     MpegTSWriteStream *stream = ctx->streams[stream_index]->priv_data;
     PESStream *pes_stream = &stream->pes_stream;
-    int payload_size, id, stuffing_size, i, header_len;
+    int payload_size, id, startcode, stuffing_size, i, header_len;
     int packet_size, es_size;
     int zero_trail_bytes = 0;
     int pad_packet_bytes = 0;
@@ -631,49 +631,15 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     int pes_size;
     uint8_t* q = stream->payload;
 
+    pes_stream->format = PES_FMT_TS;
     id = stream->id;
     packet_size = s->packet_size;
 
     if (packet_size > 0) {
-        /* packet header size */
-        packet_size -= 6;
-
-        /* packet header */
-        header_len = 3;
-        header_len += 1; /* obligatory stuffing byte */
-        if (pts != AV_NOPTS_VALUE) {
-            if (dts != pts)
-                header_len += 5 + 5;
-            else
-                header_len += 5;
-        }
-        payload_size = packet_size - header_len;
-
-        stuffing_size = payload_size - av_fifo_size(&pes_stream->fifo);
-
-        // first byte does not fit -> reset pts/dts + stuffing
-        if(payload_size <= trailer_size && pts != AV_NOPTS_VALUE){
-            int timestamp_len=0;
-            if(dts != pts)
-                timestamp_len += 5;
-            if(pts != AV_NOPTS_VALUE)
-                timestamp_len += 5;
-            pts=dts= AV_NOPTS_VALUE;
-            header_len -= timestamp_len;
-            payload_size += timestamp_len;
-            stuffing_size += timestamp_len;
-            if(payload_size > trailer_size)
-                stuffing_size += payload_size - trailer_size;
-        }
-
-        if (stuffing_size < 0)
-            stuffing_size = 0;
-        if (stuffing_size > 16) {    /*<=16 for MPEG-1, <=32 for MPEG-2*/
-            pad_packet_bytes += stuffing_size;
-            packet_size -= stuffing_size;
-            payload_size -= stuffing_size;
-            stuffing_size = 0;
-        }
+        ff_pes_cal_header(id, pes_stream,
+                          &packet_size, &header_len, &pts, &dts,
+                          &payload_size, &startcode, &stuffing_size,
+                          &trailer_size, &pad_packet_bytes);
         pes_size = ff_pes_muxer_write(ctx, stream_index, stream->payload, pts, dts, id, stream->startcode, NULL, 0,
                  header_len, packet_size, payload_size, stuffing_size);
         if(pes_size < 0)

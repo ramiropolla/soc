@@ -100,6 +100,105 @@ int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
 
     return nb_frames;
 }
+/**
+ * Caculate the PES header size
+ * @param[in] id                stream id
+ * @param[in] stream            pes stream
+ * @param[in] packet_size       pes packet size
+ * @param[in] header_len        pes header length
+ * @param[in] pts               current pts
+ * @param[in] dts               current dts
+ * @param[in] payload_size      pes payload size
+ * @param[in] startcode         pes startcode
+ * @param[in] stuffing_size     pes stuffing size
+ * @param[in] trailer_size      unwritten trailer size
+ * @param[in] pad_packet_bytes  padding size for packet
+ */
+void ff_pes_cal_header(int id, PESStream *stream,
+    int *packet_size,  int *header_len, int64_t *pts, int64_t *dts,
+    int *payload_size, int *startcode, int *stuffing_size,
+    int *trailer_size, int *pad_packet_bytes)
+{
+    /* packet header size */
+    *packet_size -= 6;
+
+    /* packet header */
+    if (stream->format & PES_FMT_MPEG2) {
+        *header_len = 3;
+        if (stream->packet_number==0 && stream->format != PES_FMT_TS)
+            *header_len += 3; /* PES extension */
+        *header_len += 1; /* obligatory stuffing byte */
+    } else {
+        *header_len = 0;
+    }
+
+    if (*pts != AV_NOPTS_VALUE){
+        if (*dts != *pts)
+            *header_len += 5 + 5;
+        else
+            *header_len += 5;
+    } else if (!(stream->format & PES_FMT_MPEG2)) {
+        (*header_len)++;
+    }
+
+    *payload_size = *packet_size - *header_len;
+    if (stream->format != PES_FMT_TS) {
+        if (id < 0xc0) {
+            *startcode = PRIVATE_STREAM_1;
+            *payload_size -= 1;
+            if (id >= 0x40) {
+                *payload_size -= 3;
+                if (id >= 0xa0)
+                    *payload_size -= 3;
+            }
+        } else {
+            *startcode = 0x100 + id;
+        }
+    }
+    *stuffing_size = *payload_size - av_fifo_size(&stream->fifo);
+
+    // first byte does not fit -> reset pts/dts + stuffing
+    if(*payload_size <= *trailer_size && *pts != AV_NOPTS_VALUE){
+        int timestamp_len=0;
+        if(*dts != *pts)
+            timestamp_len += 5;
+        if(*pts != AV_NOPTS_VALUE)
+            timestamp_len += stream->format & PES_FMT_MPEG2 ? 5 : 4;
+        *pts=*dts= AV_NOPTS_VALUE;
+        *header_len -= timestamp_len;
+        if (stream->format == PES_FMT_DVD && stream->align_iframe) {
+            *pad_packet_bytes += timestamp_len;
+            *packet_size -= timestamp_len;
+        } else {
+            *payload_size += timestamp_len;
+        }
+        *stuffing_size += timestamp_len;
+        if(*payload_size > *trailer_size)
+            *stuffing_size += *payload_size - *trailer_size;
+    }
+
+    if (stream->format != PES_FMT_TS) {
+        if (*pad_packet_bytes > 0 && *pad_packet_bytes <= 7) { // can't use padding, so use stuffing
+            *packet_size += *pad_packet_bytes;
+            *payload_size += *pad_packet_bytes; // undo the previous adjustment
+            if (*stuffing_size < 0) {
+                *stuffing_size = *pad_packet_bytes;
+            } else {
+                *stuffing_size += *pad_packet_bytes;
+            }
+            *pad_packet_bytes = 0;
+        }
+    }
+
+    if (*stuffing_size < 0)
+        *stuffing_size = 0;
+    if (*stuffing_size > 16) {    /*<=16 for MPEG-1, <=32 for MPEG-2*/
+        *pad_packet_bytes += *stuffing_size;
+        *packet_size -= *stuffing_size;
+        *payload_size -= *stuffing_size;
+        *stuffing_size = 0;
+    }
+}
 
 /**
  * Mux one stream into PES stream.

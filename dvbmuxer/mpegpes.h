@@ -30,6 +30,12 @@
 #include "avformat.h"
 #include "fifo.h"
 
+#define PES_FMT_MPEG2 0x01
+#define PES_FMT_VCD 0x02
+#define PES_FMT_SVCD (0x04 | PES_FMT_MPEG2)
+#define PES_FMT_DVD (0x08 | PES_FMT_MPEG2)
+#define PES_FMT_TS (0x10 | PES_FMT_MPEG2)
+
 /**
  * PES packet description
  */
@@ -48,6 +54,7 @@ typedef struct PacketDesc {
 typedef struct {
     AVFifoBuffer fifo;
     uint8_t id;
+    int format;
     int max_buffer_size; /**< in bytes */
     int buffer_index;
     PacketDesc *predecode_packet;
@@ -116,6 +123,26 @@ int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int
  * @return  the number of frames have been muxed.
  */
 int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
+
+
+/**
+ * Caculate the PES header size
+ * @param[in] id                stream id
+ * @param[in] stream            pes stream
+ * @param[in] packet_size       pes packet size
+ * @param[in] header_len        pes header length
+ * @param[in] pts               current pts
+ * @param[in] dts               current dts
+ * @param[in] payload_size      pes payload size
+ * @param[in] startcode         pes startcode
+ * @param[in] stuffing_size     pes stuffing size
+ * @param[in] trailer_size      unwritten trailer size
+ * @param[in] pad_packet_bytes  padding size for packet
+ */
+void ff_pes_cal_header(int id, PESStream *stream,
+          int *packet_size,  int *header_len, int64_t *pts,int64_t *dts,
+          int *payload_size, int *startcode, int *stuffing_size,
+          int *trailer_size, int *pad_packet_bytes);
 
 /**
  * Mux one stream into PES stream.

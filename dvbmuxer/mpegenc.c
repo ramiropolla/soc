@@ -303,6 +303,15 @@ static int mpeg_mux_init(AVFormatContext *ctx)
             goto fail;
         st->priv_data = stream;
 
+        /* set PESStream format */
+        if (s->is_dvd)
+            stream->format = PES_FMT_DVD;
+        if (s->is_svcd)
+            stream->format = PES_FMT_SVCD;
+        if (s->is_mpeg2)
+            stream->format = PES_FMT_MPEG2;
+        if (s->is_vcd)
+            stream->format = PES_FMT_VCD;
         av_set_pts_info(st, 64, 1, 90000);
 
         switch(st->codec->codec_type) {
@@ -712,83 +721,10 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     packet_size -= pad_packet_bytes + zero_trail_bytes;
 
     if (packet_size > 0) {
-
-        /* packet header size */
-        packet_size -= 6;
-
-        /* packet header */
-        if (s->is_mpeg2) {
-            header_len = 3;
-            if (stream->packet_number==0)
-                header_len += 3; /* PES extension */
-            header_len += 1; /* obligatory stuffing byte */
-        } else {
-            header_len = 0;
-        }
-        if (pts != AV_NOPTS_VALUE) {
-            if (dts != pts)
-                header_len += 5 + 5;
-            else
-                header_len += 5;
-        } else {
-            if (!s->is_mpeg2)
-                header_len++;
-        }
-
-        payload_size = packet_size - header_len;
-        if (id < 0xc0) {
-            startcode = PRIVATE_STREAM_1;
-            payload_size -= 1;
-            if (id >= 0x40) {
-                payload_size -= 3;
-                if (id >= 0xa0)
-                    payload_size -= 3;
-            }
-        } else {
-            startcode = 0x100 + id;
-        }
-
-        stuffing_size = payload_size - av_fifo_size(&stream->fifo);
-
-        // first byte does not fit -> reset pts/dts + stuffing
-        if(payload_size <= trailer_size && pts != AV_NOPTS_VALUE){
-            int timestamp_len=0;
-            if(dts != pts)
-                timestamp_len += 5;
-            if(pts != AV_NOPTS_VALUE)
-                timestamp_len += s->is_mpeg2 ? 5 : 4;
-            pts=dts= AV_NOPTS_VALUE;
-            header_len -= timestamp_len;
-            if (s->is_dvd && stream->align_iframe) {
-                pad_packet_bytes += timestamp_len;
-                packet_size -= timestamp_len;
-            } else {
-                payload_size += timestamp_len;
-            }
-            stuffing_size += timestamp_len;
-            if(payload_size > trailer_size)
-                stuffing_size += payload_size - trailer_size;
-        }
-
-        if (pad_packet_bytes > 0 && pad_packet_bytes <= 7) { // can't use padding, so use stuffing
-            packet_size += pad_packet_bytes;
-            payload_size += pad_packet_bytes; // undo the previous adjustment
-            if (stuffing_size < 0) {
-                stuffing_size = pad_packet_bytes;
-            } else {
-                stuffing_size += pad_packet_bytes;
-            }
-            pad_packet_bytes = 0;
-        }
-
-        if (stuffing_size < 0)
-            stuffing_size = 0;
-        if (stuffing_size > 16) {    /*<=16 for MPEG-1, <=32 for MPEG-2*/
-            pad_packet_bytes += stuffing_size;
-            packet_size -= stuffing_size;
-            payload_size -= stuffing_size;
-            stuffing_size = 0;
-        }
+        ff_pes_cal_header(id, stream,
+                          &packet_size, &header_len, &pts, &dts,
+                          &payload_size, &startcode, &stuffing_size,
+                          &trailer_size, &pad_packet_bytes);
 
         nb_frames= ff_pes_get_nb_frames(ctx, stream, payload_size - stuffing_size);
 
