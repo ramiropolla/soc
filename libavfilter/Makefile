@@ -10,6 +10,7 @@ OBJS = allfilters.o \
        avfiltergraph.o \
        defaults.o \
        formats.o \
+       graphparser.o \
 
 
 OBJS-$(CONFIG_CROP_FILTER)       += vf_crop.o
