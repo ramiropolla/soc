@@ -341,8 +341,8 @@
 +
 +
 +    if(vfilters) {
-+        avfilter_graph_parse_chain(graph, vfilters,
-+                              filt_src, 0, filt_out, 0);
++        if (avfilter_parse_graph(graph, vfilters,
++                                 filt_src, 0, filt_out, 0) < 0) goto the_end;
 +    } else {
 +        if(avfilter_link(filt_src, 0, filt_out, 0) < 0)          goto the_end;
 +    }
