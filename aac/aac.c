@@ -1291,12 +1291,8 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
     return 0;
 }
 
-static int pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef) {
+static void pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef) {
     int i, off;
-        if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
-            av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in EIGHT SHORT SEUQUENCE\n");
-            return -1;
-        }
         off = ics->swb_offset[pulse->start];
         for (i = 0; i <= pulse->num_pulse; i++) {
             off += pulse->offset[i];
@@ -1305,7 +1301,6 @@ static int pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_struc
             else
                 icoef[off] -= pulse->amp[i];
         }
-    return 0;
 }
 
 static void quant_to_spec_tool(AACContext * ac, const ics_struct * ics, const int * icoef, const int cb[][64], const float sf[][64], float * coef) {
@@ -1370,8 +1365,13 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
         return -1;
 
     if (!scale_flag) {
-        if ((pulse.present = get_bits1(gb)))
+        if ((pulse.present = get_bits1(gb))) {
+            if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
+                av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in EIGHT SHORT SEUQUENCE\n");
+                return -1;
+            }
             decode_pulse_data(ac, gb, &pulse);
+        }
         if ((tns->present = get_bits1(gb)))
             decode_tns_data(ac, gb, ics, tns);
         if (get_bits1(gb)) {
@@ -1386,8 +1386,8 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
 
     if (decode_spectral_data(ac, gb, ics, sce->cb, icoeffs) < 0)
         return -1;
-    if (pulse.present && pulse_tool(ac, ics, &pulse, icoeffs) < 0)
-        return -1;
+    if (pulse.present)
+        pulse_tool(ac, ics, &pulse, icoeffs);
     quant_to_spec_tool(ac, ics, icoeffs, sce->cb, sce->sf, out);
     return 0;
 }
