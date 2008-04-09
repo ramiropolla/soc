@@ -137,6 +137,8 @@ enum {
     ESC_FLAG       = 16,
 };
 
+#define IS_CODEBOOK_UNSIGNED(x) ((x - 1) & 10)
+
 /**
  * Channel types
  */
@@ -1223,7 +1225,6 @@ static int decode_ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe)
  * reference: Table 4.50
  */
 static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], int * icoef) {
-    static const int unsigned_cb[] = { 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1 };
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
 
@@ -1259,7 +1260,7 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                         return -1;
                     }
                     memcpy(ptr, &ac->vq[cur_cb - 1][index * dim], dim*sizeof(int));
-                    if (unsigned_cb[cur_cb - 1]) {
+                    if (IS_CODEBOOK_UNSIGNED(cur_cb)) {
                         for (j = 0; j < dim; j++)
                             if (ptr[j] && get_bits1(gb))
                                 sign[j] = -1;
