@@ -1366,7 +1366,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     if (!scale_flag) {
         if ((pulse.present = get_bits1(gb))) {
             if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
-                av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in EIGHT SHORT SEUQUENCE\n");
+                av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in EIGHT SHORT SEQUENCE\n");
                 return -1;
             }
             decode_pulse_data(ac, gb, &pulse);
