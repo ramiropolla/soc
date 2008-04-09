@@ -2158,7 +2158,11 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
             }
     }
 
-    *data_size = 1024 * avccontext->channels * sizeof(uint16_t);
+    i = 1024 * avccontext->channels * sizeof(uint16_t);
+    if(*data_size < i)
+        return -1;
+    *data_size = i;
+
     ac->dsp.float_to_int16(data, ac->interleaved_output, 1024 * avccontext->channels);
     return 0;
 }
