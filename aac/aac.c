@@ -1292,15 +1292,14 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
 }
 
 static void pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef) {
-    int i, off;
-        off = ics->swb_offset[pulse->start];
-        for (i = 0; i <= pulse->num_pulse; i++) {
-            off += pulse->offset[i];
-            if (icoef[off] > 0)
-                icoef[off] += pulse->amp[i];
-            else
-                icoef[off] -= pulse->amp[i];
-        }
+    int i, off = ics->swb_offset[pulse->start];
+    for (i = 0; i <= pulse->num_pulse; i++) {
+        off += pulse->offset[i];
+        if (icoef[off] > 0)
+            icoef[off] += pulse->amp[i];
+        else
+            icoef[off] -= pulse->amp[i];
+    }
 }
 
 static void quant_to_spec_tool(AACContext * ac, const ics_struct * ics, const int * icoef, const int cb[][64], const float sf[][64], float * coef) {
