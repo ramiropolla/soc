@@ -1293,7 +1293,6 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
 
 static int pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef) {
     int i, off;
-    if (pulse->present) {
         if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
             av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in EIGHT SHORT SEUQUENCE\n");
             return -1;
@@ -1306,7 +1305,6 @@ static int pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_struc
             else
                 icoef[off] -= pulse->amp[i];
         }
-    }
     return 0;
 }
 
@@ -1358,7 +1356,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     float * out = sce->coeffs;
     int global_gain;
 
-    memset(&pulse, 0, sizeof(pulse));
+    pulse.present = 0;
     global_gain = get_bits(gb, 8);
 
     if (!common_window && !scale_flag) {
@@ -1388,7 +1386,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
 
     if (decode_spectral_data(ac, gb, ics, sce->cb, icoeffs) < 0)
         return -1;
-    if (pulse_tool(ac, ics, &pulse, icoeffs) < 0)
+    if (pulse.present && pulse_tool(ac, ics, &pulse, icoeffs) < 0)
         return -1;
     quant_to_spec_tool(ac, ics, icoeffs, sce->cb, sce->sf, out);
     return 0;
