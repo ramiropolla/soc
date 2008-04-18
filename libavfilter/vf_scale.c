@@ -34,8 +34,6 @@ typedef struct
      *  -1 = keep original aspect
      */
     int w, h;
-
-    int sliceY;                 ///< top of current output slice
 } ScaleContext;
 
 static int init(AVFilterContext *ctx, const char *args, void *opaque)
@@ -112,7 +110,6 @@ static int config_props(AVFilterLink *link)
 
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
-    ScaleContext *scale = link->dst->priv;
     AVFilterLink *out = link->dst->outputs[0];
 
     out->outpic      = avfilter_get_video_buffer(out, AV_PERM_WRITE);
@@ -125,20 +122,22 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
          FFMAX(out->outpic->pixel_aspect.num,  out->outpic->pixel_aspect.den));
 
     avfilter_start_frame(out, avfilter_ref_pic(out->outpic, ~0));
-
-    scale->sliceY = 0;
 }
 
-static void draw_slice(AVFilterLink *link, int y, int h)
+
+/* TODO: figure out the swscale API well enough to scale slice at a time */
+static void end_frame(AVFilterLink *link)
 {
     ScaleContext *scale = link->dst->priv;
-    int outH;
 
-    outH = sws_scale(scale->sws, link->cur_pic->data, link->cur_pic->linesize,
-              y, h, link->dst->outputs[0]->outpic->data,
+    sws_scale(scale->sws, link->cur_pic->data, link->cur_pic->linesize, 0,
+              link->cur_pic->h, link->dst->outputs[0]->outpic->data,
               link->dst->outputs[0]->outpic->linesize);
-    avfilter_draw_slice(link->dst->outputs[0], scale->sliceY, outH);
-    scale->sliceY += outH;
+    avfilter_draw_slice(link->dst->outputs[0], 0, link->dst->outputs[0]->h);
+    avfilter_end_frame(link->dst->outputs[0]);
+
+    avfilter_unref_pic(link->cur_pic);
+    avfilter_unref_pic(link->dst->outputs[0]->outpic);
 }
 
 AVFilter avfilter_vf_scale =
@@ -155,7 +154,7 @@ AVFilter avfilter_vf_scale =
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
-                                    .draw_slice      = draw_slice,
+                                    .end_frame       = end_frame,
                                     .min_perms       = AV_PERM_READ, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
