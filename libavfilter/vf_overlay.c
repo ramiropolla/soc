@@ -37,7 +37,7 @@ typedef struct {
 static int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     OverlayContext *over = ctx->priv;
-    av_log(ctx, AV_LOG_ERROR, "args=\"%s\"\n", args);
+
     if(!args || sscanf(args, "%d:%d", &over->x, &over->y) != 2) {
         over->x =
         over->y = 0;
