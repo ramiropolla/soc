@@ -1670,9 +1670,7 @@ static void tns_filter_tool(AACContext * ac, int decode, sce_struct * sce, float
         bottom = ics->num_swb;
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
             top = bottom;
-            bottom = top - tns->length[w][filt];
-            if (bottom < 0)
-                bottom = 0;
+            bottom = FFMAX(0, top - tns->length[w][filt]);
             order = FFMIN(tns->order[w][filt], TNS_MAX_ORDER);
             if (order == 0)
                 continue;
