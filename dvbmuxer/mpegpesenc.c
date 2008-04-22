@@ -23,11 +23,6 @@
 #include "mpegpes.h"
 #include "bytestream.h"
 
-/**
- * Initialization of PES muxer.
- * @param[in] ctx the AVFormatContext which contains streams
- * @return  On error a negative value is returned, on success zero.
- */
 int ff_pes_muxer_init(AVFormatContext *ctx)
 {
     AVStream *st;
@@ -80,13 +75,6 @@ static inline void insert_timestamp(uint8_t** p, int id, int64_t timestamp)
     bytestream_put_be16(p, (uint16_t)((((timestamp) & 0x7fff) << 1) | 1));
 }
 
-/**
- * Get total number of frames that have been muxed.
- * @param[in] ctx    the AVFormatContext
- * @param[in] stream the PES stream
- * @param[in] len    PES packet size
- * @return  the number of frames have been muxed.
- */
 int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len){
     int nb_frames=0;
     PacketDesc *pkt_desc= stream->premux_packet;
