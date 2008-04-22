@@ -1476,10 +1476,9 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     if (decode_ics(ac, gb, cpe->common_window, 0, &cpe->ch[1]))
         return -1;
 
-    // M/S tool
-    if (cpe->common_window) {
+    if (cpe->common_window)
         ms_tool(ac, cpe);
-    }
+
     intensity_tool(ac, cpe);
     return 0;
 }
