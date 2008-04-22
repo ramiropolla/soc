@@ -152,7 +152,7 @@ static int pes_streamid[5] = {
 };
 
 typedef struct MpegTSWriteStream {
-    PESStream pes_stream;
+    StreamInfo pes_stream;
     int packet_size;
     int packet_number;
     int startcode;  /**< PES header start code */
@@ -622,7 +622,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
 {
     MpegTSWrite *s = ctx->priv_data;
     MpegTSWriteStream *stream = ctx->streams[stream_index]->priv_data;
-    PESStream *pes_stream = &stream->pes_stream;
+    StreamInfo *pes_stream = &stream->pes_stream;
     int payload_size, id, startcode, stuffing_size, i, header_len;
     int packet_size, es_size;
     int zero_trail_bytes = 0;
@@ -683,7 +683,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
 static int output_packet(AVFormatContext *ctx, int flush){
     MpegTSWrite *s = ctx->priv_data;
     AVStream *st;
-    PESStream *stream;
+    StreamInfo *stream;
     int es_size, trailer_size;
     int result;
     int best_i= -1;

@@ -66,7 +66,7 @@ typedef struct {
     int bytes_to_iframe;
     int align_iframe;
     int64_t vobu_start_pts;
-} PESStream;
+} StreamInfo;
 
 
 #define AUDIO_ID 0xc0
@@ -122,7 +122,7 @@ int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int
  * @param[in] len    PES packet size
  * @return  the number of frames have been muxed.
  */
-int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
+int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len);
 
 
 /**
@@ -139,7 +139,7 @@ int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len);
  * @param[in] trailer_size      unwritten trailer size
  * @param[in] pad_packet_bytes  padding size for packet
  */
-void ff_pes_cal_header(int id, PESStream *stream,
+void ff_pes_cal_header(int id, StreamInfo *stream,
           int *packet_size,  int *header_len, int64_t *pts,int64_t *dts,
           int *payload_size, int *startcode, int *stuffing_size,
           int *trailer_size, int *pad_packet_bytes);

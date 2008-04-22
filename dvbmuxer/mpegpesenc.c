@@ -31,7 +31,7 @@
 int ff_pes_muxer_init(AVFormatContext *ctx)
 {
     AVStream *st;
-    PESStream *stream;
+    StreamInfo *stream;
     int i;
 
     for(i=0;i<ctx->nb_streams;i++) {
@@ -87,7 +87,7 @@ static inline void insert_timestamp(uint8_t** p, int id, int64_t timestamp)
  * @param[in] len    PES packet size
  * @return  the number of frames have been muxed.
  */
-int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
+int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len){
     int nb_frames=0;
     PacketDesc *pkt_desc= stream->premux_packet;
 
@@ -101,7 +101,7 @@ int ff_pes_get_nb_frames(AVFormatContext *ctx, PESStream *stream, int len){
     return nb_frames;
 }
 
-void ff_pes_cal_header(int id, PESStream *stream,
+void ff_pes_cal_header(int id, StreamInfo *stream,
     int *packet_size,  int *header_len, int64_t *pts, int64_t *dts,
     int *payload_size, int *startcode, int *stuffing_size,
     int *trailer_size, int *pad_packet_bytes)
@@ -192,7 +192,7 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buff
     uint8_t *pes_content, int pes_content_len,
     int header_len, int packet_size, int payload_size, int stuffing_size)
 {
-    PESStream *stream = ctx->streams[stream_index]->priv_data;
+    StreamInfo *stream = ctx->streams[stream_index]->priv_data;
     int pes_flags, i;
     int data_size = payload_size - stuffing_size;
     uint8_t *q = pes_buffer;
@@ -257,7 +257,7 @@ int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
 
     for(i=0; i<ctx->nb_streams; i++){
         AVStream *st = ctx->streams[i];
-        PESStream *stream = st->priv_data;
+        StreamInfo *stream = st->priv_data;
         PacketDesc *pkt_desc;
 
         while((pkt_desc= stream->predecode_packet)
@@ -289,7 +289,7 @@ int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int
 retry:
     for(i=0; i<ctx->nb_streams; i++){
         AVStream *st = ctx->streams[i];
-        PESStream *stream = st->priv_data;
+        StreamInfo *stream = st->priv_data;
         const int avail_data= av_fifo_size(&stream->fifo);
         const int space= stream->max_buffer_size - stream->buffer_index;
         int rel_space= 1024*space / stream->max_buffer_size;
@@ -322,7 +322,7 @@ retry:
 
         for(i=0; i<ctx->nb_streams; i++){
             AVStream *st = ctx->streams[i];
-            PESStream *stream = st->priv_data;
+            StreamInfo *stream = st->priv_data;
             PacketDesc *pkt_desc= stream->predecode_packet;
             if(pkt_desc && pkt_desc->dts < best_dts)
                 best_dts= pkt_desc->dts;
@@ -354,7 +354,7 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
     int size= pkt->size;
     uint8_t *buf= pkt->data;
     AVStream *st = ctx->streams[stream_index];
-    PESStream *stream = st->priv_data;
+    StreamInfo *stream = st->priv_data;
     int64_t pts, dts;
     PacketDesc *pkt_desc;
     const int preload= av_rescale(ctx->preload, 90000, AV_TIME_BASE);
@@ -384,7 +384,7 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 
 void ff_pes_muxer_end(AVFormatContext *ctx)
 {
-    PESStream *stream;
+    StreamInfo *stream;
     int i;
 
     for(i=0;i<ctx->nb_streams;i++) {
