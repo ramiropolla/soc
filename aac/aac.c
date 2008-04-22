@@ -1205,14 +1205,13 @@ static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, sce_str
 
 static int decode_ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
     ms_struct * ms = &cpe->ms;
+    int g, i;
     ms->present = get_bits(gb, 2);
     if (ms->present == 1) {
-        int g, i;
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
             for (i = 0; i < cpe->ch[0].ics.max_sfb; i++)
                 ms->mask[g][i] = get_bits1(gb);// << i;
     } else if (ms->present == 2) {
-        int g, i;
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
             memset(ms->mask[g], 1, cpe->ch[0].ics.max_sfb);
     }
