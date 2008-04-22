@@ -219,7 +219,7 @@ typedef struct {
  */
 typedef struct {
     int present;
-    int mask[8][64];
+    uint8_t mask[8][64];
 } ms_struct;
 
 /**
@@ -1214,8 +1214,7 @@ static int decode_ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe)
     } else if (ms->present == 2) {
         int g, i;
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
-            for (i = 0; i < cpe->ch[0].ics.max_sfb; i++)
-                ms->mask[g][i] = 1;// = 0xFFFFFFFFFFFFFFFFULL;
+            memset(ms->mask[g], 1, cpe->ch[0].ics.max_sfb);
     }
     return 0;
 }
