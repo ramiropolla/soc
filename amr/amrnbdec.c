@@ -216,7 +216,7 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
 
 static void reorder_lsf(int *lsf, int min_dist) {
     int i;
-    int lsf_min;
+    int lsf_min = min_dist;
 
     for(i=0; i<LP_FILTER_ORDER; i++) {
         if(lsf[i] < lsf_min) {
