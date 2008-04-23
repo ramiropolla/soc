@@ -1,5 +1,5 @@
 --- ffplay.c.old	2008-04-22 17:33:42.000000000 +0200
-+++ ffplay.c	2008-04-22 17:34:41.000000000 +0200
++++ ffplay.c	2008-04-23 22:39:04.000000000 +0200
 @@ -27,6 +27,12 @@
  #include "swscale.h"
  #include "avstring.h"
@@ -323,7 +323,7 @@
  static int video_thread(void *arg)
  {
      VideoState *is = arg;
-@@ -1390,10 +1593,43 @@
+@@ -1390,10 +1593,55 @@
      double pts;
      int ret;
  
@@ -342,9 +342,21 @@
 +
 +
 +    if(vfilters) {
-+        if (avfilter_parse_graph(graph, vfilters,
-+                                 filt_src, 0,
-+                                 filt_out, 0, NULL) < 0) goto the_end;
++        AVFilterInOut *inouts = av_malloc(sizeof(AVFilterInOut));
++        inouts->name    = "in";
++        inouts->filter  = filt_src;
++        inouts->type    = LinkTypeOut;
++        inouts->pad_idx = 0;
++        inouts->next    = av_malloc(sizeof(AVFilterInOut));
++
++        inouts->next->name    = "out";
++        inouts->next->filter  = filt_out;
++        inouts->next->type    = LinkTypeIn;
++        inouts->next->pad_idx = 0;
++        inouts->next->next    = NULL;
++
++        if (avfilter_parse_graph(graph, vfilters, inouts, NULL) < 0)
++            goto the_end;
 +    } else {
 +        if(avfilter_link(filt_src, 0, filt_out, 0) < 0)          goto the_end;
 +    }
@@ -367,7 +379,7 @@
  
          if (ret < 0) goto the_end;
  
-@@ -1410,6 +1646,9 @@
+@@ -1410,6 +1658,9 @@
                  stream_pause(cur_stream);
      }
   the_end:
@@ -377,7 +389,7 @@
      av_free(frame);
      return 0;
  }
-@@ -2149,6 +2388,12 @@
+@@ -2149,6 +2400,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -390,7 +402,7 @@
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2486,6 +2731,9 @@
+@@ -2486,6 +2743,9 @@
      { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
      { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
