@@ -1,4 +1,4 @@
-include ../config.mak
+include $(SUBDIR)../config.mak
 
 NAME = avfilter
 FFLIBS = avcodec avutil
@@ -33,4 +33,4 @@ OBJS-$(CONFIG_MOVIE_FILTER)      += vsrc_movie.o
 
 HEADERS = avfilter.h
 
-include ../common.mak
+include $(SUBDIR)../subdir.mak
