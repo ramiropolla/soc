@@ -2,10 +2,10 @@ Index: Changelog
 ===================================================================
 --- Changelog
 +++ Changelog
-@@ -105,6 +105,7 @@
- - libvorbis Vorbis decoding removed in favor of native decoder
- - IntraX8 (J-Frame) subdecoder for WMV2 and VC-1
- - Ogg muxer
+@@ -121,6 +121,7 @@
+ - BFI demuxer
+ - MAXIS EA XA (.xa) demuxer / decoder
+ - BFI video decoder
 +- RealVideo 3 and 4 decoder
  
  version 0.4.9-pre1:
@@ -14,10 +14,10 @@ Index: libavcodec/Makefile
 ===================================================================
 --- libavcodec/Makefile
 +++ libavcodec/Makefile
-@@ -158,6 +158,8 @@
- OBJS-$(CONFIG_RV10_ENCODER)            += rv10.o mpegvideo_enc.o motion_est.o ratecontrol.o h263.o
- OBJS-$(CONFIG_RV20_DECODER)            += rv10.o h263.o
- OBJS-$(CONFIG_RV20_ENCODER)            += rv10.o mpegvideo_enc.o motion_est.o ratecontrol.o h263.o
+@@ -166,6 +166,8 @@
+ OBJS-$(CONFIG_RV10_ENCODER)            += rv10.o mpegvideo_enc.o motion_est.o ratecontrol.o h263.o mpeg12data.o mpegvideo.o error_resilience.o
+ OBJS-$(CONFIG_RV20_DECODER)            += rv10.o h263.o mpeg12data.o mpegvideo.o error_resilience.o
+ OBJS-$(CONFIG_RV20_ENCODER)            += rv10.o mpegvideo_enc.o motion_est.o ratecontrol.o h263.o mpeg12data.o mpegvideo.o error_resilience.o
 +OBJS-$(CONFIG_RV30_DECODER)            += rv30.o rv34.o h264pred.o rv30dsp.o
 +OBJS-$(CONFIG_RV40_DECODER)            += rv40.o rv34.o h264pred.o
  OBJS-$(CONFIG_SGI_DECODER)             += sgidec.o
@@ -27,7 +27,7 @@ Index: libavcodec/dsputil.c
 ===================================================================
 --- libavcodec/dsputil.c
 +++ libavcodec/dsputil.c
-@@ -2566,6 +2566,8 @@
+@@ -2737,6 +2737,8 @@
  /* H264 specific */
  void ff_h264dspenc_init(DSPContext* c, AVCodecContext *avctx);
  
@@ -36,7 +36,7 @@ Index: libavcodec/dsputil.c
  static void wmv2_mspel8_v_lowpass(uint8_t *dst, uint8_t *src, int dstStride, int srcStride, int w){
      uint8_t *cm = ff_cropTbl + MAX_NEG_CROP;
      int i;
-@@ -4149,6 +4151,9 @@
+@@ -4342,6 +4344,9 @@
  #if defined(CONFIG_H264_ENCODER)
      ff_h264dspenc_init(c,avctx);
  #endif
@@ -50,7 +50,7 @@ Index: libavcodec/dsputil.h
 ===================================================================
 --- libavcodec/dsputil.h
 +++ libavcodec/dsputil.h
-@@ -422,6 +422,10 @@
+@@ -451,6 +451,10 @@
      void (*x8_setup_spatial_compensation)(uint8_t *src, uint8_t *dst, int linesize,
             int * range, int * sum,  int edges);
  
@@ -65,7 +65,7 @@ Index: libavcodec/allcodecs.c
 ===================================================================
 --- libavcodec/allcodecs.c
 +++ libavcodec/allcodecs.c
-@@ -131,6 +131,8 @@
+@@ -138,6 +138,8 @@
      REGISTER_DECODER (RPZA, rpza);
      REGISTER_ENCDEC  (RV10, rv10);
      REGISTER_ENCDEC  (RV20, rv20);
@@ -78,7 +78,7 @@ Index: doc/general.texi
 ===================================================================
 --- doc/general.texi
 +++ doc/general.texi
-@@ -164,6 +164,8 @@
+@@ -186,6 +186,8 @@
  @item H.264                  @tab     @tab  X
  @item RealVideo 1.0          @tab  X  @tab  X
  @item RealVideo 2.0          @tab  X  @tab  X
