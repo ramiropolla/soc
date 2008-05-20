@@ -1562,12 +1562,11 @@ static int sbr_extension_data(AACContext * ac, GetBitContext * gb, int crc, int 
 
 static int excluded_channels(AACContext * ac, GetBitContext * gb) {
     int i;
-    int n = 0;
+    int n = 1;
     int num_excl_chan = 7;
 
     for (i = 0; i < 7; i++)
          ac->che_drc->exclude_mask[i] = get_bits1(gb);
-    n++;
 
     while (get_bits1(gb)) {
         ac->che_drc->additional_excluded_chns[n-1]=1;
