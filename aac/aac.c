@@ -703,52 +703,37 @@ static int program_config_element_default(AACContext *ac, int channels)
     pcs.mono_mixdown   = -1;
     pcs.stereo_mixdown = -1;
 
-    switch(channels) {
-    case 1: /* Mono */
-        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
-        break;
-
-    case 2: /* Stereo */
-        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
-        break;
-
-    case 3: /* Front Center + L + R  */
-        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
-        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
-        break;
-
-    case 4: /* Front Center + L + R + Back Center */
-        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
-        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
-        pcs.sce_type[1] = AAC_CHANNEL_BACK;
-        break;
-
-    case 5: /* Front Center + L + R + Back Stereo */
-        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
-        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
-        pcs.cpe_type[1] = AAC_CHANNEL_BACK;
-        break;
-
-    case 6: /* Front Center + L + R + Back Stereo + LFE */
-        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
-        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
-        pcs.cpe_type[1] = AAC_CHANNEL_BACK;
-        pcs.lfe_type[0] = AAC_CHANNEL_LFE;
-        break;
-
-    case 7: /* Front Center + L + R + Outer Front Left + Outer Front Right + Back Stereo + LFE */
-        pcs.sce_type[0] = AAC_CHANNEL_FRONT;
-        pcs.cpe_type[0] = AAC_CHANNEL_FRONT;
-        pcs.cpe_type[1] = AAC_CHANNEL_FRONT;
-        pcs.cpe_type[2] = AAC_CHANNEL_BACK;
-        pcs.lfe_type[0] = AAC_CHANNEL_LFE;
-        break;
-
-    default:
+    if(channels < 1 || channels > 7) {
         av_log(ac->avccontext, AV_LOG_ERROR, "Invalid default channel configuration (%d channels)\n",
                channels);
         return -1;
     }
+
+    /* Default channel configurations:
+     *
+     * 1ch : Front Center (Mono)
+     * 2ch : L + R (Stereo)
+     * 3ch : Front Center + L + R
+     * 4ch : Front Center + L + R + Back Center
+     * 5ch : Front Center + L + R + Back Stereo
+     * 6ch : Front Center + L + R + Back Stereo + LFE
+     * 7ch : Front Center + L + R + Outer Front Left + Outer Front Right + Back Stereo + LFE
+     */
+
+    if(channels != 2)
+        pcs.sce_type[0] = AAC_CHANNEL_FRONT; // Front Center (or Mono)
+    if(channels > 1)
+        pcs.cpe_type[0] = AAC_CHANNEL_FRONT; // L + R (or Stereo)
+    if(channels == 4)
+        pcs.sce_type[1] = AAC_CHANNEL_BACK;  // Back Center
+    if(channels > 4)
+        pcs.cpe_type[(channels == 7) + 1]
+                        = AAC_CHANNEL_BACK;  // Back Stereo
+    if(channels > 5)
+        pcs.lfe_type[0] = AAC_CHANNEL_LFE;   // LFE
+    if(channels == 7)
+        pcs.cpe_type[1] = AAC_CHANNEL_FRONT; // Outer Front Left + Outer Front Right
+
     return output_configure(ac, &pcs);
 }
 
