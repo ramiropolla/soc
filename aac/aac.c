@@ -46,7 +46,7 @@
 #include "avcodec.h"
 #include "bitstream.h"
 #include "dsputil.h"
-#include "random.h"
+#include "libavutil/random.h"
 
 #include "aactab.h"
 #include "mpeg4audio.h"
