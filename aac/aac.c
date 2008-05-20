@@ -1203,7 +1203,7 @@ static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, sce_str
 }
 #endif /* AAC_SSR */
 
-static int decode_ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
+static void decode_ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
     ms_struct * ms = &cpe->ms;
     int g, i;
     ms->present = get_bits(gb, 2);
@@ -1215,7 +1215,6 @@ static int decode_ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe)
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
             memset(ms->mask[g], 1, cpe->ch[0].ics.max_sfb);
     }
-    return 0;
 }
 
 /**
