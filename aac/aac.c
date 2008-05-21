@@ -1225,42 +1225,42 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                     memset(icoef + group * 128 + offsets[i], 0, (offsets[i+1] - offsets[i])*sizeof(int));
                 }
             }else if (cur_cb != INTENSITY_HCB2 && cur_cb != INTENSITY_HCB) {
-            for (group = 0; group < ics->group_len[g]; group++) {
-                for (k = offsets[i]; k < offsets[i+1]; k += dim) {
-                    int index = get_vlc2(gb, ac->books[cur_cb - 1].table, 6, 3);
-                    int j;
-                    int sign[4] = {1,1,1,1};
-                    int ptr[4];
-                    if (index == -1) {
-                        av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data\n");
-                        return -1;
-                    }
-                    memcpy(ptr, &ac->vq[cur_cb - 1][index * dim], dim*sizeof(int));
-                    if (IS_CODEBOOK_UNSIGNED(cur_cb)) {
-                        for (j = 0; j < dim; j++)
-                            if (ptr[j] && get_bits1(gb))
-                                sign[j] = -1;
-                    }
-                    if (cur_cb == ESC_HCB) {
-                        for (j = 0; j < 2; j++) {
-                            if (ptr[j] == 16) {
-                                int n = 4;
-                                /* Total length of escape_sequence must be < 22 bits according to spec. */
-                                /* ie. max is 11111111110xxxxxxxxxx */
-                                while (get_bits1(gb) && n < 15) n++;
-                                if(n == 15) {
-                                    av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data, ESC overflow\n");
-                                    return -1;
+                for (group = 0; group < ics->group_len[g]; group++) {
+                    for (k = offsets[i]; k < offsets[i+1]; k += dim) {
+                        int index = get_vlc2(gb, ac->books[cur_cb - 1].table, 6, 3);
+                        int j;
+                        int sign[4] = {1,1,1,1};
+                        int ptr[4];
+                        if (index == -1) {
+                            av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data\n");
+                            return -1;
+                        }
+                        memcpy(ptr, &ac->vq[cur_cb - 1][index * dim], dim*sizeof(int));
+                        if (IS_CODEBOOK_UNSIGNED(cur_cb)) {
+                            for (j = 0; j < dim; j++)
+                                if (ptr[j] && get_bits1(gb))
+                                    sign[j] = -1;
+                        }
+                        if (cur_cb == ESC_HCB) {
+                            for (j = 0; j < 2; j++) {
+                                if (ptr[j] == 16) {
+                                    int n = 4;
+                                    /* Total length of escape_sequence must be < 22 bits according to spec. */
+                                    /* ie. max is 11111111110xxxxxxxxxx */
+                                    while (get_bits1(gb) && n < 15) n++;
+                                    if(n == 15) {
+                                        av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data, ESC overflow\n");
+                                        return -1;
+                                    }
+                                    ptr[j] = (1<<n) + get_bits(gb, n);
                                 }
-                                ptr[j] = (1<<n) + get_bits(gb, n);
                             }
                         }
+                        for (j = 0; j < dim; j++)
+                            icoef[group*128+k+j] = sign[j] * ptr[j];
                     }
-                    for (j = 0; j < dim; j++)
-                        icoef[group*128+k+j] = sign[j] * ptr[j];
+                    assert(k == offsets[i+1]);
                 }
-                assert(k == offsets[i+1]);
-            }
             }
         }
         icoef += ics->group_len[g]*128;
