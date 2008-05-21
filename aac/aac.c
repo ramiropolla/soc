@@ -1998,7 +1998,7 @@ static void coupling_dependent_trans(AACContext * ac, cc_struct * cc, sce_struct
             }
         }
         dest += ics->group_len[g]*128;
-        src += ics->group_len[g]*128;
+        src  += ics->group_len[g]*128;
     }
 }
 
