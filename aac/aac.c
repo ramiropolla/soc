@@ -1215,22 +1215,16 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
             const int cur_cb = cb[g][i];
             const int dim = cur_cb >= FIRST_PAIR_HCB ? 2 : 4;
             int group;
-            if (cur_cb == INTENSITY_HCB2 || cur_cb == INTENSITY_HCB) {
-                continue;
-            }
             if (cur_cb == NOISE_HCB) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++)
                         icoef[group*128+k] = av_random(&ac->random_state) & 0x0000FFFF;
                 }
-                continue;
-            }
-            if (cur_cb == ZERO_HCB) {
+            }else if (cur_cb == ZERO_HCB) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     memset(icoef + group * 128 + offsets[i], 0, (offsets[i+1] - offsets[i])*sizeof(int));
                 }
-                continue;
-            }
+            }else if (cur_cb != INTENSITY_HCB2 && cur_cb != INTENSITY_HCB) {
             for (group = 0; group < ics->group_len[g]; group++) {
                 for (k = offsets[i]; k < offsets[i+1]; k += dim) {
                     int index = get_vlc2(gb, ac->books[cur_cb - 1].table, 6, 3);
@@ -1266,6 +1260,7 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                         icoef[group*128+k+j] = sign[j] * ptr[j];
                 }
                 assert(k == offsets[i+1]);
+            }
             }
         }
         icoef += ics->group_len[g]*128;
