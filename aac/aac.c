@@ -1418,9 +1418,8 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
                         if (cpe->ms.present)
                             c *= 1 - 2 * cpe->ms.mask[g][i];
                         scale = c * sce1->sf[g][i];
-                        for (k = offsets[i]; k < offsets[i+1]; k++) {
+                        for (k = offsets[i]; k < offsets[i+1]; k++)
                             coef1[k] = scale * coef0[k];
-                        }
                     }
                 }
                 coef0 += 128;
