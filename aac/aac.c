@@ -1460,9 +1460,6 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
 }
 
 static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
-    float cc_scale[] = {
-        pow(2, 1/8.), pow(2, 1/4.), pow(2, 0.5), 2.
-    };
     int num_gain = 0;
     int c, g, sfb;
     int sign;
@@ -1494,7 +1491,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
     }
     coup->domain = get_bits1(gb);
     sign = get_bits(gb, 1);
-    scale = cc_scale[get_bits(gb, 2)];
+    scale = pow(2., pow(2., get_bits(gb, 2) - 3));
 
     if (decode_ics(ac, gb, 0, 0, sce))
         return -1;
@@ -1506,7 +1503,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
         if (c) {
             cge = coup->ind_sw ? 1 : get_bits1(gb);
             gain = cge ? get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60: 0;
-            gain_cache = pow(scale, (float)gain);
+            gain_cache = pow(scale, gain);
         }
         for (g = 0; g < sce->ics.num_window_groups; g++)
             for (sfb = 0; sfb < sce->ics.max_sfb; sfb++)
@@ -1520,10 +1517,10 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
                             int t = get_vlc2(gb, ac->mainvlc.table, 7, 3);
                             int s = 1 - 2 * (t & 0x1);
                             gain += (t >> 1) - 30;
-                            coup->gain[c][g][sfb] = s * pow(scale, (float)gain);
+                            coup->gain[c][g][sfb] = s * pow(scale, gain);
                         } else {
                             gain += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
-                            coup->gain[c][g][sfb] = pow(scale, (float)gain);
+                            coup->gain[c][g][sfb] = pow(scale, gain);
                         }
                     }
                 }
