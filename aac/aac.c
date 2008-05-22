@@ -1690,7 +1690,7 @@ static void tns_filter_tool(AACContext * ac, int decode, sce_struct * sce, float
 }
 
 static void tns_trans(AACContext * ac, sce_struct * sce) {
-    if(sce->tns->present) tns_filter_tool(ac, 1, sce, sce->coeffs);
+    if(sce->tns.present) tns_filter_tool(ac, 1, sce, sce->coeffs);
 }
 
 #ifdef AAC_LTP
@@ -1740,7 +1740,7 @@ static void ltp_trans(AACContext * ac, sce_struct * sce) {
             x_est[i] = (float)sce->ltp_state[i + 2 * 1024 - ltp->lag] * ltp->coef;
 
         window_ltp_tool(ac, sce, x_est, X_est);
-        if(sce->tns->present) tns_filter_tool(ac, 0, sce, X_est);
+        if(sce->tns.present) tns_filter_tool(ac, 0, sce, X_est);
 
         for (sfb = 0; sfb < FFMIN(sce->ics.max_sfb, MAX_LTP_LONG_SFB); sfb++)
             if (ltp->used[sfb])
