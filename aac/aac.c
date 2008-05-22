@@ -871,13 +871,13 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         if(!(ac->vq[i] = av_malloc(dim * values * sizeof(int))))
             return -1;
 
-            for (j = 0; j < values * dim; j += dim) {
-                index = j/dim;
-                for (k = dim - 1; k >= 0; k--) {
-                    ac->vq[i][j+k] = (index % mod) - off;
-                    index /= mod;
-                }
+        for (j = 0; j < values * dim; j += dim) {
+            index = j/dim;
+            for (k = dim - 1; k >= 0; k--) {
+                ac->vq[i][j+k] = (index % mod) - off;
+                index /= mod;
             }
+        }
     }
 
     dsputil_init(&ac->dsp, avccontext);
