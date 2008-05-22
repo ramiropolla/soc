@@ -1670,21 +1670,21 @@ static void tns_filter_tool(AACContext * ac, int decode, sce_struct * sce, float
             // ar filter
             memset(b, 0, sizeof(b));
             ib = 0;
-                for (m = 0; m < size; m++) {
-                    tmp = coef[start];
-            if (decode) {
+            for (m = 0; m < size; m++) {
+                tmp = coef[start];
+                if (decode) {
                     for (i = 0; i < order; i++)
                         tmp -= b[ib + i] * lpc[i + 1];
-            } else { // encode
+                } else { // encode
                     for (i = 0; i < order; i++)
-                        tmp += b[i] * lpc[i + 1];
-            }
-                    if (--ib < 0)
-                        ib = order - 1;
-                    b[ib] = b[ib + order] = tmp;
-                    coef[start] = tmp;
-                    start += inc;
+                        tmp += b[i]      * lpc[i + 1];
                 }
+                if (--ib < 0)
+                    ib = order - 1;
+                b[ib] = b[ib + order] = tmp;
+                coef[start] = tmp;
+                start += inc;
+            }
         }
     }
 }
