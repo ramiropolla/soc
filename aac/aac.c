@@ -858,7 +858,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 
         int a_bits_size = sizeof(tmp[i].a_bits[0]);
         int a_code_size = sizeof(tmp[i].a_code[0]);
-        int j, values = tmp[i].s/a_code_size;
+        int j, k, values = tmp[i].s/a_code_size;
         int dim = (i >= 4 ? 2 : 4);
         int mod = mod_cb[i], off = off_cb[i], index = 0;
 
@@ -871,21 +871,13 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         if(!(ac->vq[i] = av_malloc(dim * values * sizeof(int))))
             return -1;
 
-        if (dim == 2) {
             for (j = 0; j < values * dim; j += dim) {
                 index = j/dim;
-                ac->vq[i][j  ] = (index / (mod            ) - off); index %= mod;
-                ac->vq[i][j+1] = (index                     - off);
+                for (k = dim - 1; k >= 0; k--) {
+                    ac->vq[i][j+k] = (index % mod) - off;
+                    index /= mod;
+                }
             }
-        } else {
-            for (j = 0; j < values * dim; j += dim) {
-                index = j/dim;
-                ac->vq[i][j  ] = (index / (mod * mod * mod) - off); index %= mod*mod*mod;
-                ac->vq[i][j+1] = (index / (mod * mod      ) - off); index %= mod*mod;
-                ac->vq[i][j+2] = (index / (mod            ) - off); index %= mod;
-                ac->vq[i][j+3] = (index                     - off);
-            }
-        }
     }
 
     dsputil_init(&ac->dsp, avccontext);
