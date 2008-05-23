@@ -1067,7 +1067,6 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, ics_struct *
             sect_len += k;
             for (; k < sect_len && k < ics->max_sfb; k++)
                 cb[g][k] = sect_cb;
-            assert(k == sect_len);
         }
     }
     return 0;
