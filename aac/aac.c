@@ -1421,9 +1421,7 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
 static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     int i;
     cpe_struct * cpe;
-    if (!ac->che_cpe[id]) {
-        return -1;
-    }
+
     cpe = ac->che_cpe[id];
     cpe->common_window = get_bits1(gb);
     if (cpe->common_window) {
@@ -1456,9 +1454,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
     float scale;
     sce_struct * sce;
     coupling_struct * coup;
-    if (!ac->che_cc[id]) {
-        return -1;
-    }
+
     sce = &ac->che_cc[id]->ch;
     sce->mixing_gain = 1.0;
 
@@ -2146,7 +2142,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             err = decode_ics(ac, &gb, 0, 0, ac->che_sce[tag]);
             break;
         case ID_CPE:
-            err = decode_cpe(ac, &gb, tag);
+            err = !ac->che_cpe[tag] ? -1 : decode_cpe(ac, &gb, tag);
             break;
         case ID_FIL:
             if (tag == 15) tag += get_bits(&gb, 8) - 1;
@@ -2161,7 +2157,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             err = data_stream_element(ac, &gb, tag);
             break;
         case ID_CCE:
-            err = decode_cce(ac, &gb, tag);
+            err = !ac->che_cc[tag] ? -1 : decode_cce(ac, &gb, tag);
             break;
         case ID_LFE:
             err = ac->che_lfe[tag] && !decode_ics(ac, &gb, 0, 0, ac->che_lfe[tag]) ? 0 : -1;
