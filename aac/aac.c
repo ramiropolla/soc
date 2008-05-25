@@ -1499,15 +1499,14 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
                     if (cge) {
                         coup->gain[c][g][sfb] = gain_cache;
                     } else {
+                        int s, t = get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
                         if (sign) {
-                            int t = get_vlc2(gb, ac->mainvlc.table, 7, 3);
-                            int s = 1 - 2 * (t & 0x1);
-                            gain += (t >> 1) - 30;
-                            coup->gain[c][g][sfb] = s * pow(scale, gain);
-                        } else {
-                            gain += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
-                            coup->gain[c][g][sfb] = pow(scale, gain);
-                        }
+                            s = 1 - 2 * (t & 0x1);
+                            t >>= 1;
+                        } else
+                            s = 1;
+                        gain += t;
+                        coup->gain[c][g][sfb] = pow(scale, gain) * s;
                     }
                 }
     }
