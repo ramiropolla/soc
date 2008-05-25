@@ -56,6 +56,8 @@
 #define MAX_CHANNELS 64
 #define MAX_TAGID 16
 
+#define IVQUANT_SIZE 1024
+
 /**
  * Audio Object Types
  */
@@ -366,7 +368,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, sine_short_128[128]);
     DECLARE_ALIGNED_16(float, pow2sf_tab[256]);
     DECLARE_ALIGNED_16(float, intensity_tab[256]);
-    DECLARE_ALIGNED_16(float, ivquant_tab[256]);
+    DECLARE_ALIGNED_16(float, ivquant_tab[IVQUANT_SIZE]);
     MDCTContext mdct;
     MDCTContext mdct_small;
     MDCTContext *mdct_ltp;
@@ -890,8 +892,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     // BIAS method instead needs values -1<x<1
     for (i = 0; i < 256; i++)
         ac->intensity_tab[i] = pow(0.5, (i - 100) / 4.);
-    for (i = 0; i < sizeof(ac->ivquant_tab)/sizeof(ac->ivquant_tab[0]); i++)
-        ac->ivquant_tab[i] = pow(i, 4./3);
+    for (i = 1 - IVQUANT_SIZE/2; i < IVQUANT_SIZE/2; i++)
+        ac->ivquant_tab[i + IVQUANT_SIZE/2 - 1] =  cbrt(fabs(i)) * i;
 
     if(ac->dsp.float_to_int16 == ff_float_to_int16_c) {
         ac->add_bias = 385.0f;
@@ -1035,13 +1037,10 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
 }
 
 static inline float ivquant(AACContext * ac, int a) {
-    static const float sign[2] = { -1., 1. };
-    int tmp = (a>>31);
-    int abs_a = (a^tmp)-tmp;
-    if (abs_a < sizeof(ac->ivquant_tab)/sizeof(ac->ivquant_tab[0]))
-        return sign[tmp+1] * ac->ivquant_tab[abs_a];
+    if (a + (unsigned int)IVQUANT_SIZE/2 - 1 < (unsigned int)IVQUANT_SIZE - 1)
+        return ac->ivquant_tab[a + IVQUANT_SIZE/2 - 1];
     else
-        return sign[tmp+1] * pow(abs_a, 4./3);
+        return cbrtf(fabsf(a)) * a;
 }
 
 /**
