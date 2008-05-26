@@ -34,7 +34,7 @@ typedef enum {
 
 #define EAC3_SR_CODE_REDUCED  3
 
-static float idct_cos_tab[6][5];
+static int idct_cos_tab[6][5];
 
 static int gaq_ungroup_tab[32][3];
 
@@ -171,7 +171,7 @@ static void spectral_extension(AC3DecodeContext *s){
 void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
     int bin, blk, gs;
     int hebap, end_bap, gaq_mode, bits, pre_mantissa, remap, log_gain;
-    float mant;
+    int mant;
     GetBitContext *gbc = &s->gbc;
 
     gaq_mode = get_bits(gbc, 2);
@@ -208,13 +208,13 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
         if (!hebap) {
             /* hebap=0 */
             for (blk = 0; blk < 6; blk++) {
-                s->pre_mantissa[blk][ch][bin] = ((av_random(&s->dith_state) & 0xFFFF) / 65535.0f) - 0.5f;
+                s->pre_mantissa[blk][ch][bin] = (av_random(&s->dith_state) & 0x7FFFFF) - 4194304;
             }
         } else if (hebap < 8) {
             /* Vector Quantization */
             int v = get_bits(gbc, bits);
             for (blk = 0; blk < 6; blk++) {
-                s->pre_mantissa[blk][ch][bin] = ff_eac3_vq_hebap[hebap][v][blk] / 32768.0f;
+                s->pre_mantissa[blk][ch][bin] = ff_eac3_vq_hebap[hebap][v][blk] << 8;
             }
         } else {
             /* Gain Adaptive Quantization */
@@ -229,30 +229,28 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
                 pre_mantissa = get_sbits(gbc, gbits);
                 if (log_gain == 0) {
                     // Gk = 1, GAQ mode = 0, or hebap is outside of GAQ range
-                    mant = pre_mantissa * ff_ac3_scale_factors[bits-1];
+                    mant = pre_mantissa << (24 - bits);
                     remap = 1;
                 } else if (pre_mantissa == -(1 << (gbits-1))) {
                     // large mantissa
                     if(log_gain == 1) {
                         // Gk = 2
-                        pre_mantissa = get_sbits(gbc, bits-1);
-                        mant = pre_mantissa * ff_ac3_scale_factors[bits-2];
+                        mant = get_sbits(gbc, bits-1) << (25 - bits);
                     } else {
                         // Gk = 4
-                        pre_mantissa = get_sbits(gbc, bits);
-                        mant = pre_mantissa * ff_ac3_scale_factors[bits-1];
+                        mant = get_sbits(gbc, bits) << (24 - bits);
                     }
                     remap = 1;
                 } else {
                     // small mantissa, Gk = 2 or 4
-                    mant = pre_mantissa * ff_ac3_scale_factors[bits-1];
+                    mant = pre_mantissa << (24 - bits);
                     remap = 0;
                 }
 
                 if (remap) {
-                    int a = ff_eac3_gaq_remap[hebap-8][0][log_gain][0] + 32768;
-                    int b = ff_eac3_gaq_remap[hebap-8][mant<0][log_gain][1];
-                    mant = (a * mant + b) / 32768;
+                    int64_t a = ff_eac3_gaq_remap[hebap-8][0][log_gain][0] + 32768;
+                    int64_t b = ff_eac3_gaq_remap[hebap-8][mant<0][log_gain][1];
+                    mant = (a * mant + b) >> 15;
                 }
                 s->pre_mantissa[blk][ch][bin] = mant;
             }
@@ -263,13 +261,13 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
 void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk){
     // TODO fast IDCT
     int bin, i;
-    float tmp;
+    int64_t tmp;
     for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
         tmp = s->pre_mantissa[0][ch][bin];
         for (i = 1; i < 6; i++) {
-            tmp += idct_cos_tab[blk][i-1] * s->pre_mantissa[i][ch][bin];
+            tmp += ((int64_t)idct_cos_tab[blk][i-1] * (int64_t)s->pre_mantissa[i][ch][bin]) >> 23;
         }
-        s->transform_coeffs[ch][bin] = tmp * ff_ac3_scale_factors[s->dexps[ch][bin]];
+        s->fixed_coeffs[ch][bin] = tmp >> s->dexps[ch][bin];
     }
 }
 
@@ -1232,7 +1230,7 @@ void ff_eac3_tables_init(void) {
     // initialize IDCT cosine table for use with AHT
     for(blk=0; blk<6; blk++) {
         for(i=1; i<6; i++) {
-            idct_cos_tab[blk][i-1] = M_SQRT2 * cos(M_PI*i*(2*blk + 1)/12);
+            idct_cos_tab[blk][i-1] = (M_SQRT2 * cos(M_PI*i*(2*blk + 1)/12) * 8388608.0) + 0.5;
         }
     }
 

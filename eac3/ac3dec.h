@@ -98,13 +98,13 @@ typedef struct AC3DecodeContext {
     int cpl_band_struct[18];                    ///< Coupling band structure (cplbndstrc)
     int firstchincpl;                           ///< First channel in coupling
     int first_cpl_coords[AC3_MAX_CHANNELS];     ///< First coupling coordinates states (firstcplcos)
-    float cpl_coords[AC3_MAX_CHANNELS][18];     ///< coupling coordinates (cplco)
+    int cpl_coords[AC3_MAX_CHANNELS][18];       ///< coupling coordinates (cplco)
 ///@}
 
 ///@defgroup aht Adaptive Hybrid Transform
     int channel_uses_aht[AC3_MAX_CHANNELS];     ///< Channel AHT in use (chahtinu)
     int gaq_gain[256];                              ///< Gain adaptive quantization gain
-    float pre_mantissa[6][AC3_MAX_CHANNELS][256];   ///< Pre-IDCT mantissas
+    int pre_mantissa[6][AC3_MAX_CHANNELS][256]; ///< Pre-IDCT mantissas
 ///@}
 
 #if TEST_SPX
@@ -210,6 +210,8 @@ typedef struct AC3DecodeContext {
     float add_bias;     ///< offset for float_to_int16 conversion
     float mul_bias;     ///< scaling for float_to_int16 conversion
 ///@}
+
+    int fixed_coeffs[AC3_MAX_CHANNELS][256];    ///< fixed-point transform coefficients
 
 ///@defgroup arrays Aligned Arrays
     DECLARE_ALIGNED_16(float, transform_coeffs[AC3_MAX_CHANNELS][AC3_MAX_COEFS]);   ///< Frequency Coefficients
