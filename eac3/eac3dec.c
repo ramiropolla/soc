@@ -218,20 +218,17 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
             }
         } else {
             /* Gain Adaptive Quantization */
+            int gbits;
             if (gaq_mode != EAC3_GAQ_NO && hebap < end_bap) {
                 log_gain = s->gaq_gain[gs++];
             } else {
                 log_gain = 0;
             }
+            gbits = bits - log_gain;
 
             for (blk = 0; blk < 6; blk++) {
-                int gbits = bits - log_gain;
                 pre_mantissa = get_sbits(gbc, gbits);
-                if (log_gain == 0) {
-                    // Gk = 1, GAQ mode = 0, or hebap is outside of GAQ range
-                    mant = pre_mantissa << (24 - bits);
-                    remap = 1;
-                } else if (pre_mantissa == -(1 << (gbits-1))) {
+                if (pre_mantissa == -(1 << (gbits-1))) {
                     // large mantissa
                     if(log_gain == 1) {
                         // Gk = 2
@@ -242,9 +239,8 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
                     }
                     remap = 1;
                 } else {
-                    // small mantissa, Gk = 2 or 4
                     mant = pre_mantissa << (24 - bits);
-                    remap = 0;
+                    remap = !log_gain;
                 }
 
                 if (remap) {
