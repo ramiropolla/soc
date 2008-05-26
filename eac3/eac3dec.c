@@ -170,8 +170,7 @@ static void spectral_extension(AC3DecodeContext *s){
 
 void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
     int bin, blk, gs;
-    int hebap, end_bap, gaq_mode, bits, pre_mantissa, remap, log_gain;
-    int mant;
+    int end_bap, gaq_mode;
     GetBitContext *gbc = &s->gbc;
 
     gaq_mode = get_bits(gbc, 2);
@@ -203,8 +202,8 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
 
     gs=0;
     for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-        hebap = s->hebap[ch][bin];
-        bits = ff_eac3_bits_vs_hebap[hebap];
+        int hebap = s->hebap[ch][bin];
+        int bits = ff_eac3_bits_vs_hebap[hebap];
         if (!hebap) {
             /* hebap=0 */
             for (blk = 0; blk < 6; blk++) {
@@ -218,7 +217,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
             }
         } else {
             /* Gain Adaptive Quantization */
-            int gbits;
+            int gbits, log_gain;
             if (gaq_mode != EAC3_GAQ_NO && hebap < end_bap) {
                 log_gain = s->gaq_gain[gs++];
             } else {
@@ -227,7 +226,8 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
             gbits = bits - log_gain;
 
             for (blk = 0; blk < 6; blk++) {
-                pre_mantissa = get_sbits(gbc, gbits);
+                int mant, remap;
+                int pre_mantissa = get_sbits(gbc, gbits);
                 if (pre_mantissa == -(1 << (gbits-1))) {
                     // large mantissa
                     if(log_gain == 1) {
