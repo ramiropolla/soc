@@ -230,13 +230,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
                 int pre_mantissa = get_sbits(gbc, gbits);
                 if (pre_mantissa == -(1 << (gbits-1))) {
                     // large mantissa
-                    if(log_gain == 1) {
-                        // Gk = 2
-                        mant = get_sbits(gbc, bits-1) << (25 - bits);
-                    } else {
-                        // Gk = 4
-                        mant = get_sbits(gbc, bits) << (24 - bits);
-                    }
+                    mant = get_sbits(gbc, bits-2+log_gain) << (26-log_gain-bits);
                     remap = 1;
                 } else {
                     mant = pre_mantissa << (24 - bits);
