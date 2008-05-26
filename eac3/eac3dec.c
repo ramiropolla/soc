@@ -230,17 +230,23 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
                 int pre_mantissa = get_sbits(gbc, gbits);
                 if (pre_mantissa == -(1 << (gbits-1))) {
                     // large mantissa
+                    int64_t a, b;
                     mant = get_sbits(gbc, bits-2+log_gain) << (26-log_gain-bits);
-                    remap = 1;
-                } else {
-                    mant = pre_mantissa << (24 - bits);
-                    remap = !log_gain;
-                }
-
-                if (remap) {
-                    int64_t a = ff_eac3_gaq_remap[hebap-8][0][log_gain][0] + 32768;
-                    int64_t b = ff_eac3_gaq_remap[hebap-8][mant<0][log_gain][1];
+                    /* remap mantissa value to correct for asymmetric quantization */
+                    a = ff_eac3_gaq_remap_2_4_a[hebap-8][log_gain-1] + 32768;
+                    if(mant >= 0)
+                        b = 32768 >> log_gain;
+                    else
+                        b = ff_eac3_gaq_remap_2_4_b[hebap-8][log_gain-1];
                     mant = (a * mant + b) >> 15;
+                } else {
+                    /* small mantissa, no GAQ, or Gk=1 */
+                    mant = pre_mantissa << (24 - bits);
+                    if(!log_gain) {
+                        /* remap mantissa value for no GAQ or Gk=1 */
+                        int64_t a = ff_eac3_gaq_remap_1[hebap-8] + 32768;
+                        mant = (a * mant) >> 15;
+                    }
                 }
                 s->pre_mantissa[blk][ch][bin] = mant;
             }
