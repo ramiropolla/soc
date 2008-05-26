@@ -176,6 +176,8 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
     gaq_mode = get_bits(gbc, 2);
     end_bap = (gaq_mode < 2) ? 12 : 17;
 
+    /* if GAQ gain is used, decode gain codes for bins with hebap between
+       8 and end_bap */
     if (gaq_mode == EAC3_GAQ_12 || gaq_mode == EAC3_GAQ_14) {
         /* read 1-bit GAQ gain codes */
         gs = 0;
@@ -229,7 +231,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
                 int mant, remap;
                 int pre_mantissa = get_sbits(gbc, gbits);
                 if (pre_mantissa == -(1 << (gbits-1))) {
-                    // large mantissa
+                    /* large mantissa */
                     int64_t a, b;
                     mant = get_sbits(gbc, bits-2+log_gain) << (26-log_gain-bits);
                     /* remap mantissa value to correct for asymmetric quantization */
@@ -255,7 +257,6 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
 }
 
 void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk){
-    // TODO fast IDCT
     int bin, i;
     int64_t tmp;
     for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
