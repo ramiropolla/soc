@@ -1108,17 +1108,14 @@ const uint8_t ff_eac3_frm_expstr[32][6] = {
  * Default channel map for a dependent substream defined by acmod
  */
 const uint16_t ff_eac3_default_chmap[8] = {
-    AC3_CHMAP_LEFT | AC3_CHMAP_RIGHT, // FIXME Ch1+Ch2
-    AC3_CHMAP_CENTRE,
-    AC3_CHMAP_LEFT | AC3_CHMAP_RIGHT,
-    AC3_CHMAP_LEFT | AC3_CHMAP_CENTRE | AC3_CHMAP_RIGHT,
-    AC3_CHMAP_LEFT | AC3_CHMAP_RIGHT | AC3_CHMAP_CENTRE_SURROUND,
-    AC3_CHMAP_LEFT | AC3_CHMAP_CENTRE | AC3_CHMAP_RIGHT |
-    AC3_CHMAP_CENTRE_SURROUND,
-    AC3_CHMAP_LEFT | AC3_CHMAP_RIGHT | AC3_CHMAP_LEFT_SURROUND |
-        AC3_CHMAP_RIGHT_SURROUND,
-    AC3_CHMAP_LEFT | AC3_CHMAP_CENTRE | AC3_CHMAP_RIGHT |
-        AC3_CHMAP_LEFT_SURROUND | AC3_CHMAP_RIGHT_SURROUND
+    AC3_CHMAP_L |               AC3_CHMAP_R, // FIXME Ch1+Ch2
+                  AC3_CHMAP_C,
+    AC3_CHMAP_L |               AC3_CHMAP_R,
+    AC3_CHMAP_L | AC3_CHMAP_C | AC3_CHMAP_R,
+    AC3_CHMAP_L |               AC3_CHMAP_R |                   AC3_CHMAP_C_SUR,
+    AC3_CHMAP_L | AC3_CHMAP_C | AC3_CHMAP_R |                   AC3_CHMAP_C_SUR,
+    AC3_CHMAP_L |               AC3_CHMAP_R | AC3_CHMAP_L_SUR |                  AC3_CHMAP_R_SUR,
+    AC3_CHMAP_L | AC3_CHMAP_C | AC3_CHMAP_R | AC3_CHMAP_L_SUR |                  AC3_CHMAP_R_SUR
 };
 
 /**
