@@ -1390,7 +1390,6 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
     const ics_struct * ics = &cpe->ch[1].ics;
     sce_struct * sce1 = &cpe->ch[1];
     float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
-    if (ics->intensity_present) {
         const uint16_t * offsets = ics->swb_offset;
         int g, gp, i, k;
         int c;
@@ -1411,7 +1410,6 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
                 coef1 += 128;
             }
         }
-    }
 }
 
 /**
@@ -1443,6 +1441,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     if (cpe->common_window)
         ms_tool(ac, cpe);
 
+    if (cpe->ch[1].ics.intensity_present)
     intensity_tool(ac, cpe);
     return 0;
 }
