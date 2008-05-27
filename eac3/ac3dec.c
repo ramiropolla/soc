@@ -309,11 +309,7 @@ static int parse_frame_header(AC3DecodeContext *s)
     s->bitstream_id                 = hdr.bitstream_id;
     s->num_blocks                   = hdr.num_blocks;
 
-    /* set default output to all source channels */
-    s->out_channels = s->channels;
-    s->output_mode = s->channel_mode;
     if(s->lfe_on) {
-        s->output_mode |= AC3_OUTPUT_LFEON;
         s->start_freq[s->lfe_ch] = 0;
         s->end_freq[s->lfe_ch] = 7;
         s->num_exp_groups[s->lfe_ch] = 2;
@@ -1296,6 +1292,9 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
 
     /* channel config */
     s->out_channels = s->channels;
+    s->output_mode = s->channel_mode;
+    if(s->lfe_on)
+        s->output_mode |= AC3_OUTPUT_LFEON;
     if (avctx->request_channels > 0 && avctx->request_channels <= 2 &&
         avctx->request_channels < s->channels) {
         s->out_channels = avctx->request_channels;
