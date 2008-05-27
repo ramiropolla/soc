@@ -42,6 +42,9 @@
 #include "dsputil.h"
 #include "ac3dec.h"
 
+/** Large enough for maximum possible frame size when the specification limit is ignored */
+#define AC3_FRAME_BUFFER_SIZE 32768
+
 /** table for grouping exponents */
 static uint8_t exp_ungroup_tab[128][3];
 
@@ -212,6 +215,13 @@ static av_cold int ac3_decode_init(AVCodecContext *avctx)
         avctx->channels = avctx->request_channels;
     }
     s->downmixed = 1;
+
+    /* allocate context input buffer */
+    if (avctx->error_resilience >= FF_ER_CAREFUL) {
+        s->input_buffer = av_mallocz(AC3_FRAME_BUFFER_SIZE);
+        if (!s->input_buffer)
+            return AVERROR_NOMEM;
+    }
 
     return 0;
 }
@@ -1233,7 +1243,14 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
     int i, blk, ch, err;
 
     /* initialize the GetBitContext with the start of valid AC-3 Frame */
+    if (s->input_buffer) {
+        /* copy input buffer to decoder context to avoid reading past the end
+           of the buffer, which can be caused by a damaged input stream. */
+        memcpy(s->input_buffer, buf, FFMIN(buf_size, AC3_FRAME_BUFFER_SIZE));
+        init_get_bits(&s->gbc, s->input_buffer, buf_size * 8);
+    } else {
     init_get_bits(&s->gbc, buf, buf_size * 8);
+    }
 
     /* parse the syncinfo */
     *data_size = 0;
@@ -1317,6 +1334,8 @@ static av_cold int ac3_decode_end(AVCodecContext *avctx)
     AC3DecodeContext *s = avctx->priv_data;
     ff_mdct_end(&s->imdct_512);
     ff_mdct_end(&s->imdct_256);
+
+    av_freep(&s->input_buffer);
 
     return 0;
 }

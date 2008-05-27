@@ -53,6 +53,7 @@
 typedef struct AC3DecodeContext {
     AVCodecContext *avctx;  ///< Parent context
     GetBitContext gbc;      ///< Bitstream reader
+    uint8_t *input_buffer;  ///< temp buffer to prevent overread
 
 ///@defgroup bsi Bit Stream Information
 ///@{
