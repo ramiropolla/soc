@@ -24,7 +24,7 @@
 
 #include "common.h"
 
-extern const uint8_t  ff_eac3_hebap_tab[64];
+extern const uint8_t ff_eac3_hebap_tab[64];
 extern const uint8_t ff_eac3_bits_vs_hebap[20];
 extern const int16_t ff_eac3_gaq_remap_1[12];
 extern const int16_t ff_eac3_gaq_remap_2_4_a[9][2];
