@@ -276,12 +276,12 @@ static int parse_bsi(AC3DecodeContext *s){
     /* an E-AC3 stream can have multiple independent streams which the
        application can select from. each independent stream can also contain
        dependent streams which are used to add or replace channels. */
-    s->stream_type = get_bits(gbc, 2);
-    if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
+    s->frame_type = get_bits(gbc, 2);
+    if (s->frame_type == EAC3_FRAME_TYPE_DEPENDENT) {
         ff_eac3_log_missing_feature(s->avctx, "Dependent substream");
         return -1;
-    } else if (s->stream_type == EAC3_STREAM_TYPE_RESERVED) {
-        av_log(s->avctx, AV_LOG_ERROR, "Reserved stream type\n");
+    } else if (s->frame_type == EAC3_FRAME_TYPE_RESERVED) {
+        av_log(s->avctx, AV_LOG_ERROR, "Reserved frame type\n");
         return -1;
     }
 
@@ -323,7 +323,7 @@ static int parse_bsi(AC3DecodeContext *s){
 
 #if 0
     /* dependent stream channel map */
-    if (s->stream_type == EAC3_STREAM_TYPE_DEPENDENT) {
+    if (s->frame_type == EAC3_FRAME_TYPE_DEPENDENT) {
         if (get_bits1(gbc)) {
             s->channel_map = get_bits(gbc, 16); //custom channel map
         } else {
@@ -359,7 +359,7 @@ static int parse_bsi(AC3DecodeContext *s){
         }
 
         /* info for mixing with other streams and substreams */
-        if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT) {
+        if (s->frame_type == EAC3_FRAME_TYPE_INDEPENDENT) {
             for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
                 // TODO: apply program scale factor
                 if (get_bits1(gbc)) {
@@ -430,12 +430,12 @@ static int parse_bsi(AC3DecodeContext *s){
        if frames are less than six blocks, this bit should be turned on
        once every 6 blocks to indicate the start of a frame set.
        reference: RFC 4598, Section 2.1.3  Frame Sets */
-    if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT && s->num_blocks != 6) {
+    if (s->frame_type == EAC3_FRAME_TYPE_INDEPENDENT && s->num_blocks != 6) {
         skip_bits1(gbc); //converter synchronization flag
     }
 
     /* original frame size code if this stream was converted from AC3 */
-    if (s->stream_type == EAC3_STREAM_TYPE_AC3_CONVERT &&
+    if (s->frame_type == EAC3_FRAME_TYPE_AC3_CONVERT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
         skip_bits(gbc, 6); // skip Frame size code
     }
@@ -540,7 +540,7 @@ static int parse_audfrm(AC3DecodeContext *s){
         }
     }
     /* original exponent strategies if this stream was converted from AC3 */
-    if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT &&
+    if (s->frame_type == EAC3_FRAME_TYPE_INDEPENDENT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             skip_bits(gbc, 5); //skip Converter channel exponent strategy
@@ -1125,7 +1125,7 @@ int ff_eac3_parse_audio_block(AC3DecodeContext *s, const int blk){
             for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++)
                 s->fast_gain[ch] = ff_ac3_fast_gain_tab[4];
         }
-        if (s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT && get_bits1(gbc)) {
+        if (s->frame_type == EAC3_FRAME_TYPE_INDEPENDENT && get_bits1(gbc)) {
             skip_bits(gbc, 10); //Converter SNR offset
         }
     }

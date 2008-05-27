@@ -1060,7 +1060,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     }
 
     /* E-AC3 to AC3 converter SNR offset */
-    if (s->eac3 && s->stream_type == EAC3_STREAM_TYPE_INDEPENDENT &&
+    if (s->eac3 && s->frame_type == EAC3_FRAME_TYPE_INDEPENDENT &&
             get_bits1(gbc)) {
         skip_bits(gbc, 10); // skip converter snr offset
     }

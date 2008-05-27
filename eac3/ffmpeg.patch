@@ -1,3 +1,16 @@
+Index: libavcodec/aac_ac3_parser.h
+===================================================================
+--- libavcodec/aac_ac3_parser.h	(revision 12599)
++++ libavcodec/aac_ac3_parser.h	(working copy)
+@@ -37,7 +37,7 @@
+     int sample_rate;
+     int bit_rate;
+     int samples;
+-    uint8_t stream_type;
++    uint8_t frame_type;
+ } AACAC3ParseContext;
+ 
+ int ff_aac_ac3_parse(AVCodecParserContext *s1,
 Index: libavcodec/Makefile
 ===================================================================
 --- libavcodec/Makefile	(revision 12599)
@@ -11,6 +24,19 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
+Index: libavcodec/aac_parser.c
+===================================================================
+--- libavcodec/aac_parser.c	(revision 12599)
++++ libavcodec/aac_parser.c	(working copy)
+@@ -84,7 +84,7 @@
+ static av_cold int aac_parse_init(AVCodecParserContext *s1)
+ {
+     AACAC3ParseContext *s = s1->priv_data;
+-    s->stream_type = EAC3_STREAM_TYPE_INDEPENDENT;
++    s->frame_type = EAC3_FRAME_TYPE_INDEPENDENT;
+     s->inbuf_ptr = s->inbuf;
+     s->header_size = AAC_HEADER_SIZE;
+     s->sync = aac_sync;
 Index: libavcodec/ac3_parser.c
 ===================================================================
 --- libavcodec/ac3_parser.c	(revision 12599)
@@ -23,14 +49,25 @@ Index: libavcodec/ac3_parser.c
  
      memset(hdr, 0, sizeof(*hdr));
  
-@@ -84,6 +83,7 @@
+@@ -84,13 +83,14 @@
          hdr->bit_rate = (ff_ac3_bitrate_tab[frame_size_code>>1] * 1000) >> hdr->sr_shift;
          hdr->channels = ff_ac3_channels_tab[hdr->channel_mode] + hdr->lfe_on;
          hdr->frame_size = ff_ac3_frame_size_tab[frame_size_code][hdr->sr_code] * 2;
+-        hdr->stream_type = EAC3_STREAM_TYPE_INDEPENDENT;
 +        hdr->num_blocks = 6;
-         hdr->stream_type = EAC3_STREAM_TYPE_INDEPENDENT;
++        hdr->frame_type = EAC3_FRAME_TYPE_INDEPENDENT;
      } else {
          /* Enhanced AC-3 */
+         hdr->crc1 = 0;
+-        hdr->stream_type = get_bits(&gbc, 2);
+-        if(hdr->stream_type == EAC3_STREAM_TYPE_RESERVED)
+-            return AC3_PARSE_ERROR_STREAM_TYPE;
++        hdr->frame_type = get_bits(&gbc, 2);
++        if(hdr->frame_type == EAC3_FRAME_TYPE_RESERVED)
++            return AC3_PARSE_ERROR_FRAME_TYPE;
+ 
+         skip_bits(&gbc, 3); // skip substream id
+ 
 @@ -105,9 +105,9 @@
                  return AC3_PARSE_ERROR_SAMPLE_RATE;
              hdr->sample_rate = ff_ac3_sample_rate_tab[sr_code2] / 2;
@@ -61,6 +98,19 @@ Index: libavcodec/ac3_parser.c
      return hdr.frame_size;
  }
  
+Index: libavcodec/ac3_parser.h
+===================================================================
+--- libavcodec/ac3_parser.h	(revision 12599)
++++ libavcodec/ac3_parser.h	(working copy)
+@@ -30,7 +30,7 @@
+     AC3_PARSE_ERROR_BSID        = -2,
+     AC3_PARSE_ERROR_SAMPLE_RATE = -3,
+     AC3_PARSE_ERROR_FRAME_SIZE  = -4,
+-    AC3_PARSE_ERROR_STREAM_TYPE = -5,
++    AC3_PARSE_ERROR_FRAME_TYPE  = -5,
+ } AC3ParseError;
+ 
+ /**
 Index: libavcodec/ac3.c
 ===================================================================
 --- libavcodec/ac3.c	(revision 12599)
@@ -98,13 +148,36 @@ Index: libavcodec/ac3.h
 ===================================================================
 --- libavcodec/ac3.h	(revision 12599)
 +++ libavcodec/ac3.h	(working copy)
-@@ -95,6 +95,7 @@
+@@ -84,7 +84,7 @@
+     uint8_t bitstream_id;
+     uint8_t channel_mode;
+     uint8_t lfe_on;
+-    uint8_t stream_type;
++    uint8_t frame_type;
+     /** @} */
+ 
+     /** @defgroup derived Derived values
+@@ -95,15 +95,16 @@
      uint32_t bit_rate;
      uint8_t channels;
      uint16_t frame_size;
 +    uint8_t num_blocks;
      /** @} */
  } AC3HeaderInfo;
+ 
+ typedef enum {
+-    EAC3_STREAM_TYPE_INDEPENDENT = 0,
+-    EAC3_STREAM_TYPE_DEPENDENT,
+-    EAC3_STREAM_TYPE_AC3_CONVERT,
+-    EAC3_STREAM_TYPE_RESERVED
+-} EAC3StreamType;
++    EAC3_FRAME_TYPE_INDEPENDENT = 0,
++    EAC3_FRAME_TYPE_DEPENDENT,
++    EAC3_FRAME_TYPE_AC3_CONVERT,
++    EAC3_FRAME_TYPE_RESERVED
++} EAC3FrameType;
+ 
+ void ac3_common_init(void);
  
 @@ -163,10 +164,12 @@
   * @param[in]  end        ending bin location
