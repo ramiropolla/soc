@@ -1390,26 +1390,26 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
     const ics_struct * ics = &cpe->ch[1].ics;
     sce_struct * sce1 = &cpe->ch[1];
     float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
-        const uint16_t * offsets = ics->swb_offset;
-        int g, gp, i, k;
-        int c;
-        float scale;
-        for (g = 0; g < ics->num_window_groups; g++) {
-            for (gp = 0; gp < ics->group_len[g]; gp++) {
-                for (i = 0; i < ics->max_sfb; i++) {
-                    if (sce1->cb[g][i] == INTENSITY_HCB || sce1->cb[g][i] == INTENSITY_HCB2) {
-                        c = -1 + 2 * (sce1->cb[g][i] - 14);
-                        if (cpe->ms.present)
-                            c *= 1 - 2 * cpe->ms.mask[g][i];
-                        scale = c * sce1->sf[g][i];
-                        for (k = offsets[i]; k < offsets[i+1]; k++)
-                            coef1[k] = scale * coef0[k];
-                    }
+    const uint16_t * offsets = ics->swb_offset;
+    int g, gp, i, k;
+    int c;
+    float scale;
+    for (g = 0; g < ics->num_window_groups; g++) {
+        for (gp = 0; gp < ics->group_len[g]; gp++) {
+            for (i = 0; i < ics->max_sfb; i++) {
+                if (sce1->cb[g][i] == INTENSITY_HCB || sce1->cb[g][i] == INTENSITY_HCB2) {
+                    c = -1 + 2 * (sce1->cb[g][i] - 14);
+                    if (cpe->ms.present)
+                        c *= 1 - 2 * cpe->ms.mask[g][i];
+                    scale = c * sce1->sf[g][i];
+                    for (k = offsets[i]; k < offsets[i+1]; k++)
+                        coef1[k] = scale * coef0[k];
                 }
-                coef0 += 128;
-                coef1 += 128;
             }
+            coef0 += 128;
+            coef1 += 128;
         }
+    }
 }
 
 /**
@@ -1442,7 +1442,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
         ms_tool(ac, cpe);
 
     if (cpe->ch[1].ics.intensity_present)
-    intensity_tool(ac, cpe);
+        intensity_tool(ac, cpe);
     return 0;
 }
 
