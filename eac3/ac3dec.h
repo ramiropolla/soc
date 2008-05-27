@@ -56,16 +56,16 @@ typedef struct AC3DecodeContext {
 
 ///@defgroup bsi Bit Stream Information
 ///@{
-    int stream_type;    ///< Stream type (strmtyp)
-    int substreamid;    ///< Substream identification
-    int frame_size;     ///< Frame size, in bytes
-    int bit_rate;       ///< Bitrate, in bits-per-second
-    int sample_rate;    ///< Sample rate, in Hz
-    int num_blocks;     ///< Number of audio blocks
-    int channel_mode;   ///< Channel mode (acmod)
-    int lfe_on;         ///< Low frequency effect channel on (lfeon)
-    int channel_map;    ///< Custom channel map
-    int bitstream_id;   ///< Bit stream identification (bsid)
+    int stream_type;        ///< Stream type (strmtyp)
+    int substreamid;        ///< Substream identification
+    int frame_size;         ///< Frame size, in bytes
+    int bit_rate;           ///< Bitrate, in bits-per-second
+    int sample_rate;        ///< Sample rate, in Hz
+    int num_blocks;         ///< Number of audio blocks
+    int channel_mode;       ///< Channel mode (acmod)
+    int lfe_on;             ///< Low frequency effect channel on (lfeon)
+    int channel_map;        ///< Custom channel map
+    int bitstream_id;       ///< Bit stream identification (bsid)
     int center_mix_level;   ///< Center mix level index
     int surround_mix_level; ///< Surround mix level index
     int eac3;               ///< indicates if current frame is E-AC3
@@ -97,7 +97,7 @@ typedef struct AC3DecodeContext {
 
 ///@defgroup aht Adaptive Hybrid Transform
     int channel_uses_aht[AC3_MAX_CHANNELS];     ///< Channel AHT in use (chahtinu)
-    int gaq_gain[256];                              ///< Gain adaptive quantization gain
+    int gaq_gain[256];                          ///< Gain adaptive quantization gain
     int pre_mantissa[6][AC3_MAX_CHANNELS][256]; ///< Pre-IDCT mantissas
 ///@}
 
