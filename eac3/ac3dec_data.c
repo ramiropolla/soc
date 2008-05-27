@@ -85,17 +85,6 @@ const int16_t ff_eac3_gaq_remap_2_4_b[9][2] = {
     { -16352, -8168}
 };
 
-/**
- * Map GAQ mode and gaqgain to Gk
- * Gk = 1 << ff_gaq_gk[GAQ Mode][gaqgain]
- */
-const uint8_t ff_eac3_gaq_gk[4][3]={
-    {0, 0, 0},
-    {0, 1, 0},
-    {0, 2, 0},
-    {0, 1, 2}
-};
-
 static const int16_t vq_hebap1[4][6] = {
 {   7167,    4739,    1106,    4269,   10412,    4820},
 {  -5702,   -3187,  -14483,   -1392,   -2027,     849},
