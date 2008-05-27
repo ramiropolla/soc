@@ -50,12 +50,6 @@
 #define MAX_BLOCKS 6
 #define MAX_SPX_CODES 18
 
-/**
- * table for exponent to scale_factor mapping
- * ff_ac3_scale_factors[i] = 2 ^ -i
- */
-extern float ff_ac3_scale_factors[25];
-
 typedef struct AC3DecodeContext {
     AVCodecContext *avctx;  ///< Parent context
     GetBitContext gbc;      ///< Bitstream reader
