@@ -1,6 +1,6 @@
 /*
- * Common code between AC3 encoder and decoder
- * Copyright (c) 2000, 2001, 2002 Fabrice Bellard.
+ * Common code between AC3 and E-AC3 decoder
+ * Copyright (c) 2007 Bartlomiej Wolowiec <bartek.wolowiec@gmail.com>
  *
  * This file is part of FFmpeg.
  *
