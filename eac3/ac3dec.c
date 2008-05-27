@@ -874,8 +874,8 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             av_log(s->avctx, AV_LOG_ERROR, "new coupling strategy must be present in block 0\n");
             return -1;
         } else {
-        /* for AC3, copy coupling use strategy from last block */
-        s->cpl_in_use[blk] = s->cpl_in_use[blk-1];
+            /* for AC3, copy coupling use strategy from last block */
+            s->cpl_in_use[blk] = s->cpl_in_use[blk-1];
         }
     }
 
