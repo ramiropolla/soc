@@ -22,7 +22,7 @@
 #ifndef FFMPEG_AC3DEC_DATA_H
 #define FFMPEG_AC3DEC_DATA_H
 
-#include "common.h"
+#include "libavutil/common.h"
 
 extern const uint8_t ff_eac3_hebap_tab[64];
 extern const uint8_t ff_eac3_bits_vs_hebap[20];

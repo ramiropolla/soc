@@ -34,12 +34,12 @@
 #include <math.h>
 #include <string.h>
 
+#include "libavutil/crc.h"
+#include "libavutil/random.h"
 #include "avcodec.h"
 #include "ac3_parser.h"
 #include "bitstream.h"
-#include "crc.h"
 #include "dsputil.h"
-#include "random.h"
 #include "ac3dec.h"
 
 /** table for grouping exponents */

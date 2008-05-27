@@ -27,12 +27,12 @@
 #ifndef AC3DEC_H
 #define AC3DEC_H
 
+#include "libavutil/random.h"
 #include "ac3tab.h"
 #include "ac3.h"
 #include "ac3dec_data.h"
 #include "bitstream.h"
 #include "dsputil.h"
-#include "random.h"
 
 #define TEST_SPX 0
 #define TEST_ECPL 0

@@ -22,7 +22,6 @@
 #include "avcodec.h"
 #include "ac3.h"
 #include "ac3dec.h"
-#include "random.h"
 
 /** Channel gain adaptive quantization mode */
 typedef enum {
