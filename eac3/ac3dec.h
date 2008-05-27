@@ -152,6 +152,8 @@ typedef struct AC3DecodeContext {
     int channels;                               ///< Total of all channels
     int lfe_ch;                                 ///< Index of LFE channel
     float downmix_coeffs[AC3_MAX_CHANNELS][2];  ///< stereo downmix coefficients
+    float downmix_coeff_adjust[2];              ///< adjustment needed for each output channel when downmixing
+    int downmixed;                              ///< indicates if transform coeffs are currently downmixed
     int output_mode;                            ///< output channel configuration
     int out_channels;                           ///< number of output channels
 ///@}

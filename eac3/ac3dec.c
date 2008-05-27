@@ -209,6 +209,7 @@ static int ac3_decode_init(AVCodecContext *avctx)
             avctx->request_channels <= 2) {
         avctx->channels = avctx->request_channels;
     }
+    s->downmixed = 1;
 
     return 0;
 }
@@ -345,6 +346,15 @@ static void set_downmix_coeffs(AC3DecodeContext *s)
         int nf = s->channel_mode - 4;
         s->downmix_coeffs[nf][0] = s->downmix_coeffs[nf+1][1] = smix;
     }
+
+    /* calculate adjustment needed for each channel to avoid clipping */
+    s->downmix_coeff_adjust[0] = s->downmix_coeff_adjust[1] = 0.0f;
+    for(i=0; i<s->fbw_channels; i++) {
+        s->downmix_coeff_adjust[0] += s->downmix_coeffs[i][0];
+        s->downmix_coeff_adjust[1] += s->downmix_coeffs[i][1];
+    }
+    s->downmix_coeff_adjust[0] = 1.0f / s->downmix_coeff_adjust[0];
+    s->downmix_coeff_adjust[1] = 1.0f / s->downmix_coeff_adjust[1];
 }
 
 /**
@@ -657,15 +667,9 @@ static void do_imdct_256(AC3DecodeContext *s, int chindex)
  * Convert frequency domain coefficients to time-domain audio samples.
  * reference: Section 7.9.4 Transformation Equations
  */
-static void do_imdct(AC3DecodeContext *s)
+static inline void do_imdct(AC3DecodeContext *s, int channels)
 {
     int ch;
-    int channels;
-
-    /* Don't perform the IMDCT on the LFE channel unless it's used in the output */
-    channels = s->fbw_channels;
-    if(s->output_mode & AC3_OUTPUT_LFEON)
-        channels++;
 
     for (ch=1; ch<=channels; ch++) {
         if (s->block_switch[ch]) {
@@ -688,27 +692,54 @@ static void do_imdct(AC3DecodeContext *s)
 /**
  * Downmix the output to mono or stereo.
  */
-static void ac3_downmix(AC3DecodeContext *s)
+static void ac3_downmix(AC3DecodeContext *s,
+                        float samples[AC3_MAX_CHANNELS][256], int ch_offset)
 {
     int i, j;
-    float v0, v1, s0, s1;
+    float v0, v1;
 
     for(i=0; i<256; i++) {
-        v0 = v1 = s0 = s1 = 0.0f;
+        v0 = v1 = 0.0f;
         for(j=0; j<s->fbw_channels; j++) {
-            v0 += s->output[j][i] * s->downmix_coeffs[j][0];
-            v1 += s->output[j][i] * s->downmix_coeffs[j][1];
-            s0 += s->downmix_coeffs[j][0];
-            s1 += s->downmix_coeffs[j][1];
+            v0 += samples[j+ch_offset][i] * s->downmix_coeffs[j][0];
+            v1 += samples[j+ch_offset][i] * s->downmix_coeffs[j][1];
         }
-        v0 /= s0;
-        v1 /= s1;
+        v0 *= s->downmix_coeff_adjust[0];
+        v1 *= s->downmix_coeff_adjust[1];
         if(s->output_mode == AC3_CHMODE_MONO) {
-            s->output[0][i] = (v0 + v1) * LEVEL_MINUS_3DB;
+            samples[ch_offset][i] = (v0 + v1) * LEVEL_MINUS_3DB;
         } else if(s->output_mode == AC3_CHMODE_STEREO) {
-            s->output[0][i] = v0;
-            s->output[1][i] = v1;
+            samples[  ch_offset][i] = v0;
+            samples[1+ch_offset][i] = v1;
         }
+    }
+}
+
+/**
+ * Upmix delay samples from stereo to original channel layout.
+ */
+static void ac3_upmix_delay(AC3DecodeContext *s)
+{
+    int channel_data_size = sizeof(s->delay[0]);
+    switch(s->channel_mode) {
+        case AC3_CHMODE_DUALMONO:
+        case AC3_CHMODE_STEREO:
+            /* upmix mono to stereo */
+            memcpy(s->delay[1], s->delay[0], channel_data_size);
+            break;
+        case AC3_CHMODE_2F2R:
+            memset(s->delay[3], 0, channel_data_size);
+        case AC3_CHMODE_2F1R:
+            memset(s->delay[2], 0, channel_data_size);
+            break;
+        case AC3_CHMODE_3F2R:
+            memset(s->delay[4], 0, channel_data_size);
+        case AC3_CHMODE_3F1R:
+            memset(s->delay[3], 0, channel_data_size);
+        case AC3_CHMODE_3F:
+            memcpy(s->delay[2], s->delay[1], channel_data_size);
+            memset(s->delay[1], 0, channel_data_size);
+            break;
     }
 }
 
@@ -720,15 +751,21 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     int fbw_channels = s->fbw_channels;
     int channel_mode = s->channel_mode;
     int i, bnd, seg, ch;
+    int different_transforms;
+    int downmix_output;
     GetBitContext *gbc = &s->gbc;
     uint8_t bit_alloc_stages[AC3_MAX_CHANNELS];
 
     memset(bit_alloc_stages, 0, AC3_MAX_CHANNELS);
 
     /* block switch flags */
+    different_transforms = 0;
     if (!s->eac3 || s->block_switch_syntax) {
-        for (ch = 1; ch <= fbw_channels; ch++)
+        for (ch = 1; ch <= fbw_channels; ch++) {
             s->block_switch[ch] = get_bits1(gbc);
+            if(ch > 1 && s->block_switch[ch] != s->block_switch[1])
+                different_transforms = 1;
+        }
     }
 
     /* dithering flags */
@@ -1120,12 +1157,36 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         }
     }
 
-    do_imdct(s);
+    /* downmix and MDCT. order depends on whether block switching is used for
+       any channel in this block. this is because coefficients for the long
+       and short transforms cannot be mixed. */
+    downmix_output = s->channels != s->out_channels &&
+                     !((s->output_mode & AC3_OUTPUT_LFEON) &&
+                     s->fbw_channels == s->out_channels);
+    if(different_transforms) {
+        /* the delay samples have already been downmixed, so we upmix the delay
+           samples in order to reconstruct all channels before downmixing. */
+        if(s->downmixed) {
+            s->downmixed = 0;
+            ac3_upmix_delay(s);
+        }
 
-    /* downmix output if needed */
-    if(s->channels != s->out_channels && !((s->output_mode & AC3_OUTPUT_LFEON) &&
-            s->fbw_channels == s->out_channels)) {
-        ac3_downmix(s);
+        do_imdct(s, s->channels);
+
+        if(downmix_output) {
+            ac3_downmix(s, s->output, 0);
+        }
+    } else {
+        if(downmix_output) {
+            ac3_downmix(s, s->transform_coeffs, 1);
+        }
+
+        if(!s->downmixed) {
+            s->downmixed = 1;
+            ac3_downmix(s, s->delay, 0);
+        }
+
+        do_imdct(s, s->out_channels);
     }
 
     /* convert float to 16-bit integer */
