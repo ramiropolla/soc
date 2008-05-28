@@ -1,37 +1,24 @@
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c	(revision 13202)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -178,6 +178,7 @@
+     REGISTER_ENCDEC  (ZMBV, zmbv);
+ 
+     /* audio codecs */
++    REGISTER_DECODER (AAC, aac);
+     REGISTER_ENCDEC  (AC3, ac3);
+     REGISTER_DECODER (ALAC, alac);
+     REGISTER_DECODER (APE, ape);
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 12665)
+--- libavcodec/Makefile	(revision 13202)
 +++ libavcodec/Makefile	(working copy)
 @@ -29,6 +29,7 @@
  
  OBJS-$(CONFIG_ENCODERS)                += faandct.o jfdctfst.o jfdctint.o
  
-+OBJS-$(CONFIG_AAC_DECODER)             += aac.o mdct.o fft.o mpeg4audio.o
++OBJS-$(CONFIG_AAC_DECODER)             += aac.o mdct.o fft.o
  OBJS-$(CONFIG_AASC_DECODER)            += aasc.o
  OBJS-$(CONFIG_AC3_DECODER)             += ac3dec.o ac3tab.o ac3.o mdct.o fft.o
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
-Index: libavcodec/allcodecs.c
-===================================================================
---- libavcodec/allcodecs.c	(revision 12665)
-+++ libavcodec/allcodecs.c	(working copy)
-@@ -177,6 +177,7 @@
-     REGISTER_ENCDEC  (ZMBV, zmbv);
- 
-     /* audio codecs */
-+    REGISTER_DECODER (AAC, aac);
-     REGISTER_DECODER (MPEG4AAC, mpeg4aac);
-     REGISTER_ENCDEC  (AC3, ac3);
-     REGISTER_DECODER (ALAC, alac);
-Index: libavformat/mov.c
-===================================================================
---- libavformat/mov.c	(revision 12665)
-+++ libavformat/mov.c	(working copy)
-@@ -1278,7 +1278,7 @@
-         st->codec->width= 0; /* let decoder init width/height */
-         st->codec->height= 0;
-         break;
--#ifdef CONFIG_LIBFAAD
-+#if defined(CONFIG_LIBFAAD) || defined(CONFIG_AAC_DECODER)
-     case CODEC_ID_AAC:
- #endif
- #ifdef CONFIG_VORBIS_DECODER
