@@ -1254,13 +1254,6 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
                 av_log(avctx, AV_LOG_ERROR, "invalid frame size\n");
                 break;
             case AC3_PARSE_ERROR_FRAME_TYPE:
-                /* TODO: add support for substreams and dependent frames */
-                if(s->frame_type == EAC3_FRAME_TYPE_DEPENDENT || s->substreamid) {
-                    av_log(avctx, AV_LOG_ERROR, "unsupported frame type : skipping frame\n");
-                    return s->frame_size;
-                } else {
-                    av_log(avctx, AV_LOG_ERROR, "invalid frame type\n");
-                }
                 break;
             default:
                 av_log(avctx, AV_LOG_ERROR, "invalid header\n");
@@ -1275,11 +1268,19 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
     }
 
     /* check for crc mismatch */
-    if(!err && avctx->error_resilience >= FF_ER_CAREFUL) {
+    if(avctx->error_resilience >= FF_ER_CAREFUL) {
         if(av_crc(av_crc_get_table(AV_CRC_16_ANSI), 0, &buf[2], s->frame_size-2)) {
             av_log(avctx, AV_LOG_ERROR, "frame CRC mismatch\n");
             err = 1;
         }
+    }
+
+    /* skip frame if CRC is ok. otherwise use error concealment. */
+    /* TODO: add support for substreams and dependent frames */
+    if(err == AC3_PARSE_ERROR_FRAME_TYPE &&
+            (s->frame_type == EAC3_FRAME_TYPE_DEPENDENT || s->substreamid)) {
+        av_log(avctx, AV_LOG_ERROR, "unsupported frame type : skipping frame\n");
+        return s->frame_size;
     }
 
     /* if frame is ok, set audio parameters */
