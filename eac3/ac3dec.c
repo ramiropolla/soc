@@ -1275,7 +1275,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
                 }
                 break;
             default:
-                av_log(avctx, AV_LOG_ERROR, "invalid header : error %d\n", err);
+                av_log(avctx, AV_LOG_ERROR, "invalid header\n");
                 break;
         }
     }
