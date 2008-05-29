@@ -1097,11 +1097,11 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
                 offset[index] += get_bits(gb, 9) - 256;
             else
                 offset[index] += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
-                if(offset[index] > 255) {
-                    av_log(ac->avccontext, AV_LOG_ERROR,
-                           "Gain (%d) out of range", offset[index]);
-                    return -1;
-                }
+            if(offset[index] > 255) {
+                av_log(ac->avccontext, AV_LOG_ERROR,
+                        "Gain (%d) out of range", offset[index]);
+                return -1;
+            }
             if(index == 2)
                 sf[g][i] =  ac->pow2sf_tab[-offset[index] + 300];
             else
