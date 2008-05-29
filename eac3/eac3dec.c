@@ -294,7 +294,7 @@ static int parse_bsi(AC3DecodeContext *s){
         // TODO: allow user to select which substream to decode
         av_log(s->avctx, AV_LOG_INFO, "Skipping additional substream #%d\n",
                s->substreamid);
-        return -1;
+        return AC3_PARSE_ERROR_FRAME_TYPE;
     }
 
     /* skip parameters which have already been read */
