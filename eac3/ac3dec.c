@@ -1254,8 +1254,8 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
     if(err) {
         switch(err) {
             case AC3_PARSE_ERROR_SYNC:
-                av_log(avctx, AV_LOG_ERROR, "frame sync error\n");
-                break;
+                av_log(avctx, AV_LOG_ERROR, "frame sync error : cannot use error concealment\n");
+                return -1;
             case AC3_PARSE_ERROR_BSID:
                 av_log(avctx, AV_LOG_ERROR, "invalid bitstream id\n");
                 break;
@@ -1272,7 +1272,6 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
                 av_log(avctx, AV_LOG_ERROR, "invalid header\n");
                 break;
         }
-        return -1;
     }
 
     /* check that reported frame size fits in input buffer */
@@ -1282,14 +1281,15 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
     }
 
     /* check for crc mismatch */
-    if(avctx->error_resilience > 0) {
+    if(!err && avctx->error_resilience > 0) {
         if(av_crc(av_crc_get_table(AV_CRC_16_ANSI), 0, &buf[2], s->frame_size-2)) {
             av_log(avctx, AV_LOG_ERROR, "frame CRC mismatch\n");
-            return -1;
+            err = 1;
         }
-        /* TODO: error concealment */
     }
 
+    /* if frame is ok, set audio parameters */
+    if (!err) {
     avctx->sample_rate = s->sample_rate;
     avctx->bit_rate = s->bit_rate;
 
@@ -1310,13 +1310,16 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
             s->fbw_channels == s->out_channels)) {
         set_downmix_coeffs(s);
     }
+    } else if (!s->out_channels) {
+        s->out_channels = avctx->channels;
+        if(s->out_channels < s->channels)
+            s->output_mode  = s->out_channels == 1 ? AC3_CHMODE_MONO : AC3_CHMODE_STEREO;
+    }
 
     /* parse the audio blocks */
     for (blk = 0; blk <  s->num_blocks; blk++) {
-        if (decode_audio_block(s, blk)) {
+        if (!err && decode_audio_block(s, blk)) {
             av_log(avctx, AV_LOG_ERROR, "error parsing the audio block\n");
-            *data_size = 0;
-            return s->frame_size;
         }
 
         /* interleave output samples */
