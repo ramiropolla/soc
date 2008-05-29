@@ -1279,8 +1279,8 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
     /* TODO: add support for substreams and dependent frames */
     if(err == AC3_PARSE_ERROR_FRAME_TYPE) {
         if(s->frame_type == EAC3_FRAME_TYPE_DEPENDENT || s->substreamid) {
-        av_log(avctx, AV_LOG_ERROR, "unsupported frame type : skipping frame\n");
-        return s->frame_size;
+            av_log(avctx, AV_LOG_ERROR, "unsupported frame type : skipping frame\n");
+            return s->frame_size;
         } else {
             av_log(avctx, AV_LOG_ERROR, "invalid frame type\n");
         }
