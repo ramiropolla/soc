@@ -1266,10 +1266,16 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
                 av_log(avctx, AV_LOG_ERROR, "invalid frame size\n");
                 break;
             case AC3_PARSE_ERROR_FRAME_TYPE:
+                /* TODO: add support for dependent frames */
+                if(s->frame_type == EAC3_FRAME_TYPE_DEPENDENT) {
+                    av_log(avctx, AV_LOG_ERROR, "unsupported frame type : skipping frame\n");
+                    return s->frame_size;
+                } else {
                 av_log(avctx, AV_LOG_ERROR, "invalid frame type\n");
+                }
                 break;
             default:
-                av_log(avctx, AV_LOG_ERROR, "invalid header\n");
+                av_log(avctx, AV_LOG_ERROR, "invalid header : error %d\n", err);
                 break;
         }
     }

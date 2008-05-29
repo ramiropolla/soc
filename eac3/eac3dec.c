@@ -21,6 +21,7 @@
 
 #include "avcodec.h"
 #include "ac3.h"
+#include "ac3_parser.h"
 #include "ac3dec.h"
 
 /** Channel gain adaptive quantization mode */
@@ -279,10 +280,10 @@ static int parse_bsi(AC3DecodeContext *s){
     s->frame_type = get_bits(gbc, 2);
     if (s->frame_type == EAC3_FRAME_TYPE_DEPENDENT) {
         ff_eac3_log_missing_feature(s->avctx, "Dependent substream");
-        return -1;
+        return AC3_PARSE_ERROR_FRAME_TYPE;
     } else if (s->frame_type == EAC3_FRAME_TYPE_RESERVED) {
         av_log(s->avctx, AV_LOG_ERROR, "Reserved frame type\n");
-        return -1;
+        return AC3_PARSE_ERROR_FRAME_TYPE;
     }
 
     /* the substream id indicates which substream this frame belongs to. each
@@ -626,7 +627,10 @@ static int parse_audfrm(AC3DecodeContext *s){
 
 int ff_eac3_parse_header(AC3DecodeContext *s)
 {
-    return (parse_bsi(s) || parse_audfrm(s));
+    int err = parse_bsi(s);
+    if(!err)
+        err = parse_audfrm(s);
+    return err;
 }
 
 #if 0
