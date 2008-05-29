@@ -545,7 +545,7 @@ static void remove_dithering(AC3DecodeContext *s) {
 }
 
 static void get_transform_coeffs_ch(AC3DecodeContext *s, int blk, int ch,
-                                   mant_groups *m)
+                                    mant_groups *m)
 {
     if (!s->eac3 || !s->channel_uses_aht[ch]) {
         ac3_get_transform_coeffs_ch(s, ch, m);
