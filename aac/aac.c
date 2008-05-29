@@ -366,8 +366,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, kbd_short_128[128]);
     DECLARE_ALIGNED_16(float, sine_long_1024[1024]);
     DECLARE_ALIGNED_16(float, sine_short_128[128]);
-    DECLARE_ALIGNED_16(float, pow2sf_tab[256]);
-    DECLARE_ALIGNED_16(float, intensity_tab[256]);
+    DECLARE_ALIGNED_16(float, pow2sf_tab[316]);
     DECLARE_ALIGNED_16(float, ivquant_tab[IVQUANT_SIZE]);
     MDCTContext mdct;
     MDCTContext mdct_small;
@@ -389,6 +388,7 @@ typedef struct {
     cpe_struct *mm_back;                              ///< Back   CPE to use for matrix mixdown
     float add_bias;                                   ///< Offset for dsp.float_to_int16
     float sf_scale;                                   ///< Prescale for correct IMDCT and dsp.float_to_int16
+    int sf_offset;                                    ///< Offset into pow2sf_tab as appropriate for dsp.float_to_int16
     /** @} */
 
 } AACContext;
@@ -890,20 +890,24 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     // -1024 - compensate wrong IMDCT method
     // 32768 - values in AAC build for ready float->int 16 bit audio, using
     // BIAS method instead needs values -1<x<1
-    for (i = 0; i < 256; i++)
-        ac->intensity_tab[i] = pow(0.5, (i - 100) / 4.);
     for (i = 1 - IVQUANT_SIZE/2; i < IVQUANT_SIZE/2; i++)
         ac->ivquant_tab[i + IVQUANT_SIZE/2 - 1] =  cbrt(fabs(i)) * i;
 
     if(ac->dsp.float_to_int16 == ff_float_to_int16_c) {
         ac->add_bias = 385.0f;
         ac->sf_scale = 1. / (-1024. * 32768.);
+        ac->sf_offset = 0;
     } else {
         ac->add_bias = 0.0f;
         ac->sf_scale = 1. / -1024.;
+        ac->sf_offset = 60;
     }
-    for (i = 0; i < 256; i++)
-        ac->pow2sf_tab[i] = pow(2, (i - 100)/4.) * ac->sf_scale;
+    /* [ 0, 255] scale factor decoding when using C dsp.float_to_int16
+     * [60, 315] scale factor decoding when using SIMD dsp.float_to_int16
+     * [45, 300] intensity stereo position decoding mapped in reverse order i.e. 0->300, 1->299, ..., 254->46, 255->45
+     */
+    for (i = 0; i < 316; i++)
+        ac->pow2sf_tab[i] = pow(2, (i - 200)/4.);
 
     if(init_vlc(&ac->mainvlc, 7, sizeof(code)/sizeof(code[0]),
             bits, sizeof(bits[0]), sizeof(bits[0]),
@@ -1076,41 +1080,32 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, ics_struct *
  * reference: Table 4.47
  */
 static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, ics_struct * ics, const int cb[][64], float sf[][64]) {
-    int g, i;
-    unsigned int intensity = 100; // normalization for intensity_tab lookup table
-    int noise = global_gain - 90;
+    int g, i, index;
+    int offset[3] = { global_gain, global_gain - 90, 100 };
     int noise_flag = 1;
     ics->intensity_present = 0;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
             if (cb[g][i] == ZERO_HCB) {
                 sf[g][i] = 0.;
-            } else if (cb[g][i] == INTENSITY_HCB || cb[g][i] == INTENSITY_HCB2) {
-                ics->intensity_present = 1;
-                intensity += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
-                if(intensity > 255) {
-                    av_log(ac->avccontext, AV_LOG_ERROR,
-                           "Intensity (%d) out of range", intensity);
-                    return -1;
-                }
-                sf[g][i] = ac->intensity_tab[intensity];
-            } else if (cb[g][i] == NOISE_HCB) {
-                if (noise_flag) {
-                    noise_flag = 0;
-                    noise += get_bits(gb, 9) - 256;
-                } else {
-                    noise += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
-                }
-                sf[g][i] = pow(2.0, 0.25 * noise) * ac->sf_scale;
-            } else {
-                global_gain += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
-                if(global_gain > 255) {
-                    av_log(ac->avccontext, AV_LOG_ERROR,
-                           "Global gain (%d) out of range", global_gain);
-                    return -1;
-                }
-                sf[g][i] = ac->pow2sf_tab[global_gain];
+                continue;
             }
+            index = (cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2) ? 2 :
+                     cb[g][i] == NOISE_HCB                                      ? 1 :
+                                                                                  0;
+            if (cb[g][i] == NOISE_HCB && noise_flag-- > 0)
+                offset[index] += get_bits(gb, 9) - 256;
+            else
+                offset[index] += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
+                if(offset[index] > 255) {
+                    av_log(ac->avccontext, AV_LOG_ERROR,
+                           "Gain (%d) out of range", offset[index]);
+                    return -1;
+                }
+            if(index == 2)
+                sf[g][i] =  ac->pow2sf_tab[-offset[index] + 300];
+            else
+                sf[g][i] = -ac->pow2sf_tab[ offset[index] + ac->sf_offset];
             sf[g][i] *= mix_gain;
         }
     }
