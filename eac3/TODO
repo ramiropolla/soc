@@ -30,6 +30,5 @@ Features:
       similar to RealAudio DolbyNet, but we need a sample to test.
 
 Cosmetic:
-* Continue renaming variables which are poorly named
 * Add more useful comments and remove bad comments
 * Add specification references
