@@ -1083,6 +1083,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
     int g, i, index;
     int offset[3] = { global_gain, global_gain - 90, 100 };
     int noise_flag = 1;
+    static const char *sf_str[3] = { "Global gain", "Noise gain", "Intensity stereo position" };
     ics->intensity_present = 0;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
@@ -1100,7 +1101,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
                 offset[index] += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
             if(offset[index] > 255) {
                 av_log(ac->avccontext, AV_LOG_ERROR,
-                        "Gain (%d) out of range", offset[index]);
+                        "%s (%d) out of range", sf_str[index], offset[index]);
                 return -1;
             }
             if(index == 2)
