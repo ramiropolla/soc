@@ -85,6 +85,18 @@ Index: libavcodec/ac3_parser.c
          hdr->channels = ff_ac3_channels_tab[hdr->channel_mode] + hdr->lfe_on;
      }
  
+Index: libavcodec/ac3_parser.h
+===================================================================
+--- libavcodec/ac3_parser.h	(revision 13545)
++++ libavcodec/ac3_parser.h	(working copy)
+@@ -32,6 +32,7 @@
+     AC3_PARSE_ERROR_SAMPLE_RATE = -3,
+     AC3_PARSE_ERROR_FRAME_SIZE  = -4,
+     AC3_PARSE_ERROR_FRAME_TYPE  = -5,
++    AC3_PARSE_ERROR_CRC         = -6,
+ } AC3ParseError;
+ 
+ /**
 Index: libavcodec/ac3.c
 ===================================================================
 --- libavcodec/ac3.c	(revision 13545)
