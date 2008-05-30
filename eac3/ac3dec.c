@@ -1224,11 +1224,26 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
     /* parse the syncinfo */
     *data_size = 0;
     err = parse_frame_header(s);
-    if(err) {
+
+    /* check that reported frame size fits in input buffer */
+    if(s->frame_size > buf_size) {
+        av_log(avctx, AV_LOG_ERROR, "incomplete frame\n");
+        err = AC3_PARSE_ERROR_FRAME_SIZE;
+    }
+
+    /* check for crc mismatch */
+    if(err != AC3_PARSE_ERROR_FRAME_SIZE && avctx->error_resilience >= FF_ER_CAREFUL) {
+        if(av_crc(av_crc_get_table(AV_CRC_16_ANSI), 0, &buf[2], s->frame_size-2)) {
+            av_log(avctx, AV_LOG_ERROR, "frame CRC mismatch\n");
+            err = 1;
+        }
+    }
+
+    if(err && err != 1) {
         switch(err) {
             case AC3_PARSE_ERROR_SYNC:
-                av_log(avctx, AV_LOG_ERROR, "frame sync error : cannot use error concealment\n");
-                return -1;
+                av_log(avctx, AV_LOG_ERROR, "frame sync error\n");
+                break;
             case AC3_PARSE_ERROR_BSID:
                 av_log(avctx, AV_LOG_ERROR, "invalid bitstream id\n");
                 break;
@@ -1239,35 +1254,18 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
                 av_log(avctx, AV_LOG_ERROR, "invalid frame size\n");
                 break;
             case AC3_PARSE_ERROR_FRAME_TYPE:
-                break;
-            default:
-                av_log(avctx, AV_LOG_ERROR, "invalid header\n");
-                break;
-        }
-    }
-
-    /* check that reported frame size fits in input buffer */
-    if(s->frame_size > buf_size) {
-        av_log(avctx, AV_LOG_ERROR, "incomplete frame\n");
-        return -1;
-    }
-
-    /* check for crc mismatch */
-    if(avctx->error_resilience >= FF_ER_CAREFUL) {
-        if(av_crc(av_crc_get_table(AV_CRC_16_ANSI), 0, &buf[2], s->frame_size-2)) {
-            av_log(avctx, AV_LOG_ERROR, "frame CRC mismatch\n");
-            err = 1;
-        }
-    }
-
     /* skip frame if CRC is ok. otherwise use error concealment. */
     /* TODO: add support for substreams and dependent frames */
-    if(err == AC3_PARSE_ERROR_FRAME_TYPE) {
         if(s->frame_type == EAC3_FRAME_TYPE_DEPENDENT || s->substreamid) {
             av_log(avctx, AV_LOG_ERROR, "unsupported frame type : skipping frame\n");
             return s->frame_size;
         } else {
             av_log(avctx, AV_LOG_ERROR, "invalid frame type\n");
+        }
+                break;
+            default:
+                av_log(avctx, AV_LOG_ERROR, "invalid header\n");
+                break;
         }
     }
 
