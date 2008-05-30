@@ -1,5 +1,5 @@
 /**
- * alac audio encoder
+ * ALAC audio encoder
  * Copyright (c) 2008  Jaikrishnan Menon <realityman@gmx.net>
  *
  * This file is part of FFmpeg.
@@ -40,8 +40,8 @@ typedef struct AlacEncodeContext {
 /**
  * put_sbits
  * @param pb PutBitContext pointer
- * @param bits Number of bits to be output
- * @param val Data Bits
+ * @param bits Number of bits to output
+ * @param val data Bits
  */
 static void put_sbits(PutBitContext *pb, int bits, int32_t val)
 {
@@ -82,7 +82,7 @@ static av_cold int alac_encode_init(AVCodecContext *avctx)
     AV_WB8 (alac_extradata+17, avctx->bits_per_sample);
     AV_WB8 (alac_extradata+21, s->channels);
     AV_WB32(alac_extradata+24, s->max_coded_frame_size);
-    AV_WB32(alac_extradata+28, s->samplerate*s->channels*avctx->bits_per_sample); // Average Bitrate
+    AV_WB32(alac_extradata+28, s->samplerate*s->channels*avctx->bits_per_sample); // average bitrate
     AV_WB32(alac_extradata+32, s->samplerate);
 
     avctx->extradata = alac_extradata;
