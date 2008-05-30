@@ -1089,10 +1089,11 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
             if (cb[g][i] == ZERO_HCB) {
                 sf[g][i] = 0.;
                 continue;
-            }
-            index = (cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2) ? 2 :
-                     cb[g][i] == NOISE_HCB                                      ? 1 :
-                                                                                  0;
+            }else if((cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
+                ics->intensity_present = 1;
+                index = 2;
+            }else
+                index = cb[g][i] == NOISE_HCB ? 1 : 0;
             if (cb[g][i] == NOISE_HCB && noise_flag-- > 0)
                 offset[index] += get_bits(gb, 9) - 256;
             else
