@@ -29,9 +29,6 @@ Features:
       handle them (if at all) in the bit allocation. It is probably
       similar to RealAudio DolbyNet, but we need a sample to test.
 
-General:
-* Try to simplify and document AHT decoding
-
 Cosmetic:
 * Continue renaming variables which are poorly named
 * Add more useful comments and remove bad comments
