@@ -272,12 +272,9 @@ static int parse_bsi(AC3DecodeContext *s){
     int i, blk;
     GetBitContext *gbc = &s->gbc;
 
-    skip_bits(gbc, 16); // skip the sync word
-
     /* an E-AC3 stream can have multiple independent streams which the
        application can select from. each independent stream can also contain
        dependent streams which are used to add or replace channels. */
-    s->frame_type = get_bits(gbc, 2);
     if (s->frame_type == EAC3_FRAME_TYPE_DEPENDENT) {
         ff_eac3_log_missing_feature(s->avctx, "Dependent substream");
         return AC3_PARSE_ERROR_FRAME_TYPE;
@@ -289,7 +286,6 @@ static int parse_bsi(AC3DecodeContext *s){
     /* the substream id indicates which substream this frame belongs to. each
        independent stream has its own substream id, and the dependent streams
        associated to an independent stream have matching substream id's */
-    s->substreamid = get_bits(gbc, 3);
     if (s->substreamid) {
         // TODO: allow user to select which substream to decode
         av_log(s->avctx, AV_LOG_INFO, "Skipping additional substream #%d\n",
@@ -297,9 +293,6 @@ static int parse_bsi(AC3DecodeContext *s){
         return AC3_PARSE_ERROR_FRAME_TYPE;
     }
 
-    /* skip parameters which have already been read */
-    skip_bits(gbc, 11); // skip frame size
-    skip_bits(gbc, 2);  // skip samplerate code
     if (s->bit_alloc_params.sr_code == EAC3_SR_CODE_REDUCED) {
         /* The E-AC3 specification does not tell how to handle reduced sample
            rates in bit allocation.  The best assumption would be that it is
@@ -307,11 +300,7 @@ static int parse_bsi(AC3DecodeContext *s){
            sample which utilizes this feature. */
         ff_eac3_log_missing_feature(s->avctx, "Reduced Sampling Rates");
         return -1;
-    } else {
-        skip_bits(gbc, 2); // skip number of blocks code
     }
-    skip_bits(gbc, 3); // skip channel mode
-    skip_bits1(gbc);   // skip lfe indicator
     skip_bits(gbc, 5); // skip bitstream id
 
     /* dialog normalization and compression gain are volume control params */

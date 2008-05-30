@@ -236,21 +236,6 @@ static int ac3_parse_header(AC3DecodeContext *s)
     GetBitContext *gbc = &s->gbc;
     int i;
 
-    /* skip over portion of header which has already been read */
-    skip_bits(gbc, 16); // skip the sync_word
-    skip_bits(gbc, 16); // skip crc1
-    skip_bits(gbc, 8);  // skip fscod and frmsizecod
-    skip_bits(gbc, 11); // skip bsid, bsmod, and acmod
-    if(s->channel_mode == AC3_CHMODE_STEREO) {
-        skip_bits(gbc, 2); // skip dsurmod
-    } else {
-        if((s->channel_mode & 1) && s->channel_mode != AC3_CHMODE_MONO)
-            s->center_mix_level = center_levels[get_bits(gbc, 2)];
-        if(s->channel_mode & 4)
-            s->surround_mix_level = surround_levels[get_bits(gbc, 2)];
-    }
-    skip_bits1(gbc); // skip lfeon
-
     /* read the rest of the bsi. read twice for dual mono mode. */
     i = !(s->channel_mode);
     do {
@@ -291,7 +276,7 @@ static int parse_frame_header(AC3DecodeContext *s)
     AC3HeaderInfo hdr;
     int err;
 
-    err = ff_ac3_parse_header(s->gbc.buffer, &hdr);
+    err = ff_ac3_parse_header(&s->gbc, &hdr);
     if(err)
         return err;
 
@@ -307,7 +292,11 @@ static int parse_frame_header(AC3DecodeContext *s)
     s->lfe_ch                       = s->fbw_channels + 1;
     s->frame_size                   = hdr.frame_size;
     s->bitstream_id                 = hdr.bitstream_id;
+    s->center_mix_level             = hdr.center_mix_level;
+    s->surround_mix_level           = hdr.surround_mix_level;
     s->num_blocks                   = hdr.num_blocks;
+    s->frame_type                   = hdr.frame_type;
+    s->substreamid                  = hdr.substreamid;
 
     if(s->lfe_on) {
         s->start_freq[s->lfe_ch] = 0;
@@ -315,10 +304,6 @@ static int parse_frame_header(AC3DecodeContext *s)
         s->num_exp_groups[s->lfe_ch] = 2;
         s->channel_in_cpl[s->lfe_ch] = 0;
     }
-
-    /* set default mix levels */
-    s->center_mix_level = 5;    // -4.5dB
-    s->surround_mix_level = 6;  // -6.0dB
 
     if(s->bitstream_id <= 10) {
         s->eac3 = 0;
