@@ -106,9 +106,7 @@ typedef struct AC3DecodeContext {
 ///@defgroup spx Spectral Extension
     int channel_uses_spx[AC3_MAX_CHANNELS]; ///< Channel in spectral extension attenuation process (chinspxatten)
     int spx_atten_code[AC3_MAX_CHANNELS];   ///< spectral extension attenuation code (spxattencod)
-#endif
     int spx_in_use;                         ///< spectral extension in use
-#if TEST_SPX
     int chinspx[AC3_MAX_CHANNELS];          ///< Channel in spectral extension
     int spxstrtf;                           ///< Spectral extension start copy frequency code
     int spxbegf;                            ///< Spectral extension begin frequency code
