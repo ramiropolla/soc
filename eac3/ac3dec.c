@@ -1117,11 +1117,8 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         }
         if(bit_alloc_stages[ch] > 0) {
             /* Compute bit allocation */
-            const uint8_t *bap_tab;
-            if (!s->eac3 || s->channel_uses_aht[ch] == 0)
-                bap_tab = ff_ac3_bap_tab;
-            else
-                bap_tab = ff_eac3_hebap_tab;
+            const uint8_t *bap_tab = (!s->eac3 || !s->channel_uses_aht[ch]) ?
+                                     ff_ac3_bap_tab : ff_eac3_hebap_tab;
             ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
                                       s->start_freq[ch], s->end_freq[ch],
                                       s->snr_offset[ch],
