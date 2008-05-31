@@ -56,7 +56,10 @@
 #define MAX_CHANNELS 64
 #define MAX_TAGID 16
 
-#define IVQUANT_SIZE 1024
+#ifndef CONFIG_HARDCODED_TABLES
+    static float ivquant_tab[IVQUANT_SIZE];
+    static float pow2sf_tab[316];
+#endif /* CONFIG_HARDCODED_TABLES */
 
 /**
  * Audio Object Types
@@ -366,8 +369,6 @@ typedef struct {
     DECLARE_ALIGNED_16(float, kbd_short_128[128]);
     DECLARE_ALIGNED_16(float, sine_long_1024[1024]);
     DECLARE_ALIGNED_16(float, sine_short_128[128]);
-    DECLARE_ALIGNED_16(float, pow2sf_tab[316]);
-    DECLARE_ALIGNED_16(float, ivquant_tab[IVQUANT_SIZE]);
     MDCTContext mdct;
     MDCTContext mdct_small;
     MDCTContext *mdct_ltp;
@@ -890,8 +891,6 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     // -1024 - compensate wrong IMDCT method
     // 32768 - values in AAC build for ready float->int 16 bit audio, using
     // BIAS method instead needs values -1<x<1
-    for (i = 1 - IVQUANT_SIZE/2; i < IVQUANT_SIZE/2; i++)
-        ac->ivquant_tab[i + IVQUANT_SIZE/2 - 1] =  cbrt(fabs(i)) * i;
 
     if(ac->dsp.float_to_int16 == ff_float_to_int16_c) {
         ac->add_bias = 385.0f;
@@ -902,12 +901,13 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         ac->sf_scale = 1. / -1024.;
         ac->sf_offset = 60;
     }
-    /* [ 0, 255] scale factor decoding when using C dsp.float_to_int16
-     * [60, 315] scale factor decoding when using SIMD dsp.float_to_int16
-     * [45, 300] intensity stereo position decoding mapped in reverse order i.e. 0->300, 1->299, ..., 254->46, 255->45
-     */
+
+#ifndef CONFIG_HARDCODED_TABLES
+    for (i = 1 - IVQUANT_SIZE/2; i < IVQUANT_SIZE/2; i++)
+        ivquant_tab[i + IVQUANT_SIZE/2 - 1] =  cbrt(fabs(i)) * i;
     for (i = 0; i < 316; i++)
-        ac->pow2sf_tab[i] = pow(2, (i - 200)/4.);
+        pow2sf_tab[i] = pow(2, (i - 200)/4.);
+#endif /* CONFIG_HARDCODED_TABLES */
 
     if(init_vlc(&ac->mainvlc, 7, sizeof(code)/sizeof(code[0]),
             bits, sizeof(bits[0]), sizeof(bits[0]),
@@ -1042,7 +1042,7 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
 
 static inline float ivquant(AACContext * ac, int a) {
     if (a + (unsigned int)IVQUANT_SIZE/2 - 1 < (unsigned int)IVQUANT_SIZE - 1)
-        return ac->ivquant_tab[a + IVQUANT_SIZE/2 - 1];
+        return ivquant_tab[a + IVQUANT_SIZE/2 - 1];
     else
         return cbrtf(fabsf(a)) * a;
 }
@@ -1105,9 +1105,9 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
                 return -1;
             }
             if(index == 2)
-                sf[g][i] =  ac->pow2sf_tab[-offset[index] + 300];
+                sf[g][i] =  pow2sf_tab[-offset[index] + 300];
             else
-                sf[g][i] = -ac->pow2sf_tab[ offset[index] + ac->sf_offset];
+                sf[g][i] = -pow2sf_tab[ offset[index] + ac->sf_offset];
             sf[g][i] *= mix_gain;
         }
     }
