@@ -1246,7 +1246,6 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                         for (j = 0; j < dim; j++)
                             icoef[group*128+k+j] = sign[j] * ptr[j];
                     }
-                    assert(k == offsets[i+1]);
                 }
             }
         }
