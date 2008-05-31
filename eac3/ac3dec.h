@@ -176,7 +176,6 @@ typedef struct AC3DecodeContext {
     int snr_offset[AC3_MAX_CHANNELS];               ///< SNR offset (snroffst)
     int fast_gain[AC3_MAX_CHANNELS];                ///< Channel fast gain (fgain)
     uint8_t bap[AC3_MAX_CHANNELS][AC3_MAX_COEFS];   ///< bit allocation pointers
-    uint8_t hebap[AC3_MAX_CHANNELS][AC3_MAX_COEFS]; ///< high-efficiency bit allocation pointers for AHT
     int16_t psd[AC3_MAX_CHANNELS][AC3_MAX_COEFS];   ///< scaled exponents
     int16_t band_psd[AC3_MAX_CHANNELS][50];         ///< interpolated exponents (bndpsd)
     int16_t mask[AC3_MAX_CHANNELS][50];             ///< masking values

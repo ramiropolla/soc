@@ -183,7 +183,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
         /* read 1-bit GAQ gain codes */
         gs = 0;
         for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-            if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < end_bap)
+            if (s->bap[ch][bin] > 7 && s->bap[ch][bin] < end_bap)
                 gaq_gain[gs++] = get_bits1(gbc) << (gaq_mode-1);
         }
     } else if (gaq_mode == EAC3_GAQ_124) {
@@ -191,7 +191,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
         int gc = 2;
         gs = 0;
         for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-            if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < end_bap) {
+            if (s->bap[ch][bin] > 7 && s->bap[ch][bin] < end_bap) {
                 if(gc++ == 2) {
                     int group_gain = get_bits(gbc, 5);
                     gaq_gain[gs++] = gaq_ungroup_tab[group_gain][0];
@@ -205,7 +205,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
 
     gs=0;
     for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-        int hebap = s->hebap[ch][bin];
+        int hebap = s->bap[ch][bin];
         int bits = ff_eac3_bits_vs_hebap[hebap];
         if (!hebap) {
             /* hebap=0 */

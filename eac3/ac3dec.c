@@ -509,7 +509,7 @@ static void remove_dithering(AC3DecodeContext *s) {
     for(ch=1; ch<=s->fbw_channels; ch++) {
         if(!s->dither_flag[ch]) {
             coeffs = s->fixed_coeffs[ch];
-            bap = s->channel_uses_aht[ch] ? s->hebap[ch] : s->bap[ch];
+            bap = s->bap[ch];
             if(s->channel_in_cpl[ch])
                 end = s->start_freq[CPL_CH];
             else
@@ -519,7 +519,7 @@ static void remove_dithering(AC3DecodeContext *s) {
                     coeffs[i] = 0;
             }
             if(s->channel_in_cpl[ch]) {
-                bap = s->channel_uses_aht[CPL_CH] ? s->hebap[CPL_CH] : s->bap[CPL_CH];
+                bap = s->bap[CPL_CH];
                 for(; i<s->end_freq[CPL_CH]; i++) {
                     if(!bap[i])
                         coeffs[i] = 0;
@@ -1117,17 +1117,16 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         }
         if(bit_alloc_stages[ch] > 0) {
             /* Compute bit allocation */
+            const uint8_t *bap_tab;
             if (!s->eac3 || s->channel_uses_aht[ch] == 0)
+                bap_tab = ff_ac3_bap_tab;
+            else
+                bap_tab = ff_eac3_hebap_tab;
                 ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
                                           s->start_freq[ch], s->end_freq[ch],
                                           s->snr_offset[ch],
                                           s->bit_alloc_params.floor,
-                                          ff_ac3_bap_tab, s->bap[ch]);
-            else
-                ff_ac3_bit_alloc_calc_bap(s->mask[ch], s->psd[ch],
-                        s->start_freq[ch], s->end_freq[ch], s->snr_offset[ch],
-                        s->bit_alloc_params.floor, ff_eac3_hebap_tab,
-                        s->hebap[ch]);
+                                          bap_tab, s->bap[ch]);
         }
     }
 
