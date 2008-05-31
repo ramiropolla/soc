@@ -98,7 +98,6 @@ typedef struct AC3DecodeContext {
 
 ///@defgroup aht Adaptive Hybrid Transform
     int channel_uses_aht[AC3_MAX_CHANNELS];     ///< Channel AHT in use (chahtinu)
-    int gaq_gain[256];                          ///< Gain adaptive quantization gain
     int pre_mantissa[6][AC3_MAX_CHANNELS][256]; ///< Pre-IDCT mantissas
 ///@}
 

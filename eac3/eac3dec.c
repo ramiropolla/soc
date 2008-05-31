@@ -172,6 +172,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
     int bin, blk, gs;
     int end_bap, gaq_mode;
     GetBitContext *gbc = &s->gbc;
+    int gaq_gain[AC3_MAX_COEFS];
 
     gaq_mode = get_bits(gbc, 2);
     end_bap = (gaq_mode < 2) ? 12 : 17;
@@ -183,7 +184,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
         gs = 0;
         for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
             if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < end_bap)
-                s->gaq_gain[gs++] = get_bits1(gbc) << (gaq_mode-1);
+                gaq_gain[gs++] = get_bits1(gbc) << (gaq_mode-1);
         }
     } else if (gaq_mode == EAC3_GAQ_124) {
         /* read 1.67-bit GAQ gain codes (3 codes in 5 bits) */
@@ -193,9 +194,9 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
             if (s->hebap[ch][bin] > 7 && s->hebap[ch][bin] < end_bap) {
                 if(gc++ == 2) {
                     int group_gain = get_bits(gbc, 5);
-                    s->gaq_gain[gs++] = gaq_ungroup_tab[group_gain][0];
-                    s->gaq_gain[gs++] = gaq_ungroup_tab[group_gain][1];
-                    s->gaq_gain[gs++] = gaq_ungroup_tab[group_gain][2];
+                    gaq_gain[gs++] = gaq_ungroup_tab[group_gain][0];
+                    gaq_gain[gs++] = gaq_ungroup_tab[group_gain][1];
+                    gaq_gain[gs++] = gaq_ungroup_tab[group_gain][2];
                     gc = 0;
                 }
             }
@@ -221,7 +222,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
             /* Gain Adaptive Quantization */
             int gbits, log_gain;
             if (gaq_mode != EAC3_GAQ_NO && hebap < end_bap) {
-                log_gain = s->gaq_gain[gs++];
+                log_gain = gaq_gain[gs++];
             } else {
                 log_gain = 0;
             }
