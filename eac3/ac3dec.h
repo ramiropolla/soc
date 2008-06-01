@@ -83,17 +83,17 @@ typedef struct AC3DecodeContext {
 ///@}
 
 ///@defgroup cpl Standard Coupling
-    int cpl_in_use[MAX_BLOCKS];                 ///< coupling in use (cplinu)
-    int cpl_strategy_exists[MAX_BLOCKS];        ///< coupling strategy exists (cplstre)
-    int channel_in_cpl[AC3_MAX_CHANNELS];       ///< channel in coupling (chincpl)
-    int phase_flags_in_use;                     ///< phase flag in use (phsflginu)
-    int phase_flags[18];                        ///< phase flag
-    int num_cpl_subbands;                       ///< number of coupling sub bands (ncplsubnd)
-    int num_cpl_bands;                          ///< number of coupling bands (ncplbnd)
-    int cpl_band_struct[18];                    ///< coupling band structure (cplbndstrc)
-    int firstchincpl;                           ///< first channel in coupling
-    int first_cpl_coords[AC3_MAX_CHANNELS];     ///< first coupling coordinates states (firstcplcos)
-    int cpl_coords[AC3_MAX_CHANNELS][18];       ///< coupling coordinates (cplco)
+    int cpl_in_use[MAX_BLOCKS];             ///< coupling in use (cplinu)
+    int cpl_strategy_exists[MAX_BLOCKS];    ///< coupling strategy exists (cplstre)
+    int channel_in_cpl[AC3_MAX_CHANNELS];   ///< channel in coupling (chincpl)
+    int phase_flags_in_use;                 ///< phase flag in use (phsflginu)
+    int phase_flags[18];                    ///< phase flag
+    int num_cpl_subbands;                   ///< number of coupling sub bands (ncplsubnd)
+    int num_cpl_bands;                      ///< number of coupling bands (ncplbnd)
+    int cpl_band_struct[18];                ///< coupling band structure (cplbndstrc)
+    int firstchincpl;                       ///< first channel in coupling
+    int first_cpl_coords[AC3_MAX_CHANNELS]; ///< first coupling coordinates states (firstcplcos)
+    int cpl_coords[AC3_MAX_CHANNELS][18];   ///< coupling coordinates (cplco)
 ///@}
 
 ///@defgroup aht adaptive hybrid transform
