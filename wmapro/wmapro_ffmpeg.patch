@@ -1,0 +1,24 @@
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(revision 13558)
++++ libavcodec/Makefile	(working copy)
+@@ -217,6 +217,7 @@
+ OBJS-$(CONFIG_WMAV1_ENCODER)           += wmaenc.o wma.o mdct.o fft.o
+ OBJS-$(CONFIG_WMAV2_DECODER)           += wmadec.o wma.o mdct.o fft.o
+ OBJS-$(CONFIG_WMAV2_ENCODER)           += wmaenc.o wma.o mdct.o fft.o
++OBJS-$(CONFIG_WMAV3PRO_DECODER)        += wma3dec.o
+ OBJS-$(CONFIG_WMV1_DECODER)            += h263dec.o h263.o mpeg12data.o mpegvideo.o error_resilience.o
+ OBJS-$(CONFIG_WMV1_ENCODER)            += mpegvideo_enc.o motion_est.o ratecontrol.o h263.o mpeg12data.o mpegvideo.o error_resilience.o
+ OBJS-$(CONFIG_WMV2_DECODER)            += wmv2dec.o wmv2.o msmpeg4.o msmpeg4data.o h263dec.o h263.o intrax8.o intrax8dsp.o mpeg12data.o mpegvideo.o error_resilience.o
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c	(revision 13558)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -210,6 +210,7 @@
+     REGISTER_DECODER (WAVPACK, wavpack);
+     REGISTER_ENCDEC  (WMAV1, wmav1);
+     REGISTER_ENCDEC  (WMAV2, wmav2);
++    REGISTER_DECODER (WMAV3PRO, wmav3pro);
+     REGISTER_DECODER (WS_SND1, ws_snd1);
+ 
+     /* PCM codecs */
