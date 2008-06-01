@@ -99,7 +99,7 @@ static int get_samples_per_frame(int sample_rate, unsigned int decode_flags) {
     return samples_per_frame;
 }
 
-static int wma3_decode_init(AVCodecContext *avctx)
+static av_cold int wma3_decode_init(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
     uint8_t *edata_ptr = avctx->extradata;
@@ -226,7 +226,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
     return avctx->block_align;
 }
 
-static int wma3_decode_end(AVCodecContext *avctx)
+static av_cold int wma3_decode_end(AVCodecContext *avctx)
 {
     return 0;
 }
