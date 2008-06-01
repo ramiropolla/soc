@@ -235,7 +235,7 @@ AVCodec wmav3pro_decoder =
 {
     "wmav3Pro",
     CODEC_TYPE_AUDIO,
-    CODEC_ID_WMAV3PRO,
+    CODEC_ID_WMAPRO,
     sizeof(WMA3DecodeContext),
     wma3_decode_init,
     NULL,
