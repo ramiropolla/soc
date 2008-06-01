@@ -24,8 +24,8 @@
  * Common code between AC3 encoder and decoder.
  */
 
-#ifndef AC3DEC_H
-#define AC3DEC_H
+#ifndef FFMPEG_AC3DEC_H
+#define FFMPEG_AC3DEC_H
 
 #include "libavutil/random.h"
 #include "ac3tab.h"
@@ -223,4 +223,4 @@ void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk);
 void ff_eac3_tables_init(void);
 void ff_eac3_log_missing_feature(AVCodecContext *avctx, const char *log);
 
-#endif /* AC3DEC_H */
+#endif /* FFMPEG_AC3DEC_H */
