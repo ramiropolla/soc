@@ -98,7 +98,7 @@ typedef struct AC3DecodeContext {
 
 ///@defgroup aht adaptive hybrid transform
     int channel_uses_aht[AC3_MAX_CHANNELS];     ///< channel AHT in use (chahtinu)
-    int pre_mantissa[6][AC3_MAX_CHANNELS][256]; ///< pre-IDCT mantissas
+    int pre_mantissa[6][AC3_MAX_CHANNELS][AC3_MAX_COEFS];   ///< pre-IDCT mantissas
 ///@}
 
 #if TEST_SPX
@@ -204,7 +204,7 @@ typedef struct AC3DecodeContext {
     float mul_bias;     ///< scaling for float_to_int16 conversion
 ///@}
 
-    int fixed_coeffs[AC3_MAX_CHANNELS][256];    ///< fixed-point transform coefficients
+    int fixed_coeffs[AC3_MAX_CHANNELS][AC3_MAX_COEFS];  ///< fixed-point transform coefficients
 
 ///@defgroup arrays aligned arrays
     DECLARE_ALIGNED_16(float, transform_coeffs[AC3_MAX_CHANNELS][AC3_MAX_COEFS]);   ///< frequency coefficients
