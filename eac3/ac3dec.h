@@ -217,7 +217,6 @@ typedef struct AC3DecodeContext {
 ///@}
 } AC3DecodeContext;
 
-/* TEMPORARY SOLUTION */
 int ff_eac3_parse_header(AC3DecodeContext *s);
 void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
 void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk);
