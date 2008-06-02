@@ -601,7 +601,7 @@ static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
 }
 
 /* Write an MPEG padding packet header. */
-static void put_padding_packet(uint8_t** pes_payload, int packet_bytes)
+static void put_padding_packet(uint8_t **pes_payload, int packet_bytes)
 {
     int i;
 
