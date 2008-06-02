@@ -342,7 +342,7 @@ typedef struct {
     MPEG4AudioConfig m4ac;
 
     int is_saved;                 ///< Set if elements have stored overlap from previous frame.
-    drc_struct * che_drc;
+    drc_struct che_drc;
 
     /**
      * @defgroup elements
@@ -1522,12 +1522,12 @@ static int excluded_channels(AACContext * ac, GetBitContext * gb) {
     int num_excl_chan = 7;
 
     for (i = 0; i < 7; i++)
-         ac->che_drc->exclude_mask[i] = get_bits1(gb);
+         ac->che_drc.exclude_mask[i] = get_bits1(gb);
 
     while (get_bits1(gb)) {
-        ac->che_drc->additional_excluded_chns[n-1]=1;
+        ac->che_drc.additional_excluded_chns[n-1]=1;
         for (i = num_excl_chan; i < num_excl_chan+7; i++)
-            ac->che_drc->exclude_mask[i] = get_bits1(gb);
+            ac->che_drc.exclude_mask[i] = get_bits1(gb);
         n++;
         num_excl_chan += 7;
     }
@@ -1541,13 +1541,10 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
     int drc_num_bands = 1;
     int i;
 
-    if (!ac->che_drc)
-        ac->che_drc = av_mallocz(sizeof(drc_struct));
-
     /* pce_tag_present? */
     if(get_bits1(gb)) {
-        ac->che_drc->pce_instance_tag = get_bits(gb, 4);
-        ac->che_drc->drc_tag_reserved_bits = get_bits(gb, 4);
+        ac->che_drc.pce_instance_tag = get_bits(gb, 4);
+        ac->che_drc.drc_tag_reserved_bits = get_bits(gb, 4);
         n++;
     }
 
@@ -1558,26 +1555,26 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
 
     /* drc_bands_present? */
     if (get_bits1(gb)) {
-        ac->che_drc->drc_band_incr = get_bits(gb, 4);
-        ac->che_drc->drc_interpolation_scheme = get_bits(gb, 4);
+        ac->che_drc.drc_band_incr = get_bits(gb, 4);
+        ac->che_drc.drc_interpolation_scheme = get_bits(gb, 4);
         n++;
-        drc_num_bands += ac->che_drc->drc_band_incr;
+        drc_num_bands += ac->che_drc.drc_band_incr;
         for (i = 0; i < drc_num_bands; i++) {
-            ac->che_drc->drc_band_top[i] = get_bits(gb, 8);
+            ac->che_drc.drc_band_top[i] = get_bits(gb, 8);
             n++;
         }
     }
 
     /* prog_ref_level_present? */
     if (get_bits1(gb)) {
-        ac->che_drc->prog_ref_level = get_bits(gb, 7);
-        ac->che_drc->prog_ref_level_reserved_bits = get_bits1(gb);
+        ac->che_drc.prog_ref_level = get_bits(gb, 7);
+        ac->che_drc.prog_ref_level_reserved_bits = get_bits1(gb);
         n++;
     }
 
     for (i = 0; i < drc_num_bands; i++) {
-        ac->che_drc->dyn_rng_sgn[i] = get_bits1(gb);
-        ac->che_drc->dyn_rng_ctl[i] = get_bits(gb, 7);
+        ac->che_drc.dyn_rng_sgn[i] = get_bits1(gb);
+        ac->che_drc.dyn_rng_ctl[i] = get_bits(gb, 7);
         n++;
     }
 
