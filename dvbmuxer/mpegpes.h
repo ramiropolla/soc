@@ -135,7 +135,7 @@ int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len);
  * @param[in] pad_packet_bytes  padding size for packet
  */
 void ff_pes_cal_header(int id, StreamInfo *stream,
-          int *packet_size,  int *header_len, int64_t *pts,int64_t *dts,
+          int *packet_size,  int *header_len, int64_t *pts, int64_t *dts,
           int *payload_size, int *startcode, int *stuffing_size,
           int *trailer_size, int *pad_packet_bytes);
 
@@ -155,7 +155,7 @@ void ff_pes_cal_header(int id, StreamInfo *stream,
  * @return   bytes written to PES stream.
  */
 int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buffer,
-          int64_t pts,int64_t dts, int  id, int startcode,
+          int64_t pts, int64_t dts, int id, int startcode,
           uint8_t* pes_content, int pes_content_len,
           int header_len, int packet_size, int payload_size, int stuffing_size);
 
