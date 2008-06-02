@@ -636,7 +636,8 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
                           &packet_size, &header_len, &pts, &dts,
                           &payload_size, &startcode, &stuffing_size,
                           &trailer_size, &pad_packet_bytes);
-        pes_size = ff_pes_muxer_write(ctx, stream_index, stream->payload, pts, dts, id, stream->startcode, NULL, 0,
+        pes_size = ff_pes_muxer_write(ctx, stream_index, stream->payload,
+                 pts, dts, id, stream->startcode, NULL, 0,
                  header_len, packet_size, payload_size, stuffing_size);
         if(pes_size < 0)
             return -1;
