@@ -180,15 +180,13 @@ int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     int header_len, int packet_size, int payload_size, int stuffing_size)
 {
     StreamInfo *stream = ctx->streams[stream_index]->priv_data;
-    int flags, i;
+    int i, flags = 0;
     int data_size = payload_size - stuffing_size;
     uint8_t *q = buf;
 
     bytestream_put_be32(&q, startcode);
     bytestream_put_be16(&q, packet_size);
     bytestream_put_byte(&q, 0x80); /* mpeg2 id */
-
-    flags=0;
 
     if (pts != AV_NOPTS_VALUE) {
         flags |= 0x80;
