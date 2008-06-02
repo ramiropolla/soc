@@ -459,7 +459,7 @@ static int mpegts_write_header(AVFormatContext *s)
             codec_rate= st->codec->bit_rate;
 
         if(!codec_rate)
-            codec_rate= (1<<21)*8/ctx->nb_streams;
+            codec_rate= (1<<21)*8/s->nb_streams;
         bitrate += codec_rate;
     }
 
