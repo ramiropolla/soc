@@ -384,8 +384,7 @@ static int mpegts_write_header(AVFormatContext *s)
     MpegTSWriteStream *ts_st;
     MpegTSService *service;
     AVStream *st;
-    int bitrate;
-    int i;
+    int i, total_bit_rate;
     const char *service_name;
 
     ts->tsid = DEFAULT_TSID;
@@ -417,7 +416,9 @@ static int mpegts_write_header(AVFormatContext *s)
     ts->sdt.opaque = s;
 
     /* assign pids to each stream */
+    total_bit_rate = 0;
     for(i = 0;i < s->nb_streams; i++) {
+        int codec_rate;
         st = s->streams[i];
         ts_st = av_mallocz(sizeof(MpegTSWriteStream));
         if (!ts_st)
@@ -438,6 +439,14 @@ static int mpegts_write_header(AVFormatContext *s)
             ts_st->startcode = PRIVATE_STREAM_1;
         else
             ts_st->startcode = 0x100 + ts_st->id;
+
+        if(st->codec->rc_max_rate)
+            codec_rate= st->codec->rc_max_rate;
+        else
+            codec_rate= st->codec->bit_rate;
+        if(!codec_rate)
+            codec_rate= (1<<21)*8/s->nb_streams;
+        total_bit_rate += codec_rate;
     }
 
     /* if no video stream, use the first stream as PCR */
@@ -449,34 +458,21 @@ static int mpegts_write_header(AVFormatContext *s)
     if(ff_pes_muxer_init(s) != 0)
         goto fail;
 
-    bitrate = 0;
-    for(i=0;i<s->nb_streams;i++) {
-        int codec_rate;
-        st = s->streams[i];
-        if(st->codec->rc_max_rate)
-            codec_rate= st->codec->rc_max_rate;
-        else
-            codec_rate= st->codec->bit_rate;
-
-        if(!codec_rate)
-            codec_rate= (1<<21)*8/s->nb_streams;
-        bitrate += codec_rate;
-    }
-
     if(s->mux_rate) {
         ts->mux_rate= s->mux_rate;
     } else {
-        bitrate += bitrate * 25 / (8 * DEFAULT_PES_PAYLOAD_SIZE) +  /* PES header size */
-                   bitrate * 4 / (8 * TS_PACKET_SIZE) +             /* TS  header size */
-                   500 * 12 +                                       /* SDT size */
-                   100 * 16;                                        /* PAT size */
-        ts->mux_rate = bitrate;
+        total_bit_rate +=
+            total_bit_rate * 25 / (8 * DEFAULT_PES_PAYLOAD_SIZE) + /* PES header size */
+            total_bit_rate * 4 / (8 * TS_PACKET_SIZE) +            /* TS  header size */
+            500 * 12 +                                            /* SDT size */
+            100 * 16;                                             /* PAT size */
+        ts->mux_rate = total_bit_rate;
     }
     ts->last_pcr = ts->cur_pcr = 0;
 
-    ts->sdt_packet_freq = (ts->mux_rate * SDT_RETRANS_TIME) /
+    ts->sdt_packet_freq = (total_bit_rate * SDT_RETRANS_TIME) /
         (TS_PACKET_SIZE * 8 * 1000);
-    ts->pat_packet_freq = (ts->mux_rate * PAT_RETRANS_TIME) /
+    ts->pat_packet_freq = (total_bit_rate * PAT_RETRANS_TIME) /
         (TS_PACKET_SIZE * 8 * 1000);
 #if 0
     printf("%d %d %d\n",
