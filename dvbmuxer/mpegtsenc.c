@@ -625,6 +625,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     int pad_packet_bytes = 0;
     int general_pack = 0;  /*"general" pack without data specific to one stream?*/
     int pes_size;
+    uint8_t *q = stream->payload;
 
     pes_stream->format = PES_FMT_TS;
     packet_size = s->packet_size;
@@ -639,6 +640,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
                  packet_size, payload_size, stuffing_size);
         if(pes_size < 0)
             return -1;
+        q += pes_size;
     }else{
         payload_size=
         stuffing_size= 0;
@@ -650,7 +652,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     for(i=0;i<zero_trail_bytes;i++)
         bytestream_put_byte(&q, 0x00);
 
-    mpegts_write_pes(ctx, stream, stream->payload, pes_size);
+    mpegts_write_pes(ctx, stream, stream->payload, q - stream->payload);
     put_flush_packet(ctx->pb);
 
     s->packet_number++;
