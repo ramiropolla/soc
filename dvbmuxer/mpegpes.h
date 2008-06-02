@@ -28,7 +28,7 @@
 #define AVFORMAT_MPEG_PES_H
 
 #include "avformat.h"
-#include "fifo.h"
+#include "libavutil/fifo.h"
 
 #define PES_FMT_MPEG2 0x01
 #define PES_FMT_VCD   0x02
