@@ -111,7 +111,7 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
  * @param[out] best_i      Index of the stream to be muxed
  * @return                 Negative on error, zero if not found, 1 if found.
  */
-int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int* best_i);
+int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int *best_i);
 
 /**
  * Get total number of frames of PES stream to be muxed considering len
@@ -159,7 +159,7 @@ void ff_pes_cal_header(StreamInfo *stream,
  */
 int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
           int64_t pts, int64_t dts, int id, int startcode,
-          uint8_t* pes_content, int pes_content_len,
+          uint8_t *pes_content, int pes_content_len,
           int header_len, int packet_size, int payload_size, int stuffing_size);
 
 /**
