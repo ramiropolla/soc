@@ -167,7 +167,7 @@ void ff_pes_cal_header(StreamInfo *stream,
 
     if (*stuffing_size < 0)
         *stuffing_size = 0;
-    if (*stuffing_size > 16) {    /*<=16 for MPEG-1, <=32 for MPEG-2*/
+    if (*stuffing_size > 16) {    /* <=16 for MPEG-1, <=32 for MPEG-2 */
         *pad_packet_bytes += *stuffing_size;
         *packet_size -= *stuffing_size;
         *payload_size -= *stuffing_size;
@@ -186,7 +186,6 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     uint8_t *q = buf;
 
     bytestream_put_be32(&q, startcode);
-
     bytestream_put_be16(&q, packet_size);
     bytestream_put_byte(&q, 0x80); /* mpeg2 id */
 
@@ -208,12 +207,12 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     bytestream_put_byte(&q, pes_flags); /* flags */
     bytestream_put_byte(&q, header_len - 3 + stuffing_size);
 
-    if (pes_flags & 0x80)  /*write pts*/
+    if (pes_flags & 0x80)  /* write pts */
         insert_timestamp(&q, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
-    if (pes_flags & 0x40)  /*write dts*/
+    if (pes_flags & 0x40)  /* write dts */
         insert_timestamp(&q, 0x01, dts);
 
-    if (pes_flags & 0x01) {  /*write pes extension*/
+    if (pes_flags & 0x01) {  /* write pes extension */
         bytestream_put_byte(&q, 0x10); /* flags */
 
         /* P-STD buffer info */
@@ -276,8 +275,8 @@ int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int
 
 retry:
     for(i=0; i<ctx->nb_streams; i++){
-        AVStream *st = ctx->streams[i];
-        StreamInfo *stream = st->priv_data;
+        AVStream *st= ctx->streams[i];
+        StreamInfo *stream= st->priv_data;
         const int avail_data= av_fifo_size(&stream->fifo);
         const int space= stream->max_buffer_size - stream->buffer_index;
         int rel_space= 1024*space / stream->max_buffer_size;
@@ -341,8 +340,8 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
     int stream_index= pkt->stream_index;
     int size= pkt->size;
     uint8_t *buf= pkt->data;
-    AVStream *st = ctx->streams[stream_index];
-    StreamInfo *stream = st->priv_data;
+    AVStream *st= ctx->streams[stream_index];
+    StreamInfo *stream= st->priv_data;
     int64_t pts, dts;
     PacketDesc *pkt_desc;
     const int preload= av_rescale(ctx->preload, 90000, AV_TIME_BASE);
