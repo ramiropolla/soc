@@ -21,7 +21,7 @@
  */
 
 #include "mpegpes.h"
-#include "bytestream.h"
+#include "libavcodec/bytestream.h"
 
 int ff_pes_muxer_init(AVFormatContext *ctx)
 {
