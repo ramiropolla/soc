@@ -117,18 +117,16 @@ void ff_pes_cal_header(StreamInfo *stream,
     }
 
     *payload_size = *packet_size - *header_len;
-    if (stream->format != PES_FMT_TS) {
-        if (stream->id < 0xc0) {
-            *startcode = PRIVATE_STREAM_1;
-            *payload_size -= 1;
-            if (stream->id >= 0x40) {
+    if (stream->id < 0xc0) {
+        *startcode = PRIVATE_STREAM_1;
+        *payload_size -= 1;
+        if (stream->id >= 0x40) {
+            *payload_size -= 3;
+            if (stream->id >= 0xa0)
                 *payload_size -= 3;
-                if (stream->id >= 0xa0)
-                    *payload_size -= 3;
-            }
-        } else {
-            *startcode = 0x100 + stream->id;
         }
+    } else {
+        *startcode = 0x100 + stream->id;
     }
     *stuffing_size = *payload_size - av_fifo_size(&stream->fifo);
 
