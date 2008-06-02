@@ -124,7 +124,6 @@ int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len);
 
 /**
  * Caculate next PES packet informations
- * @param[in]  id                Stream id
  * @param[in]  stream            PES stream
  * @param[out] packet_size       PES packet size
  * @param[out] header_len        PES header length
@@ -138,7 +137,7 @@ int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len);
  * @param[out] trailer_size      Unwritten trailer size
  * @param[out] pad_packet_bytes  Packet padding size
  */
-void ff_pes_cal_header(int id, StreamInfo *stream,
+void ff_pes_cal_header(StreamInfo *stream,
           int *packet_size,  int *header_len, int64_t *pts, int64_t *dts,
           int *payload_size, int *startcode, int *stuffing_size,
           int *trailer_size, int *pad_packet_bytes);

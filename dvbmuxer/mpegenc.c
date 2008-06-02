@@ -721,7 +721,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     packet_size -= pad_packet_bytes + zero_trail_bytes;
 
     if (packet_size > 0) {
-        ff_pes_cal_header(id, stream,
+        ff_pes_cal_header(stream,
                           &packet_size, &header_len, &pts, &dts,
                           &payload_size, &startcode, &stuffing_size,
                           &trailer_size, &pad_packet_bytes);

@@ -89,7 +89,7 @@ int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len){
     return nb_frames;
 }
 
-void ff_pes_cal_header(int id, StreamInfo *stream,
+void ff_pes_cal_header(StreamInfo *stream,
     int *packet_size,  int *header_len, int64_t *pts, int64_t *dts,
     int *payload_size, int *startcode, int *stuffing_size,
     int *trailer_size, int *pad_packet_bytes)
@@ -118,16 +118,16 @@ void ff_pes_cal_header(int id, StreamInfo *stream,
 
     *payload_size = *packet_size - *header_len;
     if (stream->format != PES_FMT_TS) {
-        if (id < 0xc0) {
+        if (stream->id < 0xc0) {
             *startcode = PRIVATE_STREAM_1;
             *payload_size -= 1;
-            if (id >= 0x40) {
+            if (stream->id >= 0x40) {
                 *payload_size -= 3;
-                if (id >= 0xa0)
+                if (stream->id >= 0xa0)
                     *payload_size -= 3;
             }
         } else {
-            *startcode = 0x100 + id;
+            *startcode = 0x100 + stream->id;
         }
     }
     *stuffing_size = *payload_size - av_fifo_size(&stream->fifo);
