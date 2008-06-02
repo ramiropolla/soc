@@ -187,8 +187,8 @@ typedef struct MpegTSWrite {
     int onid;
     int tsid;
     int packet_number;
-    int64_t last_pcr; /* last programme clock reference */
-    int64_t cur_pcr; /* current programme clock reference */
+    int64_t last_pcr; ///< last program clock reference */
+    int64_t cur_pcr;  ///< current program clock reference */
     int mux_rate;
     int packet_size;
 } MpegTSWrite;
