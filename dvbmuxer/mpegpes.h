@@ -83,56 +83,60 @@ typedef struct {
 
 /**
  * Initialization of PES muxer.
- * @param[in] ctx the AVFormatContext which contains streams
- * @return  On error a negative value is returned, on success zero.
+ * @param[in] ctx AVFormatContext
+ * @return  Negative value on error, zero on success.
  */
 int ff_pes_muxer_init(AVFormatContext *ctx);
 
 /**
  * Finalization of PES muxer.
- * @param [in] ctx the AVFormatContext which contains streams.
+ * @param [in] ctx AVFormatContext
  */
 void ff_pes_muxer_end(AVFormatContext *ctx);
 
 /**
  * Write packet into PES FIFO.
- * @param [in] ctx  the AVFormatContext which contains streams.
- * @param [in] pkt  the packet to write.
+ * @param [in] ctx  AVFormatContext
+ * @param [in] pkt  Packet to write.
  */
 void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
 
 /**
- * Find the stream to mux into the PES stream.
- * @param[in] ctx          the AVFormatContext
+ * Find the best stream to mux into the PES stream.
+ * @param[in] ctx          AVFormatContext
  * @param[in] packet_size  PES stream packet size
  * @param[in] flush        Flush after every single subtitle packet.
- * @param[out] best_i      index of stream to be muxed
+ * @param[in] scr          Current clock reference
+ * @param[out] scr         Updated clock reference, bumped if needed
+ * @param[out] best_i      Index of the stream to be muxed
  * @return  On error a negative or zero value is returned, on success 1 is returned.
  */
 int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int* best_i);
 
 /**
- * Get total number of frames that have been muxed.
- * @param[in] ctx    the AVFormatContext
- * @param[in] stream the PES stream
- * @param[in] len    PES packet size
- * @return  the number of frames have been muxed.
+ * Get total number of frames of PES stream to be muxed considering len
+ * @param[in] ctx    AVFormatContext
+ * @param[in] stream PES stream
+ * @param[in] len    Bytes available in next PES packet
+ * @return  Number of frames muxed.
  */
 int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len);
 
 /**
- * Caculate the PES header size
- * @param[in] id                stream id
- * @param[in] stream            pes stream
- * @param[in] packet_size       pes packet size
- * @param[in] header_len        pes header length
- * @param[in] pts               current pts
- * @param[in] dts               current dts
- * @param[in] payload_size      pes payload size
- * @param[in] startcode         pes startcode
- * @param[in] stuffing_size     pes stuffing size
- * @param[in] trailer_size      unwritten trailer size
- * @param[in] pad_packet_bytes  padding size for packet
+ * Caculate next PES packet informations
+ * @param[in]  id                Stream id
+ * @param[in]  stream            PES stream
+ * @param[out] packet_size       PES packet size
+ * @param[out] header_len        PES header length
+ * @param[in]  pts               Current pts
+ * @param[out] pts               AV_NOPTS_VALUE if reset
+ * @param[in]  dts               Current dts
+ * @param[out] dts               AV_NOPTS_VALUE if reset
+ * @param[out] payload_size      PES payload size
+ * @param[out] startcode         PES startcode
+ * @param[out] stuffing_size     PES stuffing size
+ * @param[out] trailer_size      Unwritten trailer size
+ * @param[out] pad_packet_bytes  Packet padding size
  */
 void ff_pes_cal_header(int id, StreamInfo *stream,
           int *packet_size,  int *header_len, int64_t *pts, int64_t *dts,
@@ -140,19 +144,19 @@ void ff_pes_cal_header(int id, StreamInfo *stream,
           int *trailer_size, int *pad_packet_bytes);
 
 /**
- * Mux one stream into PES stream.
- * @param [in]      ctx            the AVFormatContext which contains streams
- * @param [in]      stream_index   the stream index to write
- * @param [in]      pes_buffer     PES payload data
- * @param [in]      pts            packet presentation timestamp
- * @param [in]      dts            packet decoding timestamp
- * @param [in]      id             stream ID
- * @param [in]      start_code     PES packet start code
+ * Write PES data from PES Stream into supplied buffer.
+ * @param [in]      ctx            AVFormatContext
+ * @param [in]      stream_index   Stream index to write from
+ * @param [in]      pes_buffer     Buffer to write to
+ * @param [in]      pts            Packet pts
+ * @param [in]      dts            Packet dts
+ * @param [in]      id             Stream ID
+ * @param [in]      start_code     PES packet startcode
  * @param [in]      header_len     PES header size
- * @param [in]      packet_size    total packet size
- * @param [in]      payload_size   packet payload size
- * @param [in]      stuffing_size  packet stuffing size
- * @return   bytes written to PES stream.
+ * @param [in]      packet_size    Total packet size
+ * @param [in]      payload_size   Packet payload size
+ * @param [in]      stuffing_size  Packet stuffing size
+ * @return   Bytes written to buffer
  */
 int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buffer,
           int64_t pts, int64_t dts, int id, int startcode,
@@ -163,7 +167,7 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buff
  * Remove decoded packets of each stream.
  * @param[in] ctx  the AVFormatContext
  * @param[in] scr  System Clock Reference of PES stream
- * @return  On error a negative or zero value is returned, on success 1 is returned.
+ * @return  Negative value on error, 0 on success.
  */
 int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
 
