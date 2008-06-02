@@ -1,0 +1,14 @@
+TODO list for the ALAC Encoder:
+
+* Implement basic ALAC entropy coding
+* Simple first-order linear prediction
+* Adaptive prediction
+
+Additonal Stuff:
+
+* Testing against I-Pod/I-tunes/Quicktime/<your favorite Apple proprietary product here> for compatibility
+
+Experiments:
+
+* Adaptive Rice History based encoding
+* < Other creative ideas go here >
