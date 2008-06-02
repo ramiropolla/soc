@@ -122,19 +122,25 @@ Index: libavcodec/ac3.h
 ===================================================================
 --- libavcodec/ac3.h	(revision 13611)
 +++ libavcodec/ac3.h	(working copy)
-@@ -85,6 +85,7 @@
+@@ -85,6 +85,11 @@
      uint8_t channel_mode;
      uint8_t lfe_on;
      uint8_t frame_type;
 +    int substreamid;
++    int center_mix_level;                   ///< Center mix level index
++    int surround_mix_level;                 ///< Surround mix level index
++    uint16_t channel_map;
++    int num_blocks;
      /** @} */
  
      /** @defgroup derived Derived values
-@@ -98,6 +99,7 @@
-     int center_mix_level;                   ///< Center mix level index
-     int surround_mix_level;                 ///< Surround mix level index
-     uint16_t channel_map;
-+    int num_blocks;
+@@ -95,9 +100,6 @@
+     uint32_t bit_rate;
+     uint8_t channels;
+     uint16_t frame_size;
+-    int center_mix_level;                   ///< Center mix level index
+-    int surround_mix_level;                 ///< Surround mix level index
+-    uint16_t channel_map;
      /** @} */
  } AC3HeaderInfo;
  
