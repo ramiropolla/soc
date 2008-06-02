@@ -69,7 +69,6 @@ typedef struct {
     int format; ///< mux format (ts, svcd ...)
 } StreamInfo;
 
-
 #define AUDIO_ID 0xc0
 #define VIDEO_ID 0xe0
 #define AC3_ID   0x80
@@ -81,8 +80,6 @@ typedef struct {
 #define PRIVATE_STREAM_1   0x1bd
 #define PADDING_STREAM     0x1be
 #define PRIVATE_STREAM_2   0x1bf
-
-
 
 /**
  * Initialization of PES muxer.
@@ -124,7 +121,6 @@ int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int
  * @return  the number of frames have been muxed.
  */
 int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len);
-
 
 /**
  * Caculate the PES header size
