@@ -625,7 +625,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     int pad_packet_bytes = 0;
     int general_pack = 0;  /*"general" pack without data specific to one stream?*/
     int pes_size;
-    uint8_t* q = stream->payload;
+    uint8_t *q = stream->payload;
 
     pes_stream->format = PES_FMT_TS;
     id = stream->id;
