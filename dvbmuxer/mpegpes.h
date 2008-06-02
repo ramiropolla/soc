@@ -55,7 +55,6 @@ typedef struct PacketDesc {
 typedef struct {
     AVFifoBuffer fifo;
     uint8_t id;
-    int format;
     int max_buffer_size; /**< in bytes */
     int buffer_index;
     PacketDesc *predecode_packet;
@@ -67,6 +66,7 @@ typedef struct {
     int bytes_to_iframe;
     int align_iframe;
     int64_t vobu_start_pts;
+    int format; ///< mux format (ts, svcd ...)
 } StreamInfo;
 
 
