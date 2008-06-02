@@ -32,9 +32,10 @@
 
 #define PES_FMT_MPEG2 0x01
 #define PES_FMT_VCD 0x02
-#define PES_FMT_SVCD (0x04 | PES_FMT_MPEG2)
-#define PES_FMT_DVD (0x08 | PES_FMT_MPEG2)
-#define PES_FMT_TS (0x10 | PES_FMT_MPEG2)
+// formats below are all mpeg-2
+#define PES_FMT_SVCD  0x05
+#define PES_FMT_DVD   0x09
+#define PES_FMT_TS    0x11
 
 /**
  * PES packet description
