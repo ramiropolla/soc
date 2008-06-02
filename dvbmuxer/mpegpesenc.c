@@ -175,7 +175,7 @@ void ff_pes_cal_header(StreamInfo *stream,
     }
 }
 
-int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buffer,
+int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     int64_t pts, int64_t dts, int id, int startcode,
     uint8_t *pes_content, int pes_content_len,
     int header_len, int packet_size, int payload_size, int stuffing_size)
@@ -183,7 +183,7 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buff
     StreamInfo *stream = ctx->streams[stream_index]->priv_data;
     int pes_flags, i;
     int data_size = payload_size - stuffing_size;
-    uint8_t *q = pes_buffer;
+    uint8_t *q = buf;
 
     bytestream_put_be32(&q, startcode);
 
@@ -236,7 +236,7 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buff
     /* output data */
     if(av_fifo_read(&stream->fifo, q, data_size) < 0)
         return -1;
-    return q - pes_buffer + data_size;
+    return q - buf + data_size;
 }
 
 int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)

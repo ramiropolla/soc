@@ -146,7 +146,7 @@ void ff_pes_cal_header(StreamInfo *stream,
  * Write PES data from PES Stream into supplied buffer.
  * @param [in] ctx            AVFormatContext
  * @param [in] stream_index   Stream index to write from
- * @param [in] pes_buffer     Buffer to write to
+ * @param [in] buf            Buffer to write to
  * @param [in] pts            Packet pts
  * @param [in] dts            Packet dts
  * @param [in] id             Stream ID
@@ -157,7 +157,7 @@ void ff_pes_cal_header(StreamInfo *stream,
  * @param [in] stuffing_size  Packet stuffing size
  * @return                    Bytes written to buffer
  */
-int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buffer,
+int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
           int64_t pts, int64_t dts, int id, int startcode,
           uint8_t* pes_content, int pes_content_len,
           int header_len, int packet_size, int payload_size, int stuffing_size);
