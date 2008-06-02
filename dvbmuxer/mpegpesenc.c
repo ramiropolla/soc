@@ -175,7 +175,7 @@ void ff_pes_cal_header(StreamInfo *stream,
     }
 }
 
-int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
+int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     int64_t pts, int64_t dts, int startcode,
     int header_len, int packet_size, int payload_size, int stuffing_size)
 {
