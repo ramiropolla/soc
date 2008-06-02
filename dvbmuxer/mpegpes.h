@@ -91,7 +91,6 @@ int ff_pes_muxer_init(AVFormatContext *ctx);
 /**
  * Finalization of PES muxer.
  * @param [in] ctx the AVFormatContext which contains streams.
- * @return  NULL
  */
 void ff_pes_muxer_end(AVFormatContext *ctx);
 
@@ -99,7 +98,6 @@ void ff_pes_muxer_end(AVFormatContext *ctx);
  * Write packet into PES FIFO.
  * @param [in] ctx  the AVFormatContext which contains streams.
  * @param [in] pkt  the packet to write.
- * @return  NULL
  */
 void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
 
