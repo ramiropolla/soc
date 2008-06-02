@@ -737,6 +737,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     int i, bnd, seg, ch;
     int different_transforms;
     int downmix_output;
+    int cpl_in_use;
     GetBitContext *gbc = &s->gbc;
     uint8_t bit_alloc_stages[AC3_MAX_CHANNELS];
 
@@ -865,9 +866,10 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             s->cpl_in_use[blk] = s->cpl_in_use[blk-1];
         }
     }
+    cpl_in_use = s->cpl_in_use[blk];
 
     /* coupling coordinates */
-    if (s->cpl_in_use[blk]) {
+    if (cpl_in_use) {
         int cpl_coords_exist = 0;
 
         for (ch = 1; ch <= fbw_channels; ch++) {
@@ -916,7 +918,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     if (channel_mode == AC3_CHMODE_STEREO) {
         if ((s->eac3 && !blk) || get_bits1(gbc)) {
             s->num_rematrixing_bands = 4;
-            if(s->cpl_in_use[blk] && s->start_freq[CPL_CH] <= 61)
+            if(cpl_in_use && s->start_freq[CPL_CH] <= 61)
                 s->num_rematrixing_bands -= 1 + (s->start_freq[CPL_CH] == 37);
             for(bnd=0; bnd<s->num_rematrixing_bands; bnd++)
                 s->rematrixing_flags[bnd] = get_bits1(gbc);
@@ -928,13 +930,13 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
 
     /* exponent strategies for each channel */
     if (!s->eac3) {
-        for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
+        for (ch = !cpl_in_use; ch <= s->channels; ch++) {
             s->exp_strategy[blk][ch] = get_bits(gbc, 2 - (ch == s->lfe_ch));
         }
     }
 
     /* check exponent strategies to set bit allocation stages */
-    for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
+    for (ch = !cpl_in_use; ch <= s->channels; ch++) {
         if(s->exp_strategy[blk][ch] != EXP_REUSE)
             bit_alloc_stages[ch] = 3;
     }
@@ -961,13 +963,13 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                 memset(bit_alloc_stages, 3, AC3_MAX_CHANNELS);
         }
     }
-    if (s->cpl_in_use[blk]) {
+    if (cpl_in_use) {
         s->num_exp_groups[CPL_CH] = (s->end_freq[CPL_CH] - s->start_freq[CPL_CH]) /
                                     (3 << (s->exp_strategy[blk][CPL_CH] - 1));
     }
 
     /* decode exponents for each channel */
-    for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
+    for (ch = !cpl_in_use; ch <= s->channels; ch++) {
         if (s->exp_strategy[blk][ch] != EXP_REUSE) {
             s->dexps[ch][0] = get_bits(gbc, 4) << !ch;
             decode_exponents(gbc, s->exp_strategy[blk][ch],
@@ -986,7 +988,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             s->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab[get_bits(gbc, 2)];
             s->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[get_bits(gbc, 2)];
             s->bit_alloc_params.floor  = ff_ac3_floor_tab[get_bits(gbc, 3)];
-            for(ch=!s->cpl_in_use[blk]; ch<=s->channels; ch++)
+            for(ch=!cpl_in_use; ch<=s->channels; ch++)
                 bit_alloc_stages[ch] = FFMAX(bit_alloc_stages[ch], 2);
         } else if (!blk) {
             av_log(s->avctx, AV_LOG_ERROR, "new bit allocation info must be present in block 0\n");
@@ -999,7 +1001,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         int snr = 0;
         int csnr;
         csnr = (get_bits(gbc, 6) - 15) << 4;
-        for (i = ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
+        for (i = ch = !cpl_in_use; ch <= s->channels; ch++) {
             /* snr offset */
             if (!s->eac3 || ch == i || s->snr_offset_strategy == 2)
                 snr = (csnr + get_bits(gbc, 4)) << 2;
@@ -1026,7 +1028,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     /* fast gain (E-AC3 only) */
     if(s->eac3) {
         if (s->fast_gain_syntax && get_bits1(gbc)) {
-            for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++) {
+            for (ch = !cpl_in_use; ch <= s->channels; ch++) {
                 int prev = s->fast_gain[ch];
                 s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
                 /* run last 2 bit allocation stages if fast gain changes */
@@ -1034,7 +1036,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                     bit_alloc_stages[ch] = FFMAX(bit_alloc_stages[ch], 2);
             }
         } else if (!blk) {
-            for (ch = !s->cpl_in_use[blk]; ch <= s->channels; ch++)
+            for (ch = !cpl_in_use; ch <= s->channels; ch++)
                 s->fast_gain[ch] = ff_ac3_fast_gain_tab[4];
         }
     }
@@ -1046,7 +1048,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     }
 
     /* coupling leak information */
-    if (s->cpl_in_use[blk]) {
+    if (cpl_in_use) {
         if ((s->eac3 && s->first_cpl_leak) || get_bits1(gbc)) {
             int prev_fl = s->bit_alloc_params.cpl_fast_leak;
             int prev_sl = s->bit_alloc_params.cpl_slow_leak;
@@ -1069,7 +1071,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     /* delta bit allocation information */
     if ((!s->eac3 || s->dba_syntax) && get_bits1(gbc)) {
         /* delta bit allocation exists (strategy) */
-        for (ch = !s->cpl_in_use[blk]; ch <= fbw_channels; ch++) {
+        for (ch = !cpl_in_use; ch <= fbw_channels; ch++) {
             s->dba_mode[ch] = get_bits(gbc, 2);
             if (s->dba_mode[ch] == DBA_RESERVED) {
                 av_log(s->avctx, AV_LOG_ERROR, "delta bit allocation strategy reserved\n");
@@ -1078,7 +1080,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             bit_alloc_stages[ch] = FFMAX(bit_alloc_stages[ch], 2);
         }
         /* channel delta offset, len and bit allocation */
-        for (ch = !s->cpl_in_use[blk]; ch <= fbw_channels; ch++) {
+        for (ch = !cpl_in_use; ch <= fbw_channels; ch++) {
             if (s->dba_mode[ch] == DBA_NEW) {
                 s->dba_nsegs[ch] = get_bits(gbc, 3);
                 for (seg = 0; seg <= s->dba_nsegs[ch]; seg++) {
@@ -1097,7 +1099,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     }
 
     /* Bit allocation */
-    for(ch=!s->cpl_in_use[blk]; ch<=s->channels; ch++) {
+    for(ch=!cpl_in_use; ch<=s->channels; ch++) {
         if(bit_alloc_stages[ch] > 2) {
             /* Exponent mapping into PSD and PSD integration */
             ff_ac3_bit_alloc_calc_psd(s->dexps[ch],
