@@ -180,7 +180,7 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     int header_len, int packet_size, int payload_size, int stuffing_size)
 {
     StreamInfo *stream = ctx->streams[stream_index]->priv_data;
-    int pes_flags, i;
+    int flags, i;
     int data_size = payload_size - stuffing_size;
     uint8_t *q = buf;
 
@@ -188,20 +188,20 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     bytestream_put_be16(&q, packet_size);
     bytestream_put_byte(&q, 0x80); /* mpeg2 id */
 
-    pes_flags=0;
+    flags=0;
 
     if (pts != AV_NOPTS_VALUE) {
-        pes_flags |= 0x80;
+        flags |= 0x80;
         if (dts != pts)
-           pes_flags |= 0x40;
+           flags |= 0x40;
     }
 
-    bytestream_put_byte(&q, pes_flags); /* flags */
+    bytestream_put_byte(&q, flags); /* flags */
     bytestream_put_byte(&q, header_len - 3 + stuffing_size);
 
-    if (pes_flags & 0x80)  /* write pts */
-        insert_timestamp(&q, (pes_flags & 0x40) ? 0x03 : 0x02, pts);
-    if (pes_flags & 0x40)  /* write dts */
+    if (flags & 0x80)  /* write pts */
+        insert_timestamp(&q, (flags & 0x40) ? 0x03 : 0x02, pts);
+    if (flags & 0x40)  /* write dts */
         insert_timestamp(&q, 0x01, dts);
 
     /* special stuffing byte that is always written
