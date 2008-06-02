@@ -31,7 +31,7 @@
 #include "fifo.h"
 
 #define PES_FMT_MPEG2 0x01
-#define PES_FMT_VCD 0x02
+#define PES_FMT_VCD   0x02
 // formats below are all mpeg-2
 #define PES_FMT_SVCD  0x05
 #define PES_FMT_DVD   0x09
