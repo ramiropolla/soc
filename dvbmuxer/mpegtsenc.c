@@ -510,9 +510,11 @@ static void retransmit_si_info(AVFormatContext *s)
     }
 }
 
-static void mpegts_write_pes(AVFormatContext *s, MpegTSWriteStream *ts_st,
+/* NOTE: pes_data contains all the PES packet */
+static void mpegts_write_pes(AVFormatContext *s, AVStream *st,
                              const uint8_t *payload, int payload_size)
 {
+    MpegTSWriteStream *ts_st = st->priv_data;
     MpegTSWrite *ts = s->priv_data;
     uint8_t buf[TS_PACKET_SIZE];
     uint8_t *q;
@@ -645,7 +647,8 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     for(i=0;i<zero_trail_bytes;i++)
         bytestream_put_byte(&q, 0x00);
 
-    mpegts_write_pes(ctx, stream, stream->payload, q - stream->payload);
+    mpegts_write_pes(ctx, ctx->streams[stream_index],
+                     stream->payload, q - stream->payload);
     put_flush_packet(ctx->pb);
 
     s->packet_number++;
