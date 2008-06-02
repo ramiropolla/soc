@@ -176,8 +176,7 @@ void ff_pes_cal_header(StreamInfo *stream,
 }
 
 int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
-    int64_t pts, int64_t dts, int id, int startcode,
-    uint8_t *pes_content, int pes_content_len,
+    int64_t pts, int64_t dts, int startcode,
     int header_len, int packet_size, int payload_size, int stuffing_size)
 {
     StreamInfo *stream = ctx->streams[stream_index]->priv_data;
@@ -197,13 +196,6 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
            pes_flags |= 0x40;
     }
 
-    /* Both the MPEG-2 and the SVCD standards demand that the
-       P-STD_buffer_size field be included in the first packet of
-       every stream. (see SVCD standard p. 26 V.2.3.1 and V.2.3.2
-       and MPEG-2 standard 2.7.7) */
-    if (stream->packet_number == 0 && strcmp(ctx->oformat->name, "mpegts"))
-        pes_flags |= 0x01;
-
     bytestream_put_byte(&q, pes_flags); /* flags */
     bytestream_put_byte(&q, header_len - 3 + stuffing_size);
 
@@ -212,25 +204,12 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     if (pes_flags & 0x40)  /* write dts */
         insert_timestamp(&q, 0x01, dts);
 
-    if (pes_flags & 0x01) {  /* write pes extension */
-        bytestream_put_byte(&q, 0x10); /* flags */
-
-        /* P-STD buffer info */
-        if (id == AUDIO_ID)
-            bytestream_put_be16(&q, 0x4000 | stream->max_buffer_size/128);
-        else
-            bytestream_put_be16(&q, 0x6000 | stream->max_buffer_size/1024);
-    }
-
     /* special stuffing byte that is always written
        to prevent accidental generation of startcodes. */
     bytestream_put_byte(&q, 0xff);
 
     for(i=0;i<stuffing_size;i++)
         bytestream_put_byte(&q, 0xff);
-
-    if(pes_content != NULL)
-        bytestream_put_buffer(&q, pes_content, pes_content_len);
 
     /* output data */
     if(av_fifo_read(&stream->fifo, q, data_size) < 0)

@@ -149,7 +149,6 @@ void ff_pes_cal_header(StreamInfo *stream,
  * @param [in] buf            Buffer to write to
  * @param [in] pts            Packet pts
  * @param [in] dts            Packet dts
- * @param [in] id             Stream ID
  * @param [in] start_code     PES packet startcode
  * @param [in] header_len     PES header size
  * @param [in] packet_size    Total packet size
@@ -158,8 +157,7 @@ void ff_pes_cal_header(StreamInfo *stream,
  * @return                    Bytes written to buffer
  */
 int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
-          int64_t pts, int64_t dts, int id, int startcode,
-          uint8_t *pes_content, int pes_content_len,
+          int64_t pts, int64_t dts, int startcode,
           int header_len, int packet_size, int payload_size, int stuffing_size);
 
 /**
