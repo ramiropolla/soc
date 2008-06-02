@@ -236,7 +236,7 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *pes_buff
     /* output data */
     if(av_fifo_read(&stream->fifo, q, data_size) < 0)
         return -1;
-    return (q - pes_buffer + data_size);
+    return q - pes_buffer + data_size;
 }
 
 int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
