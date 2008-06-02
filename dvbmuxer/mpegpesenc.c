@@ -196,7 +196,7 @@ int ff_pes_muxer_write(AVFormatContext *ctx, int stream_index, uint8_t *buf,
            flags |= 0x40;
     }
 
-    bytestream_put_byte(&q, flags); /* flags */
+    bytestream_put_byte(&q, flags);
     bytestream_put_byte(&q, header_len - 3 + stuffing_size);
 
     if (flags & 0x80)  /* write pts */
