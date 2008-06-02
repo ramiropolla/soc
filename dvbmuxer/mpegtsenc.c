@@ -144,12 +144,11 @@ static int mpegts_write_section1(MpegTSSection *s, int tid, int id,
 /**
  *  lookup table from codec id to pes stream id
  */
-static int pes_streamid[5] = {
+static const int pes_streamid[CODEC_TYPE_NB] = {
    0xe0,        /**< CODEC_TYPE_VIDEO    */
    0xc0,        /**< CODEC_TYPE_AUDIO    */
    0xbd,        /**< CODEC_TYPE_DATA     */
    0xbd,        /**< CODEC_TYPE_SUBTITLE */
-   0xbd         /**< CODEC_TYPE_NB       */
 };
 
 typedef struct MpegTSWriteStream {
