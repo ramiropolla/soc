@@ -142,8 +142,6 @@ static int mpegts_write_section1(MpegTSSection *s, int tid, int id,
 
 typedef struct MpegTSWriteStream {
     StreamInfo pes_stream;
-    int packet_size;
-    int packet_number;
     struct MpegTSService *service;
     int pid; /* stream associated pid */
     int cc;
@@ -172,11 +170,9 @@ typedef struct MpegTSWrite {
     int nb_services;
     int onid;
     int tsid;
-    int packet_number;
     int64_t last_pcr; ///< last program clock reference */
     int64_t cur_pcr;  ///< current program clock reference */
     int mux_rate;
-    int packet_size;
 } MpegTSWrite;
 
 static void mpegts_write_pat(AVFormatContext *s)
@@ -384,13 +380,6 @@ static int mpegts_write_header(AVFormatContext *s)
                                  DEFAULT_PROVIDER_NAME, service_name);
     service->pmt.write_packet = section_write_packet;
     service->pmt.opaque = s;
-
-    ts->packet_number = 0;
-
-    if(s->packet_size)
-        ts->packet_size = s->packet_size;
-    else
-        ts->packet_size = DEFAULT_PES_PAYLOAD_SIZE;
 
     ts->pat.pid = PAT_PID;
     ts->pat.cc = 0;
@@ -611,19 +600,17 @@ static void put_padding_packet(uint8_t **pes_payload, int packet_bytes)
 static int flush_packet(AVFormatContext *ctx, int stream_index,
                          int64_t pts, int64_t dts, int trailer_size)
 {
-    MpegTSWrite *s = ctx->priv_data;
     MpegTSWriteStream *stream = ctx->streams[stream_index]->priv_data;
     StreamInfo *pes_stream = &stream->pes_stream;
     int payload_size, startcode, stuffing_size, i, header_len;
     int packet_size, es_size;
     int zero_trail_bytes = 0;
     int pad_packet_bytes = 0;
-    int general_pack = 0;  /*"general" pack without data specific to one stream?*/
     int pes_size;
     uint8_t *q = stream->payload;
 
     pes_stream->format = PES_FMT_TS;
-    packet_size = s->packet_size;
+    packet_size = DEFAULT_PES_PAYLOAD_SIZE;
 
     if (packet_size > 0) {
         ff_pes_cal_header(pes_stream,
@@ -651,14 +638,6 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
                      stream->payload, q - stream->payload);
     put_flush_packet(ctx->pb);
 
-    s->packet_number++;
-
-    /* only increase the stream packet number if this pack actually contains
-       something that is specific to this stream! I.e. a dedicated header
-       or some data.*/
-    if (!general_pack)
-        stream->packet_number++;
-
     es_size = payload_size - stuffing_size;
     pes_stream->buffer_index += payload_size - stuffing_size;
     while(pes_stream->premux_packet && pes_stream->premux_packet->unwritten_size <= es_size){
@@ -682,7 +661,8 @@ static int output_packet(AVFormatContext *ctx, int flush){
     int64_t pcr = s->last_pcr;
     PacketDesc *timestamp_packet;
 
-    if((result = ff_pes_find_beststream(ctx, s->packet_size, flush, &pcr, &best_i)) <= 0)
+    if((result = ff_pes_find_beststream(ctx, DEFAULT_PES_PAYLOAD_SIZE,
+                                        flush, &pcr, &best_i)) <= 0)
         return result;
     assert(best_i >= 0);
 
