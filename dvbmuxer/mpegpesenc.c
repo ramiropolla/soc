@@ -25,13 +25,11 @@
 
 int ff_pes_muxer_init(AVFormatContext *ctx)
 {
-    AVStream *st;
-    StreamInfo *stream;
     int i;
 
     for(i=0;i<ctx->nb_streams;i++) {
-        st = ctx->streams[i];
-        stream = st->priv_data;
+        AVStream *st = ctx->streams[i];
+        StreamInfo *stream = st->priv_data;
         av_set_pts_info(st, 64, 1, 90000);
 
         switch(st->codec->codec_type) {

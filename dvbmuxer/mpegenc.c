@@ -304,14 +304,10 @@ static int mpeg_mux_init(AVFormatContext *ctx)
         st->priv_data = stream;
 
         /* set StreamInfo format */
-        if (s->is_dvd)
-            stream->format = PES_FMT_DVD;
-        if (s->is_svcd)
-            stream->format = PES_FMT_SVCD;
-        if (s->is_mpeg2)
-            stream->format = PES_FMT_MPEG2;
-        if (s->is_vcd)
-            stream->format = PES_FMT_VCD;
+        if (s->is_dvd)   stream->format = PES_FMT_DVD;
+        if (s->is_svcd)  stream->format = PES_FMT_SVCD;
+        if (s->is_mpeg2) stream->format = PES_FMT_MPEG2;
+        if (s->is_vcd)   stream->format = PES_FMT_VCD;
         av_set_pts_info(st, 64, 1, 90000);
 
         switch(st->codec->codec_type) {
