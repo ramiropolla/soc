@@ -49,7 +49,7 @@ typedef struct {
 
     double vcd_padding_bitrate; //FIXME floats
     int64_t vcd_padding_bytes_written;
-    uint8_t *payload; ///< PES packet size
+    uint8_t *payload; ///< PES packet buffer
 } MpegMuxContext;
 
 extern AVOutputFormat mpeg1vcd_muxer;
