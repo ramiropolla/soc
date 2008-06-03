@@ -885,73 +885,15 @@ static int output_packet(AVFormatContext *ctx, int flush){
     MpegMuxContext *s = ctx->priv_data;
     AVStream *st;
     StreamInfo *stream;
-    int i, avail_space=0, es_size, trailer_size;
+    int res, avail_space=0, es_size, trailer_size;
     int best_i= -1;
-    int best_score= INT_MIN;
     int ignore_constraints=0;
     int64_t scr= s->last_scr;
     PacketDesc *timestamp_packet;
-    const int64_t max_delay= av_rescale(ctx->max_delay, 90000, AV_TIME_BASE);
 
-retry:
-    for(i=0; i<ctx->nb_streams; i++){
-        AVStream *st = ctx->streams[i];
-        StreamInfo *stream = st->priv_data;
-        const int avail_data=  av_fifo_size(&stream->fifo);
-        const int space= stream->max_buffer_size - stream->buffer_index;
-        int rel_space= 1024*space / stream->max_buffer_size;
-        PacketDesc *next_pkt= stream->premux_packet;
-
-        /* for subtitle, a single PES packet must be generated,
-           so we flush after every single subtitle packet */
-        if(s->packet_size > avail_data && !flush
-           && st->codec->codec_type != CODEC_TYPE_SUBTITLE)
-            return 0;
-        if(avail_data==0)
-            continue;
-        assert(avail_data>0);
-
-        if(space < s->packet_size && !ignore_constraints)
-            continue;
-
-        if(next_pkt && next_pkt->dts - scr > max_delay)
-            continue;
-
-        if(rel_space > best_score){
-            best_score= rel_space;
-            best_i = i;
-            avail_space= space;
-        }
-    }
-
-    if(best_i < 0){
-        int64_t best_dts= INT64_MAX;
-
-        for(i=0; i<ctx->nb_streams; i++){
-            AVStream *st = ctx->streams[i];
-            StreamInfo *stream = st->priv_data;
-            PacketDesc *pkt_desc= stream->predecode_packet;
-            if(pkt_desc && pkt_desc->dts < best_dts)
-                best_dts= pkt_desc->dts;
-        }
-
-#if 0
-        av_log(ctx, AV_LOG_DEBUG, "bumping scr, scr:%f, dts:%f\n",
-               scr/90000.0, best_dts/90000.0);
-#endif
-        if(best_dts == INT64_MAX)
-            return 0;
-
-        if(scr >= best_dts+1 && !ignore_constraints){
-            av_log(ctx, AV_LOG_ERROR, "packet too large, ignoring buffer limits to mux it\n");
-            ignore_constraints= 1;
-        }
-        scr= FFMAX(best_dts+1, scr);
-        if(ff_pes_remove_decoded_packets(ctx, scr) < 0)
-            return -1;
-        goto retry;
-    }
-
+    if((res = ff_pes_find_beststream(ctx, s->packet_size, flush,
+                                        &scr, &best_i)) <= 0)
+        return res;
     assert(best_i >= 0);
 
     st = ctx->streams[best_i];
