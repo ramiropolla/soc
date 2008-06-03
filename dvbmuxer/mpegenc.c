@@ -885,9 +885,8 @@ static int output_packet(AVFormatContext *ctx, int flush){
     MpegMuxContext *s = ctx->priv_data;
     AVStream *st;
     StreamInfo *stream;
-    int res, avail_space=0, es_size, trailer_size;
+    int res, es_size, trailer_size;
     int best_i= -1;
-    int ignore_constraints=0;
     int64_t scr= s->last_scr;
     PacketDesc *timestamp_packet;
 
@@ -900,8 +899,6 @@ static int output_packet(AVFormatContext *ctx, int flush){
     stream = st->priv_data;
 
     assert(av_fifo_size(&stream->fifo) > 0);
-
-    assert(avail_space >= s->packet_size || ignore_constraints);
 
     timestamp_packet= stream->premux_packet;
     if(timestamp_packet->unwritten_size == timestamp_packet->size){
