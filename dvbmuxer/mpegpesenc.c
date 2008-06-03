@@ -376,7 +376,7 @@ retry:
     return 1;
 }
 
-void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
+void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt, int packet_number)
 {
     int stream_index= pkt->stream_index;
     int size= pkt->size;
@@ -386,6 +386,7 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
     int64_t pts, dts;
     PacketDesc *pkt_desc;
     const int preload= av_rescale(ctx->preload, 90000, AV_TIME_BASE);
+    const int is_iframe = st->codec->codec_type == CODEC_TYPE_VIDEO && (pkt->flags & PKT_FLAG_KEY);
 
     pts= pkt->pts;
     dts= pkt->dts;
@@ -407,6 +408,15 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt)
     stream->next_packet= &pkt_desc->next;
 
     av_fifo_realloc(&stream->fifo, av_fifo_size(&stream->fifo) + size);
+
+    if (stream->format == PES_FMT_DVD){
+        if (is_iframe && (packet_number == 0 || (pts - stream->vobu_start_pts >= 36000))) { // min VOBU length 0.4 seconds (mpucoder)
+            stream->bytes_to_iframe = av_fifo_size(&stream->fifo);
+            stream->align_iframe = 1;
+            stream->vobu_start_pts = pts;
+        }
+    }
+
     av_fifo_generic_write(&stream->fifo, buf, size, NULL);
 }
 

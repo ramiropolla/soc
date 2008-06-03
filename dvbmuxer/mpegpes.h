@@ -86,10 +86,11 @@ void ff_pes_muxer_end(AVFormatContext *ctx);
 
 /**
  * Write packet into PES FIFO.
- * @param [in] ctx  AVFormatContext
- * @param [in] pkt  Packet to write.
+ * @param [in] ctx           AVFormatContext
+ * @param [in] pkt           Packet to write.
+ * @param [in] packet_number Current muxer packet number
  */
-void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
+void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt, int packet_number);
 
 /**
  * Find the best stream to mux into the PES stream.

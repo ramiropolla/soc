@@ -692,7 +692,7 @@ static int output_packet(AVFormatContext *ctx, int flush){
 
 static int mpegts_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 {
-    ff_pes_write_packet(ctx, pkt);
+    ff_pes_write_packet(ctx, pkt, 0);
     for(;;){
         int ret = output_packet(ctx, 0);
         if(ret<=0)

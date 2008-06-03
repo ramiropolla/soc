@@ -862,47 +862,7 @@ static int output_packet(AVFormatContext *ctx, int flush){
 static int mpeg_mux_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 {
     MpegMuxContext *s = ctx->priv_data;
-    int stream_index= pkt->stream_index;
-    int size= pkt->size;
-    uint8_t *buf= pkt->data;
-    AVStream *st = ctx->streams[stream_index];
-    StreamInfo *stream = st->priv_data;
-    int64_t pts, dts;
-    PacketDesc *pkt_desc;
-    const int preload= av_rescale(ctx->preload, 90000, AV_TIME_BASE);
-    const int is_iframe = st->codec->codec_type == CODEC_TYPE_VIDEO && (pkt->flags & PKT_FLAG_KEY);
-
-    pts= pkt->pts;
-    dts= pkt->dts;
-
-    if(pts != AV_NOPTS_VALUE) pts += preload;
-    if(dts != AV_NOPTS_VALUE) dts += preload;
-
-//av_log(ctx, AV_LOG_DEBUG, "dts:%f pts:%f flags:%d stream:%d nopts:%d\n", dts/90000.0, pts/90000.0, pkt->flags, pkt->stream_index, pts != AV_NOPTS_VALUE);
-    if (!stream->premux_packet)
-        stream->next_packet = &stream->premux_packet;
-    *stream->next_packet=
-    pkt_desc= av_mallocz(sizeof(PacketDesc));
-    pkt_desc->pts= pts;
-    pkt_desc->dts= dts;
-    pkt_desc->unwritten_size=
-    pkt_desc->size= size;
-    if(!stream->predecode_packet)
-        stream->predecode_packet= pkt_desc;
-    stream->next_packet= &pkt_desc->next;
-
-    av_fifo_realloc(&stream->fifo, av_fifo_size(&stream->fifo) + size);
-
-    if (s->is_dvd){
-        if (is_iframe && (s->packet_number == 0 || (pts - stream->vobu_start_pts >= 36000))) { // min VOBU length 0.4 seconds (mpucoder)
-            stream->bytes_to_iframe = av_fifo_size(&stream->fifo);
-            stream->align_iframe = 1;
-            stream->vobu_start_pts = pts;
-        }
-    }
-
-    av_fifo_generic_write(&stream->fifo, buf, size, NULL);
-
+    ff_pes_write_packet(ctx, pkt, s->packet_number);
     for(;;){
         int ret= output_packet(ctx, 0);
         if(ret<=0)
