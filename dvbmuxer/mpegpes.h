@@ -104,15 +104,6 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt);
 int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int *best_i);
 
 /**
- * Get total number of frames of PES stream to be muxed considering len
- * @param[in] ctx    AVFormatContext
- * @param[in] stream PES stream
- * @param[in] len    Bytes available in next PES packet
- * @return           Number of frames muxed.
- */
-int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len);
-
-/**
  * Write PES data from PES Stream into supplied buffer.
  * @param [in]  ctx               AVFormatContext
  * @param [in]  stream_index      Stream index to write from

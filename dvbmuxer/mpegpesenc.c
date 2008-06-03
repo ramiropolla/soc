@@ -73,7 +73,7 @@ static inline void put_timestamp(uint8_t** p, int id, int64_t timestamp)
     bytestream_put_be16(p, (uint16_t)((((timestamp) & 0x7fff) << 1) | 1));
 }
 
-int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len){
+static int get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len){
     int nb_frames=0;
     PacketDesc *pkt_desc= stream->premux_packet;
 
@@ -188,7 +188,7 @@ int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
                     payload_size, &startcode, stuffing_size,
                     &trailer_size, pad_packet_bytes);
 
-    nb_frames= ff_pes_get_nb_frames(ctx, stream, *payload_size - *stuffing_size);
+    nb_frames= get_nb_frames(ctx, stream, *payload_size - *stuffing_size);
 
     bytestream_put_be32(&p, startcode);
 
