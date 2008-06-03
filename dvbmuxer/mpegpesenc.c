@@ -105,13 +105,14 @@ static void calc_pes_header(StreamInfo *stream,
         *header_len = 0;
     }
 
-    if (*pts != AV_NOPTS_VALUE){
+    if (*pts != AV_NOPTS_VALUE) {
         if (*dts != *pts)
             *header_len += 5 + 5;
         else
             *header_len += 5;
-    } else if (!(stream->format & PES_FMT_MPEG2)) {
-        (*header_len)++;
+    } else {
+        if (!(stream->format & PES_FMT_MPEG2))
+            (*header_len)++;
     }
 
     *payload_size = *packet_size - *header_len;
@@ -126,6 +127,7 @@ static void calc_pes_header(StreamInfo *stream,
     } else {
         *startcode = 0x100 + stream->id;
     }
+
     *stuffing_size = *payload_size - av_fifo_size(&stream->fifo);
 
     // first byte does not fit -> reset pts/dts + stuffing
@@ -163,7 +165,7 @@ static void calc_pes_header(StreamInfo *stream,
 
     if (*stuffing_size < 0)
         *stuffing_size = 0;
-    if (*stuffing_size > 16) {    /* <=16 for MPEG-1, <=32 for MPEG-2 */
+    if (*stuffing_size > 16) {    /*<=16 for MPEG-1, <=32 for MPEG-2*/
         *pad_packet_bytes += *stuffing_size;
         *packet_size -= *stuffing_size;
         *payload_size -= *stuffing_size;
