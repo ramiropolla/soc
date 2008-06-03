@@ -422,6 +422,8 @@ static int mpegts_write_header(AVFormatContext *s)
             }
         }
 
+        ts_st->pes_stream.format = PES_FMT_TS;
+
         if(st->codec->rc_max_rate)
             codec_rate= st->codec->rc_max_rate;
         else
@@ -596,6 +598,7 @@ static void put_padding_packet(uint8_t **pes_payload, int packet_bytes)
     for(i=0;i<packet_bytes;i++)
         bytestream_put_byte(pes_payload, 0xff);
 }
+
 /* flush the packet on stream stream_index */
 static int flush_packet(AVFormatContext *ctx, int stream_index,
                          int64_t pts, int64_t dts, int trailer_size)
@@ -609,7 +612,6 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     int pes_size;
     uint8_t *q = stream->payload;
 
-    pes_stream->format = PES_FMT_TS;
     packet_size = DEFAULT_PES_PAYLOAD_SIZE;
 
     if (packet_size > 0) {
