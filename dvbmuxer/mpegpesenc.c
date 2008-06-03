@@ -20,6 +20,7 @@
  */
 
 #include "mpegpes.h"
+#include "mpeg.h"
 #include "libavcodec/bytestream.h"
 
 int ff_pes_muxer_init(AVFormatContext *ctx)
@@ -62,7 +63,7 @@ int ff_pes_muxer_init(AVFormatContext *ctx)
     return 0;
 }
 
-static inline void insert_timestamp(uint8_t** p, int id, int64_t timestamp)
+static inline void put_timestamp(uint8_t** p, int id, int64_t timestamp)
 {
     bytestream_put_byte(p,
         (id << 4) |
@@ -171,43 +172,110 @@ void ff_pes_cal_header(StreamInfo *stream,
 }
 
 int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
-    int64_t pts, int64_t dts, int startcode,
-    int header_len, int packet_size, int payload_size, int stuffing_size)
+                     int64_t *pts, int64_t *dts,
+                     int trailer_size, int *packet_size, int *pad_packet_bytes,
+                     int *payload_size, int *stuffing_size)
 {
     StreamInfo *stream = ctx->streams[stream_index]->priv_data;
-    int i, flags = 0;
-    int data_size = payload_size - stuffing_size;
-    uint8_t *q = buf;
+    int startcode, i, header_len;
+    int pes_flags = 0;
+    uint8_t *p = buf;
+    int nb_frames;
 
-    bytestream_put_be32(&q, startcode);
-    bytestream_put_be16(&q, packet_size);
-    bytestream_put_byte(&q, 0x80); /* mpeg2 id */
+    ff_pes_cal_header(stream,
+                      packet_size, &header_len, pts, dts,
+                      payload_size, &startcode, stuffing_size,
+                      &trailer_size, pad_packet_bytes);
 
-    if (pts != AV_NOPTS_VALUE) {
-        flags |= 0x80;
-        if (dts != pts)
-           flags |= 0x40;
+    nb_frames= ff_pes_get_nb_frames(ctx, stream, *payload_size - *stuffing_size);
+
+    bytestream_put_be32(&p, startcode);
+
+    bytestream_put_be16(&p, *packet_size);
+
+    if (!(stream->format & PES_FMT_MPEG2))
+        for(i=0;i<*stuffing_size;i++)
+            bytestream_put_byte(&p, 0xff);
+
+    if (stream->format & PES_FMT_MPEG2) {
+        bytestream_put_byte(&p, 0x80); /* mpeg2 id */
+
+        pes_flags=0;
+
+        if (*pts != AV_NOPTS_VALUE) {
+            pes_flags |= 0x80;
+            if (*dts != *pts)
+                pes_flags |= 0x40;
+        }
+
+        /* Both the MPEG-2 and the SVCD standards demand that the
+           P-STD_buffer_size field be included in the first packet of
+           every stream. (see SVCD standard p. 26 V.2.3.1 and V.2.3.2
+           and MPEG-2 standard 2.7.7) */
+        if (!(stream->format & PES_FMT_TS) && stream->packet_number == 0)
+            pes_flags |= 0x01;
+
+        bytestream_put_byte(&p, pes_flags); /* flags */
+        bytestream_put_byte(&p, header_len - 3 + *stuffing_size);
+
+        if (pes_flags & 0x80)  /*write pts*/
+            put_timestamp(&p, (pes_flags & 0x40) ? 0x03 : 0x02, *pts);
+        if (pes_flags & 0x40)  /*write dts*/
+            put_timestamp(&p, 0x01, *dts);
+
+        if (pes_flags & 0x01) {  /*write pes extension*/
+            bytestream_put_byte(&p, 0x10); /* flags */
+
+            /* P-STD buffer info */
+            if (stream->id == AUDIO_ID)
+                bytestream_put_be16(&p, 0x4000 | stream->max_buffer_size/128);
+            else
+                bytestream_put_be16(&p, 0x6000 | stream->max_buffer_size/1024);
+        }
+
+    } else {
+        if (*pts != AV_NOPTS_VALUE) {
+            if (*dts != *pts) {
+                put_timestamp(&p, 0x03, *pts);
+                put_timestamp(&p, 0x01, *dts);
+            } else {
+                put_timestamp(&p, 0x02, *pts);
+            }
+        } else {
+            bytestream_put_byte(&p, 0x0f);
+        }
     }
 
-    bytestream_put_byte(&q, flags);
-    bytestream_put_byte(&q, header_len - 3 + stuffing_size);
+    if (stream->format & PES_FMT_MPEG2) {
+        /* special stuffing byte that is always written
+           to prevent accidental generation of start codes. */
+        bytestream_put_byte(&p, 0xff);
 
-    if (flags & 0x80)  /* write pts */
-        insert_timestamp(&q, (flags & 0x40) ? 0x03 : 0x02, pts);
-    if (flags & 0x40)  /* write dts */
-        insert_timestamp(&q, 0x01, dts);
+        for(i=0;i<*stuffing_size;i++)
+            bytestream_put_byte(&p, 0xff);
+    }
 
-    /* special stuffing byte that is always written
-       to prevent accidental generation of startcodes. */
-    bytestream_put_byte(&q, 0xff);
-
-    for(i=0;i<stuffing_size;i++)
-        bytestream_put_byte(&q, 0xff);
+    if (!(stream->format & PES_FMT_TS) && startcode == PRIVATE_STREAM_1) {
+        bytestream_put_byte(&p, stream->id);
+        if (stream->id >= 0xa0) {
+            /* LPCM (XXX: check nb_frames) */
+            bytestream_put_byte(&p, 7);
+            bytestream_put_be16(&p, 4); /* skip 3 header bytes */
+            bytestream_put_byte(&p, stream->lpcm_header[0]);
+            bytestream_put_byte(&p, stream->lpcm_header[1]);
+            bytestream_put_byte(&p, stream->lpcm_header[2]);
+        } else if (stream->id >= 0x40) {
+            /* AC3 */
+            bytestream_put_byte(&p, nb_frames);
+            bytestream_put_be16(&p, trailer_size+1);
+        }
+    }
 
     /* output data */
-    if(av_fifo_read(&stream->fifo, q, data_size) < 0)
+    assert(payload_size - stuffing_size <= av_fifo_size(&stream->fifo));
+    if(av_fifo_read(&stream->fifo, p, *payload_size - *stuffing_size) < 0)
         return -1;
-    return q - buf + data_size;
+    return p - buf + *payload_size - *stuffing_size;
 }
 
 int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)

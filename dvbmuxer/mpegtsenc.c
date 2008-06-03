@@ -604,7 +604,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
 {
     MpegTSWriteStream *stream = ctx->streams[stream_index]->priv_data;
     StreamInfo *pes_stream = &stream->pes_stream;
-    int payload_size, startcode, stuffing_size, i, header_len;
+    int payload_size, stuffing_size, i;
     int packet_size, es_size;
     int zero_trail_bytes = 0;
     int pad_packet_bytes = 0;
@@ -614,13 +614,10 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     packet_size = DEFAULT_PES_PAYLOAD_SIZE;
 
     if (packet_size > 0) {
-        ff_pes_cal_header(pes_stream,
-                          &packet_size, &header_len, &pts, &dts,
-                          &payload_size, &startcode, &stuffing_size,
-                          &trailer_size, &pad_packet_bytes);
         pes_size = ff_pes_write_buf(ctx, stream_index, stream->payload,
-                 pts, dts, startcode, header_len,
-                 packet_size, payload_size, stuffing_size);
+                                    &pts, &dts, trailer_size,
+                                    &packet_size, &pad_packet_bytes,
+                                    &payload_size, &stuffing_size);
         if(pes_size < 0)
             return -1;
         q += pes_size;
