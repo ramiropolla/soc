@@ -655,15 +655,14 @@ static int output_packet(AVFormatContext *ctx, int flush){
     MpegTSWrite *s = ctx->priv_data;
     AVStream *st;
     StreamInfo *stream;
-    int es_size, trailer_size;
-    int result;
+    int es_size, trailer_size, res;
     int best_i= -1;
     int64_t pcr = s->last_pcr;
     PacketDesc *timestamp_packet;
 
-    if((result = ff_pes_find_beststream(ctx, DEFAULT_PES_PAYLOAD_SIZE,
-                                        flush, &pcr, &best_i)) <= 0)
-        return result;
+    if((res = ff_pes_find_beststream(ctx, DEFAULT_PES_PAYLOAD_SIZE,
+                                     flush, &pcr, &best_i)) <= 0)
+        return res;
     assert(best_i >= 0);
 
     st = ctx->streams[best_i];
