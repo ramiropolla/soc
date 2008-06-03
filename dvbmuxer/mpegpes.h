@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2000-2002 Fabrice Bellard
- * Copyright (c) 2007 Xiaohui Sun <sunxiaohui@dsp.ac.cn>
  *
  * This file is part of FFmpeg.
  *
