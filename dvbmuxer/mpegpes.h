@@ -69,17 +69,8 @@ typedef struct {
     int format; ///< mux format (ts, svcd ...)
 } StreamInfo;
 
-#define AUDIO_ID 0xc0
-#define VIDEO_ID 0xe0
-#define AC3_ID   0x80
-#define DTS_ID   0x8a
-#define LPCM_ID  0xa0
-#define SUB_ID   0x20
-
-#define PROGRAM_STREAM_MAP 0x1bc
 #define PRIVATE_STREAM_1   0x1bd
 #define PADDING_STREAM     0x1be
-#define PRIVATE_STREAM_2   0x1bf
 
 /**
  * Initialization of PES muxer.
