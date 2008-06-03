@@ -638,7 +638,6 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
 
     mpegts_write_pes(ctx, ctx->streams[stream_index],
                      stream->payload, q - stream->payload);
-    put_flush_packet(ctx->pb);
 
     es_size = payload_size - stuffing_size;
     pes_stream->buffer_index += payload_size - stuffing_size;
