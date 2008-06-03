@@ -448,8 +448,8 @@ static int mpegts_write_header(AVFormatContext *s)
         total_bit_rate +=
             total_bit_rate * 25 / (8 * DEFAULT_PES_PAYLOAD_SIZE) + /* PES header size */
             total_bit_rate * 4 / (8 * TS_PACKET_SIZE) +            /* TS  header size */
-            500 * 12 +                                            /* SDT size */
-            100 * 16;                                             /* PAT size */
+            SDT_RETRANS_TIME * 12 +                                /* SDT size */
+            PAT_RETRANS_TIME * 16;                                 /* PAT size */
         ts->mux_rate = total_bit_rate;
     }
     ts->last_pcr = ts->cur_pcr = 0;
