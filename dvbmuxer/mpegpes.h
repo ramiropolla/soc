@@ -113,26 +113,6 @@ int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int
 int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len);
 
 /**
- * Caculate next PES packet informations
- * @param[in]  stream            PES stream
- * @param[out] packet_size       PES packet size
- * @param[out] header_len        PES header length
- * @param[in]  pts               Current pts
- * @param[out] pts               AV_NOPTS_VALUE if reset
- * @param[in]  dts               Current dts
- * @param[out] dts               AV_NOPTS_VALUE if reset
- * @param[out] payload_size      PES payload size
- * @param[out] startcode         PES startcode
- * @param[out] stuffing_size     PES stuffing size
- * @param[out] trailer_size      Unwritten trailer size
- * @param[out] pad_packet_bytes  Packet padding size
- */
-void ff_pes_cal_header(StreamInfo *stream,
-          int *packet_size,  int *header_len, int64_t *pts, int64_t *dts,
-          int *payload_size, int *startcode, int *stuffing_size,
-          int *trailer_size, int *pad_packet_bytes);
-
-/**
  * Write PES data from PES Stream into supplied buffer.
  * @param [in]  ctx               AVFormatContext
  * @param [in]  stream_index      Stream index to write from

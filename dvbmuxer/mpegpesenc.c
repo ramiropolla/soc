@@ -87,7 +87,7 @@ int ff_pes_get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len){
     return nb_frames;
 }
 
-void ff_pes_cal_header(StreamInfo *stream,
+static void calc_pes_header(StreamInfo *stream,
     int *packet_size,  int *header_len, int64_t *pts, int64_t *dts,
     int *payload_size, int *startcode, int *stuffing_size,
     int *trailer_size, int *pad_packet_bytes)
@@ -182,10 +182,9 @@ int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     uint8_t *p = buf;
     int nb_frames;
 
-    ff_pes_cal_header(stream,
-                      packet_size, &header_len, pts, dts,
-                      payload_size, &startcode, stuffing_size,
-                      &trailer_size, pad_packet_bytes);
+    calc_pes_header(stream, packet_size, &header_len, pts, dts,
+                    payload_size, &startcode, stuffing_size,
+                    &trailer_size, pad_packet_bytes);
 
     nb_frames= ff_pes_get_nb_frames(ctx, stream, *payload_size - *stuffing_size);
 
