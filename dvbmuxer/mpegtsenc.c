@@ -537,7 +537,7 @@ static void mpegts_write_pes(AVFormatContext *s, AVStream *st, int64_t pcr,
         ts_st->cc = (ts_st->cc + 1) & 0xf;
         if (write_pcr) {
             /* add header and pcr bytes to pcr according to specs */
-            pcr = ts->cur_pcr + (32+56) * 90000 / ts->mux_rate;
+            pcr = ts->cur_pcr + (4+7)*8*90000LL / ts->mux_rate;
             *q++ = 7; /* AFC length */
             *q++ = 0x10; /* flags: PCR present */
             *q++ = pcr >> 25;
