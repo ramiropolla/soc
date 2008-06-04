@@ -580,7 +580,7 @@ static void mpegts_write_pes(AVFormatContext *s, AVStream *st, int64_t pcr,
         payload += len;
         payload_size -= len;
         put_buffer(s->pb, buf, TS_PACKET_SIZE);
-        ts->cur_pcr += (TS_PACKET_SIZE+1)*8*90000LL / ts->mux_rate;
+        ts->cur_pcr += (TS_PACKET_SIZE+write_pcr)*8*90000LL / ts->mux_rate;
     }
     put_flush_packet(s->pb);
 }
