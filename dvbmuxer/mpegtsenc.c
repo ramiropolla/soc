@@ -518,7 +518,7 @@ static void mpegts_write_pes(AVFormatContext *s, AVStream *st, int64_t pcr,
 
         write_pcr = !ts->cur_pcr;
         if (ts_st->pid == ts_st->service->pcr_pid) {
-            pcr = ts->cur_pcr + TS_PACKET_SIZE*90000LL / ts->mux_rate;
+            pcr = ts->cur_pcr + TS_PACKET_SIZE*8*90000LL / ts->mux_rate;
             if (pcr - ts->last_pcr > MAX_DELTA_PCR)
                 write_pcr = 1;
         }
