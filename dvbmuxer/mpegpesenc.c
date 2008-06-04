@@ -213,7 +213,7 @@ int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
            P-STD_buffer_size field be included in the first packet of
            every stream. (see SVCD standard p. 26 V.2.3.1 and V.2.3.2
            and MPEG-2 standard 2.7.7) */
-        if (!(stream->format & PES_FMT_TS) && stream->packet_number == 0)
+        if (stream->format != PES_FMT_TS && stream->packet_number == 0)
             pes_flags |= 0x01;
 
         bytestream_put_byte(&p, pes_flags); /* flags */
@@ -256,7 +256,7 @@ int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
             bytestream_put_byte(&p, 0xff);
     }
 
-    if (!(stream->format & PES_FMT_TS) && startcode == PRIVATE_STREAM_1) {
+    if (stream->format != PES_FMT_TS && startcode == PRIVATE_STREAM_1) {
         bytestream_put_byte(&p, stream->id);
         if (stream->id >= 0xa0) {
             /* LPCM (XXX: check nb_frames) */
