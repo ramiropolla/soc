@@ -171,7 +171,7 @@ typedef struct MpegTSWrite {
     int onid;
     int tsid;
     int64_t last_pcr; ///< last program clock reference */
-    int64_t cur_pcr;  ///< current program clock reference */
+    int64_t cur_pcr; ///< last program clock reference */
     int mux_rate;
 } MpegTSWrite;
 
@@ -452,7 +452,7 @@ static int mpegts_write_header(AVFormatContext *s)
             PAT_RETRANS_TIME * 16;                                 /* PAT size */
         ts->mux_rate = total_bit_rate;
     }
-    ts->last_pcr = ts->cur_pcr = 0;
+    ts->last_pcr = 0;
 
     ts->sdt_packet_freq = (total_bit_rate * SDT_RETRANS_TIME) /
         (TS_PACKET_SIZE * 8 * 1000);
@@ -502,7 +502,7 @@ static void retransmit_si_info(AVFormatContext *s)
 }
 
 /* NOTE: pes_data contains all the PES packet */
-static void mpegts_write_pes(AVFormatContext *s, AVStream *st,
+static void mpegts_write_pes(AVFormatContext *s, AVStream *st, int64_t pcr,
                              const uint8_t *payload, int payload_size)
 {
     MpegTSWriteStream *ts_st = st->priv_data;
@@ -511,9 +511,9 @@ static void mpegts_write_pes(AVFormatContext *s, AVStream *st,
     uint8_t *q;
     int val, is_start, len, header_len, write_pcr;
     int afc_len, stuffing_len;
-    int64_t pcr = -1; /* avoid warning */
 
     is_start = 1;
+    ts->cur_pcr = pcr;
     while (payload_size > 0) {
         retransmit_si_info(s);
 
@@ -600,7 +600,7 @@ static void put_padding_packet(uint8_t **pes_payload, int packet_bytes)
 
 /* flush the packet on stream stream_index */
 static int flush_packet(AVFormatContext *ctx, int stream_index,
-                         int64_t pts, int64_t dts, int trailer_size)
+                        int64_t pts, int64_t dts, int64_t pcr, int trailer_size)
 {
     MpegTSWriteStream *stream = ctx->streams[stream_index]->priv_data;
     int payload_size, stuffing_size, i;
@@ -631,7 +631,7 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     for(i=0;i<zero_trail_bytes;i++)
         bytestream_put_byte(&q, 0x00);
 
-    mpegts_write_pes(ctx, ctx->streams[stream_index],
+    mpegts_write_pes(ctx, ctx->streams[stream_index], pcr,
                      stream->payload, q - stream->payload);
 
     return payload_size - stuffing_size;
@@ -656,8 +656,6 @@ static int output_packet(AVFormatContext *ctx, int flush){
 
     assert(av_fifo_size(&stream->fifo) > 0);
 
-    s->cur_pcr = pcr;
-
     timestamp_packet= stream->premux_packet;
     if(timestamp_packet->unwritten_size == timestamp_packet->size){
         trailer_size= 0;
@@ -668,10 +666,10 @@ static int output_packet(AVFormatContext *ctx, int flush){
 
     if(timestamp_packet){
 //av_log(ctx, AV_LOG_DEBUG, "dts:%f pts:%f pcr:%f stream:%d\n", timestamp_packet->dts/90000.0, timestamp_packet->pts/90000.0, pcr/90000.0, best_i);
-        es_size= flush_packet(ctx, best_i, timestamp_packet->pts, timestamp_packet->dts, trailer_size);
+        es_size= flush_packet(ctx, best_i, timestamp_packet->pts, timestamp_packet->dts, pcr, trailer_size);
     }else{
         assert(av_fifo_size(&stream->fifo) == trailer_size);
-        es_size= flush_packet(ctx, best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, trailer_size);
+        es_size= flush_packet(ctx, best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, pcr, trailer_size);
     }
 
     stream->buffer_index += es_size;
