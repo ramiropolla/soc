@@ -1214,19 +1214,18 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
             }else if (cur_cb != INTENSITY_HCB2 && cur_cb != INTENSITY_HCB) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
-                        int index = get_vlc2(gb, ac->books[cur_cb - 1].table, 6, 3);
+                        const int index = get_vlc2(gb, ac->books[cur_cb - 1].table, 6, 3);
+                        const int *ptr = &ac->vq[cur_cb - 1][index * dim], coef_idx = (group << 7) + k;
                         int j;
-                        int sign[4] = {1,1,1,1};
-                        int ptr[4];
                         if (index == -1) {
                             av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data\n");
                             return -1;
                         }
-                        memcpy(ptr, &ac->vq[cur_cb - 1][index * dim], dim*sizeof(int));
+                        for (j = 0; j < dim; j++) icoef[coef_idx + j] = 1;
                         if (IS_CODEBOOK_UNSIGNED(cur_cb)) {
                             for (j = 0; j < dim; j++)
                                 if (ptr[j] && get_bits1(gb))
-                                    sign[j] = -1;
+                                    icoef[coef_idx + j] = -1;
                         }
                         if (cur_cb == ESC_HCB) {
                             for (j = 0; j < 2; j++) {
@@ -1239,17 +1238,17 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                                         av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data, ESC overflow\n");
                                         return -1;
                                     }
-                                    ptr[j] = (1<<n) + get_bits(gb, n);
+                                    icoef[coef_idx + j] *= (1<<n) + get_bits(gb, n);
                                 }
                             }
-                        }
+                        }else
                         for (j = 0; j < dim; j++)
-                            icoef[group*128+k+j] = sign[j] * ptr[j];
+                            icoef[coef_idx + j] *= ptr[j];
                     }
                 }
             }
         }
-        icoef += ics->group_len[g]*128;
+        icoef += ics->group_len[g]<<7;
     }
     return 0;
 }
