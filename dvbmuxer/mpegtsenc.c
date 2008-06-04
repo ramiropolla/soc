@@ -666,7 +666,9 @@ static int output_packet(AVFormatContext *ctx, int flush){
     stream = st->priv_data;
 
     assert(av_fifo_size(&stream->fifo) > 0);
+
     s->cur_pcr = pcr;
+
     timestamp_packet= stream->premux_packet;
     if(timestamp_packet->unwritten_size == timestamp_packet->size){
         trailer_size= 0;
