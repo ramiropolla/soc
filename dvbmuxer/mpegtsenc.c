@@ -603,9 +603,8 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
                          int64_t pts, int64_t dts, int trailer_size)
 {
     MpegTSWriteStream *stream = ctx->streams[stream_index]->priv_data;
-    StreamInfo *pes_stream = &stream->pes_stream;
     int payload_size, stuffing_size, i;
-    int packet_size, es_size;
+    int packet_size;
     int zero_trail_bytes = 0;
     int pad_packet_bytes = 0;
     int pes_size;
@@ -634,16 +633,6 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
 
     mpegts_write_pes(ctx, ctx->streams[stream_index],
                      stream->payload, q - stream->payload);
-
-    es_size = payload_size - stuffing_size;
-    pes_stream->buffer_index += payload_size - stuffing_size;
-    while(pes_stream->premux_packet && pes_stream->premux_packet->unwritten_size <= es_size){
-        es_size -= pes_stream->premux_packet->unwritten_size;
-        pes_stream->premux_packet= pes_stream->premux_packet->next;
-    }
-
-    if(es_size)
-        pes_stream->premux_packet->unwritten_size -= es_size;
 
     return payload_size - stuffing_size;
 }
@@ -684,6 +673,14 @@ static int output_packet(AVFormatContext *ctx, int flush){
         assert(av_fifo_size(&stream->fifo) == trailer_size);
         es_size= flush_packet(ctx, best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, trailer_size);
     }
+
+    stream->buffer_index += es_size;
+    while(stream->premux_packet && stream->premux_packet->unwritten_size <= es_size){
+        es_size -= stream->premux_packet->unwritten_size;
+        stream->premux_packet= stream->premux_packet->next;
+    }
+    if(es_size)
+        stream->premux_packet->unwritten_size -= es_size;
 
     if(ff_pes_remove_decoded_packets(ctx, s->last_pcr) < 0)
         return -1;
