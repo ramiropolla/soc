@@ -273,7 +273,7 @@ int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     }
 
     /* output data */
-    assert(payload_size - stuffing_size <= av_fifo_size(&stream->fifo));
+    assert(*payload_size - *stuffing_size <= av_fifo_size(&stream->fifo));
     if(av_fifo_read(&stream->fifo, p, *payload_size - *stuffing_size) < 0)
         return -1;
     return p - buf + *payload_size - *stuffing_size;
