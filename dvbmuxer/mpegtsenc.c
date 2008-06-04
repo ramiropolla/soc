@@ -452,7 +452,6 @@ static int mpegts_write_header(AVFormatContext *s)
             PAT_RETRANS_TIME * 16;                                 /* PAT size */
         ts->mux_rate = total_bit_rate;
     }
-    ts->last_pcr = 0;
 
     ts->sdt_packet_freq = (total_bit_rate * SDT_RETRANS_TIME) /
         (TS_PACKET_SIZE * 8 * 1000);
