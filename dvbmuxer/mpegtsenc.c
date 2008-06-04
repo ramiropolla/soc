@@ -141,7 +141,7 @@ static int mpegts_write_section1(MpegTSSection *s, int tid, int id,
 #define MAX_DELTA_PCR 9000 /**< 0.1s according to ISO 13818-1 */
 
 typedef struct MpegTSWriteStream {
-    StreamInfo pes_stream;
+    StreamInfo pes;
     struct MpegTSService *service;
     int pid; /* stream associated pid */
     int cc;
@@ -410,19 +410,19 @@ static int mpegts_write_header(AVFormatContext *s)
             service->pcr_pid = ts_st->pid;
 
         if (st->codec->codec_type == CODEC_TYPE_VIDEO) {
-            ts_st->pes_stream.id = 0xe0;
+            ts_st->pes.id = 0xe0;
         } else if (st->codec->codec_type == CODEC_TYPE_AUDIO &&
                    (st->codec->codec_id == CODEC_ID_MP2 ||
                     st->codec->codec_id == CODEC_ID_MP3)) {
-            ts_st->pes_stream.id = 0xc0;
+            ts_st->pes.id = 0xc0;
         } else {
-            ts_st->pes_stream.id = 0xbd;
+            ts_st->pes.id = 0xbd;
             if (st->codec->codec_type == CODEC_TYPE_SUBTITLE) {
                 //private_code = 0x20;
             }
         }
 
-        ts_st->pes_stream.format = PES_FMT_TS;
+        ts_st->pes.format = PES_FMT_TS;
 
         if(st->codec->rc_max_rate)
             codec_rate= st->codec->rc_max_rate;
@@ -606,16 +606,15 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
     int packet_size;
     int zero_trail_bytes = 0;
     int pad_packet_bytes = 0;
-    int pes_size;
     uint8_t *q = stream->payload;
 
     packet_size = DEFAULT_PES_PAYLOAD_SIZE;
 
     if (packet_size > 0) {
-        pes_size = ff_pes_write_buf(ctx, stream_index, stream->payload,
-                                    &pts, &dts, trailer_size,
-                                    &packet_size, &pad_packet_bytes,
-                                    &payload_size, &stuffing_size);
+        int pes_size = ff_pes_write_buf(ctx, stream_index, stream->payload,
+                                        &pts, &dts, trailer_size,
+                                        &packet_size, &pad_packet_bytes,
+                                        &payload_size, &stuffing_size);
         if(pes_size < 0)
             return -1;
         q += pes_size;
