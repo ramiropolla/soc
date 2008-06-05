@@ -93,18 +93,6 @@ void ff_pes_muxer_end(AVFormatContext *ctx);
 void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt, int packet_number);
 
 /**
- * Find the best stream to mux into the PES stream.
- * @param[in]  ctx         AVFormatContext
- * @param[in]  packet_size PES stream packet size
- * @param[in]  flush       Wether flushing remaining data is needed
- * @param[in]  scr         Current clock reference
- * @param[out] scr         Updated clock reference, bumped if needed
- * @param[out] best_i      Index of the stream to be muxed
- * @return                 Negative on error, zero if not found, 1 if found
- */
-int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int *best_i);
-
-/**
  * Output PES packet to the output file.
  * @param[in]  ctx          AVFormatContext
  * @param[in]  packet_size  PES stream packet size

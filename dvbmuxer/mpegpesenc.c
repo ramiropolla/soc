@@ -307,7 +307,7 @@ int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
     return 0;
 }
 
-int ff_pes_find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int *best_i)
+static int find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int *best_i)
 {
     int i, avail_space;
     int best_score= INT_MIN;
@@ -428,8 +428,8 @@ int ff_pes_output_packet(AVFormatContext *ctx, int packet_size, int64_t *cr,
     int trailer_size, res;
     PacketDesc *timestamp_packet;
 
-    if((res = ff_pes_find_beststream(ctx, packet_size,
-                                     flush, cr, best_i)) <= 0)
+    if((res = find_beststream(ctx, packet_size,
+                              flush, cr, best_i)) <= 0)
         return res;
     assert(*best_i >= 0);
 
