@@ -171,7 +171,7 @@ typedef struct MpegTSWrite {
     int onid;
     int tsid;
     int64_t last_pcr; ///< last program clock reference */
-    int64_t cur_pcr; ///< last program clock reference */
+    int64_t cur_pcr;  ///< last program clock reference */
     int mux_rate;
 } MpegTSWrite;
 
