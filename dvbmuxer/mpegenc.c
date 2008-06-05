@@ -890,12 +890,8 @@ static int mpeg_mux_end(AVFormatContext *ctx)
     //put_be32(ctx->pb, ISO_11172_END_CODE);
     //put_flush_packet(ctx->pb);
 
-    for(i=0;i<ctx->nb_streams;i++) {
-        stream = ctx->streams[i]->priv_data;
+    ff_pes_muxer_end(ctx);
 
-        assert(av_fifo_size(&stream->fifo) == 0);
-        av_fifo_free(&stream->fifo);
-    }
     av_free(s->payload);
     return 0;
 }
