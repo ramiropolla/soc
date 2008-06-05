@@ -420,6 +420,42 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt, int packet_number)
     av_fifo_generic_write(&stream->fifo, buf, size, NULL);
 }
 
+int ff_pes_output_packet(AVFormatContext *ctx, int packet_size, int64_t *cr,
+                         int *best_i, int flush, int (*flush_packet)())
+{
+    AVStream *st;
+    StreamInfo *stream;
+    int trailer_size, res;
+    PacketDesc *timestamp_packet;
+
+    if((res = ff_pes_find_beststream(ctx, packet_size,
+                                     flush, cr, best_i)) <= 0)
+        return res;
+    assert(*best_i >= 0);
+
+    st = ctx->streams[*best_i];
+    stream = st->priv_data;
+
+    assert(av_fifo_size(&stream->fifo) > 0);
+
+    timestamp_packet= stream->premux_packet;
+    if(timestamp_packet->unwritten_size == timestamp_packet->size){
+        trailer_size= 0;
+    }else{
+        trailer_size= timestamp_packet->unwritten_size;
+        timestamp_packet= timestamp_packet->next;
+    }
+
+    if(timestamp_packet){
+//av_log(ctx, AV_LOG_DEBUG, "dts:%f pts:%f pcr:%f stream:%d\n", timestamp_packet->dts/90000.0, timestamp_packet->pts/90000.0, pcr/90000.0, best_i);
+        return flush_packet(ctx, *best_i, timestamp_packet->pts, timestamp_packet->dts, *cr, trailer_size);
+    }else{
+        assert(av_fifo_size(&stream->fifo) == trailer_size);
+        return flush_packet(ctx, *best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, *cr, trailer_size);
+    }
+}
+
+
 void ff_pes_muxer_end(AVFormatContext *ctx)
 {
     StreamInfo *stream;

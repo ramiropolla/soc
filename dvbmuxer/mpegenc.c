@@ -799,38 +799,16 @@ static int64_t get_vcd_scr(AVFormatContext *ctx,int stream_index,int64_t pts)
 
 static int output_packet(AVFormatContext *ctx, int flush){
     MpegMuxContext *s = ctx->priv_data;
-    AVStream *st;
     StreamInfo *stream;
-    int res, es_size, trailer_size;
+    int es_size;
     int best_i= -1;
     int64_t scr= s->last_scr;
-    PacketDesc *timestamp_packet;
 
-    if((res = ff_pes_find_beststream(ctx, s->packet_size, flush,
-                                        &scr, &best_i)) <= 0)
-        return res;
-    assert(best_i >= 0);
+    if ((es_size = ff_pes_output_packet(ctx, s->packet_size, &scr, &best_i,
+                                        flush, flush_packet)) <= 0)
+        return es_size;
 
-    st = ctx->streams[best_i];
-    stream = st->priv_data;
-
-    assert(av_fifo_size(&stream->fifo) > 0);
-
-    timestamp_packet= stream->premux_packet;
-    if(timestamp_packet->unwritten_size == timestamp_packet->size){
-        trailer_size= 0;
-    }else{
-        trailer_size= timestamp_packet->unwritten_size;
-        timestamp_packet= timestamp_packet->next;
-    }
-
-    if(timestamp_packet){
-//av_log(ctx, AV_LOG_DEBUG, "dts:%f pts:%f scr:%f stream:%d\n", timestamp_packet->dts/90000.0, timestamp_packet->pts/90000.0, scr/90000.0, best_i);
-        es_size= flush_packet(ctx, best_i, timestamp_packet->pts, timestamp_packet->dts, scr, trailer_size);
-    }else{
-        assert(av_fifo_size(&stream->fifo) == trailer_size);
-        es_size= flush_packet(ctx, best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, scr, trailer_size);
-    }
+    stream= ctx->streams[best_i]->priv_data;
 
     if (s->is_vcd) {
         /* Write one or more padding sectors, if necessary, to reach
@@ -873,8 +851,6 @@ static int mpeg_mux_write_packet(AVFormatContext *ctx, AVPacket *pkt)
 static int mpeg_mux_end(AVFormatContext *ctx)
 {
     MpegMuxContext *s = ctx->priv_data;
-    StreamInfo *stream;
-    int i;
 
     for(;;){
         int ret= output_packet(ctx, 1);

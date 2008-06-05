@@ -637,39 +637,16 @@ static int flush_packet(AVFormatContext *ctx, int stream_index,
 
 static int output_packet(AVFormatContext *ctx, int flush){
     MpegTSWrite *s = ctx->priv_data;
-    AVStream *st;
     StreamInfo *stream;
-    int es_size, trailer_size, res;
+    int es_size;
     int best_i= -1;
-    int64_t pcr = s->last_pcr;
-    PacketDesc *timestamp_packet;
+    int64_t pcr= s->last_pcr;
 
-    if((res = ff_pes_find_beststream(ctx, DEFAULT_PES_PAYLOAD_SIZE,
-                                     flush, &pcr, &best_i)) <= 0)
-        return res;
-    assert(best_i >= 0);
+    if ((es_size = ff_pes_output_packet(ctx, DEFAULT_PES_PAYLOAD_SIZE,
+                                        &pcr, &best_i, flush, flush_packet)) <= 0)
+        return es_size;
 
-    st = ctx->streams[best_i];
-    stream = st->priv_data;
-
-    assert(av_fifo_size(&stream->fifo) > 0);
-
-    timestamp_packet= stream->premux_packet;
-    if(timestamp_packet->unwritten_size == timestamp_packet->size){
-        trailer_size= 0;
-    }else{
-        trailer_size= timestamp_packet->unwritten_size;
-        timestamp_packet= timestamp_packet->next;
-    }
-
-    if(timestamp_packet){
-//av_log(ctx, AV_LOG_DEBUG, "dts:%f pts:%f pcr:%f stream:%d\n", timestamp_packet->dts/90000.0, timestamp_packet->pts/90000.0, pcr/90000.0, best_i);
-        es_size= flush_packet(ctx, best_i, timestamp_packet->pts, timestamp_packet->dts, pcr, trailer_size);
-    }else{
-        assert(av_fifo_size(&stream->fifo) == trailer_size);
-        es_size= flush_packet(ctx, best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, pcr, trailer_size);
-    }
-
+    stream= ctx->streams[best_i]->priv_data;
     stream->buffer_index += es_size;
     while(stream->premux_packet && stream->premux_packet->unwritten_size <= es_size){
         es_size -= stream->premux_packet->unwritten_size;
