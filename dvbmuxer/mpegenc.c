@@ -465,17 +465,6 @@ static int mpeg_mux_init(AVFormatContext *ctx)
     return AVERROR(ENOMEM);
 }
 
-static inline void put_timestamp(ByteIOContext *pb, int id, int64_t timestamp)
-{
-    put_byte(pb,
-             (id << 4) |
-             (((timestamp >> 30) & 0x07) << 1) |
-             1);
-    put_be16(pb, (uint16_t)((((timestamp >> 15) & 0x7fff) << 1) | 1));
-    put_be16(pb, (uint16_t)((((timestamp) & 0x7fff) << 1) | 1));
-}
-
-
 /* return the number of padding bytes that should be inserted into
    the multiplexed stream.*/
 static int get_vcd_padding_size(AVFormatContext *ctx, int64_t pts)
@@ -807,7 +796,6 @@ static int output_packet(AVFormatContext *ctx, int flush){
     if ((es_size = ff_pes_output_packet(ctx, s->packet_size, &scr, &best_i,
                                         flush, flush_packet)) <= 0)
         return es_size;
-
     stream= ctx->streams[best_i]->priv_data;
 
     if (s->is_vcd) {

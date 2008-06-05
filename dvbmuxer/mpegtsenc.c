@@ -645,8 +645,8 @@ static int output_packet(AVFormatContext *ctx, int flush){
     if ((es_size = ff_pes_output_packet(ctx, DEFAULT_PES_PAYLOAD_SIZE,
                                         &pcr, &best_i, flush, flush_packet)) <= 0)
         return es_size;
-
     stream= ctx->streams[best_i]->priv_data;
+
     stream->buffer_index += es_size;
     while(stream->premux_packet && stream->premux_packet->unwritten_size <= es_size){
         es_size -= stream->premux_packet->unwritten_size;
