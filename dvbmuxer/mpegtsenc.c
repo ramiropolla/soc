@@ -501,8 +501,8 @@ static void retransmit_si_info(AVFormatContext *s)
 }
 
 /* NOTE: pes_data contains all the PES packet */
-static void mpegts_write_pes(AVFormatContext *s, AVStream *st, int64_t pcr,
-                             const uint8_t *payload, int payload_size)
+static void mpegts_write_pes(AVFormatContext *s, AVStream *st,
+                             int64_t pcr, const uint8_t *payload, int payload_size)
 {
     MpegTSWriteStream *ts_st = st->priv_data;
     MpegTSWrite *ts = s->priv_data;
