@@ -142,9 +142,13 @@ typedef struct {
     DECLARE_ALIGNED_16(int, icoefs[2][1024]);
 
     int samplerate_index;
+    int common_window;
     uint8_t *swb_sizes;
     int swb_num;
     int coded_swb_num;
+    int codebooks[MAX_SWB_SIZE];
+
+    int global_gain;
 } AACEncContext;
 
 /**
@@ -222,16 +226,200 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, short *audio, int c
     apply_psychoacoustics(avctx, channel);
 }
 
+/**
+ * Encode ics_info element.
+ * @see Table 4.6
+ */
+static void put_ics_info(AVCodecContext *avctx)
+{
+    AACEncContext *s = avctx->priv_data;
+
+    put_bits(&s->pb, 1, 0);                // ics_reserved bit
+    put_bits(&s->pb, 2, 0);                // only_long_window_sequence
+    put_bits(&s->pb, 1, 0);                // windows shape
+    put_bits(&s->pb, 6, s->coded_swb_num); // max scalefactor bands
+    put_bits(&s->pb, 1, 0);                // no prediction
+}
+
+/**
+ * Scan spectral band and determine optimal codebook for it.
+ */
+static int determine_section_info(AACEncContext *s, int channel, int start, int size)
+{
+    int i;
+    int maxval, sign;
+
+    maxval = 0;
+    sign = 0;
+    for(i = start; i < start + size; i++){
+        maxval = FFMAX(maxval, FFABS(s->icoefs[channel][i]));
+        if(s->icoefs[channel][i] < 0) sign = 1;
+    }
+
+    ///TODO: better decision
+    if(!maxval) return 0; //zero codebook
+    if(maxval == 1) return 2;
+    return 11; //escape codebook
+}
+
+static void encode_codebook(AACEncContext *s, int channel, int start, int size, int cb)
+{
+    const uint8_t *bits = aac_cb_info[cb].bits;
+    const uint16_t *codes = aac_cb_info[cb].codes;
+    const int dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
+    int i, j, idx;
+
+    if(!bits || !codes) return;
+
+    //TODO: factorize?
+    if(aac_cb_info[cb].flags & CB_ESCAPE){
+        for(i = start; i < start + size; i += dim){
+            idx = 0;
+            for(j = 0; j < dim; j++)
+                idx = idx*17 + FFMIN(FFABS(s->icoefs[channel][i+j]), 16);
+            put_bits(&s->pb, bits[idx], codes[idx]);
+            //output signs
+            for(j = 0; j < dim; j++)
+                if(s->icoefs[channel][i+j])
+                    put_bits(&s->pb, 1, s->icoefs[channel][i+j] < 0);
+            //output escape values
+            for(j = 0; j < dim; j++)
+                if(FFABS(s->icoefs[channel][i+j]) > 15){
+                    int l = av_log2(FFABS(s->icoefs[channel][i+j]));
+
+                    put_bits(&s->pb, l - 4 + 1, (1 << (l - 4 + 1)) - 2);
+                    put_bits(&s->pb, l, FFABS(s->icoefs[channel][i+j]) & ((1 << l) - 1));
+                }
+        }
+    }else if(aac_cb_info[cb].flags & CB_UNSIGNED){
+        for(i = start; i < start + size; i += dim){
+            idx = 0;
+            for(j = 0; j < dim; j++)
+                idx = idx * aac_cb_info[cb].maxval + FFABS(s->icoefs[channel][i+j]);
+            put_bits(&s->pb, bits[idx], codes[idx]);
+            //output signs
+            for(j = 0; j < dim; j++)
+                if(s->icoefs[channel][i+j])
+                    put_bits(&s->pb, 1, s->icoefs[channel][i+j] < 0);
+        }
+    }else{
+        for(i = start; i < start + size; i += dim){
+            idx = 0;
+            for(j = 0; j < dim; j++)
+                idx = idx * (aac_cb_info[cb].maxval*2 + 1) + s->icoefs[channel][i+j] + aac_cb_info[cb].maxval;
+            put_bits(&s->pb, bits[idx], codes[idx]);
+        }
+    }
+}
+
+static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, int channel)
+{
+    int i;
+    int bits = 5; //for long window
+    int count = 0;
+
+    for(i = 0; i < s->coded_swb_num; i++){
+        if(!i || s->codebooks[i] != s->codebooks[i-1]){
+            if(count){
+                while(count >= (1 << bits) - 1){
+                    put_bits(&s->pb, bits, (1 << bits) - 1);
+                    count -= (1 << bits) - 1;
+                }
+                put_bits(&s->pb, bits, count);
+            }
+            put_bits(&s->pb, 4, s->codebooks[i]);
+            count = 1;
+        }else
+            count++;
+    }
+    if(count){
+        while(count >= (1 << bits) - 1){
+            put_bits(&s->pb, bits, (1 << bits) - 1);
+            count -= (1 << bits) - 1;
+        }
+        put_bits(&s->pb, bits, count);
+    }
+}
+
+static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, int channel)
+{
+//    int off = s->global_gain;
+    int i;
+
+    for(i = 0; i < s->coded_swb_num; i++){
+        if(s->codebooks[i] != 0){
+            put_bits(&s->pb, bits[60], code[60]);
+        }
+    }
+}
+
+static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, int channel)
+{
+    int start = 0, i;
+
+    for(i = 0; i < s->coded_swb_num; i++){
+        encode_codebook(s, channel, start, s->swb_sizes[i], s->codebooks[i]);
+        start += s->swb_sizes[i];
+    }
+}
+
+/**
+ * Encode one channel of audio data.
+ */
+static int encode_individual_channel(AVCodecContext *avctx, int channel, int common_window)
+{
+    AACEncContext *s = avctx->priv_data;
+    int i, j, g = 0;
+
+    s->coded_swb_num = s->swb_num;
+    s->global_gain = 128;
+    i = 0;
+    while(i < 1024){
+        s->codebooks[g] = determine_section_info(s, channel, i, s->swb_sizes[g]);
+        i += s->swb_sizes[g];
+        g++;
+    }
+
+    put_bits(&s->pb, 8, s->global_gain); //global gain
+    put_ics_info(avctx);
+    encode_section_data(avctx, s, channel);
+    encode_scale_factor_data(avctx, s, channel);
+    put_bits(&s->pb, 1, 0); //pulse
+    put_bits(&s->pb, 1, 0); //tns
+    put_bits(&s->pb, 1, 0); //ssr
+    encode_spectral_data(avctx, s, channel);
+    return 0;
+}
+
 static int aac_encode_frame(AVCodecContext *avctx,
                             uint8_t *frame, int buf_size, void *data)
 {
-    int i,k,channel;
     AACEncContext *s = avctx->priv_data;
     int16_t *samples = data;
 
-    init_put_bits(&s->pb, frame, buf_size*8);
-    put_bits(&s->pb, 8, 0xAB);
+    analyze(avctx, s, samples, 0);
+    if(avctx->channels > 1)
+        analyze(avctx, s, samples, 1);
 
+    init_put_bits(&s->pb, frame, buf_size*8);
+    //output encoded
+    switch(avctx->channels){
+    case 1:
+        put_bits(&s->pb, 3, ID_SCE);
+        put_bits(&s->pb, 4, 0); //tag
+        encode_individual_channel(avctx, 0, 0);
+        break;
+    case 2:
+        put_bits(&s->pb, 3, ID_CPE);
+        put_bits(&s->pb, 4, 0); //tag
+        encode_individual_channel(avctx, 0, 1);
+        encode_individual_channel(avctx, 1, 1);
+        break;
+    default:
+        av_log(NULL,0,"?");
+    }
+
+    put_bits(&s->pb, 3, ID_END);
     flush_put_bits(&s->pb);
     return put_bits_count(&s->pb)>>3;
 }
