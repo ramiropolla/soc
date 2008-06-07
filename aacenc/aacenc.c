@@ -33,6 +33,11 @@ typedef struct {
     PutBitContext pb;
     MDCTContext mdct;
     DECLARE_ALIGNED_16(float, kbd_long_1024[1024]);
+    DECLARE_ALIGNED_16(FFTSample, output[2048]);
+    DECLARE_ALIGNED_16(FFTSample, frame_out[2][2048]);
+    DECLARE_ALIGNED_16(FFTSample, coefs[2][1024]);
+    DECLARE_ALIGNED_16(FFTSample, tmp[1024]);
+    DECLARE_ALIGNED_16(int, icoefs[2][1024]);
 
     int samplerate_index;
 } AACEncContext;
@@ -80,6 +85,33 @@ static int aac_encode_init(AVCodecContext *avctx)
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
     return 0;
+}
+
+/* BIG FAT TODO! */
+/* for now it just converts spectra to integer form */
+static void apply_psychoacoustics(AVCodecContext *avctx, int channel)
+{
+    AACEncContext *s = avctx->priv_data;
+    int i;
+
+    for(i = 0; i < 1024; i++)
+        s->icoefs[channel][i] = (int)s->coefs[channel][i];
+}
+
+static void analyze(AVCodecContext *avctx, AACEncContext *s, short *audio, int channel)
+{
+    int i, j;
+
+    // perform MDCT
+    memcpy(s->output, s->frame_out[channel], sizeof(float)*1024);
+    j = channel;
+    for (i = 0; i < 1024; i++, j += avctx->channels){
+        s->output[i+1024]        = audio[j] / 512 * s->kbd_long_1024[1024 - i - 1];
+        s->frame_out[channel][i] = audio[j] / 512 * s->kbd_long_1024[i];
+    }
+    ff_mdct_calc(&s->mdct, s->coefs[channel], s->output, s->tmp);
+
+    apply_psychoacoustics(avctx, channel);
 }
 
 static int aac_encode_frame(AVCodecContext *avctx,
