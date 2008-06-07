@@ -100,6 +100,37 @@ static const uint8_t *swb_size_1024[] = {
 
 //borrowed data ends here
 
+#define CB_UNSIGNED 0x01
+#define CB_PAIRS    0x02
+#define CB_ESCAPE   0x04
+
+/** Codebook information */
+static const struct {
+    int16_t maxval;         ///< maximum possible value
+
+    const uint8_t  *bits;   ///< codeword lengths
+    const uint16_t *codes;  ///< codewords
+
+    uint8_t flags;          ///< codebook features
+} aac_cb_info[] = {
+    {    0, NULL  , NULL  , CB_UNSIGNED }, // zero codebook
+    {    1, bits1 , code1 , 0 },
+    {    1, bits2 , code2 , 0 },
+    {    2, bits3 , code3 , CB_UNSIGNED },
+    {    2, bits4 , code4 , CB_UNSIGNED },
+    {    4, bits5 , code5 , CB_PAIRS },
+    {    4, bits6 , code6 , CB_PAIRS },
+    {    7, bits7 , code7 , CB_PAIRS | CB_UNSIGNED },
+    {    7, bits8 , code8 , CB_PAIRS | CB_UNSIGNED },
+    {   12, bits9 , code9 , CB_PAIRS | CB_UNSIGNED },
+    {   12, bits10, code10, CB_PAIRS | CB_UNSIGNED },
+    { 8191, bits11, code11, CB_PAIRS | CB_UNSIGNED | CB_ESCAPE },
+    {   -1, NULL  , NULL  , 0 }, // reserved
+    {   -1, NULL  , NULL  , 0 }, // perceptual noise substitution
+    {   -1, NULL  , NULL  , 0 }, // intensity out-of-phase
+    {   -1, NULL  , NULL  , 0 }, // intensity in-phase
+};
+
 typedef struct {
     PutBitContext pb;
     MDCTContext mdct;
