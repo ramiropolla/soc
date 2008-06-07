@@ -381,7 +381,7 @@ static int encode_individual_channel(AVCodecContext *avctx, int channel, int com
     }
 
     put_bits(&s->pb, 8, s->global_gain); //global gain
-    put_ics_info(avctx);
+    if(!common_window) put_ics_info(avctx);
     encode_section_data(avctx, s, channel);
     encode_scale_factor_data(avctx, s, channel);
     put_bits(&s->pb, 1, 0); //pulse
@@ -412,8 +412,14 @@ static int aac_encode_frame(AVCodecContext *avctx,
     case 2:
         put_bits(&s->pb, 3, ID_CPE);
         put_bits(&s->pb, 4, 0); //tag
-        encode_individual_channel(avctx, 0, 1);
-        encode_individual_channel(avctx, 1, 1);
+        s->common_window = 1;
+        put_bits(&s->pb, 1, s->common_window);
+        if(s->common_window){
+            put_ics_info(avctx);
+            put_bits(&s->pb, 2, 0); //no MS mode for now
+        }
+        encode_individual_channel(avctx, 0, s->common_window);
+        encode_individual_channel(avctx, 1, s->common_window);
         break;
     default:
         av_log(NULL,0,"?");
