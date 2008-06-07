@@ -29,6 +29,77 @@
 #include "dsputil.h"
 #include "mpeg4audio.h"
 
+// XXX: borrowed from aac.c, move to some header eventually
+
+#include "aactab.h"
+/**
+ * IDs for raw_data_block
+ */
+enum {
+    ID_SCE = 0x0,
+    ID_CPE,
+    ID_CCE,
+    ID_LFE,
+    ID_DSE,
+    ID_PCE,
+    ID_FIL,
+    ID_END
+};
+
+static const uint8_t swb_size_1024_96[] = {
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8,
+    12, 12, 12, 12, 12, 16, 16, 24, 28, 36, 44,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
+};
+
+static const uint8_t swb_size_1024_64[] = {
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8,
+    12, 12, 12, 16, 16, 16, 20, 24, 24, 28, 36,
+    40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40
+};
+
+static const uint8_t swb_size_1024_48[] = {
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8, 8, 8,
+    12, 12, 12, 12, 16, 16, 20, 20, 24, 24, 28, 28,
+    32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+    96
+};
+
+static const uint8_t swb_size_1024_32[] = {
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8, 8, 8,
+    12, 12, 12, 12, 16, 16, 20, 20, 24, 24, 28, 28,
+    32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32
+};
+
+static const uint8_t swb_size_1024_24[] = {
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    12, 12, 12, 12, 16, 16, 16, 20, 20, 24, 24, 28, 28,
+    32, 36, 36, 40, 44, 48, 52, 52, 64, 64, 64, 64, 64
+};
+
+static const uint8_t swb_size_1024_16[] = {
+    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    12, 12, 12, 12, 12, 12, 12, 12, 12, 16, 16, 16, 16, 20, 20, 20, 24, 24, 28, 28,
+    32, 36, 40, 40, 44, 48, 52, 56, 60, 64, 64, 64
+};
+
+static const uint8_t swb_size_1024_8[] = {
+    12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
+    16, 16, 16, 16, 16, 16, 16, 20, 20, 20, 20, 24, 24, 24, 28, 28,
+    32, 36, 36, 40, 44, 48, 52, 56, 60, 64, 80
+};
+
+static const uint8_t *swb_size_1024[] = {
+    swb_size_1024_96, swb_size_1024_96, swb_size_1024_64,
+    swb_size_1024_48, swb_size_1024_48, swb_size_1024_32,
+    swb_size_1024_24, swb_size_1024_24, swb_size_1024_16,
+    swb_size_1024_16, swb_size_1024_16, swb_size_1024_8
+};
+
+#define MAX_SWB_SIZE  51
+
+//borrowed data ends here
+
 typedef struct {
     PutBitContext pb;
     MDCTContext mdct;
@@ -40,6 +111,9 @@ typedef struct {
     DECLARE_ALIGNED_16(int, icoefs[2][1024]);
 
     int samplerate_index;
+    uint8_t *swb_sizes;
+    int swb_num;
+    int coded_swb_num;
 } AACEncContext;
 
 /**
@@ -77,6 +151,9 @@ static int aac_encode_init(AVCodecContext *avctx)
         return -1;
     }
     s->samplerate_index = i;
+    s->swb_sizes = swb_size_1024[i];
+    s->swb_num = num_swb_1024[i];
+
     ff_mdct_init(&s->mdct, 11, 1);
     // window init
     ff_kbd_window_init(s->kbd_long_1024, 4.0, 1024);
