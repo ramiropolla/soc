@@ -236,6 +236,14 @@ static int aac_encode_frame(AVCodecContext *avctx,
     return put_bits_count(&s->pb)>>3;
 }
 
+static int aac_encode_end(AVCodecContext *avctx)
+{
+    AACEncContext *s = avctx->priv_data;
+
+    ff_mdct_end(&s->mdct);
+    return 0;
+}
+
 AVCodec aac_encoder = {
     "aac",
     CODEC_TYPE_AUDIO,
@@ -243,4 +251,5 @@ AVCodec aac_encoder = {
     sizeof(AACEncContext),
     aac_encode_init,
     aac_encode_frame,
+    aac_encode_end,
 };
