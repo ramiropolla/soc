@@ -62,14 +62,14 @@ static int put_audio_specific_config(AVCodecContext *avctx)
 
 static int aac_encode_init(AVCodecContext *avctx)
 {
-    AACEncContext *c = avctx->priv_data;
+    AACEncContext *s = avctx->priv_data;
     int i;
 
     avctx->frame_size = 1024;
 
-    ff_mdct_init(&c->mdct, 11, 1);
+    ff_mdct_init(&s->mdct, 11, 1);
     // window init
-    ff_kbd_window_init(c->kbd_long_1024, 4.0, 1024);
+    ff_kbd_window_init(s->kbd_long_1024, 4.0, 1024);
 
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
