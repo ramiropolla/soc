@@ -33,25 +33,22 @@ typedef struct {
     PutBitContext pb;
     MDCTContext mdct;
     DECLARE_ALIGNED_16(float, kbd_long_1024[1024]);
+
+    int samplerate_index;
 } AACEncContext;
 
 /**
  * Make AAC audio config object.
  * @see 1.6.2.1
  */
-static int put_audio_specific_config(AVCodecContext *avctx)
+static void put_audio_specific_config(AVCodecContext *avctx)
 {
     PutBitContext pb;
+    AACEncContext *s = avctx->priv_data;
+
     init_put_bits(&pb, avctx->extradata, avctx->extradata_size*8);
     put_bits(&pb, 5, 2); //object type - AAC-LC
-    for(i = 0; i < 16; i++)
-        if(avctx->sample_rate == ff_mpeg4audio_sample_rates[i])
-            break;
-    if(i == 16){
-        av_log(avctx, AV_LOG_ERROR, "Unsupported sample rate %d\n", avctx->sample_rate);
-        return -1;
-    }
-    put_bits(&pb, 4, i); //sample rate index
+    put_bits(&pb, 4, s->samplerate_index); //sample rate index
     put_bits(&pb, 4, avctx->channels); //channel config - stereo
     //GASpecificConfig
     put_bits(&pb, 1, 0); //frame length - 1024 samples
@@ -67,6 +64,14 @@ static int aac_encode_init(AVCodecContext *avctx)
 
     avctx->frame_size = 1024;
 
+    for(i = 0; i < 16; i++)
+        if(avctx->sample_rate == ff_mpeg4audio_sample_rates[i])
+            break;
+    if(i == 16){
+        av_log(avctx, AV_LOG_ERROR, "Unsupported sample rate %d\n", avctx->sample_rate);
+        return -1;
+    }
+    s->samplerate_index = i;
     ff_mdct_init(&s->mdct, 11, 1);
     // window init
     ff_kbd_window_init(s->kbd_long_1024, 4.0, 1024);
