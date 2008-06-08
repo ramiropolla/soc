@@ -34,6 +34,7 @@ typedef struct AlacEncodeContext {
     int samplerate;
     int compression_level;
     int max_coded_frame_size;
+    PutBitContext pbctx;
     AVCodecContext *avctx;
 } AlacEncodeContext;
 
@@ -48,14 +49,14 @@ static void put_sbits(PutBitContext *pb, int bits, int32_t val)
     put_bits(pb, bits, val & ((1<<bits)-1));
 }
 
-static void write_frame_header(AlacEncodeContext *s, PutBitContext *pbctx)
+static void write_frame_header(AlacEncodeContext *s)
 {
-    put_bits(pbctx, 3,  s->channels-1);         // No. of channels -1
-    put_bits(pbctx, 16, 0);                     // Seems to be zero
-    put_bits(pbctx, 1,  1);                     // Sample count is in the header
-    put_bits(pbctx, 2,  0);                     // FIXME: Wasted bytes field
-    put_bits(pbctx, 1,  1);                     // Audio block is verbatim
-    put_bits(pbctx, 32, s->avctx->frame_size);  // No. of samples in the frame
+    put_bits(&s->pbctx, 3,  s->channels-1);         // No. of channels -1
+    put_bits(&s->pbctx, 16, 0);                     // Seems to be zero
+    put_bits(&s->pbctx, 1,  1);                     // Sample count is in the header
+    put_bits(&s->pbctx, 2,  0);                     // FIXME: Wasted bytes field
+    put_bits(&s->pbctx, 1,  1);                     // Audio block is verbatim
+    put_bits(&s->pbctx, 32, s->avctx->frame_size);  // No. of samples in the frame
 }
 
 static av_cold int alac_encode_init(AVCodecContext *avctx)
@@ -98,8 +99,8 @@ static av_cold int alac_encode_init(AVCodecContext *avctx)
 static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
                              int buf_size, void *data)
 {
-    PutBitContext pb;
     AlacEncodeContext *s = avctx->priv_data;
+    PutBitContext *pb = &s->pbctx;
     int16_t *samples;
     int i, ch;
 
@@ -108,20 +109,20 @@ static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
         return -1;
     }
 
-    init_put_bits(&pb, frame, buf_size);
-    write_frame_header(s, &pb);
+    init_put_bits(pb, frame, buf_size);
+    write_frame_header(s);
 
     for(ch=0; ch<s->channels; ch++) {
         samples = (int16_t *)data + ch;
         for(i=0; i<avctx->frame_size; i++) {
-            put_sbits(&pb, 16, *samples);
+            put_sbits(pb, 16, *samples);
             samples += s->channels;
         }
     }
 
-    put_bits(&pb, 3, 7);
-    flush_put_bits(&pb);
-    return(put_bits_count(&pb)>>3);
+    put_bits(pb, 3, 7);
+    flush_put_bits(pb);
+    return(put_bits_count(pb)>>3);
 }
 
 static av_cold int alac_encode_close(AVCodecContext *avctx)
