@@ -29,12 +29,23 @@
 #define ALAC_FRAME_HEADER_SIZE    55
 #define ALAC_FRAME_FOOTER_SIZE    3
 
+#define ALAC_ESCAPE_CODE          0x1FF
+
+typedef struct RiceContext {
+    int history_mult;
+    int initial_history;
+    int k_modifier;
+    int rice_modifier;
+} RiceContext;
+
 typedef struct AlacEncodeContext {
     int channels;
     int samplerate;
     int compression_level;
     int max_coded_frame_size;
+    int write_sample_size;
     PutBitContext pbctx;
+    RiceContext rc;
     AVCodecContext *avctx;
 } AlacEncodeContext;
 
@@ -49,14 +60,110 @@ static void put_sbits(PutBitContext *pb, int bits, int32_t val)
     put_bits(pb, bits, val & ((1<<bits)-1));
 }
 
+static void encode_scalar(AlacEncodeContext *s, int x, int k, int write_sample_size)
+{
+    int divisor, q, r;
+
+    k = FFMIN(k, s->rc.k_modifier);
+    divisor = (1<<k) - 1;
+    q = x / divisor;
+    r = x % divisor;
+
+    if(q > 8) {
+        // write escape code and sample value directly
+        put_bits(&s->pbctx, 9, ALAC_ESCAPE_CODE);
+        put_bits(&s->pbctx, write_sample_size, x);
+    } else {
+        if(q)
+            put_bits(&s->pbctx, q, (1<<q) - 1);
+        put_bits(&s->pbctx, 1, 0);
+
+        if(k != 1) {
+            if(r > 0)
+                put_bits(&s->pbctx, k, r+1);
+            else
+                put_bits(&s->pbctx, k-1, 0);
+        }
+    }
+}
+
 static void write_frame_header(AlacEncodeContext *s)
 {
     put_bits(&s->pbctx, 3,  s->channels-1);         // No. of channels -1
     put_bits(&s->pbctx, 16, 0);                     // Seems to be zero
     put_bits(&s->pbctx, 1,  1);                     // Sample count is in the header
     put_bits(&s->pbctx, 2,  0);                     // FIXME: Wasted bytes field
-    put_bits(&s->pbctx, 1,  1);                     // Audio block is verbatim
+    put_bits(&s->pbctx, 1,  (s->compression_level==0)?1:0); // Audio block is verbatim
     put_bits(&s->pbctx, 32, s->avctx->frame_size);  // No. of samples in the frame
+}
+
+static void alac_entropy_coder(AlacEncodeContext *s, int16_t *samples)
+{
+    unsigned int history = s->rc.initial_history;
+    int sign_modifier = 0, i = 0, k;
+
+    while(i < s->avctx->frame_size) {
+        int x;
+
+        k = av_log2((history >> 9) + 3);
+
+        x = -2*(*samples)-1;
+        x ^= (x>>31);
+
+        samples += s->channels;
+        i++;
+
+        encode_scalar(s, x - sign_modifier, k, s->write_sample_size);
+
+        history += x * s->rc.history_mult
+                   - ((history * s->rc.history_mult) >> 9);
+
+        sign_modifier = 0;
+        if(x > 0xFFFF)
+            history = 0xFFFF;
+
+        if((history < 128) && (i < s->avctx->frame_size)) {
+            unsigned int block_size = 0;
+
+            sign_modifier = 1;
+            k = 7 - av_log2(history) + ((history + 16) >> 6);
+
+            while((*samples == 0) && (i < s->avctx->frame_size)) {
+                samples += s->channels;
+                i++;
+                block_size++;
+            }
+            encode_scalar(s, block_size, k, 16);
+
+            sign_modifier = (block_size <= 0xFFFF);
+
+            history = 0;
+        }
+
+    }
+}
+
+static void write_compressed_frame(AlacEncodeContext *s, int16_t *samples)
+{
+    int i;
+
+    put_bits(&s->pbctx, 8, 0);      // FIXME: interlacing shift
+    put_bits(&s->pbctx, 8, 0);      // FIXME: interlacing leftweight
+
+    for(i=0;i<s->channels;i++) {
+        put_bits(&s->pbctx, 4, 0);  // prediction type : currently only type 0 has been RE'd
+        put_bits(&s->pbctx, 4, 0);  // FIXME: prediction quantization
+
+        put_bits(&s->pbctx, 3, s->rc.rice_modifier);
+        put_bits(&s->pbctx, 5, 0);  // predictor order
+        // FIXME: predictor coeff. table goes here
+    }
+
+    // apply entropy coding to audio samples
+
+    for(i=0;i<s->channels;i++) {
+        alac_entropy_coder(s, samples + i);
+    }
 }
 
 static av_cold int alac_encode_init(AVCodecContext *avctx)
@@ -74,8 +181,19 @@ static av_cold int alac_encode_init(AVCodecContext *avctx)
         return -1;
     }
 
+    // Set default compression level
+    s->compression_level = 1;
+
+    // Initialize default Rice parameters
+    s->rc.history_mult    = 40;
+    s->rc.initial_history = 10;
+    s->rc.k_modifier      = 14;
+    s->rc.rice_modifier   = 4;
+
     s->max_coded_frame_size = (ALAC_FRAME_HEADER_SIZE + ALAC_FRAME_FOOTER_SIZE +
                                avctx->frame_size*s->channels*avctx->bits_per_sample)>>3;
+
+    s->write_sample_size  = avctx->bits_per_sample + s->channels - 1; // FIXME: consider wasted_bytes
 
     AV_WB32(alac_extradata,    ALAC_EXTRADATA_SIZE);
     AV_WB32(alac_extradata+4,  MKBETAG('a','l','a','c'));
@@ -85,6 +203,13 @@ static av_cold int alac_encode_init(AVCodecContext *avctx)
     AV_WB32(alac_extradata+24, s->max_coded_frame_size);
     AV_WB32(alac_extradata+28, s->samplerate*s->channels*avctx->bits_per_sample); // average bitrate
     AV_WB32(alac_extradata+32, s->samplerate);
+
+    // Set relevant extradata fields
+    if(s->compression_level > 0) {
+        AV_WB8(alac_extradata+18, s->rc.history_mult);
+        AV_WB8(alac_extradata+19, s->rc.initial_history);
+        AV_WB8(alac_extradata+20, s->rc.k_modifier);
+    }
 
     avctx->extradata = alac_extradata;
     avctx->extradata_size = ALAC_EXTRADATA_SIZE;
@@ -112,12 +237,17 @@ static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
     init_put_bits(pb, frame, buf_size);
     write_frame_header(s);
 
+    if(s->compression_level == 0) {
+        // Verbatim mode
     for(ch=0; ch<s->channels; ch++) {
         samples = (int16_t *)data + ch;
         for(i=0; i<avctx->frame_size; i++) {
             put_sbits(pb, 16, *samples);
             samples += s->channels;
         }
+    }
+    } else {
+        write_compressed_frame(s, data);
     }
 
     put_bits(pb, 3, 7);
