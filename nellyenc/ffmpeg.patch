@@ -1,0 +1,25 @@
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(wersja 13713)
++++ libavcodec/Makefile	(kopia robocza)
+@@ -133,6 +133,7 @@
+ OBJS-$(CONFIG_MSVIDEO1_DECODER)        += msvideo1.o
+ OBJS-$(CONFIG_MSZH_DECODER)            += lcldec.o
+ OBJS-$(CONFIG_NELLYMOSER_DECODER)      += nellymoserdec.o nellymoser.o mdct.o fft.o
++OBJS-$(CONFIG_NELLYMOSER_ENCODER)      += nellymoserenc.o nellymoser.o mdct.o fft.o
+ OBJS-$(CONFIG_NUV_DECODER)             += nuv.o rtjpeg.o
+ OBJS-$(CONFIG_PAM_ENCODER)             += pnmenc.o pnm.o
+ OBJS-$(CONFIG_PBM_ENCODER)             += pnmenc.o pnm.o
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c	(wersja 13713)
++++ libavcodec/allcodecs.c	(kopia robocza)
+@@ -195,7 +195,7 @@
+     REGISTER_DECODER (MP3ON4, mp3on4);
+     REGISTER_DECODER (MPC7, mpc7);
+     REGISTER_DECODER (MPC8, mpc8);
+-    REGISTER_DECODER (NELLYMOSER, nellymoser);
++    REGISTER_ENCDEC  (NELLYMOSER, nellymoser);
+     REGISTER_DECODER (QDM2, qdm2);
+     REGISTER_DECODER (RA_144, ra_144);
+     REGISTER_DECODER (RA_288, ra_288);
