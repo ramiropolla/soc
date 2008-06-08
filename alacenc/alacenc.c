@@ -89,12 +89,12 @@ static void encode_scalar(AlacEncodeContext *s, int x, int k, int write_sample_s
 
 static void write_frame_header(AlacEncodeContext *s)
 {
-    put_bits(&s->pbctx, 3,  s->channels-1);         // No. of channels -1
-    put_bits(&s->pbctx, 16, 0);                     // Seems to be zero
-    put_bits(&s->pbctx, 1,  1);                     // Sample count is in the header
-    put_bits(&s->pbctx, 2,  0);                     // FIXME: Wasted bytes field
+    put_bits(&s->pbctx, 3,  s->channels-1);                 // No. of channels -1
+    put_bits(&s->pbctx, 16, 0);                             // Seems to be zero
+    put_bits(&s->pbctx, 1,  1);                             // Sample count is in the header
+    put_bits(&s->pbctx, 2,  0);                             // FIXME: Wasted bytes field
     put_bits(&s->pbctx, 1,  (s->compression_level==0)?1:0); // Audio block is verbatim
-    put_bits(&s->pbctx, 32, s->avctx->frame_size);  // No. of samples in the frame
+    put_bits(&s->pbctx, 32, s->avctx->frame_size);          // No. of samples in the frame
 }
 
 static void alac_entropy_coder(AlacEncodeContext *s, int16_t *samples)
@@ -239,13 +239,13 @@ static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
 
     if(s->compression_level == 0) {
         // Verbatim mode
-    for(ch=0; ch<s->channels; ch++) {
-        samples = (int16_t *)data + ch;
-        for(i=0; i<avctx->frame_size; i++) {
-            put_sbits(pb, 16, *samples);
-            samples += s->channels;
+        for(ch=0; ch<s->channels; ch++) {
+            samples = (int16_t *)data + ch;
+            for(i=0; i<avctx->frame_size; i++) {
+                put_sbits(pb, 16, *samples);
+                samples += s->channels;
+            }
         }
-    }
     } else {
         write_compressed_frame(s, data);
     }
