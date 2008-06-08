@@ -23,6 +23,7 @@
 typedef struct WMA3DecodeContext {
     AVCodecContext*     avctx;
     GetBitContext       gb;
+    int                 buf_bit_size;
 
     // Packet info
     int                 packet_sequence_number;
@@ -34,11 +35,6 @@ typedef struct WMA3DecodeContext {
     unsigned int        log2_block_align;
     unsigned int        log2_block_align_bits;
     unsigned int        log2_frame_size;
-    unsigned int        num_bits_prev_frame;
-    unsigned int        num_bits_curr_frame;
-    unsigned int        cross_frame_needed_bits;
-    unsigned int        cross_length_prev_bits;
-    unsigned int        cross_length_prev;
 
     // Extradata
     unsigned int        decode_flags;
@@ -47,6 +43,13 @@ typedef struct WMA3DecodeContext {
 
     // Packet loss variables
     unsigned int        packet_loss;
+
+
+
+    // Buffered frame data
+    int                 prev_frame_bit_size;
+    uint8_t*            prev_frame;
+
 } WMA3DecodeContext;
 
 
@@ -135,99 +138,132 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
+
+
+/* decode one wma frame */
+static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
+    int more_frames = 0;
+    /* get frame length */
+    int len = get_bits(gb,s->log2_frame_size);
+    av_log(s->avctx,AV_LOG_INFO,"decoding frame with len %x\n",len);
+
+    /* decode frame data */
+    skip_bits_long(gb,len - s->log2_frame_size - 1);
+
+    /* decode trailer bit */
+    more_frames = get_bits1(gb);
+    return more_frames;
+}
+
+
+/* calculate remaining bits from the input buffer */
+static int remaining_bits(WMA3DecodeContext *s){
+    return s->buf_bit_size - get_bits_count(&s->gb);
+}
+
+/* store bits from the prev frame into a temporary buffer */
+static void save_bits(WMA3DecodeContext *s,int len){
+    int buflen = (s->prev_frame_bit_size + len + 8) / 8;
+    int bit_offset = s->prev_frame_bit_size % 8;
+    int pos = (s->prev_frame_bit_size - bit_offset) / 8;
+    s->prev_frame_bit_size += len;
+
+    if(len <= 0)
+         return;
+
+    s->prev_frame = av_realloc(s->prev_frame,buflen + FF_INPUT_BUFFER_PADDING_SIZE);
+
+    /* byte align prev_frame buffer */
+    if(bit_offset){
+        if(len > bit_offset)
+            s->prev_frame[pos++] |= get_bits(&s->gb,bit_offset);
+        else
+            s->prev_frame[pos++] |= get_bits(&s->gb,len) << (bit_offset - len);
+        len -= bit_offset;
+    }
+
+    /* copy full bytes */
+    while(len > 7){
+        s->prev_frame[pos++] = get_bits(&s->gb,8);
+        len -= 8;
+    }
+
+    /* copy remaining bits */
+    if(len > 0){
+        s->prev_frame[pos++] |= get_bits(&s->gb,len) << (8 - len);
+    }
+}
+
 static int wma3_decode_packet(AVCodecContext *avctx,
                              void *data, int *data_size,
                              const uint8_t *buf, int buf_size)
 {
     WMA3DecodeContext *s = avctx->priv_data;
     int more_frames=1;
-    int num_bits_curr_frame, num_bits_prev_frame;
-    int i=0, sum=0, cross_frame = 0, buf_bit_size = buf_size << 3;
+    int num_bits_prev_frame;
+    s->buf_bit_size = buf_size << 3;
+
+    *data_size = 0;
+
+    //FIXME check minimum buffer size and check for security problems!!!
+    if(buf_size < avctx->block_align)
+        return 0;
 
     /* Parse packet header */
-    init_get_bits(&s->gb, buf, buf_bit_size);
+    init_get_bits(&s->gb, buf, s->buf_bit_size);
     s->packet_sequence_number = get_bits(&s->gb, 4);
     s->bit5                   = get_bits1(&s->gb);
     s->bit6                   = get_bits1(&s->gb);
 
-    /* Parse frames */
+    /* get number of bits that need to be added to the previous frame */
     num_bits_prev_frame = get_bits(&s->gb, s->log2_frame_size);
-    av_log(avctx, AV_LOG_ERROR, "[%d]: nbpf %x\n", avctx->frame_number, num_bits_prev_frame);
-    if (num_bits_prev_frame) {
-        if (s->cross_length_prev_bits) {
-            int num_bits_cross_frame = s->cross_length_prev | get_bits(&s->gb, s->log2_frame_size - s->cross_length_prev_bits);
-            av_log(avctx, AV_LOG_ERROR, "[%d]: cross length field nbpf %x, %x\n", avctx->frame_number, num_bits_prev_frame + s->cross_length_prev_bits, num_bits_cross_frame);
-            skip_bits_long(&s->gb, num_bits_cross_frame - s->log2_frame_size);
-        }
-        else
-            skip_bits_long(&s->gb, num_bits_prev_frame);
-        more_frames = 1;
-    }
-    s->cross_length_prev_bits = 0;
-    s->cross_length_prev = 0;
-    i = 0;
-    do {
-        num_bits_curr_frame = get_bits(&s->gb, s->log2_frame_size);
-        av_log(avctx, AV_LOG_ERROR, "[%d]:%d nbcf %x ", avctx->frame_number,i, num_bits_curr_frame);
-        if (num_bits_curr_frame >= s->log2_frame_size) {
-            //Check if the next frame will need data from the next packet
-            if (num_bits_curr_frame - s->log2_frame_size <= buf_bit_size - get_bits_count(&s->gb)) {
-                int left_bits = buf_bit_size - get_bits_count(&s->gb) - (num_bits_curr_frame - s->log2_frame_size);
-                if (left_bits == 0) {
-                    skip_bits_long(&s->gb, num_bits_curr_frame - s->log2_frame_size);
-                    more_frames = 0;
-                    av_log(avctx, AV_LOG_ERROR, "\tfull end\n");
-                }
-                else {
-                    skip_bits_long(&s->gb, num_bits_curr_frame - s->log2_frame_size - 1);
-                    more_frames = get_bits1(&s->gb);
-                    av_log(avctx, AV_LOG_ERROR, "\tlast bit %d \t lastbit align pos %d\n", more_frames,get_bits_count(&s->gb)%8);
-                    // Need to save the bits to be handled in next packet?
-                    if (more_frames && left_bits < s->log2_frame_size) {
-                        s->cross_length_prev_bits = left_bits;
-                        s->cross_length_prev = get_bits(&s->gb, left_bits);
-                        s->cross_length_prev <<= s->log2_frame_size - left_bits;
-                        more_frames = 0;
-                        av_log(avctx, AV_LOG_ERROR, "cross length field found: %x/%x, %x\n", left_bits, s->log2_frame_size, s->cross_length_prev);
-                    }
-                }
-            } else {
-                more_frames = 0;
-                cross_frame = 1;
-                av_log(avctx, AV_LOG_ERROR, "\tlast bit: cross_frame %x \tleft_bit_size %x\n", num_bits_curr_frame, buf_bit_size - get_bits_count(&s->gb) + s->log2_frame_size);
-                s->cross_frame_needed_bits = num_bits_curr_frame - s->log2_frame_size - (buf_bit_size - get_bits_count(&s->gb));
-                av_log(avctx, AV_LOG_ERROR, "    Not available needed bits %x\n",s->cross_frame_needed_bits);
-            }
-        } else
-            av_log(avctx, AV_LOG_ERROR, "\n");
-        i++;
-    } while(more_frames);
+    av_log(avctx, AV_LOG_INFO, "[%d]: nbpf %x\n", avctx->frame_number, num_bits_prev_frame);
 
-
-    if (!cross_frame) {
-        av_log(avctx, AV_LOG_ERROR, "    Available bits %x - Consumed bits %x \t diff %x\n",buf_bit_size, get_bits_count(&s->gb),buf_bit_size-get_bits_count(&s->gb));
-        s->cross_frame_needed_bits = buf_bit_size-get_bits_count(&s->gb);
-    }
-
-    //Check amount of non zero bits in non crossing frames
-    if (!cross_frame) {
-        for (i=0 ; i<buf_bit_size-get_bits_count(&s->gb) ; i++) {
-            sum+=get_bits1(&s->gb);
-        }
-        if (sum)
-            av_log(avctx, AV_LOG_ERROR, "!!Non crossing frame contains %x non zero bits!\n",sum);
-    }
-
+    /* check for packet loss */
     if (s->packet_sequence_number != (avctx->frame_number&0xF)) {
         s->packet_loss = 1;
         av_log(avctx, AV_LOG_ERROR, "!!Packet loss detected! seq %x vs %x\n",s->packet_sequence_number,avctx->frame_number&0xF);
     }
+
+    if (num_bits_prev_frame > 0) {
+        /* append the prev frame data to the remaining data from the previous packet to create a full frame */
+        save_bits(s,num_bits_prev_frame);
+        av_log(avctx, AV_LOG_INFO, "accumulated %x bits of frame data\n",s->prev_frame_bit_size);
+
+        /* decode the cross packet frame if it is valid */
+        if(!s->packet_loss){
+            GetBitContext gb_prev;
+            init_get_bits(&gb_prev, s->prev_frame, s->prev_frame_bit_size);
+            wma_decode_frame(s,&gb_prev);
+        }
+
+        /* reset prev frame buffer */
+        s->prev_frame_bit_size = 0;
+    }
+
+    /* decode the rest of the packet */
+    while(more_frames && remaining_bits(s) > s->log2_frame_size){
+        int frame_size = show_bits(&s->gb, s->log2_frame_size);
+
+        /* there is enough data for a full frame */
+        if(remaining_bits(s) >= frame_size){
+            /* decode the frame */
+            more_frames = wma_decode_frame(s,&s->gb);
+        }else
+            more_frames = 0;
+    }
+
+    /* save the rest of the data so that it can be decoded with the next packet */
+    save_bits(s,remaining_bits(s));
 
     return avctx->block_align;
 }
 
 static av_cold int wma3_decode_end(AVCodecContext *avctx)
 {
+    WMA3DecodeContext *s = avctx->priv_data;
+    if(s->prev_frame)
+        av_free(s->prev_frame);
     return 0;
 }
 
