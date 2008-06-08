@@ -1,6 +1,5 @@
 TODO list for the ALAC Encoder:
 
-* Implement basic ALAC entropy coding
 * Simple first-order linear prediction
 * Adaptive prediction
 
