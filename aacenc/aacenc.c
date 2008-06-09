@@ -189,7 +189,7 @@ static int aac_encode_init(AVCodecContext *avctx)
     s->swb_sizes = swb_size_1024[i];
     s->swb_num = num_swb_1024[i];
 
-    ff_mdct_init(&s->mdct, 11, 1);
+    ff_mdct_init(&s->mdct, 11, 0);
     // window init
     ff_kbd_window_init(s->kbd_long_1024, 4.0, 1024);
 
