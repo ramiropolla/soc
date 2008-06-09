@@ -104,7 +104,7 @@ int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
     /* packet header */
     if (stream->format & PES_FMT_MPEG2) {
         header_len = 3;
-        if (stream->packet_number==0)
+        if (stream->format != PES_FMT_TS && stream->packet_number==0)
             header_len += 3; /* PES extension */
         header_len += 1; /* obligatory stuffing byte */
     } else {
