@@ -236,7 +236,7 @@ static void put_ics_info(AVCodecContext *avctx)
 
     put_bits(&s->pb, 1, 0);                // ics_reserved bit
     put_bits(&s->pb, 2, 0);                // only_long_window_sequence
-    put_bits(&s->pb, 1, 0);                // windows shape
+    put_bits(&s->pb, 1, 1);                // window shape - Kaiser-Bessel derived
     put_bits(&s->pb, 6, s->coded_swb_num); // max scalefactor bands
     put_bits(&s->pb, 1, 0);                // no prediction
 }
