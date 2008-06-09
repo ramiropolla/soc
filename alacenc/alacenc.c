@@ -93,7 +93,7 @@ static void write_frame_header(AlacEncodeContext *s)
     put_bits(&s->pbctx, 16, 0);                             // Seems to be zero
     put_bits(&s->pbctx, 1,  1);                             // Sample count is in the header
     put_bits(&s->pbctx, 2,  0);                             // FIXME: Wasted bytes field
-    put_bits(&s->pbctx, 1,  (s->compression_level==0)?1:0); // Audio block is verbatim
+    put_bits(&s->pbctx, 1,  !s->compression_level); // Audio block is verbatim
     put_bits(&s->pbctx, 32, s->avctx->frame_size);          // No. of samples in the frame
 }
 
