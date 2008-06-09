@@ -341,7 +341,7 @@ void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt, int packet_number)
     av_fifo_generic_write(&stream->fifo, buf, size, NULL);
 }
 
-int ff_pes_output_packet(AVFormatContext *ctx, int packet_size, int64_t *cr,
+int ff_pes_output_packet(AVFormatContext *ctx, int packet_size, int64_t *scr,
                          int *best_i, int flush, int (*flush_packet)())
 {
     AVStream *st;
@@ -373,7 +373,7 @@ retry:
         if(space < packet_size && !ignore_constraints)
             continue;
 
-        if(next_pkt && next_pkt->dts - *cr > max_delay)
+        if(next_pkt && next_pkt->dts - *scr > max_delay)
             continue;
 
         if(rel_space > best_score){
@@ -395,18 +395,18 @@ retry:
         }
 
 #if 0
-        av_log(ctx, AV_LOG_DEBUG, "bumping cr, cr:%f, dts:%f\n",
-               cr/90000.0, best_dts/90000.0);
+        av_log(ctx, AV_LOG_DEBUG, "bumping scr, scr:%f, dts:%f\n",
+               scr/90000.0, best_dts/90000.0);
 #endif
         if(best_dts == INT64_MAX)
             return 0;
 
-        if(*cr >= best_dts+1 && !ignore_constraints){
+        if(*scr >= best_dts+1 && !ignore_constraints){
             av_log(ctx, AV_LOG_ERROR, "packet too large, ignoring buffer limits to mux it\n");
             ignore_constraints= 1;
         }
-        *cr= FFMAX(best_dts+1, *cr);
-        if(ff_pes_remove_decoded_packets(ctx, *cr) < 0)
+        *scr= FFMAX(best_dts+1, *scr);
+        if(ff_pes_remove_decoded_packets(ctx, *scr) < 0)
             return -1;
         goto retry;
     }
@@ -430,10 +430,10 @@ retry:
 
     if(timestamp_packet){
 //av_log(ctx, AV_LOG_DEBUG, "dts:%f pts:%f pcr:%f stream:%d\n", timestamp_packet->dts/90000.0, timestamp_packet->pts/90000.0, pcr/90000.0, best_i);
-        return flush_packet(ctx, *best_i, timestamp_packet->pts, timestamp_packet->dts, *cr, trailer_size);
+        return flush_packet(ctx, *best_i, timestamp_packet->pts, timestamp_packet->dts, *scr, trailer_size);
     }else{
         assert(av_fifo_size(&stream->fifo) == trailer_size);
-        return flush_packet(ctx, *best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, *cr, trailer_size);
+        return flush_packet(ctx, *best_i, AV_NOPTS_VALUE, AV_NOPTS_VALUE, *scr, trailer_size);
     }
 }
 
