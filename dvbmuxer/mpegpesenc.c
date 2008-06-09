@@ -87,37 +87,43 @@ static int get_nb_frames(AVFormatContext *ctx, StreamInfo *stream, int len){
     return nb_frames;
 }
 
-static void calc_pes_header(StreamInfo *stream,
-    int *packet_size,  int *header_len, int64_t *pts, int64_t *dts,
-    int *payload_size, int *startcode, int *stuffing_size,
-    int *trailer_size, int *pad_packet_bytes)
+int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
+                     int64_t *pts, int64_t *dts,
+                     int trailer_size, int *packet_size, int *pad_packet_bytes,
+                     int *payload_size, int *stuffing_size)
 {
+    StreamInfo *stream = ctx->streams[stream_index]->priv_data;
+    int startcode, i, header_len;
+    int pes_flags = 0;
+    uint8_t *p = buf;
+    int nb_frames;
+
     /* packet header size */
     *packet_size -= 6;
 
     /* packet header */
     if (stream->format & PES_FMT_MPEG2) {
-        *header_len = 3;
-        if (stream->packet_number==0 && stream->format != PES_FMT_TS)
-            *header_len += 3; /* PES extension */
-        *header_len += 1; /* obligatory stuffing byte */
+        header_len = 3;
+        if (stream->packet_number==0)
+            header_len += 3; /* PES extension */
+        header_len += 1; /* obligatory stuffing byte */
     } else {
-        *header_len = 0;
+        header_len = 0;
     }
 
     if (*pts != AV_NOPTS_VALUE) {
         if (*dts != *pts)
-            *header_len += 5 + 5;
+            header_len += 5 + 5;
         else
-            *header_len += 5;
+            header_len += 5;
     } else {
         if (!(stream->format & PES_FMT_MPEG2))
-            (*header_len)++;
+            header_len++;
     }
 
-    *payload_size = *packet_size - *header_len;
+    *payload_size = *packet_size - header_len;
     if (stream->id < 0xc0) {
-        *startcode = PRIVATE_STREAM_1;
+        startcode = PRIVATE_STREAM_1;
         *payload_size -= 1;
         if (stream->id >= 0x40) {
             *payload_size -= 3;
@@ -125,20 +131,20 @@ static void calc_pes_header(StreamInfo *stream,
                 *payload_size -= 3;
         }
     } else {
-        *startcode = 0x100 + stream->id;
+        startcode = 0x100 + stream->id;
     }
 
     *stuffing_size = *payload_size - av_fifo_size(&stream->fifo);
 
     // first byte does not fit -> reset pts/dts + stuffing
-    if(*payload_size <= *trailer_size && *pts != AV_NOPTS_VALUE){
+    if(*payload_size <= trailer_size && *pts != AV_NOPTS_VALUE){
         int timestamp_len=0;
         if(*dts != *pts)
             timestamp_len += 5;
         if(*pts != AV_NOPTS_VALUE)
             timestamp_len += stream->format & PES_FMT_MPEG2 ? 5 : 4;
         *pts=*dts= AV_NOPTS_VALUE;
-        *header_len -= timestamp_len;
+        header_len -= timestamp_len;
         if (stream->format == PES_FMT_DVD && stream->align_iframe) {
             *pad_packet_bytes += timestamp_len;
             *packet_size -= timestamp_len;
@@ -146,8 +152,8 @@ static void calc_pes_header(StreamInfo *stream,
             *payload_size += timestamp_len;
         }
         *stuffing_size += timestamp_len;
-        if(*payload_size > *trailer_size)
-            *stuffing_size += *payload_size - *trailer_size;
+        if(*payload_size > trailer_size)
+            *stuffing_size += *payload_size - trailer_size;
     }
 
     if (stream->format != PES_FMT_TS) {
@@ -171,22 +177,6 @@ static void calc_pes_header(StreamInfo *stream,
         *payload_size -= *stuffing_size;
         *stuffing_size = 0;
     }
-}
-
-int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
-                     int64_t *pts, int64_t *dts,
-                     int trailer_size, int *packet_size, int *pad_packet_bytes,
-                     int *payload_size, int *stuffing_size)
-{
-    StreamInfo *stream = ctx->streams[stream_index]->priv_data;
-    int startcode, i, header_len;
-    int pes_flags = 0;
-    uint8_t *p = buf;
-    int nb_frames;
-
-    calc_pes_header(stream, packet_size, &header_len, pts, dts,
-                    payload_size, &startcode, stuffing_size,
-                    &trailer_size, pad_packet_bytes);
 
     nb_frames= get_nb_frames(ctx, stream, *payload_size - *stuffing_size);
 
@@ -307,75 +297,6 @@ int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr)
     return 0;
 }
 
-static int find_beststream(AVFormatContext *ctx, int packet_size, int flush, int64_t *scr, int *best_i)
-{
-    int i, avail_space;
-    int best_score= INT_MIN;
-    int ignore_constraints=0;
-    const int64_t max_delay= av_rescale(ctx->max_delay, 90000, AV_TIME_BASE);
-
-retry:
-    for(i=0; i<ctx->nb_streams; i++){
-        AVStream *st= ctx->streams[i];
-        StreamInfo *stream= st->priv_data;
-        const int avail_data= av_fifo_size(&stream->fifo);
-        const int space= stream->max_buffer_size - stream->buffer_index;
-        int rel_space= 1024*space / stream->max_buffer_size;
-        PacketDesc *next_pkt= stream->premux_packet;
-
-        /* for subtitle, a single PES packet must be generated,
-           so we flush after every single subtitle packet */
-        if(packet_size > avail_data && !flush
-           && st->codec->codec_type != CODEC_TYPE_SUBTITLE)
-            return 0;
-        if(avail_data==0)
-            continue;
-        assert(avail_data>0);
-
-        if(space < packet_size && !ignore_constraints)
-            continue;
-
-        if(next_pkt && next_pkt->dts - *scr > max_delay)
-            continue;
-
-        if(rel_space > best_score){
-            best_score= rel_space;
-            *best_i = i;
-            avail_space= space;
-        }
-    }
-
-    if(*best_i < 0){
-        int64_t best_dts= INT64_MAX;
-
-        for(i=0; i<ctx->nb_streams; i++){
-            AVStream *st = ctx->streams[i];
-            StreamInfo *stream = st->priv_data;
-            PacketDesc *pkt_desc= stream->predecode_packet;
-            if(pkt_desc && pkt_desc->dts < best_dts)
-                best_dts= pkt_desc->dts;
-        }
-
-#if 0
-        av_log(ctx, AV_LOG_DEBUG, "bumping scr, scr:%f, dts:%f\n",
-               scr/90000.0, best_dts/90000.0);
-#endif
-        if(best_dts == INT64_MAX)
-            return 0;
-
-        if(*scr >= best_dts+1 && !ignore_constraints){
-            av_log(ctx, AV_LOG_ERROR, "packet too large, ignoring buffer limits to mux it\n");
-            ignore_constraints= 1;
-        }
-        *scr= FFMAX(best_dts+1, *scr);
-        if(ff_pes_remove_decoded_packets(ctx, *scr) < 0)
-            return -1;
-        goto retry;
-    }
-    assert(avail_space >= packet_size || ignore_constraints);
-    return 1;
-}
-
 void ff_pes_write_packet(AVFormatContext *ctx, AVPacket *pkt, int packet_number)
 {
     int stream_index= pkt->stream_index;
@@ -425,18 +346,79 @@ int ff_pes_output_packet(AVFormatContext *ctx, int packet_size, int64_t *cr,
 {
     AVStream *st;
     StreamInfo *stream;
-    int trailer_size, res;
+    int i, avail_space=0, trailer_size;
+    int best_score= INT_MIN;
+    int ignore_constraints=0;
     PacketDesc *timestamp_packet;
+    const int64_t max_delay= av_rescale(ctx->max_delay, 90000, AV_TIME_BASE);
 
-    if((res = find_beststream(ctx, packet_size,
-                              flush, cr, best_i)) <= 0)
-        return res;
+retry:
+    for(i=0; i<ctx->nb_streams; i++){
+        AVStream *st= ctx->streams[i];
+        StreamInfo *stream= st->priv_data;
+        const int avail_data= av_fifo_size(&stream->fifo);
+        const int space= stream->max_buffer_size - stream->buffer_index;
+        int rel_space= 1024*space / stream->max_buffer_size;
+        PacketDesc *next_pkt= stream->premux_packet;
+
+        /* for subtitle, a single PES packet must be generated,
+           so we flush after every single subtitle packet */
+        if(packet_size > avail_data && !flush
+           && st->codec->codec_type != CODEC_TYPE_SUBTITLE)
+            return 0;
+        if(avail_data==0)
+            continue;
+        assert(avail_data>0);
+
+        if(space < packet_size && !ignore_constraints)
+            continue;
+
+        if(next_pkt && next_pkt->dts - *cr > max_delay)
+            continue;
+
+        if(rel_space > best_score){
+            best_score= rel_space;
+            *best_i = i;
+            avail_space= space;
+        }
+    }
+
+    if(*best_i < 0){
+        int64_t best_dts= INT64_MAX;
+
+        for(i=0; i<ctx->nb_streams; i++){
+            AVStream *st = ctx->streams[i];
+            StreamInfo *stream = st->priv_data;
+            PacketDesc *pkt_desc= stream->predecode_packet;
+            if(pkt_desc && pkt_desc->dts < best_dts)
+                best_dts= pkt_desc->dts;
+        }
+
+#if 0
+        av_log(ctx, AV_LOG_DEBUG, "bumping cr, cr:%f, dts:%f\n",
+               cr/90000.0, best_dts/90000.0);
+#endif
+        if(best_dts == INT64_MAX)
+            return 0;
+
+        if(*cr >= best_dts+1 && !ignore_constraints){
+            av_log(ctx, AV_LOG_ERROR, "packet too large, ignoring buffer limits to mux it\n");
+            ignore_constraints= 1;
+        }
+        *cr= FFMAX(best_dts+1, *cr);
+        if(ff_pes_remove_decoded_packets(ctx, *cr) < 0)
+            return -1;
+        goto retry;
+    }
+
     assert(*best_i >= 0);
 
     st = ctx->streams[*best_i];
     stream = st->priv_data;
 
     assert(av_fifo_size(&stream->fifo) > 0);
+
+    assert(avail_space >= packet_size || ignore_constraints);
 
     timestamp_packet= stream->premux_packet;
     if(timestamp_packet->unwritten_size == timestamp_packet->size){
