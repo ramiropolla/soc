@@ -1239,7 +1239,8 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                                         return -1;
                                     }
                                     icoef[coef_idx + j] *= (1<<n) + get_bits(gb, n);
-                                }
+                                }else
+                                    icoef[coef_idx + j] *= ptr[j];
                             }
                         }else
                             for (j = 0; j < dim; j++)
