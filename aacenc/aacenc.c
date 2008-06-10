@@ -204,10 +204,13 @@ static int aac_encode_init(AVCodecContext *avctx)
 static void apply_psychoacoustics(AVCodecContext *avctx, int channel)
 {
     AACEncContext *s = avctx->priv_data;
-    int i;
+    int i, val;
 
-    for(i = 0; i < 1024; i++)
-        s->icoefs[channel][i] = (int)s->coefs[channel][i];
+    for(i = 0; i < 1024; i++){
+        val = pow(FFABS(s->coefs[channel][i]), 0.75);
+        if(s->coefs[channel][i] > 0.0) val = -val;
+        s->icoefs[channel][i] = val;
+    }
 }
 
 static void analyze(AVCodecContext *avctx, AACEncContext *s, short *audio, int channel)
@@ -372,7 +375,7 @@ static int encode_individual_channel(AVCodecContext *avctx, int channel, int com
     int i, j, g = 0;
 
     s->coded_swb_num = s->swb_num;
-    s->global_gain = 128;
+    s->global_gain = 140;
     i = 0;
     while(i < 1024){
         s->codebooks[g] = determine_section_info(s, channel, i, s->swb_sizes[g]);
