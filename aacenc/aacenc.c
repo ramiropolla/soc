@@ -204,13 +204,10 @@ static int aac_encode_init(AVCodecContext *avctx)
 static void apply_psychoacoustics(AVCodecContext *avctx, int channel)
 {
     AACEncContext *s = avctx->priv_data;
-    int i, val;
+    int i;
 
-    for(i = 0; i < 1024; i++){
-        val = pow(FFABS(s->coefs[channel][i]), 0.75);
-        if(s->coefs[channel][i] > 0.0) val = -val;
-        s->icoefs[channel][i] = val;
-    }
+    for(i = 0; i < 1024; i++)
+        s->icoefs[channel][i] = (int)s->coefs[channel][i];
 }
 
 static void analyze(AVCodecContext *avctx, AACEncContext *s, short *audio, int channel)
@@ -225,6 +222,9 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, short *audio, int c
         s->frame_out[channel][i] = audio[j] / 512 * s->kbd_long_1024[i];
     }
     ff_mdct_calc(&s->mdct, s->coefs[channel], s->output, s->tmp);
+    //convert coefficients into form used by AAC
+    for(i = 0; i < 1024; i++)
+        s->coefs[channel][i] = -copysignf(pow(fabsf(s->coefs[channel][i]), 0.75f), s->coefs[channel][i]);
 
     apply_psychoacoustics(avctx, channel);
 }
