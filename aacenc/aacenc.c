@@ -147,9 +147,19 @@ typedef struct {
     int swb_num;
     int coded_swb_num;
     int codebooks[MAX_SWB_SIZE];
+    int scales[2][MAX_SWB_SIZE];
+    uint8_t zeroes[2][MAX_SWB_SIZE];
 
     int global_gain;
 } AACEncContext;
+
+#define SCALE_ONE_POS   140
+#define SCALE_MAX_POS   255
+#define SCALE_MAX_DIFF   60
+#define SCALE_DIFF_ZERO  60
+
+//borrowed from aac.c
+static float pow2sf_tab[316];
 
 /**
  * Make AAC audio config object.
@@ -196,7 +206,41 @@ static int aac_encode_init(AVCodecContext *avctx)
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
+
+    for (i = 0; i < 316; i++)
+        pow2sf_tab[i] = pow(2, (i - 200)/4.);
     return 0;
+}
+
+static void determine_scales(AVCodecContext *avctx, int channel)
+{
+    AACEncContext *s = avctx->priv_data;
+    int i = 0, j, g, count = 0, maxswb;
+    double me, d;
+
+    for(g = 0; g < s->swb_num; g++){
+        me = 0.0;
+        d = 0.0;
+        for(j = 0; j < s->swb_sizes[g]; j++)
+            if(s->coefs[channel][i + j] != 0.0){
+                me += fabs(s->coefs[channel][i + j]);
+                count++;
+            }
+        if(count)
+            me /= count;
+        for(j = 0; j < s->swb_sizes[g]; j++)
+            if(s->coefs[channel][i + j] != 0.0)
+                d += (s->coefs[channel][i + j] - me) * (s->coefs[channel][i + j] - me);
+        if(count)
+            d /= count;
+        s->zeroes[channel][g] = (me < 0.1 && d < 0.1);
+        s->scales[channel][g] = SCALE_ONE_POS + g;
+        i += s->swb_sizes[g];
+    }
+    // if tail is zero, do not code it
+    for(maxswb = s->swb_num; maxswb > 0 && s->zeroes[channel][maxswb - 1]; maxswb--);
+    s->coded_swb_num = channel ? FFMAX(s->coded_swb_num, maxswb) : maxswb;
+    s->global_gain = SCALE_ONE_POS;
 }
 
 /* BIG FAT TODO! */
@@ -204,10 +248,16 @@ static int aac_encode_init(AVCodecContext *avctx)
 static void apply_psychoacoustics(AVCodecContext *avctx, int channel)
 {
     AACEncContext *s = avctx->priv_data;
-    int i;
+    int i = 0, j, g;
 
-    for(i = 0; i < 1024; i++)
-        s->icoefs[channel][i] = (int)s->coefs[channel][i];
+    for(g = 0; g < s->coded_swb_num; g++)
+        if(s->zeroes[channel][g]){
+            memset(s->icoefs[channel] + i, 0, s->swb_sizes[g] * sizeof(s->icoefs[0][0]));
+            i += s->swb_sizes[g];
+        }else
+            for(j = 0; j < s->swb_sizes[g]; j++, i++)
+                s->icoefs[channel][i] = (int)(roundf(s->coefs[channel][i] / pow2sf_tab[s->scales[channel][g]+60]));
+    memset(s->icoefs[channel] + i, 0, (1024 - i) * sizeof(s->icoefs[0][0]));
 }
 
 static void analyze(AVCodecContext *avctx, AACEncContext *s, short *audio, int channel)
@@ -226,6 +276,7 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, short *audio, int c
     for(i = 0; i < 1024; i++)
         s->coefs[channel][i] = -copysignf(pow(fabsf(s->coefs[channel][i]), 0.75f), s->coefs[channel][i]);
 
+    determine_scales(avctx, channel);
     apply_psychoacoustics(avctx, channel);
 }
 
@@ -346,12 +397,14 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, int cha
 
 static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, int channel)
 {
-//    int off = s->global_gain;
+    int off = s->global_gain, diff;
     int i;
 
     for(i = 0; i < s->coded_swb_num; i++){
-        if(s->codebooks[i] != 0){
-            put_bits(&s->pb, bits[60], code[60]);
+        if(!s->zeroes[channel][i]){
+            diff = s->scales[channel][i] - off + SCALE_DIFF_ZERO;
+            off = s->scales[channel][i];
+            put_bits(&s->pb, bits[diff], code[diff]);
         }
     }
 }
@@ -361,7 +414,8 @@ static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, int ch
     int start = 0, i;
 
     for(i = 0; i < s->coded_swb_num; i++){
-        encode_codebook(s, channel, start, s->swb_sizes[i], s->codebooks[i]);
+        if(!s->zeroes[channel][i])
+            encode_codebook(s, channel, start, s->swb_sizes[i], s->codebooks[i]);
         start += s->swb_sizes[i];
     }
 }
@@ -374,11 +428,13 @@ static int encode_individual_channel(AVCodecContext *avctx, int channel, int com
     AACEncContext *s = avctx->priv_data;
     int i, j, g = 0;
 
-    s->coded_swb_num = s->swb_num;
-    s->global_gain = 140;
     i = 0;
     while(i < 1024){
-        s->codebooks[g] = determine_section_info(s, channel, i, s->swb_sizes[g]);
+        if(!s->zeroes[channel][g]){
+            s->codebooks[g] = determine_section_info(s, channel, i, s->swb_sizes[g]);
+            s->zeroes[channel][g] = !s->codebooks[g];
+        }else
+            s->codebooks[g] = 0;
         i += s->swb_sizes[g];
         g++;
     }
