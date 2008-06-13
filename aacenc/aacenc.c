@@ -330,6 +330,10 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, sh
         cpe->ch[channel].coeffs[i] = -copysignf(pow(fabsf(cpe->ch[channel].coeffs[i]), 0.75f), cpe->ch[channel].coeffs[i]);
 
     determine_scales(avctx, cpe, channel);
+    if(channel == 1){
+        cpe->ch[0].ics.max_sfb = FFMAX(cpe->ch[0].ics.max_sfb, cpe->ch[1].ics.max_sfb);
+        cpe->common_window = 1;
+    }
     apply_psychoacoustics(avctx, cpe, channel);
 }
 
@@ -524,7 +528,6 @@ static int aac_encode_frame(AVCodecContext *avctx,
     case 2:
         put_bits(&s->pb, 3, ID_CPE);
         put_bits(&s->pb, 4, 0); //tag
-        s->cpe.common_window = 1;
         put_bits(&s->pb, 1, s->cpe.common_window);
         if(s->cpe.common_window){
             put_ics_info(avctx, &s->cpe.ch[0].ics);
