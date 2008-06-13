@@ -480,7 +480,7 @@ static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_st
 /**
  * Encode one channel of audio data.
  */
-static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int channel, int common_window)
+static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int channel)
 {
     AACEncContext *s = avctx->priv_data;
     int i, j, g = 0;
@@ -497,7 +497,7 @@ static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int
     }
 
     put_bits(&s->pb, 8, cpe->ch[channel].gain); //global gain
-    if(!common_window) put_ics_info(avctx, &cpe->ch[channel].ics);
+    if(!cpe->common_window) put_ics_info(avctx, &cpe->ch[channel].ics);
     encode_section_data(avctx, s, cpe, channel);
     encode_scale_factor_data(avctx, s, cpe,channel);
     put_bits(&s->pb, 1, 0); //pulse
@@ -523,7 +523,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
     case 1:
         put_bits(&s->pb, 3, ID_SCE);
         put_bits(&s->pb, 4, 0); //tag
-        encode_individual_channel(avctx, &s->cpe, 0, 0);
+        encode_individual_channel(avctx, &s->cpe, 0);
         break;
     case 2:
         put_bits(&s->pb, 3, ID_CPE);
@@ -533,8 +533,8 @@ static int aac_encode_frame(AVCodecContext *avctx,
             put_ics_info(avctx, &s->cpe.ch[0].ics);
             put_bits(&s->pb, 2, 0); //no MS mode for now
         }
-        encode_individual_channel(avctx, &s->cpe, 0, s->cpe.common_window);
-        encode_individual_channel(avctx, &s->cpe, 1, s->cpe.common_window);
+        encode_individual_channel(avctx, &s->cpe, 0);
+        encode_individual_channel(avctx, &s->cpe, 1);
         break;
     default:
         av_log(NULL,0,"?");
