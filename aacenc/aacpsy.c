@@ -44,6 +44,7 @@ static void psy_null_window(AACPsyContext *apc, int16_t *audio, int channel, cpe
         cpe->ch[ch].ics.window_sequence = 0;
         cpe->ch[ch].ics.window_shape = 1;
     }
+    cpe->common_window = cpe->ch[0].ics.window_shape == cpe->ch[1].ics.window_shape;
 }
 
 static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
@@ -51,12 +52,30 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
     int start, sum, maxsfb;
     int ch, g, i;
 
+    //detect M/S
+    if(apc->avctx->channels > 1 && cpe->common_window){
+        start = 0;
+        for(g = 0; g < apc->num_bands; g++){
+            float diff = 0.0f;
+
+            for(i = 0; i < apc->bands[g]; i++)
+                diff += fabs(cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i]);
+            cpe->ms.mask[0][g] = diff == 0.0;
+        }
+    }
     for(ch = 0; ch < apc->avctx->channels; ch++){
         start = 0;
         cpe->ch[ch].gain = SCALE_ONE_POS;
         for(g = 0; g < apc->num_bands; g++){
             sum = 0;
             cpe->ch[ch].sf_idx[g] = SCALE_ONE_POS;
+            //apply M/S
+            if(!ch && cpe->ms.mask[0][g]){
+                for(i = 0; i < apc->bands[g]; i++){
+                    cpe->ch[0].coeffs[start+i] = (cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i]) / 2.0;
+                    cpe->ch[1].coeffs[start+i] =  cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
+                }
+            }
             for(i = 0; i < apc->bands[g]; i++){
                 cpe->ch[ch].icoefs[start+i] = av_clip((int)(roundf(cpe->ch[ch].coeffs[start+i] / pow2sf_tab[cpe->ch[ch].sf_idx[g]+60])), -8191, 8191);
                 sum += !!cpe->ch[ch].icoefs[start+i];
@@ -66,6 +85,15 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
         }
         for(maxsfb = apc->num_bands; maxsfb > 0 && cpe->ch[ch].zeroes[maxsfb-1]; maxsfb--);
         cpe->ch[ch].ics.max_sfb = maxsfb;
+    }
+    if(apc->avctx->channels > 1 && cpe->common_window){
+        int msc = 0;
+        cpe->ch[0].ics.max_sfb = FFMAX(cpe->ch[0].ics.max_sfb, cpe->ch[1].ics.max_sfb);
+        cpe->ch[1].ics.max_sfb = cpe->ch[0].ics.max_sfb;
+        for(i = 0; i < cpe->ch[0].ics.max_sfb; i++)
+            if(cpe->ms.mask[0][i]) msc++;
+        if(msc == 0 || cpe->ch[0].ics.max_sfb == 0) cpe->ms.present = 0;
+        else cpe->ms.present = msc < cpe->ch[0].ics.max_sfb ? 1 : 2;
     }
 }
 

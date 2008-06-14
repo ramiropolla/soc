@@ -235,6 +235,20 @@ static void put_ics_info(AVCodecContext *avctx, ics_struct *info)
 }
 
 /**
+ * Encode MS data.
+ * @see 4.6.8.1
+ */
+static void encode_ms_info(PutBitContext *pb, cpe_struct *cpe)
+{
+    int i;
+
+    put_bits(pb, 2, cpe->ms.present);
+    if(cpe->ms.present == 1)
+        for(i = 0; i < cpe->ch[0].ics.max_sfb; i++)
+            put_bits(pb, 1, cpe->ms.mask[0][i]);
+}
+
+/**
  * Scan spectral band and determine optimal codebook for it.
  */
 static int determine_section_info(AACEncContext *s, cpe_struct *cpe, int channel, int start, int size)
@@ -402,13 +416,6 @@ static int aac_encode_frame(AVCodecContext *avctx,
         analyze(avctx, s, &s->cpe, samples, 1);
 
     ff_aac_psy_analyze(&s->psy, samples, 0, &s->cpe);
-    if(avctx->channels > 1){
-        s->cpe.common_window = s->cpe.ch[0].ics.window_shape == s->cpe.ch[1].ics.window_shape;
-        if(s->cpe.common_window){
-            s->cpe.ch[0].ics.max_sfb = FFMAX(s->cpe.ch[0].ics.max_sfb, s->cpe.ch[1].ics.max_sfb);
-            s->cpe.ch[1].ics.max_sfb = s->cpe.ch[0].ics.max_sfb;
-        }
-    }
 
     init_put_bits(&s->pb, frame, buf_size*8);
     //output encoded
@@ -424,7 +431,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
         put_bits(&s->pb, 1, s->cpe.common_window);
         if(s->cpe.common_window){
             put_ics_info(avctx, &s->cpe.ch[0].ics);
-            put_bits(&s->pb, 2, 0); //no MS mode for now
+            encode_ms_info(&s->pb, &s->cpe);
         }
         encode_individual_channel(avctx, &s->cpe, 0);
         encode_individual_channel(avctx, &s->cpe, 1);
