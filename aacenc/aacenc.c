@@ -98,6 +98,36 @@ static const uint8_t *swb_size_1024[] = {
     swb_size_1024_16, swb_size_1024_16, swb_size_1024_8
 };
 
+static const uint8_t swb_size_128_96[] = {
+    4, 4, 4, 4, 4, 4, 8, 8, 8, 16, 28, 36
+};
+
+static const uint8_t swb_size_128_48[] = {
+    4, 4, 4, 4, 4, 8, 8, 8, 12, 12, 12, 16, 16, 16
+};
+
+static const uint8_t swb_size_128_24[] = {
+    4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 12, 12, 16, 16, 20
+};
+
+static const uint8_t swb_size_128_16[] = {
+    4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 12, 12, 16, 20, 20
+};
+
+static const uint8_t swb_size_128_8[] = {
+    4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 12, 16, 20, 20
+};
+
+static const uint8_t *swb_size_128[] = {
+    /* the last entry on the following row is swb_size_128_64 but is a
+       duplicate of swb_size_128_96 */
+    swb_size_128_96, swb_size_128_96, swb_size_128_96,
+    swb_size_128_48, swb_size_128_48, swb_size_128_48,
+    swb_size_128_24, swb_size_128_24, swb_size_128_16,
+    swb_size_128_16, swb_size_128_16, swb_size_128_8
+};
+
+
 #define MAX_SWB_SIZE  51
 
 //borrowed data ends here
@@ -141,8 +171,10 @@ typedef struct {
     DECLARE_ALIGNED_16(FFTSample, tmp[1024]);
 
     int samplerate_index;
-    uint8_t *swb_sizes;
-    int swb_num;
+    uint8_t *swb_sizes1024;
+    int swb_num1024;
+    uint8_t *swb_sizes128;
+    int swb_num128;
     cpe_struct cpe;
     AACPsyContext psy;
 } AACEncContext;
@@ -187,14 +219,16 @@ static int aac_encode_init(AVCodecContext *avctx)
         return -1;
     }
     s->samplerate_index = i;
-    s->swb_sizes = swb_size_1024[i];
-    s->swb_num = num_swb_1024[i];
+    s->swb_sizes1024 = swb_size_1024[i];
+    s->swb_num1024 = num_swb_1024[i];
+    s->swb_sizes128 = swb_size_128[i];
+    s->swb_num128 = num_swb_128[i];
 
     ff_mdct_init(&s->mdct, 11, 0);
     // window init
     ff_kbd_window_init(s->kbd_long_1024, 4.0, 1024);
 
-    ff_aac_psy_init(&s->psy, avctx, AAC_PSY_NULL, 0, s->swb_sizes, s->swb_num);
+    ff_aac_psy_init(&s->psy, avctx, AAC_PSY_NULL, 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
@@ -402,8 +436,8 @@ static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_st
 
     for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
         if(!cpe->ch[channel].zeroes[0][i])
-            encode_codebook(s, cpe, channel, start, s->swb_sizes[i], cpe->ch[channel].cb[0][i]);
-        start += s->swb_sizes[i];
+            encode_codebook(s, cpe, channel, start, cpe->ch[channel].ics.swb_sizes[i], cpe->ch[channel].cb[0][i]);
+        start += cpe->ch[channel].ics.swb_sizes[i];
     }
 }
 
@@ -418,11 +452,11 @@ static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int
     i = 0;
     while(i < 1024){
         if(!cpe->ch[channel].zeroes[0][g]){
-            cpe->ch[channel].cb[0][g] = determine_section_info(s, cpe, channel, g, i, s->swb_sizes[g]);
+            cpe->ch[channel].cb[0][g] = determine_section_info(s, cpe, channel, g, i, cpe->ch[channel].ics.swb_sizes[g]);
             cpe->ch[channel].zeroes[0][g] = !cpe->ch[channel].cb[0][g];
         }else
             cpe->ch[channel].cb[0][g] = 0;
-        i += s->swb_sizes[g];
+        i += cpe->ch[channel].ics.swb_sizes[g];
         g++;
     }
 
