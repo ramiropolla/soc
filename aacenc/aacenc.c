@@ -336,7 +336,7 @@ static void encode_codebook(AACEncContext *s, cpe_struct *cpe, int channel, int 
         for(i = start; i < start + size; i += dim){
             idx = 0;
             for(j = 0; j < dim; j++)
-                idx = idx * aac_cb_info[cb].maxval + FFABS(cpe->ch[channel].icoefs[i+j]);
+                idx = idx * (aac_cb_info[cb].maxval + 1) + FFABS(cpe->ch[channel].icoefs[i+j]);
             put_bits(&s->pb, bits[idx], codes[idx]);
             //output signs
             for(j = 0; j < dim; j++)
