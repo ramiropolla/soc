@@ -251,10 +251,11 @@ static void encode_ms_info(PutBitContext *pb, cpe_struct *cpe)
 /**
  * Scan spectral band and determine optimal codebook for it.
  */
-static int determine_section_info(AACEncContext *s, cpe_struct *cpe, int channel, int start, int size)
+static int determine_section_info(AACEncContext *s, cpe_struct *cpe, int channel, int band, int start, int size)
 {
-    int i;
+    int i, j;
     int maxval, sign;
+    int score, best, cb, bestcb, dim, idx;
 
     maxval = 0;
     sign = 0;
@@ -263,10 +264,43 @@ static int determine_section_info(AACEncContext *s, cpe_struct *cpe, int channel
         if(cpe->ch[channel].icoefs[i] < 0) sign = 1;
     }
 
-    ///TODO: better decision
-    if(!maxval) return 0; //zero codebook
-    if(maxval == 1) return 2;
-    return 11; //escape codebook
+    if(maxval > 12) return 11;
+    if(!maxval) return 0;
+
+    for(cb = 0; cb < 12; cb++)
+        if(aac_cb_info[cb].maxval >= maxval)
+            break;
+    best = 9999;
+    bestcb = 11;
+    for(; cb < 12; cb++){
+        score = 0;
+        dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
+        if(!band || cpe->ch[channel].cb[0][band - 1] != cb)
+            score += 9; //that's for new codebook entry
+        if(aac_cb_info[cb].flags & CB_UNSIGNED){
+            for(i = start; i < start + size; i += dim){
+                idx = 0;
+                for(j = 0; j < dim; j++)
+                    idx = idx * aac_cb_info[cb].maxval + FFABS(cpe->ch[channel].icoefs[i+j]);
+                score += bits[idx];
+                for(j = 0; j < dim; j++)
+                    if(cpe->ch[channel].icoefs[i+j])
+                        score++;
+            }
+        }else{
+            for(i = start; i < start + size; i += dim){
+                idx = 0;
+                for(j = 0; j < dim; j++)
+                    idx = idx * (aac_cb_info[cb].maxval*2 + 1) + cpe->ch[channel].icoefs[i+j] + aac_cb_info[cb].maxval;
+                score += bits[idx];
+            }
+        }
+        if(score < best){
+            best = score;
+            bestcb = cb;
+        }
+    }
+    return bestcb;
 }
 
 static void encode_codebook(AACEncContext *s, cpe_struct *cpe, int channel, int start, int size, int cb)
@@ -384,7 +418,7 @@ static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int
     i = 0;
     while(i < 1024){
         if(!cpe->ch[channel].zeroes[g]){
-            cpe->ch[channel].cb[0][g] = determine_section_info(s, cpe, channel, i, s->swb_sizes[g]);
+            cpe->ch[channel].cb[0][g] = determine_section_info(s, cpe, channel, g, i, s->swb_sizes[g]);
             cpe->ch[channel].zeroes[g] = !cpe->ch[channel].cb[0][g];
         }else
             cpe->ch[channel].cb[0][g] = 0;
