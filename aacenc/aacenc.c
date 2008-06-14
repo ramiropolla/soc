@@ -395,27 +395,27 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, cpe_str
     int count = 0;
 
     for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
-    for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
-        if(!i || cpe->ch[channel].cb[w][i] != cpe->ch[channel].cb[w][i-1]){
-            if(count){
-                while(count >= (1 << bits) - 1){
-                    put_bits(&s->pb, bits, (1 << bits) - 1);
-                    count -= (1 << bits) - 1;
+        for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
+            if(!i || cpe->ch[channel].cb[w][i] != cpe->ch[channel].cb[w][i-1]){
+                if(count){
+                    while(count >= (1 << bits) - 1){
+                        put_bits(&s->pb, bits, (1 << bits) - 1);
+                        count -= (1 << bits) - 1;
+                    }
+                    put_bits(&s->pb, bits, count);
                 }
-                put_bits(&s->pb, bits, count);
-            }
-            put_bits(&s->pb, 4, cpe->ch[channel].cb[w][i]);
-            count = 1;
-        }else
-            count++;
-    }
-    if(count){
-        while(count >= (1 << bits) - 1){
-            put_bits(&s->pb, bits, (1 << bits) - 1);
-            count -= (1 << bits) - 1;
+                put_bits(&s->pb, 4, cpe->ch[channel].cb[w][i]);
+                count = 1;
+            }else
+                count++;
         }
-        put_bits(&s->pb, bits, count);
-    }
+        if(count){
+            while(count >= (1 << bits) - 1){
+                put_bits(&s->pb, bits, (1 << bits) - 1);
+                count -= (1 << bits) - 1;
+            }
+            put_bits(&s->pb, bits, count);
+        }
     }
 }
 
