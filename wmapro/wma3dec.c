@@ -50,6 +50,7 @@ typedef struct WMA3DecodeContext {
     unsigned int        packet_loss;
 
     // General frame info
+    int                 len_prefix; //< true if the frame is prefixed with its len
     int                 allow_subframes;
     int                 max_num_subframes;
 
@@ -71,6 +72,7 @@ static void dump_context(WMA3DecodeContext *s)
     PRINT("samples per frame",s->samples_per_frame);
     PRINT("log2 frame size",s->log2_frame_size);
     PRINT("max num subframes",s->max_num_subframes);
+    PRINT("len prefix",s->len_prefix);
 }
 
 
@@ -142,6 +144,14 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     s->log2_block_align_bits = av_log2(avctx->block_align*8);
     s->log2_frame_size = s->log2_block_align_bits + 1;
 
+    /* frame info */
+    s->len_prefix = s->decode_flags & 0x40;
+
+    if(!s->len_prefix){
+         av_log(avctx, AV_LOG_ERROR, "file has no len prefix please report\n");
+         return -1;
+    }
+
     /* subframe info */
     log2_max_num_subframes = (s->decode_flags & 0x38) >> 3;
     s->max_num_subframes = 1 << log2_max_num_subframes;
@@ -158,7 +168,13 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
     int more_frames = 0;
     /* get frame length */
-    int len = get_bits(gb,s->log2_frame_size);
+    int len = s->log2_frame_size;
+
+    if(s->len_prefix)
+        len = get_bits(gb,s->log2_frame_size);
+
+    assert(len == s->log2_frame_size);
+
     av_log(s->avctx,AV_LOG_INFO,"decoding frame with len %x\n",len);
 
     /* decode frame data */
