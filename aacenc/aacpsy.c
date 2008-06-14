@@ -43,6 +43,7 @@ static void psy_null_window(AACPsyContext *apc, int16_t *audio, int channel, cpe
     for(ch = 0; ch < apc->avctx->channels; ch++){
         cpe->ch[ch].ics.window_sequence = 0;
         cpe->ch[ch].ics.window_shape = 1;
+        cpe->ch[ch].ics.num_windows = 1;
         cpe->ch[ch].ics.swb_sizes = apc->bands1024;
         cpe->ch[ch].ics.num_swb = apc->num_bands1024;
     }

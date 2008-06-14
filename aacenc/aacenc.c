@@ -274,18 +274,19 @@ static void put_ics_info(AVCodecContext *avctx, ics_struct *info)
  */
 static void encode_ms_info(PutBitContext *pb, cpe_struct *cpe)
 {
-    int i;
+    int i, w;
 
     put_bits(pb, 2, cpe->ms.present);
     if(cpe->ms.present == 1)
-        for(i = 0; i < cpe->ch[0].ics.max_sfb; i++)
-            put_bits(pb, 1, cpe->ms.mask[0][i]);
+        for(w = 0; w < cpe->ch[0].ics.num_windows; w++)
+            for(i = 0; i < cpe->ch[0].ics.max_sfb; i++)
+                put_bits(pb, 1, cpe->ms.mask[w][i]);
 }
 
 /**
  * Scan spectral band and determine optimal codebook for it.
  */
-static int determine_section_info(AACEncContext *s, cpe_struct *cpe, int channel, int band, int start, int size)
+static int determine_section_info(AACEncContext *s, cpe_struct *cpe, int channel, int win, int band, int start, int size)
 {
     int i, j;
     int maxval, sign;
@@ -309,7 +310,7 @@ static int determine_section_info(AACEncContext *s, cpe_struct *cpe, int channel
     for(; cb < 12; cb++){
         score = 0;
         dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
-        if(!band || cpe->ch[channel].cb[0][band - 1] != cb)
+        if(!band || cpe->ch[channel].cb[win][band - 1] != cb)
             score += 9; //that's for new codebook entry
         if(aac_cb_info[cb].flags & CB_UNSIGNED){
             for(i = start; i < start + size; i += dim){
@@ -389,12 +390,13 @@ static void encode_codebook(AACEncContext *s, cpe_struct *cpe, int channel, int 
 
 static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
 {
-    int i;
-    int bits = 5; //for long window
+    int i, w;
+    int bits = cpe->ch[channel].ics.num_windows == 1 ? 5 : 3;
     int count = 0;
 
+    for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
     for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
-        if(!i || cpe->ch[channel].cb[0][i] != cpe->ch[channel].cb[0][i-1]){
+        if(!i || cpe->ch[channel].cb[w][i] != cpe->ch[channel].cb[w][i-1]){
             if(count){
                 while(count >= (1 << bits) - 1){
                     put_bits(&s->pb, bits, (1 << bits) - 1);
@@ -402,7 +404,7 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, cpe_str
                 }
                 put_bits(&s->pb, bits, count);
             }
-            put_bits(&s->pb, 4, cpe->ch[channel].cb[0][i]);
+            put_bits(&s->pb, 4, cpe->ch[channel].cb[w][i]);
             count = 1;
         }else
             count++;
@@ -414,30 +416,35 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, cpe_str
         }
         put_bits(&s->pb, bits, count);
     }
+    }
 }
 
 static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
 {
     int off = cpe->ch[channel].gain, diff;
-    int i;
+    int i, w;
 
-    for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
-        if(!cpe->ch[channel].zeroes[0][i]){
-            diff = cpe->ch[channel].sf_idx[0][i] - off + SCALE_DIFF_ZERO;
-            off = cpe->ch[channel].sf_idx[0][i];
-            put_bits(&s->pb, bits[diff], code[diff]);
+    for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
+        for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
+            if(!cpe->ch[channel].zeroes[w][i]){
+                diff = cpe->ch[channel].sf_idx[w][i] - off + SCALE_DIFF_ZERO;
+                off = cpe->ch[channel].sf_idx[w][i];
+                put_bits(&s->pb, bits[diff], code[diff]);
+            }
         }
     }
 }
 
 static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
 {
-    int start = 0, i;
+    int start = 0, i, w;
 
-    for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
-        if(!cpe->ch[channel].zeroes[0][i])
-            encode_codebook(s, cpe, channel, start, cpe->ch[channel].ics.swb_sizes[i], cpe->ch[channel].cb[0][i]);
-        start += cpe->ch[channel].ics.swb_sizes[i];
+    for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
+        for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
+            if(!cpe->ch[channel].zeroes[w][i])
+                encode_codebook(s, cpe, channel, start, cpe->ch[channel].ics.swb_sizes[i], cpe->ch[channel].cb[w][i]);
+            start += cpe->ch[channel].ics.swb_sizes[i];
+        }
     }
 }
 
@@ -447,17 +454,18 @@ static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_st
 static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int channel)
 {
     AACEncContext *s = avctx->priv_data;
-    int i, j, g = 0;
+    int i, j, g, w;
 
-    i = 0;
-    while(i < 1024){
-        if(!cpe->ch[channel].zeroes[0][g]){
-            cpe->ch[channel].cb[0][g] = determine_section_info(s, cpe, channel, g, i, cpe->ch[channel].ics.swb_sizes[g]);
-            cpe->ch[channel].zeroes[0][g] = !cpe->ch[channel].cb[0][g];
-        }else
-            cpe->ch[channel].cb[0][g] = 0;
-        i += cpe->ch[channel].ics.swb_sizes[g];
-        g++;
+    for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
+        i = w << 7;
+        for(g = 0; g < cpe->ch[channel].ics.max_sfb; g++){
+            if(!cpe->ch[channel].zeroes[w][g]){
+                cpe->ch[channel].cb[w][g] = determine_section_info(s, cpe, channel, w, g, i, cpe->ch[channel].ics.swb_sizes[g]);
+                cpe->ch[channel].zeroes[w][g] = !cpe->ch[channel].cb[w][g];
+            }else
+                cpe->ch[channel].cb[w][g] = 0;
+            i += cpe->ch[channel].ics.swb_sizes[g];
+        }
     }
 
     put_bits(&s->pb, 8, cpe->ch[channel].gain); //global gain
