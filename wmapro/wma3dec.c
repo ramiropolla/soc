@@ -20,6 +20,11 @@
 #include "avcodec.h"
 #include "bitstream.h"
 
+
+/* TODO
+   shrink types
+*/
+
 typedef struct WMA3DecodeContext {
     AVCodecContext*     avctx;
     GetBitContext       gb;
@@ -44,7 +49,9 @@ typedef struct WMA3DecodeContext {
     // Packet loss variables
     unsigned int        packet_loss;
 
-
+    // General frame info
+    int                 allow_subframes;
+    int                 max_num_subframes;
 
     // Buffered frame data
     int                 prev_frame_bit_size;
@@ -63,6 +70,7 @@ static void dump_context(WMA3DecodeContext *s)
     PRINT_HEX("ed decode flags",s->decode_flags);
     PRINT("samples per frame",s->samples_per_frame);
     PRINT("log2 frame size",s->log2_frame_size);
+    PRINT("max num subframes",s->max_num_subframes);
 }
 
 
@@ -107,6 +115,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     WMA3DecodeContext *s = avctx->priv_data;
     uint8_t *edata_ptr = avctx->extradata;
     int i;
+    int log2_max_num_subframes;
 
     s->avctx = avctx;
 
@@ -132,6 +141,11 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     s->log2_block_align = av_log2(avctx->block_align);
     s->log2_block_align_bits = av_log2(avctx->block_align*8);
     s->log2_frame_size = s->log2_block_align_bits + 1;
+
+    /* subframe info */
+    log2_max_num_subframes = (s->decode_flags & 0x38) >> 3;
+    s->max_num_subframes = 1 << log2_max_num_subframes;
+    s->allow_subframes = s->max_num_subframes > 1;
 
     dump_context(s);
 
