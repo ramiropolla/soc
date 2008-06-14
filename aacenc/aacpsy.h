@@ -69,8 +69,8 @@ typedef struct {
                                                *   Thus, when used inside CPE elements, both channels must have equal gain.
                                                */
     ics_struct ics;
-    int zeroes[64];
-    int sf_idx[64];
+    int zeroes[8][64];
+    int sf_idx[8][64];
     int cb[8][64];                            ///< Codebooks
     float sf[8][64];                          ///< Scalefactors
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< Coefficients for IMDCT

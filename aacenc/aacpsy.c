@@ -68,7 +68,7 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
         cpe->ch[ch].gain = SCALE_ONE_POS;
         for(g = 0; g < apc->num_bands; g++){
             sum = 0;
-            cpe->ch[ch].sf_idx[g] = SCALE_ONE_POS;
+            cpe->ch[ch].sf_idx[0][g] = SCALE_ONE_POS;
             //apply M/S
             if(!ch && cpe->ms.mask[0][g]){
                 for(i = 0; i < apc->bands[g]; i++){
@@ -77,13 +77,13 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
                 }
             }
             for(i = 0; i < apc->bands[g]; i++){
-                cpe->ch[ch].icoefs[start+i] = av_clip((int)(roundf(cpe->ch[ch].coeffs[start+i] / pow2sf_tab[cpe->ch[ch].sf_idx[g]+60])), -8191, 8191);
+                cpe->ch[ch].icoefs[start+i] = av_clip((int)(roundf(cpe->ch[ch].coeffs[start+i] / pow2sf_tab[cpe->ch[ch].sf_idx[0][g]+60])), -8191, 8191);
                 sum += !!cpe->ch[ch].icoefs[start+i];
             }
-            cpe->ch[ch].zeroes[g] = !sum;
+            cpe->ch[ch].zeroes[0][g] = !sum;
             start += apc->bands[g];
         }
-        for(maxsfb = apc->num_bands; maxsfb > 0 && cpe->ch[ch].zeroes[maxsfb-1]; maxsfb--);
+        for(maxsfb = apc->num_bands; maxsfb > 0 && cpe->ch[ch].zeroes[0][maxsfb-1]; maxsfb--);
         cpe->ch[ch].ics.max_sfb = maxsfb;
     }
     if(apc->avctx->channels > 1 && cpe->common_window){

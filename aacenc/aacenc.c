@@ -388,9 +388,9 @@ static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, cp
     int i;
 
     for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
-        if(!cpe->ch[channel].zeroes[i]){
-            diff = cpe->ch[channel].sf_idx[i] - off + SCALE_DIFF_ZERO;
-            off = cpe->ch[channel].sf_idx[i];
+        if(!cpe->ch[channel].zeroes[0][i]){
+            diff = cpe->ch[channel].sf_idx[0][i] - off + SCALE_DIFF_ZERO;
+            off = cpe->ch[channel].sf_idx[0][i];
             put_bits(&s->pb, bits[diff], code[diff]);
         }
     }
@@ -401,7 +401,7 @@ static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_st
     int start = 0, i;
 
     for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
-        if(!cpe->ch[channel].zeroes[i])
+        if(!cpe->ch[channel].zeroes[0][i])
             encode_codebook(s, cpe, channel, start, s->swb_sizes[i], cpe->ch[channel].cb[0][i]);
         start += s->swb_sizes[i];
     }
@@ -417,9 +417,9 @@ static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int
 
     i = 0;
     while(i < 1024){
-        if(!cpe->ch[channel].zeroes[g]){
+        if(!cpe->ch[channel].zeroes[0][g]){
             cpe->ch[channel].cb[0][g] = determine_section_info(s, cpe, channel, g, i, s->swb_sizes[g]);
-            cpe->ch[channel].zeroes[g] = !cpe->ch[channel].cb[0][g];
+            cpe->ch[channel].zeroes[0][g] = !cpe->ch[channel].cb[0][g];
         }else
             cpe->ch[channel].cb[0][g] = 0;
         i += s->swb_sizes[g];
