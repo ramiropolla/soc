@@ -29,6 +29,8 @@
 #include "dsputil.h"
 #include "mpeg4audio.h"
 
+#include "aacpsy.h"
+
 // XXX: borrowed from aac.c, move to some header eventually
 
 #include "aactab.h"
@@ -131,65 +133,6 @@ static const struct {
     {   -1, NULL  , NULL  , 0 }, // intensity in-phase
 };
 
-// data structures borrowed from aac.c with some minor modifications
-
-/**
- * Individual Channel Stream
- */
-typedef struct {
-    int intensity_present;
-    int max_sfb;
-    int window_sequence;
-    int window_shape;             ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
-    int window_shape_prev;
-    int num_window_groups;
-    uint8_t grouping;
-    uint8_t group_len[8];
-    const uint8_t *swb_sizes;
-    int num_swb;
-    int num_windows;
-    int tns_max_bands;
-} ics_struct;
-
-/**
- * M/S joint channel coding
- */
-typedef struct {
-    int present;
-    uint8_t mask[8][64];
-} ms_struct;
-
-/**
- * Single Channel Element
- * Used for both SCE and LFE elements
- */
-typedef struct {
-    int gain;                                 /**< Channel gain (not used by AAC bitstream).
-                                               *   Note that this is applied before joint stereo decoding.
-                                               *   Thus, when used inside CPE elements, both channels must have equal gain.
-                                               */
-    ics_struct ics;
-    int zeroes[64];
-    int sf_idx[64];
-    int cb[8][64];                            ///< Codebooks
-    float sf[8][64];                          ///< Scalefactors
-    DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< Coefficients for IMDCT
-    DECLARE_ALIGNED_16(float, saved[1024]);   ///< Overlap
-    DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
-    DECLARE_ALIGNED_16(int,   icoefs[1024]);  ///< integer coefficients for coding
-} sce_struct;
-
-/**
- * Channel Pair Element
- */
-typedef struct {
-    int common_window;     ///< Set if channels share a common 'ics_struct' in bitstream
-    ms_struct ms;
-    sce_struct ch[2];
-} cpe_struct;
-
-// borrowing temporarily ends here
-
 typedef struct {
     PutBitContext pb;
     MDCTContext mdct;
@@ -201,15 +144,13 @@ typedef struct {
     uint8_t *swb_sizes;
     int swb_num;
     cpe_struct cpe;
+    AACPsyContext psy;
 } AACEncContext;
 
 #define SCALE_ONE_POS   140
 #define SCALE_MAX_POS   255
 #define SCALE_MAX_DIFF   60
 #define SCALE_DIFF_ZERO  60
-
-//borrowed from aac.c
-static float pow2sf_tab[316];
 
 /**
  * Make AAC audio config object.
@@ -253,64 +194,12 @@ static int aac_encode_init(AVCodecContext *avctx)
     // window init
     ff_kbd_window_init(s->kbd_long_1024, 4.0, 1024);
 
+    ff_aac_psy_init(&s->psy, avctx, AAC_PSY_NULL, 0, s->swb_sizes, s->swb_num);
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
 
-    for (i = 0; i < 316; i++)
-        pow2sf_tab[i] = pow(2, (i - 200)/4.);
     return 0;
-}
-
-static void determine_scales(AVCodecContext *avctx, cpe_struct *cpe, int channel)
-{
-    AACEncContext *s = avctx->priv_data;
-    int i = 0, j, g, count = 0, maxswb;
-    double me, d;
-
-    cpe->ch[channel].ics.swb_sizes = s->swb_sizes;
-    cpe->ch[channel].ics.num_swb = s->swb_num;
-    for(g = 0; g < s->swb_num; g++){
-        me = 0.0;
-        d = 0.0;
-        for(j = 0; j < s->swb_sizes[g]; j++)
-            if(cpe->ch[channel].coeffs[i + j] != 0.0){
-                me += fabs(cpe->ch[channel].coeffs[i + j]);
-                count++;
-            }
-        if(count)
-            me /= count;
-        for(j = 0; j < cpe->ch[channel].ics.swb_sizes[g]; j++)
-            if(cpe->ch[channel].coeffs[i + j] != 0.0)
-                d += (cpe->ch[channel].coeffs[i + j] - me) * (cpe->ch[channel].coeffs[i + j] - me);
-        if(count)
-            d /= count;
-        cpe->ch[channel].zeroes[g] = (me < 0.1 && d < 0.1);
-        cpe->ch[channel].sf_idx[g] = SCALE_ONE_POS + g;
-        i += cpe->ch[channel].ics.swb_sizes[g];
-    }
-    cpe->ch[channel].gain = SCALE_ONE_POS;
-    for(maxswb = s->swb_num; maxswb > 0 && cpe->ch[channel].zeroes[maxswb-1]; maxswb--);
-    cpe->ch[channel].ics.max_sfb = maxswb;
-    cpe->ch[channel].ics.window_sequence = 0;
-    cpe->ch[channel].ics.window_shape = 1;
-}
-
-/* BIG FAT TODO! */
-/* for now it just converts spectra to integer form */
-static void apply_psychoacoustics(AVCodecContext *avctx, cpe_struct *cpe, int channel)
-{
-    AACEncContext *s = avctx->priv_data;
-    int i = 0, j, g;
-
-    for(g = 0; g < cpe->ch[channel].ics.max_sfb; g++)
-        if(cpe->ch[channel].zeroes[g]){
-            memset(cpe->ch[channel].icoefs + i, 0, cpe->ch[channel].ics.swb_sizes[g] * sizeof(cpe->ch[0].icoefs[0]));
-            i += cpe->ch[channel].ics.swb_sizes[g];
-        }else
-            for(j = 0; j < cpe->ch[channel].ics.swb_sizes[g]; j++, i++)
-                cpe->ch[channel].icoefs[i] = (int)(roundf(cpe->ch[channel].coeffs[i] / pow2sf_tab[cpe->ch[channel].sf_idx[g]+60]));
-    memset(cpe->ch[channel].icoefs + i, 0, (1024 - i) * sizeof(cpe->ch[channel].icoefs[0]));
 }
 
 static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, short *audio, int channel)
@@ -328,13 +217,6 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, sh
     //convert coefficients into form used by AAC
     for(i = 0; i < 1024; i++)
         cpe->ch[channel].coeffs[i] = -copysignf(pow(fabsf(cpe->ch[channel].coeffs[i]), 0.75f), cpe->ch[channel].coeffs[i]);
-
-    determine_scales(avctx, cpe, channel);
-    if(channel == 1){
-        cpe->ch[0].ics.max_sfb = FFMAX(cpe->ch[0].ics.max_sfb, cpe->ch[1].ics.max_sfb);
-        cpe->common_window = 1;
-    }
-    apply_psychoacoustics(avctx, cpe, channel);
 }
 
 /**
@@ -513,9 +395,20 @@ static int aac_encode_frame(AVCodecContext *avctx,
     AACEncContext *s = avctx->priv_data;
     int16_t *samples = data;
 
+    ff_aac_psy_suggest_window(&s->psy, samples, 0, &s->cpe);
+
     analyze(avctx, s, &s->cpe, samples, 0);
     if(avctx->channels > 1)
         analyze(avctx, s, &s->cpe, samples, 1);
+
+    ff_aac_psy_analyze(&s->psy, samples, 0, &s->cpe);
+    if(avctx->channels > 1){
+        s->cpe.common_window = s->cpe.ch[0].ics.window_shape == s->cpe.ch[1].ics.window_shape;
+        if(s->cpe.common_window){
+            s->cpe.ch[0].ics.max_sfb = FFMAX(s->cpe.ch[0].ics.max_sfb, s->cpe.ch[1].ics.max_sfb);
+            s->cpe.ch[1].ics.max_sfb = s->cpe.ch[0].ics.max_sfb;
+        }
+    }
 
     init_put_bits(&s->pb, frame, buf_size*8);
     //output encoded
@@ -550,6 +443,7 @@ static int aac_encode_end(AVCodecContext *avctx)
     AACEncContext *s = avctx->priv_data;
 
     ff_mdct_end(&s->mdct);
+    ff_aac_psy_end(&s->psy);
     return 0;
 }
 
