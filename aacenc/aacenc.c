@@ -392,9 +392,10 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, cpe_str
 {
     int i, w;
     int bits = cpe->ch[channel].ics.num_windows == 1 ? 5 : 3;
-    int count = 0;
+    int count;
 
     for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
+        count = 0;
         for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
             if(!i || cpe->ch[channel].cb[w][i] != cpe->ch[channel].cb[w][i-1]){
                 if(count){
