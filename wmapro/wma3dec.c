@@ -167,6 +167,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
 /* decode one wma frame */
 static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
+    unsigned int gb_start_count = get_bits_count(gb);
     int more_frames = 0;
     /* get frame length */
     int len = 0;
@@ -176,8 +177,8 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
 
     av_log(s->avctx,AV_LOG_INFO,"decoding frame with len %x\n",len);
 
-    /* decode frame data */
-    skip_bits_long(gb,len - s->log2_frame_size - 1);
+    /* skip the rest of the frame data */
+    skip_bits_long(gb,len - (get_bits_count(gb) - gb_start_count) - 1);
 
     /* decode trailer bit */
     more_frames = get_bits1(gb);
