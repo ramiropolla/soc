@@ -20,6 +20,8 @@
 #include "avcodec.h"
 #include "bitstream.h"
 
+#define MAX_CHANNELS 6
+#define MAX_SUBFRAMES 32
 
 /* TODO
    shrink types
@@ -40,6 +42,8 @@ typedef struct WMA3DecodeContext {
     unsigned int        log2_block_align;
     unsigned int        log2_block_align_bits;
     unsigned int        log2_frame_size;
+    int                 lossless;
+    int                 nb_channels;
 
     // Extradata
     unsigned int        decode_flags;
@@ -74,6 +78,8 @@ static void dump_context(WMA3DecodeContext *s)
     PRINT("log2 frame size",s->log2_frame_size);
     PRINT("max num subframes",s->max_num_subframes);
     PRINT("len prefix",s->len_prefix);
+    PRINT("nb channels",s->nb_channels);
+    PRINT("lossless",s->lossless);
 }
 
 
@@ -157,6 +163,18 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     log2_max_num_subframes = (s->decode_flags & 0x38) >> 3;
     s->max_num_subframes = 1 << log2_max_num_subframes;
     s->allow_subframes = s->max_num_subframes > 1;
+
+    if(s->max_num_subframes > MAX_SUBFRAMES){
+        av_log(avctx, AV_LOG_ERROR, "invalid number of subframes %i\n",s->max_num_subframes);
+        return -1;
+    }
+
+    s->nb_channels = avctx->channels;
+
+    if(s->nb_channels < 0 || s->nb_channels > MAX_CHANNELS){
+        av_log(avctx, AV_LOG_ERROR, "invalid number of channels %i\n",s->nb_channels);
+        return -1;
+    }
 
     dump_context(s);
 
