@@ -1,7 +1,7 @@
 echo "checking out ffmpeg svn"
 rm -f ffmpeg/libavcodec/alacenc.c
 
-svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg -r 13552
+svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg -r 13774
 echo "patching ffmpeg"
 cd ffmpeg
 patch -p0 <../alacenc_build.patch
