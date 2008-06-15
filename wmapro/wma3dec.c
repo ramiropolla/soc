@@ -203,11 +203,11 @@ static void save_bits(WMA3DecodeContext *s,int len){
 
     /* byte align prev_frame buffer */
     if(bit_offset){
-        if(len > bit_offset)
-            s->prev_frame[pos++] |= get_bits(&s->gb,bit_offset);
-        else
-            s->prev_frame[pos++] |= get_bits(&s->gb,len) << (bit_offset - len);
-        len -= bit_offset;
+        int missing = 8 - bit_offset;
+        if(len < missing)
+            missing = len;
+        s->prev_frame[pos++] |= get_bits(&s->gb, missing) << (8 - bit_offset - missing);
+        len -= missing;
     }
 
     /* copy full bytes */
@@ -217,9 +217,8 @@ static void save_bits(WMA3DecodeContext *s,int len){
     }
 
     /* copy remaining bits */
-    if(len > 0){
-        s->prev_frame[pos++] |= get_bits(&s->gb,len) << (8 - len);
-    }
+    if(len > 0)
+        s->prev_frame[pos++] = get_bits(&s->gb,len) << (8 - len);
 }
 
 static int wma3_decode_packet(AVCodecContext *avctx,
