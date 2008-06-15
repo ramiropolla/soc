@@ -277,6 +277,10 @@ static int wma3_decode_packet(AVCodecContext *avctx,
         if(remaining_bits(s) >= frame_size){
             /* decode the frame */
             more_frames = wma_decode_frame(s,&s->gb);
+
+            if(!more_frames){
+                av_log(avctx, AV_LOG_ERROR, "no more frames\n");
+            }
         }else
             more_frames = 0;
     }
