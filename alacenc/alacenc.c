@@ -24,7 +24,7 @@
 
 #define DEFAULT_FRAME_SIZE        4096
 #define DEFAULT_SAMPLE_SIZE       16
-
+#define MAX_CHANNELS              8
 #define ALAC_EXTRADATA_SIZE       36
 #define ALAC_FRAME_HEADER_SIZE    55
 #define ALAC_FRAME_FOOTER_SIZE    3
@@ -44,6 +44,7 @@ typedef struct AlacEncodeContext {
     int compression_level;
     int max_coded_frame_size;
     int write_sample_size;
+    int16_t *sample_buf[MAX_CHANNELS];
     PutBitContext pbctx;
     RiceContext rc;
     AVCodecContext *avctx;
@@ -58,6 +59,39 @@ typedef struct AlacEncodeContext {
 static void put_sbits(PutBitContext *pb, int bits, int32_t val)
 {
     put_bits(pb, bits, val & ((1<<bits)-1));
+}
+
+static void allocate_sample_buffers(AlacEncodeContext *s)
+{
+    int i = s->channels;
+
+    while(i) {
+        s->sample_buf[i-1] = av_mallocz(s->avctx->frame_size*s->avctx->bits_per_sample>>3);
+        i--;
+    }
+}
+
+static void free_sample_buffers(AlacEncodeContext *s)
+{
+    int i = s->channels;
+
+    while(i) {
+        av_freep(&s->sample_buf[i-1]);
+        i--;
+    }
+}
+
+static void init_sample_buffers(AlacEncodeContext *s, int16_t *input_samples)
+{
+    int ch, i;
+
+    for(ch=0;ch<s->channels;ch++) {
+        int16_t *sptr = input_samples + ch;
+        for(i=0;i<s->avctx->frame_size;i++) {
+            s->sample_buf[ch][i] = *sptr;
+            sptr += s->channels;
+        }
+    }
 }
 
 static void encode_scalar(AlacEncodeContext *s, int x, int k, int write_sample_size)
@@ -110,7 +144,7 @@ static void alac_entropy_coder(AlacEncodeContext *s, int16_t *samples)
         x = -2*(*samples)-1;
         x ^= (x>>31);
 
-        samples += s->channels;
+        samples++;
         i++;
 
         encode_scalar(s, x - sign_modifier, k, s->write_sample_size);
@@ -129,7 +163,7 @@ static void alac_entropy_coder(AlacEncodeContext *s, int16_t *samples)
             k = 7 - av_log2(history) + ((history + 16) >> 6);
 
             while((*samples == 0) && (i < s->avctx->frame_size)) {
-                samples += s->channels;
+                samples++;
                 i++;
                 block_size++;
             }
@@ -143,7 +177,7 @@ static void alac_entropy_coder(AlacEncodeContext *s, int16_t *samples)
     }
 }
 
-static void write_compressed_frame(AlacEncodeContext *s, int16_t *samples)
+static void write_compressed_frame(AlacEncodeContext *s)
 {
     int i;
 
@@ -162,7 +196,7 @@ static void write_compressed_frame(AlacEncodeContext *s, int16_t *samples)
     // apply entropy coding to audio samples
 
     for(i=0;i<s->channels;i++) {
-        alac_entropy_coder(s, samples + i);
+        alac_entropy_coder(s, s->sample_buf[i]);
     }
 }
 
@@ -218,6 +252,9 @@ static av_cold int alac_encode_init(AVCodecContext *avctx)
     avctx->coded_frame->key_frame = 1;
 
     s->avctx = avctx;
+
+    allocate_sample_buffers(s);
+
     return 0;
 }
 
@@ -226,7 +263,6 @@ static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
 {
     AlacEncodeContext *s = avctx->priv_data;
     PutBitContext *pb = &s->pbctx;
-    int16_t *samples;
     int i, ch;
 
     if(buf_size < s->max_coded_frame_size) {
@@ -234,20 +270,19 @@ static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
         return -1;
     }
 
+    init_sample_buffers(s, data);
+
     init_put_bits(pb, frame, buf_size);
     write_frame_header(s);
 
     if(s->compression_level == 0) {
         // Verbatim mode
         for(ch=0; ch<s->channels; ch++) {
-            samples = (int16_t *)data + ch;
-            for(i=0; i<avctx->frame_size; i++) {
-                put_sbits(pb, 16, *samples);
-                samples += s->channels;
-            }
+            for(i=0; i<avctx->frame_size; i++)
+                put_sbits(pb, 16, s->sample_buf[ch][i]);
         }
     } else {
-        write_compressed_frame(s, data);
+        write_compressed_frame(s);
     }
 
     put_bits(pb, 3, 7);
@@ -257,9 +292,12 @@ static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
 
 static av_cold int alac_encode_close(AVCodecContext *avctx)
 {
+    AlacEncodeContext *s = avctx->priv_data;
+
     av_freep(&avctx->extradata);
     avctx->extradata_size = 0;
     av_freep(&avctx->coded_frame);
+    free_sample_buffers(s);
     return 0;
 }
 
