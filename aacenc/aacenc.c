@@ -246,13 +246,13 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, sh
 
     if (cpe->ch[channel].ics.window_sequence != EIGHT_SHORT_SEQUENCE) {
     // perform MDCT
-    memcpy(s->output, cpe->ch[channel].saved, sizeof(float)*1024);
-    j = channel;
-    for (i = 0; i < 1024; i++, j += avctx->channels){
-        s->output[i+1024]         = audio[j] / 512 * s->kbd_long_1024[1024 - i - 1];
-        cpe->ch[channel].saved[i] = audio[j] / 512 * s->kbd_long_1024[i];
-    }
-    ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs, s->output, s->tmp);
+        memcpy(s->output, cpe->ch[channel].saved, sizeof(float)*1024);
+        j = channel;
+        for (i = 0; i < 1024; i++, j += avctx->channels){
+            s->output[i+1024]         = audio[j] / 512 * s->kbd_long_1024[1024 - i - 1];
+            cpe->ch[channel].saved[i] = audio[j] / 512 * s->kbd_long_1024[i];
+        }
+        ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs, s->output, s->tmp);
     }else{
         for (k = 0; k < 1024; k += 128) {
             memcpy(s->output + k, cpe->ch[channel].saved + k, sizeof(float)*128);
