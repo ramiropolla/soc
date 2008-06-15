@@ -479,7 +479,7 @@ static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_st
 static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int channel)
 {
     AACEncContext *s = avctx->priv_data;
-    int i, j, g, w;
+    int i, g, w;
 
     for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
         i = w << 7;
