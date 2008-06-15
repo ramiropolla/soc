@@ -275,18 +275,17 @@ static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
         return -1;
     }
 
-    init_sample_buffers(s, data);
-
     init_put_bits(pb, frame, buf_size);
     write_frame_header(s);
 
     if(s->compression_level == 0) {
         // Verbatim mode
-        for(ch=0; ch<s->channels; ch++) {
-            for(i=0; i<avctx->frame_size; i++)
-                put_sbits(pb, 16, s->sample_buf[ch][i]);
+        int16_t *samples = data;
+        for(i=0; i<avctx->frame_size*s->channels; i++) {
+            put_sbits(pb, 16, *samples++);
         }
     } else {
+        init_sample_buffers(s, data);
         write_compressed_frame(s);
     }
 
