@@ -173,9 +173,9 @@ typedef struct {
     DECLARE_ALIGNED_16(FFTSample, tmp[1024]);
 
     int samplerate_index;
-    uint8_t *swb_sizes1024;
+    const uint8_t *swb_sizes1024;
     int swb_num1024;
-    uint8_t *swb_sizes128;
+    const uint8_t *swb_sizes128;
     int swb_num128;
     cpe_struct cpe;
     AACPsyContext psy;
