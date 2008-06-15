@@ -217,7 +217,7 @@ static av_cold int alac_encode_init(AVCodecContext *avctx)
 
     // Set default compression level
     if(avctx->compression_level == FF_COMPRESSION_DEFAULT)
-    s->compression_level = 1;
+        s->compression_level = 1;
     else
         s->compression_level = av_clip(avctx->compression_level, 0, 1);
 
