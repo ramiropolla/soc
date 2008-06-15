@@ -32,6 +32,15 @@ enum AACPsyModelType{
 };
 
 // data structures borrowed from aac.c with some minor modifications
+/**
+ * Window sequences
+ */
+enum {
+    ONLY_LONG_SEQUENCE = 0,
+    LONG_START_SEQUENCE,
+    EIGHT_SHORT_SEQUENCE,
+    LONG_STOP_SEQUENCE
+};
 
 /**
  * Individual Channel Stream
