@@ -27,6 +27,7 @@
 
 enum AACPsyModelType{
     AAC_PSY_NULL,              // do nothing on frequencies
+    AAC_PSY_NULL8,             // do nothing on frequencies but work with short windows
 
     AAC_NB_PSY_MODELS
 };
