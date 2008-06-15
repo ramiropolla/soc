@@ -165,8 +165,10 @@ static const struct {
 
 typedef struct {
     PutBitContext pb;
-    MDCTContext mdct;
+    MDCTContext mdct1024;
+    MDCTContext mdct128;
     DECLARE_ALIGNED_16(float, kbd_long_1024[1024]);
+    DECLARE_ALIGNED_16(float, kbd_short_128[128]);
     DECLARE_ALIGNED_16(FFTSample, output[2048]);
     DECLARE_ALIGNED_16(FFTSample, tmp[1024]);
 
@@ -224,9 +226,11 @@ static int aac_encode_init(AVCodecContext *avctx)
     s->swb_sizes128 = swb_size_128[i];
     s->swb_num128 = num_swb_128[i];
 
-    ff_mdct_init(&s->mdct, 11, 0);
+    ff_mdct_init(&s->mdct1024, 11, 0);
+    ff_mdct_init(&s->mdct128,   8, 0);
     // window init
     ff_kbd_window_init(s->kbd_long_1024, 4.0, 1024);
+    ff_kbd_window_init(s->kbd_short_128, 6.0, 128);
 
     ff_aac_psy_init(&s->psy, avctx, AAC_PSY_NULL, 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
     avctx->extradata = av_malloc(2);
@@ -238,8 +242,9 @@ static int aac_encode_init(AVCodecContext *avctx)
 
 static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, short *audio, int channel)
 {
-    int i, j;
+    int i, j, k;
 
+    if (cpe->ch[channel].ics.window_sequence != EIGHT_SHORT_SEQUENCE) {
     // perform MDCT
     memcpy(s->output, cpe->ch[channel].saved, sizeof(float)*1024);
     j = channel;
@@ -247,7 +252,18 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, sh
         s->output[i+1024]         = audio[j] / 512 * s->kbd_long_1024[1024 - i - 1];
         cpe->ch[channel].saved[i] = audio[j] / 512 * s->kbd_long_1024[i];
     }
-    ff_mdct_calc(&s->mdct, cpe->ch[channel].coeffs, s->output, s->tmp);
+    ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs, s->output, s->tmp);
+    }else{
+        for (k = 0; k < 1024; k += 128) {
+            memcpy(s->output + k, cpe->ch[channel].saved + k, sizeof(float)*128);
+            j = channel + k * avctx->channels;
+            for (i = 0; i < 128; i++, j += avctx->channels){
+                s->output[k+i+128]          = audio[j] / 64 * s->kbd_short_128[128 - i - 1];
+                cpe->ch[channel].saved[k+i] = audio[j] / 64 * s->kbd_short_128[i];
+            }
+            ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs + k, s->output+k, s->tmp);
+        }
+    }
     //convert coefficients into form used by AAC
     for(i = 0; i < 1024; i++)
         cpe->ch[channel].coeffs[i] = -copysignf(pow(fabsf(cpe->ch[channel].coeffs[i]), 0.75f), cpe->ch[channel].coeffs[i]);
@@ -260,12 +276,19 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, sh
 static void put_ics_info(AVCodecContext *avctx, ics_struct *info)
 {
     AACEncContext *s = avctx->priv_data;
+    int i;
 
     put_bits(&s->pb, 1, 0);                // ics_reserved bit
     put_bits(&s->pb, 2, info->window_sequence);
     put_bits(&s->pb, 1, info->window_shape);
-    put_bits(&s->pb, 6, info->max_sfb);
-    put_bits(&s->pb, 1, 0);                // no prediction
+    if(info->window_sequence != EIGHT_SHORT_SEQUENCE){
+        put_bits(&s->pb, 6, info->max_sfb);
+        put_bits(&s->pb, 1, 0);            // no prediction
+    }else{
+        put_bits(&s->pb, 4, info->max_sfb);
+        for(i = 1; i < info->num_windows; i++)
+            put_bits(&s->pb, 1, info->group_len[i]);
+    }
 }
 
 /**
@@ -526,7 +549,8 @@ static int aac_encode_end(AVCodecContext *avctx)
 {
     AACEncContext *s = avctx->priv_data;
 
-    ff_mdct_end(&s->mdct);
+    ff_mdct_end(&s->mdct1024);
+    ff_mdct_end(&s->mdct128);
     ff_aac_psy_end(&s->psy);
     return 0;
 }
