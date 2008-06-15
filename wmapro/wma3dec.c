@@ -50,6 +50,7 @@ typedef struct WMA3DecodeContext {
     unsigned int        packet_loss;
 
     // General frame info
+    unsigned int        frame_num;
     int                 len_prefix; //< true if the frame is prefixed with its len
     int                 allow_subframes;
     int                 max_num_subframes;
@@ -180,6 +181,8 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
 
     /* decode trailer bit */
     more_frames = get_bits1(gb);
+
+    ++s->frame_num;
     return more_frames;
 }
 
