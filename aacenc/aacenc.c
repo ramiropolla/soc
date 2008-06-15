@@ -415,6 +415,7 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, cpe_str
 {
     int i, w;
     int bits = cpe->ch[channel].ics.num_windows == 1 ? 5 : 3;
+    int esc = (1 << bits) - 1;
     int count;
 
     for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
@@ -422,9 +423,9 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, cpe_str
         for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
             if(!i || cpe->ch[channel].cb[w][i] != cpe->ch[channel].cb[w][i-1]){
                 if(count){
-                    while(count >= (1 << bits) - 1){
-                        put_bits(&s->pb, bits, (1 << bits) - 1);
-                        count -= (1 << bits) - 1;
+                    while(count >= esc){
+                        put_bits(&s->pb, bits, esc);
+                        count -= esc;
                     }
                     put_bits(&s->pb, bits, count);
                 }
@@ -434,9 +435,9 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, cpe_str
                 count++;
         }
         if(count){
-            while(count >= (1 << bits) - 1){
-                put_bits(&s->pb, bits, (1 << bits) - 1);
-                count -= (1 << bits) - 1;
+            while(count >= esc){
+                put_bits(&s->pb, bits, esc);
+                count -= esc;
             }
             put_bits(&s->pb, bits, count);
         }
