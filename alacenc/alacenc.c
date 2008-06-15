@@ -265,6 +265,11 @@ static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
     PutBitContext *pb = &s->pbctx;
     int i, ch;
 
+    if(avctx->frame_size > DEFAULT_FRAME_SIZE) {
+        av_log(avctx, AV_LOG_ERROR, "input frame size exceeded\n");
+        return -1;
+    }
+
     if(buf_size < s->max_coded_frame_size) {
         av_log(avctx, AV_LOG_ERROR, "buffer size is too small\n");
         return -1;
