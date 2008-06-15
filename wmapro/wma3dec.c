@@ -168,12 +168,10 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
     int more_frames = 0;
     /* get frame length */
-    int len = s->log2_frame_size;
+    int len = 0;
 
     if(s->len_prefix)
         len = get_bits(gb,s->log2_frame_size);
-
-    assert(len == s->log2_frame_size);
 
     av_log(s->avctx,AV_LOG_INFO,"decoding frame with len %x\n",len);
 
