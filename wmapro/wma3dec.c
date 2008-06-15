@@ -27,6 +27,12 @@
    shrink types
 */
 
+typedef struct {
+    int num_subframes;
+    int subframe_len[MAX_SUBFRAMES]; //< subframe len in samples
+    int channel_len;                 //< channel len in samples
+} wma_channel_t;
+
 typedef struct WMA3DecodeContext {
     AVCodecContext*     avctx;
     GetBitContext       gb;
@@ -44,6 +50,7 @@ typedef struct WMA3DecodeContext {
     unsigned int        log2_frame_size;
     int                 lossless;
     int                 nb_channels;
+    wma_channel_t       channel[MAX_CHANNELS];
 
     // Extradata
     unsigned int        decode_flags;
