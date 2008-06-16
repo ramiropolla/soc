@@ -22,7 +22,7 @@
 #include <stdio.h>
 
 #include "avfilter.h"
-#include "swscale.h"
+#include "libswscale/swscale.h"
 
 typedef struct
 {
