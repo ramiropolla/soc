@@ -261,7 +261,7 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, sh
                 s->output[k+i+128]          = audio[j] / 64 * s->kbd_short_128[128 - i - 1];
                 cpe->ch[channel].saved[k+i] = audio[j] / 64 * s->kbd_short_128[i];
             }
-            ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs + k, s->output+k, s->tmp);
+            ff_mdct_calc(&s->mdct128, cpe->ch[channel].coeffs + k, s->output+k, s->tmp);
         }
     }
     //convert coefficients into form used by AAC
