@@ -7,9 +7,9 @@ Index: ffmpeg.c
  #include "libavformat/os_support.h"
  
 +#if ENABLE_AVFILTER
-+# include "avfilter.h"
-+# include "avfiltergraph.h"
-+# include "graphparser.h"
++# include "libavfilter/avfilter.h"
++# include "libavfilter/avfiltergraph.h"
++# include "libavfilter/graphparser.h"
 +#endif
 +
  #ifdef HAVE_SYS_RESOURCE_H
