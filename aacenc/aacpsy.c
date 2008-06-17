@@ -46,6 +46,7 @@ static void psy_null_window(AACPsyContext *apc, int16_t *audio, int channel, cpe
         cpe->ch[ch].ics.num_windows = 1;
         cpe->ch[ch].ics.swb_sizes = apc->bands1024;
         cpe->ch[ch].ics.num_swb = apc->num_bands1024;
+        cpe->ch[ch].ics.group_len[0] = 0;
     }
     cpe->common_window = cpe->ch[0].ics.window_shape == cpe->ch[1].ics.window_shape;
 }
@@ -111,7 +112,7 @@ static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int channel, cp
         cpe->ch[ch].ics.swb_sizes = apc->bands128;
         cpe->ch[ch].ics.num_swb = apc->num_bands128;
         for(i = 0; i < cpe->ch[ch].ics.num_windows; i++)
-            cpe->ch[ch].ics.group_len[i] = 0;
+            cpe->ch[ch].ics.group_len[i] = i & 1;
     }
     cpe->common_window = cpe->ch[0].ics.window_shape == cpe->ch[1].ics.window_shape;
 }
@@ -119,7 +120,7 @@ static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int channel, cp
 static void psy_null8_process(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
 {
     int start, sum, cmaxsfb, maxsfb;
-    int w, ch, g, i;
+    int w, w2, ch, g, i;
 
     //detect M/S
     if(apc->avctx->channels > 1 && cpe->common_window){
@@ -160,6 +161,22 @@ static void psy_null8_process(AACPsyContext *apc, int16_t *audio, int channel, c
             maxsfb = FFMAX(maxsfb, cmaxsfb);
         }
         cpe->ch[ch].ics.max_sfb = maxsfb;
+        //adjust zero bands for window groups
+        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+            if(cpe->ch[ch].ics.group_len[w]) continue;
+            for(g = 0; g < cpe->ch[ch].ics.max_sfb; g++){
+                i = 1;
+                w2 = w;
+                do{
+                    if(!cpe->ch[ch].zeroes[w2][g]){
+                        i = 0;
+                        break;
+                    }
+                    w2++;
+                }while(w2 < cpe->ch[ch].ics.num_windows && cpe->ch[ch].ics.group_len[w2]);
+                cpe->ch[ch].zeroes[w][g] = i;
+            }
+        }
     }
     if(apc->avctx->channels > 1 && cpe->common_window){
         int msc = 0;
