@@ -36,7 +36,7 @@
  ffmpeg -i input.avi -vfilters 'setpts=AVTB/25*(N+0.05*sin(N*2*PI/25))' output.avi
 */
 
-#include "eval.h"
+#include "libavcodec/eval.h"
 
 #include "avfilter.h"
 
