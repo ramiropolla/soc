@@ -345,26 +345,26 @@ static int determine_section_info(AACEncContext *s, cpe_struct *cpe, int channel
         w = win;
         if(aac_cb_info[cb].flags & CB_UNSIGNED){
             do{
-            for(i = start + (w-win)*128; i < start + (w-win)*128 + size; i += dim){
-                idx = 0;
-                for(j = 0; j < dim; j++)
-                    idx = idx * aac_cb_info[cb].maxval + FFABS(cpe->ch[channel].icoefs[i+j]);
-                score += bits[idx];
-                for(j = 0; j < dim; j++)
-                    if(cpe->ch[channel].icoefs[i+j])
-                        score++;
-            }
-            w++;
+                for(i = start + (w-win)*128; i < start + (w-win)*128 + size; i += dim){
+                    idx = 0;
+                    for(j = 0; j < dim; j++)
+                        idx = idx * aac_cb_info[cb].maxval + FFABS(cpe->ch[channel].icoefs[i+j]);
+                    score += bits[idx];
+                    for(j = 0; j < dim; j++)
+                        if(cpe->ch[channel].icoefs[i+j])
+                            score++;
+                }
+                w++;
             }while(w < cpe->ch[channel].ics.num_windows && cpe->ch[channel].ics.group_len[w]);
         }else{
             do{
-            for(i = start + (w-win)*128; i < start + (w-win)*128 + size; i += dim){
-                idx = 0;
-                for(j = 0; j < dim; j++)
-                    idx = idx * (aac_cb_info[cb].maxval*2 + 1) + cpe->ch[channel].icoefs[i+j] + aac_cb_info[cb].maxval;
-                score += bits[idx];
-            }
-            w++;
+                for(i = start + (w-win)*128; i < start + (w-win)*128 + size; i += dim){
+                    idx = 0;
+                    for(j = 0; j < dim; j++)
+                        idx = idx * (aac_cb_info[cb].maxval*2 + 1) + cpe->ch[channel].icoefs[i+j] + aac_cb_info[cb].maxval;
+                    score += bits[idx];
+                }
+                w++;
             }while(w < cpe->ch[channel].ics.num_windows && cpe->ch[channel].ics.group_len[w]);
         }
         if(score < best){
