@@ -55,6 +55,7 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
 {
     int start, sum, maxsfb;
     int ch, g, i;
+    int pulses, poff[4], pamp[4];
 
     //detect M/S
     if(apc->avctx->channels > 1 && cpe->common_window){
@@ -70,6 +71,7 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
     for(ch = 0; ch < apc->avctx->channels; ch++){
         start = 0;
         cpe->ch[ch].gain = SCALE_ONE_POS;
+        cpe->ch[ch].pulse.present = 0;
         for(g = 0; g < apc->num_bands1024; g++){
             sum = 0;
             cpe->ch[ch].sf_idx[0][g] = SCALE_ONE_POS;
@@ -85,6 +87,34 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
                 sum += !!cpe->ch[ch].icoefs[start+i];
             }
             cpe->ch[ch].zeroes[0][g] = !sum;
+            //try finding pulses
+            if(!cpe->ch[ch].pulse.present){
+                pulses = 0;
+                memset(poff,0,sizeof(poff));
+                memset(pamp,0,sizeof(pamp));
+                for(i = 0; i < apc->bands1024[g]; i++){
+                    if(pulses > 4 || (pulses && i > cpe->ch[ch].pulse.offset[pulses-1] - 31)) break;
+                    if(FFABS(cpe->ch[ch].icoefs[start+i]) > 4 && pulses < 4){
+                        poff[pulses] = i;
+                        pamp[pulses] = FFMIN(FFABS(cpe->ch[ch].icoefs[start+i]) - 1, 15);
+                        pulses++;
+                    }
+                }
+                if(pulses){
+                    cpe->ch[ch].pulse.present = 1;
+                    cpe->ch[ch].pulse.start = g;
+                    cpe->ch[ch].pulse.num_pulse_minus1 = pulses - 1;
+                    for(i = 0; i < pulses; i++){
+                        cpe->ch[ch].pulse.amp[i] = pamp[i];
+                        cpe->ch[ch].pulse.offset[i] = i ? poff[i] - poff[i-1] : poff[0];
+
+                        if(cpe->ch[ch].icoefs[start+poff[i]] > 0)
+                            cpe->ch[ch].icoefs[start+poff[i]] -= pamp[i];
+                        else
+                            cpe->ch[ch].icoefs[start+poff[i]] += pamp[i];
+                    }
+                }
+            }
             start += apc->bands1024[g];
         }
         for(maxsfb = apc->num_bands1024; maxsfb > 0 && cpe->ch[ch].zeroes[0][maxsfb-1]; maxsfb--);

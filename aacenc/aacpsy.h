@@ -44,6 +44,17 @@ enum {
 };
 
 /**
+ * Pulse tool
+ */
+typedef struct {
+    int present;
+    int num_pulse_minus1;
+    int start;
+    int offset[4];
+    int amp[4];
+} pulse_struct;
+
+/**
  * Individual Channel Stream
  */
 typedef struct {
@@ -79,6 +90,7 @@ typedef struct {
                                                *   Thus, when used inside CPE elements, both channels must have equal gain.
                                                */
     ics_struct ics;
+    pulse_struct pulse;
     int zeroes[8][64];
     int sf_idx[8][64];
     int cb[8][64];                            ///< Codebooks

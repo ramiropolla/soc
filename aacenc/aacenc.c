@@ -476,6 +476,21 @@ static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, cp
     }
 }
 
+static void encode_pulse_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
+{
+    int i;
+
+    put_bits(&s->pb, 1, cpe->ch[channel].pulse.present);
+    if(!cpe->ch[channel].pulse.present) return;
+
+    put_bits(&s->pb, 2, cpe->ch[channel].pulse.num_pulse_minus1);
+    put_bits(&s->pb, 6, cpe->ch[channel].pulse.start);
+    for(i = 0; i <= cpe->ch[channel].pulse.num_pulse_minus1; i++){
+        put_bits(&s->pb, 5, cpe->ch[channel].pulse.offset[i]);
+        put_bits(&s->pb, 4, cpe->ch[channel].pulse.amp[i]);
+    }
+}
+
 static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
 {
     int start, i, w, w2;
@@ -520,7 +535,7 @@ static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int
     if(!cpe->common_window) put_ics_info(avctx, &cpe->ch[channel].ics);
     encode_section_data(avctx, s, cpe, channel);
     encode_scale_factor_data(avctx, s, cpe, channel);
-    put_bits(&s->pb, 1, 0); //pulse
+    encode_pulse_data(avctx, s, cpe, channel);
     put_bits(&s->pb, 1, 0); //tns
     put_bits(&s->pb, 1, 0); //ssr
     encode_spectral_data(avctx, s, cpe, channel);
