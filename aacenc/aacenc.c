@@ -490,6 +490,43 @@ static void encode_pulse_data(AVCodecContext *avctx, AACEncContext *s, cpe_struc
     }
 }
 
+static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
+{
+    int i, w;
+
+    put_bits(&s->pb, 1, cpe->ch[channel].tns.present);
+    if(!cpe->ch[channel].tns.present) return;
+    if(cpe->ch[channel].ics.window_sequence == EIGHT_SHORT_SEQUENCE){
+        for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
+            put_bits(&s->pb, 1, cpe->ch[channel].tns.n_filt[w]);
+            if(!cpe->ch[channel].tns.n_filt[w]) continue;
+            put_bits(&s->pb, 1, cpe->ch[channel].tns.coef_res[w] - 3);
+            put_bits(&s->pb, 4, cpe->ch[channel].tns.length[w][0]);
+            put_bits(&s->pb, 3, cpe->ch[channel].tns.order[w][0]);
+            if(cpe->ch[channel].tns.order[w][0]){
+                put_bits(&s->pb, 1, cpe->ch[channel].tns.direction[w][0]);
+                put_bits(&s->pb, 1, cpe->ch[channel].tns.coef_compress[w][0]);
+                for(i = 0; i < cpe->ch[channel].tns.order[w][0]; i++)
+                     put_bits(&s->pb, cpe->ch[channel].tns.coef_len[w][0], cpe->ch[channel].tns.coef[w][0][i]);
+            }
+        }
+    }else{
+        put_bits(&s->pb, 1, cpe->ch[channel].tns.n_filt[0]);
+        if(!cpe->ch[channel].tns.n_filt[0]) return;
+        put_bits(&s->pb, 1, cpe->ch[channel].tns.coef_res[0] - 3);
+        for(w = 0; w < cpe->ch[channel].tns.n_filt[0]; w++){
+            put_bits(&s->pb, 6, cpe->ch[channel].tns.length[0][w]);
+            put_bits(&s->pb, 5, cpe->ch[channel].tns.order[0][w]);
+            if(cpe->ch[channel].tns.order[0][w]){
+                put_bits(&s->pb, 1, cpe->ch[channel].tns.direction[0][w]);
+                put_bits(&s->pb, 1, cpe->ch[channel].tns.coef_compress[0][w]);
+                for(i = 0; i < cpe->ch[channel].tns.order[0][w]; i++)
+                     put_bits(&s->pb, cpe->ch[channel].tns.coef_len[0][w], cpe->ch[channel].tns.coef[0][w][i]);
+            }
+        }
+    }
+}
+
 static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
 {
     int start, i, w, w2;
@@ -535,7 +572,7 @@ static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int
     encode_section_data(avctx, s, cpe, channel);
     encode_scale_factor_data(avctx, s, cpe, channel);
     encode_pulse_data(avctx, s, cpe, channel);
-    put_bits(&s->pb, 1, 0); //tns
+    encode_tns_data(avctx, s, cpe, channel);
     put_bits(&s->pb, 1, 0); //ssr
     encode_spectral_data(avctx, s, cpe, channel);
     return 0;

@@ -72,6 +72,23 @@ typedef struct {
     int tns_max_bands;
 } ics_struct;
 
+#define TNS_MAX_ORDER 20
+/**
+ * Temporal Noise Shaping
+ */
+typedef struct {
+    int present;
+    int n_filt[8];
+    int length[8][4];
+    int direction[8][4];
+    int order[8][4];
+    int coef_res[8];
+    int coef_compress[8][4];
+    int coef_len[8][4];
+    const float *tmp2_map[8][4];
+    int coef[8][4][TNS_MAX_ORDER];
+} tns_struct;
+
 /**
  * M/S joint channel coding
  */
@@ -91,6 +108,7 @@ typedef struct {
                                                */
     ics_struct ics;
     pulse_struct pulse;
+    tns_struct tns;
     int zeroes[8][64];
     int sf_idx[8][64];
     int cb[8][64];                            ///< Codebooks
