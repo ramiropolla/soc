@@ -1524,7 +1524,7 @@ static int excluded_channels(AACContext * ac, GetBitContext * gb) {
     for (i = 0; i < 7; i++)
          ac->che_drc.exclude_mask[i] = get_bits1(gb);
 
-    while (get_bits1(gb)) {
+    while (n <= MAX_CHANNELS && num_excl_chan < MAX_CHANNELS - 7 && get_bits1(gb)) {
         ac->che_drc.additional_excluded_chns[n-1]=1;
         for (i = num_excl_chan; i < num_excl_chan+7; i++)
             ac->che_drc.exclude_mask[i] = get_bits1(gb);
