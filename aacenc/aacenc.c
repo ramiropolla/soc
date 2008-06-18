@@ -519,7 +519,7 @@ static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int
     put_bits(&s->pb, 8, cpe->ch[channel].gain); //global gain
     if(!cpe->common_window) put_ics_info(avctx, &cpe->ch[channel].ics);
     encode_section_data(avctx, s, cpe, channel);
-    encode_scale_factor_data(avctx, s, cpe,channel);
+    encode_scale_factor_data(avctx, s, cpe, channel);
     put_bits(&s->pb, 1, 0); //pulse
     put_bits(&s->pb, 1, 0); //tns
     put_bits(&s->pb, 1, 0); //ssr
