@@ -1201,7 +1201,7 @@ static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, sce_str
 }
 #endif /* AAC_SSR */
 
-static void decode_ms_data(AACContext * ac, GetBitContext * gb, cpe_struct * cpe) {
+static void decode_ms_data(AACContext * ac, GetBitContext * gb, che_struct * cpe) {
     ms_struct * ms = &cpe->ms;
     int g, i;
     ms->present = get_bits(gb, 2);
@@ -1380,7 +1380,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     return 0;
 }
 
-static void ms_tool(AACContext * ac, cpe_struct * cpe) {
+static void ms_tool(AACContext * ac, che_struct * cpe) {
     const ms_struct * ms = &cpe->ms;
     const ics_struct * ics = &cpe->ch[0].ics;
     float *ch0 = cpe->ch[0].coeffs;
@@ -1408,7 +1408,7 @@ static void ms_tool(AACContext * ac, cpe_struct * cpe) {
 }
 
 
-static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
+static void intensity_tool(AACContext * ac, che_struct * cpe) {
     const ics_struct * ics = &cpe->ch[1].ics;
     sce_struct * sce1 = &cpe->ch[1];
     float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
@@ -1440,7 +1440,7 @@ static void intensity_tool(AACContext * ac, cpe_struct * cpe) {
  */
 static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     int i;
-    cpe_struct * cpe;
+    che_struct * cpe;
 
     cpe = ac->che[ID_CPE][id];
     cpe->common_window = get_bits1(gb);
