@@ -323,23 +323,6 @@ typedef struct {
 } sce_struct;
 
 /**
- * Channel Pair Element
- */
-typedef struct {
-    int common_window;     ///< Set if channels share a common 'ics_struct' in bitstream
-    ms_struct ms;
-    sce_struct ch[2];
-} cpe_struct;
-
-/**
- * Channel Coupling
- */
-typedef struct {
-    coupling_struct coup;
-    sce_struct ch;
-} cc_struct;
-
-/**
  * Channel Element
  * Generic struct for SCE/CPE/CCE/LFE
  */
@@ -461,40 +444,6 @@ static void ssr_context_init(ssr_context * ctx) {
     }
 }
 #endif /* AAC_SSR */
-
-/**
- * Free a Single Channel Element
- */
-static void sce_freep(sce_struct **s) {
-    if(!*s)
-        return;
-    av_free((*s)->ssr);
-    av_free((*s)->ltp_state);
-    av_freep(s);
-}
-
-/**
- * Free a Channel Pair Element
- */
-static void cpe_freep(cpe_struct **s) {
-    if(!*s)
-        return;
-    av_free((*s)->ch[0].ssr);
-    av_free((*s)->ch[1].ssr);
-    av_free((*s)->ch[0].ltp_state);
-    av_free((*s)->ch[1].ltp_state);
-    av_freep(s);
-}
-
-/**
- * Free a Coupling Channel
- */
-static void cc_freep(cc_struct **s) {
-    if(!*s)
-        return;
-    av_free((*s)->ch.ssr);
-    av_freep(s);
-}
 
 /**
  * Free a Channel Element
