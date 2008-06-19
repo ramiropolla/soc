@@ -160,6 +160,15 @@ enum {
 };
 
 /**
+ * Mixdown channel types
+ */
+enum {
+    MIXDOWN_CENTER = 0,
+    MIXDOWN_FRONT,
+    MIXDOWN_BACK,
+};
+
+/**
  * Program config. This describes how channels are arranged.
  *
  * Either read from stream (ID_PCE) or created based on a default
@@ -392,9 +401,7 @@ typedef struct {
      */
     float* interleaved_output;                        ///< Interim buffer for interleaving PCM samples
     float *output_data[MAX_CHANNELS];                 ///< Points to each elements 'ret' buffer (PCM output)
-    sce_struct *mm_center;                            ///< Center SCE to use for matrix mixdown
-    cpe_struct *mm_front;                             ///< Front  CPE to use for matrix mixdown
-    cpe_struct *mm_back;                              ///< Back   CPE to use for matrix mixdown
+    che_struct *mm[3];                                ///< Center/Front/Back Channel Elements to use for matrix mixdown
     float add_bias;                                   ///< Offset for dsp.float_to_int16
     float sf_scale;                                   ///< Prescale for correct IMDCT and dsp.float_to_int16
     int sf_offset;                                    ///< Offset into pow2sf_tab as appropriate for dsp.float_to_int16
@@ -513,8 +520,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
     program_config_struct * pcs = &ac->pcs;
     int i, channels = 0, ch;
     float a, b;
-    cpe_struct *front = NULL, *back = NULL;
-    sce_struct *center = NULL;
+    che_struct *mixdown[3] = { NULL, NULL, NULL };
 
     static const float mixdowncoeff[4] = {
         /* Matrix mixdown coefficient, Table 4.70 */
@@ -574,19 +580,19 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
             ac->che[ID_CPE][i]->ch[0].mixing_gain = 1.0f;
             ac->che[ID_CPE][i]->ch[1].mixing_gain = 1.0f;
 
-            if(!front && pcs->che_type[ID_CPE][i] == AAC_CHANNEL_FRONT)
-                front = ac->che[ID_CPE][i];
+            if(!mixdown[MIXDOWN_FRONT] && pcs->che_type[ID_CPE][i] == AAC_CHANNEL_FRONT)
+                mixdown[MIXDOWN_FRONT] = ac->che[ID_CPE][i];
 
-            if(!back  && pcs->che_type[ID_CPE][i] == AAC_CHANNEL_BACK)
-                back = ac->che[ID_CPE][i];
+            if(!mixdown[MIXDOWN_BACK]  && pcs->che_type[ID_CPE][i] == AAC_CHANNEL_BACK)
+                mixdown[MIXDOWN_BACK]  = ac->che[ID_CPE][i];
         }
 
         if(pcs->che_type[ID_SCE][i]) {
             ac->output_data[ch++] = ac->che[ID_SCE][i]->ch[0].ret;
             ac->che[ID_SCE][i]->ch[0].mixing_gain = 1.0f;
 
-            if(!center && pcs->che_type[ID_SCE][i] == AAC_CHANNEL_FRONT)
-                center = &ac->che[ID_SCE][i]->ch[0];
+            if(!mixdown[MIXDOWN_CENTER] && pcs->che_type[ID_SCE][i] == AAC_CHANNEL_FRONT)
+                mixdown[MIXDOWN_CENTER] = ac->che[ID_SCE][i];
         }
         if(ac->che[ID_LFE][i]) {
             ac->output_data[ch++] = ac->che[ID_LFE][i]->ch[0].ret;
@@ -595,8 +601,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
     }
     assert(ch == channels);
 
-    ac->mm_front = ac->mm_back = NULL;
-    ac->mm_center = NULL;
+    ac->mm[MIXDOWN_FRONT] = ac->mm[MIXDOWN_BACK] = ac->mm[MIXDOWN_CENTER] = NULL;
 
     /* Check for matrix mixdown to mono or stereo */
 
@@ -613,23 +618,23 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
         }
 
         /* We need 'center + L + R + sL + sR' for matrix mixdown */
-        if(front && center && back) {
+        if(mixdown[MIXDOWN_CENTER] && mixdown[MIXDOWN_FRONT] && mixdown[MIXDOWN_BACK]) {
             a = mixdowncoeff[pcs->mixdown_coeff_index];
 
             if(avctx->request_channels == 2) {
                 b = 1. / (1. + (1. / M_SQRT2) + a * (pcs->pseudo_surround ? 2. : 1.));
-                center->mixing_gain      = b / M_SQRT2;
+                mixdown[MIXDOWN_CENTER]->ch[0].mixing_gain      = b / M_SQRT2;
             } else {
                 b = 1. / (3. + 2. * a);
-                center->mixing_gain      = b;
+                mixdown[MIXDOWN_CENTER]->ch[0].mixing_gain      = b;
             }
-            front->ch[0].mixing_gain = b;
-            front->ch[1].mixing_gain = b;
-            back->ch[0].mixing_gain  = b * a;
-            back->ch[1].mixing_gain  = b * a;
-            ac->mm_front  = front;
-            ac->mm_center = center;
-            ac->mm_back   = back;
+            mixdown[MIXDOWN_FRONT]->ch[0].mixing_gain = b;
+            mixdown[MIXDOWN_FRONT]->ch[1].mixing_gain = b;
+            mixdown[MIXDOWN_BACK ]->ch[0].mixing_gain  = b * a;
+            mixdown[MIXDOWN_BACK ]->ch[1].mixing_gain  = b * a;
+            ac->mm[MIXDOWN_FRONT ] = mixdown[MIXDOWN_FRONT];
+            ac->mm[MIXDOWN_CENTER] = mixdown[MIXDOWN_CENTER];
+            ac->mm[MIXDOWN_BACK  ] = mixdown[MIXDOWN_BACK];
 
             channels = avctx->request_channels;
         } else {
@@ -2080,13 +2085,13 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
         return 0;
     }
 
-    if(ac->mm_center) {
+    if(ac->mm[MIXDOWN_CENTER]) {
         /* Matrix mixdown */
-        l   = ac->mm_front->ch[0].ret;
-        r   = ac->mm_front->ch[1].ret;
-        c   = ac->mm_center->ret;
-        sl  = ac->mm_back->ch[0].ret;
-        sr  = ac->mm_back->ch[1].ret;
+        l   = ac->mm[MIXDOWN_FRONT ]->ch[0].ret;
+        r   = ac->mm[MIXDOWN_FRONT ]->ch[1].ret;
+        c   = ac->mm[MIXDOWN_CENTER]->ch[0].ret;
+        sl  = ac->mm[MIXDOWN_BACK  ]->ch[0].ret;
+        sr  = ac->mm[MIXDOWN_BACK  ]->ch[1].ret;
         out = ac->interleaved_output;
 
         if(avccontext->channels == 2) {
