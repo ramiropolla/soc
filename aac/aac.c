@@ -166,10 +166,7 @@ enum {
  * fixed channel arrangement.
  */
 typedef struct {
-    int sce_type[MAX_TAGID];
-    int cpe_type[MAX_TAGID];
-    int lfe_type[MAX_TAGID];
-    int  cc_type[MAX_TAGID];
+    int che_type[4][MAX_TAGID];   ///< Channel Element type with the first index the first 4 raw_data_block IDs
 
     int mono_mixdown;         ///< The SCE tag to use if user requests mono output,   -1 if not available
     int stereo_mixdown;       ///< The CPE tag to use if user requests stereo output, -1 if not available
@@ -363,10 +360,7 @@ typedef struct {
      * @{
      */
     program_config_struct pcs;
-    sce_struct * che_sce[MAX_TAGID];
-    cpe_struct * che_cpe[MAX_TAGID];
-    sce_struct * che_lfe[MAX_TAGID];
-    cc_struct  * che_cc[MAX_TAGID];
+    che_struct * che[4][MAX_TAGID];
     /** @} */
 
     /**
@@ -539,27 +533,27 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
        current program config struct */
 
     for(i = 0; i < MAX_TAGID; i++) {
-        channels += !!pcs->sce_type[i] + !!pcs->cpe_type[i] * 2 + !!pcs->lfe_type[i];
+        channels += !!pcs->che_type[ID_SCE][i] + !!pcs->che_type[ID_CPE][i] * 2 + !!pcs->che_type[ID_LFE][i];
 
-        if(pcs->sce_type[i]) {
-            if(!ac->che_sce[i]) ac->che_sce[i] = av_mallocz(sizeof(sce_struct));
+        if(pcs->che_type[ID_SCE][i]) {
+            if(!ac->che[ID_SCE][i]) ac->che[ID_SCE][i] = av_mallocz(sizeof(che_struct));
         } else
-            sce_freep(&ac->che_sce[i]);
+            che_freep(&ac->che[ID_SCE][i]);
 
-        if(pcs->cpe_type[i]) {
-            if(!ac->che_cpe[i]) ac->che_cpe[i] = av_mallocz(sizeof(cpe_struct));
+        if(pcs->che_type[ID_CPE][i]) {
+            if(!ac->che[ID_CPE][i]) ac->che[ID_CPE][i] = av_mallocz(sizeof(che_struct));
         } else
-            cpe_freep(&ac->che_cpe[i]);
+            che_freep(&ac->che[ID_CPE][i]);
 
-        if(pcs->lfe_type[i]) {
-            if(!ac->che_lfe[i]) ac->che_lfe[i] = av_mallocz(sizeof(sce_struct));
+        if(pcs->che_type[ID_LFE][i]) {
+            if(!ac->che[ID_LFE][i]) ac->che[ID_LFE][i] = av_mallocz(sizeof(che_struct));
         } else
-            sce_freep(&ac->che_lfe[i]);
+            che_freep(&ac->che[ID_LFE][i]);
 
-        if(pcs->cc_type[i]) {
-            if(!ac->che_cc[i]) ac->che_cc[i] = av_mallocz(sizeof(cc_struct));
+        if(pcs->che_type[ID_CCE][i]) {
+            if(!ac->che[ID_CCE][i]) ac->che[ID_CCE][i] = av_mallocz(sizeof(che_struct));
         } else
-            cc_freep(&ac->che_cc[i]);
+            che_freep(&ac->che[ID_CCE][i]);
     }
 
     /* Setup default 1:1 output mapping.
@@ -573,30 +567,30 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
     ch = 0;
     for(i = 0; i < MAX_TAGID; i++) {
 
-        if(pcs->cpe_type[i]) {
-            ac->output_data[ch++] = ac->che_cpe[i]->ch[0].ret;
-            ac->output_data[ch++] = ac->che_cpe[i]->ch[1].ret;
+        if(pcs->che_type[ID_CPE][i]) {
+            ac->output_data[ch++] = ac->che[ID_CPE][i]->ch[0].ret;
+            ac->output_data[ch++] = ac->che[ID_CPE][i]->ch[1].ret;
 
-            ac->che_cpe[i]->ch[0].mixing_gain = 1.0f;
-            ac->che_cpe[i]->ch[1].mixing_gain = 1.0f;
+            ac->che[ID_CPE][i]->ch[0].mixing_gain = 1.0f;
+            ac->che[ID_CPE][i]->ch[1].mixing_gain = 1.0f;
 
-            if(!front && pcs->cpe_type[i] == AAC_CHANNEL_FRONT)
-                front = ac->che_cpe[i];
+            if(!front && pcs->che_type[ID_CPE][i] == AAC_CHANNEL_FRONT)
+                front = ac->che[ID_CPE][i];
 
-            if(!back  && pcs->cpe_type[i] == AAC_CHANNEL_BACK)
-                back = ac->che_cpe[i];
+            if(!back  && pcs->che_type[ID_CPE][i] == AAC_CHANNEL_BACK)
+                back = ac->che[ID_CPE][i];
         }
 
-        if(pcs->sce_type[i]) {
-            ac->output_data[ch++] = ac->che_sce[i]->ret;
-            ac->che_sce[i]->mixing_gain = 1.0f;
+        if(pcs->che_type[ID_SCE][i]) {
+            ac->output_data[ch++] = ac->che[ID_SCE][i]->ch[0].ret;
+            ac->che[ID_SCE][i]->ch[0].mixing_gain = 1.0f;
 
-            if(!center && pcs->sce_type[i] == AAC_CHANNEL_FRONT)
-                center = ac->che_sce[i];
+            if(!center && pcs->che_type[ID_SCE][i] == AAC_CHANNEL_FRONT)
+                center = &ac->che[ID_SCE][i]->ch[0];
         }
-        if(ac->che_lfe[i]) {
-            ac->output_data[ch++] = ac->che_lfe[i]->ret;
-            ac->che_lfe[i]->mixing_gain = 1.0f;
+        if(ac->che[ID_LFE][i]) {
+            ac->output_data[ch++] = ac->che[ID_LFE][i]->ch[0].ret;
+            ac->che[ID_LFE][i]->ch[0].mixing_gain = 1.0f;
         }
     }
     assert(ch == channels);
@@ -700,16 +694,16 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
         pcs.pseudo_surround     = get_bits1(gb);
     }
 
-    program_config_element_parse_tags(gb, pcs.cpe_type, pcs.sce_type, num_front, AAC_CHANNEL_FRONT);
-    program_config_element_parse_tags(gb, pcs.cpe_type, pcs.sce_type, num_side,  AAC_CHANNEL_SIDE );
-    program_config_element_parse_tags(gb, pcs.cpe_type, pcs.sce_type, num_back,  AAC_CHANNEL_BACK );
-    program_config_element_parse_tags(gb, NULL,         pcs.lfe_type, num_lfe,   AAC_CHANNEL_LFE  );
+    program_config_element_parse_tags(gb, pcs.che_type[ID_CPE], pcs.che_type[ID_SCE], num_front, AAC_CHANNEL_FRONT);
+    program_config_element_parse_tags(gb, pcs.che_type[ID_CPE], pcs.che_type[ID_SCE], num_side,  AAC_CHANNEL_SIDE );
+    program_config_element_parse_tags(gb, pcs.che_type[ID_CPE], pcs.che_type[ID_SCE], num_back,  AAC_CHANNEL_BACK );
+    program_config_element_parse_tags(gb, NULL,                 pcs.che_type[ID_LFE], num_lfe,   AAC_CHANNEL_LFE  );
 
     skip_bits_long(gb, 4 * num_assoc_data);
 
     for (i = 0; i < num_cc; i++) {
         skip_bits1(gb);    // cc_ind_sw
-        pcs.cc_type[get_bits(gb, 4)] = AAC_CHANNEL_CC;
+        pcs.che_type[ID_CCE][get_bits(gb, 4)] = AAC_CHANNEL_CC;
     }
 
     align_get_bits(gb);
@@ -751,18 +745,18 @@ static int program_config_element_default(AACContext *ac, int channels)
      */
 
     if(channels != 2)
-        pcs.sce_type[0] = AAC_CHANNEL_FRONT; // Front Center (or Mono)
+        pcs.che_type[ID_SCE][0] = AAC_CHANNEL_FRONT; // Front Center (or Mono)
     if(channels > 1)
-        pcs.cpe_type[0] = AAC_CHANNEL_FRONT; // L + R (or Stereo)
+        pcs.che_type[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or Stereo)
     if(channels == 4)
-        pcs.sce_type[1] = AAC_CHANNEL_BACK;  // Back Center
+        pcs.che_type[ID_SCE][1] = AAC_CHANNEL_BACK;  // Back Center
     if(channels > 4)
-        pcs.cpe_type[(channels == 7) + 1]
+        pcs.che_type[ID_CPE][(channels == 7) + 1]
                         = AAC_CHANNEL_BACK;  // Back Stereo
     if(channels > 5)
-        pcs.lfe_type[0] = AAC_CHANNEL_LFE;   // LFE
+        pcs.che_type[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
     if(channels == 7)
-        pcs.cpe_type[1] = AAC_CHANNEL_FRONT; // Outer Front Left + Outer Front Right
+        pcs.che_type[ID_CPE][1] = AAC_CHANNEL_FRONT; // Outer Front Left + Outer Front Right
 
     return output_configure(ac, &pcs);
 }
@@ -1443,7 +1437,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     int i;
     cpe_struct * cpe;
 
-    cpe = ac->che_cpe[id];
+    cpe = ac->che[ID_CPE][id];
     cpe->common_window = get_bits1(gb);
     if (cpe->common_window) {
         if (decode_ics_info(ac, gb, 1, &cpe->ch[0].ics))
@@ -1477,10 +1471,10 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
     sce_struct * sce;
     coupling_struct * coup;
 
-    sce = &ac->che_cc[id]->ch;
+    sce = &ac->che[ID_CCE][id]->ch[0];
     sce->mixing_gain = 1.0;
 
-    coup = &ac->che_cc[id]->coup;
+    coup = &ac->che[ID_CCE][id]->coup;
 
     coup->ind_sw = get_bits1(gb);
     //if (coup->ind_sw)
@@ -1962,11 +1956,11 @@ static void ssr_trans(AACContext * ac, sce_struct * sce) {
 }
 #endif /* AAC_SSR */
 
-static void coupling_dependent_trans(AACContext * ac, cc_struct * cc, sce_struct * sce, int index) {
-    ics_struct * ics = &cc->ch.ics;
+static void coupling_dependent_trans(AACContext * ac, che_struct * cc, sce_struct * sce, int index) {
+    ics_struct * ics = &cc->ch[0].ics;
     const uint16_t * offsets = ics->swb_offset;
     float * dest = sce->coeffs;
-    float * src = cc->ch.coeffs;
+    float * src = cc->ch[0].coeffs;
     int g, i, group, k;
     if(ac->m4ac.object_type == AOT_AAC_LTP) {
         av_log(ac->avccontext, AV_LOG_ERROR,
@@ -1975,7 +1969,7 @@ static void coupling_dependent_trans(AACContext * ac, cc_struct * cc, sce_struct
     }
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
-            if (cc->ch.cb[g][i] != ZERO_HCB) {
+            if (cc->ch[0].cb[g][i] != ZERO_HCB) {
                 float gain = cc->coup.gain[index][g][i] * sce->mixing_gain;
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
@@ -1989,31 +1983,31 @@ static void coupling_dependent_trans(AACContext * ac, cc_struct * cc, sce_struct
     }
 }
 
-static void coupling_independent_trans(AACContext * ac, cc_struct * cc, sce_struct * sce, int index) {
+static void coupling_independent_trans(AACContext * ac, che_struct * cc, sce_struct * sce, int index) {
     int i;
     float gain = cc->coup.gain[index][0][0] * sce->mixing_gain;
     for (i = 0; i < 1024; i++)
-        sce->ret[i] += gain * (cc->ch.ret[i] - ac->add_bias);
+        sce->ret[i] += gain * (cc->ch[0].ret[i] - ac->add_bias);
 }
 
-static void transform_coupling_tool(AACContext * ac, cc_struct * cc,
-        void (*cc_trans)(AACContext * ac, cc_struct * cc, sce_struct * sce, int index))
+static void transform_coupling_tool(AACContext * ac, che_struct * cc,
+        void (*cc_trans)(AACContext * ac, che_struct * cc, sce_struct * sce, int index))
 {
     int c;
     int index = 0;
     coupling_struct * coup = &cc->coup;
     for (c = 0; c <= coup->num_coupled; c++) {
-        if (     !coup->is_cpe[c] && ac->che_sce[coup->tag_select[c]]) {
-            cc_trans(ac, cc, ac->che_sce[coup->tag_select[c]], index++);
-        } else if(coup->is_cpe[c] && ac->che_cpe[coup->tag_select[c]]) {
+        if (     !coup->is_cpe[c] && ac->che[ID_SCE][coup->tag_select[c]]) {
+            cc_trans(ac, cc, &ac->che[ID_SCE][coup->tag_select[c]]->ch[0], index++);
+        } else if(coup->is_cpe[c] && ac->che[ID_CPE][coup->tag_select[c]]) {
             if (!coup->l[c] && !coup->r[c]) {
-                cc_trans(ac, cc, &ac->che_cpe[coup->tag_select[c]]->ch[0], index);
-                cc_trans(ac, cc, &ac->che_cpe[coup->tag_select[c]]->ch[1], index++);
+                cc_trans(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], index);
+                cc_trans(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], index++);
             }
             if (coup->l[c])
-                cc_trans(ac, cc, &ac->che_cpe[coup->tag_select[c]]->ch[0], index++);
+                cc_trans(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], index++);
             if (coup->r[c])
-                cc_trans(ac, cc, &ac->che_cpe[coup->tag_select[c]]->ch[1], index++);
+                cc_trans(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], index++);
         } else {
             av_log(ac->avccontext, AV_LOG_ERROR,
                    "Coupling target %sE[%d] not available\n",
@@ -2026,7 +2020,7 @@ static void transform_coupling_tool(AACContext * ac, cc_struct * cc,
 static void coupling_tool(AACContext * ac, int independent, int domain) {
     int i;
     for (i = 0; i < MAX_TAGID; i++) {
-        cc_struct * cc = ac->che_cc[i];
+        che_struct * cc = ac->che[ID_CCE][i];
         if (cc) {
             if (cc->coup.ind_sw && independent) {
                 transform_coupling_tool(ac, cc, coupling_independent_trans);
@@ -2040,16 +2034,16 @@ static void coupling_tool(AACContext * ac, int independent, int domain) {
 static void transform_sce_tool(AACContext * ac, void (*sce_trans)(AACContext * ac, sce_struct * sce)) {
     int i;
     for (i = 0; i < MAX_TAGID; i++) {
-        if (ac->che_sce[i])
-            sce_trans(ac, ac->che_sce[i]);
-        if (ac->che_cpe[i]) {
-            sce_trans(ac, &ac->che_cpe[i]->ch[0]);
-            sce_trans(ac, &ac->che_cpe[i]->ch[1]);
+        if (ac->che[ID_SCE][i])
+            sce_trans(ac, &ac->che[ID_SCE][i]->ch[0]);
+        if (ac->che[ID_CPE][i]) {
+            sce_trans(ac, &ac->che[ID_CPE][i]->ch[0]);
+            sce_trans(ac, &ac->che[ID_CPE][i]->ch[1]);
         }
-        if (ac->che_lfe[i])
-            sce_trans(ac, ac->che_lfe[i]);
-        if (ac->che_cc[i])
-            sce_trans(ac, &ac->che_cc[i]->ch);
+        if (ac->che[ID_LFE][i])
+            sce_trans(ac, &ac->che[ID_LFE][i]->ch[0]);
+        if (ac->che[ID_CCE][i])
+            sce_trans(ac, &ac->che[ID_CCE][i]->ch[0]);
     }
 }
 
@@ -2144,23 +2138,23 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         tag = get_bits(&gb, 4);
         switch (id) {
         case ID_SCE:
-            if(!ac->che_sce[tag]) {
-                if(tag == 1 && ac->che_lfe[0]) {
+            if(!ac->che[ID_SCE][tag]) {
+                if(tag == 1 && ac->che[ID_LFE][0]) {
                     /* Some streams incorrectly code 5.1 audio as SCE[0] CPE[0] CPE[1] SCE[1]
                        instead of SCE[0] CPE[0] CPE[0] LFE[0].
                        If we seem to have encountered such a stream,
                        transfer the LFE[0] element to SCE[1] */
-                    ac->che_sce[tag] = ac->che_lfe[0];
-                    ac->che_lfe[0] = NULL;
+                    ac->che[ID_SCE][tag] = ac->che[ID_LFE][0];
+                    ac->che[ID_LFE][0] = NULL;
                 } else {
                     err = 1;
                     break;
                 }
             }
-            err = decode_ics(ac, &gb, 0, 0, ac->che_sce[tag]);
+            err = decode_ics(ac, &gb, 0, 0, &ac->che[ID_SCE][tag]->ch[0]);
             break;
         case ID_CPE:
-            err = !ac->che_cpe[tag] ? -1 : decode_cpe(ac, &gb, tag);
+            err = !ac->che[ID_CPE][tag] ? -1 : decode_cpe(ac, &gb, tag);
             break;
         case ID_FIL:
             if (tag == 15) tag += get_bits(&gb, 8) - 1;
@@ -2175,10 +2169,10 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             err = data_stream_element(ac, &gb, tag);
             break;
         case ID_CCE:
-            err = !ac->che_cc[tag] ? -1 : decode_cce(ac, &gb, tag);
+            err = !ac->che[ID_CCE][tag] ? -1 : decode_cce(ac, &gb, tag);
             break;
         case ID_LFE:
-            err = ac->che_lfe[tag] && !decode_ics(ac, &gb, 0, 0, ac->che_lfe[tag]) ? 0 : -1;
+            err = ac->che[ID_LFE][tag] && !decode_ics(ac, &gb, 0, 0, &ac->che[ID_LFE][tag]->ch[0]) ? 0 : -1;
             break;
         default:
             err = -1; /* should not happen, but keeps compiler happy */
@@ -2199,10 +2193,10 @@ static int aac_decode_close(AVCodecContext * avccontext) {
     int i;
 
     for (i = 0; i < MAX_TAGID; i++) {
-        sce_freep(&ac->che_sce[i]);
-        cpe_freep(&ac->che_cpe[i]);
-        sce_freep(&ac->che_lfe[i]);
-        cc_freep(&ac->che_cc[i]);
+        che_freep(&ac->che[ID_SCE][i]);
+        che_freep(&ac->che[ID_CPE][i]);
+        che_freep(&ac->che[ID_LFE][i]);
+        che_freep(&ac->che[ID_CCE][i]);
     }
 
     for (i = 0; i < 11; i++) {
