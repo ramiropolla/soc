@@ -493,7 +493,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
         for(j = 0; j < 4; j++) {
             if(pcs->che_type[j][i] && !ac->che[j][i]) {
                 ac->che[j][i] = av_mallocz(sizeof(che_struct));
-        } else
+            } else
                 che_freep(&ac->che[j][i]);
         }
     }
@@ -519,7 +519,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
                         mixdown[MIXDOWN_FRONT] = ac->che[j][i];
                     if(!mixdown[MIXDOWN_BACK ] && pcs->che_type[j][i] == AAC_CHANNEL_BACK)
                         mixdown[MIXDOWN_BACK ] = ac->che[j][i];
-        }
+                }
                 if(j == ID_SCE && !mixdown[MIXDOWN_CENTER] && pcs->che_type[j][i] == AAC_CHANNEL_FRONT)
                     mixdown[MIXDOWN_CENTER] = ac->che[j][i];
             }
@@ -681,7 +681,7 @@ static int program_config_element_default(AACContext *ac, int channels)
         pcs.che_type[ID_SCE][1] = AAC_CHANNEL_BACK;  // Back Center
     if(channels > 4)
         pcs.che_type[ID_CPE][(channels == 7) + 1]
-                        = AAC_CHANNEL_BACK;  // Back Stereo
+                                = AAC_CHANNEL_BACK;  // Back Stereo
     if(channels > 5)
         pcs.che_type[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
     if(channels == 7)
