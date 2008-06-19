@@ -334,6 +334,20 @@ typedef struct {
 } cc_struct;
 
 /**
+ * Channel Element
+ * Generic struct for SCE/CPE/CCE/LFE
+ */
+typedef struct {
+    // CPE specific
+    int common_window;     ///< Set if channels share a common 'ics_struct' in bitstream
+    ms_struct ms;
+    // Shared
+    sce_struct ch[2];
+    // CCE specific
+    coupling_struct coup;
+} che_struct;
+
+/**
  * Main AAC context
  */
 typedef struct {
@@ -478,6 +492,19 @@ static void cc_freep(cc_struct **s) {
     if(!*s)
         return;
     av_free((*s)->ch.ssr);
+    av_freep(s);
+}
+
+/**
+ * Free a Channel Element
+ */
+static void che_freep(che_struct **s) {
+    if(!*s)
+        return;
+    av_free((*s)->ch[0].ssr);
+    av_free((*s)->ch[1].ssr);
+    av_free((*s)->ch[0].ltp_state);
+    av_free((*s)->ch[1].ltp_state);
     av_freep(s);
 }
 
