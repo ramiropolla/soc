@@ -160,7 +160,7 @@ enum {
 };
 
 /**
- * Mixdown channel types
+ * Mix-down channel types
  */
 enum {
     MIXDOWN_CENTER = 0,
@@ -169,13 +169,13 @@ enum {
 };
 
 /**
- * Program config. This describes how channels are arranged.
+ * Program configuration - describes how channels are arranged
  *
  * Either read from stream (ID_PCE) or created based on a default
  * fixed channel arrangement.
  */
 typedef struct {
-    int che_type[4][MAX_TAGID];   ///< Channel Element type with the first index the first 4 raw_data_block IDs
+    int che_type[4][MAX_TAGID];   ///< Channel element type with the first index as the first 4 raw_data_block IDs
 
     int mono_mixdown;         ///< The SCE tag to use if user requests mono output,   -1 if not available
     int stereo_mixdown;       ///< The CPE tag to use if user requests stereo output, -1 if not available
@@ -238,9 +238,9 @@ typedef struct {
 } ms_struct;
 
 /**
- * Dyanmic Range Control
+ * Dynamic Range Control
  *
- * DRC is decoded from bitstream but not further processed.
+ * DRC is decoded from the bitstream but not further processed
  */
 typedef struct {
     int pce_instance_tag;
@@ -291,7 +291,7 @@ typedef struct {
  * Coupling parameters
  */
 typedef struct {
-    int ind_sw;            ///< Set if independant coupling (i.e. after IMDCT)
+    int ind_sw;            ///< Set if independent coupling (i.e. after IMDCT)
     int domain;            ///< Controls if coupling is performed before (0) or after (1) the TNS decoding of the target channels
     int num_coupled;       ///< Number of target elements
     int is_cpe[9];         ///< Set if target is an CPE (otherwise it's an SCE)
@@ -323,7 +323,7 @@ typedef struct {
 } sce_struct;
 
 /**
- * Channel Element
+ * Channel element
  * Generic struct for SCE/CPE/CCE/LFE
  */
 typedef struct {
@@ -344,7 +344,7 @@ typedef struct {
 
     MPEG4AudioConfig m4ac;
 
-    int is_saved;                 ///< Set if elements have stored overlap from previous frame.
+    int is_saved;                 ///< Set if elements have stored overlap from previous frame
     drc_struct che_drc;
 
     /**
@@ -356,7 +356,7 @@ typedef struct {
     /** @} */
 
     /**
-     * @defgroup temporary Aligned temporary buffers (We do not want to have these on stack)
+     * @defgroup temporary Aligned temporary buffers (we do not want to have these on stack)
      * @{
      */
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
@@ -364,7 +364,7 @@ typedef struct {
     /** @} */
 
     /**
-     * @defgroup tables   Computed / setup during init
+     * @defgroup tables   Computed / setup during initialization
      * @{
      */
     VLC mainvlc;
@@ -379,14 +379,14 @@ typedef struct {
     /** @} */
 
     /**
-     * @defgroup output   Members used for output interleaving and downmixing
+     * @defgroup output   Members used for output interleaving and down-mixing
      * @{
      */
     float* interleaved_output;                        ///< Interim buffer for interleaving PCM samples
-    float *output_data[MAX_CHANNELS];                 ///< Points to each elements 'ret' buffer (PCM output)
-    che_struct *mm[3];                                ///< Center/Front/Back Channel Elements to use for matrix mixdown
+    float *output_data[MAX_CHANNELS];                 ///< Points to each element's 'ret' buffer (PCM output)
+    che_struct *mm[3];                                ///< Center/Front/Back channel elements to use for matrix mix-down
     float add_bias;                                   ///< Offset for dsp.float_to_int16
-    float sf_scale;                                   ///< Prescale for correct IMDCT and dsp.float_to_int16
+    float sf_scale;                                   ///< Pre-scale for correct IMDCT and dsp.float_to_int16
     int sf_offset;                                    ///< Offset into pow2sf_tab as appropriate for dsp.float_to_int16
     /** @} */
 
@@ -411,7 +411,7 @@ static void vector_fmul_add_add_add(AACContext * ac, float * dst, const float * 
 
 // aux
 /**
- * Generate a sine Window.
+ * Generate a sine window
  */
 static void sine_window_init(float *window, int n) {
     const float alpha = M_PI / n;
@@ -460,9 +460,9 @@ static void che_freep(che_struct **s) {
 
 /**
  * Configure output channel order and optional mixing based on the current
- * program config element and user requested channels.
+ * program configuration element and user requested channels
  *
- * \param nwepcs New program config struct. We only do somthing if it differs from the current one.
+ * \param newpcs New program configuration struct - we only do something if it differs from the current one
  */
 static int output_configure(AACContext *ac, program_config_struct *newpcs) {
     AVCodecContext *avctx = ac->avccontext;
@@ -472,7 +472,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
     che_struct *mixdown[3] = { NULL, NULL, NULL };
 
     static const float mixdowncoeff[4] = {
-        /* Matrix mixdown coefficient, Table 4.70 */
+        /* Matrix mix-down coefficient, Table 4.70 */
         1. / M_SQRT2,
         1. / 2.,
         1. / (2 * M_SQRT2),
@@ -485,7 +485,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
     *pcs = *newpcs;
 
     /* Allocate or free elements depending on if they are in the
-       current program config struct */
+       current program configuration struct */
 
     for(i = 0; i < MAX_TAGID; i++) {
         channels += !!pcs->che_type[ID_SCE][i] + !!pcs->che_type[ID_CPE][i] * 2 + !!pcs->che_type[ID_LFE][i];
@@ -498,12 +498,12 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
         }
     }
 
-    /* Setup default 1:1 output mapping.
+    /* Set up default 1:1 output mapping
      *
      * For a 5.1 stream the output order will be:
      *    [ Front Left ] [ Front Right ] [ Center ] [ LFE ] [ Surround Left ] [ Surround Right ]
      *
-     * While at it: locate front, center and back for matrix mixdown further down
+     * While at it: locate front, center and back for matrix mix-down further down
      */
 
     ch = 0;
@@ -529,7 +529,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
 
     ac->mm[MIXDOWN_FRONT] = ac->mm[MIXDOWN_BACK] = ac->mm[MIXDOWN_CENTER] = NULL;
 
-    /* Check for matrix mixdown to mono or stereo */
+    /* Check for matrix mix-down to mono or stereo */
 
     if(avctx->request_channels && avctx->request_channels <= 2 &&
        avctx->request_channels != channels) {
@@ -539,11 +539,11 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
             /* Add support for this as soon as we get a sample so we can figure out
                exactly how this is supposed to work */
             av_log(avctx, AV_LOG_ERROR,
-                   "Mixdown using pre-mixed elements is not supported, please file a bug. "
-                   "Reverting to matrix mixdown\n");
+                   "Mix-down using pre-mixed elements is not supported, please file a bug. "
+                   "Reverting to matrix mix-down\n");
         }
 
-        /* We need 'center + L + R + sL + sR' for matrix mixdown */
+        /* We need 'center + L + R + sL + sR' for matrix mix-down */
         if(mixdown[MIXDOWN_CENTER] && mixdown[MIXDOWN_FRONT] && mixdown[MIXDOWN_BACK]) {
             a = mixdowncoeff[pcs->mixdown_coeff_index];
 
@@ -574,7 +574,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
 
 
 /**
- * Decode an array of 4 bit tag IDs, optionally interleaved with a stereo/mono switching bit.
+ * Decode an array of 4 bit tag IDs, optionally interleaved with a stereo/mono switching bit
  *
  * @param cpe_map Stereo (Channel Pair Element) map, NULL if stereo bit is not present
  * @param sce_map Mono (Single Channel Element) map
@@ -591,7 +591,7 @@ static void program_config_element_parse_tags(GetBitContext * gb, int *cpe_map,
 
 
 /**
- * Parse program config element
+ * Parse program configuration element
  * reference: Table 4.2
  */
 static int program_config_element(AACContext * ac, GetBitContext * gb) {
@@ -652,7 +652,7 @@ static int program_config_element_default(AACContext *ac, int channels)
 
     memset(&pcs, 0, sizeof(program_config_struct));
 
-    /* Premixed downmix outputs are not available */
+    /* Pre-mixed down-mix outputs are not available */
     pcs.mono_mixdown   = -1;
     pcs.stereo_mixdown = -1;
 
@@ -869,7 +869,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     if (ac->audioObjectType == AOT_AAC_SSR) {
         ff_mdct_init(&ac->mdct, 9, 1);
         ff_mdct_init(&ac->mdct_small, 6, 1);
-        // windows init
+        // window initialization
         ff_kbd_window_init(kbd_long_1024, 4.0, 256);
         ff_kbd_window_init(kbd_short_128, 6.0, 32);
         sine_window_init(sine_long_1024, 512);
@@ -879,7 +879,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 #endif /* AAC_SSR */
         ff_mdct_init(&ac->mdct, 11, 1);
         ff_mdct_init(&ac->mdct_small, 8, 1);
-        // windows init
+        // window initialization
         ff_kbd_window_init(kbd_long_1024, 4.0, 1024);
         ff_kbd_window_init(kbd_short_128, 6.0, 128);
         sine_window_init(sine_long_1024, 2048);
@@ -1011,7 +1011,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, ics_struct *
             int sect_len_incr = 1;
             int sect_cb = get_bits(gb, 4);
             if (sect_cb == 12) {
-                av_log(ac->avccontext, AV_LOG_ERROR, "Invalid code book\n");
+                av_log(ac->avccontext, AV_LOG_ERROR, "Invalid codebook\n");
                 return -1;
             }
             while ((sect_len_incr = get_bits(gb, bits)) == (1 << bits)-1)
@@ -1181,8 +1181,8 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                             for (j = 0; j < 2; j++) {
                                 if (ptr[j] == 16) {
                                     int n = 4;
-                                    /* Total length of escape_sequence must be < 22 bits according to spec. */
-                                    /* ie. max is 11111111110xxxxxxxxxx */
+                                    /* Total length of escape_sequence must be < 22 bits according to spec */
+                                    /* i.e. max is 11111111110xxxxxxxxxx */
                                     while (get_bits1(gb) && n < 15) n++;
                                     if(n == 15) {
                                         av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data, ESC overflow\n");
@@ -1279,7 +1279,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     if (!scale_flag) {
         if ((pulse.present = get_bits1(gb))) {
             if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
-                av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in EIGHT SHORT SEQUENCE\n");
+                av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in eight short sequence\n");
                 return -1;
             }
             decode_pulse_data(ac, gb, &pulse);
@@ -2007,7 +2007,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
     }
 
     if(ac->mm[MIXDOWN_CENTER]) {
-        /* Matrix mixdown */
+        /* Matrix mix-down */
         l   = ac->mm[MIXDOWN_FRONT ]->ch[0].ret;
         r   = ac->mm[MIXDOWN_FRONT ]->ch[1].ret;
         c   = ac->mm[MIXDOWN_CENTER]->ch[0].ret;
