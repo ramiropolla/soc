@@ -69,7 +69,7 @@ DECLARE_ALIGNED_16(static float, sine_short_128[128]);
  * Audio Object Types
  */
 enum {
-    AOT_NULL = 0x0,
+    AOT_NULL             = 0x0,
     AOT_AAC_MAIN,
     AOT_AAC_LC,
     AOT_AAC_SSR,
@@ -79,13 +79,13 @@ enum {
     AOT_TWINVQ,
     AOT_CELP,
     AOT_HVXC,
-    AOT_TTSI = 12,
+    AOT_TTSI             = 12,
     AOT_MAINSYNTH,
     AOT_WAVESYNTH,
     AOT_MIDI,
     AOT_SAFX,
     AOT_ER_AAC_LC,
-    AOT_ER_AAC_LTP = 19,
+    AOT_ER_AAC_LTP       = 19,
     AOT_ER_AAC_SCALABLE,
     AOT_ER_TWINVQ,
     AOT_ER_BSAC,
@@ -1568,8 +1568,8 @@ static void tns_filter_tool(AACContext * ac, int decode, sce_struct * sce, float
         bottom = ics->num_swb;
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
             top = bottom;
-            bottom = FFMAX(0, top - tns->length[w][filt]);
-            order = FFMIN(tns->order[w][filt], TNS_MAX_ORDER);
+            bottom = FFMAX(                  0, top - tns->length[w][filt]);
+            order  = FFMIN(tns->order[w][filt], TNS_MAX_ORDER);
             if (order == 0)
                 continue;
 
@@ -1584,7 +1584,7 @@ static void tns_filter_tool(AACContext * ac, int decode, sce_struct * sce, float
             }
 
             start = ics->swb_offset[FFMIN(bottom, mmm)];
-            end = ics->swb_offset[FFMIN(top, mmm)];
+            end   = ics->swb_offset[FFMIN(   top, mmm)];
             if ((size = end - start) <= 0)
                 continue;
             if (tns->direction[w][filt]) {
@@ -1814,16 +1814,16 @@ static void ssr_gain_tool(AACContext * ac, sce_struct * sce, int band, float * i
     } else {
         memcpy(preret, saved, 112 * sizeof(float));
         preret += 112; saved += 112;
-        vector_add_dst(ac, preret, in, saved, 32);
+        vector_add_dst(ac, preret       , in            , saved    , 32);
         vector_add_dst(ac, preret + 1*32, in + 0*64 + 32, in + 1*64, 32);
         vector_add_dst(ac, preret + 2*32, in + 1*64 + 32, in + 2*64, 32);
         vector_add_dst(ac, preret + 3*32, in + 2*64 + 32, in + 3*64, 32);
         vector_add_dst(ac, preret + 4*32, in + 3*64 + 32, in + 4*64, 16);
 
-        vector_add_dst(ac, saved, in + 3*64 + 32 + 16, in + 4*64 + 16, 16);
-        vector_add_dst(ac, saved + 16, in + 4*64 + 32, in + 5*64, 32);
-        vector_add_dst(ac, saved + 1*32 + 16, in + 5*64 + 32, in + 6*64, 32);
-        vector_add_dst(ac, saved + 2*32 + 16, in + 6*64 + 32, in + 7*64, 32);
+        vector_add_dst(ac, saved            , in + 3*64 + 32 + 16, in + 4*64 + 16, 16);
+        vector_add_dst(ac, saved        + 16, in + 4*64 + 32     , in + 5*64     , 32);
+        vector_add_dst(ac, saved + 1*32 + 16, in + 5*64 + 32     , in + 6*64     , 32);
+        vector_add_dst(ac, saved + 2*32 + 16, in + 6*64 + 32     , in + 7*64     , 32);
         memcpy(saved + 3*32 + 16, in + 7*64 + 32, 32 * sizeof(float));
         memset(saved + 144, 0, 112 * sizeof(float));
     }
