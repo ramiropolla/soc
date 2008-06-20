@@ -918,7 +918,7 @@ static void decode_ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, lt
         assert(0);
     } else {
         ltp->lag = get_bits(gb, 11);
-        ltp->coef = ltp_coef[get_bits(gb, 3)] * (-2 * ac->sf_scale);
+        ltp->coef = ltp_coef[get_bits(gb, 3)] * ac->sf_scale;
         for (sfb = 0; sfb < FFMIN(max_sfb, MAX_LTP_LONG_SFB); sfb++)
             ltp->used[sfb] = get_bits1(gb);
     }
