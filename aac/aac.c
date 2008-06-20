@@ -206,7 +206,6 @@ typedef struct {
     int window_shape;             ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
     int window_shape_prev;
     int num_window_groups;
-    uint8_t grouping;
     uint8_t group_len[8];
     ltp_struct ltp;
     ltp_struct ltp2;
@@ -930,6 +929,7 @@ static void decode_ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, lt
  * reference: table 4.6
  */
 static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_struct * ics) {
+    uint8_t grouping;
     if (get_bits1(gb)) {
         av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set\n");
         return -1;
@@ -944,9 +944,9 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
     if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
         int i;
         ics->max_sfb = get_bits(gb, 4);
-        ics->grouping = get_bits(gb, 7);
+        grouping = get_bits(gb, 7);
         for (i = 0; i < 7; i++) {
-            if (ics->grouping & (1<<(6-i))) {
+            if (grouping & (1<<(6-i))) {
                 ics->group_len[ics->num_window_groups-1]++;
             } else {
                 ics->num_window_groups++;
