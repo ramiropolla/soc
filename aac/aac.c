@@ -1079,7 +1079,7 @@ static void decode_tns_data(AACContext * ac, GetBitContext * gb, const ics_struc
                 tns->direction[w][filt] = get_bits1(gb);
                 coef_compress = get_bits1(gb);
                 coef_len = coef_res - coef_compress;
-                tns->tmp2_map[w][filt] = tns_tmp2_map[(coef_compress << 1) + (coef_res - 3)];
+                tns->tmp2_map[w][filt] = tns_tmp2_map[2*coef_compress + coef_res - 3];
                 for (i = 0; i < tns->order[w][filt]; i++)
                     tns->coef[w][filt][i] = get_bits(gb, coef_len);
             }
