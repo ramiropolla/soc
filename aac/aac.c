@@ -1037,7 +1037,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
                 ics->intensity_present = 1;
                 index = 2;
             }else
-                index = cb[g][i] == NOISE_HCB ? 1 : 0;
+                index = cb[g][i] == NOISE_HCB;
             if (cb[g][i] == NOISE_HCB && noise_flag-- > 0)
                 offset[index] += get_bits(gb, 9) - 256;
             else
