@@ -242,14 +242,14 @@ typedef struct {
  */
 typedef struct {
     int pce_instance_tag;
-    int drc_tag_reserved_bits;
+    int tag_reserved_bits;
     int dyn_rng_sgn[17];
     int dyn_rng_ctl[17];
     int exclude_mask[MAX_CHANNELS];
     int additional_excluded_chns[MAX_CHANNELS];
-    int drc_band_incr;
-    int drc_interpolation_scheme;
-    int drc_band_top[17];
+    int band_incr;
+    int interpolation_scheme;
+    int band_top[17];
     int prog_ref_level;
     int prog_ref_level_reserved_bits;
 } drc_struct;
@@ -1493,7 +1493,7 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
     /* pce_tag_present? */
     if(get_bits1(gb)) {
         ac->che_drc.pce_instance_tag = get_bits(gb, 4);
-        ac->che_drc.drc_tag_reserved_bits = get_bits(gb, 4);
+        ac->che_drc.tag_reserved_bits = get_bits(gb, 4);
         n++;
     }
 
@@ -1504,12 +1504,12 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
 
     /* drc_bands_present? */
     if (get_bits1(gb)) {
-        ac->che_drc.drc_band_incr = get_bits(gb, 4);
-        ac->che_drc.drc_interpolation_scheme = get_bits(gb, 4);
+        ac->che_drc.band_incr = get_bits(gb, 4);
+        ac->che_drc.interpolation_scheme = get_bits(gb, 4);
         n++;
-        drc_num_bands += ac->che_drc.drc_band_incr;
+        drc_num_bands += ac->che_drc.band_incr;
         for (i = 0; i < drc_num_bands; i++) {
-            ac->che_drc.drc_band_top[i] = get_bits(gb, 8);
+            ac->che_drc.band_top[i] = get_bits(gb, 8);
             n++;
         }
     }
