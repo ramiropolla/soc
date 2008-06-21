@@ -185,7 +185,7 @@ typedef struct {
     int mixdown_coeff_index;  ///< 0-3
     int pseudo_surround;      ///< Mix surround channels out of phase
 
-} program_config_struct;
+} ProgramConfig;
 
 
 /**
@@ -197,7 +197,7 @@ typedef struct {
     int lag;
     float coef;
     int used[MAX_LTP_LONG_SFB];
-} ltp_struct;
+} LongTermPrediction;
 
 /**
  * Individual Channel Stream
@@ -209,13 +209,13 @@ typedef struct {
     uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
     int num_window_groups;
     uint8_t group_len[8];
-    ltp_struct ltp;
-    ltp_struct ltp2;
+    LongTermPrediction ltp;
+    LongTermPrediction ltp2;
     const uint16_t *swb_offset; ///< table of offsets to the lowest spectral coefficient of a scalefactor band, sfb, for a particular window
     int num_swb;                ///< number of scalefactor window bands
     int num_windows;
     int tns_max_bands;
-} ics_struct;
+} IndividualChannelStream;
 
 /**
  * Temporal Noise Shaping
@@ -228,7 +228,7 @@ typedef struct {
     int order[8][4];
     const float *tmp2_map[8][4];
     int coef[8][4][TNS_MAX_ORDER];
-} tns_struct;
+} TemporalNoiseShaping;
 
 /**
  * M/S joint channel coding
@@ -236,7 +236,7 @@ typedef struct {
 typedef struct {
     int present;
     uint8_t mask[8][64];
-} ms_struct;
+} MidSideStereo;
 
 /**
  * Dynamic Range Control
@@ -255,7 +255,7 @@ typedef struct {
     int band_top[17];
     int prog_ref_level;
     int prog_ref_level_reserved_bits;
-} drc_struct;
+} DynamicRangeControl;
 
 /**
  * Pulse tool
@@ -266,7 +266,7 @@ typedef struct {
     int start;
     int offset[4];
     int amp[4];
-} pulse_struct;
+} Pulse;
 
 /**
  * Parameters for the SSR Inverse Polyphase Quadrature Filter
@@ -286,7 +286,7 @@ typedef struct {
     int alev[4][8][8];
     int aloc[4][8][8];
     float buf[4][24];
-} ssr_struct;
+} ScalableSamplingRate;
 
 /**
  * Coupling parameters
@@ -300,7 +300,7 @@ typedef struct {
     int l[9];              ///< Apply gain to left channel of an CPE
     int r[9];              ///< Apply gain to right channel of an CPE
     float gain[18][8][64];
-} coupling_struct;
+} ChannelCoupling;
 
 
 /**
@@ -312,16 +312,16 @@ typedef struct {
                                                *   Note that this is applied before joint stereo decoding.
                                                *   Thus, when used inside CPE elements, both channels must have equal gain.
                                                */
-    ics_struct ics;
-    tns_struct tns;
+    IndividualChannelStream ics;
+    TemporalNoiseShaping tns;
     int cb[8][64];                            ///< Codebooks
     float sf[8][64];                          ///< Scalefactors
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< Coefficients for IMDCT
     DECLARE_ALIGNED_16(float, saved[1024]);   ///< Overlap
     DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
     int16_t *ltp_state;
-    ssr_struct *ssr;
-} sce_struct;
+    ScalableSamplingRate *ssr;
+} SingleChannelElement;
 
 /**
  * Channel element
@@ -329,13 +329,13 @@ typedef struct {
  */
 typedef struct {
     // CPE specific
-    int common_window;     ///< Set if channels share a common 'ics_struct' in bitstream
-    ms_struct ms;
+    int common_window;     ///< Set if channels share a common 'IndividualChannelStream' in bitstream
+    MidSideStereo ms;
     // Shared
-    sce_struct ch[2];
+    SingleChannelElement ch[2];
     // CCE specific
-    coupling_struct coup;
-} che_struct;
+    ChannelCoupling coup;
+} ChannelElement;
 
 /**
  * Main AAC context
@@ -346,14 +346,14 @@ typedef struct {
     MPEG4AudioConfig m4ac;
 
     int is_saved;                 ///< Set if elements have stored overlap from previous frame
-    drc_struct che_drc;
+    DynamicRangeControl che_drc;
 
     /**
      * @defgroup elements
      * @{
      */
-    program_config_struct pcs;
-    che_struct * che[4][MAX_TAGID];
+    ProgramConfig pcs;
+    ChannelElement * che[4][MAX_TAGID];
     /** @} */
 
     /**
@@ -383,7 +383,7 @@ typedef struct {
      */
     float* interleaved_output;                        ///< Interim buffer for interleaving PCM samples
     float *output_data[MAX_CHANNELS];                 ///< Points to each element's 'ret' buffer (PCM output)
-    che_struct *mm[3];                                ///< Center/Front/Back channel elements to use for matrix mix-down
+    ChannelElement *mm[3];                                ///< Center/Front/Back channel elements to use for matrix mix-down
     float add_bias;                                   ///< Offset for dsp.float_to_int16
     float sf_scale;                                   ///< Pre-scale for correct IMDCT and dsp.float_to_int16
     int sf_offset;                                    ///< Offset into pow2sf_tab as appropriate for dsp.float_to_int16
@@ -447,7 +447,7 @@ static void ssr_context_init(ssr_context * ctx) {
 /**
  * Free a Channel Element
  */
-static void che_freep(che_struct **s) {
+static void che_freep(ChannelElement **s) {
     if(!*s)
         return;
     av_free((*s)->ch[0].ssr);
@@ -463,12 +463,12 @@ static void che_freep(che_struct **s) {
  *
  * \param newpcs New program configuration struct - we only do something if it differs from the current one
  */
-static int output_configure(AACContext *ac, program_config_struct *newpcs) {
+static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     AVCodecContext *avctx = ac->avccontext;
-    program_config_struct * pcs = &ac->pcs;
+    ProgramConfig * pcs = &ac->pcs;
     int i, j, channels = 0, ch;
     float a, b;
-    che_struct *mixdown[3] = { NULL, NULL, NULL };
+    ChannelElement *mixdown[3] = { NULL, NULL, NULL };
 
     static const float mixdowncoeff[4] = {
         /* Matrix mix-down coefficient, Table 4.70 */
@@ -478,7 +478,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
         0
     };
 
-    if(!memcmp(&ac->pcs, newpcs, sizeof(program_config_struct)))
+    if(!memcmp(&ac->pcs, newpcs, sizeof(ProgramConfig)))
         return 0; /* no change */
 
     *pcs = *newpcs;
@@ -491,7 +491,7 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
 
         for(j = 0; j < 4; j++) {
             if(pcs->che_type[j][i] && !ac->che[j][i]) {
-                ac->che[j][i] = av_mallocz(sizeof(che_struct));
+                ac->che[j][i] = av_mallocz(sizeof(ChannelElement));
             } else
                 che_freep(&ac->che[j][i]);
         }
@@ -594,7 +594,7 @@ static void program_config_element_parse_tags(GetBitContext * gb, int *cpe_map,
  * reference: Table 4.2
  */
 static int program_config_element(AACContext * ac, GetBitContext * gb) {
-    program_config_struct pcs;
+    ProgramConfig pcs;
     int num_front, num_side, num_back, num_lfe, num_assoc_data, num_cc;
 
     memset(&pcs, 0, sizeof(pcs));
@@ -639,14 +639,14 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
 }
 
 /**
- * Set up program_config_struct, but based on a default channel configuration
+ * Set up ProgramConfig, but based on a default channel configuration
  * as specified in Table 1.17
  */
 static int program_config_element_default(AACContext *ac, int channels)
 {
-    program_config_struct pcs;
+    ProgramConfig pcs;
 
-    memset(&pcs, 0, sizeof(program_config_struct));
+    memset(&pcs, 0, sizeof(ProgramConfig));
 
     /* Pre-mixed down-mix outputs are not available */
     pcs.mono_mixdown   = -1;
@@ -907,7 +907,7 @@ static void data_stream_element(AACContext * ac, GetBitContext * gb, int id) {
 }
 
 #ifdef AAC_LTP
-static void decode_ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, ltp_struct * ltp) {
+static void decode_ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, LongTermPrediction * ltp) {
     int sfb;
     if (ac->audioObjectType == AOT_ER_AAC_LD) {
         assert(0);
@@ -924,7 +924,7 @@ static void decode_ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, lt
  * Decode Individual Channel Stream info
  * reference: table 4.6
  */
-static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_window, ics_struct * ics) {
+static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_window, IndividualChannelStream * ics) {
     uint8_t grouping;
     if (get_bits1(gb)) {
         av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set\n");
@@ -995,7 +995,7 @@ static inline float ivquant(AACContext * ac, int a) {
  * Decode section_data payload
  * reference: Table 4.46
  */
-static int decode_section_data(AACContext * ac, GetBitContext * gb, ics_struct * ics, int cb[][64]) {
+static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, int cb[][64]) {
     int g;
     for (g = 0; g < ics->num_window_groups; g++) {
         int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
@@ -1022,7 +1022,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, ics_struct *
  * Decode scale_factor_data
  * reference: Table 4.47
  */
-static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, ics_struct * ics, const int cb[][64], float sf[][64]) {
+static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, IndividualChannelStream * ics, const int cb[][64], float sf[][64]) {
     int g, i, index;
     int offset[3] = { global_gain, global_gain - 90, 100 };
     int noise_flag = 1;
@@ -1057,7 +1057,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
     return 0;
 }
 
-static void decode_pulse_data(AACContext * ac, GetBitContext * gb, pulse_struct * pulse) {
+static void decode_pulse_data(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
     int i;
     pulse->num_pulse = get_bits(gb, 2);
     pulse->start = get_bits(gb, 6);
@@ -1067,7 +1067,7 @@ static void decode_pulse_data(AACContext * ac, GetBitContext * gb, pulse_struct 
     }
 }
 
-static void decode_tns_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, tns_struct * tns) {
+static void decode_tns_data(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, TemporalNoiseShaping * tns) {
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
     for (w = 0; w < ics->num_windows; w++) {
         tns->n_filt[w] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 1 : 2);
@@ -1092,7 +1092,7 @@ static void decode_tns_data(AACContext * ac, GetBitContext * gb, const ics_struc
 }
 
 #ifdef AAC_SSR
-static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, sce_struct * sce) {
+static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, SingleChannelElement * sce) {
     // wd_num wd_test aloc_size
     static const int gain_mode[4][3] = {
         {1, 0, 5}, //ONLY_LONG_SEQUENCE = 0,
@@ -1102,9 +1102,9 @@ static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, sce_str
     };
     const int mode = sce->ics.window_sequence;
     int bd, wd, ad;
-    ssr_struct * ssr = sce->ssr;
+    ScalableSamplingRate * ssr = sce->ssr;
     if (!ssr)
-        ssr = sce->ssr = av_mallocz(sizeof(ssr_struct));
+        ssr = sce->ssr = av_mallocz(sizeof(ScalableSamplingRate));
     ssr->max_band = get_bits(gb, 2);
     for (bd = 0; bd < ssr->max_band; bd++) {
         for (wd = 0; wd < gain_mode[mode][0]; wd++) {
@@ -1122,8 +1122,8 @@ static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, sce_str
 }
 #endif /* AAC_SSR */
 
-static void decode_ms_data(AACContext * ac, GetBitContext * gb, che_struct * cpe) {
-    ms_struct * ms = &cpe->ms;
+static void decode_ms_data(AACContext * ac, GetBitContext * gb, ChannelElement * cpe) {
+    MidSideStereo * ms = &cpe->ms;
     int g, i;
     ms->present = get_bits(gb, 2);
     if (ms->present == 1) {
@@ -1140,7 +1140,7 @@ static void decode_ms_data(AACContext * ac, GetBitContext * gb, che_struct * cpe
  * Decode spectral data
  * reference: Table 4.50
  */
-static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], int icoef[1024]) {
+static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const int cb[][64], int icoef[1024]) {
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
 
@@ -1202,7 +1202,7 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
     return 0;
 }
 
-static void pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_struct * pulse, int * icoef) {
+static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, const Pulse * pulse, int * icoef) {
     int i, off = ics->swb_offset[pulse->start];
     for (i = 0; i <= pulse->num_pulse; i++) {
         off += pulse->offset[i];
@@ -1213,7 +1213,7 @@ static void pulse_tool(AACContext * ac, const ics_struct * ics, const pulse_stru
     }
 }
 
-static void quant_to_spec_tool(AACContext * ac, const ics_struct * ics, const int * icoef, const int cb[][64], const float sf[][64], float * coef) {
+static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * ics, const int * icoef, const int cb[][64], const float sf[][64], float * coef) {
     const uint16_t * offsets = ics->swb_offset;
     int g, i, group, k;
 
@@ -1253,11 +1253,11 @@ static void quant_to_spec_tool(AACContext * ac, const ics_struct * ics, const in
  * Decode an individual_channel_stream payload
  * reference: Table 4.44
  */
-static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, int scale_flag, sce_struct * sce) {
+static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, int scale_flag, SingleChannelElement * sce) {
     int icoeffs[1024];
-    pulse_struct pulse;
-    tns_struct * tns = &sce->tns;
-    ics_struct * ics = &sce->ics;
+    Pulse pulse;
+    TemporalNoiseShaping * tns = &sce->tns;
+    IndividualChannelStream * ics = &sce->ics;
     float * out = sce->coeffs;
     int global_gain;
 
@@ -1302,9 +1302,9 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     return 0;
 }
 
-static void ms_tool(AACContext * ac, che_struct * cpe) {
-    const ms_struct * ms = &cpe->ms;
-    const ics_struct * ics = &cpe->ch[0].ics;
+static void ms_tool(AACContext * ac, ChannelElement * cpe) {
+    const MidSideStereo * ms = &cpe->ms;
+    const IndividualChannelStream * ics = &cpe->ch[0].ics;
     float *ch0 = cpe->ch[0].coeffs;
     float *ch1 = cpe->ch[1].coeffs;
     if (ms->present) {
@@ -1330,9 +1330,9 @@ static void ms_tool(AACContext * ac, che_struct * cpe) {
 }
 
 
-static void intensity_tool(AACContext * ac, che_struct * cpe) {
-    const ics_struct * ics = &cpe->ch[1].ics;
-    sce_struct * sce1 = &cpe->ch[1];
+static void intensity_tool(AACContext * ac, ChannelElement * cpe) {
+    const IndividualChannelStream * ics = &cpe->ch[1].ics;
+    SingleChannelElement * sce1 = &cpe->ch[1];
     float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
     const uint16_t * offsets = ics->swb_offset;
     int g, gp, i, k;
@@ -1362,7 +1362,7 @@ static void intensity_tool(AACContext * ac, che_struct * cpe) {
  */
 static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     int i;
-    che_struct * cpe;
+    ChannelElement * cpe;
 
     cpe = ac->che[ID_CPE][id];
     cpe->common_window = get_bits1(gb);
@@ -1395,8 +1395,8 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
     int c, g, sfb;
     int sign;
     float scale;
-    sce_struct * sce;
-    coupling_struct * coup;
+    SingleChannelElement * sce;
+    ChannelCoupling * coup;
 
     sce = &ac->che[ID_CCE][id]->ch[0];
     sce->mixing_gain = 1.0;
@@ -1553,9 +1553,9 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
     return res;
 }
 
-static void tns_filter_tool(AACContext * ac, int decode, sce_struct * sce, float * coef) {
-    const ics_struct * ics = &sce->ics;
-    const tns_struct * tns = &sce->tns;
+static void tns_filter_tool(AACContext * ac, int decode, SingleChannelElement * sce, float * coef) {
+    const IndividualChannelStream * ics = &sce->ics;
+    const TemporalNoiseShaping * tns = &sce->tns;
     const int mmm = FFMIN(ics->tns_max_bands,  ics->max_sfb);
     int w, filt, m, i, ib;
     int bottom, top, order, start, end, size, inc;
@@ -1614,13 +1614,13 @@ static void tns_filter_tool(AACContext * ac, int decode, sce_struct * sce, float
     }
 }
 
-static void tns_trans(AACContext * ac, sce_struct * sce) {
+static void tns_trans(AACContext * ac, SingleChannelElement * sce) {
     if(sce->tns.present) tns_filter_tool(ac, 1, sce, sce->coeffs);
 }
 
 #ifdef AAC_LTP
-static void window_ltp_tool(AACContext * ac, sce_struct * sce, float * in, float * out) {
-    ics_struct * ics = &sce->ics;
+static void window_ltp_tool(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
+    IndividualChannelStream * ics = &sce->ics;
     const float * lwindow      = ics->use_kb_window[0] ? kbd_long_1024 : sine_long_1024;
     const float * swindow      = ics->use_kb_window[0] ? kbd_short_128 : sine_short_128;
     const float * lwindow_prev = ics->use_kb_window[1] ? kbd_long_1024 : sine_long_1024;
@@ -1651,8 +1651,8 @@ static void window_ltp_tool(AACContext * ac, sce_struct * sce, float * in, float
     ff_mdct_calc(ac->mdct_ltp, out, buf, in); // using in as buffer for mdct
 }
 
-static void ltp_trans(AACContext * ac, sce_struct * sce) {
-    const ltp_struct * ltp = &sce->ics.ltp;
+static void ltp_trans(AACContext * ac, SingleChannelElement * sce) {
+    const LongTermPrediction * ltp = &sce->ics.ltp;
     const uint16_t * offsets = sce->ics.swb_offset;
     int i, sfb;
     if (!ltp->present)
@@ -1692,7 +1692,7 @@ static inline int16_t ltp_round(float x) {
 }
 
 
-static void ltp_update_trans(AACContext * ac, sce_struct * sce) {
+static void ltp_update_trans(AACContext * ac, SingleChannelElement * sce) {
     int i;
     if (!sce->ltp_state)
         sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t));
@@ -1707,8 +1707,8 @@ static void ltp_update_trans(AACContext * ac, sce_struct * sce) {
 }
 #endif /* AAC_LTP */
 
-static void window_trans(AACContext * ac, sce_struct * sce) {
-    ics_struct * ics = &sce->ics;
+static void window_trans(AACContext * ac, SingleChannelElement * sce) {
+    IndividualChannelStream * ics = &sce->ics;
     float * in = sce->coeffs;
     float * out = sce->ret;
     float * saved = sce->saved;
@@ -1762,8 +1762,8 @@ static void window_trans(AACContext * ac, sce_struct * sce) {
 }
 
 #ifdef AAC_SSR
-static void window_ssr_tool(AACContext * ac, sce_struct * sce, float * in, float * out) {
-    ics_struct * ics = &sce->ics;
+static void window_ssr_tool(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
+    IndividualChannelStream * ics = &sce->ics;
     const float * lwindow      = ics->use_kb_window[0] ? kbd_long_1024 : sine_long_1024;
     const float * swindow      = ics->use_kb_window[0] ? kbd_short_128 : sine_short_128;
     const float * lwindow_prev = ics->use_kb_window[1] ? kbd_long_1024 : sine_long_1024;
@@ -1804,7 +1804,7 @@ static void vector_add_dst(AACContext * ac, float * dst, const float * src0, con
         dst[i] = src0[i] + src1[i];
 }
 
-static void ssr_gain_tool(AACContext * ac, sce_struct * sce, int band, float * in, float * preret, float * saved) {
+static void ssr_gain_tool(AACContext * ac, SingleChannelElement * sce, int band, float * in, float * preret, float * saved) {
     // TODO: 'in' buffer gain normalization
     if (sce->ics.window_sequence != EIGHT_SHORT_SEQUENCE) {
         vector_add_dst(ac, preret, in, saved, 256);
@@ -1827,9 +1827,9 @@ static void ssr_gain_tool(AACContext * ac, sce_struct * sce, int band, float * i
     }
 }
 
-static void ssr_ipqf_tool(AACContext * ac, sce_struct * sce, float * preret) {
+static void ssr_ipqf_tool(AACContext * ac, SingleChannelElement * sce, float * preret) {
     ssr_context * ctx = &ac->ssrctx;
-    ssr_struct * ssr = sce->ssr;
+    ScalableSamplingRate * ssr = sce->ssr;
     int i, b, j;
     float x;
     for (i = 0; i < 256; i++) {
@@ -1866,7 +1866,7 @@ static void vector_reverse(AACContext * ac, float * dst, const float * src, int 
         dst[i] = src[len - i];
 }
 
-static void ssr_trans(AACContext * ac, sce_struct * sce) {
+static void ssr_trans(AACContext * ac, SingleChannelElement * sce) {
     float * in = sce->coeffs;
     DECLARE_ALIGNED_16(float, tmp_buf[512]);
     DECLARE_ALIGNED_16(float, tmp_ret[1024]);
@@ -1883,8 +1883,8 @@ static void ssr_trans(AACContext * ac, sce_struct * sce) {
 }
 #endif /* AAC_SSR */
 
-static void coupling_dependent_trans(AACContext * ac, che_struct * cc, sce_struct * sce, int index) {
-    ics_struct * ics = &cc->ch[0].ics;
+static void coupling_dependent_trans(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
+    IndividualChannelStream * ics = &cc->ch[0].ics;
     const uint16_t * offsets = ics->swb_offset;
     float * dest = sce->coeffs;
     float * src = cc->ch[0].coeffs;
@@ -1910,19 +1910,19 @@ static void coupling_dependent_trans(AACContext * ac, che_struct * cc, sce_struc
     }
 }
 
-static void coupling_independent_trans(AACContext * ac, che_struct * cc, sce_struct * sce, int index) {
+static void coupling_independent_trans(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
     int i;
     float gain = cc->coup.gain[index][0][0] * sce->mixing_gain;
     for (i = 0; i < 1024; i++)
         sce->ret[i] += gain * (cc->ch[0].ret[i] - ac->add_bias);
 }
 
-static void transform_coupling_tool(AACContext * ac, che_struct * cc,
-        void (*cc_trans)(AACContext * ac, che_struct * cc, sce_struct * sce, int index))
+static void transform_coupling_tool(AACContext * ac, ChannelElement * cc,
+        void (*cc_trans)(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index))
 {
     int c;
     int index = 0;
-    coupling_struct * coup = &cc->coup;
+    ChannelCoupling * coup = &cc->coup;
     for (c = 0; c <= coup->num_coupled; c++) {
         if (     !coup->is_cpe[c] && ac->che[ID_SCE][coup->tag_select[c]]) {
             cc_trans(ac, cc, &ac->che[ID_SCE][coup->tag_select[c]]->ch[0], index++);
@@ -1947,7 +1947,7 @@ static void transform_coupling_tool(AACContext * ac, che_struct * cc,
 static void coupling_tool(AACContext * ac, int independent, int domain) {
     int i;
     for (i = 0; i < MAX_TAGID; i++) {
-        che_struct * cc = ac->che[ID_CCE][i];
+        ChannelElement * cc = ac->che[ID_CCE][i];
         if (cc) {
             if (cc->coup.ind_sw && independent) {
                 transform_coupling_tool(ac, cc, coupling_independent_trans);
@@ -1958,7 +1958,7 @@ static void coupling_tool(AACContext * ac, int independent, int domain) {
     }
 }
 
-static void transform_sce_tool(AACContext * ac, void (*sce_trans)(AACContext * ac, sce_struct * sce)) {
+static void transform_sce_tool(AACContext * ac, void (*sce_trans)(AACContext * ac, SingleChannelElement * sce)) {
     int i, j;
     for (i = 0; i < MAX_TAGID; i++) {
         for(j = 0; j < 4; j++) {
