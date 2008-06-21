@@ -94,7 +94,7 @@ enum {
     AOT_ER_HVXC,
     AOT_ER_HILN,
     AOT_ER_PARAM,
-    AOT_SSC
+    AOT_SSC,
 };
 
 /**
@@ -108,7 +108,7 @@ enum {
     ID_DSE,
     ID_PCE,
     ID_FIL,
-    ID_END
+    ID_END,
 };
 
 /**
@@ -120,7 +120,7 @@ enum {
     EXT_DATA_ELEMENT,
     EXT_DYNAMIC_RANGE = 0xb,
     EXT_SBR_DATA = 0xd,
-    EXT_SBR_DATA_CRC = 0xe
+    EXT_SBR_DATA_CRC = 0xe,
 };
 
 /**
@@ -130,7 +130,7 @@ enum {
     ONLY_LONG_SEQUENCE,
     LONG_START_SEQUENCE,
     EIGHT_SHORT_SEQUENCE,
-    LONG_STOP_SEQUENCE
+    LONG_STOP_SEQUENCE,
 };
 
 /**
