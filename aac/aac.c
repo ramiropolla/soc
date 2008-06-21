@@ -1140,7 +1140,7 @@ static void decode_ms_data(AACContext * ac, GetBitContext * gb, che_struct * cpe
  * Decode spectral data
  * reference: Table 4.50
  */
-static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], int * icoef) {
+static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_struct * ics, const int cb[][64], int icoef[1024]) {
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
 
