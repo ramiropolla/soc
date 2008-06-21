@@ -947,15 +947,15 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
                 ics->group_len[ics->num_window_groups-1] = 1;
             }
         }
-        ics->swb_offset = swb_offset_128[ac->m4ac.sampling_index];
-        ics->num_swb = num_swb_128[ac->m4ac.sampling_index];
-        ics->num_windows = 8;
+        ics->swb_offset    =    swb_offset_128[ac->m4ac.sampling_index];
+        ics->num_swb       =       num_swb_128[ac->m4ac.sampling_index];
+        ics->num_windows   = 8;
         ics->tns_max_bands = tns_max_bands_128[ac->m4ac.sampling_index];
     } else {
         ics->max_sfb = get_bits(gb, 6);
-        ics->swb_offset = swb_offset_1024[ac->m4ac.sampling_index];
-        ics->num_swb = num_swb_1024[ac->m4ac.sampling_index];
-        ics->num_windows = 1;
+        ics->swb_offset    =    swb_offset_1024[ac->m4ac.sampling_index];
+        ics->num_swb       =       num_swb_1024[ac->m4ac.sampling_index];
+        ics->num_windows   = 1;
         ics->tns_max_bands = tns_max_bands_1024[ac->m4ac.sampling_index];
         if (get_bits1(gb)) {
 #ifdef AAC_LTP
