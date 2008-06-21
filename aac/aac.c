@@ -203,7 +203,7 @@ typedef struct {
     int intensity_present;
     int max_sfb;                ///< number of scalefactor bands per group
     int window_sequence;
-    int use_kb_window[2];             ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
+    int use_kb_window[2];       ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
     int num_window_groups;
     uint8_t group_len[8];
     ltp_struct ltp;
