@@ -555,8 +555,8 @@ static int output_configure(AACContext *ac, program_config_struct *newpcs) {
             }
             mixdown[MIXDOWN_FRONT]->ch[0].mixing_gain = b;
             mixdown[MIXDOWN_FRONT]->ch[1].mixing_gain = b;
-            mixdown[MIXDOWN_BACK ]->ch[0].mixing_gain  = b * a;
-            mixdown[MIXDOWN_BACK ]->ch[1].mixing_gain  = b * a;
+            mixdown[MIXDOWN_BACK ]->ch[0].mixing_gain = b * a;
+            mixdown[MIXDOWN_BACK ]->ch[1].mixing_gain = b * a;
             for(i = 0; i < 3; i++) ac->mm[i] = mixdown[i];
 
             channels = avctx->request_channels;
