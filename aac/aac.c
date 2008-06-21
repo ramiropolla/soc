@@ -1162,7 +1162,7 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
                         const int index = get_vlc2(gb, books[cur_cb - 1].table, 6, 3);
-                        const int *ptr = &ac->vq[cur_cb - 1][index * dim], coef_idx = (group << 7) + k;
+                        const int *vq_ptr = &ac->vq[cur_cb - 1][index * dim], coef_idx = (group << 7) + k;
                         int j;
                         if (index == -1) {
                             av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data\n");
@@ -1171,12 +1171,12 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                         for (j = 0; j < dim; j++) icoef[coef_idx + j] = 1;
                         if (IS_CODEBOOK_UNSIGNED(cur_cb)) {
                             for (j = 0; j < dim; j++)
-                                if (ptr[j] && get_bits1(gb))
+                                if (vq_ptr[j] && get_bits1(gb))
                                     icoef[coef_idx + j] = -1;
                         }
                         if (cur_cb == ESC_HCB) {
                             for (j = 0; j < 2; j++) {
-                                if (ptr[j] == 16) {
+                                if (vq_ptr[j] == 16) {
                                     int n = 4;
                                     /* Total length of escape_sequence must be < 22 bits according to spec */
                                     /* i.e. max is 11111111110xxxxxxxxxx */
@@ -1187,11 +1187,11 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                                     }
                                     icoef[coef_idx + j] *= (1<<n) + get_bits(gb, n);
                                 }else
-                                    icoef[coef_idx + j] *= ptr[j];
+                                    icoef[coef_idx + j] *= vq_ptr[j];
                             }
                         }else
                             for (j = 0; j < dim; j++)
-                                icoef[coef_idx + j] *= ptr[j];
+                                icoef[coef_idx + j] *= vq_ptr[j];
                     }
                 }
             }
