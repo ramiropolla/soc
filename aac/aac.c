@@ -1662,7 +1662,7 @@ static void ltp_trans(AACContext * ac, sce_struct * sce) {
     if (sce->ics.window_sequence != EIGHT_SHORT_SEQUENCE && ac->is_saved) {
         float x_est[2 * 1024], X_est[2 * 1024];
         for (i = 0; i < 2 * 1024; i++)
-            x_est[i] = (float)sce->ltp_state[i + 2 * 1024 - ltp->lag] * ltp->coef;
+            x_est[i] = sce->ltp_state[i + 2 * 1024 - ltp->lag] * ltp->coef;
 
         window_ltp_tool(ac, sce, x_est, X_est);
         if(sce->tns.present) tns_filter_tool(ac, 0, sce, X_est);
