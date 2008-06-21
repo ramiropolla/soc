@@ -629,10 +629,7 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
 
     skip_bits_long(gb, 4 * num_assoc_data);
 
-    for (i = 0; i < num_cc; i++) {
-        skip_bits1(gb);    // cc_ind_sw
-        pcs.che_type[ID_CCE][get_bits(gb, 4)] = AAC_CHANNEL_CC;
-    }
+    program_config_element_parse_tags(gb, pcs.che_type[ID_CCE], pcs.che_type[ID_CCE], num_cc,    AAC_CHANNEL_CC   );
 
     align_get_bits(gb);
 
