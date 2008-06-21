@@ -595,7 +595,7 @@ static void program_config_element_parse_tags(GetBitContext * gb, int *cpe_map,
  */
 static int program_config_element(AACContext * ac, GetBitContext * gb) {
     program_config_struct pcs;
-    int i, num_front, num_side, num_back, num_lfe, num_assoc_data, num_cc;
+    int num_front, num_side, num_back, num_lfe, num_assoc_data, num_cc;
 
     memset(&pcs, 0, sizeof(pcs));
 
