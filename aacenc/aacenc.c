@@ -535,7 +535,10 @@ static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_st
         if(cpe->ch[channel].ics.group_len[w]) continue;
         start = 0;
         for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
-            if(cpe->ch[channel].zeroes[w][i]) continue;
+            if(cpe->ch[channel].zeroes[w][i]){
+                start += cpe->ch[channel].ics.swb_sizes[i];
+                continue;
+            }
             w2 = w;
             do{
                 encode_codebook(s, cpe, channel, start + w2*128, cpe->ch[channel].ics.swb_sizes[i], cpe->ch[channel].cb[w][i]);
