@@ -65,6 +65,9 @@ DECLARE_ALIGNED_16(static float, kbd_short_128[128]);
 DECLARE_ALIGNED_16(static float, sine_long_1024[1024]);
 DECLARE_ALIGNED_16(static float, sine_short_128[128]);
 
+static VLC mainvlc;
+static VLC books[11];
+
 /**
  * Audio Object Types
  */
@@ -365,8 +368,6 @@ typedef struct {
      * @defgroup tables   Computed / setup during initialization
      * @{
      */
-    VLC mainvlc;
-    VLC books[11];
     MDCTContext mdct;
     MDCTContext mdct_small;
     MDCTContext *mdct_ltp;
@@ -813,10 +814,10 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         int dim = (i >= 4 ? 2 : 4);
         int mod = mod_cb[i], off = off_cb[i], index = 0;
 
-        if(init_vlc(&ac->books[i], 6, values,
+        if(!books[i].table && init_vlc(&books[i], 6, values,
                 tmp[i].a_bits, a_bits_size, a_bits_size,
                 tmp[i].a_code, a_code_size, a_code_size,
-                0) < 0)
+                INIT_VLC_USE_STATIC) < 0)
             return -1;
 
         if(!(ac->vq[i] = av_malloc(dim * values * sizeof(int))))
@@ -857,10 +858,10 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         pow2sf_tab[i] = pow(2, (i - 200)/4.);
 #endif /* CONFIG_HARDCODED_TABLES */
 
-    if(init_vlc(&ac->mainvlc, 7, sizeof(code)/sizeof(code[0]),
+    if(!mainvlc.table && init_vlc(&mainvlc, 7, sizeof(code)/sizeof(code[0]),
             bits, sizeof(bits[0]), sizeof(bits[0]),
             code, sizeof(code[0]), sizeof(code[0]),
-            0) < 0)
+            INIT_VLC_USE_STATIC) < 0)
         return -1;
 
 #ifdef AAC_SSR
@@ -1047,7 +1048,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
             if (cb[g][i] == NOISE_HCB && noise_flag-- > 0)
                 offset[index] += get_bits(gb, 9) - 256;
             else
-                offset[index] += get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
+                offset[index] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
             if(offset[index] > 255) {
                 av_log(ac->avccontext, AV_LOG_ERROR,
                         "%s (%d) out of range", sf_str[index], offset[index]);
@@ -1163,7 +1164,7 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
             }else if (cur_cb != INTENSITY_HCB2 && cur_cb != INTENSITY_HCB) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
-                        const int index = get_vlc2(gb, ac->books[cur_cb - 1].table, 6, 3);
+                        const int index = get_vlc2(gb, books[cur_cb - 1].table, 6, 3);
                         const int *ptr = &ac->vq[cur_cb - 1][index * dim], coef_idx = (group << 7) + k;
                         int j;
                         if (index == -1) {
@@ -1432,7 +1433,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
         float gain_cache = 1.;
         if (c) {
             cge = coup->ind_sw ? 1 : get_bits1(gb);
-            gain = cge ? get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60: 0;
+            gain = cge ? get_vlc2(gb, mainvlc.table, 7, 3) - 60: 0;
             gain_cache = pow(scale, gain);
         }
         for (g = 0; g < sce->ics.num_window_groups; g++)
@@ -1443,7 +1444,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
                     if (cge) {
                         coup->gain[c][g][sfb] = gain_cache;
                     } else {
-                        int s, t = get_vlc2(gb, ac->mainvlc.table, 7, 3) - 60;
+                        int s, t = get_vlc2(gb, mainvlc.table, 7, 3) - 60;
                         if (sign) {
                             s = 1 - 2 * (t & 0x1);
                             t >>= 1;
@@ -2123,10 +2124,8 @@ static int aac_decode_close(AVCodecContext * avccontext) {
     }
 
     for (i = 0; i < 11; i++) {
-        free_vlc(&ac->books[i]);
         av_free(ac->vq[i]);
     }
-    free_vlc(&ac->mainvlc);
     ff_mdct_end(&ac->mdct);
     ff_mdct_end(&ac->mdct_small);
     if (ac->mdct_ltp) {
