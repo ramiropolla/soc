@@ -69,7 +69,7 @@ DECLARE_ALIGNED_16(static float, sine_short_128[128]);
  * Audio Object Types
  */
 enum {
-    AOT_NULL             = 0x0,
+    AOT_NULL,
     AOT_AAC_MAIN,
     AOT_AAC_LC,
     AOT_AAC_SSR,
@@ -101,7 +101,7 @@ enum {
  * IDs for raw_data_block
  */
 enum {
-    ID_SCE = 0x0,
+    ID_SCE,
     ID_CPE,
     ID_CCE,
     ID_LFE,
@@ -115,7 +115,7 @@ enum {
  * IDs for extension_payload
  */
 enum {
-    EXT_FILL = 0x0,
+    EXT_FILL,
     EXT_FILL_DATA,
     EXT_DATA_ELEMENT,
     EXT_DYNAMIC_RANGE = 0xb,
@@ -127,7 +127,7 @@ enum {
  * Window sequences
  */
 enum {
-    ONLY_LONG_SEQUENCE = 0,
+    ONLY_LONG_SEQUENCE,
     LONG_START_SEQUENCE,
     EIGHT_SHORT_SEQUENCE,
     LONG_STOP_SEQUENCE
@@ -163,7 +163,7 @@ enum {
  * Mix-down channel types
  */
 enum {
-    MIXDOWN_CENTER = 0,
+    MIXDOWN_CENTER,
     MIXDOWN_FRONT,
     MIXDOWN_BACK,
 };
