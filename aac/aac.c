@@ -201,15 +201,15 @@ typedef struct {
  */
 typedef struct {
     int intensity_present;
-    int max_sfb;
+    int max_sfb;                ///< number of scalefactor bands per group
     int window_sequence;
     int use_kb_window[2];             ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
     int num_window_groups;
     uint8_t group_len[8];
     ltp_struct ltp;
     ltp_struct ltp2;
-    const uint16_t *swb_offset;
-    int num_swb;
+    const uint16_t *swb_offset; ///< table of offsets to the lowest spectral coefficient of a scalefactor band, sfb, for a particular window
+    int num_swb;                ///< number of scalefactor window bands
     int num_windows;
     int tns_max_bands;
 } ics_struct;
