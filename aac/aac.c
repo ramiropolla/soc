@@ -1002,7 +1002,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, ics_struct *
         int k = 0;
         while (k < ics->max_sfb) {
             int sect_len = 0;
-            int sect_len_incr = 1;
+            int sect_len_incr;
             int sect_cb = get_bits(gb, 4);
             if (sect_cb == 12) {
                 av_log(ac->avccontext, AV_LOG_ERROR, "Invalid codebook\n");
