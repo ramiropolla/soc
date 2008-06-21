@@ -1648,7 +1648,7 @@ static void window_ltp_tool(AACContext * ac, sce_struct * sce, float * in, float
         ac->dsp.vector_fmul_reverse(buf + 1024 + 448, in + 1024 + 448, swindow, 128);
         memset(buf + 1024 + 576, 0, 448 * sizeof(float));
     }
-     ff_mdct_calc(ac->mdct_ltp, out, buf, in); // using in as buffer for mdct
+    ff_mdct_calc(ac->mdct_ltp, out, buf, in); // using in as buffer for mdct
 }
 
 static void ltp_trans(AACContext * ac, sce_struct * sce) {
