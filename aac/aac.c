@@ -119,8 +119,8 @@ enum {
     EXT_FILL_DATA,
     EXT_DATA_ELEMENT,
     EXT_DYNAMIC_RANGE = 0xb,
-    EXT_SBR_DATA = 0xd,
-    EXT_SBR_DATA_CRC = 0xe,
+    EXT_SBR_DATA      = 0xd,
+    EXT_SBR_DATA_CRC  = 0xe,
 };
 
 /**
