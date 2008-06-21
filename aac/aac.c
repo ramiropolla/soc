@@ -1132,7 +1132,7 @@ static void decode_ms_data(AACContext * ac, GetBitContext * gb, che_struct * cpe
                 ms->mask[g][i] = get_bits1(gb);// << i;
     } else if (ms->present == 2) {
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
-            memset(ms->mask[g], 1, cpe->ch[0].ics.max_sfb);
+            memset(ms->mask[g], 1, cpe->ch[0].ics.max_sfb * sizeof(ms->mask[g][0]));
     }
 }
 
