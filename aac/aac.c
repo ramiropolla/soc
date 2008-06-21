@@ -896,7 +896,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
  * Decode a data_stream_element
  * reference: Table 4.10
  */
-static int data_stream_element(AACContext * ac, GetBitContext * gb, int id) {
+static void data_stream_element(AACContext * ac, GetBitContext * gb, int id) {
     int byte_align = get_bits1(gb);
     int count = get_bits(gb, 8);
     if (count == 255)
@@ -904,7 +904,6 @@ static int data_stream_element(AACContext * ac, GetBitContext * gb, int id) {
     if (byte_align)
         align_get_bits(gb);
     skip_bits_long(gb, 8 * count);
-    return 0;
 }
 
 #ifdef AAC_LTP
@@ -2089,7 +2088,8 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             err = program_config_element(ac, &gb);
             break;
         case ID_DSE:
-            err = data_stream_element(ac, &gb, tag);
+            data_stream_element(ac, &gb, tag);
+            err = 0;
             break;
         case ID_CCE:
             err = !ac->che[ID_CCE][tag] ? -1 : decode_cce(ac, &gb, tag);
