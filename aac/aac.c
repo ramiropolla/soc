@@ -1071,15 +1071,19 @@ static void decode_tns_data(AACContext * ac, GetBitContext * gb, const ics_struc
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
     for (w = 0; w < ics->num_windows; w++) {
         tns->n_filt[w] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 1 : 2);
+
         if (tns->n_filt[w])
             coef_res = get_bits1(gb) + 3;
+
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
             tns->length[w][filt] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 4 : 6);
+
             if ((tns->order[w][filt] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 3 : 5))) {
                 tns->direction[w][filt] = get_bits1(gb);
                 coef_compress = get_bits1(gb);
                 coef_len = coef_res - coef_compress;
                 tns->tmp2_map[w][filt] = tns_tmp2_map[2*coef_compress + coef_res - 3];
+
                 for (i = 0; i < tns->order[w][filt]; i++)
                     tns->coef[w][filt][i] = get_bits(gb, coef_len);
             }
