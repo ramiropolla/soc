@@ -1168,7 +1168,8 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const ics_s
                             av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data\n");
                             return -1;
                         }
-                        for (j = 0; j < dim; j++) icoef[coef_idx + j] = 1;
+                        for (j = 0; j < dim; j++)
+                            icoef[coef_idx + j] = 1;
                         if (IS_CODEBOOK_UNSIGNED(cur_cb)) {
                             for (j = 0; j < dim; j++)
                                 if (vq_ptr[j] && get_bits1(gb))
