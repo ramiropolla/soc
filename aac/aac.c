@@ -1001,7 +1001,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, ics_struct *
         int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
         int k = 0;
         while (k < ics->max_sfb) {
-            int sect_len = 0;
+            int sect_len = k;
             int sect_len_incr;
             int sect_cb = get_bits(gb, 4);
             if (sect_cb == 12) {
@@ -1011,7 +1011,6 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, ics_struct *
             while ((sect_len_incr = get_bits(gb, bits)) == (1 << bits)-1)
                 sect_len += sect_len_incr;
             sect_len += sect_len_incr;
-            sect_len += k;
             for (; k < sect_len && k < ics->max_sfb; k++)
                 cb[g][k] = sect_cb;
         }
