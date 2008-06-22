@@ -51,6 +51,7 @@ typedef struct WMA3DecodeContext {
     int                 lossless;
     int                 nb_channels;
     wma_channel_t       channel[MAX_CHANNELS];
+    int                 no_tiling;
 
     // Extradata
     unsigned int        decode_flags;
@@ -65,6 +66,7 @@ typedef struct WMA3DecodeContext {
     int                 len_prefix; //< true if the frame is prefixed with its len
     int                 allow_subframes;
     int                 max_num_subframes;
+    int                 min_samples_per_subframe;
 
     // Buffered frame data
     int                 prev_frame_bit_size;
@@ -170,6 +172,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     log2_max_num_subframes = (s->decode_flags & 0x38) >> 3;
     s->max_num_subframes = 1 << log2_max_num_subframes;
     s->allow_subframes = s->max_num_subframes > 1;
+    s->min_samples_per_subframe = s->samples_per_frame / s->max_num_subframes;
 
     if(s->max_num_subframes > MAX_SUBFRAMES){
         av_log(avctx, AV_LOG_ERROR, "invalid number of subframes %i\n",s->max_num_subframes);
@@ -190,7 +193,174 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
 
 
-/* decode one wma frame */
+/**
+ *@brief decode how the data in the frame is split into subframes
+ *@param s context
+ *@param gb current get bit context
+ *@return 0 on success < 0 in case of an error
+ */
+static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
+    int c;
+    int missing_samples = s->nb_channels * s->samples_per_frame;
+
+    /** reset tiling information */
+    for(c=0;c<s->nb_channels;c++){
+        s->channel[c].num_subframes = 0;
+        s->channel[c].channel_len = 0;
+    }
+
+    /** handle the easy case whith one constant sized subframe per channel */
+    if(s->max_num_subframes == 1){
+        for(c=0;c<s->nb_channels;c++){
+            s->channel[c].num_subframes = 1;
+            s->channel[c].subframe_len[0] = s->samples_per_frame;
+            s->channel[c].channel_len = 0;
+        }
+    }else{ /** subframe len and number of subframes is not constant */
+        int subframe_len_bits = 0;     /** bits needed for the subframe len */
+        int subframe_len_zero_bit = 0; /** how many of the len bits indicate
+                                           if the subframe is zero */
+
+        /** calculate subframe len bits */
+        if(s->lossless)
+            subframe_len_bits = av_log2(s->max_num_subframes - 1) + 1;
+        else if(s->max_num_subframes == 16){
+            subframe_len_zero_bit = 1;
+            subframe_len_bits = 3;
+        }else
+            subframe_len_bits = av_log2(s->max_num_subframes) + 1;
+
+        /** loop until the frame data is split between the subframes */
+        while(missing_samples > 0){
+             int64_t tileinfo = -1;
+             int min_channel_len = s->samples_per_frame;
+             int num_subframes_per_channel = 0;
+             int num_channels = 0;
+             int subframe_len = s->samples_per_frame / s->max_num_subframes;
+
+             /** find channel with the smallest overall len */
+             for(c=0;c<s->nb_channels;c++){
+                 if(min_channel_len > s->channel[c].channel_len)
+                     min_channel_len = s->channel[c].channel_len;
+             }
+
+             /** check if this is the start of a new frame */
+             if(missing_samples == s->nb_channels * s->samples_per_frame){
+                 s->no_tiling = get_bits1(gb);
+             }
+
+             if(s->no_tiling){
+                 num_subframes_per_channel = 1;
+                 num_channels = s->nb_channels;
+             }else{
+                  /** count how many channels have the minimum len */
+                  for(c=0;c<s->nb_channels;c++){
+                      if(min_channel_len == s->channel[c].channel_len){
+                          ++num_channels;
+                      }
+                  }
+                  if(num_channels <= 1)
+                      num_subframes_per_channel = 1;
+             }
+
+             /** maximum number of subframes, evenly split */
+             if(subframe_len == missing_samples / num_channels){
+                 num_subframes_per_channel = 1;
+             }
+
+             /** if there might be multiple subframes per channel */
+             if(num_subframes_per_channel != 1){
+                 int total_num_bits = num_channels;
+                 tileinfo = 0;
+                 /** for every channel with the minimum len 1 bit is transmitted that
+                     informs us if the channel
+                     contains a subframe with the next subframe_len */
+                 while(total_num_bits){
+                    int num_bits = total_num_bits;
+                    if(num_bits > 24)
+                        num_bits = 24;
+                    tileinfo |= get_bits(gb,num_bits);
+                    total_num_bits -= num_bits;
+                    num_bits = total_num_bits;
+                    tileinfo <<= (num_bits > 24)? 24 : num_bits;
+                 }
+             }
+
+
+             /** if the frames are not evenly split get the next subframe len from the bitstream */
+             if(subframe_len != missing_samples / num_channels){
+                  int log2_subframe_len;
+                  /* 1 bit indicates if the subframe len is zero */
+                  if(subframe_len_zero_bit){
+                      log2_subframe_len = get_bits1(gb);
+                      if(log2_subframe_len){
+                          log2_subframe_len = get_bits(gb,subframe_len_bits-1) + 1;
+                      }
+                  }else
+                          log2_subframe_len = get_bits(gb,subframe_len_bits);
+
+                  if(s->lossless)
+                      subframe_len = s->samples_per_frame / s->max_num_subframes * (log2_subframe_len + 1);
+                  else
+                      subframe_len = s->samples_per_frame / (1 << log2_subframe_len);
+
+             }
+
+             /** sanity check the len */
+             if(subframe_len < s->min_samples_per_subframe || subframe_len > s->samples_per_frame){
+                  av_log(s->avctx, AV_LOG_ERROR, "broken frame: subframe_len %i\n",subframe_len);
+                  return -1;
+             }
+             for(c=0; c<s->nb_channels;c++){
+                  if(s->channel[c].num_subframes > 32){
+                      av_log(s->avctx, AV_LOG_ERROR, "broken frame: num subframes %i\n",s->channel[c].num_subframes);
+                      return -1;
+                  }
+
+                  /** add subframes to the individual channels */
+                  if(min_channel_len == s->channel[c].channel_len){
+                       --num_channels;
+                       if(tileinfo & (1<<num_channels)){
+                            if(s->channel[c].num_subframes > 31){
+                               av_log(s->avctx, AV_LOG_ERROR, "broken frame: num subframes > 31\n");
+                               return -1;
+                            }
+                            s->channel[c].subframe_len[s->channel[c].num_subframes] = subframe_len;
+                            s->channel[c].channel_len += subframe_len;
+                            missing_samples -= subframe_len;
+                            ++s->channel[c].num_subframes;
+                            if(missing_samples < 0 || s->channel[c].channel_len > s->samples_per_frame){
+                                av_log(s->avctx, AV_LOG_ERROR, "broken frame: channel len > samples_per_frame\n");
+                                return -1;
+                            }
+                        }
+                  }
+             }
+        }
+
+    }
+#if 0
+#undef printf
+
+    for(c=0;c<s->nb_channels;c++){
+        int i;
+        for(i=0;i<s->channel[c].num_subframes;i++){
+            printf("frame[%i] channel[%i] subframe[%i] len %i\n",s->frame_num,c,i,s->channel[c].subframe_len[i]);
+        }
+    }
+#endif
+
+    return 0;
+}
+
+
+/**
+ *@brief decode one wma frame
+ *@param s context
+ *@param gb current get bit context
+ *@return 0 if the trailer bit indicates that this is the last frame
+ *        1 if there are more frames
+ */
 static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
     unsigned int gb_start_count = get_bits_count(gb);
     int more_frames = 0;
@@ -201,6 +371,12 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
         len = get_bits(gb,s->log2_frame_size);
 
     av_log(s->avctx,AV_LOG_INFO,"decoding frame with len %x\n",len);
+
+    /** decode tile information */
+    if(wma_decode_tilehdr(s,gb)){
+        s->packet_loss = 1;
+        return 0;
+    }
 
     /* skip the rest of the frame data */
     skip_bits_long(gb,len - (get_bits_count(gb) - gb_start_count) - 1);
@@ -292,11 +468,14 @@ static int wma3_decode_packet(AVCodecContext *avctx,
             init_get_bits(&gb_prev, s->prev_frame, s->prev_frame_bit_size);
             wma_decode_frame(s,&gb_prev);
         }
+    }else if(s->prev_frame_bit_size){
+        av_log(avctx, AV_LOG_ERROR, "ignoring %x previously saved bits\n",s->prev_frame_bit_size);
 
-        /* reset prev frame buffer */
-        s->prev_frame_bit_size = 0;
     }
 
+    /* reset prev frame buffer */
+    s->prev_frame_bit_size = 0;
+    s->packet_loss = 0;
     /* decode the rest of the packet */
     while(more_frames && remaining_bits(s) > s->log2_frame_size){
         int frame_size = show_bits(&s->gb, s->log2_frame_size);
@@ -306,6 +485,8 @@ static int wma3_decode_packet(AVCodecContext *avctx,
             /* decode the frame */
             more_frames = wma_decode_frame(s,&s->gb);
 
+            /** the linspire wma decoder does not decode the last frames from the last
+                packet when more_frames is false */
             if(!more_frames){
                 av_log(avctx, AV_LOG_ERROR, "no more frames\n");
             }
