@@ -150,10 +150,11 @@ static void first_order_predictor(AlacEncodeContext *s, int ch)
     }
 }
 
-static void alac_entropy_coder(AlacEncodeContext *s, int32_t *samples)
+static void alac_entropy_coder(AlacEncodeContext *s, int ch)
 {
     unsigned int history = s->rc.initial_history;
     int sign_modifier = 0, i = 0, k;
+    int32_t *samples = s->sample_buf[ch];
 
     while(i < s->avctx->frame_size) {
         int x;
@@ -219,7 +220,7 @@ static void write_compressed_frame(AlacEncodeContext *s)
 
     for(i=0;i<s->channels;i++) {
         first_order_predictor(s, i);
-        alac_entropy_coder(s, s->sample_buf[i]);
+        alac_entropy_coder(s, i);
     }
 }
 
