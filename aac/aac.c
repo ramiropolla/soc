@@ -997,12 +997,26 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
         }
         ics->swb_offset    =    swb_offset_128[ac->m4ac.sampling_index];
         ics->num_swb       =       num_swb_128[ac->m4ac.sampling_index];
+        if(ics->max_sfb > ics->num_swb) {
+            av_log(ac->avccontext, AV_LOG_ERROR,
+                "Number of scalefactor bands in group (%d) exceeds limit (%d)\n",
+                ics->max_sfb, ics->num_swb);
+            return -1;
+        }
+
         ics->num_windows   = 8;
         ics->tns_max_bands = tns_max_bands_128[ac->m4ac.sampling_index];
     } else {
         ics->max_sfb = get_bits(gb, 6);
         ics->swb_offset    =    swb_offset_1024[ac->m4ac.sampling_index];
         ics->num_swb       =       num_swb_1024[ac->m4ac.sampling_index];
+        if(ics->max_sfb > ics->num_swb) {
+            av_log(ac->avccontext, AV_LOG_ERROR,
+                "Number of scalefactor bands in group (%d) exceeds limit (%d)\n",
+                ics->max_sfb, ics->num_swb);
+            return -1;
+        }
+
         ics->num_windows   = 1;
         ics->tns_max_bands = tns_max_bands_1024[ac->m4ac.sampling_index];
         if (get_bits1(gb)) {
@@ -1059,7 +1073,13 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
             while ((sect_len_incr = get_bits(gb, bits)) == (1 << bits)-1)
                 sect_len += sect_len_incr;
             sect_len += sect_len_incr;
-            for (; k < sect_len && k < ics->max_sfb; k++)
+            if (sect_len > ics->max_sfb) {
+                av_log(ac->avccontext, AV_LOG_ERROR,
+                    "Number of codebooks (%d) exceeds limit (%d)\n",
+                    sect_len, ics->max_sfb);
+                return -1;
+            }
+            for (; k < sect_len; k++)
                 cb[g][k] = sect_cb;
         }
     }
