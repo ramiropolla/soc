@@ -486,17 +486,6 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     /* Allocate or free elements depending on if they are in the
        current program configuration struct */
 
-    for(i = 0; i < MAX_TAGID; i++) {
-        channels += !!pcs->che_type[ID_SCE][i] + !!pcs->che_type[ID_CPE][i] * 2 + !!pcs->che_type[ID_LFE][i];
-
-        for(j = 0; j < 4; j++) {
-            if(pcs->che_type[j][i] && !ac->che[j][i]) {
-                ac->che[j][i] = av_mallocz(sizeof(ChannelElement));
-            } else
-                che_freep(&ac->che[j][i]);
-        }
-    }
-
     /* Set up default 1:1 output mapping
      *
      * For a 5.1 stream the output order will be:
@@ -507,8 +496,11 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
 
     ch = 0;
     for(i = 0; i < MAX_TAGID; i++) {
+        channels += !!pcs->che_type[ID_SCE][i] + !!pcs->che_type[ID_CPE][i] * 2 + !!pcs->che_type[ID_LFE][i];
         for(j = 0; j < 4; j++) {
-            if(j != ID_CCE && pcs->che_type[j][i]) {
+            if(pcs->che_type[j][i] && !ac->che[j][i]) {
+                ac->che[j][i] = av_mallocz(sizeof(ChannelElement));
+            if(j != ID_CCE) {
                 ac->output_data[ch++] = ac->che[j][i]->ch[0].ret;
                 ac->che[j][i]->ch[0].mixing_gain = 1.0f;
                 if(j == ID_CPE) {
@@ -522,6 +514,8 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
                 if(j == ID_SCE && !mixdown[MIXDOWN_CENTER] && pcs->che_type[j][i] == AAC_CHANNEL_FRONT)
                     mixdown[MIXDOWN_CENTER] = ac->che[j][i];
             }
+            } else
+                che_freep(&ac->che[j][i]);
         }
     }
     assert(ch == channels);
