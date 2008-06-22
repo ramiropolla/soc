@@ -466,7 +466,7 @@ static void che_freep(ChannelElement **s) {
 static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     AVCodecContext *avctx = ac->avccontext;
     ProgramConfig * pcs = &ac->pcs;
-    int i, j, channels = 0, ch;
+    int i, j, channels = 0;
     float a, b;
     ChannelElement *mixdown[3] = { NULL, NULL, NULL };
 
@@ -494,17 +494,15 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
      * While at it: locate front, center and back for matrix mix-down further down
      */
 
-    ch = 0;
     for(i = 0; i < MAX_TAGID; i++) {
-        channels += !!pcs->che_type[ID_SCE][i] + !!pcs->che_type[ID_CPE][i] * 2 + !!pcs->che_type[ID_LFE][i];
         for(j = 0; j < 4; j++) {
             if(pcs->che_type[j][i] && !ac->che[j][i]) {
                 ac->che[j][i] = av_mallocz(sizeof(ChannelElement));
                 if(j != ID_CCE) {
-                    ac->output_data[ch++] = ac->che[j][i]->ch[0].ret;
+                    ac->output_data[channels++] = ac->che[j][i]->ch[0].ret;
                     ac->che[j][i]->ch[0].mixing_gain = 1.0f;
                     if(j == ID_CPE) {
-                        ac->output_data[ch++] = ac->che[j][i]->ch[1].ret;
+                        ac->output_data[channels++] = ac->che[j][i]->ch[1].ret;
                         ac->che[j][i]->ch[1].mixing_gain = 1.0f;
                         if(!mixdown[MIXDOWN_FRONT] && pcs->che_type[j][i] == AAC_CHANNEL_FRONT)
                             mixdown[MIXDOWN_FRONT] = ac->che[j][i];
