@@ -44,7 +44,7 @@ typedef struct AlacEncodeContext {
     int compression_level;
     int max_coded_frame_size;
     int write_sample_size;
-    int16_t *sample_buf[MAX_CHANNELS];
+    int32_t *sample_buf[MAX_CHANNELS];
     PutBitContext pbctx;
     RiceContext rc;
     AVCodecContext *avctx;
@@ -66,7 +66,7 @@ static void allocate_sample_buffers(AlacEncodeContext *s)
     int i = s->channels;
 
     while(i) {
-        s->sample_buf[i-1] = av_mallocz(s->avctx->frame_size*s->avctx->bits_per_sample>>3);
+        s->sample_buf[i-1] = av_mallocz(s->avctx->frame_size*sizeof(int32_t));
         i--;
     }
 }
@@ -131,7 +131,7 @@ static void write_frame_header(AlacEncodeContext *s)
     put_bits(&s->pbctx, 32, s->avctx->frame_size);          // No. of samples in the frame
 }
 
-static void alac_entropy_coder(AlacEncodeContext *s, int16_t *samples)
+static void alac_entropy_coder(AlacEncodeContext *s, int32_t *samples)
 {
     unsigned int history = s->rc.initial_history;
     int sign_modifier = 0, i = 0, k;
