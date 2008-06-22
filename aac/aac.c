@@ -899,10 +899,6 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 #ifdef AAC_SSR
     }
 #endif /* AAC_SSR */
-    for (i = 0; i < 128; i++) {
-        sine_short_128[i] *= 8.;
-        kbd_short_128[i] *= 8.;
-    }
     return 0;
 }
 
@@ -1059,6 +1055,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
  * reference: Table 4.47
  */
 static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, IndividualChannelStream * ics, const int cb[][64], float sf[][64]) {
+    const int sf_offset = ac->sf_offset + (ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 12 : 0);
     int g, i, index;
     int offset[3] = { global_gain, global_gain - 90, 100 };
     int noise_flag = 1;
@@ -1086,7 +1083,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
             if(index == 2)
                 sf[g][i] =  pow2sf_tab[-offset[index] + 300];
             else
-                sf[g][i] = -pow2sf_tab[ offset[index] + ac->sf_offset];
+                sf[g][i] = -pow2sf_tab[ offset[index] + sf_offset];
             sf[g][i] *= mix_gain;
         }
     }
@@ -1672,7 +1669,6 @@ static void window_ltp_tool(AACContext * ac, SingleChannelElement * sce, float *
         vector_fmul_dst(ac, buf, in, lwindow_prev, 1024);
     } else {
         memset(buf, 0, 448 * sizeof(float));
-        for (i = 448; i < 576; i++) in[i] *= 0.125; // normalize
         vector_fmul_dst(ac, buf + 448, in + 448, swindow_prev, 128);
         memcpy(buf + 576, in + 576, 448 * sizeof(float));
     }
@@ -1680,7 +1676,6 @@ static void window_ltp_tool(AACContext * ac, SingleChannelElement * sce, float *
         ac->dsp.vector_fmul_reverse(buf + 1024, in + 1024, lwindow, 1024);
     } else {
         memcpy(buf + 1024, in + 1024, 448 * sizeof(float));
-        for (i = 448; i < 576; i++) in[i + 1024] *= 0.125; // normalize
         ac->dsp.vector_fmul_reverse(buf + 1024 + 448, in + 1024 + 448, swindow, 128);
         memset(buf + 1024 + 576, 0, 448 * sizeof(float));
     }
@@ -1762,7 +1757,6 @@ static void window_trans(AACContext * ac, SingleChannelElement * sce) {
                 ac->dsp.vector_fmul_add_add(out, buf, lwindow_prev, saved, ac->add_bias, 1024, 1);
             } else {
                 for (i = 0; i < 448; i++) out[i] = saved[i] + ac->add_bias;
-                for (i = 448; i < 576; i++) buf[i] *= 0.125; // normalize
                 ac->dsp.vector_fmul_add_add(out + 448, buf + 448, swindow_prev, saved + 448, ac->add_bias, 128, 1);
                 for (i = 576; i < 1024; i++)   out[i] = buf[i] + saved[i] + ac->add_bias;
             }
@@ -1771,7 +1765,6 @@ static void window_trans(AACContext * ac, SingleChannelElement * sce) {
             ac->dsp.vector_fmul_reverse(saved, buf + 1024, lwindow, 1024);
         } else {
             memcpy(saved, buf + 1024, 448 * sizeof(float));
-            for (i = 448; i < 576; i++) buf[i + 1024] *= 0.125; // normalize
             ac->dsp.vector_fmul_reverse(saved + 448, buf + 1024 + 448, swindow, 128);
             memset(saved + 576, 0, 448 * sizeof(float));
         }
@@ -1812,7 +1805,6 @@ static void window_ssr_tool(AACContext * ac, SingleChannelElement * sce, float *
             vector_fmul_dst(ac, out, buf, lwindow_prev, 256);
         } else {
             memset(out, 0, 112 * sizeof(float));
-            for (i = 112; i < 144; i++) buf[i] *= 0.125; // normalize
             vector_fmul_dst(ac, out + 112, buf + 112, swindow_prev, 32);
             memcpy(out + 144, buf + 144, 112 * sizeof(float));
         }
@@ -1820,7 +1812,6 @@ static void window_ssr_tool(AACContext * ac, SingleChannelElement * sce, float *
             ac->dsp.vector_fmul_reverse(out + 256, buf + 256, lwindow, 256);
         } else {
             memcpy(out + 256, buf + 256, 112 * sizeof(float));
-            for (i = 112; i < 144; i++) buf[i + 256] *= 0.125; // normalize
             ac->dsp.vector_fmul_reverse(out + 256 + 112, buf + 256 + 112, swindow, 32);
             memset(out + 144, 0, 112 * sizeof(float));
         }
