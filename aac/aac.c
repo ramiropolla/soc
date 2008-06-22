@@ -129,7 +129,7 @@ enum {
 /**
  * Window sequences
  */
-enum {
+enum WindowSequence {
     ONLY_LONG_SEQUENCE,
     LONG_START_SEQUENCE,
     EIGHT_SHORT_SEQUENCE,
@@ -205,7 +205,7 @@ typedef struct {
 typedef struct {
     int intensity_present;
     int max_sfb;                ///< number of scalefactor bands per group
-    int window_sequence;
+    enum WindowSequence window_sequence;
     uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
     int num_window_groups;
     uint8_t group_len[8];
