@@ -861,9 +861,7 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         static const int mod_cb[11] = { 3, 3, 3, 3, 9, 9, 8, 8, 13, 13, 17 };
         static const int off_cb[11] = { 1, 1, 0, 0, 4, 4, 0, 0,  0,  0,  0 };
 
-        int a_bits_size = sizeof(tmp[i].a_bits[0]);
-        int a_code_size = sizeof(tmp[i].a_code[0]);
-        int j, k, values = tmp[i].s/a_code_size;
+        int j, k, values = tmp[i].s/sizeof(tmp[i].a_code[0]);
         int dim = (i >= 4 ? 2 : 4);
         int mod = mod_cb[i], off = off_cb[i], index = 0;
 
