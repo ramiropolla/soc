@@ -372,7 +372,6 @@ typedef struct {
     MDCTContext mdct_small;
     MDCTContext *mdct_ltp;
     DSPContext dsp;
-    int * vq[11];
     ssr_context ssrctx;
     AVRandomState random_state;
     /** @} */
@@ -826,26 +825,6 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         tmp[10].a_code, sizeof(tmp[10].a_code[0]), sizeof(tmp[10].a_code[0]),
         384);
 
-    for (i = 0; i < 11; i++) {
-        static const int mod_cb[11] = { 3, 3, 3, 3, 9, 9, 8, 8, 13, 13, 17 };
-        static const int off_cb[11] = { 1, 1, 0, 0, 4, 4, 0, 0,  0,  0,  0 };
-
-        int j, k, values = tmp[i].s/sizeof(tmp[i].a_code[0]);
-        int dim = (i >= 4 ? 2 : 4);
-        int mod = mod_cb[i], off = off_cb[i], index = 0;
-
-        if(!(ac->vq[i] = av_malloc(dim * values * sizeof(int))))
-            return -1;
-
-        for (j = 0; j < values * dim; j += dim) {
-            index = j/dim;
-            for (k = dim - 1; k >= 0; k--) {
-                ac->vq[i][j+k] = (index % mod) - off;
-                index /= mod;
-            }
-        }
-    }
-
     dsputil_init(&ac->dsp, avccontext);
 
     /* Initialize RNG dither */
@@ -1195,7 +1174,8 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const Indiv
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
                         const int index = get_vlc2(gb, books[cur_cb - 1].table, 6, 3);
-                        const int *vq_ptr = &ac->vq[cur_cb - 1][index * dim], coef_idx = (group << 7) + k;
+                        const int coef_idx = (group << 7) + k;
+                        const int8_t *vq_ptr = &codebook_vectors[cur_cb - 1][index * dim];
                         int j;
                         if (index == -1) {
                             av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data\n");
@@ -2168,9 +2148,6 @@ static int aac_decode_close(AVCodecContext * avccontext) {
             che_freep(&ac->che[j][i]);
     }
 
-    for (i = 0; i < 11; i++) {
-        av_free(ac->vq[i]);
-    }
     ff_mdct_end(&ac->mdct);
     ff_mdct_end(&ac->mdct_small);
     if (ac->mdct_ltp) {
