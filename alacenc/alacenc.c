@@ -216,7 +216,7 @@ static void write_compressed_frame(AlacEncodeContext *s)
         }
     }
 
-    // apply entropy coding to audio samples
+    // apply lpc and entropy coding to audio samples
 
     for(i=0;i<s->channels;i++) {
         first_order_predictor(s, i);
