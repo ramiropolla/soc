@@ -30,6 +30,7 @@
 #define ALAC_FRAME_FOOTER_SIZE    3
 
 #define ALAC_ESCAPE_CODE          0x1FF
+#define MAX_LPC_COEFFS            31
 
 typedef struct RiceContext {
     int history_mult;
@@ -37,6 +38,12 @@ typedef struct RiceContext {
     int k_modifier;
     int rice_modifier;
 } RiceContext;
+
+typedef struct LPCContext {
+    int lpc_order;
+    int lpc_coeff[MAX_LPC_COEFFS];
+    int lpc_quant;
+} LPCContext;
 
 typedef struct AlacEncodeContext {
     int channels;
@@ -47,6 +54,7 @@ typedef struct AlacEncodeContext {
     int32_t *sample_buf[MAX_CHANNELS];
     PutBitContext pbctx;
     RiceContext rc;
+    LPCContext lpc;
     AVCodecContext *avctx;
 } AlacEncodeContext;
 
@@ -179,7 +187,7 @@ static void alac_entropy_coder(AlacEncodeContext *s, int32_t *samples)
 
 static void write_compressed_frame(AlacEncodeContext *s)
 {
-    int i;
+    int i, j;
 
     put_bits(&s->pbctx, 8, 0);      // FIXME: interlacing shift
     put_bits(&s->pbctx, 8, 0);      // FIXME: interlacing leftweight
@@ -189,8 +197,11 @@ static void write_compressed_frame(AlacEncodeContext *s)
         put_bits(&s->pbctx, 4, 0);  // FIXME: prediction quantization
 
         put_bits(&s->pbctx, 3, s->rc.rice_modifier);
-        put_bits(&s->pbctx, 5, 0);  // predictor order
-        // FIXME: predictor coeff. table goes here
+        put_bits(&s->pbctx, 5, s->lpc.lpc_order);
+        // predictor coeff. table
+        for(j=0;j<s->lpc.lpc_order;j++) {
+            put_bits(&s->pbctx, 16, s->lpc.lpc_coeff[j]);
+        }
     }
 
     // apply entropy coding to audio samples
@@ -226,6 +237,9 @@ static av_cold int alac_encode_init(AVCodecContext *avctx)
     s->rc.initial_history = 10;
     s->rc.k_modifier      = 14;
     s->rc.rice_modifier   = 4;
+
+    // Set default predictor order
+    s->lpc.lpc_order      = 0;
 
     s->max_coded_frame_size = (ALAC_FRAME_HEADER_SIZE + ALAC_FRAME_FOOTER_SIZE +
                                avctx->frame_size*s->channels*avctx->bits_per_sample)>>3;
