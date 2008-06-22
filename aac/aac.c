@@ -518,7 +518,6 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
                 che_freep(&ac->che[j][i]);
         }
     }
-    assert(ch == channels);
 
     ac->mm[MIXDOWN_FRONT] = ac->mm[MIXDOWN_BACK] = ac->mm[MIXDOWN_CENTER] = NULL;
 
