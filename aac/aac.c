@@ -781,50 +781,50 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     avccontext->sample_rate = ac->m4ac.sample_rate;
     avccontext->frame_size  = 1024;
 
-        INIT_VLC_STATIC(&books[0], 6, tmp[0].s/sizeof(tmp[0].a_code[0]),
-            tmp[0].a_bits, sizeof(tmp[0].a_bits[0]), sizeof(tmp[0].a_bits[0]),
-            tmp[0].a_code, sizeof(tmp[0].a_code[0]), sizeof(tmp[0].a_code[0]),
-            144);
-        INIT_VLC_STATIC(&books[1], 6, tmp[1].s/sizeof(tmp[1].a_code[0]),
-            tmp[1].a_bits, sizeof(tmp[1].a_bits[0]), sizeof(tmp[1].a_bits[0]),
-            tmp[1].a_code, sizeof(tmp[1].a_code[0]), sizeof(tmp[1].a_code[0]),
-            114);
-        INIT_VLC_STATIC(&books[2], 6, tmp[2].s/sizeof(tmp[2].a_code[0]),
-            tmp[2].a_bits, sizeof(tmp[2].a_bits[0]), sizeof(tmp[2].a_bits[0]),
-            tmp[2].a_code, sizeof(tmp[2].a_code[0]), sizeof(tmp[2].a_code[0]),
-            188);
-        INIT_VLC_STATIC(&books[3], 6, tmp[3].s/sizeof(tmp[3].a_code[0]),
-            tmp[3].a_bits, sizeof(tmp[3].a_bits[0]), sizeof(tmp[3].a_bits[0]),
-            tmp[3].a_code, sizeof(tmp[3].a_code[0]), sizeof(tmp[3].a_code[0]),
-            180);
-        INIT_VLC_STATIC(&books[4], 6, tmp[4].s/sizeof(tmp[4].a_code[0]),
-            tmp[4].a_bits, sizeof(tmp[4].a_bits[0]), sizeof(tmp[4].a_bits[0]),
-            tmp[4].a_code, sizeof(tmp[4].a_code[0]), sizeof(tmp[4].a_code[0]),
-            172);
-        INIT_VLC_STATIC(&books[5], 6, tmp[5].s/sizeof(tmp[5].a_code[0]),
-            tmp[5].a_bits, sizeof(tmp[5].a_bits[0]), sizeof(tmp[5].a_bits[0]),
-            tmp[5].a_code, sizeof(tmp[5].a_code[0]), sizeof(tmp[5].a_code[0]),
-            140);
-        INIT_VLC_STATIC(&books[6], 6, tmp[6].s/sizeof(tmp[6].a_code[0]),
-            tmp[6].a_bits, sizeof(tmp[6].a_bits[0]), sizeof(tmp[6].a_bits[0]),
-            tmp[6].a_code, sizeof(tmp[6].a_code[0]), sizeof(tmp[6].a_code[0]),
-            168);
-        INIT_VLC_STATIC(&books[7], 6, tmp[7].s/sizeof(tmp[7].a_code[0]),
-            tmp[7].a_bits, sizeof(tmp[7].a_bits[0]), sizeof(tmp[7].a_bits[0]),
-            tmp[7].a_code, sizeof(tmp[7].a_code[0]), sizeof(tmp[7].a_code[0]),
-            114);
-        INIT_VLC_STATIC(&books[8], 6, tmp[8].s/sizeof(tmp[8].a_code[0]),
-            tmp[8].a_bits, sizeof(tmp[8].a_bits[0]), sizeof(tmp[8].a_bits[0]),
-            tmp[8].a_code, sizeof(tmp[8].a_code[0]), sizeof(tmp[8].a_code[0]),
-            262);
-        INIT_VLC_STATIC(&books[9], 6, tmp[9].s/sizeof(tmp[9].a_code[0]),
-            tmp[9].a_bits, sizeof(tmp[9].a_bits[0]), sizeof(tmp[9].a_bits[0]),
-            tmp[9].a_code, sizeof(tmp[9].a_code[0]), sizeof(tmp[9].a_code[0]),
-            248);
-        INIT_VLC_STATIC(&books[10], 6, tmp[10].s/sizeof(tmp[10].a_code[0]),
-            tmp[10].a_bits, sizeof(tmp[10].a_bits[0]), sizeof(tmp[10].a_bits[0]),
-            tmp[10].a_code, sizeof(tmp[10].a_code[0]), sizeof(tmp[10].a_code[0]),
-            384);
+    INIT_VLC_STATIC(&books[0], 6, tmp[0].s/sizeof(tmp[0].a_code[0]),
+        tmp[0].a_bits, sizeof(tmp[0].a_bits[0]), sizeof(tmp[0].a_bits[0]),
+        tmp[0].a_code, sizeof(tmp[0].a_code[0]), sizeof(tmp[0].a_code[0]),
+        144);
+    INIT_VLC_STATIC(&books[1], 6, tmp[1].s/sizeof(tmp[1].a_code[0]),
+        tmp[1].a_bits, sizeof(tmp[1].a_bits[0]), sizeof(tmp[1].a_bits[0]),
+        tmp[1].a_code, sizeof(tmp[1].a_code[0]), sizeof(tmp[1].a_code[0]),
+        114);
+    INIT_VLC_STATIC(&books[2], 6, tmp[2].s/sizeof(tmp[2].a_code[0]),
+        tmp[2].a_bits, sizeof(tmp[2].a_bits[0]), sizeof(tmp[2].a_bits[0]),
+        tmp[2].a_code, sizeof(tmp[2].a_code[0]), sizeof(tmp[2].a_code[0]),
+        188);
+    INIT_VLC_STATIC(&books[3], 6, tmp[3].s/sizeof(tmp[3].a_code[0]),
+        tmp[3].a_bits, sizeof(tmp[3].a_bits[0]), sizeof(tmp[3].a_bits[0]),
+        tmp[3].a_code, sizeof(tmp[3].a_code[0]), sizeof(tmp[3].a_code[0]),
+        180);
+    INIT_VLC_STATIC(&books[4], 6, tmp[4].s/sizeof(tmp[4].a_code[0]),
+        tmp[4].a_bits, sizeof(tmp[4].a_bits[0]), sizeof(tmp[4].a_bits[0]),
+        tmp[4].a_code, sizeof(tmp[4].a_code[0]), sizeof(tmp[4].a_code[0]),
+        172);
+    INIT_VLC_STATIC(&books[5], 6, tmp[5].s/sizeof(tmp[5].a_code[0]),
+        tmp[5].a_bits, sizeof(tmp[5].a_bits[0]), sizeof(tmp[5].a_bits[0]),
+        tmp[5].a_code, sizeof(tmp[5].a_code[0]), sizeof(tmp[5].a_code[0]),
+        140);
+    INIT_VLC_STATIC(&books[6], 6, tmp[6].s/sizeof(tmp[6].a_code[0]),
+        tmp[6].a_bits, sizeof(tmp[6].a_bits[0]), sizeof(tmp[6].a_bits[0]),
+        tmp[6].a_code, sizeof(tmp[6].a_code[0]), sizeof(tmp[6].a_code[0]),
+        168);
+    INIT_VLC_STATIC(&books[7], 6, tmp[7].s/sizeof(tmp[7].a_code[0]),
+        tmp[7].a_bits, sizeof(tmp[7].a_bits[0]), sizeof(tmp[7].a_bits[0]),
+        tmp[7].a_code, sizeof(tmp[7].a_code[0]), sizeof(tmp[7].a_code[0]),
+        114);
+    INIT_VLC_STATIC(&books[8], 6, tmp[8].s/sizeof(tmp[8].a_code[0]),
+        tmp[8].a_bits, sizeof(tmp[8].a_bits[0]), sizeof(tmp[8].a_bits[0]),
+        tmp[8].a_code, sizeof(tmp[8].a_code[0]), sizeof(tmp[8].a_code[0]),
+        262);
+    INIT_VLC_STATIC(&books[9], 6, tmp[9].s/sizeof(tmp[9].a_code[0]),
+        tmp[9].a_bits, sizeof(tmp[9].a_bits[0]), sizeof(tmp[9].a_bits[0]),
+        tmp[9].a_code, sizeof(tmp[9].a_code[0]), sizeof(tmp[9].a_code[0]),
+        248);
+    INIT_VLC_STATIC(&books[10], 6, tmp[10].s/sizeof(tmp[10].a_code[0]),
+        tmp[10].a_bits, sizeof(tmp[10].a_bits[0]), sizeof(tmp[10].a_bits[0]),
+        tmp[10].a_code, sizeof(tmp[10].a_code[0]), sizeof(tmp[10].a_code[0]),
+        384);
 
     for (i = 0; i < 11; i++) {
         static const int mod_cb[11] = { 3, 3, 3, 3, 9, 9, 8, 8, 13, 13, 17 };
@@ -872,10 +872,10 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         pow2sf_tab[i] = pow(2, (i - 200)/4.);
 #endif /* CONFIG_HARDCODED_TABLES */
 
-        INIT_VLC_STATIC(&mainvlc, 7, sizeof(code)/sizeof(code[0]),
-            bits, sizeof(bits[0]), sizeof(bits[0]),
-            code, sizeof(code[0]), sizeof(code[0]),
-            352);
+    INIT_VLC_STATIC(&mainvlc, 7, sizeof(code)/sizeof(code[0]),
+        bits, sizeof(bits[0]), sizeof(bits[0]),
+        code, sizeof(code[0]), sizeof(code[0]),
+        352);
 
 #ifdef AAC_SSR
     if (ac->audioObjectType == AOT_AAC_SSR) {
