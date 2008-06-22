@@ -500,20 +500,20 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
         for(j = 0; j < 4; j++) {
             if(pcs->che_type[j][i] && !ac->che[j][i]) {
                 ac->che[j][i] = av_mallocz(sizeof(ChannelElement));
-            if(j != ID_CCE) {
-                ac->output_data[ch++] = ac->che[j][i]->ch[0].ret;
-                ac->che[j][i]->ch[0].mixing_gain = 1.0f;
-                if(j == ID_CPE) {
-                    ac->output_data[ch++] = ac->che[j][i]->ch[1].ret;
-                    ac->che[j][i]->ch[1].mixing_gain = 1.0f;
-                    if(!mixdown[MIXDOWN_FRONT] && pcs->che_type[j][i] == AAC_CHANNEL_FRONT)
-                        mixdown[MIXDOWN_FRONT] = ac->che[j][i];
-                    if(!mixdown[MIXDOWN_BACK ] && pcs->che_type[j][i] == AAC_CHANNEL_BACK)
-                        mixdown[MIXDOWN_BACK ] = ac->che[j][i];
+                if(j != ID_CCE) {
+                    ac->output_data[ch++] = ac->che[j][i]->ch[0].ret;
+                    ac->che[j][i]->ch[0].mixing_gain = 1.0f;
+                    if(j == ID_CPE) {
+                        ac->output_data[ch++] = ac->che[j][i]->ch[1].ret;
+                        ac->che[j][i]->ch[1].mixing_gain = 1.0f;
+                        if(!mixdown[MIXDOWN_FRONT] && pcs->che_type[j][i] == AAC_CHANNEL_FRONT)
+                            mixdown[MIXDOWN_FRONT] = ac->che[j][i];
+                        if(!mixdown[MIXDOWN_BACK ] && pcs->che_type[j][i] == AAC_CHANNEL_BACK)
+                            mixdown[MIXDOWN_BACK ] = ac->che[j][i];
+                    }
+                    if(j == ID_SCE && !mixdown[MIXDOWN_CENTER] && pcs->che_type[j][i] == AAC_CHANNEL_FRONT)
+                        mixdown[MIXDOWN_CENTER] = ac->che[j][i];
                 }
-                if(j == ID_SCE && !mixdown[MIXDOWN_CENTER] && pcs->che_type[j][i] == AAC_CHANNEL_FRONT)
-                    mixdown[MIXDOWN_CENTER] = ac->che[j][i];
-            }
             } else
                 che_freep(&ac->che[j][i]);
         }
