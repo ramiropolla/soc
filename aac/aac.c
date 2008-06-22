@@ -1107,9 +1107,9 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
 
 static void decode_pulse_data(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
     int i;
-    pulse->num_pulse = get_bits(gb, 2);
+    pulse->num_pulse = get_bits(gb, 2) + 1;
     pulse->start = get_bits(gb, 6);
-    for (i = 0; i <= pulse->num_pulse; i++) {
+    for (i = 0; i < pulse->num_pulse; i++) {
         pulse->offset[i] = get_bits(gb, 5);
         pulse->amp[i] = get_bits(gb, 4);
     }
@@ -1252,7 +1252,7 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const Indiv
 
 static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, const Pulse * pulse, int * icoef) {
     int i, off = ics->swb_offset[pulse->start];
-    for (i = 0; i <= pulse->num_pulse; i++) {
+    for (i = 0; i < pulse->num_pulse; i++) {
         off += pulse->offset[i];
         if (icoef[off] > 0)
             icoef[off] += pulse->amp[i];
