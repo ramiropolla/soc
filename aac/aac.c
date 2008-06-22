@@ -2109,6 +2109,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     while ((id = get_bits(&gb, 3)) != ID_END) {
         tag = get_bits(&gb, 4);
         switch (id) {
+
         case ID_SCE:
             if(!ac->che[ID_SCE][tag]) {
                 if(tag == 1 && ac->che[ID_LFE][0]) {
@@ -2125,32 +2126,50 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             }
             err = decode_ics(ac, &gb, 0, 0, &ac->che[ID_SCE][tag]->ch[0]);
             break;
+
         case ID_CPE:
-            err = !ac->che[ID_CPE][tag] ? -1 : decode_cpe(ac, &gb, tag);
+            if (ac->che[ID_CPE][tag]) {
+                err = decode_cpe(ac, &gb, tag);
+            } else
+                err = -1;
             break;
+
         case ID_FIL:
-            if (tag == 15) tag += get_bits(&gb, 8) - 1;
+            if (tag == 15)
+                tag += get_bits(&gb, 8) - 1;
             while (tag > 0)
                 tag -= extension_payload(ac, &gb, tag);
             err = 0; /* FIXME */
             break;
+
         case ID_PCE:
             err = program_config_element(ac, &gb);
             break;
+
         case ID_DSE:
             data_stream_element(ac, &gb, tag);
             err = 0;
             break;
+
         case ID_CCE:
-            err = !ac->che[ID_CCE][tag] ? -1 : decode_cce(ac, &gb, tag);
+            if (ac->che[ID_CCE][tag]) {
+                err = decode_cce(ac, &gb, tag);
+            } else
+                err = -1;
             break;
+
         case ID_LFE:
-            err = ac->che[ID_LFE][tag] && !decode_ics(ac, &gb, 0, 0, &ac->che[ID_LFE][tag]->ch[0]) ? 0 : -1;
+            if (ac->che[ID_LFE][tag]) {
+                err = decode_ics(ac, &gb, 0, 0, &ac->che[ID_LFE][tag]->ch[0]);
+            } else
+                err = -1;
             break;
+
         default:
             err = -1; /* should not happen, but keeps compiler happy */
             break;
         }
+
         if(err)
             return -1;
     }
