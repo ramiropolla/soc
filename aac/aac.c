@@ -408,17 +408,6 @@ static void vector_fmul_add_add_add(AACContext * ac, float * dst, const float * 
         dst[i] += src3[i];
 }
 
-// aux
-/**
- * Generate a sine window
- */
-static void sine_window_init(float *window, int n) {
-    const float alpha = M_PI / n;
-    int i;
-    for(i = 0; i < n/2; i++)
-        window[i] = sin((i + 0.5) * alpha);
-}
-
 #ifdef AAC_SSR
 static void ssr_context_init(ssr_context * ctx) {
     int b, i;
@@ -907,8 +896,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         // window initialization
         ff_kbd_window_init(kbd_long_1024, 4.0, 256);
         ff_kbd_window_init(kbd_short_128, 6.0, 32);
-        sine_window_init(sine_long_1024, 512);
-        sine_window_init(sine_short_128, 64);
+        ff_sine_window_init(sine_long_1024, 256);
+        ff_sine_window_init(sine_short_128, 32);
         ssr_context_init(&ac->ssrctx);
     } else {
 #endif /* AAC_SSR */
@@ -917,8 +906,8 @@ static int aac_decode_init(AVCodecContext * avccontext) {
         // window initialization
         ff_kbd_window_init(kbd_long_1024, 4.0, 1024);
         ff_kbd_window_init(kbd_short_128, 6.0, 128);
-        sine_window_init(sine_long_1024, 2048);
-        sine_window_init(sine_short_128, 256);
+        ff_sine_window_init(sine_long_1024, 1024);
+        ff_sine_window_init(sine_short_128, 128);
 #ifdef AAC_SSR
     }
 #endif /* AAC_SSR */
