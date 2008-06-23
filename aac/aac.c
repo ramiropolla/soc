@@ -1177,10 +1177,6 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const Indiv
                         const int coef_idx = (group << 7) + k;
                         const int8_t *vq_ptr = &codebook_vectors[cur_cb - 1][index * dim];
                         int j;
-                        if (index == -1) {
-                            av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data\n");
-                            return -1;
-                        }
                         for (j = 0; j < dim; j++)
                             icoef[coef_idx + j] = 1;
                         if (IS_CODEBOOK_UNSIGNED(cur_cb)) {
