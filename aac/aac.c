@@ -1228,14 +1228,11 @@ static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, con
 
 static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * ics, const int * icoef, const int cb[][64], const float sf[][64], float * coef) {
     const uint16_t * offsets = ics->swb_offset;
+    const int c = 1024/ics->num_window_groups;
     int g, i, group, k;
 
-    if(ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
-        for(g = 0; g < 8; g++)
-            memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(128 - offsets[ics->max_sfb]));
-    } else {
-        memset(coef + offsets[ics->max_sfb], 0, sizeof(float)*(1024 - offsets[ics->max_sfb]));
-    }
+    for(g = 0; g < ics->num_window_groups; g++)
+        memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(c - offsets[ics->max_sfb]));
 
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
