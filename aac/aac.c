@@ -1048,7 +1048,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
             if (cb[g][i] == ZERO_HCB) {
                 int run_end = cb_run_end[g][i];
                 for(; i < run_end; i++)
-                sf[g][i] = 0.;
+                    sf[g][i] = 0.;
                 continue;
             }else if((cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
                 int run_end = cb_run_end[g][i];
@@ -1056,39 +1056,39 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
                 for(; i < run_end; i++) {
                     offset[2] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
                     if(offset[2] > 255) {
-                av_log(ac->avccontext, AV_LOG_ERROR,
+                        av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range", sf_str[2], offset[2]);
-                return -1;
-            }
+                        return -1;
+                    }
                     sf[g][i] =  pow2sf_tab[-offset[2] + 300];
-            sf[g][i] *= mix_gain;
+                    sf[g][i] *= mix_gain;
                 }
             }else if(cb[g][i] == NOISE_HCB) {
                 int run_end = cb_run_end[g][i];
                 for(; i < run_end; i++) {
                     if(noise_flag-- > 0)
                         offset[1] += get_bits(gb, 9) - 256;
-            else
+                    else
                         offset[1] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
                     if(offset[1] > 255) {
-                av_log(ac->avccontext, AV_LOG_ERROR,
+                        av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range", sf_str[1], offset[1]);
-                return -1;
-            }
+                        return -1;
+                    }
                     sf[g][i] = -pow2sf_tab[ offset[1] + sf_offset];
-            sf[g][i] *= mix_gain;
+                    sf[g][i] *= mix_gain;
                 }
             }else {
                 int run_end = cb_run_end[g][i];
                 for(; i < run_end; i++) {
                     offset[0] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
                     if(offset[0] > 255) {
-                av_log(ac->avccontext, AV_LOG_ERROR,
+                        av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range", sf_str[0], offset[0]);
-                return -1;
-            }
+                        return -1;
+                    }
                     sf[g][i] = -pow2sf_tab[ offset[0] + sf_offset];
-            sf[g][i] *= mix_gain;
+                    sf[g][i] *= mix_gain;
                 }
             }
         }
