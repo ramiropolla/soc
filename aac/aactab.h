@@ -123,9 +123,11 @@ static const uint8_t num_swb_128[] = {
     12, 12, 12, 14, 14, 14, 15, 15, 15, 15, 15, 15
 };
 
+#ifdef AAC_LTP
 static const float ltp_coef[] = {
     -1.141658, -1.393232, -1.626008, -1.822608, -1.969800, -2.135788, -2.389202, -2.739066,
 };
+#endif /* AAC_LTP */
 
 static const uint8_t tns_max_bands_1024[] = {
     31, 31, 34, 40, 42, 51, 46, 46, 42, 42, 42, 39
