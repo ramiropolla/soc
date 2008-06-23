@@ -315,6 +315,7 @@ typedef struct {
     IndividualChannelStream ics;
     TemporalNoiseShaping tns;
     int cb[8][64];                            ///< Codebooks
+    int cb_run_end[8][64];                    ///< Codebook run end points
     float sf[8][64];                          ///< Scalefactors
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< Coefficients for IMDCT
     DECLARE_ALIGNED_16(float, saved[1024]);   ///< Overlap
@@ -1000,7 +1001,7 @@ static inline float ivquant(AACContext * ac, int a) {
  * Decode section_data payload
  * reference: Table 4.46
  */
-static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, int cb[][64]) {
+static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, int cb[][64], int cb_run_end[][64]) {
     int g;
     for (g = 0; g < ics->num_window_groups; g++) {
         int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
@@ -1022,8 +1023,10 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
                     sect_len, ics->max_sfb);
                 return -1;
             }
-            for (; k < sect_len; k++)
+            for (; k < sect_len; k++) {
                 cb[g][k] = sect_cb;
+                cb_run_end[g][k] = sect_len;
+            }
         }
     }
     return 0;
@@ -1033,37 +1036,61 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
  * Decode scale_factor_data
  * reference: Table 4.47
  */
-static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, IndividualChannelStream * ics, const int cb[][64], float sf[][64]) {
+static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, IndividualChannelStream * ics, const int cb[][64], const int cb_run_end[][64], float sf[][64]) {
     const int sf_offset = ac->sf_offset + (ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 12 : 0);
-    int g, i, index;
+    int g, i;
     int offset[3] = { global_gain, global_gain - 90, 100 };
     int noise_flag = 1;
     static const char *sf_str[3] = { "Global gain", "Noise gain", "Intensity stereo position" };
     ics->intensity_present = 0;
     for (g = 0; g < ics->num_window_groups; g++) {
-        for (i = 0; i < ics->max_sfb; i++) {
+        for (i = 0; i < ics->max_sfb;) {
             if (cb[g][i] == ZERO_HCB) {
+                int run_end = cb_run_end[g][i];
+                for(; i < run_end; i++)
                 sf[g][i] = 0.;
                 continue;
             }else if((cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
+                int run_end = cb_run_end[g][i];
                 ics->intensity_present = 1;
-                index = 2;
-            }else
-                index = cb[g][i] == NOISE_HCB;
-            if (cb[g][i] == NOISE_HCB && noise_flag-- > 0)
-                offset[index] += get_bits(gb, 9) - 256;
-            else
-                offset[index] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
-            if(offset[index] > 255) {
+                for(; i < run_end; i++) {
+                    offset[2] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
+                    if(offset[2] > 255) {
                 av_log(ac->avccontext, AV_LOG_ERROR,
-                        "%s (%d) out of range", sf_str[index], offset[index]);
+                            "%s (%d) out of range", sf_str[2], offset[2]);
                 return -1;
             }
-            if(index == 2)
-                sf[g][i] =  pow2sf_tab[-offset[index] + 300];
-            else
-                sf[g][i] = -pow2sf_tab[ offset[index] + sf_offset];
+                    sf[g][i] =  pow2sf_tab[-offset[2] + 300];
             sf[g][i] *= mix_gain;
+                }
+            }else if(cb[g][i] == NOISE_HCB) {
+                int run_end = cb_run_end[g][i];
+                for(; i < run_end; i++) {
+                    if(noise_flag-- > 0)
+                        offset[1] += get_bits(gb, 9) - 256;
+            else
+                        offset[1] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
+                    if(offset[1] > 255) {
+                av_log(ac->avccontext, AV_LOG_ERROR,
+                            "%s (%d) out of range", sf_str[1], offset[1]);
+                return -1;
+            }
+                    sf[g][i] = -pow2sf_tab[ offset[1] + sf_offset];
+            sf[g][i] *= mix_gain;
+                }
+            }else {
+                int run_end = cb_run_end[g][i];
+                for(; i < run_end; i++) {
+                    offset[0] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
+                    if(offset[0] > 255) {
+                av_log(ac->avccontext, AV_LOG_ERROR,
+                            "%s (%d) out of range", sf_str[0], offset[0]);
+                return -1;
+            }
+                    sf[g][i] = -pow2sf_tab[ offset[0] + sf_offset];
+            sf[g][i] *= mix_gain;
+                }
+            }
         }
     }
     return 0;
@@ -1275,9 +1302,9 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
             return -1;
     }
 
-    if (decode_section_data(ac, gb, ics, sce->cb) < 0)
+    if (decode_section_data(ac, gb, ics, sce->cb, sce->cb_run_end) < 0)
         return -1;
-    if (decode_scale_factor_data(ac, gb, sce->mixing_gain, global_gain, ics, sce->cb, sce->sf) < 0)
+    if (decode_scale_factor_data(ac, gb, sce->mixing_gain, global_gain, ics, sce->cb, sce->cb_run_end, sce->sf) < 0)
         return -1;
 
     if (!scale_flag) {
