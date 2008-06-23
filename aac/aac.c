@@ -1927,6 +1927,7 @@ static void coupling_dependent_trans(AACContext * ac, ChannelElement * cc, Singl
                 float gain = cc->coup.gain[index][g][i] * sce->mixing_gain;
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
+                        // XXX dsputil-ize
                         dest[group*128+k] += gain * src[group*128+k];
                     }
                 }
@@ -2040,6 +2041,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
         sr  = ac->mm[MIXDOWN_BACK  ]->ch[1].ret;
         out = ac->interleaved_output;
 
+        // XXX dsputil-ize
         if(avccontext->channels == 2) {
             if(ac->pcs.pseudo_surround) {
                 for(i = 0; i < 1024; i++) {
