@@ -620,6 +620,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
 
     put_bits(&s->pb, 3, ID_END);
     flush_put_bits(&s->pb);
+    avctx->frame_bits = put_bits_count(&s->pb);
     return put_bits_count(&s->pb)>>3;
 }
 
