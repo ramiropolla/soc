@@ -139,14 +139,17 @@ static void write_frame_header(AlacEncodeContext *s)
     put_bits(&s->pbctx, 32, s->avctx->frame_size);          // No. of samples in the frame
 }
 
-static void first_order_predictor(AlacEncodeContext *s, int ch)
+static void alac_linear_predictor(AlacEncodeContext *s, int ch)
 {
     int i;
 
+    if(s->lpc.lpc_order == 31) {
     i = s->avctx->frame_size - 1;
     while(i > 0) {
         s->sample_buf[ch][i] -= s->sample_buf[ch][i-1];
         i--;
+    }
+    return;
     }
 }
 
@@ -219,7 +222,7 @@ static void write_compressed_frame(AlacEncodeContext *s)
     // apply lpc and entropy coding to audio samples
 
     for(i=0;i<s->channels;i++) {
-        first_order_predictor(s, i);
+        alac_linear_predictor(s, i);
         alac_entropy_coder(s, i);
     }
 }
