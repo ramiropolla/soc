@@ -1,6 +1,6 @@
 TODO list for the ALAC Encoder:
 
-* Simple first-order linear prediction
+* Simple fixed-order linear prediction
 * Adaptive prediction
 * Stereo correlation
 
