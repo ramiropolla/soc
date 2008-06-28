@@ -144,12 +144,12 @@ static void alac_linear_predictor(AlacEncodeContext *s, int ch)
     int i;
 
     if(s->lpc.lpc_order == 31) {
-    i = s->avctx->frame_size - 1;
-    while(i > 0) {
-        s->sample_buf[ch][i] -= s->sample_buf[ch][i-1];
-        i--;
-    }
-    return;
+        i = s->avctx->frame_size - 1;
+        while(i > 0) {
+            s->sample_buf[ch][i] -= s->sample_buf[ch][i-1];
+            i--;
+        }
+        return;
     }
 }
 
