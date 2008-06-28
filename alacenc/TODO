@@ -2,14 +2,18 @@ TODO list for the ALAC Encoder:
 
 * Simple first-order linear prediction
 * Adaptive prediction
+* Stereo correlation
 
 Additonal Stuff:
 
 * Testing against I-Pod/I-tunes/Quicktime/<your favorite Apple proprietary product here> for compatibility
 * Support for varying compression levels
 * Benchmark against other popular lossless codecs
+* Benchmark against iTunes and dBpoweramp ALAC encoders
 
 Experiments:
 
 * Adaptive Rice History based encoding
+* Estimate size of entropy coded data for faster prediction order search
+* Test different LPC coeff quantization levels
 * < Other creative ideas go here >
