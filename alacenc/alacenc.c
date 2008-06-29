@@ -52,6 +52,7 @@ typedef struct AlacEncodeContext {
     int max_coded_frame_size;
     int write_sample_size;
     int32_t *sample_buf[MAX_CHANNELS];
+    int32_t *predictor_buf;
     PutBitContext pbctx;
     RiceContext rc;
     LPCContext lpc;
@@ -77,6 +78,7 @@ static void allocate_sample_buffers(AlacEncodeContext *s)
         s->sample_buf[i-1] = av_mallocz(s->avctx->frame_size*sizeof(int32_t));
         i--;
     }
+    s->predictor_buf = av_mallocz(s->avctx->frame_size*sizeof(int32_t));
 }
 
 static void free_sample_buffers(AlacEncodeContext *s)
@@ -87,6 +89,7 @@ static void free_sample_buffers(AlacEncodeContext *s)
         av_freep(&s->sample_buf[i-1]);
         i--;
     }
+    av_freep(&s->predictor_buf);
 }
 
 static void init_sample_buffers(AlacEncodeContext *s, int16_t *input_samples)
@@ -146,18 +149,18 @@ static void alac_linear_predictor(AlacEncodeContext *s, int ch)
     if(s->lpc.lpc_order == 31) {
         i = s->avctx->frame_size - 1;
         while(i > 0) {
-            s->sample_buf[ch][i] -= s->sample_buf[ch][i-1];
+            s->predictor_buf[i] = s->sample_buf[ch][i] - s->sample_buf[ch][i-1];
             i--;
         }
         return;
     }
 }
 
-static void alac_entropy_coder(AlacEncodeContext *s, int ch)
+static void alac_entropy_coder(AlacEncodeContext *s)
 {
     unsigned int history = s->rc.initial_history;
     int sign_modifier = 0, i = 0, k;
-    int32_t *samples = s->sample_buf[ch];
+    int32_t *samples = s->predictor_buf;
 
     while(i < s->avctx->frame_size) {
         int x;
@@ -223,7 +226,7 @@ static void write_compressed_frame(AlacEncodeContext *s)
 
     for(i=0;i<s->channels;i++) {
         alac_linear_predictor(s, i);
-        alac_entropy_coder(s, i);
+        alac_entropy_coder(s);
     }
 }
 
