@@ -31,6 +31,7 @@
 #define FFMPEG_AACTAB_H
 
 #define TNS_MAX_ORDER 20
+#define PNS_MEAN_ENERGY 3719550720.0f // sqrt(3.0) * 1<<31
 
 static const uint16_t swb_offset_1024_96[] = {
     0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56,

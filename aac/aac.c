@@ -1188,12 +1188,7 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const Indiv
             const int cur_cb = cb[g][i];
             const int dim = cur_cb >= FIRST_PAIR_HCB ? 2 : 4;
             int group;
-            if (cur_cb == NOISE_HCB) {
-                for (group = 0; group < ics->group_len[g]; group++) {
-                    for (k = offsets[i]; k < offsets[i+1]; k++)
-                        icoef[group*128+k] = av_random(&ac->random_state) & 0x0000FFFF;
-                }
-            }else if (cur_cb == ZERO_HCB) {
+            if (cur_cb == ZERO_HCB) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     memset(icoef + group * 128 + offsets[i], 0, (offsets[i+1] - offsets[i])*sizeof(int));
                 }
@@ -1261,13 +1256,9 @@ static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * 
         for (i = 0; i < ics->max_sfb; i++) {
             if (cb[g][i] == NOISE_HCB) {
                 for (group = 0; group < ics->group_len[g]; group++) {
-                    float energy = 0;
-                    float scale = 1.;// / (float)(offsets[i+1] - offsets[i]);
+                    float scale = sf[g][i] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
                     for (k = offsets[i]; k < offsets[i+1]; k++)
-                        energy += (float)icoef[group*128+k] * icoef[group*128+k];
-                    scale *= sf[g][i] / sqrt(energy);
-                    for (k = offsets[i]; k < offsets[i+1]; k++)
-                        coef[group*128+k] = icoef[group*128+k] * scale;
+                        coef[group*128+k] = (int32_t)av_random(&ac->random_state) * scale;
                 }
             } else if (cb[g][i] != INTENSITY_HCB && cb[g][i] != INTENSITY_HCB2) {
                 for (group = 0; group < ics->group_len[g]; group++) {
