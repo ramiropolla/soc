@@ -55,7 +55,7 @@ typedef struct AlacEncodeContext {
     int32_t *predictor_buf;
     PutBitContext pbctx;
     RiceContext rc;
-    LPCContext lpc;
+    LPCContext lpc[MAX_CHANNELS];
     AVCodecContext *avctx;
 } AlacEncodeContext;
 
@@ -145,14 +145,15 @@ static void write_frame_header(AlacEncodeContext *s)
 static void calc_predictor_params(AlacEncodeContext *s, int ch)
 {
     // Set default predictor order
-    s->lpc.lpc_order = 31;
+    s->lpc[ch].lpc_order = 31;
 }
 
 static void alac_linear_predictor(AlacEncodeContext *s, int ch)
 {
     int i;
+    LPCContext lpc = s->lpc[ch];
 
-    if(s->lpc.lpc_order == 31) {
+    if(lpc.lpc_order == 31) {
         i = s->avctx->frame_size - 1;
         while(i > 0) {
             s->predictor_buf[i] = s->sample_buf[ch][i] - s->sample_buf[ch][i-1];
@@ -224,10 +225,10 @@ static void write_compressed_frame(AlacEncodeContext *s)
         put_bits(&s->pbctx, 4, 0);  // FIXME: prediction quantization
 
         put_bits(&s->pbctx, 3, s->rc.rice_modifier);
-        put_bits(&s->pbctx, 5, s->lpc.lpc_order);
+        put_bits(&s->pbctx, 5, s->lpc[i].lpc_order);
         // predictor coeff. table
-        for(j=0;j<s->lpc.lpc_order;j++) {
-            put_bits(&s->pbctx, 16, s->lpc.lpc_coeff[j]);
+        for(j=0;j<s->lpc[i].lpc_order;j++) {
+            put_bits(&s->pbctx, 16, s->lpc[i].lpc_coeff[j]);
         }
     }
 
