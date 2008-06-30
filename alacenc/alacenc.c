@@ -144,8 +144,14 @@ static void write_frame_header(AlacEncodeContext *s)
 
 static void calc_predictor_params(AlacEncodeContext *s, int ch)
 {
-    // Set default predictor order
-    s->lpc[ch].lpc_order = 31;
+    // Set default predictor parameters
+    s->lpc[ch].lpc_order      = 4;
+    s->lpc[ch].lpc_quant      = 12;
+    s->lpc[ch].lpc_coeff[0]   = 4;
+    s->lpc[ch].lpc_coeff[1]   = -6;
+    s->lpc[ch].lpc_coeff[2]   = 4;
+    s->lpc[ch].lpc_coeff[3]   = -1;
+
 }
 
 static void alac_linear_predictor(AlacEncodeContext *s, int ch)
@@ -160,6 +166,55 @@ static void alac_linear_predictor(AlacEncodeContext *s, int ch)
             i--;
         }
         return;
+    }
+
+    // generalised linear predictor
+
+    if(lpc.lpc_order > 0) {
+        int32_t *samples  = s->sample_buf[ch];
+        int32_t *residual = s->predictor_buf;
+
+        // generate warm-up samples
+        i = lpc.lpc_order;
+        residual[0] = samples[0];
+        while(i > 0) {
+            residual[i] = samples[i] - samples[i-1];
+            i--;
+        }
+        // perform lpc on remaining samples
+        for(i = lpc.lpc_order + 1; i < s->avctx->frame_size; i++) {
+            int sum = 0, res_val, j;
+
+            for (j = 0; j < lpc.lpc_order; j++) {
+                sum += (samples[lpc.lpc_order-j] - samples[0]) *
+                        lpc.lpc_coeff[j];
+            }
+            sum += (1 << (lpc.lpc_quant - 1));
+            sum >>= lpc.lpc_quant;
+            sum += samples[0];
+            residual[i] = samples[lpc.lpc_order+1] - sum;
+            res_val = residual[i];
+
+            if(res_val) {
+                int index = lpc.lpc_order - 1;
+                int neg = (res_val < 0);
+
+                while(index >= 0 && (neg ? (res_val < 0):(res_val > 0))) {
+                    int val = samples[0] - samples[lpc.lpc_order - index];
+                    int sign = (val ? FFSIGN(val) : 0);
+
+                    if(neg)
+                        sign*=-1;
+
+                    lpc.lpc_coeff[index] -= sign;
+                    val *= sign;
+                    res_val -= ((val >> lpc.lpc_quant) *
+                            (lpc.lpc_order - index));
+                    index--;
+                }
+            }
+            samples++;
+        }
     }
 }
 
@@ -222,7 +277,7 @@ static void write_compressed_frame(AlacEncodeContext *s)
         calc_predictor_params(s, i);
 
         put_bits(&s->pbctx, 4, 0);  // prediction type : currently only type 0 has been RE'd
-        put_bits(&s->pbctx, 4, 0);  // FIXME: prediction quantization
+        put_bits(&s->pbctx, 4, s->lpc[i].lpc_quant);
 
         put_bits(&s->pbctx, 3, s->rc.rice_modifier);
         put_bits(&s->pbctx, 5, s->lpc[i].lpc_order);
