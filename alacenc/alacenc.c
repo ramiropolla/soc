@@ -142,6 +142,12 @@ static void write_frame_header(AlacEncodeContext *s)
     put_bits(&s->pbctx, 32, s->avctx->frame_size);          // No. of samples in the frame
 }
 
+static void calc_predictor_params(AlacEncodeContext *s, int ch)
+{
+    // Set default predictor order
+    s->lpc.lpc_order = 31;
+}
+
 static void alac_linear_predictor(AlacEncodeContext *s, int ch)
 {
     int i;
@@ -211,6 +217,9 @@ static void write_compressed_frame(AlacEncodeContext *s)
     put_bits(&s->pbctx, 8, 0);      // FIXME: interlacing leftweight
 
     for(i=0;i<s->channels;i++) {
+
+        calc_predictor_params(s, i);
+
         put_bits(&s->pbctx, 4, 0);  // prediction type : currently only type 0 has been RE'd
         put_bits(&s->pbctx, 4, 0);  // FIXME: prediction quantization
 
@@ -256,9 +265,6 @@ static av_cold int alac_encode_init(AVCodecContext *avctx)
     s->rc.initial_history = 10;
     s->rc.k_modifier      = 14;
     s->rc.rice_modifier   = 4;
-
-    // Set default predictor order
-    s->lpc.lpc_order      = 31;
 
     s->max_coded_frame_size = (ALAC_FRAME_HEADER_SIZE + ALAC_FRAME_FOOTER_SIZE +
                                avctx->frame_size*s->channels*avctx->bits_per_sample)>>3;
