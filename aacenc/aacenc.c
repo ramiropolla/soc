@@ -232,7 +232,7 @@ static int aac_encode_init(AVCodecContext *avctx)
     ff_kbd_window_init(s->kbd_long_1024, 4.0, 1024);
     ff_kbd_window_init(s->kbd_short_128, 6.0, 128);
 
-    ff_aac_psy_init(&s->psy, avctx, AAC_PSY_NULL, 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
+    ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
