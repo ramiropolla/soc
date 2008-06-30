@@ -264,9 +264,6 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, sh
             ff_mdct_calc(&s->mdct128, cpe->ch[channel].coeffs + k, s->output, s->tmp);
         }
     }
-    //convert coefficients into form used by AAC
-    for(i = 0; i < 1024; i++)
-        cpe->ch[channel].coeffs[i] = -copysignf(pow(fabsf(cpe->ch[channel].coeffs[i]), 0.75f), cpe->ch[channel].coeffs[i]);
 }
 
 /**

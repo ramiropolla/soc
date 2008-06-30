@@ -29,12 +29,31 @@
 #include "aacpsy.h"
 
 //borrowed from aac.c
-static float pow2sf_tab[316];
+static float pow2sf_tab[340];
 
 
 #define SCALE_ONE_POS   140
 #define SCALE_MAX_POS   255
 #define SCALE_MAX_DIFF   60
+
+
+/**
+ * Convert coefficients to integers.
+ * @return sum of coefficients
+ * @see 3GPP TS26.403 5.6.2
+ */
+static inline int convert_coeffs(float *in, int *out, int size, int scale_idx)
+{
+    int i, sign, sum = 0;
+    for(i = 0; i < size; i++){
+        sign = in[i] > 0.0;
+        out[i] = (int)(pow(FFABS(in[i]) * pow2sf_tab[200 - scale_idx + SCALE_ONE_POS], 0.75) + 0.4054);
+        if(out[i] > 8191) out[i] = 8191;
+        sum += out[i];
+        if(sign) out[i] = -out[i];
+    }
+    return sum;
+}
 
 static void psy_null_window(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
 {
@@ -73,7 +92,6 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
         cpe->ch[ch].gain = SCALE_ONE_POS;
         cpe->ch[ch].pulse.present = 0;
         for(g = 0; g < apc->num_bands1024; g++){
-            sum = 0;
             cpe->ch[ch].sf_idx[0][g] = SCALE_ONE_POS;
             //apply M/S
             if(!ch && cpe->ms.mask[0][g]){
@@ -82,10 +100,7 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
                     cpe->ch[1].coeffs[start+i] =  cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
                 }
             }
-            for(i = 0; i < apc->bands1024[g]; i++){
-                cpe->ch[ch].icoefs[start+i] = av_clip((int)(roundf(cpe->ch[ch].coeffs[start+i] / pow2sf_tab[cpe->ch[ch].sf_idx[0][g]+60])), -8191, 8191);
-                sum += !!cpe->ch[ch].icoefs[start+i];
-            }
+            sum = convert_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, apc->bands1024[g], cpe->ch[ch].sf_idx[0][g]);
             cpe->ch[ch].zeroes[0][g] = !sum;
             //try finding pulses
             if(!cpe->ch[ch].pulse.present){
@@ -180,10 +195,7 @@ static void psy_null8_process(AACPsyContext *apc, int16_t *audio, int channel, c
                         cpe->ch[1].coeffs[start+i] =  cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
                     }
                 }
-                for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++){
-                    cpe->ch[ch].icoefs[start+i] = av_clip((int)(roundf(cpe->ch[ch].coeffs[start+i] / pow2sf_tab[cpe->ch[ch].sf_idx[w][g]+60])), -8191, 8191);
-                    sum += !!cpe->ch[ch].icoefs[start+i];
-                }
+                sum = convert_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, cpe->ch[ch].ics.swb_sizes[g], cpe->ch[ch].sf_idx[w][g]);
                 cpe->ch[ch].zeroes[w][g] = !sum;
                 start += cpe->ch[ch].ics.swb_sizes[g];
             }
@@ -249,7 +261,7 @@ int ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx, int model, int fl
          return -1;
     }
 
-    for (i = 0; i < 316; i++)
+    for (i = 0; i < 340; i++)
         pow2sf_tab[i] = pow(2, (i - 200)/4.);
 
     ctx->avctx = avctx;
