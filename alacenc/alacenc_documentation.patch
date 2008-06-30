@@ -1,0 +1,25 @@
+Index: Changelog
+===================================================================
+--- Changelog	(revision 14032)
++++ Changelog	(working copy)
+@@ -122,6 +122,7 @@
+ - MAXIS EA XA (.xa) demuxer / decoder
+ - BFI video decoder
+ - OMA demuxer
++- Apple Lossless Audio Codec (ALAC) Encoder
+ 
+ version 0.4.9-pre1:
+ 
+Index: doc/general.texi
+===================================================================
+--- doc/general.texi	(revision 14032)
++++ doc/general.texi	(working copy)
+@@ -325,7 +325,7 @@
+ @item Apple MACE 6           @tab      @tab X
+ @item FLAC lossless audio    @tab X    @tab X
+ @item Shorten lossless audio @tab      @tab X
+-@item Apple lossless audio   @tab      @tab X
++@item Apple lossless audio   @tab X    @tab X
+ @tab QuickTime fourcc 'alac'
+ @item FFmpeg Sonic           @tab X    @tab X
+ @tab experimental lossy/lossless codec
