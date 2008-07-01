@@ -177,12 +177,10 @@ enum {
  */
 typedef struct {
     int che_type[4][MAX_TAGID];   ///< channel element type with the first index as the first 4 raw_data_block IDs
-
     int mono_mixdown;         ///< The SCE tag to use if user requests mono   output, -1 if not available.
     int stereo_mixdown;       ///< The CPE tag to use if user requests stereo output, -1 if not available.
     int mixdown_coeff_index;  ///< 0-3
     int pseudo_surround;      ///< Mix surround channels out of phase.
-
 } ProgramConfig;
 
 #ifdef AAC_LTP
