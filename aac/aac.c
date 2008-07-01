@@ -185,7 +185,7 @@ typedef struct {
 
 } ProgramConfig;
 
-
+#ifdef AAC_LTP
 /**
  * Long Term Prediction
  */
@@ -196,6 +196,7 @@ typedef struct {
     float coef;
     int used[MAX_LTP_LONG_SFB];
 } LongTermPrediction;
+#endif /* AAC_LTP */
 
 /**
  * Individual Channel Stream
@@ -208,8 +209,10 @@ typedef struct {
     uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window.
     int num_window_groups;
     uint8_t group_len[8];
+#ifdef AAC_LTP
     LongTermPrediction ltp;
     LongTermPrediction ltp2;
+#endif /* AAC_LTP */
     const uint16_t *swb_offset; ///< table of offsets to the lowest spectral coefficient of a scalefactor band, sfb, for a particular window
     int num_swb;                ///< number of scalefactor window bands
     int num_windows;
@@ -265,6 +268,7 @@ typedef struct {
     int amp[4];
 } Pulse;
 
+#ifdef AAC_SSR
 /**
  * parameters for the SSR Inverse Polyphase Quadrature Filter
  */
@@ -284,6 +288,7 @@ typedef struct {
     int aloc[4][8][8];
     float buf[4][24];
 } ScalableSamplingRate;
+#endif /* AAC_SSR */
 
 /**
  * coupling parameters
@@ -316,8 +321,12 @@ typedef struct {
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< Coefficients for IMDCT
     DECLARE_ALIGNED_16(float, saved[1024]);   ///< Overlap
     DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
+#ifdef AAC_LTP
     int16_t *ltp_state;
+#endif /* AAC_LTP */
+#ifdef AAC_SSR
     ScalableSamplingRate *ssr;
+#endif /* AAC_SSR */
 } SingleChannelElement;
 
 /**
@@ -366,9 +375,13 @@ typedef struct {
      */
     MDCTContext mdct;
     MDCTContext mdct_small;
+#ifdef AAC_LTP
     MDCTContext *mdct_ltp;
+#endif /* AAC_LTP */
     DSPContext dsp;
+#ifdef AAC_SSR
     ssr_context ssrctx;
+#endif /* AAC_SSR */
     AVRandomState random_state;
     /** @} */
 
@@ -436,10 +449,14 @@ static void ssr_context_init(ssr_context * ctx) {
 static void che_freep(ChannelElement **s) {
     if(!*s)
         return;
+#ifdef AAC_SSR
     av_free((*s)->ch[0].ssr);
     av_free((*s)->ch[1].ssr);
+#endif /* AAC_SSR */
+#ifdef AAC_LTP
     av_free((*s)->ch[0].ltp_state);
     av_free((*s)->ch[1].ltp_state);
+#endif /* AAC_LTP */
     av_freep(s);
 }
 
@@ -975,9 +992,11 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
                    "Predictor bit set but LTP is not supported.\n");
             return -1;
 #endif /* AAC_LTP */
+#ifdef AAC_LTP
         } else {
             ics->ltp.present = 0;
             ics->ltp2.present = 0;
+#endif /* AAC_LTP */
         }
     }
     return 0;
@@ -1384,7 +1403,9 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
         i = cpe->ch[1].ics.use_kb_window[0];
         cpe->ch[1].ics = cpe->ch[0].ics;
         cpe->ch[1].ics.use_kb_window[1] = i;
+#ifdef AAC_LTP
         cpe->ch[1].ics.ltp = cpe->ch[0].ics.ltp2;
+#endif /* AAC_LTP */
         decode_ms_data(ac, gb, cpe);
     } else {
         cpe->ms.present = 0;
@@ -2160,10 +2181,12 @@ static int aac_decode_close(AVCodecContext * avccontext) {
 
     ff_mdct_end(&ac->mdct);
     ff_mdct_end(&ac->mdct_small);
+#ifdef AAC_LTP
     if (ac->mdct_ltp) {
         ff_mdct_end(ac->mdct_ltp);
         av_free(ac->mdct_ltp);
     }
+#endif /* AAC_LTP */
     av_free(ac->interleaved_output);
     return 0 ;
 }
