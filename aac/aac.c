@@ -1747,7 +1747,6 @@ static void window_trans(AACContext * ac, SingleChannelElement * sce) {
 
     if (ics->window_sequence != EIGHT_SHORT_SEQUENCE) {
         ff_imdct_calc(&ac->mdct, buf, in, out); // out can be abused for now as a temp buffer
-        if (ac->is_saved) {
             if (ics->window_sequence != LONG_STOP_SEQUENCE) {
                 ac->dsp.vector_fmul_add_add(out, buf, lwindow_prev, saved, ac->add_bias, 1024, 1);
             } else {
@@ -1755,7 +1754,6 @@ static void window_trans(AACContext * ac, SingleChannelElement * sce) {
                 ac->dsp.vector_fmul_add_add(out + 448, buf + 448, swindow_prev, saved + 448, ac->add_bias, 128, 1);
                 for (i = 576; i < 1024; i++)   out[i] = buf[i] + saved[i] + ac->add_bias;
             }
-        }
         if (ics->window_sequence != LONG_START_SEQUENCE) {
             ac->dsp.vector_fmul_reverse(saved, buf + 1024, lwindow, 1024);
         } else {
