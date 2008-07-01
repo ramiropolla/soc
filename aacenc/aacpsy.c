@@ -428,7 +428,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
             //add correction factor to thresholds
             for(g = 0; g < apc->num_bands1024; g++)
                 pctx->band[ch][g].thr = modify_thr(pctx->band[ch][g].thr, r);
-            }
+        }
     }
 
     //determine scalefactors - 5.6.2
