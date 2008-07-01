@@ -206,6 +206,7 @@ typedef struct {
     int intensity_present;
     int max_sfb;                ///< number of scalefactor bands per group
     enum WindowSequence window_sequence;
+    enum WindowSequence window_sequence_prev;
     uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
     int num_window_groups;
     uint8_t group_len[8];
@@ -401,12 +402,14 @@ static void vector_fmul_dst(AACContext * ac, float * dst, const float * src0, co
 }
 #endif
 
+#if 0
 static void vector_fmul_add_add_add(AACContext * ac, float * dst, const float * src0, const float * src1, const float * src2, const float * src3, float src4, int len) {
     int i;
     ac->dsp.vector_fmul_add_add(dst, src0, src1, src2, src4, len, 1);
     for (i = 0; i < len; i++)
         dst[i] += src3[i];
 }
+#endif
 
 #ifdef AAC_SSR
 static void ssr_context_init(ssr_context * ctx) {
@@ -922,6 +925,7 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
         av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set\n");
         return -1;
     }
+    ics->window_sequence_prev = ics->window_sequence;
     ics->window_sequence = get_bits(gb, 2);
     ics->use_kb_window[1] = ics->use_kb_window[0];
     ics->use_kb_window[0] = get_bits1(gb);
@@ -1760,17 +1764,28 @@ static void window_trans(AACContext * ac, SingleChannelElement * sce) {
             memset(saved + 576, 0, 448 * sizeof(float));
         }
     } else {
+        if (ics->window_sequence_prev == ONLY_LONG_SEQUENCE || ics->window_sequence_prev == LONG_STOP_SEQUENCE)
+            av_log(ac->avccontext, AV_LOG_WARNING,
+                   "Transition from an ONLY_LONG or LONG_STOP to an EIGHT_SHORT sequence detected. "
+                   "If you heard an audible artifact, please submit the sample to the FFmpeg developers.\n");
         for (i = 0; i < 2048; i += 256) {
             ff_imdct_calc(&ac->mdct_small, buf + i, in + i/2, out);
             ac->dsp.vector_fmul_reverse(ac->revers + i/2, buf + i + 128, swindow, 128);
         }
         for (i = 0; i < 448; i++)   out[i] = saved[i] + ac->add_bias;
 
-        ac->dsp.vector_fmul_add_add(out + 448 + 0*128, buf + 0*128, swindow_prev, saved + 448 ,                            ac->add_bias, 128, 1);
+        ac->dsp.vector_fmul_add_add(out + 448 + 0*128, buf + 0*128, swindow_prev, saved + 448 ,       ac->add_bias, 128, 1);
+        ac->dsp.vector_fmul_add_add(out + 448 + 1*128, buf + 2*128, swindow,      ac->revers + 0*128, ac->add_bias, 128, 1);
+        ac->dsp.vector_fmul_add_add(out + 448 + 2*128, buf + 4*128, swindow,      ac->revers + 1*128, ac->add_bias, 128, 1);
+        ac->dsp.vector_fmul_add_add(out + 448 + 3*128, buf + 6*128, swindow,      ac->revers + 2*128, ac->add_bias, 128, 1);
+        ac->dsp.vector_fmul_add_add(out + 448 + 4*128, buf + 8*128, swindow,      ac->revers + 3*128, ac->add_bias,  64, 1);
+
+#if 0
         vector_fmul_add_add_add(ac, out + 448 + 1*128, buf + 2*128, swindow,      saved + 448 + 1*128, ac->revers + 0*128, ac->add_bias, 128);
         vector_fmul_add_add_add(ac, out + 448 + 2*128, buf + 4*128, swindow,      saved + 448 + 2*128, ac->revers + 1*128, ac->add_bias, 128);
         vector_fmul_add_add_add(ac, out + 448 + 3*128, buf + 6*128, swindow,      saved + 448 + 3*128, ac->revers + 2*128, ac->add_bias, 128);
         vector_fmul_add_add_add(ac, out + 448 + 4*128, buf + 8*128, swindow,      saved + 448 + 4*128, ac->revers + 3*128, ac->add_bias, 64);
+#endif
 
         ac->dsp.vector_fmul_add_add(saved,       buf + 1024 + 64,    swindow + 64, ac->revers + 3*128+64,  0, 64, 1);
         ac->dsp.vector_fmul_add_add(saved + 64,  buf + 1024 + 2*128, swindow,      ac->revers + 4*128,     0, 128, 1);
