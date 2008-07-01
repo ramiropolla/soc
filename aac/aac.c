@@ -408,7 +408,8 @@ static void vector_fmul_dst(AACContext * ac, float * dst, const float * src0, co
 #endif
 
 #if 0
-static void vector_fmul_add_add_add(AACContext * ac, float * dst, const float * src0, const float * src1, const float * src2, const float * src3, float src4, int len) {
+static void vector_fmul_add_add_add(AACContext * ac, float * dst, const float * src0, const float * src1,
+        const float * src2, const float * src3, float src4, int len) {
     int i;
     ac->dsp.vector_fmul_add_add(dst, src0, src1, src2, src4, len, 1);
     for (i = 0; i < len; i++)
@@ -1044,7 +1045,8 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
 /**
  * Decode scale_factor_data; reference: table 4.47.
  */
-static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, IndividualChannelStream * ics, const int cb[][64], const int cb_run_end[][64], float sf[][64]) {
+static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
+        IndividualChannelStream * ics, const int cb[][64], const int cb_run_end[][64], float sf[][64]) {
     const int sf_offset = ac->sf_offset + (ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 12 : 0);
     int g, i;
     int offset[3] = { global_gain, global_gain - 90, 100 };
@@ -1251,7 +1253,8 @@ static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, con
     }
 }
 
-static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * ics, const int * icoef, const int cb[][64], const float sf[][64], float * coef) {
+static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * ics, const int * icoef,
+        const int cb[][64], const float sf[][64], float * coef) {
     const uint16_t * offsets = ics->swb_offset;
     const int c = 1024/ics->num_window_groups;
     int g, i, group, k;
