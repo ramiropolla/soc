@@ -239,6 +239,9 @@ static void psy_null8_process(AACPsyContext *apc, int16_t *audio, int channel, c
 #define PSY_3GPP_C1 3.0f                    // log2(8.0)
 #define PSY_3GPP_C2 1.32192809488736234787f // log2(2.5)
 #define PSY_3GPP_C3 0.55935730170421255071f // 1 - C2/C1
+
+#define PSY_3GPP_SPREAD_LOW  1.5f // spreading factor for ascending threshold spreading  (15 dB/Bark)
+#define PSY_3GPP_SPREAD_HI   3.0f // spreading factor for descending threshold spreading (30 dB/Bark)
 /**
  * @}
  */
@@ -261,6 +264,10 @@ typedef struct Psy3gppBand{
  */
 typedef struct Psy3gppContext{
     float       barks [1024];
+    float       bark_l[64];
+    float       bark_s[16];
+    float       s_low [1024];
+    float       s_hi  [1024];
     Psy3gppBand band[2][128];
     int         reservoir;
     int         avg_bits;
@@ -280,12 +287,24 @@ static inline float calc_bark(float f)
 static int psy_3gpp_init(AACPsyContext *apc)
 {
     Psy3gppContext *pctx;
-    int i;
+    int i, g;
+    float prev;
     apc->model_priv_data = av_mallocz(sizeof(Psy3gppContext));
     pctx = (Psy3gppContext*) apc->model_priv_data;
 
     for(i = 0; i < 1024; i++)
         pctx->barks[i] = calc_bark(i * apc->avctx->sample_rate / 2048.0);
+    i = 0;
+    prev = 0.0;
+    for(g = 0; g < apc->num_bands1024; g++){
+        i += apc->bands1024[g];
+        pctx->bark_l[g] = (pctx->barks[i - 1] + prev) / 2.0;
+        prev = pctx->barks[i - 1];
+    }
+    for(g = 0; g < apc->num_bands1024 - 1; g++){
+        pctx->s_low[g] = pow(10.0, -(pctx->bark_l[g+1] - pctx->bark_l[g]) * PSY_3GPP_SPREAD_LOW);
+        pctx->s_hi [g] = pow(10.0, -(pctx->bark_l[g+1] - pctx->bark_l[g]) * PSY_3GPP_SPREAD_HI);
+    }
 
     pctx->avg_bits = apc->avctx->bit_rate * 1024 / apc->avctx->sample_rate;
     return 0;
@@ -388,6 +407,12 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
 
     //modify thresholds - spread, threshold in quiet - 5.4.3
     //TODO
+    for(ch = 0; ch < apc->avctx->channels; ch++){
+         for(g = 1; g < apc->num_bands1024; g++)
+             pctx->band[ch][g].thr = FFMAX(pctx->band[ch][g].thr, pctx->band[ch][g-1].thr * pctx->s_low[g-1]);
+         for(g = apc->num_bands1024 - 2; g >= 0; g--)
+             pctx->band[ch][g].thr = FFMAX(pctx->band[ch][g].thr, pctx->band[ch][g+1].thr * pctx->s_hi[g+1]);
+    }
 
     // M/S detection - 5.5.2
     if(apc->avctx->channels > 1 && cpe->common_window){
