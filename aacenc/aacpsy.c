@@ -358,7 +358,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
             pctx->band[ch][g].energy *= 1048576.0;
             pctx->band[ch][g].thr = pctx->band[ch][g].energy * 0.001258925f;
             start += apc->bands1024[g];
-            if(pctx->band[ch][g].energy > pctx->band[ch][g].thr){
+            if(pctx->band[ch][g].energy != 0.0){
                 float ffac = 0.0;
 
                 for(i = 0; i < apc->bands1024[g]; i++)
@@ -436,6 +436,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
         prev_scale = -1;
         cpe->ch[ch].gain = SCALE_ONE_POS;
         for(g = 0; g < apc->num_bands1024; g++){
+            cpe->ch[ch].zeroes[0][g] = pctx->band[ch][g].energy <= pctx->band[ch][g].thr;
             if(cpe->ch[ch].zeroes[0][g]) continue;
             //spec gives constant for lg() but we scaled it for log2()
             cpe->ch[ch].sf_idx[0][g] = (int)(2.66667 * (log2(6.75*pctx->band[ch][g].thr) - log2(pctx->band[ch][g].ffac)));
@@ -460,7 +461,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
                     cpe->ch[1].coeffs[start+i] =  cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
                 }
             }
-            if(cpe->ch[ch].sf_idx[0][g])
+            if(!cpe->ch[ch].zeroes[0][g])
                 sum = convert_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, apc->bands1024[g], cpe->ch[ch].sf_idx[0][g]);
             cpe->ch[ch].zeroes[0][g] = !sum;
             start += apc->bands1024[g];
