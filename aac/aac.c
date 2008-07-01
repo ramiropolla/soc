@@ -1563,7 +1563,8 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
     return n;
 }
 
-/** Parse extension data (incomplete).
+/**
+ * Parse extension data (incomplete).
  */
 static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
     int i = 0;
