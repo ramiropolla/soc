@@ -421,14 +421,14 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
         float t0, pe, r;
         if(pctx->b[ch] == 0.0f) continue;
         for(i = 0; i < 2; i++){
-        pe = pctx->a[ch] - pctx->b[ch] * 4.0f * log2(pow(pctx->thr[ch]/cpe->ch[ch].ics.num_swb, 0.25));
-        t0 = pow(2.0, (pctx->a[ch] - pe)        / (4.0 * pctx->b[ch]));
-        r  = pow(2.0, (pctx->a[ch] - pe_target) / (4.0 * pctx->b[ch])) - t0;
+            pe = pctx->a[ch] - pctx->b[ch] * 4.0f * log2(pow(pctx->thr[ch]/cpe->ch[ch].ics.num_swb, 0.25));
+            t0 = pow(2.0, (pctx->a[ch] - pe)        / (4.0 * pctx->b[ch]));
+            r  = pow(2.0, (pctx->a[ch] - pe_target) / (4.0 * pctx->b[ch])) - t0;
 
-        //add correction factor to thresholds
-        for(g = 0; g < apc->num_bands1024; g++)
-            pctx->band[ch][g].thr = modify_thr(pctx->band[ch][g].thr, r);
-        }
+            //add correction factor to thresholds
+            for(g = 0; g < apc->num_bands1024; g++)
+                pctx->band[ch][g].thr = modify_thr(pctx->band[ch][g].thr, r);
+            }
     }
 
     //determine scalefactors - 5.6.2
