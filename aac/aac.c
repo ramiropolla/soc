@@ -315,11 +315,11 @@ typedef struct {
                                                */
     IndividualChannelStream ics;
     TemporalNoiseShaping tns;
-    int cb[8][64];                            ///< Codebooks
-    int cb_run_end[8][64];                    ///< Codebook run end points
-    float sf[8][64];                          ///< Scalefactors
-    DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< Coefficients for IMDCT
-    DECLARE_ALIGNED_16(float, saved[1024]);   ///< Overlap
+    int cb[8][64];                            ///< codebooks
+    int cb_run_end[8][64];                    ///< codebook run end points
+    float sf[8][64];                          ///< scalefactors
+    DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< coefficients for IMDCT
+    DECLARE_ALIGNED_16(float, saved[1024]);   ///< overlap
     DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
 #ifdef AAC_LTP
     int16_t *ltp_state;
