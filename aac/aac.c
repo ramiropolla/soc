@@ -2177,5 +2177,6 @@ AVCodec aac_decoder = {
     NULL,
     aac_decode_close,
     aac_decode_frame,
+    .long_name = NULL_IF_CONFIG_SMALL("Advanced Audio Coding"),
 };
 
