@@ -242,6 +242,9 @@ static void psy_null8_process(AACPsyContext *apc, int16_t *audio, int channel, c
 
 #define PSY_3GPP_SPREAD_LOW  1.5f // spreading factor for ascending threshold spreading  (15 dB/Bark)
 #define PSY_3GPP_SPREAD_HI   3.0f // spreading factor for descending threshold spreading (30 dB/Bark)
+
+#define PSY_3GPP_RPEMIN      0.01f
+#define PSY_3GPP_RPELEV      2.0f
 /**
  * @}
  */
@@ -257,6 +260,8 @@ typedef struct Psy3gppBand{
     float a;         ///< constant part in perceptual entropy
     float b;         ///< variable part in perceptual entropy
     float nl;        ///< predicted number of lines left after quantization
+    float min_snr;   ///< minimal SNR
+    float thr_quiet; ///< threshold in quiet
 }Psy3gppBand;
 
 /**
@@ -269,6 +274,7 @@ typedef struct Psy3gppContext{
     float       s_low [1024];
     float       s_hi  [1024];
     Psy3gppBand band[2][128];
+    Psy3gppBand prev_band[2][128];
     int         reservoir;
     int         avg_bits;
     float       a[2];
@@ -341,6 +347,14 @@ static inline float modify_thr(float thr, float r){
 }
 
 /**
+ * Thresholds in quiet for each bark.
+ */
+static const float psy_3gpp_bark_thr_quiet[] = {
+    15.0f, 10.0f, 7.0f, 2.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.0f,  0.0f, 0.0f,
+     0.0f,  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 3.0f, 5.0f, 10.0f, 20.0f, 30.0f
+};
+
+/**
  * Determine scalefactors and prepare coefficients for encoding.
  * @see 3GPP TS26.403 5.4
  */
@@ -392,6 +406,10 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
                     pctx->band[ch][g].b = pctx->band[ch][g].nl * PSY_3GPP_C3;
                 }
                 pctx->band[ch][g].pe = pctx->band[ch][g].a - pctx->band[ch][g].b * log2(pctx->band[ch][g].thr);
+                pctx->band[ch][g].min_snr = 1.0 / (pow(2.0, pctx->band[ch][g].pe / apc->bands1024[g]) - 1.5);
+                if(pctx->band[ch][g].min_snr < 1.26f)     pctx->band[ch][g].min_snr = 1.26f;
+                if(pctx->band[ch][g].min_snr > 316.2277f) pctx->band[ch][g].min_snr = 316.2277f;
+
                 cpe->ch[ch].zeroes[0][g] = 0;
             }else{
                 cpe->ch[ch].zeroes[0][g] = 1;
@@ -406,12 +424,15 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
     }
 
     //modify thresholds - spread, threshold in quiet - 5.4.3
-    //TODO
     for(ch = 0; ch < apc->avctx->channels; ch++){
          for(g = 1; g < apc->num_bands1024; g++)
              pctx->band[ch][g].thr = FFMAX(pctx->band[ch][g].thr, pctx->band[ch][g-1].thr * pctx->s_low[g-1]);
          for(g = apc->num_bands1024 - 2; g >= 0; g--)
              pctx->band[ch][g].thr = FFMAX(pctx->band[ch][g].thr, pctx->band[ch][g+1].thr * pctx->s_hi[g+1]);
+         for(g = 0; g < apc->num_bands1024; g++){
+             pctx->band[ch][g].thr_quiet = FFMAX(pctx->band[ch][g].thr, psy_3gpp_bark_thr_quiet[(int)pctx->bark_l[g]]);
+             pctx->band[ch][g].thr = fmaxf(PSY_3GPP_RPEMIN*pctx->band[ch][g].thr_quiet, fminf(pctx->band[ch][g].thr_quiet, PSY_3GPP_RPELEV*pctx->prev_band[ch][g].thr_quiet));
+         }
     }
 
     // M/S detection - 5.5.2
@@ -503,6 +524,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
         for(maxsfb = apc->num_bands1024; maxsfb > 0 && cpe->ch[ch].zeroes[0][maxsfb-1]; maxsfb--);
         cpe->ch[ch].ics.max_sfb = maxsfb;
     }
+    memcpy(pctx->prev_band, pctx->band, sizeof(pctx->band));
 
     if(apc->avctx->channels > 1 && cpe->common_window){
         int msc = 0;
