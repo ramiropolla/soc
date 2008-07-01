@@ -262,7 +262,6 @@ typedef struct Psy3gppBand{
 typedef struct Psy3gppContext{
     float       barks [1024];
     Psy3gppBand band[2][128];
-    float       sfb_pe[2][128];
     int         reservoir;
     int         avg_bits;
     float       a[2];
@@ -373,7 +372,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
                     pctx->band[ch][g].a = pctx->band[ch][g].nl * (PSY_3GPP_C2 + PSY_3GPP_C3 * log2(pctx->band[ch][g].energy));
                     pctx->band[ch][g].b = pctx->band[ch][g].nl * PSY_3GPP_C3;
                 }
-                pctx->sfb_pe[ch][g] = pctx->band[ch][g].a - pctx->band[ch][g].b * log2(pctx->band[ch][g].thr);
+                pctx->band[ch][g].pe = pctx->band[ch][g].a - pctx->band[ch][g].b * log2(pctx->band[ch][g].thr);
                 cpe->ch[ch].zeroes[0][g] = 0;
             }else{
                 cpe->ch[ch].zeroes[0][g] = 1;
