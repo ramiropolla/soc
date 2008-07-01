@@ -283,7 +283,7 @@ static void write_compressed_frame(AlacEncodeContext *s)
         put_bits(&s->pbctx, 5, s->lpc[i].lpc_order);
         // predictor coeff. table
         for(j=0;j<s->lpc[i].lpc_order;j++) {
-            put_bits(&s->pbctx, 16, s->lpc[i].lpc_coeff[j]);
+            put_sbits(&s->pbctx, 16, s->lpc[i].lpc_coeff[j]);
         }
     }
 
