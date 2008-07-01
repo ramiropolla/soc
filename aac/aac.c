@@ -127,7 +127,7 @@ enum {
 };
 
 /**
- * Window sequences
+ * window sequences
  */
 enum WindowSequence {
     ONLY_LONG_SEQUENCE,
@@ -137,7 +137,7 @@ enum WindowSequence {
 };
 
 /**
- * Special codebooks
+ * special codebooks
  */
 enum {
     ZERO_HCB       = 0,
@@ -152,7 +152,7 @@ enum {
 #define IS_CODEBOOK_UNSIGNED(x) ((x - 1) & 10)
 
 /**
- * Channel types
+ * channel types
  */
 enum {
     AAC_CHANNEL_FRONT = 1,
@@ -163,7 +163,7 @@ enum {
 };
 
 /**
- * Mix-down channel types
+ * mix-down channel types
  */
 enum {
     MIXDOWN_CENTER,
@@ -172,18 +172,16 @@ enum {
 };
 
 /**
- * Program configuration - describes how channels are arranged
- *
- * Either read from stream (ID_PCE) or created based on a default
- * fixed channel arrangement.
+ * Program configuration - describes how channels are arranged. Either read from
+ * stream (ID_PCE) or created based on a default fixed channel arrangement.
  */
 typedef struct {
-    int che_type[4][MAX_TAGID];   ///< Channel element type with the first index as the first 4 raw_data_block IDs
+    int che_type[4][MAX_TAGID];   ///< channel element type with the first index as the first 4 raw_data_block IDs
 
-    int mono_mixdown;         ///< The SCE tag to use if user requests mono output,   -1 if not available
-    int stereo_mixdown;       ///< The CPE tag to use if user requests stereo output, -1 if not available
+    int mono_mixdown;         ///< The SCE tag to use if user requests mono   output, -1 if not available.
+    int stereo_mixdown;       ///< The CPE tag to use if user requests stereo output, -1 if not available.
     int mixdown_coeff_index;  ///< 0-3
-    int pseudo_surround;      ///< Mix surround channels out of phase
+    int pseudo_surround;      ///< Mix surround channels out of phase.
 
 } ProgramConfig;
 
@@ -207,7 +205,7 @@ typedef struct {
     int max_sfb;                ///< number of scalefactor bands per group
     enum WindowSequence window_sequence;
     enum WindowSequence window_sequence_prev;
-    uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
+    uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window.
     int num_window_groups;
     uint8_t group_len[8];
     LongTermPrediction ltp;
@@ -240,9 +238,7 @@ typedef struct {
 } MidSideStereo;
 
 /**
- * Dynamic Range Control
- *
- * DRC is decoded from the bitstream but not further processed
+ * Dynamic Range Control - decoded from the bitstream but not processed further.
  */
 typedef struct {
     int pce_instance_tag;
@@ -259,7 +255,7 @@ typedef struct {
 } DynamicRangeControl;
 
 /**
- * Pulse tool
+ * pulse tool
  */
 typedef struct {
     int present;
@@ -270,7 +266,7 @@ typedef struct {
 } Pulse;
 
 /**
- * Parameters for the SSR Inverse Polyphase Quadrature Filter
+ * parameters for the SSR Inverse Polyphase Quadrature Filter
  */
 typedef struct {
     float q[4][4];
@@ -279,7 +275,7 @@ typedef struct {
 } ssr_context;
 
 /**
- * Per-element gain control for SSR
+ * per-element gain control for SSR
  */
 typedef struct {
     int max_band;
@@ -290,23 +286,22 @@ typedef struct {
 } ScalableSamplingRate;
 
 /**
- * Coupling parameters
+ * coupling parameters
  */
 typedef struct {
-    int ind_sw;            ///< Set if independent coupling (i.e. after IMDCT)
-    int domain;            ///< Controls if coupling is performed before (0) or after (1) the TNS decoding of the target channels
-    int num_coupled;       ///< Number of target elements
-    int is_cpe[9];         ///< Set if target is an CPE (otherwise it's an SCE)
-    int tag_select[9];     ///< Element tag index
-    int l[9];              ///< Apply gain to left channel of an CPE
-    int r[9];              ///< Apply gain to right channel of an CPE
+    int ind_sw;            ///< Set if independent coupling (i.e. after IMDCT).
+    int domain;            ///< Controls if coupling is performed before (0) or after (1) the TNS decoding of the target channels.
+    int num_coupled;       ///< number of target elements
+    int is_cpe[9];         ///< Set if target is an CPE (otherwise it's an SCE).
+    int tag_select[9];     ///< element tag index
+    int l[9];              ///< Apply gain to left channel of a CPE.
+    int r[9];              ///< Apply gain to right channel of a CPE.
     float gain[18][8][64];
 } ChannelCoupling;
 
 
 /**
- * Single Channel Element
- * Used for both SCE and LFE elements
+ * Single Channel Element - used for both SCE and LFE elements.
  */
 typedef struct {
     float mixing_gain;                        /**< Channel gain (not used by AAC bitstream).
@@ -326,28 +321,27 @@ typedef struct {
 } SingleChannelElement;
 
 /**
- * Channel element
- * Generic struct for SCE/CPE/CCE/LFE
+ * channel element - generic struct for SCE/CPE/CCE/LFE
  */
 typedef struct {
     // CPE specific
-    int common_window;     ///< Set if channels share a common 'IndividualChannelStream' in bitstream
+    int common_window;     ///< Set if channels share a common 'IndividualChannelStream' in bitstream.
     MidSideStereo ms;
-    // Shared
+    // shared
     SingleChannelElement ch[2];
     // CCE specific
     ChannelCoupling coup;
 } ChannelElement;
 
 /**
- * Main AAC context
+ * main AAC context
  */
 typedef struct {
     AVCodecContext * avccontext;
 
     MPEG4AudioConfig m4ac;
 
-    int is_saved;                 ///< Set if elements have stored overlap from previous frame
+    int is_saved;                 ///< Set if elements have stored overlap from previous frame.
     DynamicRangeControl che_drc;
 
     /**
@@ -359,7 +353,7 @@ typedef struct {
     /** @} */
 
     /**
-     * @defgroup temporary Aligned temporary buffers (we do not want to have these on stack)
+     * @defgroup temporary aligned temporary buffers (We do not want to have these on the stack.)
      * @{
      */
     DECLARE_ALIGNED_16(float, buf_mdct[2048]);
@@ -367,7 +361,7 @@ typedef struct {
     /** @} */
 
     /**
-     * @defgroup tables   Computed / setup during initialization
+     * @defgroup tables   Computed / set up during initialization.
      * @{
      */
     MDCTContext mdct;
@@ -379,15 +373,15 @@ typedef struct {
     /** @} */
 
     /**
-     * @defgroup output   Members used for output interleaving and down-mixing
+     * @defgroup output   Members used for output interleaving and down-mixing.
      * @{
      */
-    float* interleaved_output;                        ///< Interim buffer for interleaving PCM samples
-    float *output_data[MAX_CHANNELS];                 ///< Points to each element's 'ret' buffer (PCM output)
-    ChannelElement *mm[3];                                ///< Center/Front/Back channel elements to use for matrix mix-down
-    float add_bias;                                   ///< Offset for dsp.float_to_int16
-    float sf_scale;                                   ///< Pre-scale for correct IMDCT and dsp.float_to_int16
-    int sf_offset;                                    ///< Offset into pow2sf_tab as appropriate for dsp.float_to_int16
+    float* interleaved_output;                        ///< Interim buffer for interleaving PCM samples.
+    float *output_data[MAX_CHANNELS];                 ///< Points to each element's 'ret' buffer (PCM output).
+    ChannelElement *mm[3];                            ///< Center/Front/Back channel elements to use for matrix mix-down.
+    float add_bias;                                   ///< offset for dsp.float_to_int16
+    float sf_scale;                                   ///< Pre-scale for correct IMDCT and dsp.float_to_int16.
+    int sf_offset;                                    ///< offset into pow2sf_tab as appropriate for dsp.float_to_int16
     /** @} */
 
 } AACContext;
@@ -437,7 +431,7 @@ static void ssr_context_init(ssr_context * ctx) {
 #endif /* AAC_SSR */
 
 /**
- * Free a Channel Element
+ * Free a channel element.
  */
 static void che_freep(ChannelElement **s) {
     if(!*s)
@@ -451,9 +445,9 @@ static void che_freep(ChannelElement **s) {
 
 /**
  * Configure output channel order and optional mixing based on the current
- * program configuration element and user requested channels
+ * program configuration element and user requested channels.
  *
- * \param newpcs New program configuration struct - we only do something if it differs from the current one
+ * \param newpcs New program configuration struct - we only do something if it differs from the current one.
  */
 static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     AVCodecContext *avctx = ac->avccontext;
@@ -463,7 +457,7 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     ChannelElement *mixdown[3] = { NULL, NULL, NULL };
 
     static const float mixdowncoeff[4] = {
-        /* Matrix mix-down coefficient, Table 4.70 */
+        /* matrix mix-down coefficient, table 4.70 */
         1. / M_SQRT2,
         1. / 2.,
         1. / (2 * M_SQRT2),
@@ -476,14 +470,14 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     *pcs = *newpcs;
 
     /* Allocate or free elements depending on if they are in the
-       current program configuration struct */
-
-    /* Set up default 1:1 output mapping
+     * current program configuration struct.
+     *
+     * Set up default 1:1 output mapping.
      *
      * For a 5.1 stream the output order will be:
      *    [ Front Left ] [ Front Right ] [ Center ] [ LFE ] [ Surround Left ] [ Surround Right ]
      *
-     * While at it: locate front, center and back for matrix mix-down further down
+     * Locate front, center and back channels for later matrix mix-down.
      */
 
     for(i = 0; i < MAX_TAGID; i++) {
@@ -511,7 +505,7 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
 
     ac->mm[MIXDOWN_FRONT] = ac->mm[MIXDOWN_BACK] = ac->mm[MIXDOWN_CENTER] = NULL;
 
-    /* Check for matrix mix-down to mono or stereo */
+    /* Check for matrix mix-down to mono or stereo. */
 
     if(avctx->request_channels && avctx->request_channels <= 2 &&
        avctx->request_channels != channels) {
@@ -519,13 +513,13 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
         if((avctx->request_channels == 1 && pcs->mono_mixdown   != -1) ||
            (avctx->request_channels == 2 && pcs->stereo_mixdown != -1)) {
             /* Add support for this as soon as we get a sample so we can figure out
-               exactly how this is supposed to work */
+               exactly how this is supposed to work. */
             av_log(avctx, AV_LOG_ERROR,
                    "Mix-down using pre-mixed elements is not supported, please file a bug. "
-                   "Reverting to matrix mix-down\n");
+                   "Reverting to matrix mix-down.\n");
         }
 
-        /* We need 'center + L + R + sL + sR' for matrix mix-down */
+        /* We need 'center + L + R + sL + sR' for matrix mix-down. */
         if(mixdown[MIXDOWN_CENTER] && mixdown[MIXDOWN_FRONT] && mixdown[MIXDOWN_BACK]) {
             a = mixdowncoeff[pcs->mixdown_coeff_index];
 
@@ -544,7 +538,7 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
 
             channels = avctx->request_channels;
         } else {
-            av_log(avctx, AV_LOG_WARNING, "Matrix mixing from %d to %d channels in not supported\n",
+            av_log(avctx, AV_LOG_WARNING, "Matrix mixing from %d to %d channels is not supported.\n",
                    channels, avctx->request_channels);
         }
     }
@@ -556,11 +550,11 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
 
 
 /**
- * Decode an array of 4 bit tag IDs, optionally interleaved with a stereo/mono switching bit
+ * Decode an array of 4 bit tag IDs, optionally interleaved with a stereo/mono switching bit.
  *
- * @param cpe_map Stereo (Channel Pair Element) map, NULL if stereo bit is not present
- * @param sce_map Mono (Single Channel Element) map
- * @param type Speaker type/position for these channels
+ * @param cpe_map Stereo (Channel Pair Element) map, NULL if stereo bit is not present.
+ * @param sce_map mono (Single Channel Element) map
+ * @param type speaker type/position for these channels
  */
 static void program_config_element_parse_tags(GetBitContext * gb, int *cpe_map,
                                               int *sce_map, int n, int type) {
@@ -573,8 +567,7 @@ static void program_config_element_parse_tags(GetBitContext * gb, int *cpe_map,
 
 
 /**
- * Parse program configuration element
- * reference: Table 4.2
+ * Parse program configuration element; reference: table 4.2.
  */
 static int program_config_element(AACContext * ac, GetBitContext * gb) {
     ProgramConfig pcs;
@@ -586,7 +579,7 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
 
     ac->m4ac.sampling_index = get_bits(gb, 4);
     if(ac->m4ac.sampling_index > 12) {
-        av_log(ac->avccontext, AV_LOG_ERROR, "Invalid sampling rate index %d\n", ac->m4ac.sampling_index);
+        av_log(ac->avccontext, AV_LOG_ERROR, "invalid sampling rate index %d\n", ac->m4ac.sampling_index);
         return -1;
     }
     ac->m4ac.sample_rate = ff_mpeg4audio_sample_rates[ac->m4ac.sampling_index];
@@ -623,7 +616,7 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
 
 /**
  * Set up ProgramConfig, but based on a default channel configuration
- * as specified in Table 1.17
+ * as specified in table 1.17.
  */
 static int program_config_element_default(AACContext *ac, int channels)
 {
@@ -631,54 +624,53 @@ static int program_config_element_default(AACContext *ac, int channels)
 
     memset(&pcs, 0, sizeof(ProgramConfig));
 
-    /* Pre-mixed down-mix outputs are not available */
+    /* Pre-mixed down-mix outputs are not available. */
     pcs.mono_mixdown   = -1;
     pcs.stereo_mixdown = -1;
 
     if(channels < 1 || channels > 7) {
-        av_log(ac->avccontext, AV_LOG_ERROR, "Invalid default channel configuration (%d channels)\n",
+        av_log(ac->avccontext, AV_LOG_ERROR, "invalid default channel configuration (%d channels)\n",
                channels);
         return -1;
     }
 
-    /* Default channel configurations:
+    /* default channel configurations:
      *
-     * 1ch : Front Center (Mono)
-     * 2ch : L + R (Stereo)
-     * 3ch : Front Center + L + R
-     * 4ch : Front Center + L + R + Back Center
-     * 5ch : Front Center + L + R + Back Stereo
-     * 6ch : Front Center + L + R + Back Stereo + LFE
-     * 7ch : Front Center + L + R + Outer Front Left + Outer Front Right + Back Stereo + LFE
+     * 1ch : front center (mono)
+     * 2ch : L + R (stereo)
+     * 3ch : front center + L + R
+     * 4ch : front center + L + R + back center
+     * 5ch : front center + L + R + back stereo
+     * 6ch : front center + L + R + back stereo + LFE
+     * 7ch : front center + L + R + outer front left + outer front right + back stereo + LFE
      */
 
     if(channels != 2)
-        pcs.che_type[ID_SCE][0] = AAC_CHANNEL_FRONT; // Front Center (or Mono)
+        pcs.che_type[ID_SCE][0] = AAC_CHANNEL_FRONT; // front center (or mono)
     if(channels > 1)
-        pcs.che_type[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or Stereo)
+        pcs.che_type[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or stereo)
     if(channels == 4)
-        pcs.che_type[ID_SCE][1] = AAC_CHANNEL_BACK;  // Back Center
+        pcs.che_type[ID_SCE][1] = AAC_CHANNEL_BACK;  // back center
     if(channels > 4)
         pcs.che_type[ID_CPE][(channels == 7) + 1]
-                                = AAC_CHANNEL_BACK;  // Back Stereo
+                                = AAC_CHANNEL_BACK;  // back stereo
     if(channels > 5)
         pcs.che_type[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
     if(channels == 7)
-        pcs.che_type[ID_CPE][1] = AAC_CHANNEL_FRONT; // Outer Front Left + Outer Front Right
+        pcs.che_type[ID_CPE][1] = AAC_CHANNEL_FRONT; // outer front left + outer front right
 
     return output_configure(ac, &pcs);
 }
 
 
 /**
- * Parse GA "General Audio" specific configuration
- * reference: Table 4.1
+ * Parse GA "General Audio" specific configuration; reference: table 4.1.
  */
 static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
     int ext;
 
     if(get_bits1(gb)) {  // frameLengthFlag
-        av_log(ac->avccontext, AV_LOG_ERROR, "960/120 MDCT window is not supported\n");
+        av_log(ac->avccontext, AV_LOG_ERROR, "960/120 MDCT window is not supported.\n");
         return -1;
     }
 
@@ -722,8 +714,7 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
 
 
 /**
- * Parse audio specific configuration
- * reference: Table 1.13
+ * Parse audio specific configuration; reference: table 1.13.
  */
 static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     GetBitContext gb;
@@ -748,7 +739,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
             return -1;
         break;
     default:
-        av_log(ac->avccontext, AV_LOG_ERROR, "Audio object type %s%d is not supported\n",
+        av_log(ac->avccontext, AV_LOG_ERROR, "Audio object type %s%d is not supported.\n",
                ac->m4ac.sbr == 1? "SBR+" : "", ac->m4ac.object_type);
         return -1;
     }
@@ -831,12 +822,12 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 
     dsputil_init(&ac->dsp, avccontext);
 
-    /* Initialize RNG dither */
+    /* Initialize RNG dither. */
     av_init_random(0x1f2e3d4c, &ac->random_state);
 
-    // -1024 - compensate wrong IMDCT method
-    // 32768 - values in AAC build for ready float->int 16 bit audio, using
-    // BIAS method instead needs values -1<x<1
+    // -1024 - Compensate wrong IMDCT method.
+    // 32768 - Required to scale values to the correct range for the bias method
+    //         for float to int16 conversion.
 
     if(ac->dsp.float_to_int16 == ff_float_to_int16_c) {
         ac->add_bias = 385.0f;
@@ -885,11 +876,10 @@ static int aac_decode_init(AVCodecContext * avccontext) {
     return 0;
 }
 
-// Parsers implementation
+// parser implementation
 
 /**
- * Decode a data_stream_element
- * reference: Table 4.10
+ * Decode a data_stream_element; reference: table 4.10.
  */
 static void data_stream_element(AACContext * ac, GetBitContext * gb, int id) {
     int byte_align = get_bits1(gb);
@@ -916,13 +906,12 @@ static void decode_ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, Lo
 #endif /* AAC_LTP */
 
 /**
- * Decode Individual Channel Stream info
- * reference: table 4.6
+ * Decode Individual Channel Stream info; reference: table 4.6.
  */
 static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_window, IndividualChannelStream * ics) {
     uint8_t grouping;
     if (get_bits1(gb)) {
-        av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set\n");
+        av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set.\n");
         return -1;
     }
     ics->window_sequence_prev = ics->window_sequence;
@@ -947,7 +936,7 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
         ics->num_swb       =       num_swb_128[ac->m4ac.sampling_index];
         if(ics->max_sfb > ics->num_swb) {
             av_log(ac->avccontext, AV_LOG_ERROR,
-                "Number of scalefactor bands in group (%d) exceeds limit (%d)\n",
+                "Number of scalefactor bands in group (%d) exceeds limit (%d).\n",
                 ics->max_sfb, ics->num_swb);
             return -1;
         }
@@ -960,7 +949,7 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
         ics->num_swb       =       num_swb_1024[ac->m4ac.sampling_index];
         if(ics->max_sfb > ics->num_swb) {
             av_log(ac->avccontext, AV_LOG_ERROR,
-                "Number of scalefactor bands in group (%d) exceeds limit (%d)\n",
+                "Number of scalefactor bands in group (%d) exceeds limit (%d).\n",
                 ics->max_sfb, ics->num_swb);
             return -1;
         }
@@ -983,7 +972,7 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
             }
 #else /* AAC_LTP */
             av_log(ac->avccontext, AV_LOG_ERROR,
-                   "Predictor bit set but LTP is not supported\n");
+                   "Predictor bit set but LTP is not supported.\n");
             return -1;
 #endif /* AAC_LTP */
         } else {
@@ -1002,8 +991,7 @@ static inline float ivquant(AACContext * ac, int a) {
 }
 
 /**
- * Decode section_data payload
- * reference: Table 4.46
+ * Decode section_data payload; reference: table 4.46.
  */
 static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, int cb[][64], int cb_run_end[][64]) {
     int g;
@@ -1015,7 +1003,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
             int sect_len_incr;
             int sect_cb = get_bits(gb, 4);
             if (sect_cb == 12) {
-                av_log(ac->avccontext, AV_LOG_ERROR, "Invalid codebook\n");
+                av_log(ac->avccontext, AV_LOG_ERROR, "invalid codebook\n");
                 return -1;
             }
             while ((sect_len_incr = get_bits(gb, bits)) == (1 << bits)-1)
@@ -1023,7 +1011,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
             sect_len += sect_len_incr;
             if (sect_len > ics->max_sfb) {
                 av_log(ac->avccontext, AV_LOG_ERROR,
-                    "Number of codebooks (%d) exceeds limit (%d)\n",
+                    "Number of codebooks (%d) exceeds limit (%d).\n",
                     sect_len, ics->max_sfb);
                 return -1;
             }
@@ -1037,8 +1025,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
 }
 
 /**
- * Decode scale_factor_data
- * reference: Table 4.47
+ * Decode scale_factor_data; reference: table 4.47.
  */
 static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain, IndividualChannelStream * ics, const int cb[][64], const int cb_run_end[][64], float sf[][64]) {
     const int sf_offset = ac->sf_offset + (ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 12 : 0);
@@ -1061,7 +1048,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
                     offset[2] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
                     if(offset[2] > 255) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
-                            "%s (%d) out of range", sf_str[2], offset[2]);
+                            "%s (%d) out of range.\n", sf_str[2], offset[2]);
                         return -1;
                     }
                     sf[g][i] =  pow2sf_tab[-offset[2] + 300];
@@ -1076,7 +1063,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
                         offset[1] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
                     if(offset[1] > 255) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
-                            "%s (%d) out of range", sf_str[1], offset[1]);
+                            "%s (%d) out of range.\n", sf_str[1], offset[1]);
                         return -1;
                     }
                     sf[g][i] = -pow2sf_tab[ offset[1] + sf_offset];
@@ -1088,7 +1075,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
                     offset[0] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
                     if(offset[0] > 255) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
-                            "%s (%d) out of range", sf_str[0], offset[0]);
+                            "%s (%d) out of range.\n", sf_str[0], offset[0]);
                         return -1;
                     }
                     sf[g][i] = -pow2sf_tab[ offset[0] + sf_offset];
@@ -1180,8 +1167,7 @@ static void decode_ms_data(AACContext * ac, GetBitContext * gb, ChannelElement *
 }
 
 /**
- * Decode spectral data
- * reference: Table 4.50
+ * Decode spectral data; reference: table 4.50.
  */
 static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const int cb[][64], int icoef[1024]) {
     int i, k, g;
@@ -1214,11 +1200,11 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const Indiv
                             for (j = 0; j < 2; j++) {
                                 if (vq_ptr[j] == 16) {
                                     int n = 4;
-                                    /* Total length of escape_sequence must be < 22 bits according to spec */
-                                    /* i.e. max is 11111111110xxxxxxxxxx */
+                                    /* The total length of escape_sequence must be < 22 bits according
+                                       to the specification (i.e. max is 11111111110xxxxxxxxxx). */
                                     while (get_bits1(gb) && n < 15) n++;
                                     if(n == 15) {
-                                        av_log(ac->avccontext, AV_LOG_ERROR, "Error in spectral data, ESC overflow\n");
+                                        av_log(ac->avccontext, AV_LOG_ERROR, "error in spectral data, ESC overflow\n");
                                         return -1;
                                     }
                                     icoef[coef_idx + j] *= (1<<n) + get_bits(gb, n);
@@ -1278,8 +1264,7 @@ static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * 
 }
 
 /**
- * Decode an individual_channel_stream payload
- * reference: Table 4.44
+ * Decode an individual_channel_stream payload; reference: table 4.44.
  */
 static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, int scale_flag, SingleChannelElement * sce) {
     int icoeffs[1024];
@@ -1305,7 +1290,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     if (!scale_flag) {
         if ((pulse.present = get_bits1(gb))) {
             if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
-                av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in eight short sequence\n");
+                av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in eight short sequence.\n");
                 return -1;
             }
             decode_pulse_data(ac, gb, &pulse);
@@ -1316,7 +1301,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
 #ifdef AAC_SSR
             if (decode_gain_control_data(ac, gb, sce)) return -1;
 #else
-            av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supported\n");
+            av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supported.\n");
             return -1;
 #endif
         }
@@ -1385,8 +1370,7 @@ static void intensity_tool(AACContext * ac, ChannelElement * cpe) {
 }
 
 /**
- * Decode a channel_pair_element
- * reference: Table 4.4
+ * Decode a channel_pair_element; reference: table 4.4.
  */
 static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     int i;
@@ -1557,7 +1541,7 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
     return n;
 }
 
-/** Parse extension data (incomplete)
+/** Parse extension data (incomplete).
  */
 static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
     int i = 0;
@@ -1674,7 +1658,7 @@ static void window_ltp_tool(AACContext * ac, SingleChannelElement * sce, float *
         ac->dsp.vector_fmul_reverse(buf + 1024 + 448, in + 1024 + 448, swindow, 128);
         memset(buf + 1024 + 576, 0, 448 * sizeof(float));
     }
-    ff_mdct_calc(ac->mdct_ltp, out, buf, in); // using in as buffer for mdct
+    ff_mdct_calc(ac->mdct_ltp, out, buf, in); // Using in as buffer for MDCT.
 }
 
 static void ltp_trans(AACContext * ac, SingleChannelElement * sce) {
@@ -1702,7 +1686,7 @@ static void ltp_trans(AACContext * ac, SingleChannelElement * sce) {
 
 
 /**
- * @todo: Replace this with float_to_int16()
+ * @todo: Replace this with float_to_int16().
  */
 static inline int16_t ltp_round(float x) {
     if (x >= 0)
@@ -1746,7 +1730,7 @@ static void window_trans(AACContext * ac, SingleChannelElement * sce) {
     int i;
 
     if (ics->window_sequence != EIGHT_SHORT_SEQUENCE) {
-        ff_imdct_calc(&ac->mdct, buf, in, out); // out can be abused for now as a temp buffer
+        ff_imdct_calc(&ac->mdct, buf, in, out); // Out can be abused, for now, as a temp buffer.
         if (ics->window_sequence != LONG_STOP_SEQUENCE) {
             ac->dsp.vector_fmul_add_add(out, buf, lwindow_prev, saved, ac->add_bias, 1024, 1);
         } else {
@@ -1969,7 +1953,7 @@ static void transform_coupling_tool(AACContext * ac, ChannelElement * cc,
                 cc_trans(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], index++);
         } else {
             av_log(ac->avccontext, AV_LOG_ERROR,
-                   "Coupling target %sE[%d] not available\n",
+                   "coupling target %sE[%d] not available\n",
                    coup->is_cpe[c] ? "CP" : "SC", coup->tag_select[c]);
             break;
         }
@@ -2037,7 +2021,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
     }
 
     if(ac->mm[MIXDOWN_CENTER]) {
-        /* Matrix mix-down */
+        /* matrix mix-down */
         l   = ac->mm[MIXDOWN_FRONT ]->ch[0].ret;
         r   = ac->mm[MIXDOWN_FRONT ]->ch[1].ret;
         c   = ac->mm[MIXDOWN_CENTER]->ch[0].ret;

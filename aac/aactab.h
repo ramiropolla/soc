@@ -112,8 +112,8 @@ static const uint8_t num_swb_1024[] = {
 };
 
 static const uint16_t *swb_offset_128[] = {
-    /* the last entry on the following row is swb_offset_128_64 but is a
-       duplicate of swb_offset_128_96 */
+    /* The last entry on the following row is swb_offset_128_64 but is a
+       duplicate of swb_offset_128_96. */
     swb_offset_128_96, swb_offset_128_96, swb_offset_128_96,
     swb_offset_128_48, swb_offset_128_48, swb_offset_128_48,
     swb_offset_128_24, swb_offset_128_24, swb_offset_128_16,
@@ -1072,3 +1072,4 @@ static const float pow2sf_tab[316] = {
 #endif /* CONFIG_HARDCODED_TABLES */
 
 #endif /* FFMPEG_AACTAB_H */
+
