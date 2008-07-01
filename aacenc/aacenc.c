@@ -465,6 +465,7 @@ static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, cp
         for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
             if(!cpe->ch[channel].zeroes[w][i]){
                 diff = cpe->ch[channel].sf_idx[w][i] - off + SCALE_DIFF_ZERO;
+                if(diff < 0 || diff > 120) av_log(avctx, AV_LOG_ERROR, "Scalefactor difference is too big to be coded\n");
                 off = cpe->ch[channel].sf_idx[w][i];
                 put_bits(&s->pb, bits[diff], code[diff]);
             }
