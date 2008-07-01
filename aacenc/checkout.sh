@@ -1,3 +1,5 @@
+#!/bin/sh
+
 echo "Checking out FFmpeg SVN trunk code..."
 svn co svn://svn.mplayerhq.hu/ffmpeg/trunk ffmpeg && \
 cd ffmpeg
