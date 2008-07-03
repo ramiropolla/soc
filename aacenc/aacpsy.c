@@ -55,6 +55,97 @@ static inline int convert_coeffs(float *in, int *out, int size, int scale_idx)
     return sum;
 }
 
+/**
+ * Produce integer coefficients from scalefactors provided by model.
+ */
+static void psy_create_output(AACPsyContext *apc, cpe_struct *cpe, int search_pulses)
+{
+    int i, w, w2, g, ch;
+    int start, sum, maxsfb, cmaxsfb;
+    int pulses, poff[4], pamp[4];
+
+    for(ch = 0; ch < apc->avctx->channels; ch++){
+        start = 0;
+        maxsfb = 0;
+        cpe->ch[ch].pulse.present = 0;
+        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                sum = 0;
+                //apply M/S
+                if(!ch && cpe->ms.mask[w][g]){
+                    for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++){
+                        cpe->ch[0].coeffs[start+i] = (cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i]) / 2.0;
+                        cpe->ch[1].coeffs[start+i] =  cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
+                    }
+                }
+                if(!cpe->ch[ch].zeroes[w][g])
+                    sum = convert_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, cpe->ch[ch].ics.swb_sizes[g], cpe->ch[ch].sf_idx[w][g]);
+                cpe->ch[ch].zeroes[w][g] = !sum;
+                //try finding pulses
+                if(search_pulses && cpe->ch[ch].ics.num_windows == 1 && !cpe->ch[ch].pulse.present){
+                    pulses = 0;
+                    memset(poff,0,sizeof(poff));
+                    memset(pamp,0,sizeof(pamp));
+                    for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++){
+                        if(pulses > 4 || (pulses && i > cpe->ch[ch].pulse.offset[pulses-1] - 31)) break;
+                        if(FFABS(cpe->ch[ch].icoefs[start+i]) > 4 && pulses < 4){
+                            poff[pulses] = i;
+                            pamp[pulses] = FFMIN(FFABS(cpe->ch[ch].icoefs[start+i]) - 1, 15);
+                            pulses++;
+                        }
+                    }
+                    if(pulses){
+                        cpe->ch[ch].pulse.present = 1;
+                        cpe->ch[ch].pulse.start = g;
+                        cpe->ch[ch].pulse.num_pulse_minus1 = pulses - 1;
+                        for(i = 0; i < pulses; i++){
+                            cpe->ch[ch].pulse.amp[i] = pamp[i];
+                            cpe->ch[ch].pulse.offset[i] = i ? poff[i] - poff[i-1] : poff[0];
+
+                            if(cpe->ch[ch].icoefs[start+poff[i]] > 0)
+                                cpe->ch[ch].icoefs[start+poff[i]] -= pamp[i];
+                            else
+                                cpe->ch[ch].icoefs[start+poff[i]] += pamp[i];
+                        }
+                    }
+                }
+                start += cpe->ch[ch].ics.swb_sizes[g];
+            }
+            for(cmaxsfb = cpe->ch[ch].ics.num_swb; cmaxsfb > 0 && cpe->ch[ch].zeroes[0][cmaxsfb-1]; cmaxsfb--);
+            maxsfb = FFMAX(maxsfb, cmaxsfb);
+        }
+        cpe->ch[ch].ics.max_sfb = maxsfb;
+
+        //adjust zero bands for window groups
+        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+            if(cpe->ch[ch].ics.group_len[w]) continue;
+            for(g = 0; g < cpe->ch[ch].ics.max_sfb; g++){
+                i = 1;
+                w2 = w;
+                do{
+                    if(!cpe->ch[ch].zeroes[w2][g]){
+                        i = 0;
+                        break;
+                    }
+                    w2++;
+                }while(w2 < cpe->ch[ch].ics.num_windows && cpe->ch[ch].ics.group_len[w2]);
+                cpe->ch[ch].zeroes[w][g] = i;
+            }
+        }
+    }
+
+    if(apc->avctx->channels > 1 && cpe->common_window){
+        int msc = 0;
+        cpe->ch[0].ics.max_sfb = FFMAX(cpe->ch[0].ics.max_sfb, cpe->ch[1].ics.max_sfb);
+        cpe->ch[1].ics.max_sfb = cpe->ch[0].ics.max_sfb;
+        for(w = 0; w < cpe->ch[0].ics.num_windows; w++)
+            for(i = 0; i < cpe->ch[0].ics.max_sfb; i++)
+                if(cpe->ms.mask[w][i]) msc++;
+        if(msc == 0 || cpe->ch[0].ics.max_sfb == 0) cpe->ms.present = 0;
+        else cpe->ms.present = msc < cpe->ch[0].ics.max_sfb ? 1 : 2;
+    }
+}
+
 static void psy_null_window(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
 {
     int ch;
@@ -74,7 +165,6 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
 {
     int start, sum, maxsfb;
     int ch, g, i;
-    int pulses, poff[4], pamp[4];
 
     //detect M/S
     if(apc->avctx->channels > 1 && cpe->common_window){
@@ -88,62 +178,13 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
         }
     }
     for(ch = 0; ch < apc->avctx->channels; ch++){
-        start = 0;
         cpe->ch[ch].gain = SCALE_ONE_POS;
-        cpe->ch[ch].pulse.present = 0;
         for(g = 0; g < apc->num_bands1024; g++){
             cpe->ch[ch].sf_idx[0][g] = SCALE_ONE_POS;
-            //apply M/S
-            if(!ch && cpe->ms.mask[0][g]){
-                for(i = 0; i < apc->bands1024[g]; i++){
-                    cpe->ch[0].coeffs[start+i] = (cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i]) / 2.0;
-                    cpe->ch[1].coeffs[start+i] =  cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
-                }
-            }
-            sum = convert_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, apc->bands1024[g], cpe->ch[ch].sf_idx[0][g]);
-            cpe->ch[ch].zeroes[0][g] = !sum;
-            //try finding pulses
-            if(!cpe->ch[ch].pulse.present){
-                pulses = 0;
-                memset(poff,0,sizeof(poff));
-                memset(pamp,0,sizeof(pamp));
-                for(i = 0; i < apc->bands1024[g]; i++){
-                    if(pulses > 4 || (pulses && i > cpe->ch[ch].pulse.offset[pulses-1] - 31)) break;
-                    if(FFABS(cpe->ch[ch].icoefs[start+i]) > 4 && pulses < 4){
-                        poff[pulses] = i;
-                        pamp[pulses] = FFMIN(FFABS(cpe->ch[ch].icoefs[start+i]) - 1, 15);
-                        pulses++;
-                    }
-                }
-                if(pulses){
-                    cpe->ch[ch].pulse.present = 1;
-                    cpe->ch[ch].pulse.start = g;
-                    cpe->ch[ch].pulse.num_pulse_minus1 = pulses - 1;
-                    for(i = 0; i < pulses; i++){
-                        cpe->ch[ch].pulse.amp[i] = pamp[i];
-                        cpe->ch[ch].pulse.offset[i] = i ? poff[i] - poff[i-1] : poff[0];
-
-                        if(cpe->ch[ch].icoefs[start+poff[i]] > 0)
-                            cpe->ch[ch].icoefs[start+poff[i]] -= pamp[i];
-                        else
-                            cpe->ch[ch].icoefs[start+poff[i]] += pamp[i];
-                    }
-                }
-            }
-            start += apc->bands1024[g];
+            cpe->ch[ch].zeroes[0][g] = 0;
         }
-        for(maxsfb = apc->num_bands1024; maxsfb > 0 && cpe->ch[ch].zeroes[0][maxsfb-1]; maxsfb--);
-        cpe->ch[ch].ics.max_sfb = maxsfb;
     }
-    if(apc->avctx->channels > 1 && cpe->common_window){
-        int msc = 0;
-        cpe->ch[0].ics.max_sfb = FFMAX(cpe->ch[0].ics.max_sfb, cpe->ch[1].ics.max_sfb);
-        cpe->ch[1].ics.max_sfb = cpe->ch[0].ics.max_sfb;
-        for(i = 0; i < cpe->ch[0].ics.max_sfb; i++)
-            if(cpe->ms.mask[0][i]) msc++;
-        if(msc == 0 || cpe->ch[0].ics.max_sfb == 0) cpe->ms.present = 0;
-        else cpe->ms.present = msc < cpe->ch[0].ics.max_sfb ? 1 : 2;
-    }
+    psy_create_output(apc, cpe, 1);
 }
 
 static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
@@ -164,8 +205,8 @@ static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int channel, cp
 
 static void psy_null8_process(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
 {
-    int start, sum, cmaxsfb, maxsfb;
-    int w, w2, ch, g, i;
+    int start;
+    int w, ch, g, i;
 
     //detect M/S
     if(apc->avctx->channels > 1 && cpe->common_window){
@@ -181,55 +222,15 @@ static void psy_null8_process(AACPsyContext *apc, int16_t *audio, int channel, c
         }
     }
     for(ch = 0; ch < apc->avctx->channels; ch++){
-        start = 0;
         cpe->ch[ch].gain = SCALE_ONE_POS;
-        maxsfb = 0;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                sum = 0;
                 cpe->ch[ch].sf_idx[w][g] = SCALE_ONE_POS;
-                //apply M/S
-                if(!ch && cpe->ms.mask[w][g]){
-                    for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++){
-                        cpe->ch[0].coeffs[start+i] = (cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i]) / 2.0;
-                        cpe->ch[1].coeffs[start+i] =  cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
-                    }
-                }
-                sum = convert_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, cpe->ch[ch].ics.swb_sizes[g], cpe->ch[ch].sf_idx[w][g]);
-                cpe->ch[ch].zeroes[w][g] = !sum;
-                start += cpe->ch[ch].ics.swb_sizes[g];
-            }
-            for(cmaxsfb = cpe->ch[ch].ics.num_swb; cmaxsfb > 0 && cpe->ch[ch].zeroes[0][cmaxsfb-1]; cmaxsfb--);
-            maxsfb = FFMAX(maxsfb, cmaxsfb);
-        }
-        cpe->ch[ch].ics.max_sfb = maxsfb;
-        //adjust zero bands for window groups
-        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
-            if(cpe->ch[ch].ics.group_len[w]) continue;
-            for(g = 0; g < cpe->ch[ch].ics.max_sfb; g++){
-                i = 1;
-                w2 = w;
-                do{
-                    if(!cpe->ch[ch].zeroes[w2][g]){
-                        i = 0;
-                        break;
-                    }
-                    w2++;
-                }while(w2 < cpe->ch[ch].ics.num_windows && cpe->ch[ch].ics.group_len[w2]);
-                cpe->ch[ch].zeroes[w][g] = i;
+                cpe->ch[ch].zeroes[w][g] = 0;
             }
         }
     }
-    if(apc->avctx->channels > 1 && cpe->common_window){
-        int msc = 0;
-        cpe->ch[0].ics.max_sfb = FFMAX(cpe->ch[0].ics.max_sfb, cpe->ch[1].ics.max_sfb);
-        cpe->ch[1].ics.max_sfb = cpe->ch[0].ics.max_sfb;
-        for(w = 0; w < cpe->ch[0].ics.num_windows; w++)
-            for(i = 0; i < cpe->ch[0].ics.max_sfb; i++)
-                if(cpe->ms.mask[w][i]) msc++;
-        if(msc == 0 || cpe->ch[0].ics.max_sfb == 0) cpe->ms.present = 0;
-        else cpe->ms.present = msc < cpe->ch[0].ics.max_sfb ? 1 : 2;
-    }
+    psy_create_output(apc, cpe, 0);
 }
 
 /**
@@ -360,7 +361,7 @@ static const float psy_3gpp_bark_thr_quiet[] = {
  */
 static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
 {
-    int start, sum, maxsfb;
+    int start;
     int ch, g, i;
     int prev_scale;
     Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
@@ -504,37 +505,8 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
         }
     }
 
-    for(ch = 0; ch < apc->avctx->channels; ch++){
-        start = 0;
-        cpe->ch[ch].pulse.present = 0;
-        for(g = 0; g < apc->num_bands1024; g++){
-            sum = 0;
-            //apply M/S
-            if(!ch && cpe->ms.mask[0][g]){
-                for(i = 0; i < apc->bands1024[g]; i++){
-                    cpe->ch[0].coeffs[start+i] = (cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i]) / 2.0;
-                    cpe->ch[1].coeffs[start+i] =  cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
-                }
-            }
-            if(!cpe->ch[ch].zeroes[0][g])
-                sum = convert_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, apc->bands1024[g], cpe->ch[ch].sf_idx[0][g]);
-            cpe->ch[ch].zeroes[0][g] = !sum;
-            start += apc->bands1024[g];
-        }
-        for(maxsfb = apc->num_bands1024; maxsfb > 0 && cpe->ch[ch].zeroes[0][maxsfb-1]; maxsfb--);
-        cpe->ch[ch].ics.max_sfb = maxsfb;
-    }
     memcpy(pctx->prev_band, pctx->band, sizeof(pctx->band));
-
-    if(apc->avctx->channels > 1 && cpe->common_window){
-        int msc = 0;
-        cpe->ch[0].ics.max_sfb = FFMAX(cpe->ch[0].ics.max_sfb, cpe->ch[1].ics.max_sfb);
-        cpe->ch[1].ics.max_sfb = cpe->ch[0].ics.max_sfb;
-        for(i = 0; i < cpe->ch[0].ics.max_sfb; i++)
-            if(cpe->ms.mask[0][i]) msc++;
-        if(msc == 0 || cpe->ch[0].ics.max_sfb == 0) cpe->ms.present = 0;
-        else cpe->ms.present = msc < cpe->ch[0].ics.max_sfb ? 1 : 2;
-    }
+    psy_create_output(apc, cpe, 0);
 }
 
 static void psy_3gpp_end(AACPsyContext *apc)
