@@ -463,6 +463,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
     //TODO: add more that first step estimation
     pctx->reservoir += pctx->avg_bits - apc->avctx->frame_bits;
     bits_avail = pctx->avg_bits + pctx->reservoir;
+    bits_avail = FFMIN(bits_avail, pctx->avg_bits * 1.5);
     pe_target = 1.18f * bits_avail / apc->avctx->channels / 1024.0f;
     for(ch = 0; ch < apc->avctx->channels; ch++){
         float t0, pe, r;
