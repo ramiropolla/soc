@@ -163,7 +163,7 @@ static void psy_null_window(AACPsyContext *apc, int16_t *audio, int channel, cpe
 
 static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
 {
-    int start, sum, maxsfb;
+    int start;
     int ch, g, i;
 
     //detect M/S
@@ -281,6 +281,7 @@ typedef struct Psy3gppContext{
     float       a[2];
     float       b[2];
     float       thr[2];
+    float       ath[64];
 }Psy3gppContext;
 
 /**
@@ -291,11 +292,25 @@ static inline float calc_bark(float f)
     return 13.3f * atanf(0.00076f * f) + 3.5f * atanf((f / 7500.0f) * (f / 7500.0f));
 }
 
+#define ATH_ADD 4
+/**
+ * Calculate ATH value for given frequency.
+ * Borrowed from Lame.
+ */
+static inline float ath(float f, float add)
+{
+    f /= 1000.0f;
+    return   3.64 * pow(f, -0.8)
+            - 6.8  * exp(-0.6  * (f - 3.4) * (f - 3.4))
+            + 6.0  * exp(-0.15 * (f - 8.7) * (f - 8.7))
+            + (0.6 + 0.04 * add) * 0.001 * f * f * f * f;
+}
+
 static int psy_3gpp_init(AACPsyContext *apc)
 {
     Psy3gppContext *pctx;
-    int i, g;
-    float prev;
+    int i, g, start;
+    float prev, minscale, minath;
     apc->model_priv_data = av_mallocz(sizeof(Psy3gppContext));
     pctx = (Psy3gppContext*) apc->model_priv_data;
 
@@ -311,6 +326,16 @@ static int psy_3gpp_init(AACPsyContext *apc)
     for(g = 0; g < apc->num_bands1024 - 1; g++){
         pctx->s_low[g] = pow(10.0, -(pctx->bark_l[g+1] - pctx->bark_l[g]) * PSY_3GPP_SPREAD_LOW);
         pctx->s_hi [g] = pow(10.0, -(pctx->bark_l[g+1] - pctx->bark_l[g]) * PSY_3GPP_SPREAD_HI);
+    }
+    start = 0;
+    minath = ath(3410, ATH_ADD);
+    for(g = 0; g < apc->num_bands1024; g++){
+        minscale = ath(apc->avctx->sample_rate * start / 1024.0, ATH_ADD);
+        for(i = 1; i < apc->bands1024[g]; i++){
+            minscale = fminf(minscale, ath(apc->avctx->sample_rate * (start + i) / 1024.0 / 2.0, ATH_ADD));
+        }
+        pctx->ath[g] = minscale - minath;
+        start += apc->bands1024[g];
     }
 
     pctx->avg_bits = apc->avctx->bit_rate * 1024 / apc->avctx->sample_rate;
@@ -346,14 +371,6 @@ static inline float modify_thr(float thr, float r){
     t = pow(thr, 0.25) + r;
     return t*t*t*t;
 }
-
-/**
- * Thresholds in quiet for each bark.
- */
-static const float psy_3gpp_bark_thr_quiet[] = {
-    15.0f, 10.0f, 7.0f, 2.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  0.0f,  0.0f, 0.0f,
-     0.0f,  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 3.0f, 5.0f, 10.0f, 20.0f, 30.0f
-};
 
 /**
  * Determine scalefactors and prepare coefficients for encoding.
@@ -431,7 +448,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cp
          for(g = apc->num_bands1024 - 2; g >= 0; g--)
              pctx->band[ch][g].thr = FFMAX(pctx->band[ch][g].thr, pctx->band[ch][g+1].thr * pctx->s_hi[g+1]);
          for(g = 0; g < apc->num_bands1024; g++){
-             pctx->band[ch][g].thr_quiet = FFMAX(pctx->band[ch][g].thr, psy_3gpp_bark_thr_quiet[(int)pctx->bark_l[g]]);
+             pctx->band[ch][g].thr_quiet = FFMAX(pctx->band[ch][g].thr, pctx->ath[g] *0.5);
              pctx->band[ch][g].thr = fmaxf(PSY_3GPP_RPEMIN*pctx->band[ch][g].thr_quiet, fminf(pctx->band[ch][g].thr_quiet, PSY_3GPP_RPELEV*pctx->prev_band[ch][g].thr_quiet));
          }
     }
