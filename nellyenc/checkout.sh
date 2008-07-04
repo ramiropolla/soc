@@ -1,3 +1,4 @@
+#!/bin/sh
 FILES="nellymoserenc.c"
 
 echo "checking out ffmpeg svn"
