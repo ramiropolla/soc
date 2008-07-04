@@ -315,12 +315,12 @@ static int encode_tag(AVCodecContext *avctx,
 
 
 AVCodec nellymoser_encoder = {
-    "nellymoser",
-    CODEC_TYPE_AUDIO,
-    CODEC_ID_NELLYMOSER,
-    sizeof(NellyMoserEncodeContext),
-    encode_init,
-    encode_tag,
-    encode_end,
-    NULL,
+    .name = "nellymoser",
+    .type = CODEC_TYPE_AUDIO,
+    .id = CODEC_ID_NELLYMOSER,
+    .priv_data_size = sizeof(NellyMoserEncodeContext),
+    .init = encode_init,
+    .encode = encode_tag,
+    .close = encode_end,
+    .long_name = "Nellymoser Asao Codec"
 };
