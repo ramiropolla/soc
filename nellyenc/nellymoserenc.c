@@ -322,5 +322,5 @@ AVCodec nellymoser_encoder = {
     .init = encode_init,
     .encode = encode_tag,
     .close = encode_end,
-    .long_name = "Nellymoser Asao Codec"
+    .long_name = NULL_IF_CONFIG_SMALL("Nellymoser Asao Codec"),
 };
