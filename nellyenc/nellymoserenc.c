@@ -153,10 +153,9 @@ static void encode_block(NellyMoserEncodeContext *s,
     int i, j, k, l, b;
     int bs, bk;
     float pows[NELLY_FILL_LEN];
-    float *bptr, val;
+    float val=0;
     float pval;
     float best, tmp, stmp;
-    int off[NELLY_BANDS], base; // -1
     float ss=1./1.;
     float scale=1./1.;
 
@@ -173,68 +172,44 @@ static void encode_block(NellyMoserEncodeContext *s,
 
     init_put_bits2(&pb, buf, buf_size*8);
 
-    /* FIXME: use better (fast) algorithm... */
-    best = 1e10;
-    bk = 0;
-    for(k=0; k<64; k++){
-        pval = pow(2,(ff_nelly_init_table[k])/2048) * scale;
-        tmp = fabs(((s->mdct_out[0]+s->mdct_out[1])/2)/(pval));
-        if(tmp<1) tmp = 1/tmp;
-        if(best > tmp){
-            bk = k;
-            best = tmp;
+    for(i=0, j=0; i<NELLY_BANDS; j+=ff_nelly_band_sizes_table[i++]){
+        stmp = 0;
+        for(l=0; l<ff_nelly_band_sizes_table[i]; l++){
+            for(b=0; b<2; b++){
+                tmp = s->mdct_out[j+l+b*NELLY_BUF_LEN];
+                stmp += tmp*tmp;
+            }
         }
-    }
+        tmp = log(FFMAX(1.0, stmp/(ff_nelly_band_sizes_table[i]<<1))) *
+            M_LOG2E * 1024.0;
 
-    av_log(s->avctx, AV_LOG_DEBUG, "base_best=%f\n", best  );
-
-    base = bk;
-    put_bits2(&pb, 6, base);
-    j=0;
-
-    val = ff_nelly_init_table[base];
-    for(i=0; i<NELLY_BANDS; i++){
-        if (i > 0){
-            /* FIXME: use better (fast) algorithm... */
-            best = 1e10;
-            bk = 0;
+        /* TODO use binary search */
+        best = 1e10;
+        bk = 0;
+        if(i){
+            tmp -= val;
             for(k=0; k<32; k++){
-                stmp = 0;
-                pval = pow(2,(val+ff_nelly_delta_table[k])/2048) * scale;
-
-                for(b=0; b<2; b++){
-                    for(l=0; l<ff_nelly_band_sizes_table[i]; l++){
-                        tmp = fabs(s->mdct_out[j+l+b*NELLY_BUF_LEN]/(pval));
-                        if(tmp<0.90) tmp=0.90;
-                        if(tmp<1) tmp = 1/tmp;
-                        if(tmp>5) tmp=5;
-                    }
-                    stmp += tmp*tmp;
-                }
-
-
-                if(best > stmp){
+                if(fabs(tmp - ff_nelly_delta_table[k])<best){
+                    best = fabs(tmp - ff_nelly_delta_table[k]);
                     bk = k;
-                    best = stmp;
                 }
             }
-            av_log(s->avctx, AV_LOG_DEBUG, "best=%f\n", best  );
-            off[i] = bk;
-            put_bits2(&pb, 5, off[i]); // [5] -> -1
-            j+=ff_nelly_band_sizes_table[i];
-            val += ff_nelly_delta_table[off[i]];
+            put_bits2(&pb, 5, bk);
+            val += ff_nelly_delta_table[bk];
+        }else{
+            //base exponent
+            for(k=0; k<64; k++){
+                if(fabs(tmp - ff_nelly_init_table[k])<best){
+                    best = fabs(tmp - ff_nelly_init_table[k]);
+                    bk = k;
+                }
+            }
+            put_bits2(&pb, 6, bk);
+            val = ff_nelly_init_table[bk];
         }
-    }
 
-    val = ff_nelly_init_table[base];
-    bptr = pows;
-    for (i=0 ; i<NELLY_BANDS ; i++) {
-        if (i > 0)
-            val += ff_nelly_delta_table[off[i]];
-        for (j = 0; j < ff_nelly_band_sizes_table[i]; j++) {
-            *bptr++ = val;
-            av_log(s->avctx, AV_LOG_DEBUG, " exp: %f\n",
-                -pow(2,val/2048.)*scale);
+        for (k = 0; k < ff_nelly_band_sizes_table[i]; k++) {
+            pows[j+k] = val;
         }
     }
 
