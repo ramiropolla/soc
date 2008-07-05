@@ -55,6 +55,24 @@ static inline int convert_coeffs(float *in, int *out, int size, int scale_idx)
     return sum;
 }
 
+static inline float unquant(int q, int scale_idx){
+    return (FFABS(q) * cbrt(q*1.0)) * pow2sf_tab[200 + scale_idx - SCALE_ONE_POS];
+}
+static inline float calc_distortion(float *c, int size, int scale_idx)
+{
+    int i;
+    int q;
+    float coef, unquant, sum = 0.0f;
+    for(i = 0; i < size; i++){
+        coef = FFABS(c[i]);
+        q = (int)(pow(FFABS(coef) * pow2sf_tab[200 - scale_idx + SCALE_ONE_POS], 0.75) + 0.4054);
+        q = av_clip(q, 0, 8191);
+        unquant = (q * cbrt(q)) * pow2sf_tab[200 + scale_idx - SCALE_ONE_POS];
+        sum += (coef - unquant) * (coef - unquant);
+    }
+    return sum;
+}
+
 /**
  * Produce integer coefficients from scalefactors provided by model.
  */
@@ -165,24 +183,39 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
 {
     int start;
     int ch, g, i;
+    int minscale;
 
-    //detect M/S
-    if(apc->avctx->channels > 1 && cpe->common_window){
+    for(ch = 0; ch < apc->avctx->channels; ch++){
         start = 0;
         for(g = 0; g < apc->num_bands1024; g++){
-            float diff = 0.0f;
+            float energy = 0.0f, ffac = 0.0f, thr, dist;
 
-            for(i = 0; i < apc->bands1024[g]; i++)
-                diff += fabs(cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i]);
-            cpe->ms.mask[0][g] = diff == 0.0;
+            for(i = 0; i < apc->bands1024[g]; i++){
+                energy += cpe->ch[ch].coeffs[start+i]*cpe->ch[ch].coeffs[start+i];
+                ffac += sqrt(FFABS(cpe->ch[ch].coeffs[start+i]));
+            }
+            thr = energy * 0.001258925f;
+            cpe->ch[ch].sf_idx[ch][g] = 136;
+            cpe->ch[ch].zeroes[ch][g] = (energy == 0.0);
+            if(cpe->ch[ch].zeroes[ch][g]) continue;
+            minscale = (int)(2.66667 * (log2(6.75*thr) - log2(ffac)));
+            cpe->ch[ch].sf_idx[ch][g] = SCALE_ONE_POS - minscale;
+            while(cpe->ch[ch].sf_idx[ch][g] > 3){
+                dist = calc_distortion(cpe->ch[ch].coeffs + start, apc->bands1024[g], cpe->ch[ch].sf_idx[ch][g]);
+                if(dist < thr) break;
+                cpe->ch[ch].sf_idx[ch][g] -= 3;
+            }
         }
     }
     for(ch = 0; ch < apc->avctx->channels; ch++){
-        cpe->ch[ch].gain = SCALE_ONE_POS;
-        for(g = 0; g < apc->num_bands1024; g++){
-            cpe->ch[ch].sf_idx[0][g] = SCALE_ONE_POS;
-            cpe->ch[ch].zeroes[0][g] = 0;
-        }
+        minscale = 255;
+        for(g = 0; g < apc->num_bands1024; g++)
+            if(!cpe->ch[ch].zeroes[0][g])
+                minscale = FFMIN(minscale, cpe->ch[ch].sf_idx[0][g]);
+        cpe->ch[ch].gain = minscale;
+        for(g = 0; g < apc->num_bands1024; g++)
+            if(!cpe->ch[ch].zeroes[0][g])
+                cpe->ch[ch].sf_idx[0][g] = FFMIN(minscale + SCALE_MAX_DIFF, cpe->ch[ch].sf_idx[0][g]);
     }
     psy_create_output(apc, cpe, 1);
 }
