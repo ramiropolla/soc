@@ -249,10 +249,12 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, sh
         memcpy(s->output, cpe->ch[channel].saved, sizeof(float)*1024);
         j = channel;
         for (i = 0; i < 1024; i++, j += avctx->channels){
-            s->output[i+1024]         = audio[j] / 512 * s->kbd_long_1024[1024 - i - 1];
-            cpe->ch[channel].saved[i] = audio[j] / 512 * s->kbd_long_1024[i];
+            s->output[i+1024]         = audio[j] * s->kbd_long_1024[1024 - i - 1];
+            cpe->ch[channel].saved[i] = audio[j] * s->kbd_long_1024[i];
         }
         ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs, s->output, s->tmp);
+        //XXX: unelegant hack but it makes output spectrum more like other implementations
+        for(i = 0; i < 1024; i++) cpe->ch[channel].coeffs[i] /= 512;
     }else{
         for (k = 0; k < 1024; k += 128) {
             memcpy(s->output, cpe->ch[channel].saved + k + !k*1024 - 128, sizeof(float)*128);
