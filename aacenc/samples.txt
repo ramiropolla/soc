@@ -1,0 +1,1 @@
+wget -r 1 -l 1 http://www.rarewares.org/test_samples/
