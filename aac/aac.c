@@ -398,7 +398,6 @@ typedef struct {
 } AACContext;
 
 
-//aux
 // TODO: Maybe add to dsputil?!
 #if defined(AAC_LTP) || defined(AAC_SSR)
 static void vector_fmul_dst(AACContext * ac, float * dst, const float * src0, const float * src1, int len) {
@@ -894,8 +893,6 @@ static int aac_decode_init(AVCodecContext * avccontext) {
 #endif /* AAC_SSR */
     return 0;
 }
-
-// parser implementation
 
 /**
  * Decode a data_stream_element; reference: table 4.10.
