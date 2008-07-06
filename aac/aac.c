@@ -292,7 +292,7 @@ typedef struct {
  * coupling parameters
  */
 typedef struct {
-    int ind_sw;            ///< Set if independent coupling (i.e. after IMDCT).
+    int is_indep_coup;     ///< Set if independent coupling (i.e. after IMDCT).
     int domain;            ///< Controls if coupling is performed before (0) or after (1) the TNS decoding of the target channels.
     int num_coupled;       ///< number of target elements
     int is_cpe[9];         ///< Set if target is an CPE (otherwise it's an SCE).
@@ -1437,8 +1437,8 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
 
     coup = &ac->che[ID_CCE][id]->coup;
 
-    coup->ind_sw = get_bits1(gb);
-    //if (coup->ind_sw)
+    coup->is_indep_coup = get_bits1(gb);
+    //if (coup->is_indep_coup)
     //    av_log(ac->avccontext, AV_LOG_ERROR, "aac: independently switched coupling\n");
     coup->num_coupled = get_bits(gb, 3);
     for (c = 0; c <= coup->num_coupled; c++) {
@@ -1464,7 +1464,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
         int gain = 0;
         float gain_cache = 1.;
         if (c) {
-            cge = coup->ind_sw ? 1 : get_bits1(gb);
+            cge = coup->is_indep_coup ? 1 : get_bits1(gb);
             gain = cge ? get_vlc2(gb, mainvlc.table, 7, 3) - 60: 0;
             gain_cache = pow(scale, gain);
         }
@@ -1988,9 +1988,9 @@ static void coupling_tool(AACContext * ac, int independent, int domain) {
     for (i = 0; i < MAX_TAGID; i++) {
         ChannelElement * cc = ac->che[ID_CCE][i];
         if (cc) {
-            if (cc->coup.ind_sw && independent) {
+            if (cc->coup.is_indep_coup && independent) {
                 transform_coupling_tool(ac, cc, coupling_independent_trans);
-            } else if (!cc->coup.ind_sw && !independent && (cc->coup.domain == domain)) {
+            } else if (!cc->coup.is_indep_coup && !independent && (cc->coup.domain == domain)) {
                 transform_coupling_tool(ac, cc, coupling_dependent_trans);
             }
         }
