@@ -469,7 +469,7 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     AVCodecContext *avctx = ac->avccontext;
     ProgramConfig * pcs = &ac->pcs;
     int i, j, channels = 0;
-    float a, b;
+    float a, b, *ilo_tmp;
     ChannelElement *mixdown[3] = { NULL, NULL, NULL };
 
     static const float mixdowncoeff[4] = {
@@ -560,7 +560,10 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     }
 
     avctx->channels = channels;
+    ilo_tmp = ac->interleaved_output;
     ac->interleaved_output = av_realloc(ac->interleaved_output, channels * 1024 * sizeof(float));
+    if(!ac->interleaved_output)
+        av_freep(ilo_tmp);
     return ac->interleaved_output ? 0 : -1;
 }
 
