@@ -1059,7 +1059,6 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
             if (cb[g][i] == ZERO_HCB) {
                 for(; i < run_end; i++)
                     sf[g][i] = 0.;
-                continue;
             }else if((cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
                 ics->intensity_present = 1;
                 for(; i < run_end; i++) {
