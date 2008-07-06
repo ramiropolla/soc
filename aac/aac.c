@@ -201,7 +201,7 @@ typedef struct {
  */
 typedef struct {
     int intensity_present;
-    int max_sfb;                ///< number of scalefactor bands per group
+    uint8_t max_sfb;            ///< number of scalefactor bands per group
     enum WindowSequence window_sequence;
     enum WindowSequence window_sequence_prev;
     uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window.
@@ -908,7 +908,7 @@ static void data_stream_element(AACContext * ac, GetBitContext * gb, int id) {
 }
 
 #ifdef AAC_LTP
-static void decode_ltp_data(AACContext * ac, GetBitContext * gb, int max_sfb, LongTermPrediction * ltp) {
+static void decode_ltp_data(AACContext * ac, GetBitContext * gb, uint8_t max_sfb, LongTermPrediction * ltp) {
     int sfb;
     if (ac->audioObjectType == AOT_ER_AAC_LD) {
         assert(0);
@@ -1017,7 +1017,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
         int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
         int k = 0;
         while (k < ics->max_sfb) {
-            int sect_len = k;
+            uint8_t sect_len = k;
             int sect_len_incr;
             int sect_cb = get_bits(gb, 4);
             if (sect_cb == 12) {
