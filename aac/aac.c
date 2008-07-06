@@ -139,7 +139,7 @@ enum WindowSequence {
 /**
  * special codebooks
  */
-enum {
+enum Codebook {
     ZERO_HCB       = 0,
     FIRST_PAIR_HCB = 5,
     ESC_HCB        = 11,
@@ -154,7 +154,7 @@ enum {
 /**
  * channel types
  */
-enum {
+enum ChannelType {
     AAC_CHANNEL_FRONT = 1,
     AAC_CHANNEL_SIDE  = 2,
     AAC_CHANNEL_BACK  = 3,
@@ -176,7 +176,7 @@ enum {
  * stream (ID_PCE) or created based on a default fixed channel arrangement.
  */
 typedef struct {
-    int che_type[4][MAX_TAGID]; ///< channel element type with the first index as the first 4 raw_data_block IDs
+    enum ChannelType che_type[4][MAX_TAGID]; ///< channel element type with the first index as the first 4 raw_data_block IDs
     int mono_mixdown;           ///< The SCE tag to use if user requests mono   output, -1 if not available.
     int stereo_mixdown;         ///< The CPE tag to use if user requests stereo output, -1 if not available.
     int mixdown_coeff_index;    ///< 0-3
@@ -313,7 +313,7 @@ typedef struct {
                                                */
     IndividualChannelStream ics;
     TemporalNoiseShaping tns;
-    int cb[8][64];                            ///< codebooks
+    enum Codebook cb[8][64];                  ///< codebooks
     int cb_run_end[8][64];                    ///< codebook run end points
     float sf[8][64];                          ///< scalefactors
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< coefficients for IMDCT
@@ -572,9 +572,9 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
  * @param sce_map mono (Single Channel Element) map
  * @param type speaker type/position for these channels
  */
-static void program_config_element_parse_tags(GetBitContext * gb, int *cpe_map,
-                                              int *sce_map, int n, int type) {
-    int *map;
+static void program_config_element_parse_tags(GetBitContext * gb, enum ChannelType *cpe_map,
+                                              enum ChannelType *sce_map, int n, enum ChannelType type) {
+    enum ChannelType *map;
     while(n--) {
         map = cpe_map && get_bits1(gb) ? cpe_map : sce_map; // stereo or mono map
         map[get_bits(gb, 4)] = type;
@@ -1011,7 +1011,7 @@ static inline float ivquant(AACContext * ac, int a) {
 /**
  * Decode section_data payload; reference: table 4.46.
  */
-static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, int cb[][64], int cb_run_end[][64]) {
+static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum Codebook cb[][64], int cb_run_end[][64]) {
     int g;
     for (g = 0; g < ics->num_window_groups; g++) {
         int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
@@ -1046,7 +1046,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
  * Decode scale_factor_data; reference: table 4.47.
  */
 static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
-        IndividualChannelStream * ics, const int cb[][64], const int cb_run_end[][64], float sf[][64]) {
+        IndividualChannelStream * ics, const enum Codebook cb[][64], const int cb_run_end[][64], float sf[][64]) {
     const int sf_offset = ac->sf_offset + (ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 12 : 0);
     int g, i;
     int offset[3] = { global_gain, global_gain - 90, 100 };
@@ -1188,7 +1188,7 @@ static void decode_ms_data(AACContext * ac, GetBitContext * gb, ChannelElement *
 /**
  * Decode spectral data; reference: table 4.50.
  */
-static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const int cb[][64], int icoef[1024]) {
+static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const enum Codebook cb[][64], int icoef[1024]) {
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
 
@@ -1254,7 +1254,7 @@ static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, con
 }
 
 static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * ics, const int * icoef,
-        const int cb[][64], const float sf[][64], float * coef) {
+        const enum Codebook cb[][64], const float sf[][64], float * coef) {
     const uint16_t * offsets = ics->swb_offset;
     const int c = 1024/ics->num_window_groups;
     int g, i, group, k;
