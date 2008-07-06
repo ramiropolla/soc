@@ -1241,11 +1241,10 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const Indiv
 static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, const Pulse * pulse, int * icoef) {
     int i, off = ics->swb_offset[pulse->start];
     for (i = 0; i < pulse->num_pulse; i++) {
+        int ic;
         off += pulse->offset[i];
-        if (icoef[off] > 0)
-            icoef[off] += pulse->amp[i];
-        else
-            icoef[off] -= pulse->amp[i];
+        ic = (icoef[off] - 1)>>31;
+        icoef[off] += (pulse->amp[i]^ic) - ic;
     }
 }
 
