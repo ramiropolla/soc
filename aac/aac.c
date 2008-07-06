@@ -1055,13 +1055,12 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
     ics->intensity_present = 0;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb;) {
+            int run_end = cb_run_end[g][i];
             if (cb[g][i] == ZERO_HCB) {
-                int run_end = cb_run_end[g][i];
                 for(; i < run_end; i++)
                     sf[g][i] = 0.;
                 continue;
             }else if((cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
-                int run_end = cb_run_end[g][i];
                 ics->intensity_present = 1;
                 for(; i < run_end; i++) {
                     offset[2] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
@@ -1074,7 +1073,6 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
                     sf[g][i] *= mix_gain;
                 }
             }else if(cb[g][i] == NOISE_HCB) {
-                int run_end = cb_run_end[g][i];
                 for(; i < run_end; i++) {
                     if(noise_flag-- > 0)
                         offset[1] += get_bits(gb, 9) - 256;
@@ -1089,7 +1087,6 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
                     sf[g][i] *= mix_gain;
                 }
             }else {
-                int run_end = cb_run_end[g][i];
                 for(; i < run_end; i++) {
                     offset[0] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
                     if(offset[0] > 255) {
