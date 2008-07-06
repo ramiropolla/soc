@@ -177,8 +177,8 @@ enum {
  */
 typedef struct {
     enum ChannelType che_type[4][MAX_TAGID]; ///< channel element type with the first index as the first 4 raw_data_block IDs
-    int mono_mixdown;                        ///< The SCE tag to use if user requests mono   output, -1 if not available.
-    int stereo_mixdown;                      ///< The CPE tag to use if user requests stereo output, -1 if not available.
+    int mono_mixdown_tag;                    ///< The SCE tag to use if user requests mono   output, -1 if not available.
+    int stereo_mixdown_tag;                  ///< The CPE tag to use if user requests stereo output, -1 if not available.
     int mixdown_coeff_index;                 ///< 0-3
     int pseudo_surround;                     ///< Mix surround channels out of phase.
 } ProgramConfig;
@@ -526,8 +526,8 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     if(avctx->request_channels && avctx->request_channels <= 2 &&
        avctx->request_channels != channels) {
 
-        if((avctx->request_channels == 1 && pcs->mono_mixdown   != -1) ||
-           (avctx->request_channels == 2 && pcs->stereo_mixdown != -1)) {
+        if((avctx->request_channels == 1 && pcs->mono_mixdown_tag   != -1) ||
+           (avctx->request_channels == 2 && pcs->stereo_mixdown_tag != -1)) {
             /* Add support for this as soon as we get a sample so we can figure out
                exactly how this is supposed to work. */
             av_log(avctx, AV_LOG_ERROR,
@@ -606,8 +606,8 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
     num_assoc_data  = get_bits(gb, 3);
     num_cc          = get_bits(gb, 4);
 
-    pcs.mono_mixdown   = get_bits1(gb) ? get_bits(gb, 4) : -1;
-    pcs.stereo_mixdown = get_bits1(gb) ? get_bits(gb, 4) : -1;
+    pcs.mono_mixdown_tag   = get_bits1(gb) ? get_bits(gb, 4) : -1;
+    pcs.stereo_mixdown_tag = get_bits1(gb) ? get_bits(gb, 4) : -1;
 
     if (get_bits1(gb)) {
         pcs.mixdown_coeff_index = get_bits(gb, 2);
@@ -641,8 +641,8 @@ static int program_config_element_default(AACContext *ac, int channels)
     memset(&pcs, 0, sizeof(ProgramConfig));
 
     /* Pre-mixed down-mix outputs are not available. */
-    pcs.mono_mixdown   = -1;
-    pcs.stereo_mixdown = -1;
+    pcs.mono_mixdown_tag   = -1;
+    pcs.stereo_mixdown_tag = -1;
 
     if(channels < 1 || channels > 7) {
         av_log(ac->avccontext, AV_LOG_ERROR, "invalid default channel configuration (%d channels)\n",
