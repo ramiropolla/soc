@@ -1254,10 +1254,8 @@ static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * 
     const int c = 1024/ics->num_window_groups;
     int g, i, group, k;
 
-    for(g = 0; g < ics->num_window_groups; g++)
-        memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(c - offsets[ics->max_sfb]));
-
     for (g = 0; g < ics->num_window_groups; g++) {
+        memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(c - offsets[ics->max_sfb]));
         for (i = 0; i < ics->max_sfb; i++) {
             if (cb[g][i] == NOISE_HCB) {
                 for (group = 0; group < ics->group_len[g]; group++) {
