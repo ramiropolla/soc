@@ -2091,6 +2091,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     // parse
     while ((id = get_bits(&gb, 3)) != ID_END) {
         tag = get_bits(&gb, 4);
+        err = -1;
         switch (id) {
 
         case ID_SCE:
@@ -2111,10 +2112,8 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             break;
 
         case ID_CPE:
-            if (ac->che[ID_CPE][tag]) {
+            if (ac->che[ID_CPE][tag])
                 err = decode_cpe(ac, &gb, tag);
-            } else
-                err = -1;
             break;
 
         case ID_FIL:
@@ -2135,17 +2134,13 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             break;
 
         case ID_CCE:
-            if (ac->che[ID_CCE][tag]) {
+            if (ac->che[ID_CCE][tag])
                 err = decode_cce(ac, &gb, tag);
-            } else
-                err = -1;
             break;
 
         case ID_LFE:
-            if (ac->che[ID_LFE][tag]) {
+            if (ac->che[ID_LFE][tag])
                 err = decode_ics(ac, &gb, 0, 0, &ac->che[ID_LFE][tag]->ch[0]);
-            } else
-                err = -1;
             break;
 
         default:
