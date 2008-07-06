@@ -243,7 +243,6 @@ typedef struct {
  */
 typedef struct {
     int pce_instance_tag;
-    int tag_reserved_bits;
     int dyn_rng_sgn[17];
     int dyn_rng_ctl[17];
     int exclude_mask[MAX_CHANNELS];
@@ -252,7 +251,6 @@ typedef struct {
     int interpolation_scheme;
     int band_top[17];
     int prog_ref_level;
-    int prog_ref_level_reserved_bits;
 } DynamicRangeControl;
 
 /**
@@ -1519,7 +1517,7 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
     /* pce_tag_present? */
     if(get_bits1(gb)) {
         ac->che_drc.pce_instance_tag  = get_bits(gb, 4);
-        ac->che_drc.tag_reserved_bits = get_bits(gb, 4);
+        skip_bits(gb, 4); // tag_reserved_bits
         n++;
     }
 
@@ -1543,7 +1541,7 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
     /* prog_ref_level_present? */
     if (get_bits1(gb)) {
         ac->che_drc.prog_ref_level = get_bits(gb, 7);
-        ac->che_drc.prog_ref_level_reserved_bits = get_bits1(gb);
+        skip_bits1(gb); // prog_ref_level_reserved_bits
         n++;
     }
 
