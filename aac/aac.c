@@ -60,8 +60,8 @@
     static float ivquant_tab[IVQUANT_SIZE];
     static float pow2sf_tab[316];
 #endif /* CONFIG_HARDCODED_TABLES */
-DECLARE_ALIGNED_16(static float, kbd_long_1024[1024]);
-DECLARE_ALIGNED_16(static float, kbd_short_128[128]);
+DECLARE_ALIGNED_16(static float,  kbd_long_1024[1024]);
+DECLARE_ALIGNED_16(static float,  kbd_short_128[128]);
 DECLARE_ALIGNED_16(static float, sine_long_1024[1024]);
 DECLARE_ALIGNED_16(static float, sine_short_128[128]);
 
@@ -1278,7 +1278,7 @@ static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * 
                 }
             }
         }
-        coef += ics->group_len[g]*128;
+        coef  += ics->group_len[g]*128;
         icoef += ics->group_len[g]*128;
     }
 }
@@ -1525,7 +1525,7 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
 
     /* pce_tag_present? */
     if(get_bits1(gb)) {
-        ac->che_drc.pce_instance_tag = get_bits(gb, 4);
+        ac->che_drc.pce_instance_tag  = get_bits(gb, 4);
         ac->che_drc.tag_reserved_bits = get_bits(gb, 4);
         n++;
     }
