@@ -1429,8 +1429,6 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
     coup = &ac->che[ID_CCE][id]->coup;
 
     coup->is_indep_coup = get_bits1(gb);
-    //if (coup->is_indep_coup)
-    //    av_log(ac->avccontext, AV_LOG_ERROR, "aac: independently switched coupling\n");
     coup->num_coupled = get_bits(gb, 3);
     for (c = 0; c <= coup->num_coupled; c++) {
         num_gain++;
