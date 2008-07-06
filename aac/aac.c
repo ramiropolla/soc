@@ -762,7 +762,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     return 0;
 }
 
-static int aac_decode_init(AVCodecContext * avccontext) {
+static av_cold int aac_decode_init(AVCodecContext * avccontext) {
     static const struct {
         const uint16_t     *a_code;
         const unsigned int s;
@@ -2158,7 +2158,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     return buf_size;
 }
 
-static int aac_decode_close(AVCodecContext * avccontext) {
+static av_cold int aac_decode_close(AVCodecContext * avccontext) {
     AACContext * ac = avccontext->priv_data;
     int i, j;
 
