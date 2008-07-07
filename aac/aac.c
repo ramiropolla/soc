@@ -42,6 +42,54 @@
  */
 //#define AAC_LTP
 
+/*
+ * supported tools
+ *
+ * Support?             Name
+ * N (code in SoC repo) gain control
+ * Y                    block switching
+ * Y                    window shapes - standard
+ * N                    window shapes - Low Delay
+ * Y                    filterbank - standard
+ * N (code in SoC repo) filterbank - Scalable Sample Rate
+ * Y                    Tonal Noise Shaping
+ * N (code in SoC repo) Long Term Prediction
+ * Y                    intensity stereo
+ * Y                    channel coupling
+ * N                    frequency domain prediction
+ * Y                    Perceptual Noise Substitution
+ * Y                    Mid/Side stereo
+ * N                    Scalable Inverse AAC Quantization
+ * N                    Frequency Selective Switch
+ * N                    upsampling filter
+ * Y                    quantization & coding - AAC
+ * N                    quantization & coding - TwinVQ
+ * N                    quantization & coding - BSAC
+ * N                    AAC Error Resilience tools
+ * N                    Error Resilience payload syntax
+ * N                    Error Protection tool
+ * N                    CELP
+ * N                    Silence Compression
+ * N                    HVXC
+ * N                    HVXC 4kbits/s VR
+ * N                    Structured Audio tools
+ * N                    Structured Audio Sample Bank Format
+ * N                    MIDI
+ * N                    Harmonic and Individual Lines plus Noise
+ * N                    Text-To-Speech Interface
+ * N (in progress)      Spectral Band Replication
+ * Y (not in this code) Layer-1
+ * Y (not in this code) Layer-2
+ * Y (not in this code) Layer-3
+ * N                    SinuSoidal Coding (Transient, Sinusoid, Noise)
+ * N (planned)          Parametric Stereo
+ * N                    Direct Stream Transfer
+ *
+ * Note: - HE AAC v1 comprises LC AAC with Spectral Band Replication.
+ *       - HE AAC v2 comprises LC AAC with Spectral Band Replication and
+           Parametric Stereo.
+ */
+
 
 #include "avcodec.h"
 #include "bitstream.h"
@@ -73,31 +121,32 @@ static VLC books[11];
  */
 enum {
     AOT_NULL,
-    AOT_AAC_MAIN,
-    AOT_AAC_LC,
-    AOT_AAC_SSR,
-    AOT_AAC_LTP,
-    AOT_SBR,
-    AOT_AAC_SCALABLE,
-    AOT_TWINVQ,
-    AOT_CELP,
-    AOT_HVXC,
-    AOT_TTSI             = 12,
-    AOT_MAINSYNTH,
-    AOT_WAVESYNTH,
-    AOT_MIDI,
-    AOT_SAFX,
-    AOT_ER_AAC_LC,
-    AOT_ER_AAC_LTP       = 19,
-    AOT_ER_AAC_SCALABLE,
-    AOT_ER_TWINVQ,
-    AOT_ER_BSAC,
-    AOT_ER_AAC_LD,
-    AOT_ER_CELP,
-    AOT_ER_HVXC,
-    AOT_ER_HILN,
-    AOT_ER_PARAM,
-    AOT_SSC,
+                               // Support?                Name
+    AOT_AAC_MAIN,              // Y                       Main
+    AOT_AAC_LC,                // Y                       Low Complexity
+    AOT_AAC_SSR,               // N (code in SoC repo)    Scalable Sample Rate
+    AOT_AAC_LTP,               // N (code in SoC repo)    Long Term Prediction
+    AOT_SBR,                   // N (in progress)         Spectral Band Replication
+    AOT_AAC_SCALABLE,          // N                       Scalable
+    AOT_TWINVQ,                // N                       Twin Vector Quantizer
+    AOT_CELP,                  // N                       Code Excited Linear Prediction
+    AOT_HVXC,                  // N                       Harmonic Vector eXcitation Coding
+    AOT_TTSI             = 12, // N                       Text-To-Speech Interface
+    AOT_MAINSYNTH,             // N                       Main Synthesis
+    AOT_WAVESYNTH,             // N                       Wavetable Synthesis
+    AOT_MIDI,                  // N                       General MIDI
+    AOT_SAFX,                  // N                       Algorithmic Synthesis and Audio Effects
+    AOT_ER_AAC_LC,             // N                       Error Resilient Low Complexity
+    AOT_ER_AAC_LTP       = 19, // N                       Error Resilient Long Term Prediction
+    AOT_ER_AAC_SCALABLE,       // N                       Error Resilient Scalable
+    AOT_ER_TWINVQ,             // N                       Error Resilient Twin Vector Quantizer
+    AOT_ER_BSAC,               // N                       Error Resilient Bit-Sliced Arithmetic Coding
+    AOT_ER_AAC_LD,             // N                       Error Resilient Low Delay
+    AOT_ER_CELP,               // N                       Error Resilient Code Excited Linear Prediction
+    AOT_ER_HVXC,               // N                       Error Resilient Harmonic Vector eXcitation Coding
+    AOT_ER_HILN,               // N                       Error Resilient Harmonic and Individual Lines plus Noise
+    AOT_ER_PARAM,              // N                       Error Resilient Parametric
+    AOT_SSC,                   // N                       SinuSoidal Coding
 };
 
 /**
