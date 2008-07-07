@@ -8,6 +8,6 @@ General:
 Cosmetic:
 
 * Find unusually capitalized keyword phrases and add abbreviations in
-  parentheses e.g. Tonal Noise Shaping (TNS)
+  parentheses e.g. Temporal Noise Shaping (TNS)
 * Break lines over 80 characters as appropriate
 * Add notes regarding what FAAD supports that we don't
