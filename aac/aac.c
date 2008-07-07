@@ -731,6 +731,10 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
 
 /**
  * Parse audio specific configuration; reference: table 1.13.
+ *
+ * @param   data        pointer to AVCodecContext extradata
+ * @param   data_size   size of AVCCodecContext extradata
+ * @return  Returns error status.
  */
 static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     GetBitContext gb;
@@ -921,6 +925,8 @@ static void decode_ltp_data(AACContext * ac, GetBitContext * gb, uint8_t max_sfb
 
 /**
  * Decode Individual Channel Stream info; reference: table 4.6.
+ *
+ * @param   common_window   Channels have independent [0], or shared [1], Individual Channel Stream information.
  */
 static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_window, IndividualChannelStream * ics) {
     uint8_t grouping;
@@ -999,6 +1005,12 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
     return 0;
 }
 
+/**
+ * inverse quantization
+ *
+ * @param   a   quantized value to be dequantized
+ * @return  Returns dequantized value.
+ */
 static inline float ivquant(AACContext * ac, int a) {
     if (a + (unsigned int)IVQUANT_SIZE/2 - 1 < (unsigned int)IVQUANT_SIZE - 1)
         return ivquant_tab[a + IVQUANT_SIZE/2 - 1];
@@ -1008,6 +1020,10 @@ static inline float ivquant(AACContext * ac, int a) {
 
 /**
  * Decode section_data payload; reference: table 4.46.
+ *
+ * @param   cb          array of the codebook used for a window group's scalefactor band
+ * @param   cb_run_end  array of the last scalefactor band of a codebook run for a window group's scalefactor band
+ * @return  Returns error status.
  */
 static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum Codebook cb[][64], int cb_run_end[][64]) {
     int g;
@@ -1042,6 +1058,13 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
 
 /**
  * Decode scale_factor_data; reference: table 4.47.
+ *
+ * @param   mix_gain    channel gain (Not used by AAC bitstream.)
+ * @param   global_gain first scalefactor value as scalefactors are differentially coded
+ * @param   cb          array of the codebook used for a window group's scalefactor band
+ * @param   cb_run_end  array of the last scalefactor band of a codebook run for a window group's scalefactor band
+ * @param   sf          array of scalefactors or intensity stereo positions used for a window group's scalefactor band
+ * @return  Returns error status.
  */
 static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
         IndividualChannelStream * ics, const enum Codebook cb[][64], const int cb_run_end[][64], float sf[][64]) {
@@ -1100,6 +1123,9 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
     return 0;
 }
 
+/**
+ * Decode pulse data; reference: table 4.7.
+ */
 static void decode_pulse_data(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
     int i;
     pulse->num_pulse = get_bits(gb, 2) + 1;
@@ -1110,6 +1136,9 @@ static void decode_pulse_data(AACContext * ac, GetBitContext * gb, Pulse * pulse
     }
 }
 
+/**
+ * Decode Temporal Noise Shaping data; reference: table 4.48.
+ */
 static void decode_tns_data(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, TemporalNoiseShaping * tns) {
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
     for (w = 0; w < ics->num_windows; w++) {
@@ -1165,6 +1194,9 @@ static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, SingleC
 }
 #endif /* AAC_SSR */
 
+/**
+ * Decode Mid/Side data; reference: table 4.54.
+ */
 static void decode_ms_data(AACContext * ac, GetBitContext * gb, ChannelElement * cpe) {
     MidSideStereo * ms = &cpe->ms;
     int g, i;
@@ -1181,6 +1213,10 @@ static void decode_ms_data(AACContext * ac, GetBitContext * gb, ChannelElement *
 
 /**
  * Decode spectral data; reference: table 4.50.
+ *
+ * @param   cb          array of the codebook used for a window group's scalefactor band
+ * @param   icoef       array of quantized spectral data
+ * @return  Returns error status.
  */
 static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const enum Codebook cb[][64], int icoef[1024]) {
     int i, k, g;
@@ -1236,6 +1272,12 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const Indiv
     return 0;
 }
 
+/**
+ * Add pulses with particular amplitudes to the quantized spectral data; reference: 4.6.3.3.
+ *
+ * @param   pulse   pointer to pulse data struct
+ * @param   icoef   array of quantized spectral data
+ */
 static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, const Pulse * pulse, int * icoef) {
     int i, off = ics->swb_offset[pulse->start];
     for (i = 0; i < pulse->num_pulse; i++) {
@@ -1246,6 +1288,14 @@ static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, con
     }
 }
 
+/**
+ * Dequantize and scale spectral data; reference: 4.6.3.3.
+ *
+ * @param   icoef   array of quantized spectral data
+ * @param   cb      array of the codebook used for a window group's scalefactor band
+ * @param   sf      array of scalefactors or intensity stereo positions used for a window group's scalefactor band
+ * @param   coef    array of dequantized, scaled spectral data
+ */
 static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * ics, const int * icoef,
         const enum Codebook cb[][64], const float sf[][64], float * coef) {
     const uint16_t * offsets = ics->swb_offset;
@@ -1276,6 +1326,10 @@ static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * 
 
 /**
  * Decode an individual_channel_stream payload; reference: table 4.44.
+ *
+ * @param   common_window   Channels have independent [0], or shared [1], Individual Channel Stream information.
+ * @param   scale_flag
+ * @return  Returns error status.
  */
 static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, int scale_flag, SingleChannelElement * sce) {
     int icoeffs[1024];
@@ -1326,6 +1380,9 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     return 0;
 }
 
+/**
+ * Mid/Side stereo decoding; reference: 4.6.8.1.3.
+ */
 static void ms_tool(AACContext * ac, ChannelElement * cpe) {
     const MidSideStereo * ms = &cpe->ms;
     const IndividualChannelStream * ics = &cpe->ch[0].ics;
@@ -1353,7 +1410,9 @@ static void ms_tool(AACContext * ac, ChannelElement * cpe) {
     }
 }
 
-
+/**
+ * intensity stereo decoding; reference: 4.6.8.2.3
+ */
 static void intensity_tool(AACContext * ac, ChannelElement * cpe) {
     const IndividualChannelStream * ics = &cpe->ch[1].ics;
     SingleChannelElement * sce1 = &cpe->ch[1];
@@ -1382,6 +1441,9 @@ static void intensity_tool(AACContext * ac, ChannelElement * cpe) {
 
 /**
  * Decode a channel_pair_element; reference: table 4.4.
+ *
+ * @param   id  Identifies the instance of a syntax element.
+ * @return  Returns error status.
  */
 static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     int i;
@@ -1415,6 +1477,12 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     return 0;
 }
 
+/**
+ * Decode coupling_channel_element; reference: table 4.8.
+ *
+ * @param   id  Identifies the instance of a syntax element.
+ * @return  Returns error status.
+ */
 static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
     int num_gain = 0;
     int c, g, sfb;
@@ -1479,14 +1547,25 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
     return 0;
 }
 
+/**
+ * Parse Spectral Band Replication extension data; reference: table 4.55.
+ *
+ * @param   crc flag indicating the presence of CRC data
+ * @param   cnt length of ID_FIL syntactic element in bytes
+ * @return  Returns number of bytes consumed from the ID_FIL element.
+ */
 static int sbr_extension_data(AACContext * ac, GetBitContext * gb, int crc, int cnt) {
     // TODO : sbr_extension implementation
     av_log(ac->avccontext, AV_LOG_DEBUG, "aac: SBR not yet supported.\n");
-    skip_bits_long(gb, 8*cnt - 4);
+    skip_bits_long(gb, 8*cnt - 4); // -4 due to reading extension type
     return cnt;
 }
 
-
+/**
+ * Parse whether channels are to be excluded from Dynamic Range Compression; reference: table 4.53.
+ *
+ * @return  Returns number of bytes consumed.
+ */
 static int excluded_channels(AACContext * ac, GetBitContext * gb) {
     int i;
     int n = 1;
@@ -1505,8 +1584,12 @@ static int excluded_channels(AACContext * ac, GetBitContext * gb) {
     return n;
 }
 
-
-
+/**
+ * Decode dynamic range information; reference: table 4.52.
+ *
+ * @param   cnt length of ID_FIL syntactic element in bytes
+ * @return  Returns number of bytes consumed.
+ */
 static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
     int n = 1;
     int drc_num_bands = 1;
@@ -1553,7 +1636,9 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
 }
 
 /**
- * Parse extension data (incomplete).
+ * Parse extension data (incomplete); reference: table 4.51.
+ *
+ * @param   cnt length of ID_FIL syntactic element in bytes
  */
 static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
     int i = 0;
@@ -1577,6 +1662,12 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
     return res;
 }
 
+/**
+ * Decode TNS filter coefficients and apply all-pole filters; reference: 4.6.9.3.
+ *
+ * @param   decode  1 if tool is used normally, 0 if tool is used in LTP.
+ * @param   coef    spectral coefficients
+ */
 static void tns_filter_tool(AACContext * ac, int decode, SingleChannelElement * sce, float * coef) {
     const IndividualChannelStream * ics = &sce->ics;
     const TemporalNoiseShaping * tns = &sce->tns;
@@ -1638,6 +1729,9 @@ static void tns_filter_tool(AACContext * ac, int decode, SingleChannelElement * 
     }
 }
 
+/**
+ * tns_filter_tool wrapper to make interface consistent.
+ */
 static void tns_trans(AACContext * ac, SingleChannelElement * sce) {
     if(sce->tns.present) tns_filter_tool(ac, 1, sce, sce->coeffs);
 }
@@ -1729,6 +1823,9 @@ static void ltp_update_trans(AACContext * ac, SingleChannelElement * sce) {
 }
 #endif /* AAC_LTP */
 
+/**
+ * Conduct IMDCT and windowing.
+ */
 static void window_trans(AACContext * ac, SingleChannelElement * sce) {
     IndividualChannelStream * ics = &sce->ics;
     float * in = sce->coeffs;
@@ -1910,6 +2007,11 @@ static void ssr_trans(AACContext * ac, SingleChannelElement * sce) {
 }
 #endif /* AAC_SSR */
 
+/**
+ * Apply dependent channel coupling.
+ *
+ * @param   index   which gain to use for coupling
+ */
 static void coupling_dependent_trans(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
     IndividualChannelStream * ics = &cc->ch[0].ics;
     const uint16_t * offsets = ics->swb_offset;
@@ -1938,6 +2040,11 @@ static void coupling_dependent_trans(AACContext * ac, ChannelElement * cc, Singl
     }
 }
 
+/**
+ * Apply independent channel coupling.
+ *
+ * @param   index   which gain to use for coupling
+ */
 static void coupling_independent_trans(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
     int i;
     float gain = cc->coup.gain[index][0][0] * sce->mixing_gain;
@@ -1945,6 +2052,11 @@ static void coupling_independent_trans(AACContext * ac, ChannelElement * cc, Sin
         sce->ret[i] += gain * (cc->ch[0].ret[i] - ac->add_bias);
 }
 
+/**
+ * channel coupling transformation interface
+ *
+ * @param   index   which gain to use for coupling
+ */
 static void transform_coupling_tool(AACContext * ac, ChannelElement * cc,
         void (*cc_trans)(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index))
 {
@@ -1992,6 +2104,9 @@ static void coupling_tool(AACContext * ac, int independent, int domain) {
     }
 }
 
+/**
+ * Single Channel Element transformation interface
+ */
 static void transform_sce_tool(AACContext * ac, void (*sce_trans)(AACContext * ac, SingleChannelElement * sce)) {
     int i, j;
     for (i = 0; i < MAX_TAGID; i++) {
@@ -2005,6 +2120,9 @@ static void transform_sce_tool(AACContext * ac, void (*sce_trans)(AACContext * a
     }
 }
 
+/**
+ * Convert spectral data to float samples, applying all supported tools as appropriate.
+ */
 static void spec_to_sample(AACContext * ac) {
     coupling_tool(ac, 0, 0);
 #ifdef AAC_LTP
@@ -2026,7 +2144,13 @@ static void spec_to_sample(AACContext * ac) {
 #endif /* AAC_LTP */
 }
 
-
+/**
+ * Conduct matrix mix-down and float to int16 conversion.
+ *
+ * @param   data        pointer to output data
+ * @param   data_size   output data size in bytes
+ * @return  Returns error status.
+ */
 static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
     AACContext * ac = avccontext->priv_data;
     int i, ch;
