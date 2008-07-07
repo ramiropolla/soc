@@ -1276,7 +1276,7 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const Indiv
  * @param   pulse   pointer to pulse data struct
  * @param   icoef   array of quantized spectral data
  */
-static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, const Pulse * pulse, int * icoef) {
+static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, const Pulse * pulse, int icoef[1024]) {
     int i, off = ics->swb_offset[pulse->start];
     for (i = 0; i < pulse->num_pulse; i++) {
         int ic;
@@ -1294,8 +1294,8 @@ static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, con
  * @param   sf      array of scalefactors or intensity stereo positions used for a window group's scalefactor band
  * @param   coef    array of dequantized, scaled spectral data
  */
-static void quant_to_spectral(AACContext * ac, const IndividualChannelStream * ics, const int * icoef,
-        const enum Codebook cb[][64], const float sf[][64], float * coef) {
+static void quant_to_spectral(AACContext * ac, const IndividualChannelStream * ics, const int icoef[1024],
+        const enum Codebook cb[][64], const float sf[][64], float coef[1024]) {
     const uint16_t * offsets = ics->swb_offset;
     const int c = 1024/ics->num_window_groups;
     int g, i, group, k;
@@ -1666,7 +1666,7 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
  * @param   decode  1 if tool is used normally, 0 if tool is used in LTP.
  * @param   coef    spectral coefficients
  */
-static void tns_filter_tool(AACContext * ac, int decode, SingleChannelElement * sce, float * coef) {
+static void tns_filter_tool(AACContext * ac, int decode, SingleChannelElement * sce, float coef[1024]) {
     const IndividualChannelStream * ics = &sce->ics;
     const TemporalNoiseShaping * tns = &sce->tns;
     const int mmm = FFMIN(ics->tns_max_bands,  ics->max_sfb);
