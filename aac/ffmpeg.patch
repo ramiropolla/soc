@@ -1,6 +1,30 @@
+Index: Changelog
+===================================================================
+--- Changelog	(revision 14100)
++++ Changelog	(working copy)
+@@ -123,6 +123,7 @@
+ - BFI video decoder
+ - OMA demuxer
+ - MLP/TrueHD decoder
++- AAC decoder
+ 
+ version 0.4.9-pre1:
+ 
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(revision 14100)
++++ libavcodec/Makefile	(working copy)
+@@ -25,6 +25,7 @@
+ 
+ OBJS-$(CONFIG_ENCODERS)                += faandct.o jfdctfst.o jfdctint.o
+ 
++OBJS-$(CONFIG_AAC_DECODER)             += aac.o mdct.o fft.o
+ OBJS-$(CONFIG_AASC_DECODER)            += aasc.o
+ OBJS-$(CONFIG_AC3_DECODER)             += ac3dec.o ac3tab.o ac3dec_data.o ac3.o mdct.o fft.o
+ OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 13202)
+--- libavcodec/allcodecs.c	(revision 14100)
 +++ libavcodec/allcodecs.c	(working copy)
 @@ -178,6 +178,7 @@
      REGISTER_ENCDEC  (ZMBV, zmbv);
@@ -10,15 +34,16 @@ Index: libavcodec/allcodecs.c
      REGISTER_ENCDEC  (AC3, ac3);
      REGISTER_DECODER (ALAC, alac);
      REGISTER_DECODER (APE, ape);
-Index: libavcodec/Makefile
+Index: doc/general.texi
 ===================================================================
---- libavcodec/Makefile	(revision 13202)
-+++ libavcodec/Makefile	(working copy)
-@@ -29,6 +29,7 @@
- 
- OBJS-$(CONFIG_ENCODERS)                += faandct.o jfdctfst.o jfdctint.o
- 
-+OBJS-$(CONFIG_AAC_DECODER)             += aac.o mdct.o fft.o
- OBJS-$(CONFIG_AASC_DECODER)            += aasc.o
- OBJS-$(CONFIG_AC3_DECODER)             += ac3dec.o ac3tab.o ac3.o mdct.o fft.o
- OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
+--- doc/general.texi	(revision 14100)
++++ doc/general.texi	(working copy)
+@@ -275,7 +275,7 @@
+ @item Vorbis                 @tab  X   @tab  X
+ @item WMA V1/V2              @tab X    @tab X
+ @item AAC                    @tab X    @tab X
+-@tab Supported through the external library libfaac/libfaad.
++@tab AAC encoding is supported through the external library libfaac.
+ @item Microsoft ADPCM        @tab X    @tab X
+ @item AMV IMA ADPCM          @tab      @tab X
+ @tab Used in AMV files
