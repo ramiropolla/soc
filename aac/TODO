@@ -1,15 +1,13 @@
 General:
 
-* Find and remove duplicate code and tables
-* Remove invalid assertions and deal with bitstream errors appropriately
-* Move variables that are unnecessarily included in the context into function or
-  more isolated code blocks
+* dsputil-ize code in coupling_dependent_trans() and output_samples() as
+  appropriate
 * Swap scale_bias values for C/SIMD and multiply by scale_bias as appropriate
   rather than divide
 
 Cosmetic:
 
-* Order functions as they are called/to match the process flow in the spec
-* Add references to the specification sections
-* Add doxygen comments to functions
-* Review Andreas' cosmetic alterations and apply good hunks one at a time
+* Find unusually capitalized keyword phrases and add abbreviations in
+  parentheses e.g. Tonal Noise Shaping (TNS)
+* Break lines over 80 characters as appropriate
+* Add notes regarding what FAAD supports that we don't
