@@ -1195,7 +1195,7 @@ static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const Indiv
                 for (group = 0; group < ics->group_len[g]; group++) {
                     memset(icoef + group * 128 + offsets[i], 0, (offsets[i+1] - offsets[i])*sizeof(int));
                 }
-            }else if (cur_cb != INTENSITY_HCB2 && cur_cb != INTENSITY_HCB) {
+            }else if (cur_cb != NOISE_HCB && cur_cb != INTENSITY_HCB2 && cur_cb != INTENSITY_HCB) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
                         const int index = get_vlc2(gb, books[cur_cb - 1].table, 6, 3);
