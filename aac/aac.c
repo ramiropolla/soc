@@ -443,15 +443,13 @@ static void ssr_context_init(ssr_context * ctx) {
  * Free a channel element.
  */
 static void che_freep(ChannelElement **s) {
-    if(!*s)
-        return;
 #ifdef AAC_SSR
-    av_free((*s)->ch[0].ssr);
-    av_free((*s)->ch[1].ssr);
+    av_freep(&(*s)->ch[0].ssr);
+    av_freep(&(*s)->ch[1].ssr);
 #endif /* AAC_SSR */
 #ifdef AAC_LTP
-    av_free((*s)->ch[0].ltp_state);
-    av_free((*s)->ch[1].ltp_state);
+    av_freep(&(*s)->ch[0].ltp_state);
+    av_freep(&(*s)->ch[1].ltp_state);
 #endif /* AAC_LTP */
     av_freep(s);
 }
