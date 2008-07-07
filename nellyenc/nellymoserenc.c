@@ -84,14 +84,14 @@ typedef struct NellyMoserEncodeContext {
     DECLARE_ALIGNED_16(float,mdct_out[NELLY_BUF_LEN*2]);
 } NellyMoserEncodeContext;
 
-static DECLARE_ALIGNED_16(float,sine_window2[2*NELLY_BUF_LEN]);
+static DECLARE_ALIGNED_16(float,sine_window[2*NELLY_BUF_LEN]);
 
 void apply_mdct(NellyMoserEncodeContext *s, float *in, float *coefs)
 {
     DECLARE_ALIGNED_16(float,in_buff[NELLY_SAMPLES]);
 
     memcpy(&in_buff[0], &in[0], NELLY_SAMPLES*sizeof(float));
-    s->dsp.vector_fmul(in_buff,sine_window2,NELLY_SAMPLES);
+    s->dsp.vector_fmul(in_buff,sine_window,NELLY_SAMPLES);
     memset(coefs, 0, NELLY_BUF_LEN*sizeof(float));
     ff_mdct_calc(&s->mdct_ctx, coefs, in_buff, s->mdct_tmp);
 }
@@ -116,9 +116,9 @@ static av_cold int encode_init(AVCodecContext * avctx) {
     dsputil_init(&s->dsp, avctx);
 
     /* Generate overlap window */
-    if (!sine_window2[0])
+    if (!sine_window[0])
         for (i=0 ; i<256; i++) {
-            sine_window2[i] = sin((i + 0.5) / 256.0 * M_PI) /8;
+            sine_window[i] = sin((i + 0.5) / 256.0 * M_PI) /8;
         }
 
     s->bufsize = 0;
