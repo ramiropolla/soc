@@ -22,7 +22,6 @@
  */
 #include "nellymoser.h"
 #include "avcodec.h"
-#include "libavutil/random.h"
 #include "dsputil.h"
 
 
@@ -75,14 +74,10 @@ static inline int put_bits2_count(PutBitContext2 * pb) {
 typedef struct NellyMoserEncodeContext {
     AVCodecContext* avctx;
     DECLARE_ALIGNED_16(float,float_buf[2*NELLY_SAMPLES]); // NELLY_SAMPLES
-    float           state[128];
 
     int16_t buf[1024*64]; //FIXME (use any better solution)
     int bufsize;
 
-    AVRandomState   random_state;
-    int             add_bias;
-    float           scale_bias;
     DSPContext      dsp;
     MDCTContext     mdct_ctx;
     DECLARE_ALIGNED_16(float,mdct_tmp[NELLY_BUF_LEN*2]);
@@ -116,18 +111,9 @@ static av_cold int encode_init(AVCodecContext * avctx) {
     avctx->frame_size = NELLY_SAMPLES;
 
     s->avctx = avctx;
-    av_init_random(0, &s->random_state);
     ff_mdct_init(&s->mdct_ctx, 8, 0);
 
     dsputil_init(&s->dsp, avctx);
-
-    if(s->dsp.float_to_int16 == ff_float_to_int16_c) {
-        s->add_bias = 385;
-        s->scale_bias = 1.0/(8*32768);
-    } else {
-        s->add_bias = 0;
-        s->scale_bias = 1.0/(1*8);
-    }
 
     /* Generate overlap window */
     if (!sine_window2[0])
