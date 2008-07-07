@@ -146,6 +146,28 @@ static av_cold int encode_end(AVCodecContext * avctx) {
     return 0;
 }
 
+/*
+ * Searching index in table with size table_size, where
+ * |val-table[best_idx]| is minimal.
+ * It assumes that table elements increasing order and uses binary search.
+ */
+#define find_best_value(val, table, table_size, best_idx) \
+{ \
+    int first=0, last=table_size-1, mid; \
+    while(first<=last){ \
+        mid=(first+last)/2; \
+        if(val > table[mid]){ \
+            first = mid + 1; \
+        }else{ \
+            last = mid - 1; \
+        } \
+    } \
+    if(!first || (first!=table_size && table[first]-val < val-table[last])) \
+            best_idx = first; \
+    else \
+            best_idx = last; \
+}
+
 static void encode_block(NellyMoserEncodeContext *s,
         unsigned char *buf, int buf_size, int16_t *samples){
     PutBitContext2 pb;
@@ -155,7 +177,7 @@ static void encode_block(NellyMoserEncodeContext *s,
     float pows[NELLY_FILL_LEN];
     float val=0;
     float pval;
-    float best, tmp, stmp;
+    float tmp, stmp;
     float ss=1./1.;
     float scale=1./1.;
 
@@ -183,27 +205,14 @@ static void encode_block(NellyMoserEncodeContext *s,
         tmp = log(FFMAX(1.0, stmp/(ff_nelly_band_sizes_table[i]<<1))) *
             M_LOG2E * 1024.0;
 
-        /* TODO use binary search */
-        best = 1e10;
-        bk = 0;
         if(i){
             tmp -= val;
-            for(k=0; k<32; k++){
-                if(fabs(tmp - ff_nelly_delta_table[k])<best){
-                    best = fabs(tmp - ff_nelly_delta_table[k]);
-                    bk = k;
-                }
-            }
+            find_best_value(tmp, ff_nelly_delta_table, 32, bk);
             put_bits2(&pb, 5, bk);
             val += ff_nelly_delta_table[bk];
         }else{
             //base exponent
-            for(k=0; k<64; k++){
-                if(fabs(tmp - ff_nelly_init_table[k])<best){
-                    best = fabs(tmp - ff_nelly_init_table[k]);
-                    bk = k;
-                }
-            }
+            find_best_value(tmp, ff_nelly_init_table, 64, bk);
             put_bits2(&pb, 6, bk);
             val = ff_nelly_init_table[bk];
         }
@@ -221,27 +230,12 @@ static void encode_block(NellyMoserEncodeContext *s,
         for (j = 0; j < NELLY_FILL_LEN; j++) {
             bs+=bits[j];
             if (bits[j] > 0) {
-                /* FIXME: use better (fast) algorithm... */
-                av_log(s->avctx, AV_LOG_DEBUG, "bits=%i\n", bits[j]);
                 pval = -pow(2, pows[j]/2048)*scale;
-                av_log(s->avctx, AV_LOG_DEBUG, "pval=%f\n", pval);
-                best = 1e10;
-                bk = 0;
-                for(k=0; k<(1<<bits[j]); k++){
-                    tmp = s->mdct_out[i*NELLY_BUF_LEN + j]
-                        /(ff_nelly_dequantization_table[(1<<bits[j])-1+k]*pval);
-                    if(tmp<0) continue;
-                    if(tmp<1) tmp = 1/tmp;
-                    if(best > tmp){
-                        bk = k;
-                        best = tmp;
-                    }
-                }
-                av_log(s->avctx, AV_LOG_DEBUG, "bk=%3i best_deq=%f send=%f\n",
-                        bk,
-                        best,
-                        (ff_nelly_dequantization_table[(1<<bits[j])-1+bk]*pval)
-                      );
+                tmp = s->mdct_out[i*NELLY_BUF_LEN + j] / pval;
+
+                find_best_value(tmp,
+                        (ff_nelly_dequantization_table + (1<<bits[j])-1),
+                        (1<<bits[j]), bk);
                 put_bits2(&pb, bits[j], bk);
             }
         }
