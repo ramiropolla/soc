@@ -895,7 +895,7 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
 /**
  * Decode a data_stream_element; reference: table 4.10.
  */
-static void data_stream_element(AACContext * ac, GetBitContext * gb, int id) {
+static void data_stream_element(AACContext * ac, GetBitContext * gb) {
     int byte_align = get_bits1(gb);
     int count = get_bits(gb, 8);
     if (count == 255)
@@ -2133,7 +2133,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             break;
 
         case ID_DSE:
-            data_stream_element(ac, &gb, tag);
+            data_stream_element(ac, &gb);
             err = 0;
             break;
 
