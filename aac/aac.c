@@ -781,7 +781,7 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
  *
  * @param   data        pointer to AVCodecContext extradata
  * @param   data_size   size of AVCCodecContext extradata
- * @return  Returns error status.
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
     GetBitContext gb;
@@ -1071,7 +1071,7 @@ static inline float ivquant(AACContext * ac, int a) {
  *
  * @param   cb          array of the codebook used for a window group's scalefactor band
  * @param   cb_run_end  array of the last scalefactor band of a codebook run for a window group's scalefactor band
- * @return  Returns error status.
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum Codebook cb[][64], int cb_run_end[][64]) {
     int g;
@@ -1112,7 +1112,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
  * @param   cb          array of the codebook used for a window group's scalefactor band
  * @param   cb_run_end  array of the last scalefactor band of a codebook run for a window group's scalefactor band
  * @param   sf          array of scalefactors or intensity stereo positions used for a window group's scalefactor band
- * @return  Returns error status.
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
         IndividualChannelStream * ics, const enum Codebook cb[][64], const int cb_run_end[][64], float sf[][64]) {
@@ -1264,7 +1264,7 @@ static void decode_mid_side_data(AACContext * ac, GetBitContext * gb, ChannelEle
  *
  * @param   cb          array of the codebook used for a window group's scalefactor band
  * @param   icoef       array of quantized spectral data
- * @return  Returns error status.
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const enum Codebook cb[][64], int icoef[1024]) {
     int i, k, g;
@@ -1377,7 +1377,7 @@ static void quant_to_spectral(AACContext * ac, const IndividualChannelStream * i
  *
  * @param   common_window   Channels have independent [0], or shared [1], Individual Channel Stream information.
  * @param   scale_flag
- * @return  Returns error status.
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, int scale_flag, SingleChannelElement * sce) {
     int icoeffs[1024];
@@ -1491,7 +1491,7 @@ static void intensity_stereo_tool(AACContext * ac, ChannelElement * cpe) {
  * Decode a channel_pair_element; reference: table 4.4.
  *
  * @param   id  Identifies the instance of a syntax element.
- * @return  Returns error status.
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
     int i;
@@ -1529,7 +1529,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
  * Decode coupling_channel_element; reference: table 4.8.
  *
  * @param   id  Identifies the instance of a syntax element.
- * @return  Returns error status.
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
     int num_gain = 0;
@@ -2197,7 +2197,7 @@ static void spectral_to_sample(AACContext * ac) {
  *
  * @param   data        pointer to output data
  * @param   data_size   output data size in bytes
- * @return  Returns error status.
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
     AACContext * ac = avccontext->priv_data;
