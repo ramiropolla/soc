@@ -149,7 +149,7 @@ static av_cold int encode_end(AVCodecContext * avctx) {
 /*
  * Searching index in table with size table_size, where
  * |val-table[best_idx]| is minimal.
- * It assumes that table elements increasing order and uses binary search.
+ * It assumes that table elements are in increasing order and uses binary search.
  */
 #define find_best_value(val, table, table_size, best_idx) \
 { \
