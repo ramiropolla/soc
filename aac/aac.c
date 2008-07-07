@@ -1294,7 +1294,7 @@ static void pulse_tool(AACContext * ac, const IndividualChannelStream * ics, con
  * @param   sf      array of scalefactors or intensity stereo positions used for a window group's scalefactor band
  * @param   coef    array of dequantized, scaled spectral data
  */
-static void quant_to_spec_tool(AACContext * ac, const IndividualChannelStream * ics, const int * icoef,
+static void quant_to_spectral(AACContext * ac, const IndividualChannelStream * ics, const int * icoef,
         const enum Codebook cb[][64], const float sf[][64], float * coef) {
     const uint16_t * offsets = ics->swb_offset;
     const int c = 1024/ics->num_window_groups;
@@ -1374,7 +1374,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
         return -1;
     if (pulse.present)
         pulse_tool(ac, ics, &pulse, icoeffs);
-    quant_to_spec_tool(ac, ics, icoeffs, sce->cb, sce->sf, out);
+    quant_to_spectral(ac, ics, icoeffs, sce->cb, sce->sf, out);
     return 0;
 }
 
@@ -2121,7 +2121,7 @@ static void transform_sce_tool(AACContext * ac, void (*sce_trans)(AACContext * a
 /**
  * Convert spectral data to float samples, applying all supported tools as appropriate.
  */
-static void spec_to_sample(AACContext * ac) {
+static void spectral_to_sample(AACContext * ac) {
     coupling_tool(ac, 0, 0);
 #ifdef AAC_LTP
     if (ac->audioObjectType == AOT_AAC_LTP)
@@ -2278,7 +2278,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             return -1;
     }
 
-    spec_to_sample(ac);
+    spectral_to_sample(ac);
     output_samples(avccontext, data, data_size);
 
     return buf_size;
