@@ -178,11 +178,9 @@ static void encode_block(NellyMoserEncodeContext *s,
     float val=0;
     float pval;
     float tmp, stmp;
-    float ss=1./1.;
-    float scale=1./1.;
 
     for(i=0; i<NELLY_BUF_LEN*3; i++){
-        s->float_buf[i] = samples[i]*ss;
+        s->float_buf[i] = samples[i];
     }
     apply_mdct(s, s->float_buf, s->mdct_out);
     apply_mdct(s, s->float_buf+NELLY_BUF_LEN, s->mdct_out+NELLY_BUF_LEN);
@@ -230,7 +228,7 @@ static void encode_block(NellyMoserEncodeContext *s,
         for (j = 0; j < NELLY_FILL_LEN; j++) {
             bs+=bits[j];
             if (bits[j] > 0) {
-                pval = -pow(2, pows[j]/2048)*scale;
+                pval = -pow(2, pows[j]/2048);
                 tmp = s->mdct_out[i*NELLY_BUF_LEN + j] / pval;
 
                 find_best_value(tmp,
