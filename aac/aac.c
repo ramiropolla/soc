@@ -1195,7 +1195,7 @@ static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, SingleC
 /**
  * Decode Mid/Side data; reference: table 4.54.
  */
-static void decode_ms_data(AACContext * ac, GetBitContext * gb, ChannelElement * cpe) {
+static void decode_mid_side_data(AACContext * ac, GetBitContext * gb, ChannelElement * cpe) {
     MidSideStereo * ms = &cpe->ms;
     int g, i;
     ms->present = get_bits(gb, 2);
@@ -1381,7 +1381,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
 /**
  * Mid/Side stereo decoding; reference: 4.6.8.1.3.
  */
-static void ms_tool(AACContext * ac, ChannelElement * cpe) {
+static void mid_side_tool(AACContext * ac, ChannelElement * cpe) {
     const MidSideStereo * ms = &cpe->ms;
     const IndividualChannelStream * ics = &cpe->ch[0].ics;
     float *ch0 = cpe->ch[0].coeffs;
@@ -1411,7 +1411,7 @@ static void ms_tool(AACContext * ac, ChannelElement * cpe) {
 /**
  * intensity stereo decoding; reference: 4.6.8.2.3
  */
-static void intensity_tool(AACContext * ac, ChannelElement * cpe) {
+static void intensity_stereo_tool(AACContext * ac, ChannelElement * cpe) {
     const IndividualChannelStream * ics = &cpe->ch[1].ics;
     SingleChannelElement * sce1 = &cpe->ch[1];
     float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
@@ -1458,7 +1458,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
 #ifdef AAC_LTP
         cpe->ch[1].ics.ltp = cpe->ch[0].ics.ltp2;
 #endif /* AAC_LTP */
-        decode_ms_data(ac, gb, cpe);
+        decode_mid_side_data(ac, gb, cpe);
     } else {
         cpe->ms.present = 0;
     }
@@ -1468,10 +1468,10 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
         return -1;
 
     if (cpe->common_window)
-        ms_tool(ac, cpe);
+        mid_side_tool(ac, cpe);
 
     if (cpe->ch[1].ics.intensity_present)
-        intensity_tool(ac, cpe);
+        intensity_stereo_tool(ac, cpe);
     return 0;
 }
 
