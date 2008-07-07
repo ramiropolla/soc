@@ -177,7 +177,7 @@ typedef struct {
     int swb_num1024;
     const uint8_t *swb_sizes128;
     int swb_num128;
-    cpe_struct cpe;
+    ChannelElement cpe;
     AACPsyContext psy;
 } AACEncContext;
 
@@ -240,7 +240,7 @@ static int aac_encode_init(AVCodecContext *avctx)
     return 0;
 }
 
-static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, short *audio, int channel)
+static void analyze(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, short *audio, int channel)
 {
     int i, j, k;
 
@@ -270,14 +270,14 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, sh
  * Encode ics_info element.
  * @see Table 4.6
  */
-static void put_ics_info(AVCodecContext *avctx, ics_struct *info)
+static void put_ics_info(AVCodecContext *avctx, IndividualChannelStream *info)
 {
     AACEncContext *s = avctx->priv_data;
     int i;
 
     put_bits(&s->pb, 1, 0);                // ics_reserved bit
     put_bits(&s->pb, 2, info->window_sequence);
-    put_bits(&s->pb, 1, info->window_shape);
+    put_bits(&s->pb, 1, info->use_kb_window[0]);
     if(info->window_sequence != EIGHT_SHORT_SEQUENCE){
         put_bits(&s->pb, 6, info->max_sfb);
         put_bits(&s->pb, 1, 0);            // no prediction
@@ -292,7 +292,7 @@ static void put_ics_info(AVCodecContext *avctx, ics_struct *info)
  * Encode MS data.
  * @see 4.6.8.1
  */
-static void encode_ms_info(PutBitContext *pb, cpe_struct *cpe)
+static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
 {
     int i, w;
 
@@ -308,7 +308,7 @@ static void encode_ms_info(PutBitContext *pb, cpe_struct *cpe)
 /**
  * Scan spectral band and determine optimal codebook for it.
  */
-static int determine_section_info(AACEncContext *s, cpe_struct *cpe, int channel, int win, int band, int start, int size)
+static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int channel, int win, int band, int start, int size)
 {
     int i, j, w;
     int maxval, sign;
@@ -371,7 +371,7 @@ static int determine_section_info(AACEncContext *s, cpe_struct *cpe, int channel
     return bestcb;
 }
 
-static void encode_codebook(AACEncContext *s, cpe_struct *cpe, int channel, int start, int size, int cb)
+static void encode_codebook(AACEncContext *s, ChannelElement *cpe, int channel, int start, int size, int cb)
 {
     const uint8_t *bits = aac_cb_info[cb].bits;
     const uint16_t *codes = aac_cb_info[cb].codes;
@@ -421,7 +421,7 @@ static void encode_codebook(AACEncContext *s, cpe_struct *cpe, int channel, int 
     }
 }
 
-static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
+static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int i, w;
     int bits = cpe->ch[channel].ics.num_windows == 1 ? 5 : 3;
@@ -455,7 +455,7 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, cpe_str
     }
 }
 
-static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
+static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int off = cpe->ch[channel].gain, diff;
     int i, w;
@@ -473,22 +473,22 @@ static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, cp
     }
 }
 
-static void encode_pulse_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
+static void encode_pulse_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int i;
 
     put_bits(&s->pb, 1, cpe->ch[channel].pulse.present);
     if(!cpe->ch[channel].pulse.present) return;
 
-    put_bits(&s->pb, 2, cpe->ch[channel].pulse.num_pulse_minus1);
+    put_bits(&s->pb, 2, cpe->ch[channel].pulse.num_pulse - 1);
     put_bits(&s->pb, 6, cpe->ch[channel].pulse.start);
-    for(i = 0; i <= cpe->ch[channel].pulse.num_pulse_minus1; i++){
+    for(i = 0; i < cpe->ch[channel].pulse.num_pulse; i++){
         put_bits(&s->pb, 5, cpe->ch[channel].pulse.offset[i]);
         put_bits(&s->pb, 4, cpe->ch[channel].pulse.amp[i]);
     }
 }
 
-static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
+static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int i, w;
 
@@ -525,7 +525,7 @@ static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct 
     }
 }
 
-static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_struct *cpe, int channel)
+static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int start, i, w, w2;
 
@@ -550,7 +550,7 @@ static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, cpe_st
 /**
  * Encode one channel of audio data.
  */
-static int encode_individual_channel(AVCodecContext *avctx, cpe_struct *cpe, int channel)
+static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe, int channel)
 {
     AACEncContext *s = avctx->priv_data;
     int i, g, w;

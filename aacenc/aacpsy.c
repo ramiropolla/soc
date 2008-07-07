@@ -76,7 +76,7 @@ static inline float calc_distortion(float *c, int size, int scale_idx)
 /**
  * Produce integer coefficients from scalefactors provided by model.
  */
-static void psy_create_output(AACPsyContext *apc, cpe_struct *cpe, int search_pulses)
+static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int search_pulses)
 {
     int i, w, w2, g, ch;
     int start, sum, maxsfb, cmaxsfb;
@@ -115,7 +115,7 @@ static void psy_create_output(AACPsyContext *apc, cpe_struct *cpe, int search_pu
                     if(pulses){
                         cpe->ch[ch].pulse.present = 1;
                         cpe->ch[ch].pulse.start = g;
-                        cpe->ch[ch].pulse.num_pulse_minus1 = pulses - 1;
+                        cpe->ch[ch].pulse.num_pulse = pulses;
                         for(i = 0; i < pulses; i++){
                             cpe->ch[ch].pulse.amp[i] = pamp[i];
                             cpe->ch[ch].pulse.offset[i] = i ? poff[i] - poff[i-1] : poff[0];
@@ -164,22 +164,22 @@ static void psy_create_output(AACPsyContext *apc, cpe_struct *cpe, int search_pu
     }
 }
 
-static void psy_null_window(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
+static void psy_null_window(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
 {
     int ch;
 
     for(ch = 0; ch < apc->avctx->channels; ch++){
         cpe->ch[ch].ics.window_sequence = ONLY_LONG_SEQUENCE;
-        cpe->ch[ch].ics.window_shape = 1;
+        cpe->ch[ch].ics.use_kb_window[0] = 1;
         cpe->ch[ch].ics.num_windows = 1;
         cpe->ch[ch].ics.swb_sizes = apc->bands1024;
         cpe->ch[ch].ics.num_swb = apc->num_bands1024;
         cpe->ch[ch].ics.group_len[0] = 0;
     }
-    cpe->common_window = cpe->ch[0].ics.window_shape == cpe->ch[1].ics.window_shape;
+    cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
 }
 
-static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
+static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
 {
     int start;
     int ch, g, i;
@@ -220,23 +220,23 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, cp
     psy_create_output(apc, cpe, 1);
 }
 
-static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
+static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
 {
     int ch, i;
 
     for(ch = 0; ch < apc->avctx->channels; ch++){
         cpe->ch[ch].ics.window_sequence = EIGHT_SHORT_SEQUENCE;
-        cpe->ch[ch].ics.window_shape = 1;
+        cpe->ch[ch].ics.use_kb_window[0] = 1;
         cpe->ch[ch].ics.num_windows = 8;
         cpe->ch[ch].ics.swb_sizes = apc->bands128;
         cpe->ch[ch].ics.num_swb = apc->num_bands128;
         for(i = 0; i < cpe->ch[ch].ics.num_windows; i++)
             cpe->ch[ch].ics.group_len[i] = i & 1;
     }
-    cpe->common_window = cpe->ch[0].ics.window_shape == cpe->ch[1].ics.window_shape;
+    cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
 }
 
-static void psy_null8_process(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
+static void psy_null8_process(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
 {
     int start;
     int w, ch, g, i;
@@ -379,20 +379,20 @@ static int psy_3gpp_init(AACPsyContext *apc)
  * Tell encoder which window types to use.
  * @see 3GPP TS26.403 5.4.1
  */
-static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
+static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
 {
     int ch;
 
 //XXX: stub, because encoder does not support long to short window transition yet :(
     for(ch = 0; ch < apc->avctx->channels; ch++){
         cpe->ch[ch].ics.window_sequence = ONLY_LONG_SEQUENCE;
-        cpe->ch[ch].ics.window_shape = 1;
+        cpe->ch[ch].ics.use_kb_window[0] = 1;
         cpe->ch[ch].ics.num_windows = 1;
         cpe->ch[ch].ics.swb_sizes = apc->bands1024;
         cpe->ch[ch].ics.num_swb = apc->num_bands1024;
         cpe->ch[ch].ics.group_len[0] = 0;
     }
-    cpe->common_window = cpe->ch[0].ics.window_shape == cpe->ch[1].ics.window_shape;
+    cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
 }
 
 /**
@@ -409,7 +409,7 @@ static inline float modify_thr(float thr, float r){
  * Determine scalefactors and prepare coefficients for encoding.
  * @see 3GPP TS26.403 5.4
  */
-static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe)
+static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
 {
     int start;
     int ch, g, i;
@@ -617,12 +617,12 @@ int ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx, int model, int fl
     return 0;
 }
 
-void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int channel, cpe_struct *cpe)
+void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int channel, ChannelElement *cpe)
 {
     ctx->model->window(ctx, audio, channel, cpe);
 }
 
-void ff_aac_psy_analyze(AACPsyContext *ctx, int16_t *audio, int channel, cpe_struct *cpe)
+void ff_aac_psy_analyze(AACPsyContext *ctx, int16_t *audio, int channel, ChannelElement *cpe)
 {
     ctx->model->process(ctx, audio, channel, cpe);
 }

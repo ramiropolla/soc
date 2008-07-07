@@ -35,35 +35,48 @@ enum AACPsyModelType{
 
 // data structures borrowed from aac.c with some minor modifications
 /**
- * Window sequences
+ * window sequences
  */
-enum {
-    ONLY_LONG_SEQUENCE = 0,
+enum WindowSequence {
+    ONLY_LONG_SEQUENCE,
     LONG_START_SEQUENCE,
     EIGHT_SHORT_SEQUENCE,
-    LONG_STOP_SEQUENCE
+    LONG_STOP_SEQUENCE,
 };
 
 /**
- * Pulse tool
+ * special codebooks
+ */
+enum Codebook {
+    ZERO_HCB       = 0,
+    FIRST_PAIR_HCB = 5,
+    ESC_HCB        = 11,
+    NOISE_HCB      = 13,
+    INTENSITY_HCB2 = 14,
+    INTENSITY_HCB  = 15,
+    ESC_FLAG       = 16,
+};
+
+/**
+ * pulse tool
  */
 typedef struct {
     int present;
-    int num_pulse_minus1;
+    int num_pulse;
     int start;
     int offset[4];
     int amp[4];
-} pulse_struct;
+} Pulse;
 
 /**
  * Individual Channel Stream
  */
 typedef struct {
     int intensity_present;
-    int max_sfb;
-    int window_sequence;
-    int window_shape;             ///< If set, use Kaiser-Bessel window, otherwise use a sinus window
-    int window_shape_prev;
+    uint8_t max_sfb;            ///< number of scalefactor bands per group
+    enum WindowSequence window_sequence;
+    enum WindowSequence window_sequence_prev;
+    uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window.
     int num_window_groups;
     uint8_t grouping;
     uint8_t group_len[8];
@@ -71,7 +84,7 @@ typedef struct {
     int num_swb;
     int num_windows;
     int tns_max_bands;
-} ics_struct;
+} IndividualChannelStream;
 
 #define TNS_MAX_ORDER 20
 /**
@@ -88,7 +101,7 @@ typedef struct {
     int coef_len[8][4];
     const float *tmp2_map[8][4];
     int coef[8][4][TNS_MAX_ORDER];
-} tns_struct;
+} TemporalNoiseShaping;
 
 /**
  * M/S joint channel coding
@@ -96,7 +109,7 @@ typedef struct {
 typedef struct {
     int present;
     uint8_t mask[8][64];
-} ms_struct;
+} MidSideStereo;
 
 /**
  * Single Channel Element
@@ -107,27 +120,32 @@ typedef struct {
                                                *   Note that this is applied before joint stereo decoding.
                                                *   Thus, when used inside CPE elements, both channels must have equal gain.
                                                */
-    ics_struct ics;
-    pulse_struct pulse;
-    tns_struct tns;
+    IndividualChannelStream ics;
+    TemporalNoiseShaping tns;
+    Pulse pulse;
     int zeroes[8][64];
     int sf_idx[8][64];
-    int cb[8][64];                            ///< Codebooks
-    float sf[8][64];                          ///< Scalefactors
-    DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< Coefficients for IMDCT
-    DECLARE_ALIGNED_16(float, saved[1024]);   ///< Overlap
+    enum Codebook cb[8][64];                  ///< codebooks
+    int cb_run_end[8][64];                    ///< codebook run end points
+    float sf[8][64];                          ///< scalefactors
+    DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< coefficients for IMDCT
+    DECLARE_ALIGNED_16(float, saved[1024]);   ///< overlap
     DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
     DECLARE_ALIGNED_16(int,   icoefs[1024]);  ///< integer coefficients for coding
-} sce_struct;
+} SingleChannelElement;
 
 /**
- * Channel Pair Element
+ * channel element - generic struct for SCE/CPE/CCE/LFE
  */
 typedef struct {
-    int common_window;     ///< Set if channels share a common 'ics_struct' in bitstream
-    ms_struct ms;
-    sce_struct ch[2];
-} cpe_struct;
+    // CPE specific
+    int common_window;     ///< Set if channels share a common 'IndividualChannelStream' in bitstream.
+    MidSideStereo ms;
+    // shared
+    SingleChannelElement ch[2];
+    // CCE specific
+//    ChannelCoupling coup;
+} ChannelElement;
 
 // borrowing temporarily ends here
 
@@ -152,16 +170,16 @@ typedef struct AACPsyContext {
 typedef struct AACPsyModel {
     const char *name;
     int   (*init)   (AACPsyContext *apc);
-    void  (*window) (AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe);
-    void  (*process)(AACPsyContext *apc, int16_t *audio, int channel, cpe_struct *cpe);
+    void  (*window) (AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe);
+    void  (*process)(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe);
     void  (*end)    (AACPsyContext *apc);
 }AACPsyModel;
 
 int ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx, int model, int flags,
                     const uint8_t *bands1024, int num_bands1024,
                     const uint8_t *bands128,  int num_bands128);
-void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int channel, cpe_struct *cpe);
-void ff_aac_psy_analyze(AACPsyContext *ctx, int16_t *audio, int channel, cpe_struct *cpe);
+void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int channel, ChannelElement *cpe);
+void ff_aac_psy_analyze(AACPsyContext *ctx, int16_t *audio, int channel, ChannelElement *cpe);
 void ff_aac_psy_end(AACPsyContext *ctx);
 #endif /* FFMPEG_AACPSY_H */
 
