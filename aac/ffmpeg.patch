@@ -34,6 +34,19 @@ Index: libavcodec/allcodecs.c
      REGISTER_ENCDEC  (AC3, ac3);
      REGISTER_DECODER (ALAC, alac);
      REGISTER_DECODER (APE, ape);
+Index: libavcodec/avcodec.h
+===================================================================
+--- libavcodec/avcodec.h	(revision 14100)
++++ libavcodec/avcodec.h	(working copy)
+@@ -30,7 +30,7 @@
+ #include "libavutil/avutil.h"
+ 
+ #define LIBAVCODEC_VERSION_MAJOR 51
+-#define LIBAVCODEC_VERSION_MINOR 58
++#define LIBAVCODEC_VERSION_MINOR 59
+ #define LIBAVCODEC_VERSION_MICRO  0
+ 
+ #define LIBAVCODEC_VERSION_INT  AV_VERSION_INT(LIBAVCODEC_VERSION_MAJOR, \
 Index: doc/general.texi
 ===================================================================
 --- doc/general.texi	(revision 14100)
