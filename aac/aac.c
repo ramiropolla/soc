@@ -1972,6 +1972,12 @@ static void transform_coupling_tool(AACContext * ac, ChannelElement * cc,
     }
 }
 
+/**
+ * channel coupling tool
+ *
+ * @param   independent     dependent [0] or independent [1] coupling
+ * @param   domain          Conduct coupling before [0] or after [1] TNS decoding.
+ */
 static void coupling_tool(AACContext * ac, int independent, int domain) {
     int i;
     for (i = 0; i < MAX_TAGID; i++) {
