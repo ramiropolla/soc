@@ -116,10 +116,13 @@ static av_cold int encode_init(AVCodecContext * avctx) {
     dsputil_init(&s->dsp, avctx);
 
     /* Generate overlap window */
-    if (!sine_window[0])
-        for (i=0 ; i<256; i++) {
-            sine_window[i] = sin((i + 0.5) / 256.0 * M_PI) /8;
+    if (!sine_window[0]){
+        ff_sine_window_init(sine_window, 128);
+        for (i=0; i<128; i++) {
+            sine_window[i] /= 8.0;
+            sine_window[255-i] = sine_window[i];
         }
+    }
 
     s->bufsize = 0;
     return 0;
