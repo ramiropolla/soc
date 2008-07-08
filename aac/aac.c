@@ -1376,7 +1376,7 @@ static void dequant(AACContext * ac, const IndividualChannelStream * ics, const 
  * Decode an individual_channel_stream payload; reference: table 4.44.
  *
  * @param   common_window   Channels have independent [0], or shared [1], Individual Channel Stream information.
- * @param   scale_flag
+ * @param   scale_flag      scalable [1] or non-scalable [0] AAC
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, int scale_flag, SingleChannelElement * sce) {
