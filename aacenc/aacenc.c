@@ -181,7 +181,6 @@ typedef struct {
     int swb_num128;
     ChannelElement cpe;
     AACPsyContext psy;
-    int first_frame;
 } AACEncContext;
 
 #define SCALE_ONE_POS   140    ///< scalefactor index that corresponds to scale=1.0
@@ -242,8 +241,6 @@ static int aac_encode_init(AVCodecContext *avctx)
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
-
-    s->first_frame = 1;
     return 0;
 }
 
@@ -644,7 +641,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
     ff_aac_psy_analyze(&s->psy, samples, 0, &s->cpe);
 
     init_put_bits(&s->pb, frame, buf_size*8);
-    if(s->first_frame){
+    if(!avctx->frame_number){
         put_bitstream_info(avctx, s, LIBAVCODEC_IDENT);
     }
     switch(avctx->channels){
@@ -672,7 +669,6 @@ static int aac_encode_frame(AVCodecContext *avctx,
     put_bits(&s->pb, 3, ID_END);
     flush_put_bits(&s->pb);
     avctx->frame_bits = put_bits_count(&s->pb);
-    s->first_frame = 0;
     return put_bits_count(&s->pb)>>3;
 }
 
