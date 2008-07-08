@@ -136,11 +136,11 @@ static const uint8_t *swb_size_128[] = {
 
 //borrowed data ends here
 
-#define CB_UNSIGNED 0x01
-#define CB_PAIRS    0x02
-#define CB_ESCAPE   0x04
+#define CB_UNSIGNED 0x01    ///< coefficients are coded as absolute values
+#define CB_PAIRS    0x02    ///< coefficients are grouped into pairs before coding (quads by default)
+#define CB_ESCAPE   0x04    ///< codebook allows escapes
 
-/** Codebook information */
+/** spectral coefficients codebook information */
 static const struct {
     int16_t maxval;         ///< maximum possible value
 
@@ -183,10 +183,10 @@ typedef struct {
     AACPsyContext psy;
 } AACEncContext;
 
-#define SCALE_ONE_POS   140
-#define SCALE_MAX_POS   255
-#define SCALE_MAX_DIFF   60
-#define SCALE_DIFF_ZERO  60
+#define SCALE_ONE_POS   140    ///< scalefactor index that corresponds to scale=1.0
+#define SCALE_MAX_POS   255    ///< scalefactor index maximum value
+#define SCALE_MAX_DIFF   60    ///< maximum scalefactor difference allowed by standard
+#define SCALE_DIFF_ZERO  60    ///< codebook index corresponding to zero scalefactor indices difference
 
 /**
  * Make AAC audio config object.
@@ -200,7 +200,7 @@ static void put_audio_specific_config(AVCodecContext *avctx)
     init_put_bits(&pb, avctx->extradata, avctx->extradata_size*8);
     put_bits(&pb, 5, 2); //object type - AAC-LC
     put_bits(&pb, 4, s->samplerate_index); //sample rate index
-    put_bits(&pb, 4, avctx->channels); //channel config - stereo
+    put_bits(&pb, 4, avctx->channels);
     //GASpecificConfig
     put_bits(&pb, 1, 0); //frame length - 1024 samples
     put_bits(&pb, 1, 0); //does not depend on core coder
@@ -236,6 +236,7 @@ static int aac_encode_init(AVCodecContext *avctx)
     ff_sine_window_init(sine_long_1024, 1024);
     ff_sine_window_init(sine_short_128, 128);
 
+    //TODO: psy model selection with some option
     ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
@@ -244,14 +245,17 @@ static int aac_encode_init(AVCodecContext *avctx)
     return 0;
 }
 
+/**
+ * Perform windowing and MDCT.
+ */
 static void analyze(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, short *audio, int channel)
 {
     int i, j, k;
     const float * lwindow = cpe->ch[channel].ics.use_kb_window[0] ? kbd_long_1024 : sine_long_1024;
     const float * swindow = cpe->ch[channel].ics.use_kb_window[0] ? kbd_short_128 : sine_short_128;
 
+    //TODO: transitional windows
     if (cpe->ch[channel].ics.window_sequence != EIGHT_SHORT_SEQUENCE) {
-    // perform MDCT
         memcpy(s->output, cpe->ch[channel].saved, sizeof(float)*1024);
         j = channel;
         for (i = 0; i < 1024; i++, j += avctx->channels){
@@ -377,6 +381,9 @@ static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int cha
     return bestcb;
 }
 
+/**
+ * Encode one scalefactor band with selected codebook.
+ */
 static void encode_codebook(AACEncContext *s, ChannelElement *cpe, int channel, int start, int size, int cb)
 {
     const uint8_t *bits = aac_cb_info[cb].bits;
@@ -427,6 +434,9 @@ static void encode_codebook(AACEncContext *s, ChannelElement *cpe, int channel, 
     }
 }
 
+/**
+ * Encode information about codebooks used for scalefactor bands coding.
+ */
 static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int i, w;
@@ -461,6 +471,9 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, Channel
     }
 }
 
+/**
+ * Encode scale factors.
+ */
 static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int off = cpe->ch[channel].gain, diff;
@@ -479,6 +492,9 @@ static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, Ch
     }
 }
 
+/**
+ * Encode pulse data.
+ */
 static void encode_pulse_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int i;
@@ -494,6 +510,9 @@ static void encode_pulse_data(AVCodecContext *avctx, AACEncContext *s, ChannelEl
     }
 }
 
+/**
+ * Encode temporal noise shaping data.
+ */
 static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int i, w;
@@ -531,6 +550,9 @@ static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, ChannelElem
     }
 }
 
+/**
+ * Encode spectral coefficients processed by psychoacoustic model.
+ */
 static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int start, i, w, w2;
@@ -600,7 +622,6 @@ static int aac_encode_frame(AVCodecContext *avctx,
     ff_aac_psy_analyze(&s->psy, samples, 0, &s->cpe);
 
     init_put_bits(&s->pb, frame, buf_size*8);
-    //output encoded
     switch(avctx->channels){
     case 1:
         put_bits(&s->pb, 3, ID_SCE);
@@ -619,7 +640,8 @@ static int aac_encode_frame(AVCodecContext *avctx,
         encode_individual_channel(avctx, &s->cpe, 1);
         break;
     default:
-        av_log(NULL,0,"?");
+        av_log(avctx, AV_LOG_ERROR, "Unsupported number of channels: %d\n", avctx->channels);
+        return -1;
     }
 
     put_bits(&s->pb, 3, ID_END);
