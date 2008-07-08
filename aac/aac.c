@@ -52,7 +52,7 @@
  * N                    window shapes - Low Delay
  * Y                    filterbank - standard
  * N (code in SoC repo) filterbank - Scalable Sample Rate
- * Y                    Tonal Noise Shaping
+ * Y                    Temporal Noise Shaping
  * N (code in SoC repo) Long Term Prediction
  * Y                    intensity stereo
  * Y                    channel coupling
@@ -1598,7 +1598,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
 /**
  * Parse Spectral Band Replication extension data; reference: table 4.55.
  *
- * @param   crc flag indicating the presence of CRC data
+ * @param   crc flag indicating the presence of CRC checksum
  * @param   cnt length of ID_FIL syntactic element in bytes
  * @return  Returns number of bytes consumed from the ID_FIL element.
  */
@@ -1711,7 +1711,7 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
 }
 
 /**
- * Decode TNS filter coefficients and apply all-pole filters; reference: 4.6.9.3.
+ * Decode Temporal Noise Shaping filter coefficients and apply all-pole filters; reference: 4.6.9.3.
  *
  * @param   decode  1 if tool is used normally, 0 if tool is used in LTP.
  * @param   coef    spectral coefficients
