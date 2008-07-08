@@ -1174,7 +1174,7 @@ static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float m
 /**
  * Decode pulse data; reference: table 4.7.
  */
-static void decode_pulse_data(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
+static void decode_pulses(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
     int i;
     pulse->num_pulse = get_bits(gb, 2) + 1;
     pulse->start = get_bits(gb, 6);
@@ -1406,7 +1406,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
                 av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in eight short sequence.\n");
                 return -1;
             }
-            decode_pulse_data(ac, gb, &pulse);
+            decode_pulses(ac, gb, &pulse);
         }
         if ((tns->present = get_bits1(gb)))
             decode_tns_data(ac, gb, ics, tns);
