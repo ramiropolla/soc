@@ -472,7 +472,7 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, Channel
 }
 
 /**
- * Encode scale factors.
+ * Encode scalefactors.
  */
 static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
