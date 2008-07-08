@@ -181,6 +181,7 @@ typedef struct {
     int swb_num128;
     ChannelElement cpe;
     AACPsyContext psy;
+    int first_frame;
 } AACEncContext;
 
 #define SCALE_ONE_POS   140    ///< scalefactor index that corresponds to scale=1.0
@@ -242,6 +243,7 @@ static int aac_encode_init(AVCodecContext *avctx)
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
 
+    s->first_frame = 1;
     return 0;
 }
 
@@ -607,6 +609,26 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
     return 0;
 }
 
+/**
+ * Write some auxiliary information about created AAC file.
+ */
+static void put_bitstream_info(AVCodecContext *avctx, AACEncContext *s, const char *name)
+{
+    int i, namelen, padbits;
+
+    namelen = strlen(name) + 2;
+    put_bits(&s->pb, 3, ID_FIL);
+    put_bits(&s->pb, 4, FFMIN(namelen, 15));
+    if(namelen >= 15)
+        put_bits(&s->pb, 8, namelen - 16);
+    put_bits(&s->pb, 4, 0); //extension type - filler
+    padbits = 8 - (put_bits_count(&s->pb) & 7);
+    align_put_bits(&s->pb);
+    for(i = 0; i < namelen - 2; i++)
+        put_bits(&s->pb, 8, name[i]);
+    put_bits(&s->pb, 12 - padbits, 0);
+}
+
 static int aac_encode_frame(AVCodecContext *avctx,
                             uint8_t *frame, int buf_size, void *data)
 {
@@ -622,6 +644,9 @@ static int aac_encode_frame(AVCodecContext *avctx,
     ff_aac_psy_analyze(&s->psy, samples, 0, &s->cpe);
 
     init_put_bits(&s->pb, frame, buf_size*8);
+    if(s->first_frame){
+        put_bitstream_info(avctx, s, LIBAVCODEC_IDENT);
+    }
     switch(avctx->channels){
     case 1:
         put_bits(&s->pb, 3, ID_SCE);
@@ -647,6 +672,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
     put_bits(&s->pb, 3, ID_END);
     flush_put_bits(&s->pb);
     avctx->frame_bits = put_bits_count(&s->pb);
+    s->first_frame = 0;
     return put_bits_count(&s->pb)>>3;
 }
 
