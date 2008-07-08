@@ -264,7 +264,7 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe
             memcpy(s->output, cpe->ch[channel].saved + k + !k*1024 - 128, sizeof(float)*128);
             j = channel + k * avctx->channels;
             for (i = 0; i < 128; i++, j += avctx->channels){
-                s->output[i+128]          = audio[j] / 512.0 * swindow[128 - i - 1];
+                s->output[i+128]            = audio[j] / 512.0 * swindow[128 - i - 1];
                 cpe->ch[channel].saved[i+k] = audio[j] / 512.0 * swindow[i];
             }
             ff_mdct_calc(&s->mdct128, cpe->ch[channel].coeffs + k, s->output, s->tmp);
