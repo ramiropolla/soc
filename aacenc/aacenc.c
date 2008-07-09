@@ -265,15 +265,17 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe
         }
         ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs, s->output, s->tmp);
     }else{
+        j = channel;
         for (k = 0; k < 1024; k += 128) {
-            memcpy(s->output, cpe->ch[channel].saved + k + !k*1024 - 128, sizeof(float)*128);
-            j = channel + k * avctx->channels;
-            for (i = 0; i < 128; i++, j += avctx->channels){
-                s->output[i+128]            = audio[j] / 512.0 * swindow[128 - i - 1];
-                cpe->ch[channel].saved[i+k] = audio[j] / 512.0 * swindow[i];
-            }
+            for(i = 448 + k; i < 448 + k + 256; i++)
+                s->output[i - 448 - k] = (i < 1024) ? cpe->ch[channel].saved[i] : audio[channel + (i-1024)*avctx->channels] / 512.0;
+            s->dsp.vector_fmul        (s->output,     k ?  swindow : pwindow, 128);
+            s->dsp.vector_fmul_reverse(s->output+128, s->output+128, swindow, 128);
             ff_mdct_calc(&s->mdct128, cpe->ch[channel].coeffs + k, s->output, s->tmp);
         }
+        j = channel;
+        for(i = 0; i < 1024; i++, j += avctx->channels)
+            cpe->ch[channel].saved[i] = audio[j] / 512.0;
     }
 }
 
