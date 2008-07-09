@@ -171,6 +171,7 @@ typedef struct {
     PutBitContext pb;
     MDCTContext mdct1024;
     MDCTContext mdct128;
+    DSPContext  dsp;
     DECLARE_ALIGNED_16(FFTSample, output[2048]);
     DECLARE_ALIGNED_16(FFTSample, tmp[1024]);
 
@@ -228,6 +229,7 @@ static int aac_encode_init(AVCodecContext *avctx)
     s->swb_sizes128 = swb_size_128[i];
     s->swb_num128 = num_swb_128[i];
 
+    dsputil_init(&s->dsp, avctx);
     ff_mdct_init(&s->mdct1024, 11, 0);
     ff_mdct_init(&s->mdct128,   8, 0);
     // window init
