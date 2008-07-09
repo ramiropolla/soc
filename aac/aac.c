@@ -1431,7 +1431,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
 /**
  * Mid/Side stereo decoding; reference: 4.6.8.1.3.
  */
-static void mid_side_tool(AACContext * ac, ChannelElement * cpe) {
+static void apply_mid_side_stereo(AACContext * ac, ChannelElement * cpe) {
     const MidSideStereo * ms = &cpe->ms;
     const IndividualChannelStream * ics = &cpe->ch[0].ics;
     float *ch0 = cpe->ch[0].coeffs;
@@ -1461,7 +1461,7 @@ static void mid_side_tool(AACContext * ac, ChannelElement * cpe) {
 /**
  * intensity stereo decoding; reference: 4.6.8.2.3
  */
-static void intensity_stereo_tool(AACContext * ac, ChannelElement * cpe) {
+static void apply_intensity_stereo(AACContext * ac, ChannelElement * cpe) {
     const IndividualChannelStream * ics = &cpe->ch[1].ics;
     SingleChannelElement * sce1 = &cpe->ch[1];
     float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
@@ -1518,10 +1518,10 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
         return -1;
 
     if (cpe->common_window)
-        mid_side_tool(ac, cpe);
+        apply_mid_side_stereo(ac, cpe);
 
     if (cpe->ch[1].ics.intensity_present)
-        intensity_stereo_tool(ac, cpe);
+        apply_intensity_stereo(ac, cpe);
     return 0;
 }
 
@@ -1716,7 +1716,7 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
  * @param   decode  1 if tool is used normally, 0 if tool is used in LTP.
  * @param   coef    spectral coefficients
  */
-static void tns_filter_tool(AACContext * ac, int decode, SingleChannelElement * sce, float coef[1024]) {
+static void apply_tns(AACContext * ac, int decode, SingleChannelElement * sce, float coef[1024]) {
     const IndividualChannelStream * ics = &sce->ics;
     const TemporalNoiseShaping * tns = &sce->tns;
     const int mmm = FFMIN(ics->tns_max_bands,  ics->max_sfb);
@@ -1778,14 +1778,14 @@ static void tns_filter_tool(AACContext * ac, int decode, SingleChannelElement * 
 }
 
 /**
- * tns_filter_tool wrapper to make interface consistent.
+ * apply_tns wrapper to make interface consistent.
  */
 static void tns_trans(AACContext * ac, SingleChannelElement * sce) {
-    if(sce->tns.present) tns_filter_tool(ac, 1, sce, sce->coeffs);
+    if(sce->tns.present) apply_tns(ac, 1, sce, sce->coeffs);
 }
 
 #ifdef AAC_LTP
-static void window_ltp_tool(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
+static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
     IndividualChannelStream * ics = &sce->ics;
     const float * lwindow      = ics->use_kb_window[0] ? kbd_long_1024 : sine_long_1024;
     const float * swindow      = ics->use_kb_window[0] ? kbd_short_128 : sine_short_128;
@@ -1828,8 +1828,8 @@ static void ltp_trans(AACContext * ac, SingleChannelElement * sce) {
         for (i = 0; i < 2 * 1024; i++)
             x_est[i] = sce->ltp_state[i + 2 * 1024 - ltp->lag] * ltp->coef;
 
-        window_ltp_tool(ac, sce, x_est, X_est);
-        if(sce->tns.present) tns_filter_tool(ac, 0, sce, X_est);
+        windowing_and_mdct_ltp(ac, sce, x_est, X_est);
+        if(sce->tns.present) apply_tns(ac, 0, sce, X_est);
 
         for (sfb = 0; sfb < FFMIN(sce->ics.max_sfb, MAX_LTP_LONG_SFB); sfb++)
             if (ltp->used[sfb])
@@ -1936,7 +1936,7 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
 }
 
 #ifdef AAC_SSR
-static void window_ssr_tool(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
+static void windowing_and_imdct_ssr(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
     IndividualChannelStream * ics = &sce->ics;
     const float * lwindow      = ics->use_kb_window[0] ? kbd_long_1024 : sine_long_1024;
     const float * swindow      = ics->use_kb_window[0] ? kbd_short_128 : sine_short_128;
@@ -1976,7 +1976,7 @@ static void vector_add_dst(AACContext * ac, float * dst, const float * src0, con
         dst[i] = src0[i] + src1[i];
 }
 
-static void ssr_gain_tool(AACContext * ac, SingleChannelElement * sce, int band, float * in, float * preret, float * saved) {
+static void apply_ssr_gains(AACContext * ac, SingleChannelElement * sce, int band, float * in, float * preret, float * saved) {
     // TODO: 'in' buffer gain normalization
     if (sce->ics.window_sequence != EIGHT_SHORT_SEQUENCE) {
         vector_add_dst(ac, preret, in, saved, 256);
@@ -1999,7 +1999,7 @@ static void ssr_gain_tool(AACContext * ac, SingleChannelElement * sce, int band,
     }
 }
 
-static void ssr_ipqf_tool(AACContext * ac, SingleChannelElement * sce, float * preret) {
+static void inverse_polyphase_quadrature_filter(AACContext * ac, SingleChannelElement * sce, float * preret) {
     ssr_context * ctx = &ac->ssrctx;
     ScalableSamplingRate * ssr = sce->ssr;
     int i, b, j;
@@ -2048,10 +2048,10 @@ static void ssr_trans(AACContext * ac, SingleChannelElement * sce) {
             vector_reverse(ac, tmp_buf, in + 256 * b, 256);
             memcpy(in + 256 * b, tmp_buf, 256 * sizeof(float));
         }
-        window_ssr_tool(ac, sce, in + 256 * b, tmp_buf);
-        ssr_gain_tool(ac, sce, b, tmp_buf, tmp_ret + 256 * b, sce->saved + 256 * b);
+        windowing_and_imdct_ssr(ac, sce, in + 256 * b, tmp_buf);
+        apply_ssr_gains(ac, sce, b, tmp_buf, tmp_ret + 256 * b, sce->saved + 256 * b);
     }
-    ssr_ipqf_tool(ac, sce, tmp_ret);
+    inverse_polyphase_quadrature_filter(ac, sce, tmp_ret);
 }
 #endif /* AAC_SSR */
 
