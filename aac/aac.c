@@ -1777,13 +1777,6 @@ static void apply_tns(AACContext * ac, int decode, SingleChannelElement * sce, f
     }
 }
 
-/**
- * apply_tns wrapper to make interface consistent.
- */
-static void tns_trans(AACContext * ac, SingleChannelElement * sce) {
-    if(sce->tns.present) apply_tns(ac, 1, sce, sce->coeffs);
-}
-
 #ifdef AAC_LTP
 static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
     IndividualChannelStream * ics = &sce->ics;
@@ -2150,9 +2143,10 @@ static void spectral_to_sample(AACContext * ac) {
                         ltp_trans(ac, &che->ch[1]);
                 }
 #endif /* AAC_LTP */
-                tns_trans(ac, &che->ch[0]);
-                if(j == ID_CPE)
-                    tns_trans(ac, &che->ch[1]);
+                if(               che->ch[0].tns.present)
+                    apply_tns(ac, 1, &che->ch[0], che->ch[0].coeffs);
+                if(j == ID_CPE && che->ch[1].tns.present)
+                    apply_tns(ac, 1, &che->ch[1], che->ch[1].coeffs);
                 if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 1))
                     transform_coupling_tool(ac, che, coupling_dependent_trans);
 #ifdef AAC_SSR
