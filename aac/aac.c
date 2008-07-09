@@ -1808,7 +1808,7 @@ static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, 
     ff_mdct_calc(ac->mdct_ltp, out, buf, in); // Using in as buffer for MDCT.
 }
 
-static void ltp_trans(AACContext * ac, SingleChannelElement * sce) {
+static void apply_ltp(AACContext * ac, SingleChannelElement * sce) {
     const LongTermPrediction * ltp = &sce->ics.ltp;
     const uint16_t * offsets = sce->ics.swb_offset;
     int i, sfb;
@@ -1849,7 +1849,7 @@ static inline int16_t ltp_round(float x) {
 }
 
 
-static void ltp_update_trans(AACContext * ac, SingleChannelElement * sce) {
+static void update_ltp(AACContext * ac, SingleChannelElement * sce) {
     int i;
     if (!sce->ltp_state)
         sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t));
@@ -2031,7 +2031,7 @@ static void vector_reverse(AACContext * ac, float * dst, const float * src, int 
         dst[i] = src[len - i];
 }
 
-static void ssr_trans(AACContext * ac, SingleChannelElement * sce) {
+static void apply_ssr(AACContext * ac, SingleChannelElement * sce) {
     float * in = sce->coeffs;
     DECLARE_ALIGNED_16(float, tmp_buf[512]);
     DECLARE_ALIGNED_16(float, tmp_ret[1024]);
@@ -2053,7 +2053,7 @@ static void ssr_trans(AACContext * ac, SingleChannelElement * sce) {
  *
  * @param   index   which gain to use for coupling
  */
-static void coupling_dependent_trans(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
+static void dependent_coupling(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
     IndividualChannelStream * ics = &cc->ch[0].ics;
     const uint16_t * offsets = ics->swb_offset;
     float * dest = sce->coeffs;
@@ -2086,7 +2086,7 @@ static void coupling_dependent_trans(AACContext * ac, ChannelElement * cc, Singl
  *
  * @param   index   which gain to use for coupling
  */
-static void coupling_independent_trans(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
+static void independent_coupling(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
     int i;
     float gain = cc->coup.gain[index][0][0] * sce->mixing_gain;
     for (i = 0; i < 1024; i++)
@@ -2098,24 +2098,24 @@ static void coupling_independent_trans(AACContext * ac, ChannelElement * cc, Sin
  *
  * @param   index   which gain to use for coupling
  */
-static void transform_coupling_tool(AACContext * ac, ChannelElement * cc,
-        void (*cc_trans)(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index))
+static void apply_channel_coupling(AACContext * ac, ChannelElement * cc,
+        void (*apply_coupling_method)(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index))
 {
     int c;
     int index = 0;
     ChannelCoupling * coup = &cc->coup;
     for (c = 0; c <= coup->num_coupled; c++) {
         if (     !coup->is_cpe[c] && ac->che[ID_SCE][coup->tag_select[c]]) {
-            cc_trans(ac, cc, &ac->che[ID_SCE][coup->tag_select[c]]->ch[0], index++);
+            apply_coupling_method(ac, cc, &ac->che[ID_SCE][coup->tag_select[c]]->ch[0], index++);
         } else if(coup->is_cpe[c] && ac->che[ID_CPE][coup->tag_select[c]]) {
             if (!coup->l[c] && !coup->r[c]) {
-                cc_trans(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], index);
-                cc_trans(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], index++);
+                apply_coupling_method(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], index);
+                apply_coupling_method(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], index++);
             }
             if (coup->l[c])
-                cc_trans(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], index++);
+                apply_coupling_method(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], index++);
             if (coup->r[c])
-                cc_trans(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], index++);
+                apply_coupling_method(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], index++);
         } else {
             av_log(ac->avccontext, AV_LOG_ERROR,
                    "coupling target %sE[%d] not available\n",
@@ -2135,12 +2135,12 @@ static void spectral_to_sample(AACContext * ac) {
             ChannelElement *che = ac->che[j][i];
             if(che) {
                 if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 0))
-                    transform_coupling_tool(ac, che, coupling_dependent_trans);
+                    apply_channel_coupling(ac, che, dependent_coupling);
 #ifdef AAC_LTP
                 if (ac->audioObjectType == AOT_AAC_LTP) {
-                    ltp_trans(ac, &che->ch[0]);
+                    apply_ltp(ac, &che->ch[0]);
                     if(j == ID_CPE)
-                        ltp_trans(ac, &che->ch[1]);
+                        apply_ltp(ac, &che->ch[1]);
                 }
 #endif /* AAC_LTP */
                 if(               che->ch[0].tns.present)
@@ -2148,12 +2148,12 @@ static void spectral_to_sample(AACContext * ac) {
                 if(j == ID_CPE && che->ch[1].tns.present)
                     apply_tns(ac, 1, &che->ch[1], che->ch[1].coeffs);
                 if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 1))
-                    transform_coupling_tool(ac, che, coupling_dependent_trans);
+                    apply_channel_coupling(ac, che, dependent_coupling);
 #ifdef AAC_SSR
                 if (ac->audioObjectType == AOT_AAC_SSR) {
-                    ssr_trans(ac, &che->ch[0]);
+                    apply_ssr(ac, &che->ch[0]);
                     if(j == ID_CPE)
-                        ssr_trans(ac, &che->ch[1]);
+                        apply_ssr(ac, &che->ch[1]);
                 } else {
 #endif /* AAC_SSR */
                     imdct_and_windowing(ac, &che->ch[0]);
@@ -2163,12 +2163,12 @@ static void spectral_to_sample(AACContext * ac) {
                 }
 #endif /* AAC_SSR */
                 if(j == ID_CCE && che->coup.is_indep_coup && (che->coup.domain == 1))
-                    transform_coupling_tool(ac, che, coupling_independent_trans);
+                    apply_channel_coupling(ac, che, independent_coupling);
 #ifdef AAC_LTP
                 if (ac->audioObjectType == AOT_AAC_LTP) {
-                    ltp_update_trans(ac, &che->ch[0]);
+                    update_ltp(ac, &che->ch[0]);
                     if(j == ID_CPE)
-                        ltp_update_trans(ac, &che->ch[1]);
+                        update_ltp(ac, &che->ch[1]);
                 }
 #endif /* AAC_LTP */
             }
