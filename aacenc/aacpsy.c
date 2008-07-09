@@ -225,13 +225,30 @@ static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int channel, Ch
     int ch, i;
 
     for(ch = 0; ch < apc->avctx->channels; ch++){
-        cpe->ch[ch].ics.window_sequence = EIGHT_SHORT_SEQUENCE;
+        int prev_seq = cpe->ch[ch].ics.window_sequence_prev;
+        cpe->ch[ch].ics.use_kb_window[1] = cpe->ch[ch].ics.use_kb_window[0];
+        cpe->ch[ch].ics.window_sequence_prev = cpe->ch[ch].ics.window_sequence;
+        switch(cpe->ch[ch].ics.window_sequence){
+        case ONLY_LONG_SEQUENCE:   if(prev_seq == ONLY_LONG_SEQUENCE)cpe->ch[ch].ics.window_sequence = LONG_START_SEQUENCE;   break;
+        case LONG_START_SEQUENCE:  cpe->ch[ch].ics.window_sequence = EIGHT_SHORT_SEQUENCE; break;
+        case EIGHT_SHORT_SEQUENCE: if(prev_seq == EIGHT_SHORT_SEQUENCE)cpe->ch[ch].ics.window_sequence = LONG_STOP_SEQUENCE;  break;
+        case LONG_STOP_SEQUENCE:   cpe->ch[ch].ics.window_sequence = ONLY_LONG_SEQUENCE;   break;
+        }
+
+        if(cpe->ch[ch].ics.window_sequence != EIGHT_SHORT_SEQUENCE){
+        cpe->ch[ch].ics.use_kb_window[0] = 1;
+        cpe->ch[ch].ics.num_windows = 1;
+        cpe->ch[ch].ics.swb_sizes = apc->bands1024;
+        cpe->ch[ch].ics.num_swb = apc->num_bands1024;
+        cpe->ch[ch].ics.group_len[0] = 0;
+        }else{
         cpe->ch[ch].ics.use_kb_window[0] = 1;
         cpe->ch[ch].ics.num_windows = 8;
         cpe->ch[ch].ics.swb_sizes = apc->bands128;
         cpe->ch[ch].ics.num_swb = apc->num_bands128;
         for(i = 0; i < cpe->ch[ch].ics.num_windows; i++)
             cpe->ch[ch].ics.group_len[i] = i & 1;
+        }
     }
     cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
 }
