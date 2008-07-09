@@ -664,7 +664,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
     ff_aac_psy_analyze(&s->psy, samples, 0, &s->cpe);
 
     init_put_bits(&s->pb, frame, buf_size*8);
-    if(!avctx->frame_number){
+    if(!avctx->frame_number && !(avctx->flags & CODEC_FLAG_BITEXACT)){
         put_bitstream_info(avctx, s, LIBAVCODEC_IDENT);
     }
     switch(avctx->channels){
