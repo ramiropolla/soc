@@ -1490,14 +1490,14 @@ static void intensity_stereo_tool(AACContext * ac, ChannelElement * cpe) {
 /**
  * Decode a channel_pair_element; reference: table 4.4.
  *
- * @param   id  Identifies the instance of a syntax element.
+ * @param   tag Identifies the instance of a syntax element.
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
+static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
     int i;
     ChannelElement * cpe;
 
-    cpe = ac->che[ID_CPE][id];
+    cpe = ac->che[ID_CPE][tag];
     cpe->common_window = get_bits1(gb);
     if (cpe->common_window) {
         if (decode_ics_info(ac, gb, 1, &cpe->ch[0].ics))
@@ -1528,10 +1528,10 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int id) {
 /**
  * Decode coupling_channel_element; reference: table 4.8.
  *
- * @param   id  Identifies the instance of a syntax element.
+ * @param   tag Identifies the instance of a syntax element.
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
+static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
     int num_gain = 0;
     int c, g, sfb;
     int sign;
@@ -1539,10 +1539,10 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int id) {
     SingleChannelElement * sce;
     ChannelCoupling * coup;
 
-    sce = &ac->che[ID_CCE][id]->ch[0];
+    sce = &ac->che[ID_CCE][tag]->ch[0];
     sce->mixing_gain = 1.0;
 
-    coup = &ac->che[ID_CCE][id]->coup;
+    coup = &ac->che[ID_CCE][tag]->coup;
 
     coup->is_indep_coup = get_bits1(gb);
     coup->num_coupled = get_bits(gb, 3);
