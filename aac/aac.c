@@ -2133,42 +2133,6 @@ static void transform_coupling_tool(AACContext * ac, ChannelElement * cc,
 }
 
 /**
- * channel coupling tool
- *
- * @param   independent     dependent [0] or independent [1] coupling
- * @param   domain          Conduct coupling before [0] or after [1] TNS decoding.
- */
-static void coupling_tool(AACContext * ac, int independent, int domain) {
-    int i;
-    for (i = 0; i < MAX_TAGID; i++) {
-        ChannelElement * cc = ac->che[ID_CCE][i];
-        if (cc) {
-            if (cc->coup.is_indep_coup && independent) {
-                transform_coupling_tool(ac, cc, coupling_independent_trans);
-            } else if (!cc->coup.is_indep_coup && !independent && (cc->coup.domain == domain)) {
-                transform_coupling_tool(ac, cc, coupling_dependent_trans);
-            }
-        }
-    }
-}
-
-/**
- * Single Channel Element transformation interface
- */
-static void transform_sce_tool(AACContext * ac, void (*sce_trans)(AACContext * ac, SingleChannelElement * sce)) {
-    int i, j;
-    for (i = 0; i < MAX_TAGID; i++) {
-        for(j = 0; j < 4; j++) {
-            if(ac->che[j][i]) {
-                sce_trans(ac, &ac->che[j][i]->ch[0]);
-                if(j == ID_CPE)
-                    sce_trans(ac, &ac->che[j][i]->ch[1]);
-            }
-        }
-    }
-}
-
-/**
  * Convert spectral data to float samples, applying all supported tools as appropriate.
  */
 static void spectral_to_sample(AACContext * ac) {
