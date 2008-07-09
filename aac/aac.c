@@ -2172,24 +2172,50 @@ static void transform_sce_tool(AACContext * ac, void (*sce_trans)(AACContext * a
  * Convert spectral data to float samples, applying all supported tools as appropriate.
  */
 static void spectral_to_sample(AACContext * ac) {
-    coupling_tool(ac, 0, 0);
+    int i, j;
+    for (i = 0; i < MAX_TAGID; i++) {
+        for(j = 0; j < 4; j++) {
+            ChannelElement *che = ac->che[j][i];
+            if(che) {
+                if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 0))
+                    transform_coupling_tool(ac, che, coupling_dependent_trans);
 #ifdef AAC_LTP
-    if (ac->audioObjectType == AOT_AAC_LTP)
-        transform_sce_tool(ac, ltp_trans);
+                if (ac->audioObjectType == AOT_AAC_LTP) {
+                    ltp_trans(ac, &che->ch[0]);
+                    if(j == ID_CPE)
+                        ltp_trans(ac, &che->ch[1]);
+                }
 #endif /* AAC_LTP */
-    transform_sce_tool(ac, tns_trans);
-    coupling_tool(ac, 0, 1);
+                tns_trans(ac, &che->ch[0]);
+                if(j == ID_CPE)
+                    tns_trans(ac, &che->ch[1]);
+                if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 1))
+                    transform_coupling_tool(ac, che, coupling_dependent_trans);
 #ifdef AAC_SSR
-    if (ac->audioObjectType == AOT_AAC_SSR)
-        transform_sce_tool(ac, ssr_trans);
-    else
+                if (ac->audioObjectType == AOT_AAC_SSR) {
+                    ssr_trans(ac, &che->ch[0]);
+                    if(j == ID_CPE)
+                        ssr_trans(ac, &che->ch[1]);
+                } else {
 #endif /* AAC_SSR */
-        transform_sce_tool(ac, imdct_and_windowing);
-    coupling_tool(ac, 1, 1);
+                    imdct_and_windowing(ac, &che->ch[0]);
+                    if(j == ID_CPE)
+                        imdct_and_windowing(ac, &che->ch[1]);
+#ifdef AAC_SSR
+                }
+#endif /* AAC_SSR */
+                if(j == ID_CCE && che->coup.is_indep_coup && (che->coup.domain == 1))
+                    transform_coupling_tool(ac, che, coupling_independent_trans);
 #ifdef AAC_LTP
-    if (ac->audioObjectType == AOT_AAC_LTP)
-        transform_sce_tool(ac, ltp_update_trans);
+                if (ac->audioObjectType == AOT_AAC_LTP) {
+                    ltp_update_trans(ac, &che->ch[0]);
+                    if(j == ID_CPE)
+                        ltp_update_trans(ac, &che->ch[1]);
+                }
 #endif /* AAC_LTP */
+            }
+        }
+    }
 }
 
 /**
