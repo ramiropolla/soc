@@ -186,15 +186,15 @@ enum WindowSequence {
 };
 
 /**
- * special codebooks
+ * special band types
  */
-enum Codebook {
-    ZERO_HCB       = 0,
-    FIRST_PAIR_HCB = 5,
-    ESC_HCB        = 11,
-    NOISE_HCB      = 13,
-    INTENSITY_HCB2 = 14,
-    INTENSITY_HCB  = 15,
+enum BandType {
+    ZERO_BT        = 0,
+    FIRST_PAIR_BT  = 5,
+    ESC_BT         = 11,
+    NOISE_BT       = 13,
+    INTENSITY_BT2  = 14,
+    INTENSITY_BT   = 15,
     ESC_FLAG       = 16,
 };
 
@@ -360,8 +360,8 @@ typedef struct {
                                                */
     IndividualChannelStream ics;
     TemporalNoiseShaping tns;
-    enum Codebook cb[8][64];                  ///< codebooks
-    int cb_run_end[8][64];                    ///< codebook run end points
+    enum BandType band_type[8][64];           ///< band types
+    int band_type_run_end[8][64];             ///< band type run end points
     float sf[8][64];                          ///< scalefactors
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< coefficients for IMDCT
     DECLARE_ALIGNED_16(float, saved[1024]);   ///< overlap
@@ -1069,11 +1069,11 @@ static inline float ivquant(AACContext * ac, int a) {
 /**
  * Decode section_data payload; reference: table 4.46.
  *
- * @param   cb          array of the codebook used for a window group's scalefactor band
- * @param   cb_run_end  array of the last scalefactor band of a codebook run for a window group's scalefactor band
+ * @param   band_type           array of the band type used for a window group's scalefactor band
+ * @param   band_type_run_end   array of the last scalefactor band of a band type run for a window group's scalefactor band
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_section(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum Codebook cb[][64], int cb_run_end[][64]) {
+static int decode_section(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum BandType band_type[][64], int band_type_run_end[][64]) {
     int g;
     for (g = 0; g < ics->num_window_groups; g++) {
         int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
@@ -1081,9 +1081,9 @@ static int decode_section(AACContext * ac, GetBitContext * gb, IndividualChannel
         while (k < ics->max_sfb) {
             uint8_t sect_len = k;
             int sect_len_incr;
-            int sect_cb = get_bits(gb, 4);
-            if (sect_cb == 12) {
-                av_log(ac->avccontext, AV_LOG_ERROR, "invalid codebook\n");
+            int sect_band_type = get_bits(gb, 4);
+            if (sect_band_type == 12) {
+                av_log(ac->avccontext, AV_LOG_ERROR, "invalid band type\n");
                 return -1;
             }
             while ((sect_len_incr = get_bits(gb, bits)) == (1 << bits)-1)
@@ -1091,13 +1091,13 @@ static int decode_section(AACContext * ac, GetBitContext * gb, IndividualChannel
             sect_len += sect_len_incr;
             if (sect_len > ics->max_sfb) {
                 av_log(ac->avccontext, AV_LOG_ERROR,
-                    "Number of codebooks (%d) exceeds limit (%d).\n",
+                    "Number of bands (%d) exceeds limit (%d).\n",
                     sect_len, ics->max_sfb);
                 return -1;
             }
             for (; k < sect_len; k++) {
-                cb[g][k] = sect_cb;
-                cb_run_end[g][k] = sect_len;
+                band_type[g][k] = sect_band_type;
+                band_type_run_end[g][k] = sect_len;
             }
         }
     }
@@ -1109,13 +1109,13 @@ static int decode_section(AACContext * ac, GetBitContext * gb, IndividualChannel
  *
  * @param   mix_gain    channel gain (Not used by AAC bitstream.)
  * @param   global_gain first scalefactor value as scalefactors are differentially coded
- * @param   cb          array of the codebook used for a window group's scalefactor band
- * @param   cb_run_end  array of the last scalefactor band of a codebook run for a window group's scalefactor band
+ * @param   band_type           array of the band type used for a window group's scalefactor band
+ * @param   band_type_run_end   array of the last scalefactor band of a band type run for a window group's scalefactor band
  * @param   sf          array of scalefactors or intensity stereo positions used for a window group's scalefactor band
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
-        IndividualChannelStream * ics, const enum Codebook cb[][64], const int cb_run_end[][64], float sf[][64]) {
+        IndividualChannelStream * ics, const enum BandType band_type[][64], const int band_type_run_end[][64], float sf[][64]) {
     const int sf_offset = ac->sf_offset + (ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 12 : 0);
     int g, i;
     int offset[3] = { global_gain, global_gain - 90, 100 };
@@ -1124,11 +1124,11 @@ static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_ga
     ics->intensity_present = 0;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb;) {
-            int run_end = cb_run_end[g][i];
-            if (cb[g][i] == ZERO_HCB) {
+            int run_end = band_type_run_end[g][i];
+            if (band_type[g][i] == ZERO_BT) {
                 for(; i < run_end; i++)
                     sf[g][i] = 0.;
-            }else if((cb[g][i] == INTENSITY_HCB) || (cb[g][i] == INTENSITY_HCB2)) {
+            }else if((band_type[g][i] == INTENSITY_BT) || (band_type[g][i] == INTENSITY_BT2)) {
                 ics->intensity_present = 1;
                 for(; i < run_end; i++) {
                     offset[2] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
@@ -1140,7 +1140,7 @@ static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_ga
                     sf[g][i] =  pow2sf_tab[-offset[2] + 300];
                     sf[g][i] *= mix_gain;
                 }
-            }else if(cb[g][i] == NOISE_HCB) {
+            }else if(band_type[g][i] == NOISE_BT) {
                 for(; i < run_end; i++) {
                     if(noise_flag-- > 0)
                         offset[1] += get_bits(gb, 9) - 256;
@@ -1262,38 +1262,38 @@ static void decode_mid_side_stereo(AACContext * ac, GetBitContext * gb, ChannelE
 /**
  * Decode spectral data; reference: table 4.50.
  *
- * @param   cb          array of the codebook used for a window group's scalefactor band
+ * @param   band_type   array of the band type used for a window group's scalefactor band
  * @param   icoef       array of quantized spectral data
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_spectrum(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const enum Codebook cb[][64], int icoef[1024]) {
+static int decode_spectrum(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const enum BandType band_type[][64], int icoef[1024]) {
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
 
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
-            const int cur_cb = cb[g][i];
-            const int dim = cur_cb >= FIRST_PAIR_HCB ? 2 : 4;
+            const int cur_band_type = band_type[g][i];
+            const int dim = cur_band_type >= FIRST_PAIR_BT ? 2 : 4;
             int group;
-            if (cur_cb == ZERO_HCB) {
+            if (cur_band_type == ZERO_BT) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     memset(icoef + group * 128 + offsets[i], 0, (offsets[i+1] - offsets[i])*sizeof(int));
                 }
-            }else if (cur_cb != NOISE_HCB && cur_cb != INTENSITY_HCB2 && cur_cb != INTENSITY_HCB) {
+            }else if (cur_band_type != NOISE_BT && cur_band_type != INTENSITY_BT2 && cur_band_type != INTENSITY_BT) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
-                        const int index = get_vlc2(gb, books[cur_cb - 1].table, 6, 3);
+                        const int index = get_vlc2(gb, books[cur_band_type - 1].table, 6, 3);
                         const int coef_idx = (group << 7) + k;
-                        const int8_t *vq_ptr = &codebook_vectors[cur_cb - 1][index * dim];
+                        const int8_t *vq_ptr = &codebook_vectors[cur_band_type - 1][index * dim];
                         int j;
                         for (j = 0; j < dim; j++)
                             icoef[coef_idx + j] = 1;
-                        if (IS_CODEBOOK_UNSIGNED(cur_cb)) {
+                        if (IS_CODEBOOK_UNSIGNED(cur_band_type)) {
                             for (j = 0; j < dim; j++)
                                 if (vq_ptr[j] && get_bits1(gb))
                                     icoef[coef_idx + j] = -1;
                         }
-                        if (cur_cb == ESC_HCB) {
+                        if (cur_band_type == ESC_BT) {
                             for (j = 0; j < 2; j++) {
                                 if (vq_ptr[j] == 16) {
                                     int n = 4;
@@ -1340,12 +1340,12 @@ static void add_pulses(AACContext * ac, const IndividualChannelStream * ics, con
  * Dequantize and scale spectral data; reference: 4.6.3.3.
  *
  * @param   icoef   array of quantized spectral data
- * @param   cb      array of the codebook used for a window group's scalefactor band
+ * @param   band_type   array of the band type used for a window group's scalefactor band
  * @param   sf      array of scalefactors or intensity stereo positions used for a window group's scalefactor band
  * @param   coef    array of dequantized, scaled spectral data
  */
 static void dequant(AACContext * ac, const IndividualChannelStream * ics, const int icoef[1024],
-        const enum Codebook cb[][64], const float sf[][64], float coef[1024]) {
+        const enum BandType band_type[][64], const float sf[][64], float coef[1024]) {
     const uint16_t * offsets = ics->swb_offset;
     const int c = 1024/ics->num_window_groups;
     int g, i, group, k;
@@ -1353,13 +1353,13 @@ static void dequant(AACContext * ac, const IndividualChannelStream * ics, const 
     for (g = 0; g < ics->num_window_groups; g++) {
         memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(c - offsets[ics->max_sfb]));
         for (i = 0; i < ics->max_sfb; i++) {
-            if (cb[g][i] == NOISE_HCB) {
+            if (band_type[g][i] == NOISE_BT) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     float scale = sf[g][i] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
                     for (k = offsets[i]; k < offsets[i+1]; k++)
                         coef[group*128+k] = (int32_t)av_random(&ac->random_state) * scale;
                 }
-            } else if (cb[g][i] != INTENSITY_HCB && cb[g][i] != INTENSITY_HCB2) {
+            } else if (band_type[g][i] != INTENSITY_BT && band_type[g][i] != INTENSITY_BT2) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
                         coef[group*128+k] = ivquant(ac, icoef[group*128+k]) * sf[g][i];
@@ -1395,9 +1395,9 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
             return -1;
     }
 
-    if (decode_section(ac, gb, ics, sce->cb, sce->cb_run_end) < 0)
+    if (decode_section(ac, gb, ics, sce->band_type, sce->band_type_run_end) < 0)
         return -1;
-    if (decode_scalefactors(ac, gb, sce->mixing_gain, global_gain, ics, sce->cb, sce->cb_run_end, sce->sf) < 0)
+    if (decode_scalefactors(ac, gb, sce->mixing_gain, global_gain, ics, sce->band_type, sce->band_type_run_end, sce->sf) < 0)
         return -1;
 
     if (!scale_flag) {
@@ -1420,11 +1420,11 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
         }
     }
 
-    if (decode_spectrum(ac, gb, ics, sce->cb, icoeffs) < 0)
+    if (decode_spectrum(ac, gb, ics, sce->band_type, icoeffs) < 0)
         return -1;
     if (pulse.present)
         add_pulses(ac, ics, &pulse, icoeffs);
-    dequant(ac, ics, icoeffs, sce->cb, sce->sf, out);
+    dequant(ac, ics, icoeffs, sce->band_type, sce->sf, out);
     return 0;
 }
 
@@ -1443,7 +1443,7 @@ static void apply_mid_side_stereo(AACContext * ac, ChannelElement * cpe) {
             for (gp = 0; gp < ics->group_len[g]; gp++) {
                 for (i = 0; i < ics->max_sfb; i++) {
                     if (ms->mask[g][i] &&
-                        cpe->ch[0].cb[g][i] < NOISE_HCB && cpe->ch[1].cb[g][i] < NOISE_HCB) {
+                        cpe->ch[0].band_type[g][i] < NOISE_BT && cpe->ch[1].band_type[g][i] < NOISE_BT) {
                         for (k = offsets[i]; k < offsets[i+1]; k++) {
                             float tmp = ch0[k] - ch1[k];
                             ch0[k] += ch1[k];
@@ -1472,8 +1472,8 @@ static void apply_intensity_stereo(AACContext * ac, ChannelElement * cpe) {
     for (g = 0; g < ics->num_window_groups; g++) {
         for (gp = 0; gp < ics->group_len[g]; gp++) {
             for (i = 0; i < ics->max_sfb; i++) {
-                if (sce1->cb[g][i] == INTENSITY_HCB || sce1->cb[g][i] == INTENSITY_HCB2) {
-                    c = -1 + 2 * (sce1->cb[g][i] - 14);
+                if (sce1->band_type[g][i] == INTENSITY_BT || sce1->band_type[g][i] == INTENSITY_BT2) {
+                    c = -1 + 2 * (sce1->band_type[g][i] - 14);
                     if (cpe->ms.present)
                         c *= 1 - 2 * cpe->ms.mask[g][i];
                     scale = c * sce1->sf[g][i];
@@ -1575,7 +1575,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
         }
         for (g = 0; g < sce->ics.num_window_groups; g++)
             for (sfb = 0; sfb < sce->ics.max_sfb; sfb++)
-                if (sce->cb[g][sfb] == ZERO_HCB) {
+                if (sce->band_type[g][sfb] == ZERO_BT) {
                     coup->gain[c][g][sfb] = 0;
                 } else {
                     if (cge) {
@@ -2066,7 +2066,7 @@ static void dependent_coupling(AACContext * ac, ChannelElement * cc, SingleChann
     }
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
-            if (cc->ch[0].cb[g][i] != ZERO_HCB) {
+            if (cc->ch[0].band_type[g][i] != ZERO_BT) {
                 float gain = cc->coup.gain[index][g][i] * sce->mixing_gain;
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
