@@ -958,7 +958,7 @@ static void data_stream_element(AACContext * ac, GetBitContext * gb) {
 }
 
 #ifdef AAC_LTP
-static void decode_ltp_data(AACContext * ac, GetBitContext * gb, uint8_t max_sfb, LongTermPrediction * ltp) {
+static void decode_ltp(AACContext * ac, GetBitContext * gb, uint8_t max_sfb, LongTermPrediction * ltp) {
     int sfb;
     if (ac->audioObjectType == AOT_ER_AAC_LD) {
         assert(0);
@@ -1030,11 +1030,11 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
                 assert(0);
             } else {
                 if ((ics->ltp.present = get_bits(gb, 1))) {
-                    decode_ltp_data(ac, gb, ics->max_sfb, &ics->ltp);
+                    decode_ltp(ac, gb, ics->max_sfb, &ics->ltp);
                 }
                 if (common_window) {
                     if ((ics->ltp2.present = get_bits(gb, 1))) {
-                        decode_ltp_data(ac, gb, ics->max_sfb, &ics->ltp2);
+                        decode_ltp(ac, gb, ics->max_sfb, &ics->ltp2);
                     }
                 }
             }
@@ -1073,7 +1073,7 @@ static inline float ivquant(AACContext * ac, int a) {
  * @param   cb_run_end  array of the last scalefactor band of a codebook run for a window group's scalefactor band
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum Codebook cb[][64], int cb_run_end[][64]) {
+static int decode_section(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum Codebook cb[][64], int cb_run_end[][64]) {
     int g;
     for (g = 0; g < ics->num_window_groups; g++) {
         int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
@@ -1114,7 +1114,7 @@ static int decode_section_data(AACContext * ac, GetBitContext * gb, IndividualCh
  * @param   sf          array of scalefactors or intensity stereo positions used for a window group's scalefactor band
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_scale_factor_data(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
+static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
         IndividualChannelStream * ics, const enum Codebook cb[][64], const int cb_run_end[][64], float sf[][64]) {
     const int sf_offset = ac->sf_offset + (ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 12 : 0);
     int g, i;
@@ -1187,7 +1187,7 @@ static void decode_pulses(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
 /**
  * Decode Temporal Noise Shaping data; reference: table 4.48.
  */
-static void decode_tns_data(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, TemporalNoiseShaping * tns) {
+static void decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, TemporalNoiseShaping * tns) {
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
     for (w = 0; w < ics->num_windows; w++) {
         tns->n_filt[w] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 1 : 2);
@@ -1212,7 +1212,7 @@ static void decode_tns_data(AACContext * ac, GetBitContext * gb, const Individua
 }
 
 #ifdef AAC_SSR
-static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, SingleChannelElement * sce) {
+static int decode_gain_control(AACContext * ac, GetBitContext * gb, SingleChannelElement * sce) {
     // wd_num wd_test aloc_size
     static const int gain_mode[4][3] = {
         {1, 0, 5}, //ONLY_LONG_SEQUENCE = 0,
@@ -1245,7 +1245,7 @@ static int decode_gain_control_data(AACContext * ac, GetBitContext * gb, SingleC
 /**
  * Decode Mid/Side data; reference: table 4.54.
  */
-static void decode_mid_side_data(AACContext * ac, GetBitContext * gb, ChannelElement * cpe) {
+static void decode_mid_side_stereo(AACContext * ac, GetBitContext * gb, ChannelElement * cpe) {
     MidSideStereo * ms = &cpe->ms;
     int g, i;
     ms->present = get_bits(gb, 2);
@@ -1266,7 +1266,7 @@ static void decode_mid_side_data(AACContext * ac, GetBitContext * gb, ChannelEle
  * @param   icoef       array of quantized spectral data
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_spectral_data(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const enum Codebook cb[][64], int icoef[1024]) {
+static int decode_spectrum(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const enum Codebook cb[][64], int icoef[1024]) {
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
 
@@ -1395,9 +1395,9 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
             return -1;
     }
 
-    if (decode_section_data(ac, gb, ics, sce->cb, sce->cb_run_end) < 0)
+    if (decode_section(ac, gb, ics, sce->cb, sce->cb_run_end) < 0)
         return -1;
-    if (decode_scale_factor_data(ac, gb, sce->mixing_gain, global_gain, ics, sce->cb, sce->cb_run_end, sce->sf) < 0)
+    if (decode_scalefactors(ac, gb, sce->mixing_gain, global_gain, ics, sce->cb, sce->cb_run_end, sce->sf) < 0)
         return -1;
 
     if (!scale_flag) {
@@ -1409,10 +1409,10 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
             decode_pulses(ac, gb, &pulse);
         }
         if ((tns->present = get_bits1(gb)))
-            decode_tns_data(ac, gb, ics, tns);
+            decode_tns(ac, gb, ics, tns);
         if (get_bits1(gb)) {
 #ifdef AAC_SSR
-            if (decode_gain_control_data(ac, gb, sce)) return -1;
+            if (decode_gain_control(ac, gb, sce)) return -1;
 #else
             av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supported.\n");
             return -1;
@@ -1420,7 +1420,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
         }
     }
 
-    if (decode_spectral_data(ac, gb, ics, sce->cb, icoeffs) < 0)
+    if (decode_spectrum(ac, gb, ics, sce->cb, icoeffs) < 0)
         return -1;
     if (pulse.present)
         add_pulses(ac, ics, &pulse, icoeffs);
@@ -1508,7 +1508,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
 #ifdef AAC_LTP
         cpe->ch[1].ics.ltp = cpe->ch[0].ics.ltp2;
 #endif /* AAC_LTP */
-        decode_mid_side_data(ac, gb, cpe);
+        decode_mid_side_stereo(ac, gb, cpe);
     } else {
         cpe->ms.present = 0;
     }
