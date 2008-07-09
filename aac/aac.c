@@ -1107,11 +1107,11 @@ static int decode_section(AACContext * ac, GetBitContext * gb, IndividualChannel
 /**
  * Decode scale_factor_data; reference: table 4.47.
  *
- * @param   mix_gain    channel gain (Not used by AAC bitstream.)
- * @param   global_gain first scalefactor value as scalefactors are differentially coded
+ * @param   mix_gain            channel gain (Not used by AAC bitstream.)
+ * @param   global_gain         first scalefactor value as scalefactors are differentially coded
  * @param   band_type           array of the band type used for a window group's scalefactor band
  * @param   band_type_run_end   array of the last scalefactor band of a band type run for a window group's scalefactor band
- * @param   sf          array of scalefactors or intensity stereo positions used for a window group's scalefactor band
+ * @param   sf                  array of scalefactors or intensity stereo positions used for a window group's scalefactor band
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
@@ -1339,10 +1339,10 @@ static void add_pulses(AACContext * ac, const IndividualChannelStream * ics, con
 /**
  * Dequantize and scale spectral data; reference: 4.6.3.3.
  *
- * @param   icoef   array of quantized spectral data
+ * @param   icoef       array of quantized spectral data
  * @param   band_type   array of the band type used for a window group's scalefactor band
- * @param   sf      array of scalefactors or intensity stereo positions used for a window group's scalefactor band
- * @param   coef    array of dequantized, scaled spectral data
+ * @param   sf          array of scalefactors or intensity stereo positions used for a window group's scalefactor band
+ * @param   coef        array of dequantized, scaled spectral data
  */
 static void dequant(AACContext * ac, const IndividualChannelStream * ics, const int icoef[1024],
         const enum BandType band_type[][64], const float sf[][64], float coef[1024]) {
