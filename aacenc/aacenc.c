@@ -254,14 +254,33 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe
     int i, j, k;
     const float * lwindow = cpe->ch[channel].ics.use_kb_window[0] ? kbd_long_1024 : sine_long_1024;
     const float * swindow = cpe->ch[channel].ics.use_kb_window[0] ? kbd_short_128 : sine_short_128;
+    const float * pwindow = cpe->ch[channel].ics.use_kb_window[1] ? kbd_short_128 : sine_short_128;
 
-    //TODO: transitional windows
     if (cpe->ch[channel].ics.window_sequence != EIGHT_SHORT_SEQUENCE) {
         memcpy(s->output, cpe->ch[channel].saved, sizeof(float)*1024);
-        j = channel;
-        for (i = 0; i < 1024; i++, j += avctx->channels){
-            s->output[i+1024]         = audio[j] / 512.0 * lwindow[1024 - i - 1];
-            cpe->ch[channel].saved[i] = audio[j] / 512.0 * lwindow[i];
+        if(cpe->ch[channel].ics.window_sequence == LONG_STOP_SEQUENCE){
+            memset(s->output, 0, sizeof(s->output[0]) * 448);
+            for(i = 448; i < 576; i++)
+                s->output[i] = cpe->ch[channel].saved[i] * pwindow[i - 448];
+            for(i = 576; i < 704; i++)
+                s->output[i] = cpe->ch[channel].saved[i];
+        }
+        if(cpe->ch[channel].ics.window_sequence != LONG_START_SEQUENCE){
+            j = channel;
+            for (i = 0; i < 1024; i++, j += avctx->channels){
+                s->output[i+1024]         = audio[j] / 512.0 * lwindow[1024 - i - 1];
+                cpe->ch[channel].saved[i] = audio[j] / 512.0 * lwindow[i];
+            }
+        }else{
+            j = channel;
+            for(i = 0; i < 448; i++, j += avctx->channels)
+                s->output[i+1024]         = audio[j] / 512.0;
+            for(i = 448; i < 576; i++, j += avctx->channels)
+                s->output[i+1024]         = audio[j] / 512.0 * swindow[576 - i - 1];
+            memset(s->output+1024+576, 0, sizeof(s->output[0]) * 448);
+            j = channel;
+            for(i = 0; i < 1024; i++, j += avctx->channels)
+                cpe->ch[channel].saved[i] = audio[j] / 512.0;
         }
         ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs, s->output, s->tmp);
     }else{
