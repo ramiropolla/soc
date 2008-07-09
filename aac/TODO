@@ -1,7 +1,6 @@
 General:
 
-* dsputil-ize code in coupling_dependent_trans() and output_samples() as
-  appropriate
+* dsputil-ize code in dependent_coupling() and output_samples() as appropriate
 * Swap scale_bias values for C/SIMD and multiply by scale_bias as appropriate
   rather than divide
 
