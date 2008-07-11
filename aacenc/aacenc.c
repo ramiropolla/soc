@@ -209,7 +209,7 @@ static void put_audio_specific_config(AVCodecContext *avctx)
     flush_put_bits(&pb);
 }
 
-static int aac_encode_init(AVCodecContext *avctx)
+static av_cold int aac_encode_init(AVCodecContext *avctx)
 {
     AACEncContext *s = avctx->priv_data;
     int i;
@@ -649,7 +649,7 @@ static void put_bitstream_info(AVCodecContext *avctx, AACEncContext *s, const ch
     put_bits(&s->pb, 12 - padbits, 0);
 }
 
-static int aac_encode_frame(AVCodecContext *avctx,
+static av_cold int aac_encode_frame(AVCodecContext *avctx,
                             uint8_t *frame, int buf_size, void *data)
 {
     AACEncContext *s = avctx->priv_data;

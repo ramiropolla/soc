@@ -356,7 +356,7 @@ static inline float ath(float f, float add)
             + (0.6 + 0.04 * add) * 0.001 * f * f * f * f;
 }
 
-static int psy_3gpp_init(AACPsyContext *apc)
+static av_cold int psy_3gpp_init(AACPsyContext *apc)
 {
     Psy3gppContext *pctx;
     int i, g, start;
@@ -577,7 +577,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
     psy_create_output(apc, cpe, 0);
 }
 
-static void psy_3gpp_end(AACPsyContext *apc)
+static av_cold void psy_3gpp_end(AACPsyContext *apc)
 {
     av_freep(&apc->model_priv_data);
 }
@@ -607,7 +607,7 @@ static const AACPsyModel psy_models[AAC_NB_PSY_MODELS] =
     },
 };
 
-int ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx, int model, int flags,
+int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx, int model, int flags,
                     const uint8_t *bands1024, int num_bands1024,
                     const uint8_t *bands128,  int num_bands128)
 {
@@ -644,7 +644,7 @@ void ff_aac_psy_analyze(AACPsyContext *ctx, int16_t *audio, int channel, Channel
     ctx->model->process(ctx, audio, channel, cpe);
 }
 
-void ff_aac_psy_end(AACPsyContext *ctx)
+void av_cold ff_aac_psy_end(AACPsyContext *ctx)
 {
     if(ctx->model->end)
         return ctx->model->end(ctx);
