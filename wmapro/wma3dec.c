@@ -195,6 +195,19 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
 /**
  *@brief decode how the data in the frame is split into subframes
+ *       every wma frame contains the encoded data for a fixed number of samples per channel
+ *       the data for every channel might be split into several subframes
+ *       this function will reconstruct the list of subframes for every channel
+ *
+ *       If the subframes are not evenly split the algorithm estimates the channels with
+ *       the lowest number of total samples.
+ *       Afterwards for every of these channels a bit is read from the bitstream
+ *       that indicates if the channel contains a frame with the next subframesize that is going to
+ *       be read from the bitstream or not.
+ *       If a channel contains such a subframe the subframesize gets added to the channel's subframelist.
+ *       The algorithm repeats these steps until the frame is properly divided between the individual channels.
+ *
+ *
  *@param s context
  *@param gb current get bit context
  *@return 0 on success < 0 in case of an error
