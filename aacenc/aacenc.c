@@ -649,7 +649,7 @@ static void put_bitstream_info(AVCodecContext *avctx, AACEncContext *s, const ch
     put_bits(&s->pb, 12 - padbits, 0);
 }
 
-static av_cold int aac_encode_frame(AVCodecContext *avctx,
+static int aac_encode_frame(AVCodecContext *avctx,
                             uint8_t *frame, int buf_size, void *data)
 {
     AACEncContext *s = avctx->priv_data;
