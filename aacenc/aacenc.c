@@ -695,7 +695,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
     return put_bits_count(&s->pb)>>3;
 }
 
-static int aac_encode_end(AVCodecContext *avctx)
+static av_cold int aac_encode_end(AVCodecContext *avctx)
 {
     AACEncContext *s = avctx->priv_data;
 
