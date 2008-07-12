@@ -902,7 +902,7 @@ int qsort_compare(const float *a, const float *b) {
 static float medianf(float *values, int n) {
     float temp[9]; // largest n used for median calculation is 9
 
-    memcpy(values, temp, n*sizeof(float));
+    memcpy(temp, values, n * sizeof(float));
 
     qsort(temp, n, sizeof(float), qsort_compare);
 
