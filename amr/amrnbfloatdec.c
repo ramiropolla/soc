@@ -1039,6 +1039,9 @@ static void update_state(AMRContext *p) {
     p->prediction_error[2] = p->prediction_error[3];
     p->prediction_error[3] = 20.0*log10f(p->fixed_gain_factor);
 
+    // update pitch lag history
+    p->prev_pitch_lag_int = p->pitch_lag_int;
+
     // update gain history
     memmove(&p->pitch_gain[0], &p->pitch_gain[1], 4*sizeof(float));
     memmove(&p->fixed_gain[0], &p->fixed_gain[1], 4*sizeof(float));
@@ -1104,7 +1107,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 /*** adaptive code book (pitch) vector decoding ***/
 
         // find the search range
-        p->search_range_min = FFMAX(p->pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
+        p->search_range_min = FFMAX(p->prev_pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
         p->search_range_max = p->search_range_min + 9;
         if(p->search_range_max > PITCH_LAG_MAX) {
             p->search_range_max = PITCH_LAG_MAX;
