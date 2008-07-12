@@ -882,8 +882,13 @@ static inline float av_clipf(float a, float min, float max) {
  * @return a-b : the result of the comparison
  */
 
-float qsort_compare(const float *a, const float *b) {
-    return (float)(*a - *b);
+int qsort_compare(const float *a, const float *b) {
+    float diff = *a - *b;
+    if(diff > 0.0f)
+        return 1;
+    if(diff < 0.0f)
+        return -1;
+    return 0;
 }
 
 /**
