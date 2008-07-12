@@ -82,8 +82,6 @@ typedef struct AMRContext {
     DECLARE_ALIGNED_16(float,    samples_in[LP_FILTER_ORDER + AMR_BLOCK_SIZE]); ///< floating point samples
     DECLARE_ALIGNED_16(int16_t, samples_out[LP_FILTER_ORDER + AMR_BLOCK_SIZE]); ///< 16-bit signed int samples
 
-    uint8_t                  remainder_bits; ///< bits to skip when decoding the next frame
-
 } AMRContext;
 
 
@@ -163,7 +161,7 @@ enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size, enum Mode 
 
     // initialise get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
-    skip_bits(&p->gb, 1 + p->remainder_bits);
+    skip_bits(&p->gb, 1);
     // set the mode
     mode = get_bits(&p->gb ,4);
     // set the bad frame indicator based on the quality bit
@@ -1301,10 +1299,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
     /* Report how many samples we got */
     *data_size = AMR_BLOCK_SIZE * sizeof(int16_t);
 
-    p->remainder_bits = mode_bits[p->cur_frame_mode]&3;
-
     /* Return the amount of bytes consumed if everything was ok */
-    return mode_bits[p->cur_frame_mode]>>3;
+    return (mode_bits[p->cur_frame_mode] + 15)>>3; // +7 for rounding and +8 for TOC
 }
 
 
