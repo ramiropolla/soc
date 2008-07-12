@@ -1297,7 +1297,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 
         // convert float samples to 16-bit integer
         for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
-            p->samples_in[i] += p->add_bias;
+            p->samples_in[i] = p->samples_in[i] * p->mul_bias + p->add_bias;
         }
         p->dsp.float_to_int16(p->samples_out, p->samples_in, AMR_SUBFRAME_SIZE);
         memcpy(&buf_out[subframe*AMR_SUBFRAME_SIZE], p->samples_out, AMR_SUBFRAME_SIZE*sizeof(int16_t));
