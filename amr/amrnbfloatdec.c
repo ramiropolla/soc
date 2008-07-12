@@ -159,6 +159,9 @@ enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size, enum Mode 
     int i;
     const AMROrder *order;
 
+    // reset amr_prms
+    memset(p->amr_prms, 0, PRMS_MODE_122 * sizeof(int16_t));
+
     // initialise get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
     skip_bits(&p->gb, 1);
