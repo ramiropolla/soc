@@ -33,6 +33,7 @@
 
 #include "avcodec.h"
 #include "bitstream.h"
+#include "libavutil/common.h"
 #include "dsputil.h"
 #include "amrnbfloatdata.h"
 
