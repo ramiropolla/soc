@@ -1028,6 +1028,9 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc, float *sample
  */
 
 static void update_state(AMRContext *p) {
+    // update the previous frame's fourth subframe LSP vector
+    memcpy(p->prev_lsp_sub4, p->lsp[3], LP_FILTER_ORDER * sizeof(float));
+
     // update the excitation buffer moving the current values into the buffer
     // pushing out those no longer needed
     memmove(&p->excitation_buf[0], &p->excitation_buf[AMR_SUBFRAME_SIZE],
