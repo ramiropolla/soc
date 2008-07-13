@@ -80,8 +80,8 @@ typedef struct AMRContext {
     DSPContext                          dsp;
     float                          add_bias;
     float                          mul_bias;
-    DECLARE_ALIGNED_16(float,    samples_in[LP_FILTER_ORDER + AMR_BLOCK_SIZE]); ///< floating point samples
-    DECLARE_ALIGNED_16(int16_t, samples_out[LP_FILTER_ORDER + AMR_BLOCK_SIZE]); ///< 16-bit signed int samples
+    DECLARE_ALIGNED_16(float,    samples_in[LP_FILTER_ORDER + AMR_SUBFRAME_SIZE]); ///< floating point samples
+    DECLARE_ALIGNED_16(int16_t, samples_out[                  AMR_SUBFRAME_SIZE]); ///< 16-bit signed int samples
 
 } AMRContext;
 
