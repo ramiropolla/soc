@@ -1045,8 +1045,8 @@ static void update_state(AMRContext *p) {
     p->ir_filter_strength[0] = p->ir_filter_strength[1];
 
     // update speech sample history
-    memmove(&p->samples_in[0], &p->samples_in[LP_FILTER_ORDER],
-        AMR_SUBFRAME_SIZE*sizeof(float));
+    memmove(&p->samples_in[0], &p->samples_in[AMR_SUBFRAME_SIZE],
+        LP_FILTER_ORDER*sizeof(float));
 }
 
 /*** end of update functions ***/
