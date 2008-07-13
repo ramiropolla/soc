@@ -28,7 +28,7 @@
 #ifndef FFMPEG_AMRNBFLOATDATA_H
 #define FFMPEG_AMRNBFLOATDATA_H
 
-#include <inttypes.h>
+#include <stdint.h>
 #include <math.h>
 
 // general definitions
