@@ -865,15 +865,6 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error, 
 
 /*** pre-processing functions ***/
 
-static inline float av_clipf(float a, float min, float max) {
-    if(a>max)
-        return max;
-    else if(a<min)
-        return min;
-    else
-        return a;
-}
-
 /**
  * Comparison function for use with qsort
  *
