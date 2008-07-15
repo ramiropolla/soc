@@ -544,7 +544,7 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
         for(j = 0; j < 4; j++) {
             if(pcs->che_type[j][i]) {
                 if(!ac->che[j][i] && !(ac->che[j][i] = av_mallocz(sizeof(ChannelElement))))
-                    return -1;
+                    return AVERROR(ENOMEM);
                 if(j != ID_CCE) {
                     ac->output_data[channels++] = ac->che[j][i]->ch[0].ret;
                     ac->che[j][i]->ch[0].mixing_gain = 1.0f;
@@ -568,7 +568,7 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     if(channels > avctx->channels)
         av_freep(&ac->interleaved_output);
     if(!ac->interleaved_output && !(ac->interleaved_output = av_malloc(channels * 1024 * sizeof(float))))
-        return -1;
+        return AVERROR(ENOMEM);
 
     ac->mm[MIXDOWN_FRONT] = ac->mm[MIXDOWN_BACK] = ac->mm[MIXDOWN_CENTER] = NULL;
 
@@ -733,7 +733,7 @@ static int program_config_element_default(AACContext *ac, int channels)
  * Parse GA "General Audio" specific configuration; reference: table 4.1.
  */
 static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
-    int ext;
+    int ext, ret;
 
     if(get_bits1(gb)) {  // frameLengthFlag
         av_log(ac->avccontext, AV_LOG_ERROR, "960/120 MDCT window is not supported.\n");
@@ -750,10 +750,10 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
 
     if (channels == 0) {
         skip_bits(gb, 4);  // element_instance_tag
-        if(program_config_element(ac, gb) < 0)
-            return -1;
+        if((ret = program_config_element(ac, gb)))
+            return ret;
     } else {
-        if(program_config_element_default(ac, channels) < 0)
+        if((ret = program_config_element_default(ac, channels)))
             return -1;
     }
 
@@ -1230,7 +1230,7 @@ static int decode_gain_control(AACContext * ac, GetBitContext * gb, SingleChanne
     int bd, wd, ad;
     ScalableSamplingRate * ssr = sce->ssr;
     if (!ssr && !(ssr = sce->ssr = av_mallocz(sizeof(ScalableSamplingRate))))
-        return -1;
+        return AVERROR(ENOMEM);
     ssr->max_band = get_bits(gb, 2);
     for (bd = 0; bd < ssr->max_band; bd++) {
         for (wd = 0; wd < gain_mode[mode][0]; wd++) {
@@ -1418,7 +1418,8 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
             decode_tns(ac, gb, ics, tns);
         if (get_bits1(gb)) {
 #ifdef AAC_SSR
-            if (decode_gain_control(ac, gb, sce)) return -1;
+            int ret;
+            if ((ret = decode_gain_control(ac, gb, sce))) return ret;
 #else
             av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supported.\n");
             return -1;
@@ -1500,7 +1501,7 @@ static void apply_intensity_stereo(AACContext * ac, ChannelElement * cpe) {
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
-    int i;
+    int i, ret;
     ChannelElement * cpe;
 
     cpe = ac->che[ID_CPE][tag];
@@ -1518,10 +1519,10 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
     } else {
         cpe->ms.present = 0;
     }
-    if (decode_ics(ac, gb, cpe->common_window, 0, &cpe->ch[0]))
-        return -1;
-    if (decode_ics(ac, gb, cpe->common_window, 0, &cpe->ch[1]))
-        return -1;
+    if ((ret = decode_ics(ac, gb, cpe->common_window, 0, &cpe->ch[0])))
+        return ret;
+    if ((ret = decode_ics(ac, gb, cpe->common_window, 0, &cpe->ch[1])))
+        return ret;
 
     if (cpe->common_window)
         apply_mid_side_stereo(ac, cpe);
@@ -1539,7 +1540,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
  */
 static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
     int num_gain = 0;
-    int c, g, sfb;
+    int c, g, sfb, ret;
     int sign;
     float scale;
     SingleChannelElement * sce;
@@ -1567,8 +1568,8 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
     sign = get_bits(gb, 1);
     scale = pow(2., pow(2., get_bits(gb, 2) - 3));
 
-    if (decode_ics(ac, gb, 0, 0, sce))
-        return -1;
+    if ((ret = decode_ics(ac, gb, 0, 0, sce)))
+        return ret;
 
     for (c = 0; c < num_gain; c++) {
         int cge = 1;
@@ -1810,14 +1811,14 @@ static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, 
     ff_mdct_calc(ac->mdct_ltp, out, buf, in); // Using in as buffer for MDCT.
 }
 
-static void apply_ltp(AACContext * ac, SingleChannelElement * sce) {
+static int apply_ltp(AACContext * ac, SingleChannelElement * sce) {
     const LongTermPrediction * ltp = &sce->ics.ltp;
     const uint16_t * offsets = sce->ics.swb_offset;
     int i, sfb;
     if (!ltp->present)
-        return;
-    if (!sce->ltp_state)
-        sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t));
+        return 0;
+    if (!sce->ltp_state && !(sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t))))
+        return AVERROR(ENOMEM);
     if (sce->ics.window_sequence != EIGHT_SHORT_SEQUENCE && ac->is_saved) {
         float x_est[2 * 1024], X_est[2 * 1024];
         for (i = 0; i < 2 * 1024; i++)
@@ -1831,6 +1832,7 @@ static void apply_ltp(AACContext * ac, SingleChannelElement * sce) {
                 for (i = offsets[sfb]; i < offsets[sfb + 1]; i++)
                     sce->coeffs[i] += X_est[i];
     }
+    return 0;
 }
 
 
@@ -1851,10 +1853,10 @@ static inline int16_t ltp_round(float x) {
 }
 
 
-static void update_ltp(AACContext * ac, SingleChannelElement * sce) {
+static int update_ltp(AACContext * ac, SingleChannelElement * sce) {
     int i;
-    if (!sce->ltp_state)
-        sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t));
+    if (!sce->ltp_state && !(sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t))))
+        return AVERROR(ENOMEM);
     if (ac->is_saved) {
         for (i = 0; i < 1024; i++) {
             sce->ltp_state[i] = sce->ltp_state[i + 1024];
@@ -1863,6 +1865,7 @@ static void update_ltp(AACContext * ac, SingleChannelElement * sce) {
             //sce->ltp_state[i + 3 * 1024] = 0;
         }
     }
+    return 0;
 }
 #endif /* AAC_LTP */
 
@@ -2130,7 +2133,7 @@ static void apply_channel_coupling(AACContext * ac, ChannelElement * cc,
 /**
  * Convert spectral data to float samples, applying all supported tools as appropriate.
  */
-static void spectral_to_sample(AACContext * ac) {
+static int spectral_to_sample(AACContext * ac) {
     int i, j;
     for (i = 0; i < MAX_TAGID; i++) {
         for(j = 0; j < 4; j++) {
@@ -2140,9 +2143,11 @@ static void spectral_to_sample(AACContext * ac) {
                     apply_channel_coupling(ac, che, dependent_coupling);
 #ifdef AAC_LTP
                 if (ac->audioObjectType == AOT_AAC_LTP) {
-                    apply_ltp(ac, &che->ch[0]);
-                    if(j == ID_CPE)
-                        apply_ltp(ac, &che->ch[1]);
+                    int ret;
+                    if((ret = apply_ltp(ac, &che->ch[0])))
+                        return ret;
+                    if(j == ID_CPE && (ret = apply_ltp(ac, &che->ch[1])))
+                        return ret;
                 }
 #endif /* AAC_LTP */
                 if(               che->ch[0].tns.present)
@@ -2168,14 +2173,17 @@ static void spectral_to_sample(AACContext * ac) {
                     apply_channel_coupling(ac, che, independent_coupling);
 #ifdef AAC_LTP
                 if (ac->audioObjectType == AOT_AAC_LTP) {
-                    update_ltp(ac, &che->ch[0]);
-                    if(j == ID_CPE)
-                        update_ltp(ac, &che->ch[1]);
+                    int ret;
+                    if((ret = update_ltp(ac, &che->ch[0])))
+                        return ret;
+                    if(j == ID_CPE && (ret = update_ltp(ac, &che->ch[1])))
+                        return ret;
                 }
 #endif /* AAC_LTP */
             }
         }
     }
+    return 0;
 }
 
 /**
@@ -2311,10 +2319,11 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         }
 
         if(err)
-            return -1;
+            return err;
     }
 
-    spectral_to_sample(ac);
+    if((err = spectral_to_sample(ac)))
+        return err;
     output_samples(avccontext, data, data_size);
 
     return buf_size;
