@@ -513,7 +513,7 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     AVCodecContext *avctx = ac->avccontext;
     ProgramConfig * pcs = &ac->pcs;
     int i, j, channels = 0;
-    float a, b, *ilo_tmp;
+    float a, b;
     ChannelElement *mixdown[3] = { NULL, NULL, NULL };
 
     static const float mixdowncoeff[4] = {
