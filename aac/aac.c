@@ -2271,10 +2271,8 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
                        transfer the LFE[0] element to SCE[1] */
                     ac->che[ID_SCE][tag] = ac->che[ID_LFE][0];
                     ac->che[ID_LFE][0] = NULL;
-                } else {
-                    err = 1;
+                } else
                     break;
-                }
             }
             err = decode_ics(ac, &gb, 0, 0, &ac->che[ID_SCE][tag]->ch[0]);
             break;
