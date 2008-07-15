@@ -543,8 +543,8 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     for(i = 0; i < MAX_TAGID; i++) {
         for(j = 0; j < 4; j++) {
             if(pcs->che_type[j][i]) {
-                if(!ac->che[j][i])
-                    ac->che[j][i] = av_mallocz(sizeof(ChannelElement));
+                if(!ac->che[j][i] && !(ac->che[j][i] = av_mallocz(sizeof(ChannelElement))))
+                    return -1;
                 if(j != ID_CCE) {
                     ac->output_data[channels++] = ac->che[j][i]->ch[0].ret;
                     ac->che[j][i]->ch[0].mixing_gain = 1.0f;
@@ -567,8 +567,8 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     // allocate appropriately aligned buffer for interleaved output
     if(channels > avctx->channels)
         av_freep(&ac->interleaved_output);
-    if(!ac->interleaved_output)
-        ac->interleaved_output = av_malloc(channels * 1024 * sizeof(float));
+    if(!ac->interleaved_output && !(ac->interleaved_output = av_malloc(channels * 1024 * sizeof(float))))
+        return -1;
 
     ac->mm[MIXDOWN_FRONT] = ac->mm[MIXDOWN_BACK] = ac->mm[MIXDOWN_CENTER] = NULL;
 
@@ -1226,8 +1226,8 @@ static int decode_gain_control(AACContext * ac, GetBitContext * gb, SingleChanne
     const int mode = sce->ics.window_sequence;
     int bd, wd, ad;
     ScalableSamplingRate * ssr = sce->ssr;
-    if (!ssr)
-        ssr = sce->ssr = av_mallocz(sizeof(ScalableSamplingRate));
+    if (!ssr && !(ssr = sce->ssr = av_mallocz(sizeof(ScalableSamplingRate))))
+        return -1;
     ssr->max_band = get_bits(gb, 2);
     for (bd = 0; bd < ssr->max_band; bd++) {
         for (wd = 0; wd < gain_mode[mode][0]; wd++) {
