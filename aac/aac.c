@@ -923,7 +923,7 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
         352);
 
 #ifdef AAC_LTP
-        ff_mdct_init(ac->mdct_ltp, 11, 0);
+    ff_mdct_init(ac->mdct_ltp, 11, 0);
 #endif /* AAC_LTP */
 #ifdef AAC_SSR
     if (ac->audioObjectType == AOT_AAC_SSR) {
@@ -2332,7 +2332,7 @@ static av_cold int aac_decode_close(AVCodecContext * avccontext) {
     ff_mdct_end(&ac->mdct);
     ff_mdct_end(&ac->mdct_small);
 #ifdef AAC_LTP
-        ff_mdct_end(ac->mdct_ltp);
+    ff_mdct_end(ac->mdct_ltp);
 #endif /* AAC_LTP */
     av_freep(&ac->interleaved_output);
     return 0 ;
