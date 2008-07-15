@@ -567,7 +567,7 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     // allocate appropriately aligned buffer for interleaved output
     if(!ac->interleaved_output)
         ac->interleaved_output = av_malloc(channels * 1024 * sizeof(float));
-    else if(channels != avctx->channels) {
+    else if(channels > avctx->channels) {
         av_free(ac->interleaved_output);
         ac->interleaved_output = av_malloc(channels * 1024 * sizeof(float));
     }
