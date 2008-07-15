@@ -923,10 +923,10 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
         352);
 
 #ifdef AAC_LTP
-    ff_mdct_init(ac->mdct_ltp, 11, 0);
+    ff_mdct_init(&ac->mdct_ltp, 11, 0);
 #endif /* AAC_LTP */
 #ifdef AAC_SSR
-    if (ac->audioObjectType == AOT_AAC_SSR) {
+    if (ac->m4ac.object_type == AOT_AAC_SSR) {
         ff_mdct_init(&ac->mdct, 9, 1);
         ff_mdct_init(&ac->mdct_small, 6, 1);
         // window initialization
@@ -966,7 +966,7 @@ static void data_stream_element(AACContext * ac, GetBitContext * gb) {
 #ifdef AAC_LTP
 static void decode_ltp(AACContext * ac, GetBitContext * gb, uint8_t max_sfb, LongTermPrediction * ltp) {
     int sfb;
-    if (ac->audioObjectType == AOT_ER_AAC_LD) {
+    if (ac->m4ac.object_type == AOT_ER_AAC_LD) {
         assert(0);
     } else {
         ltp->lag = get_bits(gb, 11);
@@ -1032,7 +1032,7 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
         ics->tns_max_bands = tns_max_bands_1024[ac->m4ac.sampling_index];
         if (get_bits1(gb)) {
 #ifdef AAC_LTP
-            if (ac->audioObjectType == AOT_AAC_MAIN) {
+            if (ac->m4ac.object_type == AOT_AAC_MAIN) {
                 assert(0);
             } else {
                 if ((ics->ltp.present = get_bits(gb, 1))) {
@@ -1792,7 +1792,6 @@ static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, 
     const float * lwindow_prev = ics->use_kb_window[1] ? kbd_long_1024 : sine_long_1024;
     const float * swindow_prev = ics->use_kb_window[1] ? kbd_short_128 : sine_short_128;
     float * buf = ac->buf_mdct;
-    int i;
     assert(ics->window_sequence != EIGHT_SHORT_SEQUENCE);
     if (ics->window_sequence != LONG_STOP_SEQUENCE) {
         vector_fmul_dst(ac, buf, in, lwindow_prev, 1024);
@@ -1808,7 +1807,7 @@ static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, 
         ac->dsp.vector_fmul_reverse(buf + 1024 + 448, in + 1024 + 448, swindow, 128);
         memset(buf + 1024 + 576, 0, 448 * sizeof(float));
     }
-    ff_mdct_calc(ac->mdct_ltp, out, buf, in); // Using in as buffer for MDCT.
+    ff_mdct_calc(&ac->mdct_ltp, out, buf, in); // Using in as buffer for MDCT.
 }
 
 static int apply_ltp(AACContext * ac, SingleChannelElement * sce) {
@@ -1942,7 +1941,6 @@ static void windowing_and_imdct_ssr(AACContext * ac, SingleChannelElement * sce,
     const float * swindow_prev = ics->use_kb_window[1] ? kbd_short_128 : sine_short_128;
     float * buf = ac->buf_mdct;
     if (ics->window_sequence != EIGHT_SHORT_SEQUENCE) {
-        int i;
         ff_imdct_calc(&ac->mdct, buf, in, out);
         if (ics->window_sequence != LONG_STOP_SEQUENCE) {
             vector_fmul_dst(ac, out, buf, lwindow_prev, 256);
@@ -2142,7 +2140,7 @@ static int spectral_to_sample(AACContext * ac) {
                 if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 0))
                     apply_channel_coupling(ac, che, dependent_coupling);
 #ifdef AAC_LTP
-                if (ac->audioObjectType == AOT_AAC_LTP) {
+                if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
                     if((ret = apply_ltp(ac, &che->ch[0])))
                         return ret;
@@ -2157,7 +2155,7 @@ static int spectral_to_sample(AACContext * ac) {
                 if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 1))
                     apply_channel_coupling(ac, che, dependent_coupling);
 #ifdef AAC_SSR
-                if (ac->audioObjectType == AOT_AAC_SSR) {
+                if (ac->m4ac.object_type == AOT_AAC_SSR) {
                     apply_ssr(ac, &che->ch[0]);
                     if(j == ID_CPE)
                         apply_ssr(ac, &che->ch[1]);
@@ -2172,7 +2170,7 @@ static int spectral_to_sample(AACContext * ac) {
                 if(j == ID_CCE && che->coup.is_indep_coup && (che->coup.domain == 1))
                     apply_channel_coupling(ac, che, independent_coupling);
 #ifdef AAC_LTP
-                if (ac->audioObjectType == AOT_AAC_LTP) {
+                if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
                     if((ret = update_ltp(ac, &che->ch[0])))
                         return ret;
@@ -2341,7 +2339,7 @@ static av_cold int aac_decode_close(AVCodecContext * avccontext) {
     ff_mdct_end(&ac->mdct);
     ff_mdct_end(&ac->mdct_small);
 #ifdef AAC_LTP
-    ff_mdct_end(ac->mdct_ltp);
+    ff_mdct_end(&ac->mdct_ltp);
 #endif /* AAC_LTP */
     av_freep(&ac->interleaved_output);
     return 0 ;
