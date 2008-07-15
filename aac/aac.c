@@ -565,12 +565,10 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
     }
 
     // allocate appropriately aligned buffer for interleaved output
+    if(channels > avctx->channels)
+        av_freep(&ac->interleaved_output);
     if(!ac->interleaved_output)
         ac->interleaved_output = av_malloc(channels * 1024 * sizeof(float));
-    else if(channels > avctx->channels) {
-        av_free(ac->interleaved_output);
-        ac->interleaved_output = av_malloc(channels * 1024 * sizeof(float));
-    }
 
     ac->mm[MIXDOWN_FRONT] = ac->mm[MIXDOWN_BACK] = ac->mm[MIXDOWN_CENTER] = NULL;
 
