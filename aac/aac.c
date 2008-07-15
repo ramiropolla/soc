@@ -754,7 +754,7 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
             return ret;
     } else {
         if((ret = program_config_element_default(ac, channels)))
-            return -1;
+            return ret;
     }
 
     if (ext) {
