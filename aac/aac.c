@@ -542,7 +542,8 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
 
     for(i = 0; i < MAX_TAGID; i++) {
         for(j = 0; j < 4; j++) {
-            if(pcs->che_type[j][i] && !ac->che[j][i]) {
+            if(pcs->che_type[j][i]) {
+                if(!ac->che[j][i])
                 ac->che[j][i] = av_mallocz(sizeof(ChannelElement));
                 if(j != ID_CCE) {
                     ac->output_data[channels++] = ac->che[j][i]->ch[0].ret;
