@@ -421,7 +421,7 @@ typedef struct {
     MDCTContext mdct;
     MDCTContext mdct_small;
 #ifdef AAC_LTP
-    MDCTContext *mdct_ltp;
+    MDCTContext mdct_ltp;
 #endif /* AAC_LTP */
     DSPContext dsp;
 #ifdef AAC_SSR
@@ -922,6 +922,9 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
         code, sizeof(code[0]), sizeof(code[0]),
         352);
 
+#ifdef AAC_LTP
+        ff_mdct_init(ac->mdct_ltp, 11, 0);
+#endif /* AAC_LTP */
 #ifdef AAC_SSR
     if (ac->audioObjectType == AOT_AAC_SSR) {
         ff_mdct_init(&ac->mdct, 9, 1);
@@ -1790,10 +1793,6 @@ static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, 
     float * buf = ac->buf_mdct;
     int i;
     assert(ics->window_sequence != EIGHT_SHORT_SEQUENCE);
-    if (!ac->mdct_ltp) {
-        ac->mdct_ltp = av_malloc(sizeof(MDCTContext));
-        ff_mdct_init(ac->mdct_ltp, 11, 0);
-    }
     if (ics->window_sequence != LONG_STOP_SEQUENCE) {
         vector_fmul_dst(ac, buf, in, lwindow_prev, 1024);
     } else {
@@ -2333,10 +2332,7 @@ static av_cold int aac_decode_close(AVCodecContext * avccontext) {
     ff_mdct_end(&ac->mdct);
     ff_mdct_end(&ac->mdct_small);
 #ifdef AAC_LTP
-    if (ac->mdct_ltp) {
         ff_mdct_end(ac->mdct_ltp);
-        av_free(ac->mdct_ltp);
-    }
 #endif /* AAC_LTP */
     av_freep(&ac->interleaved_output);
     return 0 ;
