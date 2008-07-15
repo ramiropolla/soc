@@ -434,7 +434,7 @@ typedef struct {
      * @defgroup output   Members used for output interleaving and down-mixing.
      * @{
      */
-    DECLARE_ALIGNED_16(float, interleaved_output[MAX_CHANNELS * 1024]); ///< Interim buffer for interleaving PCM samples.
+    float *interleaved_output;                        ///< Interim buffer for interleaving PCM samples.
     float *output_data[MAX_CHANNELS];                 ///< Points to each element's 'ret' buffer (PCM output).
     ChannelElement *mm[3];                            ///< Center/Front/Back channel elements to use for matrix mix-down.
     float add_bias;                                   ///< offset for dsp.float_to_int16
@@ -562,6 +562,14 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
             } else
                 che_freep(&ac->che[j][i]);
         }
+    }
+
+    // allocate appropriately aligned buffer for interleaved output
+    if(!ac->interleaved_output)
+        ac->interleaved_output = av_malloc(channels * 1024 * sizeof(float));
+    else if(channels != avctx->channels) {
+        av_free(ac->interleaved_output);
+        ac->interleaved_output = av_malloc(channels * 1024 * sizeof(float));
     }
 
     ac->mm[MIXDOWN_FRONT] = ac->mm[MIXDOWN_BACK] = ac->mm[MIXDOWN_CENTER] = NULL;
@@ -2332,6 +2340,7 @@ static av_cold int aac_decode_close(AVCodecContext * avccontext) {
         av_free(ac->mdct_ltp);
     }
 #endif /* AAC_LTP */
+    av_freep(&ac->interleaved_output);
     return 0 ;
 }
 
