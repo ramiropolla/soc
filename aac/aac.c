@@ -2227,7 +2227,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
             }
     }
 
-    i = 1024 * avccontext->channels * sizeof(uint16_t);
+    i = 1024 * avccontext->channels * sizeof(int16_t);
     if(*data_size < i)
         return -1;
     *data_size = i;
