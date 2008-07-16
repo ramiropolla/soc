@@ -2193,7 +2193,7 @@ static int spectral_to_sample(AACContext * ac) {
  */
 static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
     AACContext * ac = avccontext->priv_data;
-    int i, ch;
+    int i;
     float *c, *l, *r, *sl, *sr, *out;
 
     if (!ac->is_saved) {
@@ -2237,7 +2237,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
             }
         }
 
-    ac->dsp.float_to_int16(data, ac->interleaved_output, 1024 * avccontext->channels);
+        ac->dsp.float_to_int16(data, ac->interleaved_output, 1024 * avccontext->channels);
     } else {
         ac->dsp.float_to_int16_interleave(data, ac->output_data, 1024, avccontext->channels);
     }
