@@ -2220,7 +2220,7 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
         if(avccontext->channels == 2) {
             if(ac->pcs.pseudo_surround) {
                 for(i = 0; i < 1024; i++) {
-                    *out++ = *l++ + *c   - *sl   - *sr   - ac->add_bias * 3;
+                    *out++ = *l++ + *c   - *sl   - *sr   + ac->add_bias;
                     *out++ = *r++ + *c++ + *sl++ + *sr++ - ac->add_bias * 3;
                 }
             } else {
