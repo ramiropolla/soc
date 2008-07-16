@@ -2202,6 +2202,11 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
         return 0;
     }
 
+    i = 1024 * avccontext->channels * sizeof(int16_t);
+    if(*data_size < i)
+        return -1;
+    *data_size = i;
+
     if(ac->mm[MIXDOWN_CENTER]) {
         /* matrix mix-down */
         l   = ac->mm[MIXDOWN_FRONT ]->ch[0].ret;
@@ -2232,19 +2237,11 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
             }
         }
 
+    ac->dsp.float_to_int16(data, ac->interleaved_output, 1024 * avccontext->channels);
     } else {
-        for(i = 0; i < 1024; i++)
-            for(ch = 0; ch < avccontext->channels; ch++) {
-                ac->interleaved_output[i * avccontext->channels + ch] = ac->output_data[ch][i];
-            }
+        ac->dsp.float_to_int16_interleave(data, ac->output_data, 1024, avccontext->channels);
     }
 
-    i = 1024 * avccontext->channels * sizeof(int16_t);
-    if(*data_size < i)
-        return -1;
-    *data_size = i;
-
-    ac->dsp.float_to_int16(data, ac->interleaved_output, 1024 * avccontext->channels);
     return 0;
 }
 
