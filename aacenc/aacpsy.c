@@ -422,6 +422,28 @@ static inline float modify_thr(float thr, float r){
     return t*t*t*t;
 }
 
+static void calc_pe(Psy3gppBand *band, int band_width)
+{
+    if(band->energy <= band->thr){
+        band->a  = 0.0f;
+        band->b  = 0.0f;
+        band->nl = 0.0f;
+        return;
+    }
+    band->nl = band->ffac / pow(band->energy/band_width, 0.25);
+    if(band->energy >= band->thr * 8.0){
+        band->a = band->nl * log2(band->energy);
+        band->b = band->nl;
+    }else{
+        band->a = band->nl * (PSY_3GPP_C2 + PSY_3GPP_C3 * log2(band->energy));
+        band->b = band->nl * PSY_3GPP_C3;
+    }
+    band->pe = band->a - band->b * log2(band->thr);
+    band->min_snr = 1.0 / (pow(2.0, band->pe / band_width) - 1.5);
+    if(band->min_snr < 1.26f)     band->min_snr = 1.26f;
+    if(band->min_snr > 316.2277f) band->min_snr = 316.2277f;
+}
+
 /**
  * Determine scalefactors and prepare coefficients for encoding.
  * @see 3GPP TS26.403 5.4
@@ -464,23 +486,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
                 for(i = 0; i < apc->bands1024[g]; i++)
                     ffac += sqrt(FFABS(cpe->ch[ch].coeffs[start+i]));
                 pctx->band[ch][g].ffac = ffac * 32.0;
-
-                pctx->band[ch][g].nl = pctx->band[ch][g].ffac / pow(pctx->band[ch][g].energy/apc->bands1024[g], 0.25);
-                if(pctx->band[ch][g].energy / pctx->band[ch][g].thr >= 8.0){
-                    pctx->band[ch][g].a = pctx->band[ch][g].nl * log2(pctx->band[ch][g].energy);
-                    pctx->band[ch][g].b = pctx->band[ch][g].nl;
-                }else{
-                    pctx->band[ch][g].a = pctx->band[ch][g].nl * (PSY_3GPP_C2 + PSY_3GPP_C3 * log2(pctx->band[ch][g].energy));
-                    pctx->band[ch][g].b = pctx->band[ch][g].nl * PSY_3GPP_C3;
-                }
-                pctx->band[ch][g].pe = pctx->band[ch][g].a - pctx->band[ch][g].b * log2(pctx->band[ch][g].thr);
-                pctx->band[ch][g].min_snr = 1.0 / (pow(2.0, pctx->band[ch][g].pe / apc->bands1024[g]) - 1.5);
-                if(pctx->band[ch][g].min_snr < 1.26f)     pctx->band[ch][g].min_snr = 1.26f;
-                if(pctx->band[ch][g].min_snr > 316.2277f) pctx->band[ch][g].min_snr = 316.2277f;
-
-                cpe->ch[ch].zeroes[0][g] = 0;
-            }else{
-                cpe->ch[ch].zeroes[0][g] = 1;
+                calc_pe(&pctx->band[ch][g], apc->bands1024[g]);
             }
             pctx->a[ch]   += pctx->band[ch][g].a;
             pctx->b[ch]   += pctx->band[ch][g].b;
