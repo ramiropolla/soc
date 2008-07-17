@@ -177,7 +177,7 @@ static void mxf_generate_uuid(AVFormatContext *s, UID uuid)
 
     for (i = 0; i < 16; i++) {
         rand_num = av_random(&mxf->random_state);
-        rand_num = rand_num%256 + 1;
+        rand_num = rand_num & 0x00ff;
 
         //the 7th byte is version according to ISO 11578
         if (i == 6) {
@@ -190,7 +190,7 @@ static void mxf_generate_uuid(AVFormatContext *s, UID uuid)
             rand_num &= 0x3f;
             rand_num |= 0x80;
         }
-        bytestream_put_byte(&uuid, rand_num);
+        uuid[i] = rand_num;
     }
 }
 
