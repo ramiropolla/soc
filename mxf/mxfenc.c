@@ -200,17 +200,17 @@ static void mxf_generate_umid(AVFormatContext *s, UMID umid)
     mxf_generate_uuid(s, umid + 16);
 }
 
-static int mxf_generate_reference(AVFormatContext *s, UID *refs, int ref_count)
+static int mxf_generate_reference(AVFormatContext *s, UID **refs, int ref_count)
 {
     int i;
     UID *p;
-    refs = av_mallocz(ref_count * sizeof(UID));
+    *refs = av_mallocz(ref_count * sizeof(UID));
     if (!refs)
         return -1;
-    p = refs;
+    p = *refs;
     for (i = 0; i < ref_count; i++) {
         mxf_generate_uuid(s, *p);
-        p ++;
+        p += 16;
     }
     p = 0;
     return 0;
@@ -348,13 +348,13 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     put_be16(dyn_bc, 1);
 
     //write identification_refs
-    if (mxf_generate_reference(s, set_ref->identification, 1) < 0)
+    if (mxf_generate_reference(s, &set_ref->identification, 1) < 0)
         return -1;
     mxf_write_local_tag(dyn_bc, 16 + 8, 0x3B06);
     mxf_write_reference(dyn_bc, 1, set_ref->identification);
 
     //write content_storage_refs
-    if (mxf_generate_reference(s, set_ref->content_storage, 1) < 0)
+    if (mxf_generate_reference(s, &set_ref->content_storage, 1) < 0)
         return -1;
     mxf_write_local_tag(dyn_bc, 16, 0x3B03);
     put_buffer(dyn_bc, *set_ref->content_storage, 16);
@@ -363,7 +363,7 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     put_buffer(dyn_bc, op1a_ul, 16);
 
     //write essence_container_refs
-    if (mxf_generate_reference(s, set_ref->essence_container, 1) < 0)
+    if (mxf_generate_reference(s, &set_ref->essence_container, 1) < 0)
         return -1;
     mxf_write_local_tag(dyn_bc, 16 + 8, 0x3B0A);
     mxf_write_reference(dyn_bc, 1, set_ref->essence_container);
@@ -464,7 +464,7 @@ static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
     put_buffer(dyn_bc, *set_ref->content_storage, 16);
 
     //write package reference
-    if (mxf_generate_reference(s, set_ref->package, 2) < 0)
+    if (mxf_generate_reference(s, &set_ref->package, 2) < 0)
         return -1;
     mxf_write_local_tag(dyn_bc, 16 * 2 + 8, 0x1901);
     mxf_write_reference(dyn_bc, 2, set_ref->package);
@@ -519,7 +519,7 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     put_buffer(dyn_bc, 0, 8);
 
     //write track refs
-    if (mxf_generate_reference(s, set_ref->track, s->nb_streams) < 0)
+    if (mxf_generate_reference(s, &set_ref->track, s->nb_streams) < 0)
         return -1;
     mxf_write_local_tag(dyn_bc, s->nb_streams * 16 + 8, 0x4403);
     mxf_write_reference(dyn_bc, s->nb_streams, set_ref->track);
@@ -610,7 +610,7 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     put_be64(dyn_bc, 0);
 
     //write sequence refs
-    if (mxf_generate_reference(s, set_ref->sequence[stream_index], 1) < 0)
+    if (mxf_generate_reference(s, &set_ref->sequence[stream_index], 1) < 0)
         return -1;
     mxf_write_local_tag(dyn_bc, 16, 0x4803);
     put_buffer(dyn_bc, *set_ref->sequence[stream_index], 16);
@@ -657,7 +657,7 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     put_be32(dyn_bc, st->duration);
 
     //write structural component
-    if (mxf_generate_reference(s, set_ref->structural_component[stream_index], 1) < 0)
+    if (mxf_generate_reference(s, &set_ref->structural_component[stream_index], 1) < 0)
         return -1;
     mxf_write_local_tag(dyn_bc, 16 + 8, 0x1001);
     mxf_write_reference(dyn_bc, 1, set_ref->structural_component[stream_index]);
