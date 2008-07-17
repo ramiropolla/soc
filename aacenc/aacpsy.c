@@ -512,7 +512,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
             float m, s;
 
             cpe->ms.mask[0][g] = 0;
-            if(pctx->band[0][g].energy + pctx->band[1][g].energy == 0.0)
+            if(pctx->band[0][g].energy == 0.0 || pctx->band[1][g].energy == 0.0)
                 continue;
             for(i = 0; i < cpe->ch[0].ics.swb_sizes[g]; i++){
                 m = (cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i]) / 2.0;
@@ -521,9 +521,14 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
                 en_s += s*s;
             }
             l1 = FFMIN(pctx->band[0][g].thr, pctx->band[1][g].thr);
-            l1 = l1*l1 / (en_m + en_s);
-            if(l1 >= (pctx->band[0][g].thr * pctx->band[1][g].thr / (pctx->band[0][g].energy + pctx->band[1][g].energy)))
+            if(en_m == 0.0 || en_s == 0.0 || l1*l1 / (en_m * en_s) >= (pctx->band[0][g].thr * pctx->band[1][g].thr / (pctx->band[0][g].energy * pctx->band[1][g].energy))){
                 cpe->ms.mask[0][g] = 1;
+                pctx->band[0][g].energy = en_m;
+                pctx->band[1][g].energy = en_s;
+                pctx->band[0][g].thr = en_m * 0.001258925f;
+                pctx->band[1][g].thr = en_s * 0.001258925f;
+                //TODO: minSnr update
+            }
         }
     }
 
