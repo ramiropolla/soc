@@ -477,7 +477,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
         for(g = 0; g < apc->num_bands1024; g++){
             for(i = 0; i < apc->bands1024[g]; i++)
                 pctx->band[ch][g].energy +=  cpe->ch[ch].coeffs[start+i] *  cpe->ch[ch].coeffs[start+i];
-            pctx->band[ch][g].energy *= 1048576.0;
             pctx->band[ch][g].thr = pctx->band[ch][g].energy * 0.001258925f;
             start += apc->bands1024[g];
             if(pctx->band[ch][g].energy != 0.0){
@@ -485,16 +484,13 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
 
                 for(i = 0; i < apc->bands1024[g]; i++)
                     ffac += sqrt(FFABS(cpe->ch[ch].coeffs[start+i]));
-                pctx->band[ch][g].ffac = ffac * 32.0;
+                pctx->band[ch][g].ffac = ffac;
                 calc_pe(&pctx->band[ch][g], apc->bands1024[g]);
             }
             pctx->a[ch]   += pctx->band[ch][g].a;
             pctx->b[ch]   += pctx->band[ch][g].b;
             pctx->thr[ch] += pctx->band[ch][g].thr;
         }
-        pctx->a[ch]   /= 1024.0f;
-        pctx->b[ch]   /= 1024.0f;
-        pctx->thr[ch] /= 1024.0f;
     }
 
     //modify thresholds - spread, threshold in quiet - 5.4.3
@@ -537,7 +533,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
     pctx->reservoir += pctx->avg_bits - apc->avctx->frame_bits;
     bits_avail = pctx->avg_bits + pctx->reservoir;
     bits_avail = FFMIN(bits_avail, pctx->avg_bits * 1.5);
-    pe_target = 1.18f * bits_avail / apc->avctx->channels / 1024.0f;
+    pe_target = 1.18f * bits_avail / apc->avctx->channels;
     for(ch = 0; ch < apc->avctx->channels; ch++){
         float t0, pe, r;
         if(pctx->b[ch] == 0.0f) continue;
