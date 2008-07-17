@@ -330,6 +330,7 @@ typedef struct Psy3gppContext{
     int         avg_bits;
     float       a[2];
     float       b[2];
+    float       pe[2];
     float       thr[2];
     float       ath[64];
 }Psy3gppContext;
@@ -487,9 +488,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
                 pctx->band[ch][g].ffac = ffac;
                 calc_pe(&pctx->band[ch][g], apc->bands1024[g]);
             }
-            pctx->a[ch]   += pctx->band[ch][g].a;
-            pctx->b[ch]   += pctx->band[ch][g].b;
-            pctx->thr[ch] += pctx->band[ch][g].thr;
         }
     }
 
@@ -528,6 +526,20 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
         }
     }
 
+    for(ch = 0; ch < apc->avctx->channels; ch++){
+        pctx->a[ch] = pctx->b[ch] = pctx->pe[ch] = pctx->thr[ch] = 0.0f;
+        for(g = 0; g < apc->num_bands1024; g++){
+            if(pctx->band[ch][g].energy != 0.0)
+                calc_pe(&pctx->band[ch][g], apc->bands1024[g]);
+            if(pctx->band[ch][g].thr < pctx->band[ch][g].energy){
+                pctx->a[ch]   += pctx->band[ch][g].a;
+                pctx->b[ch]   += pctx->band[ch][g].b;
+                pctx->pe[ch]  += pctx->band[ch][g].pe;
+                pctx->thr[ch] += pctx->band[ch][g].thr;
+            }
+        }
+    }
+
     //bitrate reduction - 5.6.1
     //TODO: add more that first step estimation
     pctx->reservoir += pctx->avg_bits - apc->avctx->frame_bits;
@@ -538,14 +550,24 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
         float t0, pe, r;
         if(pctx->b[ch] == 0.0f) continue;
         for(i = 0; i < 2; i++){
-            pe = pctx->a[ch] - pctx->b[ch] * 4.0f * log2(pow(pctx->thr[ch]/cpe->ch[ch].ics.num_swb, 0.25));
-            t0 = pow(2.0, (pctx->a[ch] - pe)        / (4.0 * pctx->b[ch]));
-            r  = pow(2.0, (pctx->a[ch] - pe_target) / (4.0 * pctx->b[ch])) - t0;
+            t0 = pow(2.0, (pctx->a[ch] - pctx->pe[ch]) / (4.0 * pctx->b[ch]));
+            r  = pow(2.0, (pctx->a[ch] - pe_target)    / (4.0 * pctx->b[ch])) - t0;
 
-            //add correction factor to thresholds
-            for(g = 0; g < apc->num_bands1024; g++)
+            //add correction factor to thresholds and recalculate perceptual entropy
+            pctx->a[ch] = pctx->b[ch] = pctx->pe[ch] = pctx->thr[ch] = 0.0;
+            pe = 0.0f;
+            for(g = 0; g < apc->num_bands1024; g++){
                 pctx->band[ch][g].thr = modify_thr(pctx->band[ch][g].thr, r);
+                calc_pe(&pctx->band[ch][g], apc->bands1024[g]);
+                if(pctx->band[ch][g].thr < pctx->band[ch][g].energy){
+                    pctx->a[ch]   += pctx->band[ch][g].a;
+                    pctx->b[ch]   += pctx->band[ch][g].b;
+                    pctx->pe[ch]  += pctx->band[ch][g].pe;
+                    pctx->thr[ch] += pctx->band[ch][g].thr;
+                }
+            }
         }
+        //TODO: linearization
     }
 
     //determine scalefactors - 5.6.2
