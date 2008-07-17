@@ -577,16 +577,15 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
     }
 
     //determine scalefactors - 5.6.2
-    //TODO: quantization optimization, scalefactor difference reduction
     for(ch = 0; ch < apc->avctx->channels; ch++){
         int min_scale = 256;
         prev_scale = -1;
         cpe->ch[ch].gain = 0;
         for(g = 0; g < apc->num_bands1024; g++){
+            cpe->ch[ch].zeroes[0][g] = pctx->band[ch][g].thr >= pctx->band[ch][g].energy;
             if(cpe->ch[ch].zeroes[0][g]) continue;
             //spec gives constant for lg() but we scaled it for log2()
             cpe->ch[ch].sf_idx[0][g] = (int)(2.66667 * (log2(6.75*pctx->band[ch][g].thr) - log2(pctx->band[ch][g].ffac)));
-            cpe->ch[ch].sf_idx[0][g] = av_clip(cpe->ch[ch].sf_idx[0][g], 0, 255);
             if(prev_scale != -1)
                 cpe->ch[ch].sf_idx[0][g] = av_clip(cpe->ch[ch].sf_idx[0][g], prev_scale - SCALE_MAX_DIFF, prev_scale + SCALE_MAX_DIFF);
             prev_scale = cpe->ch[ch].sf_idx[0][g];
@@ -599,6 +598,10 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
         for(g = 0; g < apc->num_bands1024; g++){
             if(cpe->ch[ch].zeroes[0][g]) continue;
             cpe->ch[ch].sf_idx[0][g] = FFMIN(cpe->ch[ch].sf_idx[0][g], min_scale + SCALE_MAX_DIFF);
+        }
+        for(g = 0; g < apc->num_bands1024; g++){
+            if(cpe->ch[ch].zeroes[0][g]) continue;
+            cpe->ch[ch].sf_idx[0][g] = SCALE_ONE_POS + cpe->ch[ch].sf_idx[0][g];
             if(!cpe->ch[ch].gain) cpe->ch[ch].gain = cpe->ch[ch].sf_idx[0][g];
         }
     }
