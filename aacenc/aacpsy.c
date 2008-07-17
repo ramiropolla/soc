@@ -498,8 +498,9 @@ static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
         for(g = apc->num_bands1024 - 2; g >= 0; g--)
             pctx->band[ch][g].thr = FFMAX(pctx->band[ch][g].thr, pctx->band[ch][g+1].thr * pctx->s_hi[g+1]);
         for(g = 0; g < apc->num_bands1024; g++){
-            pctx->band[ch][g].thr_quiet = FFMAX(pctx->band[ch][g].thr, pctx->ath[g] *0.5);
-            pctx->band[ch][g].thr = fmaxf(PSY_3GPP_RPEMIN*pctx->band[ch][g].thr_quiet, fminf(pctx->band[ch][g].thr_quiet, PSY_3GPP_RPELEV*pctx->prev_band[ch][g].thr_quiet));
+            pctx->band[ch][g].thr_quiet = FFMAX(pctx->band[ch][g].thr, pctx->ath[g]);
+            pctx->band[ch][g].thr_quiet = fmaxf(PSY_3GPP_RPEMIN*pctx->band[ch][g].thr_quiet, fminf(pctx->band[ch][g].thr_quiet, PSY_3GPP_RPELEV*pctx->prev_band[ch][g].thr_quiet));
+            pctx->band[ch][g].thr = FFMAX(pctx->band[ch][g].thr, pctx->band[ch][g].thr_quiet * 0.25);
         }
     }
 
