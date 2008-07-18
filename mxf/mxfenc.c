@@ -247,7 +247,7 @@ static int mxf_write_primer_pack(AVFormatContext *s)
     const MXFLocalTagPair *local_tag_batch;
     int i,local_tag_number = 0;
 
-    local_tag_number = sizeof(mxf_local_tag_batch) / 20;
+    local_tag_number = sizeof(mxf_local_tag_batch) / sizeof(MXFLocalTagPair);
 
     //write key and length
     put_buffer(pb, primer_pack_key, 16);
