@@ -373,7 +373,7 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     mxf_write_local_tag(pb, 8, 0x3B0B);
     put_be64(pb, 0);
     return 0;
-
+}
 
 static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
 {
