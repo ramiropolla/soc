@@ -81,7 +81,7 @@ typedef struct {
 } MXFReferenceContext;
 
 typedef struct MXFContext {
-    UMID top_sour_package_uid;
+    UMID top_src_package_uid;
     int64_t header_byte_count;
     int64_t header_start;
     int64_t header_byte_count_offset;
@@ -478,7 +478,7 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
         mxf_generate_umid(s, umid);
         put_buffer(pb, umid, 32);
     } else {
-        put_buffer(pb, mxf->top_sour_package_uid, 32);
+        put_buffer(pb, mxf->top_src_package_uid, 32);
     }
 
     //write create date
@@ -662,7 +662,7 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
         put_be64(pb, 0);
     } else {
         mxf_write_local_tag(pb, 32, 0x1101);
-        put_buffer(pb, mxf->top_sour_package_uid, 32);
+        put_buffer(pb, mxf->top_src_package_uid, 32);
 
         mxf_write_local_tag(pb, 4, 0x1102);
         put_be64(pb, stream_index + 1);
@@ -670,7 +670,7 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     return 0;
 }
 
-static int mxf_build_strctural_metadata(AVFormatContext *s, KLVPacket* klv, enum MXFMetadataSetType type)
+static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enum MXFMetadataSetType type)
 {
     int i;
 
@@ -703,10 +703,10 @@ static int mxf_write_header_metadata_sets(AVFormatContext *s)
     if (mxf_write_content_storage(s, &klv) < 0)
         return -1;
 
-    if (mxf_build_strctural_metadata(s, &klv, MaterialPackage) < 0)
+    if (mxf_build_structural_metadata(s, &klv, MaterialPackage) < 0)
         return -1;
 
-    if (mxf_build_strctural_metadata(s, &klv, SourcePackage) < 0)
+    if (mxf_build_structural_metadata(s, &klv, SourcePackage) < 0)
         return -1;
     return 0;
 }
@@ -721,7 +721,7 @@ static int mxf_write_header_partition(AVFormatContext *s)
 
     // generate Source Package Set UMID for op1a
     // will be used by material_package->source_track->sequence->structual_component->source_package_id
-    mxf_generate_umid(s, mxf->top_sour_package_uid);
+    mxf_generate_umid(s, mxf->top_src_package_uid);
 
     //write klv
     put_buffer(pb, header_partition_key, 16);
