@@ -164,7 +164,7 @@ typedef struct MXFContext {
     int64_t header_footer_partition_offset;
     AVRandomState random_state;
     MXFReferenceContext *reference;
-    char track_number_sign[sizeof(mxf_essence_element_key)];
+    char *track_number_sign;
     UID *track_essence_element_key;
 } MXFContext;
 
@@ -289,7 +289,7 @@ static int utf8len(const uint8_t *b){
     return len;
 }
 
-static void mxf_free_refs(AVFormatContext *s)
+static void mxf_free(AVFormatContext *s)
 {
     MXFContext *mxf = s->priv_data;
     int i;
@@ -304,6 +304,8 @@ static void mxf_free_refs(AVFormatContext *s)
     }
     av_freep(&mxf->reference->sequence);
     av_freep(&mxf->reference->structural_component);
+    av_freep(&mxf->track_essence_element_key);
+    av_freep(&mxf->track_number_sign);
 }
 
 static const MXFDataDefinitionUL *mxf_get_data_definition_ul(const MXFDataDefinitionUL *uls, enum CodecType type)
@@ -499,6 +501,11 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
         return -1;
     set_ref->structural_component = av_mallocz(s->nb_streams * sizeof(*set_ref->structural_component));
     if (set_ref->structural_component)
+        return -1;
+
+    //malloc memory for track number sign
+    mxf->track_number_sign = av_mallocz(sizeof(mxf_essence_element_key)/sizeof(MXFEssenceElementKey));
+    if (!mxf->track_number_sign)
         return -1;
 
     //malloc memory for essence element key of each track
@@ -839,7 +846,7 @@ static int mux_write_footer(AVFormatContext *s)
     put_flush_packet(pb);
 
     mxf_update_header_partition(s, this_partition);
-    mxf_free_refs(s);
+    mxf_free(s);
     return 0;
 }
 
