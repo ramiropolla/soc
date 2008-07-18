@@ -322,57 +322,6 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     MXFReferenceContext *set_ref = mxf->reference;
     UID uid;
     ByteIOContext *pb = s->pb;
-    ByteIOContext *dyn_bc;
-    uint8_t *dyn_buf=NULL;
-    int dyn_size;
-
-    int ret = url_open_dyn_buf(&dyn_bc);
-    if(ret < 0)
-        return ret;
-
-    //write preface set uid
-    mxf_generate_uuid(s, uid);
-    mxf_write_local_tag(dyn_bc, 16, 0x3C0A);
-    put_buffer(dyn_bc, uid, 16);
-
-#ifdef DEBUG
-    PRINT_KEY(s, "preface uid", uid);
-#endif
-
-    //write create date as unknown
-    mxf_write_local_tag(dyn_bc, 8, 0x3B02);
-    put_buffer(dyn_bc, 0, 8);
-
-    //write version
-    mxf_write_local_tag(dyn_bc, 2, 0x3B05);
-    put_be16(dyn_bc, 1);
-
-    //write identification_refs
-    if (mxf_generate_reference(s, &set_ref->identification, 1) < 0)
-        return -1;
-    mxf_write_local_tag(dyn_bc, 16 + 8, 0x3B06);
-    mxf_write_reference(dyn_bc, 1, set_ref->identification);
-
-    //write content_storage_refs
-    if (mxf_generate_reference(s, &set_ref->content_storage, 1) < 0)
-        return -1;
-    mxf_write_local_tag(dyn_bc, 16, 0x3B03);
-    put_buffer(dyn_bc, *set_ref->content_storage, 16);
-
-    mxf_write_local_tag(dyn_bc, 16, 0x3B09);
-    put_buffer(dyn_bc, op1a_ul, 16);
-
-    //write essence_container_refs
-    if (mxf_generate_reference(s, &set_ref->essence_container, 1) < 0)
-        return -1;
-    mxf_write_local_tag(dyn_bc, 16 + 8, 0x3B0A);
-    mxf_write_reference(dyn_bc, 1, set_ref->essence_container);
-
-    //write dm_scheme_refs
-    mxf_write_local_tag(dyn_bc, 8, 0x3B0B);
-    put_be64(dyn_bc, 0);
-
-    dyn_size= url_close_dyn_buf(dyn_bc, &dyn_buf);
 
     //write KLV
     klv->key[13] = 0x01;
@@ -380,12 +329,51 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     klv->key[15] = 0x00;
 
     put_buffer(pb, klv->key, 16);
-    klv_encode_ber_length(pb, dyn_size);
-    put_buffer(pb, dyn_buf, dyn_size);
+    klv_encode_ber_length(pb, 146);
 
-    av_free(dyn_buf);
+    //write preface set uid
+    mxf_generate_uuid(s, uid);
+    mxf_write_local_tag(pb, 16, 0x3C0A);
+    put_buffer(pb, uid, 16);
+
+#ifdef DEBUG
+    PRINT_KEY(s, "preface uid", uid);
+#endif
+
+    //write create date as unknown
+    mxf_write_local_tag(pb, 8, 0x3B02);
+    put_buffer(pb, 0, 8);
+
+    //write version
+    mxf_write_local_tag(pb, 2, 0x3B05);
+    put_be16(pb, 1);
+
+    //write identification_refs
+    if (mxf_generate_reference(s, &set_ref->identification, 1) < 0)
+        return -1;
+    mxf_write_local_tag(pb, 16 + 8, 0x3B06);
+    mxf_write_reference(pb, 1, set_ref->identification);
+
+    //write content_storage_refs
+    if (mxf_generate_reference(s, &set_ref->content_storage, 1) < 0)
+        return -1;
+    mxf_write_local_tag(pb, 16, 0x3B03);
+    put_buffer(pb, *set_ref->content_storage, 16);
+
+    mxf_write_local_tag(pb, 16, 0x3B09);
+    put_buffer(pb, op1a_ul, 16);
+
+    //write essence_container_refs
+    if (mxf_generate_reference(s, &set_ref->essence_container, 1) < 0)
+        return -1;
+    mxf_write_local_tag(pb, 16 + 8, 0x3B0A);
+    mxf_write_reference(pb, 1, set_ref->essence_container);
+
+    //write dm_scheme_refs
+    mxf_write_local_tag(pb, 8, 0x3B0B);
+    put_be64(pb, 0);
     return 0;
-}
+
 
 static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
 {
@@ -393,56 +381,47 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
     MXFReferenceContext *set_ref = mxf->reference;
     ByteIOContext *pb = s->pb;
     UID uid;
-    ByteIOContext *dyn_bc;
-    uint8_t *dyn_buf=NULL;
-    int dyn_size, company_name_len, product_name_len, version_string_len;
-
-    int ret = url_open_dyn_buf(&dyn_bc);
-    if(ret < 0)
-        return ret;
-
-    company_name_len = utf8len("FFmpeg") + 1;
-    product_name_len = utf8len("OP1a Muxer") + 1;
-    version_string_len = utf8len("version 0.0.1") + 1;
-
-    //write uid
-    mxf_write_local_tag(dyn_bc, 16, 0x3C0A);
-    put_buffer(dyn_bc, *set_ref->identification, 16);
-
-    //write generation uid
-    mxf_generate_uuid(s, uid);
-    mxf_write_local_tag(dyn_bc, 16, 0x3C09);
-    put_buffer(dyn_bc, uid, 16);
-
-    mxf_write_local_tag(dyn_bc, company_name_len, 0x3C01);
-    put_buffer(dyn_bc, "FFmpeg", company_name_len);
-
-    mxf_write_local_tag(dyn_bc, product_name_len, 0x3C02);
-    put_buffer(dyn_bc, "OP1a Muxer", product_name_len);
-
-    mxf_write_local_tag(dyn_bc, version_string_len, 0x3C04);
-    put_buffer(dyn_bc, "version 0.0.1", version_string_len);
-
-    //write product uid
-    mxf_generate_uuid(s, uid);
-    mxf_write_local_tag(dyn_bc, 16, 0x3C05);
-    put_buffer(dyn_bc, uid, 16);
-
-    //write modified date
-    mxf_write_local_tag(dyn_bc, 8, 0x3C06);
-    put_buffer(dyn_bc, 0, 8);
-
-    dyn_size= url_close_dyn_buf(dyn_bc, &dyn_buf);
+    int length, company_name_len, product_name_len, version_string_len;
 
     klv->key[13] = 0x01;
     klv->key[14] = 0x30;
     klv->key[15] = 0x00;
 
     put_buffer(pb, klv->key, 16);
-    klv_encode_ber_length(pb, dyn_size);
-    put_buffer(pb, dyn_buf, dyn_size);
 
-    av_free(dyn_buf);
+    company_name_len = utf8len("FFmpeg") + 1;
+    product_name_len = utf8len("OP1a Muxer") + 1;
+    version_string_len = utf8len("version 0.0.1") + 1;
+    length = 84 + company_name_len + product_name_len + version_string_len;
+
+    klv_encode_ber_length(pb, length);
+
+    //write uid
+    mxf_write_local_tag(pb, 16, 0x3C0A);
+    put_buffer(pb, *set_ref->identification, 16);
+
+    //write generation uid
+    mxf_generate_uuid(s, uid);
+    mxf_write_local_tag(pb, 16, 0x3C09);
+    put_buffer(pb, uid, 16);
+
+    mxf_write_local_tag(pb, company_name_len, 0x3C01);
+    put_buffer(pb, "FFmpeg", company_name_len);
+
+    mxf_write_local_tag(pb, product_name_len, 0x3C02);
+    put_buffer(pb, "OP1a Muxer", product_name_len);
+
+    mxf_write_local_tag(pb, version_string_len, 0x3C04);
+    put_buffer(pb, "version 0.0.1", version_string_len);
+
+    //write product uid
+    mxf_generate_uuid(s, uid);
+    mxf_write_local_tag(pb, 16, 0x3C05);
+    put_buffer(pb, uid, 16);
+
+    //write modified date
+    mxf_write_local_tag(pb, 8, 0x3C06);
+    put_buffer(pb, 0, 8);
     return 0;
 }
 
@@ -451,33 +430,23 @@ static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
     MXFContext *mxf = s->priv_data;
     MXFReferenceContext *set_ref = mxf->reference;
     ByteIOContext *pb = s->pb;
-    ByteIOContext *dyn_bc;
-    uint8_t *dyn_buf=NULL;
-    int dyn_size;
-
-    int ret = url_open_dyn_buf(&dyn_bc);
-    if(ret < 0)
-        return ret;
-
-    //write uid
-    mxf_write_local_tag(dyn_bc, 16, 0x3C0A);
-    put_buffer(dyn_bc, *set_ref->content_storage, 16);
-
-    //write package reference
-    if (mxf_generate_reference(s, &set_ref->package, 2) < 0)
-        return -1;
-    mxf_write_local_tag(dyn_bc, 16 * 2 + 8, 0x1901);
-    mxf_write_reference(dyn_bc, 2, set_ref->package);
 
     klv->key[13] = 0x01;
     klv->key[14] = 0x18;
     klv->key[15] = 0x00;
 
     put_buffer(pb, klv->key, 16);
-    klv_encode_ber_length(pb, dyn_size);
-    put_buffer(pb, dyn_buf, dyn_size);
+    klv_encode_ber_length(pb, 64);
 
-    av_free(dyn_buf);
+    //write uid
+    mxf_write_local_tag(pb, 16, 0x3C0A);
+    put_buffer(pb, *set_ref->content_storage, 16);
+
+    //write package reference
+    if (mxf_generate_reference(s, &set_ref->package, 2) < 0)
+        return -1;
+    mxf_write_local_tag(pb, 16 * 2 + 8, 0x1901);
+    mxf_write_reference(pb, 2, set_ref->package);
     return 0;
 }
 
@@ -488,41 +457,41 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     ByteIOContext *pb = s->pb;
     UMID umid;
     UID *ref;
-    ByteIOContext *dyn_bc;
-    uint8_t *dyn_buf=NULL;
-    int dyn_size;
 
-    int ret = url_open_dyn_buf(&dyn_bc);
-    if(ret < 0)
-        return ret;
+    klv->key[13] = 0x01;
+    klv->key[14] = type == MaterialPackage ? 0x36 : 0x37;
+    klv->key[15] = 0x00;
+
+    put_buffer(pb, klv->key, 16);
+    klv_encode_ber_length(pb, 92 + 16 * s->nb_streams);
 
     //write uid
     ref = type == MaterialPackage ? set_ref->package : & set_ref->package[1];
-    mxf_write_local_tag(dyn_bc, 16, 0x3C0A);
-    put_buffer(dyn_bc, *ref, 16);
+    mxf_write_local_tag(pb, 16, 0x3C0A);
+    put_buffer(pb, *ref, 16);
 
     //write package umid
-    mxf_write_local_tag(dyn_bc, 32, 0x4401);
+    mxf_write_local_tag(pb, 32, 0x4401);
     if (type == MaterialPackage) {
         mxf_generate_umid(s, umid);
-        put_buffer(dyn_bc, umid, 32);
+        put_buffer(pb, umid, 32);
     } else {
-        put_buffer(dyn_bc, mxf->top_sour_package_uid, 32);
+        put_buffer(pb, mxf->top_sour_package_uid, 32);
     }
 
     //write create date
-    mxf_write_local_tag(dyn_bc, 8, 0x4405);
-    put_buffer(dyn_bc, 0, 8);
+    mxf_write_local_tag(pb, 8, 0x4405);
+    put_buffer(pb, 0, 8);
 
     //write modified date
-    mxf_write_local_tag(dyn_bc, 8, 0x4404);
-    put_buffer(dyn_bc, 0, 8);
+    mxf_write_local_tag(pb, 8, 0x4404);
+    put_buffer(pb, 0, 8);
 
     //write track refs
     if (mxf_generate_reference(s, &set_ref->track, s->nb_streams) < 0)
         return -1;
-    mxf_write_local_tag(dyn_bc, s->nb_streams * 16 + 8, 0x4403);
-    mxf_write_reference(dyn_bc, s->nb_streams, set_ref->track);
+    mxf_write_local_tag(pb, s->nb_streams * 16 + 8, 0x4403);
+    mxf_write_reference(pb, s->nb_streams, set_ref->track);
 
     //every track have 1 sequence and 1 structural componet, malloc memory for the refs pointer
     set_ref->sequence = av_mallocz(s->nb_streams * sizeof(*set_ref->sequence));
@@ -536,16 +505,6 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     mxf->track_essence_element_key = av_mallocz(s->nb_streams * sizeof(UID));
     if (!mxf->track_essence_element_key)
         return -1;
-
-    klv->key[13] = 0x01;
-    klv->key[14] = type == MaterialPackage ? 0x36 : 0x37;
-    klv->key[15] = 0x00;
-
-    put_buffer(pb, klv->key, 16);
-    klv_encode_ber_length(pb, dyn_size);
-    put_buffer(pb, dyn_buf, dyn_size);
-
-    av_free(dyn_buf);
     return 0;
 }
 
@@ -557,13 +516,14 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     AVStream *st;
     const MXFEssenceElementKey *element;
     int i = 0;
-    ByteIOContext *dyn_bc;
-    uint8_t *dyn_buf=NULL;
-    int dyn_size;
 
-    int ret = url_open_dyn_buf(&dyn_bc);
-    if(ret < 0)
-        return ret;
+    //write KLV
+    klv->key[13] = 0x01;
+    klv->key[14] = 0x3b;
+    klv->key[15] = 0x00;
+
+    put_buffer(pb, klv->key, 16);
+    klv_encode_ber_length(pb, 80);
 
     st = s->streams[stream_index];
 
@@ -575,20 +535,20 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     }
 
     //write track uid
-    mxf_write_local_tag(dyn_bc, 16, 0x3C0A);
-    put_buffer(dyn_bc, set_ref->track[stream_index], 16);
+    mxf_write_local_tag(pb, 16, 0x3C0A);
+    put_buffer(pb, set_ref->track[stream_index], 16);
 
     //write track id
-    mxf_write_local_tag(dyn_bc, 4, 0x4801);
-    put_be32(dyn_bc, stream_index + 1);
+    mxf_write_local_tag(pb, 4, 0x4801);
+    put_be32(pb, stream_index + 1);
 
     if (type != MaterialPackage) {
         for (element = mxf_essence_element_key; element->type != CODEC_ID_NONE; element++) {
             if (st->codec->codec_id== element->type) {
                 //write track number
-                mxf_write_local_tag(dyn_bc, 4, 0x4804);
-                put_buffer(dyn_bc, element->uid + 12, 3);
-                put_byte(dyn_bc, element->uid[15] + mxf->track_number_sign[i]);
+                mxf_write_local_tag(pb, 4, 0x4804);
+                put_buffer(pb, element->uid + 12, 3);
+                put_byte(pb, element->uid[15] + mxf->track_number_sign[i]);
                 mxf->track_number_sign[i] ++;
 
                 //set essence_element key
@@ -598,33 +558,22 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
             i++;
         }
     } else {
-        put_buffer(dyn_bc, 0, 4);//track number of material package is 0
+        put_buffer(pb, 0, 4);//track number of material package is 0
     }
 
-    mxf_write_local_tag(dyn_bc, 8, 0x4B01);
-    put_be32(dyn_bc, st->time_base.num);
-    put_be32(dyn_bc, st->time_base.den);
+    mxf_write_local_tag(pb, 8, 0x4B01);
+    put_be32(pb, st->time_base.num);
+    put_be32(pb, st->time_base.den);
 
     //write origin
-    mxf_write_local_tag(dyn_bc, 8, 0x4B02);
-    put_be64(dyn_bc, 0);
+    mxf_write_local_tag(pb, 8, 0x4B02);
+    put_be64(pb, 0);
 
     //write sequence refs
     if (mxf_generate_reference(s, &set_ref->sequence[stream_index], 1) < 0)
         return -1;
-    mxf_write_local_tag(dyn_bc, 16, 0x4803);
-    put_buffer(dyn_bc, *set_ref->sequence[stream_index], 16);
-
-    //write KLV
-    klv->key[13] = 0x01;
-    klv->key[14] = 0x3b;
-    klv->key[15] = 0x00;
-
-    put_buffer(pb, klv->key, 16);
-    klv_encode_ber_length(pb, dyn_size);
-    put_buffer(pb, dyn_buf, dyn_size);
-
-    av_free(dyn_buf);
+    mxf_write_local_tag(pb, 16, 0x4803);
+    put_buffer(pb, *set_ref->sequence[stream_index], 16);
     return 0;
 }
 
@@ -635,42 +584,32 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     ByteIOContext *pb = s->pb;
     AVStream *st;
     const MXFDataDefinitionUL * data_def_ul;
-    ByteIOContext *dyn_bc;
-    uint8_t *dyn_buf=NULL;
-    int dyn_size;
-
-    int ret = url_open_dyn_buf(&dyn_bc);
-    if(ret < 0)
-        return ret;
-
-    st = s->streams[stream_index];
-
-    mxf_write_local_tag(dyn_bc, 16, 0x3C0A);
-    put_buffer(dyn_bc, *set_ref->sequence[stream_index], 16);
-
-    //find data define uls
-    data_def_ul = mxf_get_data_definition_ul(mxf_data_definition_uls, st->codec->codec_type);
-    mxf_write_local_tag(dyn_bc, 16, 0x0201);
-    put_buffer(dyn_bc, data_def_ul->uid, 16);
-
-    mxf_write_local_tag(dyn_bc, 8, 0x0202);
-    put_be32(dyn_bc, st->duration);
-
-    //write structural component
-    if (mxf_generate_reference(s, &set_ref->structural_component[stream_index], 1) < 0)
-        return -1;
-    mxf_write_local_tag(dyn_bc, 16 + 8, 0x1001);
-    mxf_write_reference(dyn_bc, 1, set_ref->structural_component[stream_index]);
 
     klv->key[13] = 0x01;
     klv->key[14] = 0x0f;
     klv->key[15] = 0x00;
 
     put_buffer(pb, klv->key, 16);
-    klv_encode_ber_length(pb, dyn_size);
-    put_buffer(pb, dyn_buf, dyn_size);
+    klv_encode_ber_length(pb, 80);
 
-    av_free(dyn_buf);
+    st = s->streams[stream_index];
+
+    mxf_write_local_tag(pb, 16, 0x3C0A);
+    put_buffer(pb, *set_ref->sequence[stream_index], 16);
+
+    //find data define uls
+    data_def_ul = mxf_get_data_definition_ul(mxf_data_definition_uls, st->codec->codec_type);
+    mxf_write_local_tag(pb, 16, 0x0201);
+    put_buffer(pb, data_def_ul->uid, 16);
+
+    mxf_write_local_tag(pb, 8, 0x0202);
+    put_be32(pb, st->duration);
+
+    //write structural component
+    if (mxf_generate_reference(s, &set_ref->structural_component[stream_index], 1) < 0)
+        return -1;
+    mxf_write_local_tag(pb, 16 + 8, 0x1001);
+    mxf_write_reference(pb, 1, set_ref->structural_component[stream_index]);
     return 0;
 }
 
@@ -681,56 +620,46 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     ByteIOContext *pb = s->pb;
     AVStream *st;
     const MXFDataDefinitionUL * data_def_ul;
-    ByteIOContext *dyn_bc;
-    uint8_t *dyn_buf=NULL;
-    int dyn_size;
-
-    int ret = url_open_dyn_buf(&dyn_bc);
-    if(ret < 0)
-        return ret;
-
-    st = s->streams[stream_index];
-
-    //write uid
-    mxf_write_local_tag(dyn_bc, 16, 0x3C0A);
-    put_buffer(dyn_bc, *set_ref->structural_component[stream_index], 16);
-
-    data_def_ul = mxf_get_data_definition_ul(mxf_data_definition_uls, st->codec->codec_type);
-    mxf_write_local_tag(dyn_bc, 16, 0x0201);
-    put_buffer(dyn_bc, data_def_ul->uid, 16);
-
-    //write start_position
-    mxf_write_local_tag(dyn_bc, 8, 0x1201);
-    put_be64(dyn_bc, 0);
-
-    //write duration
-    mxf_write_local_tag(dyn_bc, 8, 0x0202);
-    put_be64(dyn_bc, st->duration);
-
-    if (type == SourcePackage) {
-        //write source package uid, end of the reference
-        mxf_write_local_tag(pb, 32, 0x1101);
-        put_buffer(dyn_bc, 0, 32);
-
-        //write source track id
-        mxf_write_local_tag(dyn_bc, 4, 0x1102);
-        put_be64(dyn_bc, 0);
-    } else {
-        mxf_write_local_tag(dyn_bc, 32, 0x1101);
-        put_buffer(dyn_bc, mxf->top_sour_package_uid, 32);
-
-        mxf_write_local_tag(dyn_bc, 4, 0x1102);
-        put_be64(dyn_bc, stream_index + 1);
-    }
 
     klv->key[13] = 0x01;
     klv->key[14] = 0x11;
     klv->key[15] = 0x00;
     put_buffer(pb, klv->key, 16);
-    klv_encode_ber_length(pb, dyn_size);
-    put_buffer(pb, dyn_buf, dyn_size);
+    klv_encode_ber_length(pb, 90);
 
-    av_free(dyn_buf);
+    st = s->streams[stream_index];
+
+    //write uid
+    mxf_write_local_tag(pb, 16, 0x3C0A);
+    put_buffer(pb, *set_ref->structural_component[stream_index], 16);
+
+    data_def_ul = mxf_get_data_definition_ul(mxf_data_definition_uls, st->codec->codec_type);
+    mxf_write_local_tag(pb, 16, 0x0201);
+    put_buffer(pb, data_def_ul->uid, 16);
+
+    //write start_position
+    mxf_write_local_tag(pb, 8, 0x1201);
+    put_be64(pb, 0);
+
+    //write duration
+    mxf_write_local_tag(pb, 8, 0x0202);
+    put_be64(pb, st->duration);
+
+    if (type == SourcePackage) {
+        //write source package uid, end of the reference
+        mxf_write_local_tag(pb, 32, 0x1101);
+        put_buffer(pb, 0, 32);
+
+        //write source track id
+        mxf_write_local_tag(pb, 4, 0x1102);
+        put_be64(pb, 0);
+    } else {
+        mxf_write_local_tag(pb, 32, 0x1101);
+        put_buffer(pb, mxf->top_sour_package_uid, 32);
+
+        mxf_write_local_tag(pb, 4, 0x1102);
+        put_be64(pb, stream_index + 1);
+    }
     return 0;
 }
 
