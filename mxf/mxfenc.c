@@ -465,7 +465,7 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     klv_encode_ber_length(pb, 92 + 16 * s->nb_streams);
 
     // write uid
-    ref = type == MaterialPackage ? refs->package : & refs->package[1];
+    ref = &refs->package[type == SourcePackage];
     mxf_write_local_tag(pb, 16, 0x3C0A);
     put_buffer(pb, *ref, 16);
 
