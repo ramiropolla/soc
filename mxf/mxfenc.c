@@ -848,7 +848,7 @@ static int mux_write_footer(AVFormatContext *s)
 
 AVOutputFormat mxf_muxer = {
     "mxf",
-    NULL_IF_CONFIG_SMALL("MXF format"),
+    NULL_IF_CONFIG_SMALL("Material eXchange Format"),
     NULL,
     "mxf",
     sizeof(MXFContext),
