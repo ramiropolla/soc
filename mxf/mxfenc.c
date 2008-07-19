@@ -227,7 +227,7 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
         return size;
     }
 
-    while (len /= 256)
+    while (len >>= 8)
         size ++;
 
     //long form
