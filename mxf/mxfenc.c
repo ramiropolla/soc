@@ -759,7 +759,7 @@ static int mxf_write_header_partition(AVFormatContext *s)
     return 0;
 
 fail:
-    mxf_free_refs(s);
+    mxf_free(s);
     return -1;
 }
 
