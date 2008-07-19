@@ -501,9 +501,11 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
         return -1;
 
     // malloc memory for track number sign
-    mxf->track_number_sign = av_mallocz(sizeof(mxf_essence_element_key)/sizeof(MXFEssenceElementKey));
-    if (!mxf->track_number_sign)
-        return -1;
+    if (type == SourcePackage) {
+        mxf->track_number_sign = av_mallocz(sizeof(mxf_essence_element_key)/sizeof(MXFEssenceElementKey));
+        if (!mxf->track_number_sign)
+            return -1;
+    }
 
     // malloc memory for essence element key of each track
     mxf->track_essence_element_key = av_mallocz(s->nb_streams * sizeof(UID));
