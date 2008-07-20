@@ -353,7 +353,7 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
 
     // write create date as unknown
     mxf_write_local_tag(pb, 8, 0x3B02);
-    put_buffer(pb, "0", 8);
+    put_be64(pb, 0);
 
     // write version
     mxf_write_local_tag(pb, 2, 0x3B05);
@@ -435,7 +435,7 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
 
     // write modified date
     mxf_write_local_tag(pb, 8, 0x3C06);
-    put_buffer(pb, "0", 8);
+    put_be64(pb, 0);
     return 0;
 }
 
@@ -495,11 +495,11 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
 
     // write create date
     mxf_write_local_tag(pb, 8, 0x4405);
-    put_buffer(pb, "0", 8);
+    put_be64(pb, 0);
 
     // write modified date
     mxf_write_local_tag(pb, 8, 0x4404);
-    put_buffer(pb, "0", 8);
+    put_be64(pb, 0);
 
     // write track refs
     if (mxf_generate_reference(s, &refs->track, s->nb_streams) < 0)
@@ -578,7 +578,7 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
             i++;
         }
     } else {
-        put_buffer(pb, "0", 4); // track number of material package is 0
+        put_be32(pb, 0); // track number of material package is 0
     }
 
     mxf_write_local_tag(pb, 8, 0x4B01);
@@ -640,6 +640,7 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     ByteIOContext *pb = s->pb;
     AVStream *st;
     const MXFDataDefinitionUL * data_def_ul;
+    int i;
 
     klv->key[13] = 0x01;
     klv->key[14] = 0x11;
@@ -668,7 +669,9 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     if (type == SourcePackage) {
         // write source package uid, end of the reference
         mxf_write_local_tag(pb, 32, 0x1101);
-        put_buffer(pb, "0", 32);
+        for (i = 0; i < 4; i++) {
+            put_be64(pb, 0);
+        }
 
         // write source track id
         mxf_write_local_tag(pb, 4, 0x1102);
