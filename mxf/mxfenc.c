@@ -819,7 +819,7 @@ static int mux_write_header(AVFormatContext *s)
     // mark the start of the headermetadata and calculate metadata size
     header_metadata_start = url_ftell(s->pb);
     mxf_write_primer_pack(s);
-    if (mxf_write_header_metadata_sets < 0)
+    if (mxf_write_header_metadata_sets(s) < 0)
         goto fail;
     mxf->header_byte_count = url_ftell(s->pb) - header_metadata_start;
 
