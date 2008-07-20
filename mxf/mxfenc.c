@@ -73,7 +73,6 @@ typedef struct {
 typedef struct {
     UID *identification;
     UID *content_storage;
-    UID *essence_container;
     UID *package;
     UID *track;
     UID **sequence;
@@ -90,6 +89,9 @@ typedef struct MXFContext {
     MXFReferenceContext *reference;
     char *track_number_sign;
     UID *track_essence_element_key;
+    int type_num;
+    const MXFCodecUL *video_container_ul;
+    const MXFCodecUL *audio_container_ul;
 } MXFContext;
 
 static const uint8_t umid_base[] = {0x06, 0x0a, 0x2b, 0x34, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x0f, 0x00, 0x13, 0x00, 0x00, 0x00};
@@ -121,7 +123,14 @@ static const MXFDataDefinitionUL mxf_data_definition_uls[] = {
 static const MXFCodecUL mxf_picture_essence_container_uls[] = {
     { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x02,0x0D,0x01,0x03,0x01,0x02,0x04,0x60,0x01 }, 14, CODEC_ID_MPEG2VIDEO }, /* MPEG-ES Frame wrapped */
 //    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x0D,0x01,0x03,0x01,0x02,0x02,0x41,0x01 }, 14,    CODEC_ID_DVVIDEO }, /* DV 625 25mbps */
-//    { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },  0,       CODEC_ID_NONE },
+    { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },  0,       CODEC_ID_NONE },
+};
+
+static const MXFCodecUL mxf_sound_essence_container_uls[] = {
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x0D,0x01,0x03,0x01,0x02,0x06,0x01,0x00 }, 14, CODEC_ID_PCM_S16LE }, /* BWF Frame wrapped */
+//    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x02,0x0D,0x01,0x03,0x01,0x02,0x04,0x40,0x01 }, 14,       CODEC_ID_MP2 }, /* MPEG-ES Frame wrapped, 0x40 ??? stream id */
+//    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x0D,0x01,0x03,0x01,0x02,0x01,0x01,0x01 }, 14, CODEC_ID_PCM_S16LE }, /* D-10 Mapping 50Mbps PAL Extended Template */
+    { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },  0,      CODEC_ID_NONE },
 };
 
 /* SMPTE RP210 http://www.smpte-ra.org/mdd/index.html */
@@ -363,10 +372,13 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     put_buffer(pb, op1a_ul, 16);
 
     // write essence_container_refs
-    if (mxf_generate_reference(s, &refs->essence_container, 1) < 0)
-        return -1;
-    mxf_write_local_tag(pb, 16 + 8, 0x3B0A);
-    mxf_write_reference(pb, 1, refs->essence_container);
+    mxf_write_local_tag(pb, 8 + 16 * mxf->type_num, 0x3B0A);
+    put_be32(pb,mxf->type_num);
+    put_be32(pb,16);
+    if (mxf->video_container_ul != 0)
+        put_buffer(pb, mxf->video_container_ul->uid, 16);
+    if (mxf->audio_container_ul != 0)
+        put_buffer(pb, mxf->audio_container_ul->uid, 16);
 
     // write dm_scheme_refs
     mxf_write_local_tag(pb, 8, 0x3B0B);
@@ -709,13 +721,46 @@ static int mxf_write_header_metadata_sets(AVFormatContext *s)
     return 0;
 }
 
+static const MXFCodecUL *mxf_get_essence_container_ul(const MXFCodecUL *uls, enum CodecID type)
+{
+    while (uls->id != CODEC_ID_NONE) {
+        if (uls->id == type)
+            break;
+        uls++;
+    }
+    return uls;
+}
+
+static void mxf_set_essence_number(AVFormatContext *s)
+{
+    MXFContext *mxf = s->priv_data;
+    AVStream *st;
+    int i, video_type = 0, audio_type = 0;
+
+    for (i = 0; i < s->nb_streams; i++) {
+        st = s->streams[i];
+        if (!video_type && st->codec->codec_type == CODEC_TYPE_VIDEO) {
+            mxf->video_container_ul = mxf_get_essence_container_ul(mxf_picture_essence_container_uls, st->codec->codec_id);
+            video_type++;
+        }
+        if (!audio_type && st->codec->codec_type == CODEC_TYPE_AUDIO) {
+            mxf->audio_container_ul = mxf_get_essence_container_ul(mxf_sound_essence_container_uls, st->codec->codec_id);
+            audio_type++;
+        }
+        if (video_type && audio_type)
+            break;
+    }
+    mxf->type_num = video_type + audio_type;
+}
+
 static int mxf_write_header_partition(AVFormatContext *s)
 {
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
     int64_t header_metadata_start;
-    // for op1a, only 1 essence container
-    uint64_t partitionLen = 88 + 16;
+
+    // calculate the numner of essence container type
+    mxf_set_essence_number(s);
 
     // generate Source Package Set UMID for op1a
     // will be used by material_package->source_track->sequence->structual_component->source_package_id
@@ -723,7 +768,7 @@ static int mxf_write_header_partition(AVFormatContext *s)
 
     // write klv
     put_buffer(pb, header_partition_key, 16);
-    klv_encode_ber_length(pb, partitionLen);
+    klv_encode_ber_length(pb, 88 + 16 * mxf->type_num);
 
     // write partition value
     put_be16(pb, 1); // majorVersion
@@ -748,9 +793,14 @@ static int mxf_write_header_partition(AVFormatContext *s)
 
     put_be32(pb, 1); // bodySID
     put_buffer(pb, op1a_ul, 16); // operational pattern
-    put_be32(pb,1);
+
+    // essence container
+    put_be32(pb,mxf->type_num);
     put_be32(pb,16);
-    put_buffer(pb, mxf_picture_essence_container_uls->uid, 16);
+    if (mxf->video_container_ul != 0)
+        put_buffer(pb, mxf->video_container_ul->uid, 16);
+    if (mxf->audio_container_ul != 0)
+        put_buffer(pb, mxf->audio_container_ul->uid, 16);
 
     // mark the start of the headermetadata and calculate metadata size
     header_metadata_start = url_ftell(s->pb);
@@ -814,10 +864,9 @@ static int mux_write_footer(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
 
     int64_t this_partition = url_ftell(pb) - mxf->header_start;
-    int64_t partitionLen = 88 + 16;
 
     put_buffer(pb, footer_partition_key, 16);
-    klv_encode_ber_length(pb, partitionLen);
+    klv_encode_ber_length(pb, 88 + 16 * mxf->type_num);
 
     put_be16(pb, 1); // majorVersion
     put_be16(pb, 2); // minorVersion
@@ -835,9 +884,13 @@ static int mux_write_footer(AVFormatContext *s)
 
     put_be32(pb, 0); // bodySID
     put_buffer(pb, op1a_ul, 16); // operational pattern
-    put_be32(pb,1);
+
+    put_be32(pb,mxf->type_num);
     put_be32(pb,16);
-    put_buffer(pb, mxf_picture_essence_container_uls->uid, 16);
+    if (mxf->video_container_ul != 0)
+        put_buffer(pb, mxf->video_container_ul->uid, 16);
+    if (mxf->audio_container_ul != 0)
+        put_buffer(pb, mxf->audio_container_ul->uid, 16);
 
     put_flush_packet(pb);
 
