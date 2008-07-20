@@ -512,7 +512,7 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     if (!refs->sequence)
         return -1;
     refs->structural_component = av_mallocz(s->nb_streams * sizeof(*refs->structural_component));
-    if (refs->structural_component)
+    if (!refs->structural_component)
         return -1;
 
     // malloc memory for track number sign
