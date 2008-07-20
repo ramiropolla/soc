@@ -313,6 +313,7 @@ static void mxf_free(AVFormatContext *s)
     }
     av_freep(&mxf->reference->sequence);
     av_freep(&mxf->reference->structural_component);
+    av_freep(&mxf->reference);
     av_freep(&mxf->track_essence_element_key);
     av_freep(&mxf->track_number_sign);
 }
@@ -806,6 +807,10 @@ static int mux_write_header(AVFormatContext *s)
     int64_t header_metadata_start;
 
     av_init_random(0xbeefdead, &mxf->random_state);
+    // intial MXFReferenceContext
+    mxf->reference = av_mallocz(sizeof(MXFReferenceContext));
+    if (!mxf->reference)
+        goto fail;
 
     // mark the header start position, for some fields update later
     mxf->header_start = url_ftell(pb);
