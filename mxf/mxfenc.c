@@ -753,21 +753,13 @@ static void mxf_set_essence_number(AVFormatContext *s)
     mxf->type_num = video_type + audio_type;
 }
 
-static int mxf_write_header_partition(AVFormatContext *s)
+static void mxf_write_partition(AVFormatContext *s, int64_t this_partition, int bodysid, const uint8_t *key)
 {
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
-    int64_t header_metadata_start;
-
-    // calculate the numner of essence container type
-    mxf_set_essence_number(s);
-
-    // generate Source Package Set UMID for op1a
-    // will be used by material_package->source_track->sequence->structual_component->source_package_id
-    mxf_generate_umid(s, mxf->top_src_package_uid);
 
     // write klv
-    put_buffer(pb, header_partition_key, 16);
+    put_buffer(pb, key, 16);
     klv_encode_ber_length(pb, 88 + 16 * mxf->type_num);
 
     // write partition value
@@ -775,15 +767,17 @@ static int mxf_write_header_partition(AVFormatContext *s)
     put_be16(pb, 2); // minorVersion
     put_be32(pb, 1); // kagSize
 
-    put_be64(pb, 0); // thisPartition
+    put_be64(pb, this_partition); // thisPartition
     put_be64(pb, 0); // previousPartition
 
     // set offset
-    mxf->header_footer_partition_offset = url_ftell(pb);
-    put_be64(pb, 0); // footerPartition,update later
+    if (!this_partition)
+        mxf->header_footer_partition_offset = url_ftell(pb);
+    put_be64(pb, this_partition); // footerPartition,update later
 
     // set offset
-    mxf->header_byte_count_offset = url_ftell(pb);
+    if (!this_partition)
+        mxf->header_byte_count_offset = url_ftell(pb);
     put_be64(pb, 0); // headerByteCount, update later
 
     // no indexTable
@@ -791,7 +785,7 @@ static int mxf_write_header_partition(AVFormatContext *s)
     put_be32(pb, 0); // indexSID
     put_be64(pb, 0); // bodyOffset
 
-    put_be32(pb, 1); // bodySID
+    put_be32(pb, bodysid); // bodySID
     put_buffer(pb, op1a_ul, 16); // operational pattern
 
     // essence container
@@ -801,6 +795,26 @@ static int mxf_write_header_partition(AVFormatContext *s)
         put_buffer(pb, mxf->video_container_ul->uid, 16);
     if (mxf->audio_container_ul != 0)
         put_buffer(pb, mxf->audio_container_ul->uid, 16);
+}
+
+static int mux_write_header(AVFormatContext *s)
+{
+    MXFContext *mxf = s->priv_data;
+    ByteIOContext *pb = s->pb;
+    int64_t header_metadata_start;
+
+    av_init_random(0xbeefdead, &mxf->random_state);
+
+    // mark the header start position, for some fields update later
+    mxf->header_start = url_ftell(pb);
+
+    // calculate the numner of essence container type
+    mxf_set_essence_number(s);
+    mxf_write_partition(s, 0, 0, header_partition_key);
+
+    // generate Source Package Set UMID for op1a
+    // will be used by material_package->source_track->sequence->structual_component->source_package_id
+    mxf_generate_umid(s, mxf->top_src_package_uid);
 
     // mark the start of the headermetadata and calculate metadata size
     header_metadata_start = url_ftell(s->pb);
@@ -808,25 +822,12 @@ static int mxf_write_header_partition(AVFormatContext *s)
     if (mxf_write_header_metadata_sets < 0)
         goto fail;
     mxf->header_byte_count = url_ftell(s->pb) - header_metadata_start;
-    return 0;
-
-fail:
-    mxf_free(s);
-    return -1;
-}
-
-static int mux_write_header(AVFormatContext *s)
-{
-    MXFContext *mxf = s->priv_data;
-    ByteIOContext *pb = s->pb;
-    av_init_random(0xbeefdead, &mxf->random_state);
-
-    // mark the header start position, for some fields update later
-    mxf->header_start = url_ftell(pb);
-    mxf_write_header_partition(s);
 
     put_flush_packet(pb);
     return 0;
+fail:
+    mxf_free(s);
+    return -1;
 }
 
 static int mux_write_packet(AVFormatContext *s, AVPacket *pkt)
@@ -864,33 +865,7 @@ static int mux_write_footer(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
 
     int64_t this_partition = url_ftell(pb) - mxf->header_start;
-
-    put_buffer(pb, footer_partition_key, 16);
-    klv_encode_ber_length(pb, 88 + 16 * mxf->type_num);
-
-    put_be16(pb, 1); // majorVersion
-    put_be16(pb, 2); // minorVersion
-    put_be32(pb, 1); // kagSize
-
-    put_be64(pb, this_partition);
-    put_be64(pb, 0); // previousPartition
-    put_be64(pb, this_partition);
-    put_be64(pb, 0); // header byte count
-
-    // no indexTable
-    put_be64(pb, 0); // indexByteCount
-    put_be32(pb, 0); // indexSID
-    put_be64(pb, 0); // bodyOffset
-
-    put_be32(pb, 0); // bodySID
-    put_buffer(pb, op1a_ul, 16); // operational pattern
-
-    put_be32(pb,mxf->type_num);
-    put_be32(pb,16);
-    if (mxf->video_container_ul != 0)
-        put_buffer(pb, mxf->video_container_ul->uid, 16);
-    if (mxf->audio_container_ul != 0)
-        put_buffer(pb, mxf->audio_container_ul->uid, 16);
+    mxf_write_partition(s, this_partition, 1, footer_partition_key);
 
     put_flush_packet(pb);
 
