@@ -229,6 +229,7 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
 {
     // Determine the best BER size
     int size = 0, i;
+    uint64_t tmp = len;
     if (len < 128) {
         //short form
         size = 1;
@@ -236,8 +237,8 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
         return size;
     }
 
-    while (len) {
-        len >>= 8;
+    while (tmp) {
+        tmp >>= 8;
         size ++;
     }
 
