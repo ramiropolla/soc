@@ -229,6 +229,7 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
 {
     // Determine the best BER size
     int size = 0, i;
+    uint8_t *tmp_buf;
     uint64_t tmp = len;
     if (len < 128) {
         //short form
@@ -245,12 +246,17 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
     // long form
     put_byte(pb, 0x80 + size);
     i = size;
+    tmp_buf = av_mallocz(size);
+    if (!tmp_buf)
+        return -1;
     while(i) {
-        put_byte(pb, len & 0xff);
+        tmp_buf[i - 1] = len & 0xff;
         len >>= 8;
         i--;
     }
-    return size;
+    put_buffer(pb, tmp_buf, size);
+    av_freep(&tmp_buf);
+    return 0;
 }
 
 static int mxf_write_primer_pack(AVFormatContext *s)
