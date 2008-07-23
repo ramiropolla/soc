@@ -355,6 +355,7 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     put_buffer(pb, uid, 16);
 
 #ifdef DEBUG
+    PRINT_KEY(s, "preface key", klv->key);
     PRINT_KEY(s, "preface uid", uid);
 #endif
 
@@ -420,7 +421,10 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     put_buffer(pb, *refs->identification, 16);
-
+#ifdef DEBUG
+    PRINT_KEY(s, "identification key", klv->key);
+    PRINT_KEY(s, "identification uid", *refs->identification);
+#endif
     // write generation uid
     mxf_generate_uuid(s, uid);
     mxf_write_local_tag(pb, 16, 0x3C09);
@@ -462,7 +466,10 @@ static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     put_buffer(pb, *refs->content_storage, 16);
-
+#ifdef DEBUG
+    PRINT_KEY(s, "content storage key", klv->key);
+    PRINT_KEY(s, "content storage uid", *refs->content_storage);
+#endif
     // write package reference
     if (mxf_generate_reference(s, &refs->package, 2) < 0)
         return -1;
@@ -490,6 +497,13 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     ref = &refs->package[type == SourcePackage];
     mxf_write_local_tag(pb, 16, 0x3C0A);
     put_buffer(pb, *ref, 16);
+#ifdef DEBUG
+    av_log(s,AV_LOG_DEBUG, "package type:%d\n", type);
+    PRINT_KEY(s, "package", klv->key);
+    PRINT_KEY(s, "package uid", *ref);
+    PRINT_KEY(s, "package umid first part", umid);
+    PRINT_KEY(s, "package umid second part", umid + 16);
+#endif
 
     // write package umid
     mxf_write_local_tag(pb, 32, 0x4401);
@@ -564,7 +578,10 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     // write track uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     put_buffer(pb, refs->track[stream_index], 16);
-
+#ifdef DEBUG
+    PRINT_KEY(s, "track key", klv->key);
+    PRINT_KEY(s, "track uid", refs->track[stream_index]);
+#endif
     // write track id
     mxf_write_local_tag(pb, 4, 0x4801);
     put_be32(pb, stream_index + 1);
@@ -624,6 +641,10 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     mxf_write_local_tag(pb, 16, 0x3C0A);
     put_buffer(pb, *refs->sequence[stream_index], 16);
 
+#ifdef DEBUG
+    PRINT_KEY(s, "sequence key", klv->key);
+    PRINT_KEY(s, "sequence uid", *refs->sequence[stream_index]);
+#endif
     // find data define uls
     data_def_ul = mxf_get_data_definition_ul(mxf_data_definition_uls, st->codec->codec_type);
     mxf_write_local_tag(pb, 16, 0x0201);
@@ -661,6 +682,10 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     mxf_write_local_tag(pb, 16, 0x3C0A);
     put_buffer(pb, *refs->structural_component[stream_index], 16);
 
+#ifdef DEBUG
+    PRINT_KEY(s, "structural component key", klv->key);
+    PRINT_KEY(s, "structural component uid", *refs->structural_component[stream_index]);
+#endif
     data_def_ul = mxf_get_data_definition_ul(mxf_data_definition_uls, st->codec->codec_type);
     mxf_write_local_tag(pb, 16, 0x0201);
     put_buffer(pb, data_def_ul->uid, 16);
