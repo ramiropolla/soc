@@ -651,7 +651,7 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     put_buffer(pb, data_def_ul->uid, 16);
 
     mxf_write_local_tag(pb, 8, 0x0202);
-    put_be32(pb, st->duration);
+    put_be64(pb, st->duration);
 
     // write structural component
     if (mxf_generate_reference(s, &refs->structural_component[stream_index], 1) < 0)
