@@ -586,11 +586,11 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     mxf_write_local_tag(pb, 4, 0x4801);
     put_be32(pb, stream_index + 1);
 
+    mxf_write_local_tag(pb, 4, 0x4804);
     if (type != MaterialPackage) {
         for (element = mxf_essence_element_key; element->type != CODEC_ID_NONE; element++) {
             if (st->codec->codec_id== element->type) {
                 // write track number
-                mxf_write_local_tag(pb, 4, 0x4804);
                 put_buffer(pb, element->uid + 12, 3);
                 put_byte(pb, element->uid[15] + mxf->track_number_sign[i]);
                 mxf->track_number_sign[i] ++;
