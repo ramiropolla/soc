@@ -263,7 +263,7 @@ static int mxf_write_primer_pack(AVFormatContext *s)
 {
     ByteIOContext *pb = s->pb;
     const MXFLocalTagPair *local_tag_batch;
-    int i,local_tag_number = 0;
+    int local_tag_number, i = 0;
 
     local_tag_number = sizeof(mxf_local_tag_batch) / sizeof(MXFLocalTagPair);
 
