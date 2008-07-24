@@ -164,7 +164,7 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int searc
     }
 }
 
-static void psy_null_window(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
+static void psy_null_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe)
 {
     int ch;
 
@@ -179,7 +179,7 @@ static void psy_null_window(AACPsyContext *apc, int16_t *audio, int channel, Cha
     cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
 }
 
-static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
+static void psy_null_process(AACPsyContext *apc, int channel, ChannelElement *cpe)
 {
     int start;
     int ch, g, i;
@@ -220,7 +220,7 @@ static void psy_null_process(AACPsyContext *apc, int16_t *audio, int channel, Ch
     psy_create_output(apc, cpe, 1);
 }
 
-static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
+static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe)
 {
     int ch, i;
 
@@ -253,7 +253,7 @@ static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int channel, Ch
     cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
 }
 
-static void psy_null8_process(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
+static void psy_null8_process(AACPsyContext *apc, int channel, ChannelElement *cpe)
 {
     int start;
     int w, ch, g, i;
@@ -397,7 +397,7 @@ static av_cold int psy_3gpp_init(AACPsyContext *apc)
  * Tell encoder which window types to use.
  * @see 3GPP TS26.403 5.4.1
  */
-static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
+static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe)
 {
     int ch;
 
@@ -449,7 +449,7 @@ static void calc_pe(Psy3gppBand *band, int band_width)
  * Determine scalefactors and prepare coefficients for encoding.
  * @see 3GPP TS26.403 5.4
  */
-static void psy_3gpp_process(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe)
+static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cpe)
 {
     int start;
     int ch, g, i;
@@ -667,14 +667,14 @@ int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx, int model
     return 0;
 }
 
-void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int channel, ChannelElement *cpe)
+void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe)
 {
-    ctx->model->window(ctx, audio, channel, cpe);
+    ctx->model->window(ctx, audio, la, channel, cpe);
 }
 
-void ff_aac_psy_analyze(AACPsyContext *ctx, int16_t *audio, int channel, ChannelElement *cpe)
+void ff_aac_psy_analyze(AACPsyContext *ctx, int channel, ChannelElement *cpe)
 {
-    ctx->model->process(ctx, audio, channel, cpe);
+    ctx->model->process(ctx, channel, cpe);
 }
 
 void av_cold ff_aac_psy_end(AACPsyContext *ctx)

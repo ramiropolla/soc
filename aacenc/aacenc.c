@@ -655,13 +655,13 @@ static int aac_encode_frame(AVCodecContext *avctx,
     AACEncContext *s = avctx->priv_data;
     int16_t *samples = data;
 
-    ff_aac_psy_suggest_window(&s->psy, samples, 0, &s->cpe);
+    ff_aac_psy_suggest_window(&s->psy, samples, NULL, 0, &s->cpe);
 
     analyze(avctx, s, &s->cpe, samples, 0);
     if(avctx->channels > 1)
         analyze(avctx, s, &s->cpe, samples, 1);
 
-    ff_aac_psy_analyze(&s->psy, samples, 0, &s->cpe);
+    ff_aac_psy_analyze(&s->psy, 0, &s->cpe);
 
     init_put_bits(&s->pb, frame, buf_size*8);
     if(!avctx->frame_number && !(avctx->flags & CODEC_FLAG_BITEXACT)){

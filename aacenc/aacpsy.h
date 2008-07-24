@@ -170,16 +170,16 @@ typedef struct AACPsyContext {
 typedef struct AACPsyModel {
     const char *name;
     int   (*init)   (AACPsyContext *apc);
-    void  (*window) (AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe);
-    void  (*process)(AACPsyContext *apc, int16_t *audio, int channel, ChannelElement *cpe);
+    void  (*window) (AACPsyContext *apc, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe);
+    void  (*process)(AACPsyContext *apc,int channel, ChannelElement *cpe);
     void  (*end)    (AACPsyContext *apc);
 }AACPsyModel;
 
 int ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx, int model, int flags,
                     const uint8_t *bands1024, int num_bands1024,
                     const uint8_t *bands128,  int num_bands128);
-void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int channel, ChannelElement *cpe);
-void ff_aac_psy_analyze(AACPsyContext *ctx, int16_t *audio, int channel, ChannelElement *cpe);
+void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe);
+void ff_aac_psy_analyze(AACPsyContext *ctx, int channel, ChannelElement *cpe);
 void ff_aac_psy_end(AACPsyContext *ctx);
 #endif /* FFMPEG_AACPSY_H */
 
