@@ -674,7 +674,7 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     klv->key[14] = 0x11;
     klv->key[15] = 0x00;
     put_buffer(pb, klv->key, 16);
-    klv_encode_ber_length(pb, 90);
+    klv_encode_ber_length(pb, 108);
 
     st = s->streams[stream_index];
 
@@ -707,13 +707,13 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
 
         // write source track id
         mxf_write_local_tag(pb, 4, 0x1102);
-        put_be64(pb, 0);
+        put_be32(pb, 0);
     } else {
         mxf_write_local_tag(pb, 32, 0x1101);
         put_buffer(pb, mxf->top_src_package_uid, 32);
 
         mxf_write_local_tag(pb, 4, 0x1102);
-        put_be64(pb, stream_index + 1);
+        put_be32(pb, stream_index + 1);
     }
     return 0;
 }
