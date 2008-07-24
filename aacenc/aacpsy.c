@@ -601,7 +601,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
         }
         for(g = 0; g < apc->num_bands1024; g++){
             if(cpe->ch[ch].zeroes[0][g]) continue;
-            cpe->ch[ch].sf_idx[0][g] = SCALE_ONE_POS + cpe->ch[ch].sf_idx[0][g];
+            cpe->ch[ch].sf_idx[0][g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[0][g], 0, SCALE_MAX_POS);
             if(!cpe->ch[ch].gain) cpe->ch[ch].gain = cpe->ch[ch].sf_idx[0][g];
         }
     }
