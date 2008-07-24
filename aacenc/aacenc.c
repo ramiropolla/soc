@@ -174,6 +174,7 @@ typedef struct {
     DSPContext  dsp;
     DECLARE_ALIGNED_16(FFTSample, output[2048]);
     DECLARE_ALIGNED_16(FFTSample, tmp[1024]);
+    int16_t* samples;
 
     int samplerate_index;
     const uint8_t *swb_sizes1024;
@@ -653,9 +654,14 @@ static int aac_encode_frame(AVCodecContext *avctx,
                             uint8_t *frame, int buf_size, void *data)
 {
     AACEncContext *s = avctx->priv_data;
-    int16_t *samples = data;
+    int16_t *samples = s->samples;
 
-    ff_aac_psy_suggest_window(&s->psy, samples, NULL, 0, &s->cpe);
+    if(!samples){
+        s->samples = av_malloc(1024 * avctx->channels * sizeof(s->samples[0]));
+        memcpy(s->samples, data, 1024 * avctx->channels * sizeof(s->samples[0]));
+        return 0;
+    }
+    ff_aac_psy_suggest_window(&s->psy, samples, data, 0, &s->cpe);
 
     analyze(avctx, s, &s->cpe, samples, 0);
     if(avctx->channels > 1)
@@ -664,7 +670,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
     ff_aac_psy_analyze(&s->psy, 0, &s->cpe);
 
     init_put_bits(&s->pb, frame, buf_size*8);
-    if(!avctx->frame_number && !(avctx->flags & CODEC_FLAG_BITEXACT)){
+    if(avctx->frame_number==1 && !(avctx->flags & CODEC_FLAG_BITEXACT)){
         put_bitstream_info(avctx, s, LIBAVCODEC_IDENT);
     }
     switch(avctx->channels){
@@ -692,6 +698,10 @@ static int aac_encode_frame(AVCodecContext *avctx,
     put_bits(&s->pb, 3, ID_END);
     flush_put_bits(&s->pb);
     avctx->frame_bits = put_bits_count(&s->pb);
+
+    if(data){
+        memcpy(s->samples, data, 1024 * avctx->channels * sizeof(s->samples[0]));
+    }
     return put_bits_count(&s->pb)>>3;
 }
 
@@ -702,6 +712,7 @@ static av_cold int aac_encode_end(AVCodecContext *avctx)
     ff_mdct_end(&s->mdct1024);
     ff_mdct_end(&s->mdct128);
     ff_aac_psy_end(&s->psy);
+    av_freep(&s->samples);
     return 0;
 }
 
@@ -713,4 +724,5 @@ AVCodec aac_encoder = {
     aac_encode_init,
     aac_encode_frame,
     aac_encode_end,
+    .capabilities = CODEC_CAP_SMALL_LAST_FRAME,
 };
