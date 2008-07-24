@@ -606,8 +606,8 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     }
 
     mxf_write_local_tag(pb, 8, 0x4B01);
-    put_be32(pb, st->time_base.num);
     put_be32(pb, st->time_base.den);
+    put_be32(pb, st->time_base.num);
 
     // write origin
     mxf_write_local_tag(pb, 8, 0x4B02);
