@@ -475,29 +475,29 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     for(ch = 0; ch < apc->avctx->channels; ch++){
         start = 0;
         cpe->ch[ch].gain = 0;
-        for(g = 0; g < apc->num_bands1024; g++){
-            for(i = 0; i < apc->bands1024[g]; i++)
+        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+            for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++)
                 pctx->band[ch][g].energy +=  cpe->ch[ch].coeffs[start+i] *  cpe->ch[ch].coeffs[start+i];
             pctx->band[ch][g].thr = pctx->band[ch][g].energy * 0.001258925f;
-            start += apc->bands1024[g];
+            start += cpe->ch[ch].ics.swb_sizes[g];
             if(pctx->band[ch][g].energy != 0.0){
                 float ffac = 0.0;
 
-                for(i = 0; i < apc->bands1024[g]; i++)
+                for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++)
                     ffac += sqrt(FFABS(cpe->ch[ch].coeffs[start+i]));
                 pctx->band[ch][g].ffac = ffac;
-                calc_pe(&pctx->band[ch][g], apc->bands1024[g]);
+                calc_pe(&pctx->band[ch][g], cpe->ch[ch].ics.swb_sizes[g]);
             }
         }
     }
 
     //modify thresholds - spread, threshold in quiet - 5.4.3
     for(ch = 0; ch < apc->avctx->channels; ch++){
-        for(g = 1; g < apc->num_bands1024; g++)
+        for(g = 1; g < cpe->ch[ch].ics.num_swb; g++)
             pctx->band[ch][g].thr = FFMAX(pctx->band[ch][g].thr, pctx->band[ch][g-1].thr * pctx->s_low[g-1]);
-        for(g = apc->num_bands1024 - 2; g >= 0; g--)
+        for(g = cpe->ch[ch].ics.num_swb - 2; g >= 0; g--)
             pctx->band[ch][g].thr = FFMAX(pctx->band[ch][g].thr, pctx->band[ch][g+1].thr * pctx->s_hi[g+1]);
-        for(g = 0; g < apc->num_bands1024; g++){
+        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
             pctx->band[ch][g].thr_quiet = FFMAX(pctx->band[ch][g].thr, pctx->ath[g]);
             pctx->band[ch][g].thr_quiet = fmaxf(PSY_3GPP_RPEMIN*pctx->band[ch][g].thr_quiet, fminf(pctx->band[ch][g].thr_quiet, PSY_3GPP_RPELEV*pctx->prev_band[ch][g].thr_quiet));
             pctx->band[ch][g].thr = FFMAX(pctx->band[ch][g].thr, pctx->band[ch][g].thr_quiet * 0.25);
@@ -534,9 +534,9 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
 
     for(ch = 0; ch < apc->avctx->channels; ch++){
         pctx->a[ch] = pctx->b[ch] = pctx->pe[ch] = pctx->thr[ch] = 0.0f;
-        for(g = 0; g < apc->num_bands1024; g++){
+        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
             if(pctx->band[ch][g].energy != 0.0)
-                calc_pe(&pctx->band[ch][g], apc->bands1024[g]);
+                calc_pe(&pctx->band[ch][g], cpe->ch[ch].ics.swb_sizes[g]);
             if(pctx->band[ch][g].thr < pctx->band[ch][g].energy){
                 pctx->a[ch]   += pctx->band[ch][g].a;
                 pctx->b[ch]   += pctx->band[ch][g].b;
@@ -562,9 +562,9 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
             //add correction factor to thresholds and recalculate perceptual entropy
             pctx->a[ch] = pctx->b[ch] = pctx->pe[ch] = pctx->thr[ch] = 0.0;
             pe = 0.0f;
-            for(g = 0; g < apc->num_bands1024; g++){
+            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 pctx->band[ch][g].thr = modify_thr(pctx->band[ch][g].thr, r);
-                calc_pe(&pctx->band[ch][g], apc->bands1024[g]);
+                calc_pe(&pctx->band[ch][g], cpe->ch[ch].ics.swb_sizes[g]);
                 if(pctx->band[ch][g].thr < pctx->band[ch][g].energy){
                     pctx->a[ch]   += pctx->band[ch][g].a;
                     pctx->b[ch]   += pctx->band[ch][g].b;
@@ -581,7 +581,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
         int min_scale = 256;
         prev_scale = -1;
         cpe->ch[ch].gain = 0;
-        for(g = 0; g < apc->num_bands1024; g++){
+        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
             cpe->ch[ch].zeroes[0][g] = pctx->band[ch][g].thr >= pctx->band[ch][g].energy;
             if(cpe->ch[ch].zeroes[0][g]) continue;
             //spec gives constant for lg() but we scaled it for log2()
@@ -591,15 +591,15 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
             prev_scale = cpe->ch[ch].sf_idx[0][g];
         }
         //limit scalefactors
-        for(g = 0; g < apc->num_bands1024; g++){
+        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
             if(cpe->ch[ch].zeroes[0][g]) continue;
             min_scale = FFMIN(min_scale, cpe->ch[ch].sf_idx[0][g]);
         }
-        for(g = 0; g < apc->num_bands1024; g++){
+        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
             if(cpe->ch[ch].zeroes[0][g]) continue;
             cpe->ch[ch].sf_idx[0][g] = FFMIN(cpe->ch[ch].sf_idx[0][g], min_scale + SCALE_MAX_DIFF);
         }
-        for(g = 0; g < apc->num_bands1024; g++){
+        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
             if(cpe->ch[ch].zeroes[0][g]) continue;
             cpe->ch[ch].sf_idx[0][g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[0][g], 0, SCALE_MAX_POS);
             if(!cpe->ch[ch].gain) cpe->ch[ch].gain = cpe->ch[ch].sf_idx[0][g];
