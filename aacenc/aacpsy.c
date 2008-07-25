@@ -498,44 +498,44 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
         start = 0;
         cpe->ch[ch].gain = 0;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
-        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-            g2 = w*16 + g;
-            for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++)
-                pctx->band[ch][g2].energy +=  cpe->ch[ch].coeffs[start+i] *  cpe->ch[ch].coeffs[start+i];
-            pctx->band[ch][g2].thr = pctx->band[ch][g2].energy * 0.001258925f;
-            start += cpe->ch[ch].ics.swb_sizes[g];
-            if(pctx->band[ch][g2].energy != 0.0){
-                float ffac = 0.0;
-
+            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                g2 = w*16 + g;
                 for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++)
-                    ffac += sqrt(FFABS(cpe->ch[ch].coeffs[start+i]));
-                pctx->band[ch][g2].ffac = ffac;
-                calc_pe(&pctx->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
+                    pctx->band[ch][g2].energy +=  cpe->ch[ch].coeffs[start+i] *  cpe->ch[ch].coeffs[start+i];
+                pctx->band[ch][g2].thr = pctx->band[ch][g2].energy * 0.001258925f;
+                start += cpe->ch[ch].ics.swb_sizes[g];
+                if(pctx->band[ch][g2].energy != 0.0){
+                    float ffac = 0.0;
+
+                    for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++)
+                        ffac += sqrt(FFABS(cpe->ch[ch].coeffs[start+i]));
+                    pctx->band[ch][g2].ffac = ffac;
+                    calc_pe(&pctx->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
+                }
             }
-        }
         }
     }
 
     //modify thresholds - spread, threshold in quiet - 5.4.3
     for(ch = 0; ch < apc->avctx->channels; ch++){
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
-        for(g = 1; g < cpe->ch[ch].ics.num_swb; g++){
-            g2 = w*16 + g;
-            pctx->band[ch][g2].thr = FFMAX(pctx->band[ch][g2].thr, pctx->band[ch][g2-1].thr * pctx->s_low_l[g-1]);
-        }
-        for(g = cpe->ch[ch].ics.num_swb - 2; g >= 0; g--){
-            g2 = w*16 + g;
-            pctx->band[ch][g2].thr = FFMAX(pctx->band[ch][g2].thr, pctx->band[ch][g2+1].thr * pctx->s_hi_l[g+1]);
-        }
-        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-            g2 = w*16 + g;
-            if(cpe->ch[ch].ics.num_swb == apc->num_bands1024)
-                pctx->band[ch][g2].thr_quiet = FFMAX(pctx->band[ch][g2].thr, pctx->ath_l[g]);
-            else
-                pctx->band[ch][g2].thr_quiet = FFMAX(pctx->band[ch][g2].thr, pctx->ath_s[g]);
-            pctx->band[ch][g2].thr_quiet = fmaxf(PSY_3GPP_RPEMIN*pctx->band[ch][g2].thr_quiet, fminf(pctx->band[ch][g2].thr_quiet, PSY_3GPP_RPELEV*pctx->prev_band[ch][g2].thr_quiet));
-            pctx->band[ch][g2].thr = FFMAX(pctx->band[ch][g2].thr, pctx->band[ch][g2].thr_quiet * 0.25);
-        }
+            for(g = 1; g < cpe->ch[ch].ics.num_swb; g++){
+                g2 = w*16 + g;
+                pctx->band[ch][g2].thr = FFMAX(pctx->band[ch][g2].thr, pctx->band[ch][g2-1].thr * pctx->s_low_l[g-1]);
+            }
+            for(g = cpe->ch[ch].ics.num_swb - 2; g >= 0; g--){
+                g2 = w*16 + g;
+                pctx->band[ch][g2].thr = FFMAX(pctx->band[ch][g2].thr, pctx->band[ch][g2+1].thr * pctx->s_hi_l[g+1]);
+            }
+            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                g2 = w*16 + g;
+                if(cpe->ch[ch].ics.num_swb == apc->num_bands1024)
+                    pctx->band[ch][g2].thr_quiet = FFMAX(pctx->band[ch][g2].thr, pctx->ath_l[g]);
+                else
+                    pctx->band[ch][g2].thr_quiet = FFMAX(pctx->band[ch][g2].thr, pctx->ath_s[g]);
+                pctx->band[ch][g2].thr_quiet = fmaxf(PSY_3GPP_RPEMIN*pctx->band[ch][g2].thr_quiet, fminf(pctx->band[ch][g2].thr_quiet, PSY_3GPP_RPELEV*pctx->prev_band[ch][g2].thr_quiet));
+                pctx->band[ch][g2].thr = FFMAX(pctx->band[ch][g2].thr, pctx->band[ch][g2].thr_quiet * 0.25);
+            }
         }
     }
 
@@ -543,47 +543,47 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     if(apc->avctx->channels > 1 && cpe->common_window){
         start = 0;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
-        for(g = 0; g < cpe->ch[0].ics.num_swb; g++){
-            double en_m = 0.0, en_s = 0.0, l1;
-            float m, s;
+            for(g = 0; g < cpe->ch[0].ics.num_swb; g++){
+                double en_m = 0.0, en_s = 0.0, l1;
+                float m, s;
 
-            g2 = w*16 + g;
-            cpe->ms.mask[w][g] = 0;
-            if(pctx->band[0][g2].energy == 0.0 || pctx->band[1][g2].energy == 0.0)
-                continue;
-            for(i = 0; i < cpe->ch[0].ics.swb_sizes[g]; i++){
-                m = (cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i]) / 2.0;
-                s = (cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i]) / 2.0;
-                en_m += m*m;
-                en_s += s*s;
+                g2 = w*16 + g;
+                cpe->ms.mask[w][g] = 0;
+                if(pctx->band[0][g2].energy == 0.0 || pctx->band[1][g2].energy == 0.0)
+                    continue;
+                for(i = 0; i < cpe->ch[0].ics.swb_sizes[g]; i++){
+                    m = (cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i]) / 2.0;
+                    s = (cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i]) / 2.0;
+                    en_m += m*m;
+                    en_s += s*s;
+                }
+                l1 = FFMIN(pctx->band[0][g2].thr, pctx->band[1][g2].thr);
+                if(en_m == 0.0 || en_s == 0.0 || l1*l1 / (en_m * en_s) >= (pctx->band[0][g2].thr * pctx->band[1][g2].thr / (pctx->band[0][g2].energy * pctx->band[1][g2].energy))){
+                    cpe->ms.mask[w][g] = 1;
+                    pctx->band[0][g2].energy = en_m;
+                    pctx->band[1][g2].energy = en_s;
+                    pctx->band[0][g2].thr = en_m * 0.001258925f;
+                    pctx->band[1][g2].thr = en_s * 0.001258925f;
+                    //TODO: minSnr update
+                }
             }
-            l1 = FFMIN(pctx->band[0][g2].thr, pctx->band[1][g2].thr);
-            if(en_m == 0.0 || en_s == 0.0 || l1*l1 / (en_m * en_s) >= (pctx->band[0][g2].thr * pctx->band[1][g2].thr / (pctx->band[0][g2].energy * pctx->band[1][g2].energy))){
-                cpe->ms.mask[w][g] = 1;
-                pctx->band[0][g2].energy = en_m;
-                pctx->band[1][g2].energy = en_s;
-                pctx->band[0][g2].thr = en_m * 0.001258925f;
-                pctx->band[1][g2].thr = en_s * 0.001258925f;
-                //TODO: minSnr update
-            }
-        }
         }
     }
 
     for(ch = 0; ch < apc->avctx->channels; ch++){
         pctx->a[ch] = pctx->b[ch] = pctx->pe[ch] = pctx->thr[ch] = 0.0f;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
-        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-            g2 = w*16 + g;
-            if(pctx->band[ch][g2].energy != 0.0)
-                calc_pe(&pctx->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
-            if(pctx->band[ch][g2].thr < pctx->band[ch][g2].energy){
-                pctx->a[ch]   += pctx->band[ch][g2].a;
-                pctx->b[ch]   += pctx->band[ch][g2].b;
-                pctx->pe[ch]  += pctx->band[ch][g2].pe;
-                pctx->thr[ch] += pctx->band[ch][g2].thr;
+            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                g2 = w*16 + g;
+                if(pctx->band[ch][g2].energy != 0.0)
+                    calc_pe(&pctx->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
+                if(pctx->band[ch][g2].thr < pctx->band[ch][g2].energy){
+                    pctx->a[ch]   += pctx->band[ch][g2].a;
+                    pctx->b[ch]   += pctx->band[ch][g2].b;
+                    pctx->pe[ch]  += pctx->band[ch][g2].pe;
+                    pctx->thr[ch] += pctx->band[ch][g2].thr;
+                }
             }
-        }
         }
     }
 
@@ -604,17 +604,17 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
             pctx->a[ch] = pctx->b[ch] = pctx->pe[ch] = pctx->thr[ch] = 0.0;
             pe = 0.0f;
             for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
-            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                g2 = w*16 + g;
-                pctx->band[ch][g2].thr = modify_thr(pctx->band[ch][g2].thr, r);
-                calc_pe(&pctx->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
-                if(pctx->band[ch][g2].thr < pctx->band[ch][g2].energy){
-                    pctx->a[ch]   += pctx->band[ch][g2].a;
-                    pctx->b[ch]   += pctx->band[ch][g2].b;
-                    pctx->pe[ch]  += pctx->band[ch][g2].pe;
-                    pctx->thr[ch] += pctx->band[ch][g2].thr;
+                for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                    g2 = w*16 + g;
+                    pctx->band[ch][g2].thr = modify_thr(pctx->band[ch][g2].thr, r);
+                    calc_pe(&pctx->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
+                    if(pctx->band[ch][g2].thr < pctx->band[ch][g2].energy){
+                        pctx->a[ch]   += pctx->band[ch][g2].a;
+                        pctx->b[ch]   += pctx->band[ch][g2].b;
+                        pctx->pe[ch]  += pctx->band[ch][g2].pe;
+                        pctx->thr[ch] += pctx->band[ch][g2].thr;
+                    }
                 }
-            }
             }
         }
         //TODO: linearization
@@ -626,30 +626,30 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
         prev_scale = -1;
         cpe->ch[ch].gain = 0;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
-        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-            g2 = w*16 + g;
-            cpe->ch[ch].zeroes[w][g] = pctx->band[ch][g2].thr >= pctx->band[ch][g2].energy;
-            if(cpe->ch[ch].zeroes[w][g]) continue;
-            //spec gives constant for lg() but we scaled it for log2()
-            cpe->ch[ch].sf_idx[w][g] = (int)(2.66667 * (log2(6.75*pctx->band[ch][g2].thr) - log2(pctx->band[ch][g2].ffac)));
-            if(prev_scale != -1)
-                cpe->ch[ch].sf_idx[w][g] = av_clip(cpe->ch[ch].sf_idx[w][g], prev_scale - SCALE_MAX_DIFF, prev_scale + SCALE_MAX_DIFF);
-            prev_scale = cpe->ch[ch].sf_idx[w][g];
-        }
-        //limit scalefactors
-        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-            if(cpe->ch[ch].zeroes[w][g]) continue;
-            min_scale = FFMIN(min_scale, cpe->ch[ch].sf_idx[w][g]);
-        }
-        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-            if(cpe->ch[ch].zeroes[w][g]) continue;
-            cpe->ch[ch].sf_idx[w][g] = FFMIN(cpe->ch[ch].sf_idx[w][g], min_scale + SCALE_MAX_DIFF);
-        }
-        for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-            if(cpe->ch[ch].zeroes[w][g]) continue;
-            cpe->ch[ch].sf_idx[w][g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[w][g], 0, SCALE_MAX_POS);
-            if(!cpe->ch[ch].gain) cpe->ch[ch].gain = cpe->ch[ch].sf_idx[w][g];
-        }
+            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                g2 = w*16 + g;
+                cpe->ch[ch].zeroes[w][g] = pctx->band[ch][g2].thr >= pctx->band[ch][g2].energy;
+                if(cpe->ch[ch].zeroes[w][g]) continue;
+                //spec gives constant for lg() but we scaled it for log2()
+                cpe->ch[ch].sf_idx[w][g] = (int)(2.66667 * (log2(6.75*pctx->band[ch][g2].thr) - log2(pctx->band[ch][g2].ffac)));
+                if(prev_scale != -1)
+                    cpe->ch[ch].sf_idx[w][g] = av_clip(cpe->ch[ch].sf_idx[w][g], prev_scale - SCALE_MAX_DIFF, prev_scale + SCALE_MAX_DIFF);
+                prev_scale = cpe->ch[ch].sf_idx[w][g];
+            }
+            //limit scalefactors
+            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                if(cpe->ch[ch].zeroes[w][g]) continue;
+                min_scale = FFMIN(min_scale, cpe->ch[ch].sf_idx[w][g]);
+            }
+            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                if(cpe->ch[ch].zeroes[w][g]) continue;
+                cpe->ch[ch].sf_idx[w][g] = FFMIN(cpe->ch[ch].sf_idx[w][g], min_scale + SCALE_MAX_DIFF);
+            }
+            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                if(cpe->ch[ch].zeroes[w][g]) continue;
+                cpe->ch[ch].sf_idx[w][g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[w][g], 0, SCALE_MAX_POS);
+                if(!cpe->ch[ch].gain) cpe->ch[ch].gain = cpe->ch[ch].sf_idx[w][g];
+            }
         }
     }
 
