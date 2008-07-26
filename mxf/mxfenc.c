@@ -73,8 +73,8 @@ typedef struct {
 typedef struct {
     UID *identification;
     UID *content_storage;
-    UID *package;
-    UID *track;
+    UID **package;
+    UID **track;
     UID **sequence;
     UID **structural_component;
 } MXFReferenceContext;
@@ -219,7 +219,7 @@ static int mxf_generate_reference(AVFormatContext *s, UID **refs, int ref_count)
     p = *refs;
     for (i = 0; i < ref_count; i++) {
         mxf_generate_uuid(s, *p);
-        p += 16;
+        p ++;
     }
     p = 0;
     return 0;
@@ -320,6 +320,8 @@ static void mxf_free(AVFormatContext *s)
     }
     av_freep(&mxf->reference->sequence);
     av_freep(&mxf->reference->structural_component);
+    av_freep(&mxf->reference->track);
+    av_freep(&mxf->reference->package);
     av_freep(&mxf->reference);
     av_freep(&mxf->track_essence_element_key);
     av_freep(&mxf->track_number_sign);
@@ -471,10 +473,13 @@ static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
     PRINT_KEY(s, "content storage uid", *refs->content_storage);
 #endif
     // write package reference
-    if (mxf_generate_reference(s, &refs->package, 2) < 0)
+    refs->package= av_mallocz(s->nb_streams * sizeof(*refs->package));
+    if (!refs->package)
+        return -1;
+    if (mxf_generate_reference(s, refs->package, 2) < 0)
         return -1;
     mxf_write_local_tag(pb, 16 * 2 + 8, 0x1901);
-    mxf_write_reference(pb, 2, refs->package);
+    mxf_write_reference(pb, 2, *refs->package);
     return 0;
 }
 
@@ -484,7 +489,7 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     MXFReferenceContext *refs = mxf->reference;
     ByteIOContext *pb = s->pb;
     UMID umid;
-    UID *ref;
+    int i;
 
     klv->key[13] = 0x01;
     klv->key[14] = type == MaterialPackage ? 0x36 : 0x37;
@@ -494,13 +499,13 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     klv_encode_ber_length(pb, 92 + 16 * s->nb_streams);
 
     // write uid
-    ref = &refs->package[type == SourcePackage];
+    i = type == MaterialPackage ? 0 : 1;
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, *ref, 16);
+    put_buffer(pb, (*refs->package)[i], 16);
 #ifdef DEBUG
     av_log(s,AV_LOG_DEBUG, "package type:%d\n", type);
     PRINT_KEY(s, "package", klv->key);
-    PRINT_KEY(s, "package uid", *ref);
+    PRINT_KEY(s, "package uid", (*refs->package)[i]);
     PRINT_KEY(s, "package umid first part", umid);
     PRINT_KEY(s, "package umid second part", umid + 16);
 #endif
@@ -523,10 +528,13 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     put_be64(pb, 0);
 
     // write track refs
-    if (mxf_generate_reference(s, &refs->track, s->nb_streams) < 0)
+    refs->track = av_mallocz(s->nb_streams * sizeof(*refs->track));
+    if (!refs->track)
+        return -1;
+    if (mxf_generate_reference(s, refs->track, s->nb_streams) < 0)
         return -1;
     mxf_write_local_tag(pb, s->nb_streams * 16 + 8, 0x4403);
-    mxf_write_reference(pb, s->nb_streams, refs->track);
+    mxf_write_reference(pb, s->nb_streams, *refs->track);
 
     // every track have 1 sequence and 1 structural componet, malloc memory for the refs pointer
     refs->sequence = av_mallocz(s->nb_streams * sizeof(*refs->sequence));
@@ -577,10 +585,10 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
 
     // write track uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, refs->track[stream_index], 16);
+    put_buffer(pb, (*refs->track)[stream_index], 16);
 #ifdef DEBUG
     PRINT_KEY(s, "track key", klv->key);
-    PRINT_KEY(s, "track uid", refs->track[stream_index]);
+    PRINT_KEY(s, "track uid", (*refs->track)[stream_index]);
 #endif
     // write track id
     mxf_write_local_tag(pb, 4, 0x4801);
