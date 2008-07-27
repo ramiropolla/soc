@@ -821,7 +821,7 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
 
     ac->avccontext = avccontext;
 
-    if (avccontext->extradata && avccontext->extradata_size &&
+    if (avccontext->extradata_size > 0 &&
         audio_specific_config(ac, avccontext->extradata, avccontext->extradata_size))
         return -1;
 
