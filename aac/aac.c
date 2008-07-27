@@ -606,9 +606,8 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
  */
 static void program_config_element_parse_tags(GetBitContext * gb, enum ChannelType *cpe_map,
                                               enum ChannelType *sce_map, int n, enum ChannelType type) {
-    enum ChannelType *map;
     while(n--) {
-        map = cpe_map && get_bits1(gb) ? cpe_map : sce_map; // stereo or mono map
+        enum ChannelType *map = cpe_map && get_bits1(gb) ? cpe_map : sce_map; // stereo or mono map
         map[get_bits(gb, 4)] = type;
     }
 }
