@@ -995,12 +995,12 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
         ics->num_swb       =       num_swb_1024[ac->m4ac.sampling_index];
     }
 
-        if(ics->max_sfb > ics->num_swb) {
-            av_log(ac->avccontext, AV_LOG_ERROR,
-                "Number of scalefactor bands in group (%d) exceeds limit (%d).\n",
-                ics->max_sfb, ics->num_swb);
-            return -1;
-        }
+    if(ics->max_sfb > ics->num_swb) {
+        av_log(ac->avccontext, AV_LOG_ERROR,
+            "Number of scalefactor bands in group (%d) exceeds limit (%d).\n",
+            ics->max_sfb, ics->num_swb);
+        return -1;
+    }
 
     if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
         ics->num_windows   = 8;
