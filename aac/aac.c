@@ -1059,8 +1059,8 @@ static inline float ivquant(AACContext * ac, int a) {
  */
 static int decode_band_types(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum BandType band_type[][64], int band_type_run_end[][64]) {
     int g;
+    const int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
     for (g = 0; g < ics->num_window_groups; g++) {
-        int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
         int k = 0;
         while (k < ics->max_sfb) {
             uint8_t sect_len = k;
