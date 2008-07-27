@@ -715,7 +715,7 @@ static int program_config_element_default(AACContext *ac, int channels)
  * Parse GA "General Audio" specific configuration; reference: table 4.1.
  */
 static int ga_specific_config(AACContext * ac, GetBitContext * gb, int channels) {
-    int ext, ret;
+    int extension_flag, ret;
 
     if(get_bits1(gb)) {  // frameLengthFlag
         av_log(ac->avccontext, AV_LOG_ERROR, "960/120 MDCT window is not supported.\n");
@@ -724,7 +724,7 @@ static int ga_specific_config(AACContext * ac, GetBitContext * gb, int channels)
 
     if (get_bits1(gb))       // dependsOnCoreCoder
         skip_bits(gb, 14);   // coreCoderDelay
-    ext = get_bits1(gb);
+    extension_flag = get_bits1(gb);
 
     if(ac->m4ac.object_type == AOT_AAC_SCALABLE ||
        ac->m4ac.object_type == AOT_ER_AAC_SCALABLE)
@@ -739,7 +739,7 @@ static int ga_specific_config(AACContext * ac, GetBitContext * gb, int channels)
             return ret;
     }
 
-    if (ext) {
+    if (extension_flag) {
         switch (ac->m4ac.object_type) {
             case AOT_ER_BSAC:
                 skip_bits(gb, 5);    // numOfSubFrame
