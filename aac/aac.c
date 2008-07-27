@@ -875,7 +875,6 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
 
     dsputil_init(&ac->dsp, avccontext);
 
-    /* Initialize RNG dither. */
     av_init_random(0x1f2e3d4c, &ac->random_state);
 
     // -1024 - Compensate wrong IMDCT method.
