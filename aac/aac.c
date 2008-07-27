@@ -119,7 +119,7 @@ static VLC books[11];
 /**
  * Audio Object Types
  */
-enum {
+enum AudioObjectType {
     AOT_NULL,
                                // Support?                Name
     AOT_AAC_MAIN,              ///< Y                       Main
@@ -152,7 +152,7 @@ enum {
 /**
  * IDs for raw_data_block
  */
-enum {
+enum RawDataBlockID {
     ID_SCE,
     ID_CPE,
     ID_CCE,
@@ -166,7 +166,7 @@ enum {
 /**
  * IDs for extension_payload
  */
-enum {
+enum ExtensionPayloadID {
     EXT_FILL,
     EXT_FILL_DATA,
     EXT_DATA_ELEMENT,
@@ -2249,7 +2249,8 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
 static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data_size, const uint8_t * buf, int buf_size) {
     AACContext * ac = avccontext->priv_data;
     GetBitContext gb;
-    int id, err, tag;
+    enum RawDataBlockID id;
+    int err, tag;
 
     init_get_bits(&gb, buf, buf_size*8);
 
