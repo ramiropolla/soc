@@ -1057,7 +1057,7 @@ static inline float ivquant(AACContext * ac, int a) {
  * @param   band_type_run_end   array of the last scalefactor band of a band type run for a window group's scalefactor band
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_section(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum BandType band_type[][64], int band_type_run_end[][64]) {
+static int decode_band_types(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum BandType band_type[][64], int band_type_run_end[][64]) {
     int g;
     for (g = 0; g < ics->num_window_groups; g++) {
         int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
@@ -1379,7 +1379,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
             return -1;
     }
 
-    if (decode_section(ac, gb, ics, sce->band_type, sce->band_type_run_end) < 0)
+    if (decode_band_types(ac, gb, ics, sce->band_type, sce->band_type_run_end) < 0)
         return -1;
     if (decode_scalefactors(ac, gb, sce->mixing_gain, global_gain, ics, sce->band_type, sce->band_type_run_end, sce->sf) < 0)
         return -1;
