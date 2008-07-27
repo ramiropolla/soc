@@ -77,6 +77,8 @@ typedef struct {
     UID **track;
     UID **sequence;
     UID **structural_component;
+    UID *mul_desc;
+    UID **sub_desc;
 } MXFReferenceContext;
 
 typedef struct MXFContext {
@@ -92,6 +94,12 @@ typedef struct MXFContext {
     int essence_container_count;
     UID *essence_container_uls;
 } MXFContext;
+
+typedef struct {
+    const UID key;
+    int (*write)();
+    enum CodecType type;
+} MXFDescriptorWriteTableEntry;
 
 static const uint8_t umid_base[] = {0x06, 0x0a, 0x2b, 0x34, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x0f, 0x00, 0x13, 0x00, 0x00, 0x00};
 
@@ -118,6 +126,28 @@ static const MXFDataDefinitionUL mxf_data_definition_uls[] = {
     { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },  CODEC_TYPE_DATA },
 };
 
+static const MXFCodecUL mxf_codec_uls[] = {
+    /* PictureEssenceCoding */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x03,0x04,0x01,0x02,0x02,0x01,0x01,0x11,0x00 }, 14, CODEC_ID_MPEG2VIDEO }, /* MP@ML Long GoP */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x04,0x01,0x02,0x02,0x01,0x02,0x01,0x01 }, 14, CODEC_ID_MPEG2VIDEO }, /* D-10 50Mbps PAL */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x03,0x04,0x01,0x02,0x02,0x01,0x03,0x03,0x00 }, 14, CODEC_ID_MPEG2VIDEO }, /* MP@HL Long GoP */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x03,0x04,0x01,0x02,0x02,0x01,0x04,0x02,0x00 }, 14, CODEC_ID_MPEG2VIDEO }, /* 422P@HL I-Frame */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x03,0x04,0x01,0x02,0x02,0x01,0x20,0x02,0x03 }, 14,      CODEC_ID_MPEG4 }, /* XDCAM proxy_pal030926.mxf */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x04,0x01,0x02,0x02,0x02,0x01,0x02,0x00 }, 13,    CODEC_ID_DVVIDEO }, /* DV25 IEC PAL */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x07,0x04,0x01,0x02,0x02,0x03,0x01,0x01,0x00 }, 14,   CODEC_ID_JPEG2000 }, /* JPEG2000 Codestream */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x04,0x01,0x02,0x01,0x7F,0x00,0x00,0x00 }, 13,   CODEC_ID_RAWVIDEO }, /* Uncompressed */
+    /* SoundEssenceCompression */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x04,0x02,0x02,0x01,0x00,0x00,0x00,0x00 }, 13,  CODEC_ID_PCM_S16LE }, /* Uncompressed */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x04,0x02,0x02,0x01,0x7F,0x00,0x00,0x00 }, 13,  CODEC_ID_PCM_S16LE },
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x07,0x04,0x02,0x02,0x01,0x7E,0x00,0x00,0x00 }, 13,  CODEC_ID_PCM_S16BE }, /* From Omneon MXF file */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x04,0x04,0x02,0x02,0x02,0x03,0x01,0x01,0x00 }, 15,   CODEC_ID_PCM_ALAW }, /* XDCAM Proxy C0023S01.mxf */
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x04,0x02,0x02,0x02,0x03,0x02,0x01,0x00 }, 15,        CODEC_ID_AC3 },
+    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x04,0x02,0x02,0x02,0x03,0x02,0x05,0x00 }, 15,        CODEC_ID_MP2 }, /* MP2 or MP3 */
+  //{ { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x04,0x02,0x02,0x02,0x03,0x02,0x1C,0x00 }, 15,    CODEC_ID_DOLBY_E }, /* Dolby-E */
+    { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },  0,       CODEC_ID_NONE },
+};
+
+static const uint8_t multiple_desc_ul[]           = { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x03,0x0D,0x01,0x03,0x01,0x02,0x7F,0x01,0x00 };
 
 static const MXFCodecUL mxf_picture_essence_container_uls[] = {
     { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x02,0x0D,0x01,0x03,0x01,0x02,0x04,0x60,0x01 }, 14, CODEC_ID_MPEG2VIDEO }, /* MPEG-ES Frame wrapped */
@@ -160,6 +190,7 @@ static const MXFLocalTagPair mxf_local_tag_batch[] = {
     { 0x4405, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x07,0x02,0x01,0x10,0x01,0x03,0x00,0x00}}, /* Package Creation Date */
     { 0x4404, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x07,0x02,0x01,0x10,0x02,0x05,0x00,0x00}}, /* Package Modified Date */
     { 0x4403, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x06,0x01,0x01,0x04,0x06,0x05,0x00,0x00}}, /* Tracks Strong reference array */
+    { 0x4701, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x06,0x01,0x01,0x04,0x02,0x03,0x00,0x00}}, /* Descriptor */
     // Track
     { 0x4801, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x01,0x07,0x01,0x01,0x00,0x00,0x00,0x00}}, /* Track ID */
     { 0x4804, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x06,0x01,0x01,0x04,0x01,0x03,0x00,0x00}}, /* Track Numberr */
@@ -174,6 +205,20 @@ static const MXFLocalTagPair mxf_local_tag_batch[] = {
     { 0x1201, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x05,0x07,0x02,0x01,0x03,0x01,0x0A,0x00,0x00}}, /* Start position */
     { 0x1101, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x06,0x01,0x01,0x03,0x01,0x00,0x00,0x00}}, /* SourcePackageID */
     { 0x1102, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x06,0x01,0x01,0x03,0x02,0x00,0x00,0x00}}, /* SourceTrackID */
+    // file descriptor
+    { 0x3F01, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x04,0x06,0x01,0x01,0x04,0x06,0x0B,0x00,0x00}}, /* sub descriptor uid*/
+    { 0x3006, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x05,0x06,0x01,0x01,0x03,0x05,0x00,0x00,0x00}}, /* Linked Track ID */
+    { 0x3004, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x06,0x01,0x01,0x04,0x01,0x02,0x00,0x00}}, /* essence container ul */
+    // generic picture eseence descriptor
+    { 0x3203, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x01,0x04,0x01,0x05,0x02,0x02,0x00,0x00,0x00}}, /* stored width */
+    { 0x3202, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x01,0x04,0x01,0x05,0x02,0x01,0x00,0x00,0x00}}, /* stored heigth */
+    { 0x320E, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x01,0x04,0x01,0x01,0x01,0x01,0x00,0x00,0x00}}, /* aspect ratio*/
+    { 0x3201, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x04,0x01,0x06,0x01,0x00,0x00,0x00,0x00}}, /* picture essence coding*/
+    // generic picture sound essence descriptor
+    { 0x3D03, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x05,0x04,0x02,0x03,0x01,0x01,0x01,0x00,0x00}}, /* audio sampling rate */
+    { 0x3D07, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x05,0x04,0x02,0x01,0x01,0x04,0x00,0x00,0x00}}, /* channel count */
+    { 0x3D01, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x04,0x04,0x02,0x03,0x03,0x04,0x00,0x00,0x00}}, /* quantization bits */
+    { 0x3D06, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x04,0x01,0x06,0x01,0x00,0x00,0x00,0x00}}, /* sound essence compression */
 };
 
 #define PRINT_KEY(pc, s, x) dprintf(pc, "%s %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X\n", s, \
@@ -258,6 +303,16 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
     return 0;
 }
 
+static const MXFCodecUL *mxf_get_essence_container_ul(const MXFCodecUL *uls, enum CodecID type)
+{
+    while (uls->id != CODEC_ID_NONE) {
+        if (uls->id == type)
+            break;
+        uls++;
+    }
+    return uls;
+}
+
 static int mxf_write_primer_pack(AVFormatContext *s)
 {
     ByteIOContext *pb = s->pb;
@@ -320,6 +375,8 @@ static void mxf_free(AVFormatContext *s)
     av_freep(&mxf->reference->sequence);
     av_freep(&mxf->reference->structural_component);
     av_freep(&mxf->reference->track);
+    av_freep(&mxf->reference->sub_desc);
+    av_freep(&mxf->reference->mul_desc);
     av_freep(&mxf->reference->package);
     av_freep(&mxf->reference);
     av_freep(&mxf->track_essence_element_key);
@@ -491,7 +548,10 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     klv->key[15] = 0x00;
 
     put_buffer(pb, klv->key, 16);
-    klv_encode_ber_length(pb, 92 + 16 * s->nb_streams);
+    if (type == MaterialPackage)
+        klv_encode_ber_length(pb, 92 + 16 * s->nb_streams);
+    else
+        klv_encode_ber_length(pb, 112 + 16 * s->nb_streams); // 20 bytes length for descriptor reference
 
     // write uid
     i = type == MaterialPackage ? 0 : 1;
@@ -544,6 +604,11 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
         mxf->track_number_sign = av_mallocz(sizeof(mxf_essence_element_key)/sizeof(MXFEssenceElementKey));
         if (!mxf->track_number_sign)
             return -1;
+        // write multiple descriptor reference
+        if (mxf_generate_reference(s, &refs->mul_desc, 1) < 0)
+            return -1;
+        mxf_write_local_tag(pb, 16, 0x4701);
+        put_buffer(pb, *refs->mul_desc, 16);
     }
 
     // malloc memory for essence element key of each track
@@ -587,7 +652,7 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
 #endif
     // write track id
     mxf_write_local_tag(pb, 4, 0x4801);
-    put_be32(pb, stream_index + 1);
+    put_be32(pb, stream_index);
 
     mxf_write_local_tag(pb, 4, 0x4804);
     if (type != MaterialPackage) {
@@ -716,17 +781,152 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
         put_buffer(pb, mxf->top_src_package_uid, 32);
 
         mxf_write_local_tag(pb, 4, 0x1102);
-        put_be32(pb, stream_index + 1);
+        put_be32(pb, stream_index);
     }
     return 0;
 }
 
+static int mxf_write_multi_descriptor(AVFormatContext *s, KLVPacket *klv)
+{
+    MXFContext *mxf = s->priv_data;
+    MXFReferenceContext *refs = mxf->reference;
+    ByteIOContext *pb = s->pb;
+
+    klv->key[13] = 0x01;
+    klv->key[14] = 0x44;
+    klv->key[15] = 0x00;
+
+    put_buffer(pb, klv->key, 16);
+    klv_encode_ber_length(pb, 64 + 16 * s->nb_streams);
+
+    mxf_write_local_tag(pb, 16, 0x3C0A);
+    put_buffer(pb, *refs->mul_desc, 16);
+#ifdef DEBUG
+    PRINT_KEY(s, "multi_desc uid", *refs->mul_desc);
+#endif
+    // write sample rate
+    // SMPTE377M D.1 says this field is necessary,
+    // but mxf.c actually do not read the field,so we set 0 as default.
+    mxf_write_local_tag(pb, 8, 0x3001);
+    put_be64(pb, 0);
+
+    // write essence container ul
+    mxf_write_local_tag(pb, 16, 0x3004);
+    put_buffer(pb, multiple_desc_ul, 16);
+
+    // write sub descriptor refs
+    refs->sub_desc= av_mallocz(s->nb_streams * sizeof(*refs->sub_desc));
+    if (!refs->sub_desc)
+        return -1;
+    if (mxf_generate_reference(s, refs->sub_desc, s->nb_streams) < 0)
+        return -1;
+    mxf_write_local_tag(pb, s->nb_streams * 16 + 8, 0x3F01);
+    mxf_write_reference(pb, s->nb_streams, *refs->sub_desc);
+    return 0;
+}
+
+static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWriteTableEntry *desc_tbl, int stream_index)
+{
+    MXFContext *mxf = s->priv_data;
+    MXFReferenceContext *refs = mxf->reference;
+    ByteIOContext *pb = s->pb;
+    AVStream *st;
+    const MXFCodecUL *codec_ul = NULL;
+
+    st = s->streams[stream_index];
+
+    put_buffer(pb, desc_tbl->key, 16);
+    klv_encode_ber_length(pb, 96);
+
+    mxf_write_local_tag(pb, 16, 0x3C0A);
+    put_buffer(pb, (*refs->sub_desc)[stream_index], 16);
+
+    mxf_write_local_tag(pb, 4, 0x3006);
+    put_be32(pb, stream_index);
+#ifdef DEBUG
+    PRINT_KEY(s, "mpeg2video uid", (*refs->track)[stream_index]);
+    av_log(s, AV_LOG_DEBUG, "linked track ID:%d\n", stream_index);
+#endif
+
+    codec_ul = mxf_get_essence_container_ul(mxf_picture_essence_container_uls, st->codec->codec_id);
+    mxf_write_local_tag(pb, 16, 0x3004);
+    put_buffer(pb, codec_ul->uid, 16);
+
+    mxf_write_local_tag(pb, 4, 0x3203);
+    put_be32(pb, st->codec->width);
+
+    mxf_write_local_tag(pb, 4, 0x3202);
+    put_be32(pb, st->codec->height);
+
+    mxf_write_local_tag(pb, 8, 0x320E);
+    put_be32(pb, st->time_base.den);
+    put_be32(pb, st->time_base.num);
+
+    // tmp write, will modified later
+    mxf_write_local_tag(pb, 16, 0x3201);
+    put_buffer(pb, mxf_codec_uls->uid, 16);
+    return 0;
+}
+
+static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableEntry *desc_tbl, int stream_index)
+{
+    MXFContext *mxf = s->priv_data;
+    MXFReferenceContext *refs = mxf->reference;
+    ByteIOContext *pb = s->pb;
+    AVStream *st;
+    const MXFCodecUL *codec_ul = NULL;
+
+    st = s->streams[stream_index];
+
+    put_buffer(pb, desc_tbl->key, 16);
+    klv_encode_ber_length(pb, 96);
+
+    mxf_write_local_tag(pb, 16, 0x3C0A);
+    put_buffer(pb, (*refs->sub_desc)[stream_index], 16);
+
+    mxf_write_local_tag(pb, 4, 0x3006);
+    put_be32(pb, stream_index);
+#ifdef DEBUG
+    PRINT_KEY(s, "wav desc uid", (*refs->track)[stream_index]);
+#endif
+    codec_ul = mxf_get_essence_container_ul(mxf_sound_essence_container_uls, st->codec->codec_id);
+    mxf_write_local_tag(pb, 16, 0x3004);
+    put_buffer(pb, codec_ul->uid, 16);
+
+    // write audio sampling rate
+    mxf_write_local_tag(pb, 8, 0x3D03);
+    put_be32(pb, 48000);
+    put_be32(pb, 1);
+
+    mxf_write_local_tag(pb, 4, 0x3D07);
+    put_be32(pb, st->codec->channels);
+
+    mxf_write_local_tag(pb, 4, 0x3D01);
+    put_be32(pb, st->codec->bits_per_sample);
+
+    // tmp write, will modified later
+    mxf_write_local_tag(pb, 16, 0x3201);
+    put_buffer(pb, (mxf_codec_uls + 8) ->uid, 16);
+    return 0;
+}
+
+static const MXFDescriptorWriteTableEntry mxf_descriptor_read_table[] = {
+    { { 0x06,0x0E,0x2B,0x34,0x02,0x53,0x01,0x01,0x0d,0x01,0x01,0x01,0x01,0x01,0x51,0x00 }, mxf_write_mpeg_video_desc, CODEC_ID_MPEG2VIDEO},
+    { { 0x06,0x0E,0x2B,0x34,0x02,0x53,0x01,0x01,0x0d,0x01,0x01,0x01,0x01,0x01,0x48,0x00 }, mxf_write_wav_desc, CODEC_ID_PCM_S16LE},
+    { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }, NULL, CODEC_ID_NONE},
+};
+
 static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enum MXFMetadataSetType type)
 {
     int i;
+    const MXFDescriptorWriteTableEntry *desc = NULL;
 
     if (mxf_write_package(s, klv, type) < 0)
         return -1;
+    if (type == SourcePackage) {
+        if (mxf_write_multi_descriptor(s, klv) < 0)
+            return -1;
+    }
 
     for (i = 0;i < s->nb_streams; i++) {
         if (mxf_write_track(s, klv, i, type) < 0)
@@ -737,6 +937,19 @@ static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enu
 
         if (mxf_write_structural_component(s, klv, i, type) < 0)
             return -1;
+
+        if (type == SourcePackage) {
+            for (desc = mxf_descriptor_read_table; desc->write; desc++) {
+                if(s->streams[i]->codec->codec_id == desc->type) {
+                    int (*write)() = desc->write;
+                    if (write(s, desc, i) < 0) {
+                        av_log(s, AV_LOG_ERROR, "error writing descriptor\n");
+                        return -1;
+                    }
+                    break;
+                }
+            }
+        }
     }
     return 0;
 }
@@ -760,16 +973,6 @@ static int mxf_write_header_metadata_sets(AVFormatContext *s)
     if (mxf_build_structural_metadata(s, &klv, SourcePackage) < 0)
         return -1;
     return 0;
-}
-
-static const MXFCodecUL *mxf_get_essence_container_ul(const MXFCodecUL *uls, enum CodecID type)
-{
-    while (uls->id != CODEC_ID_NONE) {
-        if (uls->id == type)
-            break;
-        uls++;
-    }
-    return uls;
 }
 
 static int mxf_add_essence_container_ul(MXFContext *mxf, const MXFCodecUL *codec_ul)
