@@ -182,7 +182,6 @@ enum BandType {
     NOISE_BT       = 13,    ///< Spectral data are scaled white noise not coded in the bitstream.
     INTENSITY_BT2  = 14,    ///< Scalefactor data are intensity stereo positions.
     INTENSITY_BT   = 15,    ///< Scalefactor data are intensity stereo positions.
-    ESC_FLAG       = 16,
 };
 
 #define IS_CODEBOOK_UNSIGNED(x) ((x - 1) & 10)
