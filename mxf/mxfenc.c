@@ -89,9 +89,8 @@ typedef struct MXFContext {
     MXFReferenceContext *reference;
     char *track_number_sign;
     UID *track_essence_element_key;
-    int type_num;
-    const MXFCodecUL *video_container_ul;
-    const MXFCodecUL *audio_container_ul;
+    int essence_container_count;
+    UID *essence_container_uls;
 } MXFContext;
 
 static const uint8_t umid_base[] = {0x06, 0x0a, 0x2b, 0x34, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x0f, 0x00, 0x13, 0x00, 0x00, 0x00};
@@ -325,6 +324,7 @@ static void mxf_free(AVFormatContext *s)
     av_freep(&mxf->reference);
     av_freep(&mxf->track_essence_element_key);
     av_freep(&mxf->track_number_sign);
+    av_freep(&mxf->essence_container_uls);
 }
 
 static const MXFDataDefinitionUL *mxf_get_data_definition_ul(const MXFDataDefinitionUL *uls, enum CodecType type)
@@ -385,13 +385,8 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     put_buffer(pb, op1a_ul, 16);
 
     // write essence_container_refs
-    mxf_write_local_tag(pb, 8 + 16 * mxf->type_num, 0x3B0A);
-    put_be32(pb,mxf->type_num);
-    put_be32(pb,16);
-    if (mxf->video_container_ul != 0)
-        put_buffer(pb, mxf->video_container_ul->uid, 16);
-    if (mxf->audio_container_ul != 0)
-        put_buffer(pb, mxf->audio_container_ul->uid, 16);
+    mxf_write_local_tag(pb, 8 + 16 * mxf->essence_container_count, 0x3B0A);
+    mxf_write_reference(pb, mxf->essence_container_count, mxf->essence_container_uls);
 
     // write dm_scheme_refs
     mxf_write_local_tag(pb, 8, 0x3B0B);
@@ -777,36 +772,58 @@ static const MXFCodecUL *mxf_get_essence_container_ul(const MXFCodecUL *uls, enu
     return uls;
 }
 
-static void mxf_set_essence_number(AVFormatContext *s)
+static int mxf_add_essence_container_ul(MXFContext *mxf, const MXFCodecUL *codec_ul)
+{
+    int i;
+    for (i = 0; i < mxf->essence_container_count; i++) {
+        if (!memcmp(mxf->essence_container_uls[i], codec_ul->uid, 16))
+            return 0;
+    }
+    mxf->essence_container_uls = av_realloc(mxf->essence_container_uls, (mxf->essence_container_count + 1) * 16);
+    if (!mxf->essence_container_uls)
+        return -1;
+    memcpy(mxf->essence_container_uls[mxf->essence_container_count], codec_ul->uid, 16);
+    mxf->essence_container_count++;
+    return mxf->essence_container_count;
+}
+
+static int mxf_build_essence_container_refs(AVFormatContext *s)
 {
     MXFContext *mxf = s->priv_data;
     AVStream *st;
-    int i, video_type = 0, audio_type = 0;
+    int i;
+    const MXFCodecUL *codec_ul = NULL;
 
     for (i = 0; i < s->nb_streams; i++) {
         st = s->streams[i];
-        if (!video_type && st->codec->codec_type == CODEC_TYPE_VIDEO) {
-            mxf->video_container_ul = mxf_get_essence_container_ul(mxf_picture_essence_container_uls, st->codec->codec_id);
-            video_type++;
-        }
-        if (!audio_type && st->codec->codec_type == CODEC_TYPE_AUDIO) {
-            mxf->audio_container_ul = mxf_get_essence_container_ul(mxf_sound_essence_container_uls, st->codec->codec_id);
-            audio_type++;
-        }
-        if (video_type && audio_type)
+        switch (st->codec->codec_type) {
+        case CODEC_TYPE_VIDEO:
+            codec_ul = mxf_get_essence_container_ul(mxf_picture_essence_container_uls, st->codec->codec_id);
             break;
+        case CODEC_TYPE_AUDIO:
+            codec_ul = mxf_get_essence_container_ul(mxf_sound_essence_container_uls, st->codec->codec_id);
+            break;
+        }
+
+        if (codec_ul) {
+            if (mxf_add_essence_container_ul(mxf, codec_ul) < 0 )
+                return -1;
+        } else
+            return -1;
     }
-    mxf->type_num = video_type + audio_type;
+    return 0;
 }
 
 static void mxf_write_partition(AVFormatContext *s, int64_t this_partition, int bodysid, const uint8_t *key)
 {
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
-
+#ifdef DEBUG
+    int i;
+#endif
     // write klv
     put_buffer(pb, key, 16);
-    klv_encode_ber_length(pb, 88 + 16 * mxf->type_num);
+    klv_encode_ber_length(pb, 88 + 16 * mxf->essence_container_count);
 
     // write partition value
     put_be16(pb, 1); // majorVersion
@@ -835,12 +852,13 @@ static void mxf_write_partition(AVFormatContext *s, int64_t this_partition, int 
     put_buffer(pb, op1a_ul, 16); // operational pattern
 
     // essence container
-    put_be32(pb,mxf->type_num);
-    put_be32(pb,16);
-    if (mxf->video_container_ul != 0)
-        put_buffer(pb, mxf->video_container_ul->uid, 16);
-    if (mxf->audio_container_ul != 0)
-        put_buffer(pb, mxf->audio_container_ul->uid, 16);
+    mxf_write_reference(pb, mxf->essence_container_count, mxf->essence_container_uls);
+#ifdef DEBUG
+    av_log(s,AV_LOG_DEBUG, "essence container count:%d\n", mxf->essence_container_count);
+    for (i = 0; i < mxf->essence_container_count; i++)
+        PRINT_KEY(s, "essence container ul:\n", mxf->essence_container_uls[i]);
+
+#endif
 }
 
 static int mux_write_header(AVFormatContext *s)
@@ -859,7 +877,7 @@ static int mux_write_header(AVFormatContext *s)
     mxf->header_start = url_ftell(pb);
 
     // calculate the numner of essence container type
-    mxf_set_essence_number(s);
+    mxf_build_essence_container_refs(s);
     mxf_write_partition(s, 0, 0, header_partition_key);
 
     // generate Source Package Set UMID for op1a
