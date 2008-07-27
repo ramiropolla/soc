@@ -1080,7 +1080,7 @@ static int decode_band_types(AACContext * ac, GetBitContext * gb, IndividualChan
                 return -1;
             }
             for (; k < sect_len; k++) {
-                band_type[g][k] = sect_band_type;
+                band_type        [g][k] = sect_band_type;
                 band_type_run_end[g][k] = sect_len;
             }
         }
