@@ -177,7 +177,7 @@ enum WindowSequence {
 
 enum BandType {
     ZERO_BT        = 0,     ///< Scalefactors and spectral data are all zero.
-    FIRST_PAIR_BT  = 5,
+    FIRST_PAIR_BT  = 5,     ///< This and later band types encode two values (rather than four) with one code word.
     ESC_BT         = 11,    ///< Spectral data are coded with an escape sequence.
     NOISE_BT       = 13,    ///< Spectral data are scaled white noise not coded in the bitstream.
     INTENSITY_BT2  = 14,    ///< Scalefactor data are intensity stereo positions.
