@@ -542,7 +542,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     // M/S detection - 5.5.2
     if(apc->avctx->channels > 1 && cpe->common_window){
         start = 0;
-        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+        for(w = 0; w < cpe->ch[0].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[0].ics.num_swb; g++){
                 double en_m = 0.0, en_s = 0.0, l1;
                 float m, s;
