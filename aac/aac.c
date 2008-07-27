@@ -116,9 +116,6 @@ DECLARE_ALIGNED_16(static float, sine_short_128[128]);
 static VLC mainvlc;
 static VLC books[11];
 
-/**
- * Audio Object Types
- */
 enum AudioObjectType {
     AOT_NULL,
                                // Support?                Name
@@ -149,9 +146,6 @@ enum AudioObjectType {
     AOT_SSC,                   ///< N                       SinuSoidal Coding
 };
 
-/**
- * IDs for raw_data_block
- */
 enum RawDataBlockID {
     ID_SCE,
     ID_CPE,
@@ -163,9 +157,6 @@ enum RawDataBlockID {
     ID_END,
 };
 
-/**
- * IDs for extension_payload
- */
 enum ExtensionPayloadID {
     EXT_FILL,
     EXT_FILL_DATA,
@@ -175,9 +166,6 @@ enum ExtensionPayloadID {
     EXT_SBR_DATA_CRC  = 0xe,
 };
 
-/**
- * window sequences
- */
 enum WindowSequence {
     ONLY_LONG_SEQUENCE,
     LONG_START_SEQUENCE,
@@ -185,9 +173,6 @@ enum WindowSequence {
     LONG_STOP_SEQUENCE,
 };
 
-/**
- * special band types
- */
 enum BandType {
     ZERO_BT        = 0,
     FIRST_PAIR_BT  = 5,
@@ -200,9 +185,6 @@ enum BandType {
 
 #define IS_CODEBOOK_UNSIGNED(x) ((x - 1) & 10)
 
-/**
- * channel types
- */
 enum ChannelType {
     AAC_CHANNEL_FRONT = 1,
     AAC_CHANNEL_SIDE  = 2,
