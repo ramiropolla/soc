@@ -713,7 +713,7 @@ static int program_config_element_default(AACContext *ac, int channels)
 /**
  * Parse GA "General Audio" specific configuration; reference: table 4.1.
  */
-static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
+static int ga_specific_config(AACContext * ac, GetBitContext * gb, int channels) {
     int ext, ret;
 
     if(get_bits1(gb)) {  // frameLengthFlag
@@ -767,7 +767,7 @@ static int GASpecificConfig(AACContext * ac, GetBitContext * gb, int channels) {
  * @param   data_size   size of AVCCodecContext extradata
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
+static int audio_specific_config(AACContext * ac, void *data, int data_size) {
     GetBitContext gb;
     int i;
 
@@ -786,7 +786,7 @@ static int AudioSpecificConfig(AACContext * ac, void *data, int data_size) {
 #ifdef AAC_LTP
     case AOT_AAC_LTP:
 #endif /* AAC_LTP */
-        if (GASpecificConfig(ac, &gb, ac->m4ac.chan_config))
+        if (ga_specific_config(ac, &gb, ac->m4ac.chan_config))
             return -1;
         break;
     default:
@@ -821,7 +821,7 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
     ac->avccontext = avccontext;
 
     if (avccontext->extradata && avccontext->extradata_size &&
-        AudioSpecificConfig(ac, avccontext->extradata, avccontext->extradata_size))
+        audio_specific_config(ac, avccontext->extradata, avccontext->extradata_size))
         return -1;
 
     avccontext->sample_rate = ac->m4ac.sample_rate;
