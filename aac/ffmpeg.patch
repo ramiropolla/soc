@@ -1,6 +1,6 @@
 Index: Changelog
 ===================================================================
---- Changelog	(revision 14236)
+--- Changelog	(revision 14425)
 +++ Changelog	(working copy)
 @@ -127,6 +127,7 @@
  - Motion Pixels Video decoder
@@ -12,7 +12,7 @@ Index: Changelog
  
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 14236)
+--- libavcodec/Makefile	(revision 14425)
 +++ libavcodec/Makefile	(working copy)
 @@ -25,6 +25,7 @@
  
@@ -24,7 +24,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 14236)
+--- libavcodec/allcodecs.c	(revision 14425)
 +++ libavcodec/allcodecs.c	(working copy)
 @@ -180,6 +180,7 @@
      REGISTER_ENCDEC  (ZMBV, zmbv);
@@ -36,20 +36,20 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (APE, ape);
 Index: libavcodec/avcodec.h
 ===================================================================
---- libavcodec/avcodec.h	(revision 14236)
+--- libavcodec/avcodec.h	(revision 14425)
 +++ libavcodec/avcodec.h	(working copy)
 @@ -30,7 +30,7 @@
  #include "libavutil/avutil.h"
  
  #define LIBAVCODEC_VERSION_MAJOR 51
--#define LIBAVCODEC_VERSION_MINOR 60
-+#define LIBAVCODEC_VERSION_MINOR 61
+-#define LIBAVCODEC_VERSION_MINOR 61
++#define LIBAVCODEC_VERSION_MINOR 62
  #define LIBAVCODEC_VERSION_MICRO  0
  
  #define LIBAVCODEC_VERSION_INT  AV_VERSION_INT(LIBAVCODEC_VERSION_MAJOR, \
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 14236)
+--- doc/general.texi	(revision 14425)
 +++ doc/general.texi	(working copy)
 @@ -336,7 +336,7 @@
  @item 4X IMA ADPCM           @tab     @tab  X
