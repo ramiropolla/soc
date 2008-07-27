@@ -174,12 +174,12 @@ enum WindowSequence {
 };
 
 enum BandType {
-    ZERO_BT        = 0,
+    ZERO_BT        = 0,     ///< Scalefactors and spectral data are all zero.
     FIRST_PAIR_BT  = 5,
-    ESC_BT         = 11,
-    NOISE_BT       = 13,
-    INTENSITY_BT2  = 14,
-    INTENSITY_BT   = 15,
+    ESC_BT         = 11,    ///< Spectral data are coded with an escape sequence.
+    NOISE_BT       = 13,    ///< Spectral data are scaled white noise not coded in the bitstream.
+    INTENSITY_BT2  = 14,    ///< Scalefactor data are intensity stereo positions.
+    INTENSITY_BT   = 15,    ///< Scalefactor data are intensity stereo positions.
     ESC_FLAG       = 16,
 };
 
