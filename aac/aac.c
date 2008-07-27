@@ -100,6 +100,8 @@
 #include "mpeg4audio.h"
 
 #include <assert.h>
+#include <math.h>
+#include <string.h>
 
 #define MAX_CHANNELS 64
 #define MAX_TAGID 16
