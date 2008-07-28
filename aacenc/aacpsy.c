@@ -76,13 +76,14 @@ static inline float calc_distortion(float *c, int size, int scale_idx)
 /**
  * Produce integer coefficients from scalefactors provided by model.
  */
-static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int search_pulses)
+static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int channel, int search_pulses)
 {
     int i, w, w2, g, ch;
     int start, sum, maxsfb, cmaxsfb;
     int pulses, poff[4], pamp[4];
+    int chans = FFMIN(apc->avctx->channels - channel, 2);
 
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         start = 0;
         maxsfb = 0;
         cpe->ch[ch].pulse.present = 0;
@@ -152,7 +153,7 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int searc
         }
     }
 
-    if(apc->avctx->channels > 1 && cpe->common_window){
+    if(apc->avctx->channels - channel > 1 && cpe->common_window){
         int msc = 0;
         cpe->ch[0].ics.max_sfb = FFMAX(cpe->ch[0].ics.max_sfb, cpe->ch[1].ics.max_sfb);
         cpe->ch[1].ics.max_sfb = cpe->ch[0].ics.max_sfb;
@@ -167,8 +168,9 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int searc
 static void psy_null_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe)
 {
     int ch;
+    int chans = FFMIN(apc->avctx->channels - channel, 2);
 
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         cpe->ch[ch].ics.window_sequence = ONLY_LONG_SEQUENCE;
         cpe->ch[ch].ics.use_kb_window[0] = 1;
         cpe->ch[ch].ics.num_windows = 1;
@@ -184,8 +186,9 @@ static void psy_null_process(AACPsyContext *apc, int channel, ChannelElement *cp
     int start;
     int ch, g, i;
     int minscale;
+    int chans = FFMIN(apc->avctx->channels - channel, 2);
 
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         start = 0;
         for(g = 0; g < apc->num_bands1024; g++){
             float energy = 0.0f, ffac = 0.0f, thr, dist;
@@ -207,7 +210,7 @@ static void psy_null_process(AACPsyContext *apc, int channel, ChannelElement *cp
             }
         }
     }
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         minscale = 255;
         for(g = 0; g < apc->num_bands1024; g++)
             if(!cpe->ch[ch].zeroes[0][g])
@@ -217,14 +220,15 @@ static void psy_null_process(AACPsyContext *apc, int channel, ChannelElement *cp
             if(!cpe->ch[ch].zeroes[0][g])
                 cpe->ch[ch].sf_idx[0][g] = FFMIN(minscale + SCALE_MAX_DIFF, cpe->ch[ch].sf_idx[0][g]);
     }
-    psy_create_output(apc, cpe, 1);
+    psy_create_output(apc, cpe, channel, 1);
 }
 
 static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe)
 {
     int ch, i;
+    int chans = FFMIN(apc->avctx->channels - channel, 2);
 
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         int prev_seq = cpe->ch[ch].ics.window_sequence_prev;
         cpe->ch[ch].ics.use_kb_window[1] = cpe->ch[ch].ics.use_kb_window[0];
         cpe->ch[ch].ics.window_sequence_prev = cpe->ch[ch].ics.window_sequence;
@@ -257,9 +261,10 @@ static void psy_null8_process(AACPsyContext *apc, int channel, ChannelElement *c
 {
     int start;
     int w, ch, g, i;
+    int chans = FFMIN(apc->avctx->channels - channel, 2);
 
     //detect M/S
-    if(apc->avctx->channels > 1 && cpe->common_window){
+    if(chans > 1 && cpe->common_window){
         start = 0;
         for(w = 0; w < cpe->ch[0].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[0].ics.num_swb; g++){
@@ -271,7 +276,7 @@ static void psy_null8_process(AACPsyContext *apc, int channel, ChannelElement *c
             }
         }
     }
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         cpe->ch[ch].gain = SCALE_ONE_POS;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
@@ -280,7 +285,7 @@ static void psy_null8_process(AACPsyContext *apc, int channel, ChannelElement *c
             }
         }
     }
-    psy_create_output(apc, cpe, 0);
+    psy_create_output(apc, cpe, channel, 0);
 }
 
 /**
@@ -422,9 +427,10 @@ static av_cold int psy_3gpp_init(AACPsyContext *apc)
 static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe)
 {
     int ch;
+    int chans = FFMIN(apc->avctx->channels - channel, 2);
 
 //XXX: stub, because encoder does not support long to short window transition yet :(
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         cpe->ch[ch].ics.window_sequence = ONLY_LONG_SEQUENCE;
         cpe->ch[ch].ics.use_kb_window[0] = 1;
         cpe->ch[ch].ics.num_windows = 1;
@@ -479,9 +485,10 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
     float stereo_att, pe_target;
     int bits_avail;
+    const int chans = FFMIN(apc->avctx->channels - channel, 2);
 
     //calculate and apply stereo attenuation factor - 5.2
-    if(apc->avctx->channels > 1){
+    if(apc->avctx->channels - channel > 1){
         float l, r;
         stereo_att = 1.0 / 2.0; //XXX: find some way to determine it
         for(i = 0; i < 1024; i++){
@@ -494,7 +501,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
 
     //calculate energies, initial thresholds and related values - 5.4.2
     memset(pctx->band, 0, sizeof(pctx->band));
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         start = 0;
         cpe->ch[ch].gain = 0;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
@@ -517,7 +524,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     }
 
     //modify thresholds - spread, threshold in quiet - 5.4.3
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 1; g < cpe->ch[ch].ics.num_swb; g++){
                 g2 = w*16 + g;
@@ -540,7 +547,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     }
 
     // M/S detection - 5.5.2
-    if(apc->avctx->channels > 1 && cpe->common_window){
+    if(chans > 1 && cpe->common_window){
         start = 0;
         for(w = 0; w < cpe->ch[0].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[0].ics.num_swb; g++){
@@ -571,7 +578,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
         }
     }
 
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         pctx->a[ch] = pctx->b[ch] = pctx->pe[ch] = pctx->thr[ch] = 0.0f;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
@@ -594,7 +601,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     bits_avail = pctx->avg_bits + pctx->reservoir;
     bits_avail = FFMIN(bits_avail, pctx->avg_bits * 1.5);
     pe_target = 1.18f * bits_avail / apc->avctx->channels;
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         float t0, pe, r;
         if(pctx->b[ch] == 0.0f) continue;
         for(i = 0; i < 2; i++){
@@ -622,7 +629,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     }
 
     //determine scalefactors - 5.6.2
-    for(ch = 0; ch < apc->avctx->channels; ch++){
+    for(ch = 0; ch < chans; ch++){
         int min_scale = 256;
         prev_scale = -1;
         cpe->ch[ch].gain = 0;
@@ -655,7 +662,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     }
 
     memcpy(pctx->prev_band, pctx->band, sizeof(pctx->band));
-    psy_create_output(apc, cpe, 0);
+    psy_create_output(apc, cpe, channel, 0);
 }
 
 static av_cold void psy_3gpp_end(AACPsyContext *apc)

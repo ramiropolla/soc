@@ -181,7 +181,9 @@ typedef struct {
     int swb_num1024;
     const uint8_t *swb_sizes128;
     int swb_num128;
-    ChannelElement cpe;
+
+    ProgramConfig pc;
+    ChannelElement *cpe;
     AACPsyContext psy;
 } AACEncContext;
 
@@ -239,6 +241,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     ff_sine_window_init(sine_long_1024, 1024);
     ff_sine_window_init(sine_short_128, 128);
 
+    s->cpe = av_mallocz(sizeof(ChannelElement) * ((avctx->channels + 1) >> 1));
     //TODO: psy model selection with some option
     ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
     avctx->extradata = av_malloc(2);
@@ -297,6 +300,45 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe
         for(i = 0; i < 1024; i++, j += avctx->channels)
             cpe->ch[channel].saved[i] = audio[j] / 512.0;
     }
+}
+
+/**
+ * Encode channel layout (aka program config element).
+ * @see table 4.2
+ */
+static void put_program_config_element(AVCodecContext *avctx, AACEncContext *s)
+{
+    int i;
+    ProgramConfig *pc = &s->pc;
+
+    put_bits(&s->pb, 2, 0); //object type - ?
+    put_bits(&s->pb, 4, s->samplerate_index); //sample rate index
+
+    put_bits(&s->pb, 4, avctx->channels/2); // all channels are front :)
+    put_bits(&s->pb, 4, 0); // no side channels
+    put_bits(&s->pb, 4, 0); // no back channels
+    put_bits(&s->pb, 2, 0); // no LFE
+    put_bits(&s->pb, 3, 0); // no associated data
+    put_bits(&s->pb, 4, 0); // no valid channel couplings
+
+    put_bits(&s->pb, 1, pc->mono_mixdown);
+    if(pc->mono_mixdown)
+        put_bits(&s->pb, 4, pc->mixdown_coeff_index);
+    put_bits(&s->pb, 1, pc->stereo_mixdown);
+    if(pc->stereo_mixdown)
+        put_bits(&s->pb, 4, pc->mixdown_coeff_index);
+    put_bits(&s->pb, 1, pc->matrix_mixdown);
+    if(pc->matrix_mixdown){
+        put_bits(&s->pb, 2, pc->mixdown_coeff_index);
+        put_bits(&s->pb, 1, pc->pseudo_surround);
+    }
+    //TODO: proper channel map output
+    for(i = 0; i < avctx->channels; i += 2){
+        put_bits(&s->pb, 1, 1); // channel is CPE
+        put_bits(&s->pb, 4, i/2);
+    }
+    align_put_bits(&s->pb);
+    put_bits(&s->pb, 8, 0); // no commentary bytes
 }
 
 /**
@@ -654,45 +696,47 @@ static int aac_encode_frame(AVCodecContext *avctx,
                             uint8_t *frame, int buf_size, void *data)
 {
     AACEncContext *s = avctx->priv_data;
-    int16_t *samples = s->samples;
+    int16_t *samples = s->samples, *samples2;
+    ChannelElement *cpe;
+    int i, j, chans;
 
     if(!samples){
         s->samples = av_malloc(1024 * avctx->channels * sizeof(s->samples[0]));
         memcpy(s->samples, data, 1024 * avctx->channels * sizeof(s->samples[0]));
         return 0;
     }
-    ff_aac_psy_suggest_window(&s->psy, samples, data, 0, &s->cpe);
-
-    analyze(avctx, s, &s->cpe, samples, 0);
-    if(avctx->channels > 1)
-        analyze(avctx, s, &s->cpe, samples, 1);
-
-    ff_aac_psy_analyze(&s->psy, 0, &s->cpe);
 
     init_put_bits(&s->pb, frame, buf_size*8);
     if(avctx->frame_number==1 && !(avctx->flags & CODEC_FLAG_BITEXACT)){
         put_bitstream_info(avctx, s, LIBAVCODEC_IDENT);
     }
-    switch(avctx->channels){
-    case 1:
-        put_bits(&s->pb, 3, ID_SCE);
-        put_bits(&s->pb, 4, 0); //tag
-        encode_individual_channel(avctx, &s->cpe, 0);
-        break;
-    case 2:
-        put_bits(&s->pb, 3, ID_CPE);
-        put_bits(&s->pb, 4, 0); //tag
-        put_bits(&s->pb, 1, s->cpe.common_window);
-        if(s->cpe.common_window){
-            put_ics_info(avctx, &s->cpe.ch[0].ics);
-            encode_ms_info(&s->pb, &s->cpe);
+    //encode channels as channel pairs and one optional single channel element
+    /*if(avctx->channels > 2){
+        put_bits(&s->pb, 3, ID_PCE);
+        put_bits(&s->pb, 4, 0);
+        put_program_config_element(avctx, s);
+    }*/
+    for(i = 0; i < avctx->channels; i += 2){
+        chans = FFMIN(avctx->channels - i, 2);
+        cpe = &s->cpe[i/2];
+        samples2 = samples + i;
+        ff_aac_psy_suggest_window(&s->psy, samples2, data, i, cpe);
+        for(j = 0; j < chans; j++){
+            analyze(avctx, s, cpe, samples2, j);
         }
-        encode_individual_channel(avctx, &s->cpe, 0);
-        encode_individual_channel(avctx, &s->cpe, 1);
-        break;
-    default:
-        av_log(avctx, AV_LOG_ERROR, "Unsupported number of channels: %d\n", avctx->channels);
-        return -1;
+        ff_aac_psy_analyze(&s->psy, i, cpe);
+        put_bits(&s->pb, 3, chans > 1 ? ID_CPE : ID_SCE);
+        put_bits(&s->pb, 4, i >> 1);
+        if(chans == 2){
+            put_bits(&s->pb, 1, cpe->common_window);
+            if(cpe->common_window){
+                put_ics_info(avctx, &cpe->ch[0].ics);
+                encode_ms_info(&s->pb, cpe);
+            }
+        }
+        for(j = 0; j < chans; j++){
+            encode_individual_channel(avctx, cpe, j);
+        }
     }
 
     put_bits(&s->pb, 3, ID_END);
@@ -713,6 +757,7 @@ static av_cold int aac_encode_end(AVCodecContext *avctx)
     ff_mdct_end(&s->mdct128);
     ff_aac_psy_end(&s->psy);
     av_freep(&s->samples);
+    av_freep(&s->cpe);
     return 0;
 }
 
