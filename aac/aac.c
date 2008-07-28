@@ -1277,8 +1277,8 @@ static int decode_spectrum(AACContext * ac, GetBitContext * gb, const Individual
                                 if (vq_ptr[j])
                                     icoef[coef_idx + j] = 1 - 2*get_bits1(gb);
                         }else {
-                        for (j = 0; j < dim; j++)
-                            icoef[coef_idx + j] = 1;
+                            for (j = 0; j < dim; j++)
+                                icoef[coef_idx + j] = 1;
                         }
                         if (cur_band_type == ESC_BT) {
                             for (j = 0; j < 2; j++) {
