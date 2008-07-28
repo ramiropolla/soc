@@ -1259,6 +1259,7 @@ static int decode_spectrum(AACContext * ac, GetBitContext * gb, const Individual
         for (i = 0; i < ics->max_sfb; i++) {
             const int cur_band_type = band_type[g][i];
             const int dim = cur_band_type >= FIRST_PAIR_BT ? 2 : 4;
+            const int is_cb_unsigned = IS_CODEBOOK_UNSIGNED(cur_band_type);
             int group;
             if (cur_band_type == ZERO_BT) {
                 for (group = 0; group < ics->group_len[g]; group++) {
@@ -1273,7 +1274,7 @@ static int decode_spectrum(AACContext * ac, GetBitContext * gb, const Individual
                         int j;
                         for (j = 0; j < dim; j++)
                             icoef[coef_idx + j] = 1;
-                        if (IS_CODEBOOK_UNSIGNED(cur_band_type)) {
+                        if (is_cb_unsigned) {
                             for (j = 0; j < dim; j++)
                                 if (vq_ptr[j] && get_bits1(gb))
                                     icoef[coef_idx + j] = -1;
