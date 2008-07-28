@@ -1374,7 +1374,6 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     float * out = sce->coeffs;
     int global_gain;
 
-    pulse.present = 0;
     global_gain = get_bits(gb, 8);
 
     if (!common_window && !scale_flag) {
@@ -1387,6 +1386,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     if (decode_scalefactors(ac, gb, sce->mixing_gain, global_gain, ics, sce->band_type, sce->band_type_run_end, sce->sf) < 0)
         return -1;
 
+    pulse.present = 0;
     if (!scale_flag) {
         if ((pulse.present = get_bits1(gb))) {
             if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
