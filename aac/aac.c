@@ -1648,7 +1648,7 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
 
     /* drc_bands_present? */
     if (get_bits1(gb)) {
-        ac->che_drc.band_incr = get_bits(gb, 4);
+        ac->che_drc.band_incr            = get_bits(gb, 4);
         ac->che_drc.interpolation_scheme = get_bits(gb, 4);
         n++;
         drc_num_bands += ac->che_drc.band_incr;
