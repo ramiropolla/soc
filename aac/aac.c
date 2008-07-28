@@ -361,7 +361,6 @@ typedef struct {
  */
 typedef struct {
     // CPE specific
-    int common_window;     ///< Set if channels share a common 'IndividualChannelStream' in bitstream.
     MidSideStereo ms;
     // shared
     SingleChannelElement ch[2];
@@ -1486,12 +1485,12 @@ static void apply_intensity_stereo(AACContext * ac, ChannelElement * cpe) {
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
-    int i, ret;
+    int i, ret, common_window;
     ChannelElement * cpe;
 
     cpe = ac->che[ID_CPE][tag];
-    cpe->common_window = get_bits1(gb);
-    if (cpe->common_window) {
+    common_window = get_bits1(gb);
+    if (common_window) {
         if (decode_ics_info(ac, gb, 1, &cpe->ch[0].ics))
             return -1;
         i = cpe->ch[1].ics.use_kb_window[0];
@@ -1504,12 +1503,12 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
     } else {
         cpe->ms.present = 0;
     }
-    if ((ret = decode_ics(ac, gb, cpe->common_window, 0, &cpe->ch[0])))
+    if ((ret = decode_ics(ac, gb, common_window, 0, &cpe->ch[0])))
         return ret;
-    if ((ret = decode_ics(ac, gb, cpe->common_window, 0, &cpe->ch[1])))
+    if ((ret = decode_ics(ac, gb, common_window, 0, &cpe->ch[1])))
         return ret;
 
-    if (cpe->common_window)
+    if (common_window)
         apply_mid_side_stereo(ac, cpe);
 
     if (cpe->ch[1].ics.intensity_present)
