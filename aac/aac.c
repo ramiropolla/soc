@@ -1341,8 +1341,8 @@ static void dequant(AACContext * ac, const IndividualChannelStream * ics, const 
         memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(c - offsets[ics->max_sfb]));
         for (i = 0; i < ics->max_sfb; i++) {
             if (band_type[g][i] == NOISE_BT) {
+                const float scale = sf[g][i] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
                 for (group = 0; group < ics->group_len[g]; group++) {
-                    float scale = sf[g][i] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
                     for (k = offsets[i]; k < offsets[i+1]; k++)
                         coef[group*128+k] = (int32_t)av_random(&ac->random_state) * scale;
                 }
