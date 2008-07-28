@@ -1272,12 +1272,13 @@ static int decode_spectrum(AACContext * ac, GetBitContext * gb, const Individual
                         const int coef_idx = (group << 7) + k;
                         const int8_t *vq_ptr = &codebook_vectors[cur_band_type - 1][index * dim];
                         int j;
-                        for (j = 0; j < dim; j++)
-                            icoef[coef_idx + j] = 1;
                         if (is_cb_unsigned) {
                             for (j = 0; j < dim; j++)
-                                if (vq_ptr[j] && get_bits1(gb))
-                                    icoef[coef_idx + j] = -1;
+                                if (vq_ptr[j])
+                                    icoef[coef_idx + j] = 1 - 2*get_bits1(gb);
+                        }else {
+                        for (j = 0; j < dim; j++)
+                            icoef[coef_idx + j] = 1;
                         }
                         if (cur_band_type == ESC_BT) {
                             for (j = 0; j < 2; j++) {
