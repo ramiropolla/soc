@@ -2044,7 +2044,7 @@ static void dependent_coupling(AACContext * ac, ChannelElement * cc, SingleChann
     IndividualChannelStream * ics = &cc->ch[0].ics;
     const uint16_t * offsets = ics->swb_offset;
     float * dest = sce->coeffs;
-    float * src = cc->ch[0].coeffs;
+    const float * src = cc->ch[0].coeffs;
     int g, i, group, k;
     if(ac->m4ac.object_type == AOT_AAC_LTP) {
         av_log(ac->avccontext, AV_LOG_ERROR,
