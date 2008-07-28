@@ -1461,15 +1461,15 @@ static void apply_intensity_stereo(AACContext * ac, ChannelElement * cpe) {
             for (i = 0; i < ics->max_sfb;) {
                 if (sce1->band_type[g][i] == INTENSITY_BT || sce1->band_type[g][i] == INTENSITY_BT2) {
                     const int bt_run_end = sce1->band_type_run_end[g][i];
-                while (i < bt_run_end) {
-                    c = -1 + 2 * (sce1->band_type[g][i] - 14);
-                    if (cpe->ms.present)
-                        c *= 1 - 2 * cpe->ms.mask[g][i];
-                    scale = c * sce1->sf[g][i];
-                    for (k = offsets[i]; k < offsets[i+1]; k++)
-                        coef1[k] = scale * coef0[k];
-                    i++;
-                }
+                    while (i < bt_run_end) {
+                        c = -1 + 2 * (sce1->band_type[g][i] - 14);
+                        if (cpe->ms.present)
+                            c *= 1 - 2 * cpe->ms.mask[g][i];
+                        scale = c * sce1->sf[g][i];
+                        for (k = offsets[i]; k < offsets[i+1]; k++)
+                            coef1[k] = scale * coef0[k];
+                        i++;
+                    }
                 } else
                     i = sce1->band_type_run_end[g][i];
             }
