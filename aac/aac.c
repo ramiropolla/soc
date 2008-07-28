@@ -1173,16 +1173,17 @@ static void decode_pulses(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
  */
 static void decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, TemporalNoiseShaping * tns) {
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
+    const int is8 = ics->window_sequence == EIGHT_SHORT_SEQUENCE;
     for (w = 0; w < ics->num_windows; w++) {
-        tns->n_filt[w] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 1 : 2);
+        tns->n_filt[w] = get_bits(gb, 2 - is8);
 
         if (tns->n_filt[w])
             coef_res = get_bits1(gb) + 3;
 
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
-            tns->length[w][filt] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 4 : 6);
+            tns->length[w][filt] = get_bits(gb, 6 - 2*is8);
 
-            if ((tns->order[w][filt] = get_bits(gb, ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 3 : 5))) {
+            if ((tns->order[w][filt] = get_bits(gb, 5 - 2*is8))) {
                 tns->direction[w][filt] = get_bits1(gb);
                 coef_compress = get_bits1(gb);
                 coef_len = coef_res - coef_compress;
