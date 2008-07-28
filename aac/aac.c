@@ -1164,7 +1164,7 @@ static void decode_pulses(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
     pulse->start = get_bits(gb, 6);
     for (i = 0; i < pulse->num_pulse; i++) {
         pulse->offset[i] = get_bits(gb, 5);
-        pulse->amp[i] = get_bits(gb, 4);
+        pulse->amp   [i] = get_bits(gb, 4);
     }
 }
 
