@@ -1680,13 +1680,13 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
  * @param   cnt length of ID_FIL syntactic element in bytes
  */
 static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
-    int i = 0;
+    int crc_flag = 0;
     int res = cnt;
     switch (get_bits(gb, 4)) { // extension type
         case EXT_SBR_DATA_CRC:
-            i++;
+            crc_flag++;
         case EXT_SBR_DATA:
-            res = sbr_extension_data(ac, gb, i, cnt);
+            res = sbr_extension_data(ac, gb, crc_flag, cnt);
             break;
         case EXT_DYNAMIC_RANGE:
             res = dynamic_range_info(ac, gb, cnt);
