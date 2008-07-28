@@ -160,7 +160,7 @@ static void alac_linear_predictor(AlacEncodeContext *s, int ch)
     LPCContext lpc = s->lpc[ch];
 
     if(lpc.lpc_order == 31) {
-        s->predictor_buf[0] = s->sample_buf[0];
+        s->predictor_buf[0] = s->sample_buf[ch][0];
         i = s->avctx->frame_size - 1;
         while(i > 0) {
             s->predictor_buf[i] = s->sample_buf[ch][i] - s->sample_buf[ch][i-1];
