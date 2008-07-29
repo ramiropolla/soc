@@ -517,7 +517,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
                     for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++)
                         ffac += sqrt(FFABS(cpe->ch[ch].coeffs[start+i]));
                     pctx->band[ch][g2].ffac = ffac;
-                    calc_pe(&pctx->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
                 }
             }
         }
@@ -571,8 +570,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
                     pctx->band[1][g2].energy = en_s;
                     pctx->band[0][g2].thr = en_m * 0.001258925f;
                     pctx->band[1][g2].thr = en_s * 0.001258925f;
-                    calc_pe(&pctx->band[0][g2], cpe->ch[0].ics.swb_sizes[g]);
-                    calc_pe(&pctx->band[1][g2], cpe->ch[1].ics.swb_sizes[g]);
                 }
             }
         }
