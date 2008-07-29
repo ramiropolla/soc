@@ -902,7 +902,7 @@ static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enu
 
         if (type == SourcePackage) {
             for (desc = mxf_descriptor_read_table; desc->write; desc++) {
-                if(s->streams[i]->codec->codec_id == desc->type) {
+                if (s->streams[i]->codec->codec_id == desc->type) {
                     int (*write)() = desc->write;
                     if (write(s, desc, i) < 0) {
                         av_log(s, AV_LOG_ERROR, "error writing descriptor\n");
