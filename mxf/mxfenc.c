@@ -327,12 +327,11 @@ static int mxf_write_local_tag(ByteIOContext *pb, int value_size, int tag)
     return 0;
 }
 
-static int mxf_write_reference(ByteIOContext *pb, int ref_count, UID *value)
+static void mxf_write_reference(ByteIOContext *pb, int ref_count, UID *value)
 {
     put_be32(pb, ref_count);
     put_be32(pb, 16);
     put_buffer(pb, *value, 16 * ref_count);
-    return 0;
 }
 
 static int utf8len(const uint8_t *b){
