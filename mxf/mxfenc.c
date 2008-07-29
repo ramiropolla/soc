@@ -320,11 +320,10 @@ static int mxf_write_primer_pack(AVFormatContext *s)
     return 0;
 }
 
-static int mxf_write_local_tag(ByteIOContext *pb, int value_size, int tag)
+static void mxf_write_local_tag(ByteIOContext *pb, int value_size, int tag)
 {
     put_be16(pb, tag);
     put_be16(pb, value_size);
-    return 0;
 }
 
 static void mxf_write_reference(ByteIOContext *pb, int ref_count, UID *value)
