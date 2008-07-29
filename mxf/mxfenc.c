@@ -369,8 +369,9 @@ static void mxf_free(AVFormatContext *s)
     av_freep(&mxf->essence_container_uls);
 }
 
-static const MXFDataDefinitionUL *mxf_get_data_definition_ul(const MXFDataDefinitionUL *uls, enum CodecType type)
+static const MXFDataDefinitionUL *mxf_get_data_definition_ul(enum CodecType type)
 {
+    const MXFDataDefinitionUL *uls = mxf_data_definition_uls;
     while (uls->type != CODEC_TYPE_DATA) {
         if (type == uls->type)
             break;
@@ -699,7 +700,7 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     PRINT_KEY(s, "sequence uid", *refs->sequence[stream_index]);
 #endif
     // find data define uls
-    data_def_ul = mxf_get_data_definition_ul(mxf_data_definition_uls, st->codec->codec_type);
+    data_def_ul = mxf_get_data_definition_ul(st->codec->codec_type);
     mxf_write_local_tag(pb, 16, 0x0201);
     put_buffer(pb, data_def_ul->uid, 16);
 
@@ -739,7 +740,7 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     PRINT_KEY(s, "structural component key", klv->key);
     PRINT_KEY(s, "structural component uid", *refs->structural_component[stream_index]);
 #endif
-    data_def_ul = mxf_get_data_definition_ul(mxf_data_definition_uls, st->codec->codec_type);
+    data_def_ul = mxf_get_data_definition_ul(st->codec->codec_type);
     mxf_write_local_tag(pb, 16, 0x0201);
     put_buffer(pb, data_def_ul->uid, 16);
 
