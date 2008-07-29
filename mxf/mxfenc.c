@@ -333,16 +333,6 @@ static void mxf_write_reference(ByteIOContext *pb, int ref_count, UID *value)
     put_buffer(pb, *value, 16 * ref_count);
 }
 
-static int utf8len(const uint8_t *b){
-    int len=0;
-    int val;
-    while(*b){
-        GET_UTF8(val, *b++, return -1;)
-        len++;
-    }
-    return len;
-}
-
 static void mxf_free(AVFormatContext *s)
 {
     MXFContext *mxf = s->priv_data;
@@ -450,9 +440,9 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
 
     put_buffer(pb, klv->key, 16);
 
-    company_name_len = utf8len("FFmpeg") + 1;
-    product_name_len = utf8len("OP1a Muxer") + 1;
-    version_string_len = utf8len(LIBAVFORMAT_IDENT) + 1;
+    company_name_len = strlen("FFmpeg") + 1;
+    product_name_len = strlen("OP1a Muxer") + 1;
+    version_string_len = strlen(LIBAVFORMAT_IDENT) + 1;
     length = 84 + company_name_len + product_name_len + version_string_len;
 
     klv_encode_ber_length(pb, length);
@@ -476,7 +466,7 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
     put_buffer(pb, "OP1a Muxer", product_name_len);
 
     mxf_write_local_tag(pb, version_string_len, 0x3C04);
-    put_buffer(pb, "version 0.0.1", version_string_len);
+    put_buffer(pb, "LIBAVFORMAT_IDENT", version_string_len);
 
     // write product uid
     mxf_generate_uuid(s, uid);
