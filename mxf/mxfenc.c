@@ -376,9 +376,7 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     UID uid;
     ByteIOContext *pb = s->pb;
 
-    klv->key[13] = 0x01;
-    klv->key[14] = 0x2f;
-    klv->key[15] = 0x00;
+    AV_WB24(klv->key + 13, 0x012f00);
 
     put_buffer(pb, klv->key, 16);
     klv_encode_ber_length(pb, 146);
@@ -434,9 +432,7 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
     UID uid;
     int length, company_name_len, product_name_len, version_string_len;
 
-    klv->key[13] = 0x01;
-    klv->key[14] = 0x30;
-    klv->key[15] = 0x00;
+    AV_WB24(klv->key + 13, 0x013000);
 
     put_buffer(pb, klv->key, 16);
 
@@ -485,9 +481,7 @@ static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
     MXFReferenceContext *refs = mxf->reference;
     ByteIOContext *pb = s->pb;
 
-    klv->key[13] = 0x01;
-    klv->key[14] = 0x18;
-    klv->key[15] = 0x00;
+    AV_WB24(klv->key + 13, 0x011800);
 
     put_buffer(pb, klv->key, 16);
     klv_encode_ber_length(pb, 64);
@@ -602,9 +596,7 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     const MXFEssenceElementKey *element;
     int i = 0;
 
-    klv->key[13] = 0x01;
-    klv->key[14] = 0x3b;
-    klv->key[15] = 0x00;
+    AV_WB24(klv->key + 13, 0x013b00);
 
     put_buffer(pb, klv->key, 16);
     klv_encode_ber_length(pb, 80);
@@ -672,9 +664,7 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     AVStream *st;
     const MXFDataDefinitionUL * data_def_ul;
 
-    klv->key[13] = 0x01;
-    klv->key[14] = 0x0f;
-    klv->key[15] = 0x00;
+    AV_WB24(klv->key + 13, 0x010f00);
 
     put_buffer(pb, klv->key, 16);
     klv_encode_ber_length(pb, 80);
@@ -713,9 +703,8 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     const MXFDataDefinitionUL * data_def_ul;
     int i;
 
-    klv->key[13] = 0x01;
-    klv->key[14] = 0x11;
-    klv->key[15] = 0x00;
+    AV_WB24(klv->key + 13, 0x011100);
+
     put_buffer(pb, klv->key, 16);
     klv_encode_ber_length(pb, 108);
 
@@ -767,9 +756,7 @@ static int mxf_write_multi_descriptor(AVFormatContext *s, KLVPacket *klv)
     MXFReferenceContext *refs = mxf->reference;
     ByteIOContext *pb = s->pb;
 
-    klv->key[13] = 0x01;
-    klv->key[14] = 0x44;
-    klv->key[15] = 0x00;
+    AV_WB24(klv->key + 13, 0x014400);
 
     put_buffer(pb, klv->key, 16);
     klv_encode_ber_length(pb, 64 + 16 * s->nb_streams);
