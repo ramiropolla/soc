@@ -266,14 +266,13 @@ static int mxf_generate_reference(AVFormatContext *s, UID **refs, int ref_count)
 static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
 {
     // Determine the best BER size
-    int size = 0, i;
-    uint8_t *tmp_buf;
+    int size = 0;
     uint64_t tmp = len;
     if (len < 128) {
         //short form
         size = 1;
         put_byte(pb, len);
-        return size;
+        return 1;
     }
 
     while (tmp) {
@@ -283,18 +282,11 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
 
     // long form
     put_byte(pb, 0x80 + size);
-    i = size;
-    tmp_buf = av_mallocz(size);
-    if (!tmp_buf)
-        return -1;
-    while(i) {
-        tmp_buf[i - 1] = len & 0xff;
-        len >>= 8;
-        i--;
+    while(size) {
+        size --;
+        put_byte(pb, len >> 8 * size & 0xff);
     }
-    put_buffer(pb, tmp_buf, size);
-    av_freep(&tmp_buf);
-    return 0;
+    return size;
 }
 
 static const MXFCodecUL *mxf_get_essence_container_ul(const MXFCodecUL *uls, enum CodecID type)
