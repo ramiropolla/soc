@@ -601,15 +601,19 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     pctx->reservoir += pctx->avg_bits - apc->avctx->frame_bits;
     bits_avail = pctx->avg_bits + pctx->reservoir;
     bits_avail = FFMIN(bits_avail, pctx->avg_bits * 1.5);
-    pe_target = 1.18f * bits_avail / apc->avctx->channels;
-    for(ch = 0; ch < chans; ch++){
-        float t0, pe, r;
-        if(pctx->b[ch] == 0.0f) continue;
-        for(i = 0; i < 2; i++){
-            t0 = pow(2.0, (pctx->a[ch] - pctx->pe[ch]) / (4.0 * pctx->b[ch]));
-            r  = pow(2.0, (pctx->a[ch] - pe_target)    / (4.0 * pctx->b[ch])) - t0;
+    pe_target = 1.18f * bits_avail / apc->avctx->channels * chans;
+    for(i = 0; i < 2; i++){
+        float t0, pe, r, a0 = 0.0f, pe0 = 0.0f, b0 = 0.0f;
+        for(ch = 0; ch < chans; ch++){
+            a0  += pctx->a[ch];
+            b0  += pctx->b[ch];
+            pe0 += pctx->pe[ch];
+        }
+        t0 = pow(2.0, (a0 - pe0)       / (4.0 * b0));
+        r  = pow(2.0, (a0 - pe_target) / (4.0 * b0)) - t0;
 
-            //add correction factor to thresholds and recalculate perceptual entropy
+        //add correction factor to thresholds and recalculate perceptual entropy
+        for(ch = 0; ch < chans; ch++){
             pctx->a[ch] = pctx->b[ch] = pctx->pe[ch] = pctx->thr[ch] = 0.0;
             pe = 0.0f;
             for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
@@ -626,8 +630,8 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
                 }
             }
         }
-        //TODO: linearization
     }
+        //TODO: linearization
 
     //determine scalefactors - 5.6.2
     for(ch = 0; ch < chans; ch++){
