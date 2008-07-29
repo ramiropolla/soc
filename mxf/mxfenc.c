@@ -230,21 +230,16 @@ static void mxf_generate_uuid(AVFormatContext *s, UID uuid)
 
     for (i = 0; i < 16; i++) {
         rand_num = av_random(&mxf->random_state);
-        rand_num = rand_num & 0x00ff;
-
-        // the 7th byte is version according to ISO 11578
-        if (i == 6) {
-            rand_num &= 0x0f;
-            rand_num |= 0x40;
-        }
-
-        // the 8th byte is variant for current use according to ISO 11578
-        if (i == 8) {
-            rand_num &= 0x3f;
-            rand_num |= 0x80;
-        }
+        rand_num &= 0x00ff;
         uuid[i] = rand_num;
     }
+    // the 7th byte is version according to ISO 11578
+    uuid[6] &= 0x0f;
+    uuid[6] &= 0x40;
+
+    // the 8th byte is variant for current use according to ISO 11578
+    uuid[8] &= 0x3f;
+    uuid[8] |= 0x80;
 }
 
 static void mxf_generate_umid(AVFormatContext *s, UMID umid)
