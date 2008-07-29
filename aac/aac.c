@@ -2036,7 +2036,7 @@ static void apply_ssr(AACContext * ac, SingleChannelElement * sce) {
 #endif /* AAC_SSR */
 
 /**
- * Apply dependent channel coupling.
+ * Apply dependent channel coupling (applied before IMDCT).
  *
  * @param   index   which gain to use for coupling
  */
@@ -2069,7 +2069,7 @@ static void dependent_coupling(AACContext * ac, ChannelElement * cc, SingleChann
 }
 
 /**
- * Apply independent channel coupling.
+ * Apply independent channel coupling (applied after IMDCT).
  *
  * @param   index   which gain to use for coupling
  */
