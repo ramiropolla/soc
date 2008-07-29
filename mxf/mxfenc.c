@@ -453,7 +453,7 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
 
     company_name_len = utf8len("FFmpeg") + 1;
     product_name_len = utf8len("OP1a Muxer") + 1;
-    version_string_len = utf8len("version 0.0.1") + 1;
+    version_string_len = utf8len(LIBAVFORMAT_IDENT) + 1;
     length = 84 + company_name_len + product_name_len + version_string_len;
 
     klv_encode_ber_length(pb, length);
