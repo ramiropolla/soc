@@ -550,7 +550,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
         start = 0;
         for(w = 0; w < cpe->ch[0].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[0].ics.num_swb; g++){
-                double en_m = 0.0, en_s = 0.0, l1;
+                double en_m = 0.0, en_s = 0.0, ff_m = 0.0, ff_s = 0.0, l1;
                 float m, s;
 
                 g2 = w*16 + g;
@@ -562,12 +562,16 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
                     s = (cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i]) / 2.0;
                     en_m += m*m;
                     en_s += s*s;
+                    ff_m += sqrt(FFABS(m));
+                    ff_s += sqrt(FFABS(s));
                 }
                 l1 = FFMIN(pctx->band[0][g2].thr, pctx->band[1][g2].thr);
                 if(en_m == 0.0 || en_s == 0.0 || l1*l1 / (en_m * en_s) >= (pctx->band[0][g2].thr * pctx->band[1][g2].thr / (pctx->band[0][g2].energy * pctx->band[1][g2].energy))){
                     cpe->ms.mask[w][g] = 1;
                     pctx->band[0][g2].energy = en_m;
                     pctx->band[1][g2].energy = en_s;
+                    pctx->band[0][g2].ffac = ff_m;
+                    pctx->band[1][g2].ffac = ff_s;
                     pctx->band[0][g2].thr = en_m * 0.001258925f;
                     pctx->band[1][g2].thr = en_s * 0.001258925f;
                 }
