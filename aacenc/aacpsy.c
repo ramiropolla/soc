@@ -327,10 +327,10 @@ typedef struct Psy3gppContext{
     float       barks [1024];
     float       bark_l[64];
     float       bark_s[16];
-    float       s_low_s[64];
-    float       s_low_l[16];
-    float       s_hi_s [64];
-    float       s_hi_l [16];
+    float       s_low_l[64];
+    float       s_low_s[16];
+    float       s_hi_l [64];
+    float       s_hi_s [16];
     Psy3gppBand band[2][128];
     Psy3gppBand prev_band[2][128];
     int         reservoir;
