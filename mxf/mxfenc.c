@@ -254,7 +254,7 @@ static int mxf_generate_reference(AVFormatContext *s, UID **refs, int ref_count)
     UID *p;
     *refs = av_mallocz(ref_count * sizeof(UID));
     if (!refs)
-        return -1;
+        return AVERROR(ENOMEM);
     p = *refs;
     for (i = 0; i < ref_count; i++) {
         mxf_generate_uuid(s, *p);
@@ -513,7 +513,7 @@ static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
     // write package reference
     refs->package= av_mallocz(s->nb_streams * sizeof(*refs->package));
     if (!refs->package)
-        return -1;
+        return AVERROR(ENOMEM);
     if (mxf_generate_reference(s, refs->package, 2) < 0)
         return -1;
     mxf_write_local_tag(pb, 16 * 2 + 8, 0x1901);
@@ -571,7 +571,7 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     // write track refs
     refs->track = av_mallocz(s->nb_streams * sizeof(*refs->track));
     if (!refs->track)
-        return -1;
+        return AVERROR(ENOMEM);
     if (mxf_generate_reference(s, refs->track, s->nb_streams) < 0)
         return -1;
     mxf_write_local_tag(pb, s->nb_streams * 16 + 8, 0x4403);
@@ -580,16 +580,16 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     // every track have 1 sequence and 1 structural componet, malloc memory for the refs pointer
     refs->sequence = av_mallocz(s->nb_streams * sizeof(*refs->sequence));
     if (!refs->sequence)
-        return -1;
+        return AVERROR(ENOMEM);
     refs->structural_component = av_mallocz(s->nb_streams * sizeof(*refs->structural_component));
     if (!refs->structural_component)
-        return -1;
+        return AVERROR(ENOMEM);
 
     // malloc memory for track number sign
     if (type == SourcePackage) {
         mxf->track_number_sign = av_mallocz(sizeof(mxf_essence_element_key)/sizeof(MXFEssenceElementKey));
         if (!mxf->track_number_sign)
-            return -1;
+            return AVERROR(ENOMEM);
         // write multiple descriptor reference
         if (mxf_generate_reference(s, &refs->mul_desc, 1) < 0)
             return -1;
@@ -600,7 +600,7 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     // malloc memory for essence element key of each track
     mxf->track_essence_element_key = av_mallocz(s->nb_streams * sizeof(UID));
     if (!mxf->track_essence_element_key)
-        return -1;
+        return AVERROR(ENOMEM);
     return 0;
 }
 
@@ -803,7 +803,7 @@ static int mxf_write_multi_descriptor(AVFormatContext *s, KLVPacket *klv)
     // write sub descriptor refs
     refs->sub_desc= av_mallocz(s->nb_streams * sizeof(*refs->sub_desc));
     if (!refs->sub_desc)
-        return -1;
+        return AVERROR(ENOMEM);
     if (mxf_generate_reference(s, refs->sub_desc, s->nb_streams) < 0)
         return -1;
     mxf_write_local_tag(pb, s->nb_streams * 16 + 8, 0x3F01);
