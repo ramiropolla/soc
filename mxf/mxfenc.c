@@ -260,7 +260,6 @@ static int mxf_generate_reference(AVFormatContext *s, UID **refs, int ref_count)
         mxf_generate_uuid(s, *p);
         p ++;
     }
-    p = 0;
     return 0;
 }
 
