@@ -2314,7 +2314,8 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
 
     if((err = spectral_to_sample(ac)))
         return err;
-    output_samples(avccontext, data, data_size);
+    if((err = output_samples(avccontext, data, data_size)))
+        return err;
 
     return buf_size;
 }
