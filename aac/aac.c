@@ -963,7 +963,7 @@ static void decode_ltp(AACContext * ac, GetBitContext * gb, uint8_t max_sfb, Lon
  * @param   common_window   Channels have independent [0], or shared [1], Individual Channel Stream information.
  */
 static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_window, IndividualChannelStream * ics) {
-    uint8_t grouping;
+    unsigned int grouping;
     if (get_bits1(gb)) {
         av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set.\n");
         return -1;
