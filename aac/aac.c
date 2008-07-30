@@ -2041,7 +2041,7 @@ static void apply_ssr(AACContext * ac, SingleChannelElement * sce) {
  *
  * @param   index   which gain to use for coupling
  */
-static void dependent_coupling(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
+static void apply_dependent_coupling(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
     IndividualChannelStream * ics = &cc->ch[0].ics;
     const uint16_t * offsets = ics->swb_offset;
     float * dest = sce->coeffs;
@@ -2074,7 +2074,7 @@ static void dependent_coupling(AACContext * ac, ChannelElement * cc, SingleChann
  *
  * @param   index   which gain to use for coupling
  */
-static void independent_coupling(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
+static void apply_independent_coupling(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
     int i;
     float gain = cc->coup.gain[index][0][0] * sce->mixing_gain;
     for (i = 0; i < 1024; i++)
@@ -2124,7 +2124,7 @@ static int spectral_to_sample(AACContext * ac) {
             ChannelElement *che = ac->che[j][i];
             if(che) {
                 if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 0))
-                    apply_channel_coupling(ac, che, dependent_coupling);
+                    apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
@@ -2139,7 +2139,7 @@ static int spectral_to_sample(AACContext * ac) {
                 if(che->ch[1].tns.present)
                     apply_tns(ac, 1, &che->ch[1], che->ch[1].coeffs);
                 if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 1))
-                    apply_channel_coupling(ac, che, dependent_coupling);
+                    apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_SSR
                 if (ac->m4ac.object_type == AOT_AAC_SSR) {
                     apply_ssr(ac, &che->ch[0]);
@@ -2154,7 +2154,7 @@ static int spectral_to_sample(AACContext * ac) {
                 }
 #endif /* AAC_SSR */
                 if(j == ID_CCE && che->coup.is_indep_coup && (che->coup.domain == 1))
-                    apply_channel_coupling(ac, che, independent_coupling);
+                    apply_channel_coupling(ac, che, apply_independent_coupling);
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
