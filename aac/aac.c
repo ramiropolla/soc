@@ -2134,7 +2134,7 @@ static int spectral_to_sample(AACContext * ac) {
                         return ret;
                 }
 #endif /* AAC_LTP */
-                if(               che->ch[0].tns.present)
+                if(che->ch[0].tns.present)
                     apply_tns(ac, 1, &che->ch[0], che->ch[0].coeffs);
                 if(che->ch[1].tns.present)
                     apply_tns(ac, 1, &che->ch[1], che->ch[1].coeffs);
