@@ -619,11 +619,8 @@ static void program_config_element_parse_tags(GetBitContext * gb, enum ChannelTy
 /**
  * Parse program configuration element; reference: table 4.2.
  */
-static int program_config_element(AACContext * ac, GetBitContext * gb) {
-    ProgramConfig pcs;
+static int program_config_element(AACContext * ac, GetBitContext * gb, ProgramConfig *newpcs) {
     int num_front, num_side, num_back, num_lfe, num_assoc_data, num_cc;
-
-    memset(&pcs, 0, sizeof(pcs));
 
     skip_bits(gb, 2);  // object_type
 
@@ -640,43 +637,39 @@ static int program_config_element(AACContext * ac, GetBitContext * gb) {
     num_assoc_data  = get_bits(gb, 3);
     num_cc          = get_bits(gb, 4);
 
-    pcs.mono_mixdown_tag   = get_bits1(gb) ? get_bits(gb, 4) : -1;
-    pcs.stereo_mixdown_tag = get_bits1(gb) ? get_bits(gb, 4) : -1;
+    newpcs->mono_mixdown_tag   = get_bits1(gb) ? get_bits(gb, 4) : -1;
+    newpcs->stereo_mixdown_tag = get_bits1(gb) ? get_bits(gb, 4) : -1;
 
     if (get_bits1(gb)) {
-        pcs.mixdown_coeff_index = get_bits(gb, 2);
-        pcs.pseudo_surround     = get_bits1(gb);
+        newpcs->mixdown_coeff_index = get_bits(gb, 2);
+        newpcs->pseudo_surround     = get_bits1(gb);
     }
 
-    program_config_element_parse_tags(gb, pcs.che_type[ID_CPE], pcs.che_type[ID_SCE], num_front, AAC_CHANNEL_FRONT);
-    program_config_element_parse_tags(gb, pcs.che_type[ID_CPE], pcs.che_type[ID_SCE], num_side,  AAC_CHANNEL_SIDE );
-    program_config_element_parse_tags(gb, pcs.che_type[ID_CPE], pcs.che_type[ID_SCE], num_back,  AAC_CHANNEL_BACK );
-    program_config_element_parse_tags(gb, NULL,                 pcs.che_type[ID_LFE], num_lfe,   AAC_CHANNEL_LFE  );
+    program_config_element_parse_tags(gb, newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], num_front, AAC_CHANNEL_FRONT);
+    program_config_element_parse_tags(gb, newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], num_side,  AAC_CHANNEL_SIDE );
+    program_config_element_parse_tags(gb, newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], num_back,  AAC_CHANNEL_BACK );
+    program_config_element_parse_tags(gb, NULL,                     newpcs->che_type[ID_LFE], num_lfe,   AAC_CHANNEL_LFE  );
 
     skip_bits_long(gb, 4 * num_assoc_data);
 
-    program_config_element_parse_tags(gb, pcs.che_type[ID_CCE], pcs.che_type[ID_CCE], num_cc,    AAC_CHANNEL_CC   );
+    program_config_element_parse_tags(gb, newpcs->che_type[ID_CCE], newpcs->che_type[ID_CCE], num_cc,    AAC_CHANNEL_CC   );
 
     align_get_bits(gb);
 
     /* comment field, first byte is length */
     skip_bits_long(gb, 8 * get_bits(gb, 8));
-    return output_configure(ac, &pcs);
+    return 0;
 }
 
 /**
  * Set up ProgramConfig, but based on a default channel configuration
  * as specified in table 1.17.
  */
-static int program_config_element_default(AACContext *ac, int channels)
+static int program_config_element_default(AACContext *ac, int channels, ProgramConfig *newpcs)
 {
-    ProgramConfig pcs;
-
-    memset(&pcs, 0, sizeof(ProgramConfig));
-
     /* Pre-mixed down-mix outputs are not available. */
-    pcs.mono_mixdown_tag   = -1;
-    pcs.stereo_mixdown_tag = -1;
+    newpcs->mono_mixdown_tag   = -1;
+    newpcs->stereo_mixdown_tag = -1;
 
     if(channels < 1 || channels > 7) {
         av_log(ac->avccontext, AV_LOG_ERROR, "invalid default channel configuration (%d channels)\n",
@@ -696,20 +689,20 @@ static int program_config_element_default(AACContext *ac, int channels)
      */
 
     if(channels != 2)
-        pcs.che_type[ID_SCE][0] = AAC_CHANNEL_FRONT; // front center (or mono)
+        newpcs->che_type[ID_SCE][0] = AAC_CHANNEL_FRONT; // front center (or mono)
     if(channels > 1)
-        pcs.che_type[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or stereo)
+        newpcs->che_type[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or stereo)
     if(channels == 4)
-        pcs.che_type[ID_SCE][1] = AAC_CHANNEL_BACK;  // back center
+        newpcs->che_type[ID_SCE][1] = AAC_CHANNEL_BACK;  // back center
     if(channels > 4)
-        pcs.che_type[ID_CPE][(channels == 7) + 1]
+        newpcs->che_type[ID_CPE][(channels == 7) + 1]
                                 = AAC_CHANNEL_BACK;  // back stereo
     if(channels > 5)
-        pcs.che_type[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
+        newpcs->che_type[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
     if(channels == 7)
-        pcs.che_type[ID_CPE][1] = AAC_CHANNEL_FRONT; // outer front left + outer front right
+        newpcs->che_type[ID_CPE][1] = AAC_CHANNEL_FRONT; // outer front left + outer front right
 
-    return output_configure(ac, &pcs);
+    return 0;
 }
 
 
@@ -717,6 +710,7 @@ static int program_config_element_default(AACContext *ac, int channels)
  * Parse GA "General Audio" specific configuration; reference: table 4.1.
  */
 static int ga_specific_config(AACContext * ac, GetBitContext * gb, int channels) {
+    ProgramConfig newpcs;
     int extension_flag, ret;
 
     if(get_bits1(gb)) {  // frameLengthFlag
@@ -732,14 +726,17 @@ static int ga_specific_config(AACContext * ac, GetBitContext * gb, int channels)
        ac->m4ac.object_type == AOT_ER_AAC_SCALABLE)
         skip_bits(gb, 3);     // layerNr
 
+    memset(&newpcs, 0, sizeof(ProgramConfig));
     if (channels == 0) {
         skip_bits(gb, 4);  // element_instance_tag
-        if((ret = program_config_element(ac, gb)))
+        if((ret  = program_config_element(ac, gb, &newpcs)))
             return ret;
     } else {
-        if((ret = program_config_element_default(ac, channels)))
+        if((ret = program_config_element_default(ac, channels, &newpcs)))
             return ret;
     }
+    if((ret = output_configure(ac, &newpcs)))
+        return ret;
 
     if (extension_flag) {
         switch (ac->m4ac.object_type) {
@@ -2281,8 +2278,14 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             break;
 
         case ID_PCE:
-            err = program_config_element(ac, &gb);
+        {
+            ProgramConfig newpcs;
+            memset(&newpcs, 0, sizeof(ProgramConfig));
+            if((err = program_config_element(ac, &gb, &newpcs)))
+                break;
+            err = output_configure(ac, &newpcs);
             break;
+        }
 
         case ID_DSE:
             data_stream_element(ac, &gb);
