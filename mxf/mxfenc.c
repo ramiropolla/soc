@@ -438,8 +438,12 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
 
     company_name_len = strlen("FFmpeg") + 1;
     product_name_len = strlen("OP1a Muxer") + 1;
-    version_string_len = strlen(LIBAVFORMAT_IDENT) + 1;
-    length = 84 + company_name_len + product_name_len + version_string_len;
+    if (!(s->streams[0]->codec->flags & CODEC_FLAG_BITEXACT)) {
+        version_string_len = strlen(LIBAVFORMAT_IDENT) + 1;
+        length = 84 + company_name_len + product_name_len + version_string_len;
+    } else {
+        length = 80 + company_name_len + product_name_len;
+    }
 
     klv_encode_ber_length(pb, length);
 
@@ -461,8 +465,10 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
     mxf_write_local_tag(pb, product_name_len, 0x3C02);
     put_buffer(pb, "OP1a Muxer", product_name_len);
 
-    mxf_write_local_tag(pb, version_string_len, 0x3C04);
-    put_buffer(pb, "LIBAVFORMAT_IDENT", version_string_len);
+    if (!(s->streams[0]->codec->flags & CODEC_FLAG_BITEXACT)) {
+        mxf_write_local_tag(pb, version_string_len, 0x3C04);
+        put_buffer(pb, LIBAVFORMAT_IDENT, version_string_len);
+    }
 
     // write product uid
     mxf_generate_uuid(s, uid);
