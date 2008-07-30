@@ -279,7 +279,7 @@ typedef struct {
     int dyn_rng_sgn[17];                            ///< DRC sign information; 0 - positive, 1 - negative
     int dyn_rng_ctl[17];                            ///< DRC magnitude information
     int exclude_mask[MAX_CHANNELS];                 ///< Channels to be excluded from DRC processing.
-    int additional_excluded_chns[MAX_CHANNELS];     /**< The exclude_mask bits are
+    int additional_excluded_chns[MAX_CHANNELS / 7]; /**< The exclude_mask bits are
                                                         coded in groups of 7 with 1 bit preceeding each group (except the first)
                                                         indicating that 7 more mask bits are coded. */
     int band_incr;                                  ///< Number of DRC bands greater than 1 having DRC info.
@@ -1616,19 +1616,16 @@ static int decode_sbr_extension(AACContext * ac, GetBitContext * gb, int crc, in
  */
 static int decode_drc_channel_exclusions(AACContext * ac, GetBitContext * gb) {
     int i;
-    int n = 1;
-    int num_excl_chan = 7;
+    int n = 0;
+    int num_excl_chan = 0;
 
-    for (i = 0; i < 7; i++)
-         ac->che_drc.exclude_mask[i] = get_bits1(gb);
-
-    while (n <= MAX_CHANNELS && num_excl_chan < MAX_CHANNELS - 7 && get_bits1(gb)) {
-        ac->che_drc.additional_excluded_chns[n-1]=1;
-        for (i = num_excl_chan; i < num_excl_chan+7; i++)
-            ac->che_drc.exclude_mask[i] = get_bits1(gb);
+    do {
+        for (i = 0; i < 7; i++)
+            ac->che_drc.exclude_mask[num_excl_chan + i] = get_bits1(gb);
         n++;
         num_excl_chan += 7;
-    }
+    } while (num_excl_chan < MAX_CHANNELS - 7 && (ac->che_drc.additional_excluded_chns[n-1] = get_bits1(gb)));
+
     return n;
 }
 
