@@ -2177,7 +2177,7 @@ static int spectral_to_sample(AACContext * ac) {
  * @param   data_size   output data size in bytes
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
+static int mixdown_and_convert_to_int16(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
     AACContext * ac = avccontext->priv_data;
     int i;
     float *c, *l, *r, *sl, *sr, *out;
@@ -2314,7 +2314,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
 
     if((err = spectral_to_sample(ac)))
         return err;
-    if((err = output_samples(avccontext, data, data_size)))
+    if((err = mixdown_and_convert_to_int16(avccontext, data, data_size)))
         return err;
 
     return buf_size;
