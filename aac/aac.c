@@ -998,6 +998,8 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
         av_log(ac->avccontext, AV_LOG_ERROR,
             "Number of scalefactor bands in group (%d) exceeds limit (%d).\n",
             ics->max_sfb, ics->num_swb);
+        ics->max_sfb = 0;
+        ics->num_swb = 0;
         return -1;
     }
 
