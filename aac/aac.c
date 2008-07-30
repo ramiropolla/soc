@@ -1630,7 +1630,7 @@ static int decode_drc_channel_exclusions(AACContext * ac, GetBitContext * gb) {
  * @param   cnt length of ID_FIL syntactic element in bytes
  * @return  Returns number of bytes consumed.
  */
-static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
+static int decode_dynamic_range(AACContext * ac, GetBitContext * gb, int cnt) {
     int n = 1;
     int drc_num_bands = 1;
     int i;
@@ -1690,7 +1690,7 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
             res = decode_sbr_extension(ac, gb, crc_flag, cnt);
             break;
         case EXT_DYNAMIC_RANGE:
-            res = dynamic_range_info(ac, gb, cnt);
+            res = decode_dynamic_range(ac, gb, cnt);
             break;
         case EXT_FILL:
         case EXT_FILL_DATA:
