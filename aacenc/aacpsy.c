@@ -99,6 +99,8 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chann
                 }
                 if(!cpe->ch[ch].zeroes[w][g])
                     sum = convert_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, cpe->ch[ch].ics.swb_sizes[g], cpe->ch[ch].sf_idx[w][g]);
+                else
+                    memset(cpe->ch[ch].icoefs + start, 0, cpe->ch[ch].ics.swb_sizes[g] * sizeof(cpe->ch[0].icoefs[0]));
                 cpe->ch[ch].zeroes[w][g] = !sum;
                 //try finding pulses
                 if(search_pulses && cpe->ch[ch].ics.num_windows == 1 && !cpe->ch[ch].pulse.present){
