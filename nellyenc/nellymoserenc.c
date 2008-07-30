@@ -163,7 +163,7 @@ static void encode_block(NellyMoserEncodeContext *s,
     int bits[NELLY_BUF_LEN];
     int i, j, k, l, b;
     int bs, bk;
-    float val=0;
+    int val=0;
     float pval;
     float tmp, stmp;
 
@@ -203,7 +203,7 @@ static void encode_block(NellyMoserEncodeContext *s,
             val = ff_nelly_init_table[bk];
         }
 
-        pval = -pow(2, -val/2048 - 3.0);
+        pval = -pow(2, -val/2048.0 - 3.0);
         for (k = 0; k < ff_nelly_band_sizes_table[i]; k++) {
             s->mdct_out[j+k] *= pval;
             s->mdct_out[j+k+NELLY_BUF_LEN] *= pval;
