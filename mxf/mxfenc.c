@@ -269,7 +269,6 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
     uint64_t tmp = len;
     if (len < 128) {
         //short form
-        size = 1;
         put_byte(pb, len);
         return 1;
     }
@@ -285,7 +284,7 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
         size --;
         put_byte(pb, len >> 8 * size & 0xff);
     }
-    return size;
+    return 0;
 }
 
 static const MXFCodecUL *mxf_get_essence_container_ul(const MXFCodecUL *uls, enum CodecID type)
