@@ -203,7 +203,10 @@ static void encode_block(NellyMoserEncodeContext *s,
             val = ff_nelly_init_table[bk];
         }
 
+        pval = -pow(2, -val/2048 - 3.0);
         for (k = 0; k < ff_nelly_band_sizes_table[i]; k++) {
+            s->mdct_out[j+k] *= pval;
+            s->mdct_out[j+k+NELLY_BUF_LEN] *= pval;
             s->pows[j+k] = val;
         }
     }
@@ -216,8 +219,7 @@ static void encode_block(NellyMoserEncodeContext *s,
         for (j = 0; j < NELLY_FILL_LEN; j++) {
             bs+=bits[j];
             if (bits[j] > 0) {
-                pval = -pow(2, -s->pows[j]/2048 - 3.0);
-                tmp = s->mdct_out[i*NELLY_BUF_LEN + j] * pval;
+                tmp = s->mdct_out[i*NELLY_BUF_LEN + j];
 
                 find_best_value(tmp,
                         (ff_nelly_dequantization_table + (1<<bits[j])-1),
