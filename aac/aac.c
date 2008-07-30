@@ -236,8 +236,7 @@ typedef struct {
 typedef struct {
     int intensity_present;
     uint8_t max_sfb;            ///< number of scalefactor bands per group
-    enum WindowSequence window_sequence;
-    enum WindowSequence window_sequence_prev;
+    enum WindowSequence window_sequence[2];
     uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window.
     int num_window_groups;
     uint8_t group_len[8];
@@ -972,13 +971,13 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
         av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set.\n");
         return -1;
     }
-    ics->window_sequence_prev = ics->window_sequence;
-    ics->window_sequence = get_bits(gb, 2);
+    ics->window_sequence[1] = ics->window_sequence[0];
+    ics->window_sequence[0] = get_bits(gb, 2);
     ics->use_kb_window[1] = ics->use_kb_window[0];
     ics->use_kb_window[0] = get_bits1(gb);
     ics->num_window_groups = 1;
     ics->group_len[0] = 1;
-    if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
+    if (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) {
         int i;
         ics->max_sfb = get_bits(gb, 4);
         grouping = get_bits(gb, 7);
@@ -1005,7 +1004,7 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
         return -1;
     }
 
-    if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
+    if (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) {
         ics->num_windows   = 8;
         ics->tns_max_bands = tns_max_bands_128[ac->m4ac.sampling_index];
     } else {
@@ -1062,7 +1061,7 @@ static inline float ivquant(AACContext * ac, int a) {
  */
 static int decode_band_types(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum BandType band_type[][64], int band_type_run_end[][64]) {
     int g;
-    const int bits = (ics->window_sequence == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
+    const int bits = (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
     for (g = 0; g < ics->num_window_groups; g++) {
         int k = 0;
         while (k < ics->max_sfb) {
@@ -1103,7 +1102,7 @@ static int decode_band_types(AACContext * ac, GetBitContext * gb, IndividualChan
  */
 static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
         IndividualChannelStream * ics, const enum BandType band_type[][64], const int band_type_run_end[][64], float sf[][64]) {
-    const int sf_offset = ac->sf_offset + (ics->window_sequence == EIGHT_SHORT_SEQUENCE ? 12 : 0);
+    const int sf_offset = ac->sf_offset + (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE ? 12 : 0);
     int g, i;
     int offset[3] = { global_gain, global_gain - 90, 100 };
     int noise_flag = 1;
@@ -1176,7 +1175,7 @@ static void decode_pulses(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
  */
 static void decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, TemporalNoiseShaping * tns) {
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
-    const int is8 = ics->window_sequence == EIGHT_SHORT_SEQUENCE;
+    const int is8 = ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE;
     for (w = 0; w < ics->num_windows; w++) {
         tns->n_filt[w] = get_bits(gb, 2 - is8);
 
@@ -1208,7 +1207,7 @@ static int decode_gain_control(AACContext * ac, GetBitContext * gb, SingleChanne
         {8, 0, 2}, //EIGHT_SHORT_SEQUENCE,
         {2, 1, 5}, //LONG_STOP_SEQUENCE
     };
-    const int mode = sce->ics.window_sequence;
+    const int mode = sce->ics.window_sequence[0];
     int bd, wd, ad;
     ScalableSamplingRate * ssr = sce->ssr;
     if (!ssr && !(ssr = sce->ssr = av_mallocz(sizeof(ScalableSamplingRate))))
@@ -1392,7 +1391,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     pulse_present = 0;
     if (!scale_flag) {
         if ((pulse_present = get_bits1(gb))) {
-            if (ics->window_sequence == EIGHT_SHORT_SEQUENCE) {
+            if (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) {
                 av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in eight short sequence.\n");
                 return -1;
             }
@@ -1781,15 +1780,15 @@ static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, 
     const float * lwindow_prev = ics->use_kb_window[1] ? kbd_long_1024 : sine_long_1024;
     const float * swindow_prev = ics->use_kb_window[1] ? kbd_short_128 : sine_short_128;
     float * buf = ac->buf_mdct;
-    assert(ics->window_sequence != EIGHT_SHORT_SEQUENCE);
-    if (ics->window_sequence != LONG_STOP_SEQUENCE) {
+    assert(ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE);
+    if (ics->window_sequence[0] != LONG_STOP_SEQUENCE) {
         vector_fmul_dst(ac, buf, in, lwindow_prev, 1024);
     } else {
         memset(buf, 0, 448 * sizeof(float));
         vector_fmul_dst(ac, buf + 448, in + 448, swindow_prev, 128);
         memcpy(buf + 576, in + 576, 448 * sizeof(float));
     }
-    if (ics->window_sequence != LONG_START_SEQUENCE) {
+    if (ics->window_sequence[0] != LONG_START_SEQUENCE) {
         ac->dsp.vector_fmul_reverse(buf + 1024, in + 1024, lwindow, 1024);
     } else {
         memcpy(buf + 1024, in + 1024, 448 * sizeof(float));
@@ -1807,7 +1806,7 @@ static int apply_ltp(AACContext * ac, SingleChannelElement * sce) {
         return 0;
     if (!sce->ltp_state && !(sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t))))
         return AVERROR(ENOMEM);
-    if (sce->ics.window_sequence != EIGHT_SHORT_SEQUENCE && ac->is_saved) {
+    if (sce->ics.window_sequence[0] != EIGHT_SHORT_SEQUENCE && ac->is_saved) {
         float x_est[2 * 1024], X_est[2 * 1024];
         for (i = 0; i < 2 * 1024; i++)
             x_est[i] = sce->ltp_state[i + 2 * 1024 - ltp->lag] * ltp->coef;
@@ -1872,16 +1871,16 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
     float * buf = ac->buf_mdct;
     int i;
 
-    if (ics->window_sequence != EIGHT_SHORT_SEQUENCE) {
+    if (ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
         ff_imdct_calc(&ac->mdct, buf, in, out); // Out can be abused, for now, as a temp buffer.
-        if (ics->window_sequence != LONG_STOP_SEQUENCE) {
+        if (ics->window_sequence[0] != LONG_STOP_SEQUENCE) {
             ac->dsp.vector_fmul_add_add(out, buf, lwindow_prev, saved, ac->add_bias, 1024, 1);
         } else {
             for (i = 0;   i < 448;  i++)   out[i] =          saved[i] + ac->add_bias;
             ac->dsp.vector_fmul_add_add(out + 448, buf + 448, swindow_prev, saved + 448, ac->add_bias, 128, 1);
             for (i = 576; i < 1024; i++)   out[i] = buf[i] + saved[i] + ac->add_bias;
         }
-        if (ics->window_sequence != LONG_START_SEQUENCE) {
+        if (ics->window_sequence[0] != LONG_START_SEQUENCE) {
             ac->dsp.vector_fmul_reverse(saved, buf + 1024, lwindow, 1024);
         } else {
             memcpy(saved, buf + 1024, 448 * sizeof(float));
@@ -1889,7 +1888,7 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
             memset(saved + 576, 0, 448 * sizeof(float));
         }
     } else {
-        if (ics->window_sequence_prev == ONLY_LONG_SEQUENCE || ics->window_sequence_prev == LONG_STOP_SEQUENCE)
+        if (ics->window_sequence[1] == ONLY_LONG_SEQUENCE || ics->window_sequence[1] == LONG_STOP_SEQUENCE)
             av_log(ac->avccontext, AV_LOG_WARNING,
                    "Transition from an ONLY_LONG or LONG_STOP to an EIGHT_SHORT sequence detected. "
                    "If you heard an audible artifact, please submit the sample to the FFmpeg developers.\n");
@@ -1929,16 +1928,16 @@ static void windowing_and_imdct_ssr(AACContext * ac, SingleChannelElement * sce,
     const float * lwindow_prev = ics->use_kb_window[1] ? kbd_long_1024 : sine_long_1024;
     const float * swindow_prev = ics->use_kb_window[1] ? kbd_short_128 : sine_short_128;
     float * buf = ac->buf_mdct;
-    if (ics->window_sequence != EIGHT_SHORT_SEQUENCE) {
+    if (ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
         ff_imdct_calc(&ac->mdct, buf, in, out);
-        if (ics->window_sequence != LONG_STOP_SEQUENCE) {
+        if (ics->window_sequence[0] != LONG_STOP_SEQUENCE) {
             vector_fmul_dst(ac, out, buf, lwindow_prev, 256);
         } else {
             memset(out, 0, 112 * sizeof(float));
             vector_fmul_dst(ac, out + 112, buf + 112, swindow_prev, 32);
             memcpy(out + 144, buf + 144, 112 * sizeof(float));
         }
-        if (ics->window_sequence != LONG_START_SEQUENCE) {
+        if (ics->window_sequence[0] != LONG_START_SEQUENCE) {
             ac->dsp.vector_fmul_reverse(out + 256, buf + 256, lwindow, 256);
         } else {
             memcpy(out + 256, buf + 256, 112 * sizeof(float));
@@ -1963,7 +1962,7 @@ static void vector_add_dst(AACContext * ac, float * dst, const float * src0, con
 
 static void apply_ssr_gains(AACContext * ac, SingleChannelElement * sce, int band, float * in, float * preret, float * saved) {
     // TODO: 'in' buffer gain normalization
-    if (sce->ics.window_sequence != EIGHT_SHORT_SEQUENCE) {
+    if (sce->ics.window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
         vector_add_dst(ac, preret, in, saved, 256);
         memcpy(saved, in + 256, 256 * sizeof(float));
     } else {
