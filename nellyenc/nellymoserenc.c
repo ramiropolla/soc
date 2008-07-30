@@ -120,7 +120,6 @@ static av_cold int encode_init(AVCodecContext * avctx) {
     if (!sine_window[0]){
         ff_sine_window_init(sine_window, 128);
         for (i=0; i<128; i++) {
-            sine_window[i] /= 8.0;
             sine_window[255-i] = sine_window[i];
         }
     }
@@ -189,7 +188,7 @@ static void encode_block(NellyMoserEncodeContext *s,
                 stmp += tmp*tmp;
             }
         }
-        tmp = log(FFMAX(1.0, stmp/(ff_nelly_band_sizes_table[i]<<1))) *
+        tmp = ( log(FFMAX(64.0, stmp/(ff_nelly_band_sizes_table[i]<<1))) - log(64.0)) *
             M_LOG2E * 1024.0;
 
         if(i){
@@ -217,8 +216,8 @@ static void encode_block(NellyMoserEncodeContext *s,
         for (j = 0; j < NELLY_FILL_LEN; j++) {
             bs+=bits[j];
             if (bits[j] > 0) {
-                pval = -pow(2, s->pows[j]/2048);
-                tmp = s->mdct_out[i*NELLY_BUF_LEN + j] / pval;
+                pval = -pow(2, -s->pows[j]/2048 - 3.0);
+                tmp = s->mdct_out[i*NELLY_BUF_LEN + j] * pval;
 
                 find_best_value(tmp,
                         (ff_nelly_dequantization_table + (1<<bits[j])-1),
