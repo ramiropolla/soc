@@ -332,6 +332,11 @@ typedef struct Psy3gppChannel{
     float       thr[2];
     Psy3gppBand band[2][128];
     Psy3gppBand prev_band[2][128];
+
+    float       win_nrg[2];
+    float       iir_state[2][2];
+    uint8_t     next_grouping[2];
+    enum WindowSequence next_window_seq[2];
 }Psy3gppChannel;
 
 /**
@@ -430,6 +435,26 @@ static av_cold int psy_3gpp_init(AACPsyContext *apc)
 }
 
 /**
+ * IIR filter used in block switching decision
+ */
+static float iir_filter(int in, float state[2])
+{
+    float ret;
+
+    ret = 0.7548f * (in - state[0]) + 0.5095f * state[1];
+    state[0] = in;
+    state[1] = ret;
+    return ret;
+}
+
+/**
+ * window grouping information stored as bits (0 - new group, 1 - group continues)
+ */
+static const uint8_t window_grouping[9] = {
+    0xB6, 0x6C, 0xD8, 0xB2, 0x66, 0xC6, 0x96, 0x36, 0x36
+};
+
+/**
  * Tell encoder which window types to use.
  * @see 3GPP TS26.403 5.4.1
  */
@@ -437,17 +462,83 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
 {
     int ch;
     int chans = FFMIN(apc->avctx->channels - channel, 2);
+    int i, j;
+    int br = apc->avctx->bit_rate / apc->avctx->channels;
+    int attack_ratio = (br <= 16000 + 8000*chans) ? 18 : 10;
+    Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
+    Psy3gppChannel *pch = &pctx->ch;
+    uint8_t grouping[2];
+    enum WindowSequence win[2];
 
-//XXX: stub, because encoder does not support long to short window transition yet :(
-    for(ch = 0; ch < chans; ch++){
-        cpe->ch[ch].ics.window_sequence = ONLY_LONG_SEQUENCE;
-        cpe->ch[ch].ics.use_kb_window[0] = 1;
-        cpe->ch[ch].ics.num_windows = 1;
-        cpe->ch[ch].ics.swb_sizes = apc->bands1024;
-        cpe->ch[ch].ics.num_swb = apc->num_bands1024;
-        cpe->ch[ch].ics.group_len[0] = 0;
+    if(la){
+        float s[8], v;
+        for(ch = 0; ch < chans; ch++){
+            enum WindowSequence last_window_sequence = cpe->ch[ch].ics.window_sequence;
+            int switch_to_eight = 0;
+            float sum = 0.0, sum2 = 0.0;
+            int attack_n = 0;
+            for(i = 0; i < 8; i++){
+                for(j = 0; j < 128; j++){
+                    v = iir_filter(audio[(i*128+j)*apc->avctx->channels+ch], pch->iir_state[ch]);
+                    sum += v*v;
+                }
+                s[i] = sum;
+                sum2 += sum;
+            }
+            for(i = 0; i < 8; i++){
+                if(s[i] > pch->win_nrg[ch] * attack_ratio){
+                    attack_n = i + 1;
+                    switch_to_eight = 1;
+                    break;
+                }
+            }
+            pch->win_nrg[ch] = pch->win_nrg[ch]*7/8 + sum2/64;
+
+            switch(last_window_sequence){
+            case ONLY_LONG_SEQUENCE:
+                win[ch] = switch_to_eight ? LONG_START_SEQUENCE : ONLY_LONG_SEQUENCE;
+                grouping[ch] = 0;
+                break;
+            case LONG_START_SEQUENCE:
+                win[ch] = EIGHT_SHORT_SEQUENCE;
+                grouping[ch] = pch->next_grouping[ch];
+                break;
+            case LONG_STOP_SEQUENCE:
+                win[ch] = ONLY_LONG_SEQUENCE;
+                grouping[ch] = 0;
+                break;
+            case EIGHT_SHORT_SEQUENCE:
+                win[ch] = switch_to_eight ? EIGHT_SHORT_SEQUENCE : LONG_STOP_SEQUENCE;
+                grouping[ch] = switch_to_eight ? pch->next_grouping[ch] : 0;
+                break;
+            }
+            pch->next_grouping[ch] = window_grouping[attack_n];
+        }
+    }else{
+        for(ch = 0; ch < chans; ch++){
+            win[ch] = (cpe->ch[ch].ics.window_sequence == EIGHT_SHORT_SEQUENCE) ? EIGHT_SHORT_SEQUENCE : ONLY_LONG_SEQUENCE;
+            grouping[ch] = (cpe->ch[ch].ics.window_sequence == EIGHT_SHORT_SEQUENCE) ? window_grouping[0] : 0;
+        }
     }
-    cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
+
+    for(ch = 0; ch < chans; ch++){
+        cpe->ch[ch].ics.window_sequence = win[ch];
+        cpe->ch[ch].ics.use_kb_window[0] = 1;
+        if(win[ch] != EIGHT_SHORT_SEQUENCE){
+            cpe->ch[ch].ics.num_windows = 1;
+            cpe->ch[ch].ics.swb_sizes = apc->bands1024;
+            cpe->ch[ch].ics.num_swb = apc->num_bands1024;
+        }else{
+            cpe->ch[ch].ics.num_windows = 8;
+            cpe->ch[ch].ics.swb_sizes = apc->bands128;
+            cpe->ch[ch].ics.num_swb = apc->num_bands128;
+        }
+        for(i = 0; i < 8; i++)
+            cpe->ch[ch].ics.group_len[i] = (grouping[ch] >> i) & 1;
+    }
+    cpe->common_window = chans > 1 && cpe->ch[0].ics.window_sequence == cpe->ch[1].ics.window_sequence && cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
+    if(cpe->common_window && cpe->ch[0].ics.window_sequence == EIGHT_SHORT_SEQUENCE && grouping[0] != grouping[1])
+        cpe->common_window = 0;
 }
 
 /**
@@ -489,7 +580,7 @@ static void calc_pe(Psy3gppBand *band, int band_width)
 static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cpe)
 {
     int start;
-    int ch, w, g, g2, i;
+    int ch, w, w2, g, g2, i;
     int prev_scale;
     Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
     float stereo_att, pe_target;
@@ -672,6 +763,24 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
                 if(cpe->ch[ch].zeroes[w][g]) continue;
                 cpe->ch[ch].sf_idx[w][g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[w][g], 0, SCALE_MAX_POS);
                 if(!cpe->ch[ch].gain) cpe->ch[ch].gain = cpe->ch[ch].sf_idx[w][g];
+            }
+        }
+        //adjust scalefactors for window groups
+        for(w = 0; w < cpe->ch[ch].ics.num_windows - 1; w++){
+            int min_scale = 256;
+
+            if(cpe->ch[ch].ics.group_len[w]) continue;
+            w2 = w;
+            do{
+                w2++;
+            }while(w2 < cpe->ch[ch].ics.num_windows && cpe->ch[ch].ics.group_len[w2]);
+            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                for(i = w; i < w2; i++){
+                    if(cpe->ch[ch].zeroes[i][g]) continue;
+                    min_scale = FFMIN(min_scale, cpe->ch[ch].sf_idx[i][g]);
+                }
+                for(i = w; i < w2; i++)
+                    cpe->ch[ch].sf_idx[i][g] = min_scale;
             }
         }
     }
