@@ -87,7 +87,7 @@ typedef struct MXFContext {
     int64_t header_start;
     int64_t header_byte_count_offset;
     int64_t header_footer_partition_offset;
-    AVRandomState random_state;
+    unsigned int random_state;
     MXFReferenceContext *reference;
     char *track_number_sign;
     UID *track_essence_element_key;
@@ -226,12 +226,11 @@ static const MXFLocalTagPair mxf_local_tag_batch[] = {
 static void mxf_generate_uuid(AVFormatContext *s, UID uuid)
 {
     MXFContext *mxf = s->priv_data;
-    int rand_num, i;
+    int i;
 
     for (i = 0; i < 16; i++) {
-        rand_num = av_random(&mxf->random_state);
-        rand_num &= 0x00ff;
-        uuid[i] = rand_num;
+        mxf->random_state= mxf->random_state*1664525+10139042;
+        uuid[i]= mxf->random_state>>24;
     }
     // the 7th byte is version according to ISO 11578
     uuid[6] &= 0x0f;
@@ -1038,7 +1037,6 @@ static int mux_write_header(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
     int64_t header_metadata_start;
 
-    av_init_random(0xbeefdead, &mxf->random_state);
     // intial MXFReferenceContext
     mxf->reference = av_mallocz(sizeof(MXFReferenceContext));
     if (!mxf->reference)
