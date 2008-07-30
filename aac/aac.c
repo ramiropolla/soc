@@ -1176,9 +1176,10 @@ static void decode_pulses(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
 /**
  * Decode Temporal Noise Shaping data; reference: table 4.48.
  */
-static void decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, TemporalNoiseShaping * tns) {
+static int decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, TemporalNoiseShaping * tns) {
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
     const int is8 = ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE;
+    const int tns_max_order = is8 ? 7 : ac->m4ac.object_type == AOT_AAC_MAIN ? 20 : 12;
     for (w = 0; w < ics->num_windows; w++) {
         tns->n_filt[w] = get_bits(gb, 2 - is8);
 
@@ -1188,7 +1189,7 @@ static void decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChan
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
             tns->length[w][filt] = get_bits(gb, 6 - 2*is8);
 
-            if ((tns->order[w][filt] = get_bits(gb, 5 - 2*is8))) {
+            if ((tns->order[w][filt] = get_bits(gb, 5 - 2*is8)) <= tns_max_order) {
                 tns->direction[w][filt] = get_bits1(gb);
                 coef_compress = get_bits1(gb);
                 coef_len = coef_res - coef_compress;
@@ -1196,9 +1197,15 @@ static void decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChan
 
                 for (i = 0; i < tns->order[w][filt]; i++)
                     tns->coef[w][filt][i] = get_bits(gb, coef_len);
+            } else {
+                av_log(ac->avccontext, "TNS filter order %d is greater than maximum %d.",
+                       tns->order[w][filt], tns_max_order);
+                tns->order[w][filt] = 0;
+                return -1;
             }
         }
     }
+    return 0;
 }
 
 #ifdef AAC_SSR
@@ -1404,8 +1411,8 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
             }
             decode_pulses(ac, gb, &pulse);
         }
-        if ((tns->present = get_bits1(gb)))
-            decode_tns(ac, gb, ics, tns);
+        if ((tns->present = get_bits1(gb)) && decode_tns(ac, gb, ics, tns))
+            return -1;
         if (get_bits1(gb)) {
 #ifdef AAC_SSR
             int ret;
