@@ -80,6 +80,7 @@ typedef struct NellyMoserEncodeContext {
 
     DSPContext      dsp;
     MDCTContext     mdct_ctx;
+    float pows[NELLY_FILL_LEN];
     DECLARE_ALIGNED_16(float,mdct_tmp[NELLY_BUF_LEN*2]);
     DECLARE_ALIGNED_16(float,mdct_out[NELLY_BUF_LEN*2]);
 } NellyMoserEncodeContext;
@@ -163,7 +164,6 @@ static void encode_block(NellyMoserEncodeContext *s,
     int bits[NELLY_BUF_LEN];
     int i, j, k, l, b;
     int bs, bk;
-    float pows[NELLY_FILL_LEN];
     float val=0;
     float pval;
     float tmp, stmp;
@@ -205,11 +205,11 @@ static void encode_block(NellyMoserEncodeContext *s,
         }
 
         for (k = 0; k < ff_nelly_band_sizes_table[i]; k++) {
-            pows[j+k] = val;
+            s->pows[j+k] = val;
         }
     }
 
-    ff_nelly_get_sample_bits(pows, bits);
+    ff_nelly_get_sample_bits(s->pows, bits);
 
     bs=0;
     for (i = 0; i < 2; i++) { //2
@@ -217,7 +217,7 @@ static void encode_block(NellyMoserEncodeContext *s,
         for (j = 0; j < NELLY_FILL_LEN; j++) {
             bs+=bits[j];
             if (bits[j] > 0) {
-                pval = -pow(2, pows[j]/2048);
+                pval = -pow(2, s->pows[j]/2048);
                 tmp = s->mdct_out[i*NELLY_BUF_LEN + j] / pval;
 
                 find_best_value(tmp,
