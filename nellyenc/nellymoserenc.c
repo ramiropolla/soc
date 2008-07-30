@@ -24,6 +24,7 @@
 #include "avcodec.h"
 #include "dsputil.h"
 
+#define MAX_POW_CACHED (1<<15)
 
 /*
  * FIXME: Bitstream from vorbis_enc.c (move to seperate file?)
@@ -81,6 +82,7 @@ typedef struct NellyMoserEncodeContext {
     DSPContext      dsp;
     MDCTContext     mdct_ctx;
     float pows[NELLY_FILL_LEN];
+    float pow_table[MAX_POW_CACHED];
     DECLARE_ALIGNED_16(float,mdct_tmp[NELLY_BUF_LEN*2]);
     DECLARE_ALIGNED_16(float,mdct_out[NELLY_BUF_LEN*2]);
 } NellyMoserEncodeContext;
@@ -123,6 +125,8 @@ static av_cold int encode_init(AVCodecContext * avctx) {
             sine_window[255-i] = sine_window[i];
         }
     }
+    for(i=0; i<MAX_POW_CACHED; i++)
+        s->pow_table[i] = -pow(2, -i/2048.0 - 3.0);
 
     s->bufsize = 0;
     return 0;
@@ -203,7 +207,11 @@ static void encode_block(NellyMoserEncodeContext *s,
             val = ff_nelly_init_table[bk];
         }
 
-        pval = -pow(2, -val/2048.0 - 3.0);
+        if(val >= 0 && val < MAX_POW_CACHED){
+            pval = s->pow_table[val];
+        }else{
+            pval = -pow(2, -val/2048.0 - 3.0);
+        }
         for (k = 0; k < ff_nelly_band_sizes_table[i]; k++) {
             s->mdct_out[j+k] *= pval;
             s->mdct_out[j+k+NELLY_BUF_LEN] *= pval;
