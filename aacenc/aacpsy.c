@@ -498,7 +498,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int channel, ChannelElement *cp
     Psy3gppChannel *pch = &pctx->ch;
 
     //calculate and apply stereo attenuation factor - 5.2
-    if(apc->avctx->channels - channel > 1){
+    if(chans > 1 && cpe->common_window){
         float l, r;
         stereo_att = 1.0 / 2.0; //XXX: find some way to determine it
         for(i = 0; i < 1024; i++){
