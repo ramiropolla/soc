@@ -1594,7 +1594,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
  * @param   cnt length of ID_FIL syntactic element in bytes
  * @return  Returns number of bytes consumed from the ID_FIL element.
  */
-static int sbr_extension_data(AACContext * ac, GetBitContext * gb, int crc, int cnt) {
+static int decode_sbr_extension(AACContext * ac, GetBitContext * gb, int crc, int cnt) {
     // TODO : sbr_extension implementation
     av_log(ac->avccontext, AV_LOG_DEBUG, "aac: SBR not yet supported.\n");
     skip_bits_long(gb, 8*cnt - 4); // -4 due to reading extension type
@@ -1687,7 +1687,7 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
         case EXT_SBR_DATA_CRC:
             crc_flag++;
         case EXT_SBR_DATA:
-            res = sbr_extension_data(ac, gb, crc_flag, cnt);
+            res = decode_sbr_extension(ac, gb, crc_flag, cnt);
             break;
         case EXT_DYNAMIC_RANGE:
             res = dynamic_range_info(ac, gb, cnt);
