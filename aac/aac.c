@@ -2039,7 +2039,7 @@ static void apply_ssr(AACContext * ac, SingleChannelElement * sce) {
 /**
  * Apply dependent channel coupling (applied before IMDCT).
  *
- * @param   index   which gain to use for coupling
+ * @param   index   index into coupling gain array
  */
 static void apply_dependent_coupling(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
     IndividualChannelStream * ics = &cc->ch[0].ics;
@@ -2072,7 +2072,7 @@ static void apply_dependent_coupling(AACContext * ac, ChannelElement * cc, Singl
 /**
  * Apply independent channel coupling (applied after IMDCT).
  *
- * @param   index   which gain to use for coupling
+ * @param   index   index into coupling gain array
  */
 static void apply_independent_coupling(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
     int i;
@@ -2084,7 +2084,7 @@ static void apply_independent_coupling(AACContext * ac, ChannelElement * cc, Sin
 /**
  * channel coupling transformation interface
  *
- * @param   index   which gain to use for coupling
+ * @param   index   index into coupling gain array
  * @param   apply_coupling_method   pointer to (in)dependent coupling function
  */
 static void apply_channel_coupling(AACContext * ac, ChannelElement * cc,
