@@ -2189,8 +2189,12 @@ static int output_samples(AVCodecContext * avccontext, uint16_t * data, int * da
     }
 
     i = 1024 * avccontext->channels * sizeof(int16_t);
-    if(*data_size < i)
+    if(*data_size < i) {
+        av_log(avccontext, AV_LOG_ERROR,
+               "Output buffer too small (%d) or trying to output too many samples (%d) for this frame.\n",
+               *data_size, i);
         return -1;
+    }
     *data_size = i;
 
     if(ac->mm[MIXDOWN_CENTER]) {
