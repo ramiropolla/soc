@@ -2085,6 +2085,7 @@ static void independent_coupling(AACContext * ac, ChannelElement * cc, SingleCha
  * channel coupling transformation interface
  *
  * @param   index   which gain to use for coupling
+ * @param   apply_coupling_method   pointer to (in)dependent coupling function
  */
 static void apply_channel_coupling(AACContext * ac, ChannelElement * cc,
         void (*apply_coupling_method)(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index))
