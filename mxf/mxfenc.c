@@ -235,7 +235,7 @@ static void mxf_generate_uuid(AVFormatContext *s, UID uuid)
     }
     // the 7th byte is version according to ISO 11578
     uuid[6] &= 0x0f;
-    uuid[6] &= 0x40;
+    uuid[6] |= 0x40;
 
     // the 8th byte is variant for current use according to ISO 11578
     uuid[8] &= 0x3f;
