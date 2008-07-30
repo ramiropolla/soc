@@ -1606,7 +1606,7 @@ static int decode_sbr_extension(AACContext * ac, GetBitContext * gb, int crc, in
  *
  * @return  Returns number of bytes consumed.
  */
-static int excluded_channels(AACContext * ac, GetBitContext * gb) {
+static int decode_drc_channel_exclusions(AACContext * ac, GetBitContext * gb) {
     int i;
     int n = 1;
     int num_excl_chan = 7;
@@ -1644,7 +1644,7 @@ static int dynamic_range_info(AACContext * ac, GetBitContext * gb, int cnt) {
 
     /* excluded_chns_present? */
     if(get_bits1(gb)) {
-        n += excluded_channels(ac, gb);
+        n += decode_drc_channel_exclusions(ac, gb);
     }
 
     /* drc_bands_present? */
