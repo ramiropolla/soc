@@ -132,7 +132,7 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chann
                 }
                 start += cpe->ch[ch].ics.swb_sizes[g];
             }
-            for(cmaxsfb = cpe->ch[ch].ics.num_swb; cmaxsfb > 0 && cpe->ch[ch].zeroes[0][cmaxsfb-1]; cmaxsfb--);
+            for(cmaxsfb = cpe->ch[ch].ics.num_swb; cmaxsfb > 0 && cpe->ch[ch].zeroes[w][cmaxsfb-1]; cmaxsfb--);
             maxsfb = FFMAX(maxsfb, cmaxsfb);
         }
         cpe->ch[ch].ics.max_sfb = maxsfb;
