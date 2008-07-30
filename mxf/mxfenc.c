@@ -436,10 +436,10 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
 
     put_buffer(pb, klv->key, 16);
 
-    company_name_len = strlen("FFmpeg") + 1;
-    product_name_len = strlen("OP1a Muxer") + 1;
+    company_name_len = sizeof("FFmpeg");
+    product_name_len = sizeof("OP1a Muxer");
     if (!(s->streams[0]->codec->flags & CODEC_FLAG_BITEXACT)) {
-        version_string_len = strlen(LIBAVFORMAT_IDENT) + 1;
+        version_string_len = sizeof(LIBAVFORMAT_IDENT);
         length = 84 + company_name_len + product_name_len + version_string_len;
     } else {
         length = 80 + company_name_len + product_name_len;
