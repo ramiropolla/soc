@@ -1052,8 +1052,10 @@ static inline float ivquant(AACContext * ac, int a) {
 /**
  * Decode section_data payload; reference: table 4.46.
  *
- * @param   band_type           array of the band type used for a window group's scalefactor band
- * @param   band_type_run_end   array of the last scalefactor band of a band type run for a window group's scalefactor band
+ * @param   band_type           array of the used band type
+ * @param   band_type_run_end   array of the last scalefactor band of a band type run
+ *
+ * The band_type* arrays have indices [window group][scalefactor band].
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_band_types(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum BandType band_type[][64], int band_type_run_end[][64]) {
@@ -1092,9 +1094,11 @@ static int decode_band_types(AACContext * ac, GetBitContext * gb, IndividualChan
  *
  * @param   mix_gain            channel gain (Not used by AAC bitstream.)
  * @param   global_gain         first scalefactor value as scalefactors are differentially coded
- * @param   band_type           array of the band type used for a window group's scalefactor band
- * @param   band_type_run_end   array of the last scalefactor band of a band type run for a window group's scalefactor band
- * @param   sf                  array of scalefactors or intensity stereo positions used for a window group's scalefactor band
+ * @param   band_type           array of the used band type
+ * @param   band_type_run_end   array of the last scalefactor band of a band type run
+ * @param   sf                  array of scalefactors or intensity stereo positions
+ *
+ * The band_type* and sf arrays have indices [window group][scalefactor band].
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
@@ -1246,8 +1250,10 @@ static void decode_mid_side_stereo(AACContext * ac, GetBitContext * gb, ChannelE
 /**
  * Decode spectral data; reference: table 4.50.
  *
- * @param   band_type   array of the band type used for a window group's scalefactor band
+ * @param   band_type   array of the used band type
  * @param   icoef       array of quantized spectral data
+ *
+ * The band_type array has indices [window group][scalefactor band]
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_spectrum(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const enum BandType band_type[][64], int icoef[1024]) {
@@ -1326,9 +1332,11 @@ static void add_pulses(AACContext * ac, const IndividualChannelStream * ics, con
  * Dequantize and scale spectral data; reference: 4.6.3.3.
  *
  * @param   icoef       array of quantized spectral data
- * @param   band_type   array of the band type used for a window group's scalefactor band
- * @param   sf          array of scalefactors or intensity stereo positions used for a window group's scalefactor band
+ * @param   band_type   array of the used band type
+ * @param   sf          array of scalefactors or intensity stereo positions
  * @param   coef        array of dequantized, scaled spectral data
+ *
+ * The band_type and sf arrays have indices [window group][scalefactor band].
  */
 static void dequant(AACContext * ac, const IndividualChannelStream * ics, const int icoef[1024],
         const enum BandType band_type[][64], const float sf[][64], float coef[1024]) {
