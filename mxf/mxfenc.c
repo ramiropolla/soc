@@ -857,7 +857,7 @@ static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableE
 
     // write audio sampling rate
     mxf_write_local_tag(pb, 8, 0x3D03);
-    put_be32(pb, 48000);
+    put_be32(pb, st->codec->sample_rate);
     put_be32(pb, 1);
 
     mxf_write_local_tag(pb, 4, 0x3D07);
