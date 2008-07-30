@@ -252,7 +252,7 @@ static int mxf_generate_reference(AVFormatContext *s, UID **refs, int ref_count)
     int i;
     UID *p;
     *refs = av_mallocz(ref_count * sizeof(UID));
-    if (!refs)
+    if (!*refs)
         return AVERROR(ENOMEM);
     p = *refs;
     for (i = 0; i < ref_count; i++) {
