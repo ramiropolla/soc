@@ -1198,7 +1198,7 @@ static int decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChann
                 for (i = 0; i < tns->order[w][filt]; i++)
                     tns->coef[w][filt][i] = get_bits(gb, coef_len);
             } else {
-                av_log(ac->avccontext, "TNS filter order %d is greater than maximum %d.",
+                av_log(ac->avccontext, AV_LOG_ERROR, "TNS filter order %d is greater than maximum %d.",
                        tns->order[w][filt], tns_max_order);
                 tns->order[w][filt] = 0;
                 return -1;
