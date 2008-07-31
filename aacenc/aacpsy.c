@@ -32,11 +32,6 @@
 static float pow2sf_tab[340];
 
 
-#define SCALE_ONE_POS   140
-#define SCALE_MAX_POS   255
-#define SCALE_MAX_DIFF   60
-
-
 /**
  * Convert coefficients to integers.
  * @return sum of coefficients

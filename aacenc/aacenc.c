@@ -30,13 +30,7 @@
 #include "mpeg4audio.h"
 
 #include "aacpsy.h"
-
-// XXX: borrowed from aac.c, move to some header eventually
-DECLARE_ALIGNED_16(static float,  kbd_long_1024[1024]);
-DECLARE_ALIGNED_16(static float,  kbd_short_128[128]);
-DECLARE_ALIGNED_16(static float, sine_long_1024[1024]);
-DECLARE_ALIGNED_16(static float, sine_short_128[128]);
-
+#include "aac.h"
 #include "aactab.h"
 
 static const uint8_t swb_size_1024_96[] = {
@@ -118,11 +112,6 @@ static const uint8_t *swb_size_128[] = {
     swb_size_128_16, swb_size_128_16, swb_size_128_8
 };
 
-
-#define MAX_SWB_SIZE  51
-
-//borrowed data ends here
-
 #define CB_UNSIGNED 0x01    ///< coefficients are coded as absolute values
 #define CB_PAIRS    0x02    ///< coefficients are grouped into pairs before coding (quads by default)
 #define CB_ESCAPE   0x04    ///< codebook allows escapes
@@ -173,11 +162,6 @@ typedef struct {
     ChannelElement *cpe;
     AACPsyContext psy;
 } AACEncContext;
-
-#define SCALE_ONE_POS   140    ///< scalefactor index that corresponds to scale=1.0
-#define SCALE_MAX_POS   255    ///< scalefactor index maximum value
-#define SCALE_MAX_DIFF   60    ///< maximum scalefactor difference allowed by standard
-#define SCALE_DIFF_ZERO  60    ///< codebook index corresponding to zero scalefactor indices difference
 
 /**
  * Make AAC audio config object.
