@@ -149,13 +149,11 @@ static const MXFCodecUL mxf_codec_uls[] = {
 
 static const uint8_t multiple_desc_ul[] = { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x03,0x0D,0x01,0x03,0x01,0x02,0x7F,0x01,0x00 };
 
-static const MXFCodecUL mxf_picture_essence_container_uls[] = {
+static const MXFCodecUL mxf_essence_container_uls[] = {
+    // picture essence container
     { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x02,0x0D,0x01,0x03,0x01,0x02,0x04,0x60,0x01 }, 14, CODEC_ID_MPEG2VIDEO }, /* MPEG-ES Frame wrapped */
 //    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x0D,0x01,0x03,0x01,0x02,0x02,0x41,0x01 }, 14,    CODEC_ID_DVVIDEO }, /* DV 625 25mbps */
-    { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },  0,       CODEC_ID_NONE },
-};
-
-static const MXFCodecUL mxf_sound_essence_container_uls[] = {
+    // audio essence conatiner uls
     { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x0D,0x01,0x03,0x01,0x02,0x06,0x01,0x00 }, 14, CODEC_ID_PCM_S16LE }, /* BWF Frame wrapped */
 //    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x02,0x0D,0x01,0x03,0x01,0x02,0x04,0x40,0x01 }, 14,       CODEC_ID_MP2 }, /* MPEG-ES Frame wrapped, 0x40 ??? stream id */
 //    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x0D,0x01,0x03,0x01,0x02,0x01,0x01,0x01 }, 14, CODEC_ID_PCM_S16LE }, /* D-10 Mapping 50Mbps PAL Extended Template */
@@ -813,7 +811,7 @@ static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWrit
     av_log(s, AV_LOG_DEBUG, "linked track ID:%d\n", stream_index);
 #endif
 
-    codec_ul = mxf_get_essence_container_ul(mxf_picture_essence_container_uls, st->codec->codec_id);
+    codec_ul = mxf_get_essence_container_ul(mxf_essence_container_uls, st->codec->codec_id);
     mxf_write_local_tag(pb, 16, 0x3004);
     put_buffer(pb, codec_ul->uid, 16);
 
@@ -854,7 +852,7 @@ static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableE
 #ifdef DEBUG
     PRINT_KEY(s, "wav desc uid", (*refs->track)[stream_index]);
 #endif
-    codec_ul = mxf_get_essence_container_ul(mxf_sound_essence_container_uls, st->codec->codec_id);
+    codec_ul = mxf_get_essence_container_ul(mxf_essence_container_uls, st->codec->codec_id);
     mxf_write_local_tag(pb, 16, 0x3004);
     put_buffer(pb, codec_ul->uid, 16);
 
@@ -964,15 +962,7 @@ static int mxf_build_essence_container_refs(AVFormatContext *s)
 
     for (i = 0; i < s->nb_streams; i++) {
         st = s->streams[i];
-        switch (st->codec->codec_type) {
-        case CODEC_TYPE_VIDEO:
-            codec_ul = mxf_get_essence_container_ul(mxf_picture_essence_container_uls, st->codec->codec_id);
-            break;
-        case CODEC_TYPE_AUDIO:
-            codec_ul = mxf_get_essence_container_ul(mxf_sound_essence_container_uls, st->codec->codec_id);
-            break;
-        }
-
+        codec_ul = mxf_get_essence_container_ul(mxf_essence_container_uls, st->codec->codec_id);
         if (codec_ul) {
             if (mxf_add_essence_container_ul(mxf, codec_ul) < 0 )
                 return -1;
