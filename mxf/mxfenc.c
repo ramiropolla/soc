@@ -941,10 +941,6 @@ static int mxf_write_header_metadata_sets(AVFormatContext *s)
 static int mxf_add_essence_container_ul(MXFContext *mxf, const MXFCodecUL *codec_ul)
 {
     int i;
-    for (i = 0; i < mxf->essence_container_count; i++) {
-        if (!memcmp(mxf->essence_container_uls[i], codec_ul->uid, 16))
-            return 0;
-    }
     mxf->essence_container_uls = av_realloc(mxf->essence_container_uls, (mxf->essence_container_count + 1) * 16);
     if (!mxf->essence_container_uls)
         return -1;
@@ -960,14 +956,15 @@ static int mxf_build_essence_container_refs(AVFormatContext *s)
     int i;
     const MXFCodecUL *codec_ul = NULL;
 
-    for (i = 0; i < s->nb_streams; i++) {
-        st = s->streams[i];
-        codec_ul = mxf_get_essence_container_ul(mxf_essence_container_uls, st->codec->codec_id);
-        if (codec_ul) {
-            if (mxf_add_essence_container_ul(mxf, codec_ul) < 0 )
-                return -1;
-        } else
-            return -1;
+    for (codec_ul = mxf_essence_container_uls; codec_ul->id; codec_ul++) {
+        for (i = 0; i < s->nb_streams; i++) {
+            st = s->streams[i];
+            if (st->codec->codec_id == codec_ul->id) {
+                if (mxf_add_essence_container_ul(mxf, codec_ul) < 0 )
+                    return -1;
+                break;
+            }
+        }
     }
     return 0;
 }
