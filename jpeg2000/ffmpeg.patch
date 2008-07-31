@@ -1,45 +1,61 @@
-Index: Makefile
+Index: Changelog
 ===================================================================
---- Makefile	(wersja 9451)
-+++ Makefile	(kopia robocza)
-@@ -93,6 +93,8 @@
- OBJS-$(CONFIG_INDEO3_DECODER)          += indeo3.o
+--- Changelog	(revision 14483)
++++ Changelog	(working copy)
+@@ -127,6 +127,7 @@
+ - Motion Pixels Video decoder
+ - Motion Pixels MVI demuxer
+ - removed animated GIF decoder/demuxer
++- JPEG2000 encoder and decoder
+ 
+ version 0.4.9-pre1:
+ 
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(revision 14483)
++++ libavcodec/Makefile	(working copy)
+@@ -99,6 +99,8 @@
  OBJS-$(CONFIG_INTERPLAY_VIDEO_DECODER) += interplayvideo.o
- OBJS-$(CONFIG_INTERPLAY_DPCM_DECODER)  += dpcm.o
-+OBJS-$(CONFIG_JPEG2000_DECODER)        += j2kdec.o mqcdec.o mqc.o j2k.o dwt.o
-+OBJS-$(CONFIG_JPEG2000_ENCODER)        += j2kenc.o mqcenc.o mqc.o j2k.o dwt.o
  OBJS-$(CONFIG_JPEGLS_DECODER)          += jpeglsdec.o jpegls.o mjpegdec.o mjpeg.o golomb.o
  OBJS-$(CONFIG_JPEGLS_ENCODER)          += jpeglsenc.o jpegls.o golomb.o
++OBJS-$(CONFIG_JPEG2000_DECODER)        += j2kdec.o mqcdec.o mqc.o j2k.o dwt.o
++OBJS-$(CONFIG_JPEG2000_ENCODER)        += j2kenc.o mqcenc.o mqc.o j2k.o dwt.o
  OBJS-$(CONFIG_KMVC_DECODER)            += kmvc.o
-Index: allcodecs.c
+ OBJS-$(CONFIG_LJPEG_ENCODER)           += ljpegenc.o mjpegenc.o mjpeg.o mpegvideo_enc.o motion_est.o ratecontrol.o mpeg12data.o mpegvideo.o
+ OBJS-$(CONFIG_LOCO_DECODER)            += loco.o golomb.o
+Index: libavcodec/allcodecs.c
 ===================================================================
---- allcodecs.c	(wersja 9451)
-+++ allcodecs.c	(kopia robocza)
-@@ -92,6 +92,7 @@
-     REGISTER_DECODER(INDEO3, indeo3);
-     REGISTER_DECODER(INTERPLAY_VIDEO, interplay_video);
-     REGISTER_ENCDEC (JPEGLS, jpegls);
-+    REGISTER_ENCDEC (JPEG2000, jpeg2000);
-     REGISTER_DECODER(KMVC, kmvc);
-     REGISTER_ENCODER(LIBX264, libx264);
-     REGISTER_ENCODER(LIBXVID, libxvid);
-Index: allcodecs.h
+--- libavcodec/allcodecs.c	(revision 14483)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -101,6 +101,7 @@
+     REGISTER_DECODER (INDEO2, indeo2);
+     REGISTER_DECODER (INDEO3, indeo3);
+     REGISTER_DECODER (INTERPLAY_VIDEO, interplay_video);
++    REGISTER_ENCDEC  (JPEG2000, jpeg2000);
+     REGISTER_ENCDEC  (JPEGLS, jpegls);
+     REGISTER_DECODER (KMVC, kmvc);
+     REGISTER_ENCODER (LJPEG, ljpeg);
+Index: doc/general.texi
 ===================================================================
---- allcodecs.h	(wersja 9451)
-+++ allcodecs.h	(kopia robocza)
-@@ -40,6 +40,7 @@
- extern AVCodec h264_encoder;
- extern AVCodec huffyuv_encoder;
- extern AVCodec jpegls_encoder;
-+extern AVCodec jpeg2000_encoder;
- extern AVCodec ljpeg_encoder;
- extern AVCodec mdec_encoder;
- extern AVCodec mjpeg_encoder;
-@@ -117,6 +118,7 @@
- extern AVCodec indeo3_decoder;
- extern AVCodec interplay_dpcm_decoder;
- extern AVCodec interplay_video_decoder;
-+extern AVCodec jpeg2000_decoder;
- extern AVCodec jpegls_decoder;
- extern AVCodec kmvc_decoder;
- extern AVCodec loco_decoder;
+--- doc/general.texi	(revision 14483)
++++ doc/general.texi	(working copy)
+@@ -253,6 +253,7 @@
+     @tab Used in Interplay .MVE files.
+ @item JPEG-LS                @tab  X  @tab  X
+     @tab fourcc: MJLS, lossless and near-lossless is supported.
++@item JPEG2000               @tab  X  @tab  X
+ @item KMVC                   @tab     @tab  X
+     @tab Codec used in Worms games.
+ @item LOCO                   @tab     @tab  X
+Index: libavformat/riff.c
+===================================================================
+--- libavformat/riff.c	(revision 14483)
++++ libavformat/riff.c	(working copy)
+@@ -156,6 +156,7 @@
+     { CODEC_ID_ZMBV,         MKTAG('Z', 'M', 'B', 'V') },
+     { CODEC_ID_KMVC,         MKTAG('K', 'M', 'V', 'C') },
+     { CODEC_ID_CAVS,         MKTAG('C', 'A', 'V', 'S') },
++    { CODEC_ID_JPEG2000,     MKTAG('m', 'j', 'p', '2') },
+     { CODEC_ID_JPEG2000,     MKTAG('M', 'J', '2', 'C') },
+     { CODEC_ID_VMNC,         MKTAG('V', 'M', 'n', 'c') },
+     { CODEC_ID_TARGA,        MKTAG('t', 'g', 'a', ' ') },
