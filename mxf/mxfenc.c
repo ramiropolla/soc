@@ -285,8 +285,9 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
     return 0;
 }
 
-static const MXFCodecUL *mxf_get_essence_container_ul(const MXFCodecUL *uls, enum CodecID type)
+static const MXFCodecUL *mxf_get_essence_container_ul(enum CodecID type)
 {
+    const MXFCodecUL *uls = mxf_essence_container_uls;
     while (uls->id != CODEC_ID_NONE) {
         if (uls->id == type)
             break;
@@ -811,7 +812,7 @@ static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWrit
     av_log(s, AV_LOG_DEBUG, "linked track ID:%d\n", stream_index);
 #endif
 
-    codec_ul = mxf_get_essence_container_ul(mxf_essence_container_uls, st->codec->codec_id);
+    codec_ul = mxf_get_essence_container_ul(st->codec->codec_id);
     mxf_write_local_tag(pb, 16, 0x3004);
     put_buffer(pb, codec_ul->uid, 16);
 
@@ -852,7 +853,7 @@ static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableE
 #ifdef DEBUG
     PRINT_KEY(s, "wav desc uid", (*refs->track)[stream_index]);
 #endif
-    codec_ul = mxf_get_essence_container_ul(mxf_essence_container_uls, st->codec->codec_id);
+    codec_ul = mxf_get_essence_container_ul(st->codec->codec_id);
     mxf_write_local_tag(pb, 16, 0x3004);
     put_buffer(pb, codec_ul->uid, 16);
 
