@@ -745,21 +745,25 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                     cpe->ch[ch].sf_idx[w][g] = av_clip(cpe->ch[ch].sf_idx[w][g], prev_scale - SCALE_MAX_DIFF, prev_scale + SCALE_MAX_DIFF);
                 prev_scale = cpe->ch[ch].sf_idx[w][g];
             }
+        }
             //limit scalefactors
+        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++)
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 if(cpe->ch[ch].zeroes[w][g]) continue;
                 min_scale = FFMIN(min_scale, cpe->ch[ch].sf_idx[w][g]);
             }
+        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++)
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 if(cpe->ch[ch].zeroes[w][g]) continue;
                 cpe->ch[ch].sf_idx[w][g] = FFMIN(cpe->ch[ch].sf_idx[w][g], min_scale + SCALE_MAX_DIFF);
             }
+        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++)
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 if(cpe->ch[ch].zeroes[w][g]) continue;
                 cpe->ch[ch].sf_idx[w][g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[w][g], 0, SCALE_MAX_POS);
                 if(!cpe->ch[ch].gain) cpe->ch[ch].gain = cpe->ch[ch].sf_idx[w][g];
             }
-        }
+
         //adjust scalefactors for window groups
         for(w = 0; w < cpe->ch[ch].ics.num_windows - 1; w++){
             int min_scale = 256;
