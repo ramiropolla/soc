@@ -348,7 +348,7 @@ typedef struct Psy3gppContext{
     int         avg_bits;
     float       ath_l[64];
     float       ath_s[16];
-    Psy3gppChannel ch;
+    Psy3gppChannel *ch;
 }Psy3gppContext;
 
 /**
@@ -425,6 +425,7 @@ static av_cold int psy_3gpp_init(AACPsyContext *apc, int elements)
     }
 
     pctx->avg_bits = apc->avctx->bit_rate * 1024 / apc->avctx->sample_rate;
+    pctx->ch = av_mallocz(sizeof(Psy3gppChannel) * elements);
     return 0;
 }
 
@@ -460,7 +461,7 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
     int br = apc->avctx->bit_rate / apc->avctx->channels;
     int attack_ratio = (br <= 16000 + 8000*chans) ? 18 : 10;
     Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
-    Psy3gppChannel *pch = &pctx->ch;
+    Psy3gppChannel *pch = &pctx->ch[tag];
     uint8_t grouping[2];
     enum WindowSequence win[2];
 
@@ -580,7 +581,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     float stereo_att, pe_target;
     int bits_avail;
     int chans = type == ID_CPE ? 2 : 1;
-    Psy3gppChannel *pch = &pctx->ch;
+    Psy3gppChannel *pch = &pctx->ch[tag];
 
     //calculate and apply stereo attenuation factor - 5.2
     if(chans > 1 && cpe->common_window){
@@ -785,6 +786,8 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
 
 static av_cold void psy_3gpp_end(AACPsyContext *apc)
 {
+    Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
+    av_freep(&pctx->ch);
     av_freep(&apc->model_priv_data);
 }
 
