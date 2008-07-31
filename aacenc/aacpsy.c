@@ -814,7 +814,7 @@ static const AACPsyModel psy_models[AAC_NB_PSY_MODELS] =
 };
 
 int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
-                            int model, int elements, int flags,
+                            enum AACPsyModelType model, int elements, int flags,
                             const uint8_t *bands1024, int num_bands1024,
                             const uint8_t *bands128,  int num_bands128)
 {

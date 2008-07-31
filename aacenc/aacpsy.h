@@ -62,7 +62,7 @@ typedef struct AACPsyModel {
 }AACPsyModel;
 
 int ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
-                    int model, int elements, int flags,
+                    enum AACPsyModelType model, int elements, int flags,
                     const uint8_t *bands1024, int num_bands1024,
                     const uint8_t *bands128,  int num_bands128);
 void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe);
