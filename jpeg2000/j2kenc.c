@@ -29,7 +29,7 @@
 #include "avcodec.h"
 #include "bytestream.h"
 #include "j2k.h"
-#include "common.h"
+#include "libavutil/common.h"
 
 #define NMSEDEC_BITS 7
 #define NMSEDEC_FRACBITS (NMSEDEC_BITS-1)

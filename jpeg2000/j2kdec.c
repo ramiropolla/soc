@@ -29,7 +29,7 @@
 #include "avcodec.h"
 #include "bytestream.h"
 #include "j2k.h"
-#include "common.h"
+#include "libavutil/common.h"
 
 #define HAD_COC 0x01
 #define HAD_QCC 0x02
