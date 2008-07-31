@@ -41,6 +41,7 @@ typedef struct AACPsyContext {
     AVCodecContext *avctx;
     DSPContext dsp;
 
+    int flags;
     int window_type[2];
     int window_shape[2];
     const uint8_t *bands1024;

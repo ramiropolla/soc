@@ -829,6 +829,7 @@ int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
         pow2sf_tab[i] = pow(2, (i - 200)/4.);
 
     ctx->avctx = avctx;
+    ctx->flags = flags;
     ctx->bands1024 = bands1024;
     ctx->num_bands1024 = num_bands1024;
     ctx->bands128 = bands128;
