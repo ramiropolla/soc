@@ -38,19 +38,6 @@ DECLARE_ALIGNED_16(static float, sine_long_1024[1024]);
 DECLARE_ALIGNED_16(static float, sine_short_128[128]);
 
 #include "aactab.h"
-/**
- * IDs for raw_data_block
- */
-enum {
-    ID_SCE = 0x0,
-    ID_CPE,
-    ID_CCE,
-    ID_LFE,
-    ID_DSE,
-    ID_PCE,
-    ID_FIL,
-    ID_END
-};
 
 static const uint8_t swb_size_1024_96[] = {
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8,
@@ -243,7 +230,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
 
     s->cpe = av_mallocz(sizeof(ChannelElement) * ((avctx->channels + 1) >> 1));
     //TODO: psy model selection with some option
-    ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
+    ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, (avctx->channels + 1) >> 1, 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
@@ -698,7 +685,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
     AACEncContext *s = avctx->priv_data;
     int16_t *samples = s->samples, *samples2;
     ChannelElement *cpe;
-    int i, j, chans;
+    int i, j, chans, tag;
 
     if(!samples){
         s->samples = av_malloc(1024 * avctx->channels * sizeof(s->samples[0]));
@@ -718,14 +705,15 @@ static int aac_encode_frame(AVCodecContext *avctx,
     }*/
     for(i = 0; i < avctx->channels; i += 2){
         chans = FFMIN(avctx->channels - i, 2);
-        cpe = &s->cpe[i/2];
+        tag = chans > 1 ? ID_CPE : ID_SCE;
+        cpe = &s->cpe[(i + 1)/2];
         samples2 = samples + i;
-        ff_aac_psy_suggest_window(&s->psy, samples2, data, i, cpe);
+        ff_aac_psy_suggest_window(&s->psy, samples2, data, (i + 1) >> 1, tag, cpe);
         for(j = 0; j < chans; j++){
             analyze(avctx, s, cpe, samples2, j);
         }
-        ff_aac_psy_analyze(&s->psy, i, cpe);
-        put_bits(&s->pb, 3, chans > 1 ? ID_CPE : ID_SCE);
+        ff_aac_psy_analyze(&s->psy, (i + 1) >> 1, tag, cpe);
+        put_bits(&s->pb, 3, tag);
         put_bits(&s->pb, 4, i >> 1);
         if(chans == 2){
             put_bits(&s->pb, 1, cpe->common_window);

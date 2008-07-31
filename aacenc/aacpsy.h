@@ -45,6 +45,20 @@ enum WindowSequence {
 };
 
 /**
+ * IDs for raw_data_block
+ */
+enum {
+    ID_SCE = 0x0,
+    ID_CPE,
+    ID_CCE,
+    ID_LFE,
+    ID_DSE,
+    ID_PCE,
+    ID_FIL,
+    ID_END
+};
+
+/**
  * special codebooks
  */
 enum Codebook {
@@ -184,17 +198,18 @@ typedef struct AACPsyContext {
 
 typedef struct AACPsyModel {
     const char *name;
-    int   (*init)   (AACPsyContext *apc);
-    void  (*window) (AACPsyContext *apc, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe);
-    void  (*process)(AACPsyContext *apc,int channel, ChannelElement *cpe);
+    int   (*init)   (AACPsyContext *apc, int elements);
+    void  (*window) (AACPsyContext *apc, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe);
+    void  (*process)(AACPsyContext *apc, int tag, int type, ChannelElement *cpe);
     void  (*end)    (AACPsyContext *apc);
 }AACPsyModel;
 
-int ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx, int model, int flags,
+int ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
+                    int model, int elements, int flags,
                     const uint8_t *bands1024, int num_bands1024,
                     const uint8_t *bands128,  int num_bands128);
-void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int16_t *la, int channel, ChannelElement *cpe);
-void ff_aac_psy_analyze(AACPsyContext *ctx, int channel, ChannelElement *cpe);
+void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe);
+void ff_aac_psy_analyze(AACPsyContext *ctx, int tag, int type, ChannelElement *cpe);
 void ff_aac_psy_end(AACPsyContext *ctx);
 #endif /* FFMPEG_AACPSY_H */
 
