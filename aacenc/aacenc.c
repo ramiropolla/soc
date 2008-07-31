@@ -143,6 +143,16 @@ static const struct {
     {   -1, NULL  , NULL  , 0 }, // intensity in-phase
 };
 
+/** default channel configurations */
+static const uint8_t aac_chan_configs[6][5] = {
+ {1, ID_SCE},                         // 1 channel  - single channel element
+ {1, ID_CPE},                         // 2 channels - channel pair
+ {2, ID_SCE, ID_CPE},                 // 3 channels - center + stereo
+ {3, ID_SCE, ID_CPE, ID_SCE},         // 4 channels - front center + stereo + back center
+ {3, ID_SCE, ID_CPE, ID_CPE},         // 5 channels - front center + stereo + back stereo
+ {4, ID_SCE, ID_CPE, ID_CPE, ID_LFE}, // 6 channels - front center + stereo + back stereo + LFE
+};
+
 typedef struct {
     PutBitContext pb;
     MDCTContext mdct1024;
@@ -197,6 +207,10 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
         av_log(avctx, AV_LOG_ERROR, "Unsupported sample rate %d\n", avctx->sample_rate);
         return -1;
     }
+    if(avctx->channels > 6){
+        av_log(avctx, AV_LOG_ERROR, "Unsupported number of channels: %d\n", avctx->channels);
+        return -1;
+    }
     s->samplerate_index = i;
     s->swb_sizes1024 = swb_size_1024[i];
     s->swb_num1024 = num_swb_1024[i];
@@ -212,9 +226,9 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     ff_sine_window_init(sine_long_1024, 1024);
     ff_sine_window_init(sine_short_128, 128);
 
-    s->cpe = av_mallocz(sizeof(ChannelElement) * ((avctx->channels + 1) >> 1));
+    s->cpe = av_mallocz(sizeof(ChannelElement) * aac_chan_configs[avctx->channels-1][0]);
     //TODO: psy model selection with some option
-    ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, (avctx->channels + 1) >> 1, 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
+    ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, aac_chan_configs[avctx->channels-1][0], 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
@@ -667,9 +681,11 @@ static int aac_encode_frame(AVCodecContext *avctx,
                             uint8_t *frame, int buf_size, void *data)
 {
     AACEncContext *s = avctx->priv_data;
-    int16_t *samples = s->samples, *samples2;
+    int16_t *samples = s->samples, *samples2, *la;
     ChannelElement *cpe;
-    int i, j, chans, tag;
+    int i, j, chans, tag, start_ch;
+    const uint8_t *chan_map = aac_chan_configs[avctx->channels-1];
+    int chan_el_counter[4];
 
     if(!samples){
         s->samples = av_malloc(1024 * avctx->channels * sizeof(s->samples[0]));
@@ -687,18 +703,21 @@ static int aac_encode_frame(AVCodecContext *avctx,
         put_bits(&s->pb, 4, 0);
         put_program_config_element(avctx, s);
     }*/
-    for(i = 0; i < avctx->channels; i += 2){
-        chans = FFMIN(avctx->channels - i, 2);
-        tag = chans > 1 ? ID_CPE : ID_SCE;
-        cpe = &s->cpe[(i + 1)/2];
-        samples2 = samples + i;
-        ff_aac_psy_suggest_window(&s->psy, samples2, data, (i + 1) >> 1, tag, cpe);
+    start_ch = 0;
+    memset(chan_el_counter, 0, sizeof(chan_el_counter));
+    for(i = 0; i < chan_map[0]; i++){
+        tag = chan_map[i+1];
+        chans = tag == ID_CPE ? 2 : 1;
+        cpe = &s->cpe[i];
+        samples2 = samples + start_ch;
+        la = (uint16_t*)data + start_ch;
+        ff_aac_psy_suggest_window(&s->psy, samples2, la, i, tag, cpe);
         for(j = 0; j < chans; j++){
             analyze(avctx, s, cpe, samples2, j);
         }
-        ff_aac_psy_analyze(&s->psy, (i + 1) >> 1, tag, cpe);
+        ff_aac_psy_analyze(&s->psy, i, tag, cpe);
         put_bits(&s->pb, 3, tag);
-        put_bits(&s->pb, 4, i >> 1);
+        put_bits(&s->pb, 4, chan_el_counter[tag]++);
         if(chans == 2){
             put_bits(&s->pb, 1, cpe->common_window);
             if(cpe->common_window){
@@ -709,6 +728,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
         for(j = 0; j < chans; j++){
             encode_individual_channel(avctx, cpe, j);
         }
+        start_ch += chans;
     }
 
     put_bits(&s->pb, 3, ID_END);
