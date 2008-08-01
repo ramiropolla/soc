@@ -30,10 +30,9 @@
 #ifndef FFMPEG_AACTAB_H
 #define FFMPEG_AACTAB_H
 
-#include <stdint.h>
+#include "aac.h"
 
-#define TNS_MAX_ORDER 20
-#define PNS_MEAN_ENERGY 3719550720.0f // sqrt(3.0) * 1<<31
+#include <stdint.h>
 
 static const uint16_t swb_offset_1024_96[] = {
       0,   4,   8,  12,  16,  20,  24,  28,
@@ -598,8 +597,6 @@ static const uint8_t bits11[289] = {
      9,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  9,
      5,
 };
-
-#define IVQUANT_SIZE 1024
 
 static const int8_t aac_codebook_vector0[324] = {
  -1, -1, -1, -1, -1, -1, -1,  0, -1, -1, -1,  1, -1, -1,  0, -1,
