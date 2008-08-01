@@ -24,7 +24,7 @@
 #include "avcodec.h"
 #include "dsputil.h"
 
-#define MAX_POW_CACHED (1<<15)
+#define MAX_POW_CACHED (1<<11)
 
 /*
  * FIXME: Bitstream from vorbis_enc.c (move to seperate file?)
@@ -207,8 +207,8 @@ static void encode_block(NellyMoserEncodeContext *s,
             val = ff_nelly_init_table[bk];
         }
 
-        if(val >= 0 && val < MAX_POW_CACHED){
-            pval = s->pow_table[val];
+        if(val >= 0){
+            pval = s->pow_table[val&0x7FF] / (1<<(val>>11)) ;
         }else{
             pval = -pow(2, -val/2048.0 - 3.0);
         }
