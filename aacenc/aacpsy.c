@@ -465,7 +465,7 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
     uint8_t grouping[2];
     enum WindowSequence win[2];
 
-    if(la){
+    if(la && !(apc->flags & PSY_MODEL_NO_SWITCH)){
         float s[8], v;
         for(ch = 0; ch < chans; ch++){
             enum WindowSequence last_window_sequence = cpe->ch[ch].ics.window_sequence;
@@ -534,6 +534,9 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
     cpe->common_window = chans > 1 && cpe->ch[0].ics.window_sequence == cpe->ch[1].ics.window_sequence && cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
     if(cpe->common_window && cpe->ch[0].ics.window_sequence == EIGHT_SHORT_SEQUENCE && grouping[0] != grouping[1])
         cpe->common_window = 0;
+    if(PSY_MODEL_MODE(apc->flags) > PSY_MODE_QUALITY){
+        av_log(apc->avctx, AV_LOG_ERROR, "Unknown mode %d, defaulting to CBR\n", PSY_MODEL_MODE(apc->flags));
+    }
 }
 
 /**
@@ -692,11 +695,17 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         }
     }
 
+    switch(PSY_MODEL_MODE(apc->flags)){
+    case PSY_MODE_CBR:
+    case PSY_MODE_ABR:
     //bitrate reduction - 5.6.1
-    //TODO: add more that first step estimation
+    if(PSY_MODEL_MODE(apc->flags) != PSY_MODE_ABR){
     pctx->reservoir += pctx->avg_bits - apc->avctx->frame_bits;
     bits_avail = pctx->avg_bits + pctx->reservoir;
     bits_avail = FFMIN(bits_avail, pctx->avg_bits * 1.5);
+    }else{
+        bits_avail = pctx->avg_bits;
+    }
     pe_target = 1.18f * bits_avail / apc->avctx->channels * chans;
     for(i = 0; i < 2; i++){
         float t0, pe, r, a0 = 0.0f, pe0 = 0.0f, b0 = 0.0f;
@@ -731,7 +740,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
 
     //determine scalefactors - 5.6.2
     for(ch = 0; ch < chans; ch++){
-        int min_scale = 256;
         prev_scale = -1;
         cpe->ch[ch].gain = 0;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
@@ -746,7 +754,15 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                 prev_scale = cpe->ch[ch].sf_idx[w][g];
             }
         }
+    }
+    break;
+    case PSY_MODE_QUALITY:
+        break;
+    }
+
             //limit scalefactors
+    for(ch = 0; ch < chans; ch++){
+        int min_scale = 256;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++)
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 if(cpe->ch[ch].zeroes[w][g]) continue;
@@ -785,7 +801,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     }
 
     memcpy(pch->prev_band, pch->band, sizeof(pch->band));
-    psy_create_output(apc, cpe, chans, 0);
+    psy_create_output(apc, cpe, chans, !(apc->flags & PSY_MODEL_NO_PULSE));
 }
 
 static av_cold void psy_3gpp_end(AACPsyContext *apc)
