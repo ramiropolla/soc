@@ -83,6 +83,7 @@
 
 #include "aac.h"
 #include "aactab.h"
+#include "aacdectab.h"
 #include "mpeg4audio.h"
 
 #include <assert.h>
@@ -90,13 +91,9 @@
 #include <string.h>
 
 #ifndef CONFIG_HARDCODED_TABLES
-    static float ivquant_tab[IVQUANT_SIZE];
-    static float pow2sf_tab[316];
+    static float ff_aac_ivquant_tab[IVQUANT_SIZE];
+    static float ff_aac_pow2sf_tab[316];
 #endif /* CONFIG_HARDCODED_TABLES */
-DECLARE_ALIGNED_16(static float,  kbd_long_1024[1024]);
-DECLARE_ALIGNED_16(static float,  kbd_short_128[128]);
-DECLARE_ALIGNED_16(static float, sine_long_1024[1024]);
-DECLARE_ALIGNED_16(static float, sine_short_128[128]);
 
 static VLC mainvlc;
 static VLC books[11];
@@ -475,17 +472,17 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
         const unsigned int s;
         const uint8_t      *a_bits;
     } tmp[] = {
-        { code1 , sizeof code1 , bits1  },
-        { code2 , sizeof code2 , bits2  },
-        { code3 , sizeof code3 , bits3  },
-        { code4 , sizeof code4 , bits4  },
-        { code5 , sizeof code5 , bits5  },
-        { code6 , sizeof code6 , bits6  },
-        { code7 , sizeof code7 , bits7  },
-        { code8 , sizeof code8 , bits8  },
-        { code9 , sizeof code9 , bits9  },
-        { code10, sizeof code10, bits10 },
-        { code11, sizeof code11, bits11 },
+        { ff_aac_code1 , sizeof ff_aac_code1 , ff_aac_bits1  },
+        { ff_aac_code2 , sizeof ff_aac_code2 , ff_aac_bits2  },
+        { ff_aac_code3 , sizeof ff_aac_code3 , ff_aac_bits3  },
+        { ff_aac_code4 , sizeof ff_aac_code4 , ff_aac_bits4  },
+        { ff_aac_code5 , sizeof ff_aac_code5 , ff_aac_bits5  },
+        { ff_aac_code6 , sizeof ff_aac_code6 , ff_aac_bits6  },
+        { ff_aac_code7 , sizeof ff_aac_code7 , ff_aac_bits7  },
+        { ff_aac_code8 , sizeof ff_aac_code8 , ff_aac_bits8  },
+        { ff_aac_code9 , sizeof ff_aac_code9 , ff_aac_bits9  },
+        { ff_aac_code10, sizeof ff_aac_code10, ff_aac_bits10 },
+        { ff_aac_code11, sizeof ff_aac_code11, ff_aac_bits11 },
     };
     AACContext * ac = avccontext->priv_data;
     int i;
@@ -564,14 +561,14 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
 
 #ifndef CONFIG_HARDCODED_TABLES
     for (i = 1 - IVQUANT_SIZE/2; i < IVQUANT_SIZE/2; i++)
-        ivquant_tab[i + IVQUANT_SIZE/2 - 1] =  cbrt(fabs(i)) * i;
+        ff_aac_ivquant_tab[i + IVQUANT_SIZE/2 - 1] =  cbrt(fabs(i)) * i;
     for (i = 0; i < 316; i++)
-        pow2sf_tab[i] = pow(2, (i - 200)/4.);
+        ff_aac_pow2sf_tab[i] = pow(2, (i - 200)/4.);
 #endif /* CONFIG_HARDCODED_TABLES */
 
-    INIT_VLC_STATIC(&mainvlc, 7, sizeof(code)/sizeof(code[0]),
-        bits, sizeof(bits[0]), sizeof(bits[0]),
-        code, sizeof(code[0]), sizeof(code[0]),
+    INIT_VLC_STATIC(&mainvlc, 7, sizeof(ff_aac_code)/sizeof(ff_aac_code[0]),
+        ff_aac_bits, sizeof(ff_aac_bits[0]), sizeof(ff_aac_bits[0]),
+        ff_aac_code, sizeof(ff_aac_code[0]), sizeof(ff_aac_code[0]),
         352);
 
 #ifdef AAC_LTP
@@ -582,20 +579,20 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
         ff_mdct_init(&ac->mdct, 9, 1);
         ff_mdct_init(&ac->mdct_small, 6, 1);
         // window initialization
-        ff_kbd_window_init(kbd_long_1024, 4.0, 256);
-        ff_kbd_window_init(kbd_short_128, 6.0, 32);
-        ff_sine_window_init(sine_long_1024, 256);
-        ff_sine_window_init(sine_short_128, 32);
+        ff_kbd_window_init(ff_aac_kbd_long_1024, 4.0, 256);
+        ff_kbd_window_init(ff_aac_kbd_short_128, 6.0, 32);
+        ff_sine_window_init(ff_aac_sine_long_1024, 256);
+        ff_sine_window_init(ff_aac_sine_short_128, 32);
         ssr_context_init(&ac->ssrctx);
     } else {
 #endif /* AAC_SSR */
         ff_mdct_init(&ac->mdct, 11, 1);
         ff_mdct_init(&ac->mdct_small, 8, 1);
         // window initialization
-        ff_kbd_window_init(kbd_long_1024, 4.0, 1024);
-        ff_kbd_window_init(kbd_short_128, 6.0, 128);
-        ff_sine_window_init(sine_long_1024, 1024);
-        ff_sine_window_init(sine_short_128, 128);
+        ff_kbd_window_init(ff_aac_kbd_long_1024, 4.0, 1024);
+        ff_kbd_window_init(ff_aac_kbd_short_128, 6.0, 128);
+        ff_sine_window_init(ff_aac_sine_long_1024, 1024);
+        ff_sine_window_init(ff_aac_sine_short_128, 128);
 #ifdef AAC_SSR
     }
 #endif /* AAC_SSR */
@@ -659,11 +656,11 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
             }
         }
         ics->swb_offset    =    swb_offset_128[ac->m4ac.sampling_index];
-        ics->num_swb       =       num_swb_128[ac->m4ac.sampling_index];
+        ics->num_swb       = ff_aac_num_swb_128[ac->m4ac.sampling_index];
     } else {
         ics->max_sfb = get_bits(gb, 6);
         ics->swb_offset    =    swb_offset_1024[ac->m4ac.sampling_index];
-        ics->num_swb       =       num_swb_1024[ac->m4ac.sampling_index];
+        ics->num_swb       = ff_aac_num_swb_1024[ac->m4ac.sampling_index];
     }
 
     if(ics->max_sfb > ics->num_swb) {
@@ -718,7 +715,7 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
  */
 static inline float ivquant(AACContext * ac, int a) {
     if (a + (unsigned int)IVQUANT_SIZE/2 - 1 < (unsigned int)IVQUANT_SIZE - 1)
-        return ivquant_tab[a + IVQUANT_SIZE/2 - 1];
+        return ff_aac_ivquant_tab[a + IVQUANT_SIZE/2 - 1];
     else
         return cbrtf(fabsf(a)) * a;
 }
@@ -798,7 +795,7 @@ static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_ga
                             "%s (%d) out of range.\n", sf_str[2], offset[2]);
                         return -1;
                     }
-                    sf[g][i] =  pow2sf_tab[-offset[2] + 300];
+                    sf[g][i] =  ff_aac_pow2sf_tab[-offset[2] + 300];
                     sf[g][i] *= mix_gain;
                 }
             }else if(band_type[g][i] == NOISE_BT) {
@@ -812,7 +809,7 @@ static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_ga
                             "%s (%d) out of range.\n", sf_str[1], offset[1]);
                         return -1;
                     }
-                    sf[g][i] = -pow2sf_tab[ offset[1] + sf_offset];
+                    sf[g][i] = -ff_aac_pow2sf_tab[ offset[1] + sf_offset];
                     sf[g][i] *= mix_gain;
                 }
             }else {
@@ -823,7 +820,7 @@ static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_ga
                             "%s (%d) out of range.\n", sf_str[0], offset[0]);
                         return -1;
                     }
-                    sf[g][i] = -pow2sf_tab[ offset[0] + sf_offset];
+                    sf[g][i] = -ff_aac_pow2sf_tab[ offset[0] + sf_offset];
                     sf[g][i] *= mix_gain;
                 }
             }
@@ -956,7 +953,7 @@ static int decode_spectrum(AACContext * ac, GetBitContext * gb, const Individual
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
                         const int index = get_vlc2(gb, books[cur_band_type - 1].table, 6, 3);
                         const int coef_idx = (group << 7) + k;
-                        const int8_t *vq_ptr = &codebook_vectors[cur_band_type - 1][index * dim];
+                        const int8_t *vq_ptr = &ff_aac_codebook_vectors[cur_band_type - 1][index * dim];
                         int j;
                         if (is_cb_unsigned) {
                             for (j = 0; j < dim; j++)
@@ -1458,10 +1455,10 @@ static void apply_tns(AACContext * ac, int decode, SingleChannelElement * sce, f
 #ifdef AAC_LTP
 static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
     IndividualChannelStream * ics = &sce->ics;
-    const float * lwindow      = ics->use_kb_window[0] ? kbd_long_1024 : sine_long_1024;
-    const float * swindow      = ics->use_kb_window[0] ? kbd_short_128 : sine_short_128;
-    const float * lwindow_prev = ics->use_kb_window[1] ? kbd_long_1024 : sine_long_1024;
-    const float * swindow_prev = ics->use_kb_window[1] ? kbd_short_128 : sine_short_128;
+    const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
+    const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
+    const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
+    const float * swindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
     float * buf = ac->buf_mdct;
     assert(ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE);
     if (ics->window_sequence[0] != LONG_STOP_SEQUENCE) {
@@ -1547,10 +1544,10 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
     float * in = sce->coeffs;
     float * out = sce->ret;
     float * saved = sce->saved;
-    const float * lwindow      = ics->use_kb_window[0] ? kbd_long_1024 : sine_long_1024;
-    const float * swindow      = ics->use_kb_window[0] ? kbd_short_128 : sine_short_128;
-    const float * lwindow_prev = ics->use_kb_window[1] ? kbd_long_1024 : sine_long_1024;
-    const float * swindow_prev = ics->use_kb_window[1] ? kbd_short_128 : sine_short_128;
+    const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
+    const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
+    const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
+    const float * swindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
     float * buf = ac->buf_mdct;
     int i;
 
@@ -1606,10 +1603,10 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
 #ifdef AAC_SSR
 static void windowing_and_imdct_ssr(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
     IndividualChannelStream * ics = &sce->ics;
-    const float * lwindow      = ics->use_kb_window[0] ? kbd_long_1024 : sine_long_1024;
-    const float * swindow      = ics->use_kb_window[0] ? kbd_short_128 : sine_short_128;
-    const float * lwindow_prev = ics->use_kb_window[1] ? kbd_long_1024 : sine_long_1024;
-    const float * swindow_prev = ics->use_kb_window[1] ? kbd_short_128 : sine_short_128;
+    const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
+    const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
+    const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
+    const float * swindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
     float * buf = ac->buf_mdct;
     if (ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
         ff_imdct_calc(&ac->mdct, buf, in, out);
