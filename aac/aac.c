@@ -96,7 +96,7 @@
 #endif /* CONFIG_HARDCODED_TABLES */
 
 static VLC vlc_scalefactors;
-static VLC books[11];
+static VLC vlc_spectral[11];
 
 
 // TODO: Maybe add to dsputil?!
@@ -496,47 +496,47 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
     avccontext->sample_rate = ac->m4ac.sample_rate;
     avccontext->frame_size  = 1024;
 
-    INIT_VLC_STATIC(&books[0], 6, tmp[0].s/sizeof(tmp[0].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[0], 6, tmp[0].s/sizeof(tmp[0].a_code[0]),
         tmp[0].a_bits, sizeof(tmp[0].a_bits[0]), sizeof(tmp[0].a_bits[0]),
         tmp[0].a_code, sizeof(tmp[0].a_code[0]), sizeof(tmp[0].a_code[0]),
         144);
-    INIT_VLC_STATIC(&books[1], 6, tmp[1].s/sizeof(tmp[1].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[1], 6, tmp[1].s/sizeof(tmp[1].a_code[0]),
         tmp[1].a_bits, sizeof(tmp[1].a_bits[0]), sizeof(tmp[1].a_bits[0]),
         tmp[1].a_code, sizeof(tmp[1].a_code[0]), sizeof(tmp[1].a_code[0]),
         114);
-    INIT_VLC_STATIC(&books[2], 6, tmp[2].s/sizeof(tmp[2].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[2], 6, tmp[2].s/sizeof(tmp[2].a_code[0]),
         tmp[2].a_bits, sizeof(tmp[2].a_bits[0]), sizeof(tmp[2].a_bits[0]),
         tmp[2].a_code, sizeof(tmp[2].a_code[0]), sizeof(tmp[2].a_code[0]),
         188);
-    INIT_VLC_STATIC(&books[3], 6, tmp[3].s/sizeof(tmp[3].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[3], 6, tmp[3].s/sizeof(tmp[3].a_code[0]),
         tmp[3].a_bits, sizeof(tmp[3].a_bits[0]), sizeof(tmp[3].a_bits[0]),
         tmp[3].a_code, sizeof(tmp[3].a_code[0]), sizeof(tmp[3].a_code[0]),
         180);
-    INIT_VLC_STATIC(&books[4], 6, tmp[4].s/sizeof(tmp[4].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[4], 6, tmp[4].s/sizeof(tmp[4].a_code[0]),
         tmp[4].a_bits, sizeof(tmp[4].a_bits[0]), sizeof(tmp[4].a_bits[0]),
         tmp[4].a_code, sizeof(tmp[4].a_code[0]), sizeof(tmp[4].a_code[0]),
         172);
-    INIT_VLC_STATIC(&books[5], 6, tmp[5].s/sizeof(tmp[5].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[5], 6, tmp[5].s/sizeof(tmp[5].a_code[0]),
         tmp[5].a_bits, sizeof(tmp[5].a_bits[0]), sizeof(tmp[5].a_bits[0]),
         tmp[5].a_code, sizeof(tmp[5].a_code[0]), sizeof(tmp[5].a_code[0]),
         140);
-    INIT_VLC_STATIC(&books[6], 6, tmp[6].s/sizeof(tmp[6].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[6], 6, tmp[6].s/sizeof(tmp[6].a_code[0]),
         tmp[6].a_bits, sizeof(tmp[6].a_bits[0]), sizeof(tmp[6].a_bits[0]),
         tmp[6].a_code, sizeof(tmp[6].a_code[0]), sizeof(tmp[6].a_code[0]),
         168);
-    INIT_VLC_STATIC(&books[7], 6, tmp[7].s/sizeof(tmp[7].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[7], 6, tmp[7].s/sizeof(tmp[7].a_code[0]),
         tmp[7].a_bits, sizeof(tmp[7].a_bits[0]), sizeof(tmp[7].a_bits[0]),
         tmp[7].a_code, sizeof(tmp[7].a_code[0]), sizeof(tmp[7].a_code[0]),
         114);
-    INIT_VLC_STATIC(&books[8], 6, tmp[8].s/sizeof(tmp[8].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[8], 6, tmp[8].s/sizeof(tmp[8].a_code[0]),
         tmp[8].a_bits, sizeof(tmp[8].a_bits[0]), sizeof(tmp[8].a_bits[0]),
         tmp[8].a_code, sizeof(tmp[8].a_code[0]), sizeof(tmp[8].a_code[0]),
         262);
-    INIT_VLC_STATIC(&books[9], 6, tmp[9].s/sizeof(tmp[9].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[9], 6, tmp[9].s/sizeof(tmp[9].a_code[0]),
         tmp[9].a_bits, sizeof(tmp[9].a_bits[0]), sizeof(tmp[9].a_bits[0]),
         tmp[9].a_code, sizeof(tmp[9].a_code[0]), sizeof(tmp[9].a_code[0]),
         248);
-    INIT_VLC_STATIC(&books[10], 6, tmp[10].s/sizeof(tmp[10].a_code[0]),
+    INIT_VLC_STATIC(&vlc_spectral[10], 6, tmp[10].s/sizeof(tmp[10].a_code[0]),
         tmp[10].a_bits, sizeof(tmp[10].a_bits[0]), sizeof(tmp[10].a_bits[0]),
         tmp[10].a_code, sizeof(tmp[10].a_code[0]), sizeof(tmp[10].a_code[0]),
         384);
@@ -951,7 +951,7 @@ static int decode_spectrum(AACContext * ac, GetBitContext * gb, const Individual
             }else if (cur_band_type != NOISE_BT && cur_band_type != INTENSITY_BT2 && cur_band_type != INTENSITY_BT) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
-                        const int index = get_vlc2(gb, books[cur_band_type - 1].table, 6, 3);
+                        const int index = get_vlc2(gb, vlc_spectral[cur_band_type - 1].table, 6, 3);
                         const int coef_idx = (group << 7) + k;
                         const int8_t *vq_ptr = &ff_aac_codebook_vectors[cur_band_type - 1][index * dim];
                         int j;
