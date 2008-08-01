@@ -95,7 +95,7 @@
     static float ff_aac_pow2sf_tab[316];
 #endif /* CONFIG_HARDCODED_TABLES */
 
-static VLC mainvlc;
+static VLC vlc_scalefactors;
 static VLC books[11];
 
 
@@ -566,7 +566,7 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
         ff_aac_pow2sf_tab[i] = pow(2, (i - 200)/4.);
 #endif /* CONFIG_HARDCODED_TABLES */
 
-    INIT_VLC_STATIC(&mainvlc, 7, sizeof(ff_aac_code)/sizeof(ff_aac_code[0]),
+    INIT_VLC_STATIC(&vlc_scalefactors, 7, sizeof(ff_aac_code)/sizeof(ff_aac_code[0]),
         ff_aac_bits, sizeof(ff_aac_bits[0]), sizeof(ff_aac_bits[0]),
         ff_aac_code, sizeof(ff_aac_code[0]), sizeof(ff_aac_code[0]),
         352);
@@ -789,7 +789,7 @@ static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_ga
             }else if((band_type[g][i] == INTENSITY_BT) || (band_type[g][i] == INTENSITY_BT2)) {
                 ics->intensity_present = 1;
                 for(; i < run_end; i++) {
-                    offset[2] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
+                    offset[2] += get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
                     if(offset[2] > 255) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range.\n", sf_str[2], offset[2]);
@@ -803,7 +803,7 @@ static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_ga
                     if(noise_flag-- > 0)
                         offset[1] += get_bits(gb, 9) - 256;
                     else
-                        offset[1] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
+                        offset[1] += get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
                     if(offset[1] > 255) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range.\n", sf_str[1], offset[1]);
@@ -814,7 +814,7 @@ static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_ga
                 }
             }else {
                 for(; i < run_end; i++) {
-                    offset[0] += get_vlc2(gb, mainvlc.table, 7, 3) - 60;
+                    offset[0] += get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
                     if(offset[0] > 255) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range.\n", sf_str[0], offset[0]);
@@ -1248,7 +1248,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
         float gain_cache = 1.;
         if (c) {
             cge = coup->is_indep_coup ? 1 : get_bits1(gb);
-            gain = cge ? get_vlc2(gb, mainvlc.table, 7, 3) - 60: 0;
+            gain = cge ? get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60: 0;
             gain_cache = pow(scale, gain);
         }
         for (g = 0; g < sce->ics.num_window_groups; g++)
@@ -1259,7 +1259,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
                     if (cge) {
                         coup->gain[c][g][sfb] = gain_cache;
                     } else {
-                        int s, t = get_vlc2(gb, mainvlc.table, 7, 3) - 60;
+                        int s, t = get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
                         if (sign) {
                             s = 1 - 2 * (t & 0x1);
                             t >>= 1;
