@@ -703,10 +703,10 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
             pctx->reservoir += pctx->avg_bits - apc->avctx->frame_bits;
             bits_avail = pctx->avg_bits + pctx->reservoir;
             bits_avail = FFMIN(bits_avail, pctx->avg_bits * 1.5);
+            pe_target = 1.18f * bits_avail / apc->avctx->channels * chans;
         }else{
-            bits_avail = pctx->avg_bits;
+            pe_target = pctx->avg_bits / apc->avctx->channels * chans;
         }
-        pe_target = 1.18f * bits_avail / apc->avctx->channels * chans;
         for(i = 0; i < 2; i++){
             float t0, pe, r, a0 = 0.0f, pe0 = 0.0f, b0 = 0.0f;
             for(ch = 0; ch < chans; ch++){
