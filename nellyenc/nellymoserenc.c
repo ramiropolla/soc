@@ -82,12 +82,12 @@ typedef struct NellyMoserEncodeContext {
     DSPContext      dsp;
     MDCTContext     mdct_ctx;
     float pows[NELLY_FILL_LEN];
-    float pow_table[MAX_POW_CACHED];
     DECLARE_ALIGNED_16(float,mdct_tmp[NELLY_BUF_LEN*2]);
     DECLARE_ALIGNED_16(float,mdct_out[NELLY_BUF_LEN*2]);
 } NellyMoserEncodeContext;
 
 static DECLARE_ALIGNED_16(float,sine_window[2*NELLY_BUF_LEN]);
+static float pow_table[MAX_POW_CACHED];
 
 void apply_mdct(NellyMoserEncodeContext *s, float *in, float *coefs)
 {
@@ -126,7 +126,7 @@ static av_cold int encode_init(AVCodecContext * avctx) {
         }
     }
     for(i=0; i<MAX_POW_CACHED; i++)
-        s->pow_table[i] = -pow(2, -i/2048.0 - 3.0);
+        pow_table[i] = -pow(2, -i/2048.0 - 3.0);
 
     s->bufsize = 0;
     return 0;
@@ -208,7 +208,7 @@ static void encode_block(NellyMoserEncodeContext *s,
         }
 
         if(val >= 0){
-            pval = s->pow_table[val&0x7FF] / (1<<(val>>11)) ;
+            pval = pow_table[val&0x7FF] / (1<<(val>>11)) ;
         }else{
             pval = -pow(2, -val/2048.0 - 3.0);
         }
