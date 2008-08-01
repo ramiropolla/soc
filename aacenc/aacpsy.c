@@ -757,6 +757,28 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         }
         break;
     case PSY_MODE_QUALITY:
+        for(ch = 0; ch < chans; ch++){
+            start = 0;
+            for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+                for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                    g2 = w*16 + g;
+                    //TODO: make controllable quality
+                    if(pch->band[ch][g2].thr >= pch->band[ch][g2].energy){
+                        cpe->ch[ch].sf_idx[w][g] = 0;
+                        cpe->ch[ch].zeroes[w][g] = 1;
+                    }else{
+                        cpe->ch[ch].zeroes[w][g] = 0;
+                        cpe->ch[ch].sf_idx[w][g] = (int)(2.66667 * (log2(6.75*pch->band[ch][g2].thr) - log2(pch->band[ch][g2].ffac)));
+                        while(cpe->ch[ch].sf_idx[ch][g] > 3){
+                            float dist = calc_distortion(cpe->ch[ch].coeffs + start, cpe->ch[ch].ics.swb_sizes[g], SCALE_ONE_POS + cpe->ch[ch].sf_idx[ch][g]);
+                            if(dist < pch->band[ch][g2].thr) break;
+                            cpe->ch[ch].sf_idx[ch][g] -= 3;
+                        }
+                    }
+                    start += cpe->ch[ch].ics.swb_sizes[g];
+                }
+            }
+        }
         break;
     }
 
