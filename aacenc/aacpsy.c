@@ -698,69 +698,69 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     switch(PSY_MODEL_MODE(apc->flags)){
     case PSY_MODE_CBR:
     case PSY_MODE_ABR:
-    //bitrate reduction - 5.6.1
-    if(PSY_MODEL_MODE(apc->flags) != PSY_MODE_ABR){
-    pctx->reservoir += pctx->avg_bits - apc->avctx->frame_bits;
-    bits_avail = pctx->avg_bits + pctx->reservoir;
-    bits_avail = FFMIN(bits_avail, pctx->avg_bits * 1.5);
-    }else{
-        bits_avail = pctx->avg_bits;
-    }
-    pe_target = 1.18f * bits_avail / apc->avctx->channels * chans;
-    for(i = 0; i < 2; i++){
-        float t0, pe, r, a0 = 0.0f, pe0 = 0.0f, b0 = 0.0f;
-        for(ch = 0; ch < chans; ch++){
-            a0  += pch->a[ch];
-            b0  += pch->b[ch];
-            pe0 += pch->pe[ch];
+        //bitrate reduction - 5.6.1
+        if(PSY_MODEL_MODE(apc->flags) != PSY_MODE_ABR){
+            pctx->reservoir += pctx->avg_bits - apc->avctx->frame_bits;
+            bits_avail = pctx->avg_bits + pctx->reservoir;
+            bits_avail = FFMIN(bits_avail, pctx->avg_bits * 1.5);
+        }else{
+            bits_avail = pctx->avg_bits;
         }
-        t0 = pow(2.0, (a0 - pe0)       / (4.0 * b0));
-        r  = pow(2.0, (a0 - pe_target) / (4.0 * b0)) - t0;
+        pe_target = 1.18f * bits_avail / apc->avctx->channels * chans;
+        for(i = 0; i < 2; i++){
+            float t0, pe, r, a0 = 0.0f, pe0 = 0.0f, b0 = 0.0f;
+            for(ch = 0; ch < chans; ch++){
+                a0  += pch->a[ch];
+                b0  += pch->b[ch];
+                pe0 += pch->pe[ch];
+            }
+            t0 = pow(2.0, (a0 - pe0)       / (4.0 * b0));
+            r  = pow(2.0, (a0 - pe_target) / (4.0 * b0)) - t0;
 
-        //add correction factor to thresholds and recalculate perceptual entropy
-        for(ch = 0; ch < chans; ch++){
-            pch->a[ch] = pch->b[ch] = pch->pe[ch] = pch->thr[ch] = 0.0;
-            pe = 0.0f;
-            for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
-                for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                    g2 = w*16 + g;
-                    pch->band[ch][g2].thr = modify_thr(pch->band[ch][g2].thr, r);
-                    calc_pe(&pch->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
-                    if(pch->band[ch][g2].thr < pch->band[ch][g2].energy){
-                        pch->a[ch]   += pch->band[ch][g2].a;
-                        pch->b[ch]   += pch->band[ch][g2].b;
-                        pch->pe[ch]  += pch->band[ch][g2].pe;
-                        pch->thr[ch] += pch->band[ch][g2].thr;
+            //add correction factor to thresholds and recalculate perceptual entropy
+            for(ch = 0; ch < chans; ch++){
+                pch->a[ch] = pch->b[ch] = pch->pe[ch] = pch->thr[ch] = 0.0;
+                pe = 0.0f;
+                for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+                    for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                        g2 = w*16 + g;
+                        pch->band[ch][g2].thr = modify_thr(pch->band[ch][g2].thr, r);
+                        calc_pe(&pch->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
+                        if(pch->band[ch][g2].thr < pch->band[ch][g2].energy){
+                            pch->a[ch]   += pch->band[ch][g2].a;
+                            pch->b[ch]   += pch->band[ch][g2].b;
+                            pch->pe[ch]  += pch->band[ch][g2].pe;
+                            pch->thr[ch] += pch->band[ch][g2].thr;
+                        }
                     }
                 }
             }
         }
-    }
         //TODO: linearization
 
-    //determine scalefactors - 5.6.2
-    for(ch = 0; ch < chans; ch++){
-        prev_scale = -1;
-        cpe->ch[ch].gain = 0;
-        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
-            for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                g2 = w*16 + g;
-                cpe->ch[ch].zeroes[w][g] = pch->band[ch][g2].thr >= pch->band[ch][g2].energy;
-                if(cpe->ch[ch].zeroes[w][g]) continue;
-                //spec gives constant for lg() but we scaled it for log2()
-                cpe->ch[ch].sf_idx[w][g] = (int)(2.66667 * (log2(6.75*pch->band[ch][g2].thr) - log2(pch->band[ch][g2].ffac)));
-                if(prev_scale != -1)
-                    cpe->ch[ch].sf_idx[w][g] = av_clip(cpe->ch[ch].sf_idx[w][g], prev_scale - SCALE_MAX_DIFF, prev_scale + SCALE_MAX_DIFF);
-                prev_scale = cpe->ch[ch].sf_idx[w][g];
+        //determine scalefactors - 5.6.2
+        for(ch = 0; ch < chans; ch++){
+            prev_scale = -1;
+            cpe->ch[ch].gain = 0;
+            for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+                for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
+                    g2 = w*16 + g;
+                    cpe->ch[ch].zeroes[w][g] = pch->band[ch][g2].thr >= pch->band[ch][g2].energy;
+                    if(cpe->ch[ch].zeroes[w][g]) continue;
+                    //spec gives constant for lg() but we scaled it for log2()
+                    cpe->ch[ch].sf_idx[w][g] = (int)(2.66667 * (log2(6.75*pch->band[ch][g2].thr) - log2(pch->band[ch][g2].ffac)));
+                    if(prev_scale != -1)
+                        cpe->ch[ch].sf_idx[w][g] = av_clip(cpe->ch[ch].sf_idx[w][g], prev_scale - SCALE_MAX_DIFF, prev_scale + SCALE_MAX_DIFF);
+                    prev_scale = cpe->ch[ch].sf_idx[w][g];
+                }
             }
         }
-    }
-    break;
+        break;
     case PSY_MODE_QUALITY:
         break;
     }
 
-            //limit scalefactors
+    //limit scalefactors
     for(ch = 0; ch < chans; ch++){
         int min_scale = 256;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++)
