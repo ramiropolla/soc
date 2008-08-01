@@ -88,7 +88,6 @@ typedef struct MXFContext {
     int64_t header_footer_partition_offset;
     unsigned int random_state;
     MXFReferenceContext reference;
-    char *track_number_sign;
     UID *track_essence_element_key;
     int essence_container_count;
     UID *essence_container_uls;
@@ -116,6 +115,8 @@ static const MXFEssenceElementKey mxf_essence_element_key[] = {
     { { 0x06,0x0E,0x2B,0x34,0x01,0x02,0x01,0x01,0x0D,0x01,0x03,0x01,0x16,0x01,0x01,0x00 }, CODEC_ID_PCM_S16LE},
     { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }, CODEC_ID_NONE},
 };
+
+static track_number_sign[sizeof(mxf_essence_element_key)/sizeof(MXFEssenceElementKey)] = { 0 };
 
 /* SMPTE RP224 http://www.smpte-ra.org/mdd/index.html */
 static const MXFDataDefinitionUL mxf_data_definition_uls[] = {
@@ -349,7 +350,6 @@ static void mxf_free(AVFormatContext *s)
     av_freep(&mxf->reference.mul_desc);
     av_freep(&mxf->reference.package);
     av_freep(&mxf->track_essence_element_key);
-    av_freep(&mxf->track_number_sign);
     av_freep(&mxf->essence_container_uls);
 }
 
@@ -570,9 +570,6 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
 
     // malloc memory for track number sign
     if (type == SourcePackage) {
-        mxf->track_number_sign = av_mallocz(sizeof(mxf_essence_element_key)/sizeof(MXFEssenceElementKey));
-        if (!mxf->track_number_sign)
-            return AVERROR(ENOMEM);
         // write multiple descriptor reference
         if (mxf_generate_reference(s, &refs->mul_desc, 1) < 0)
             return -1;
@@ -627,8 +624,8 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
             if (st->codec->codec_id== element->type) {
                 // write track number
                 put_buffer(pb, element->uid + 12, 3);
-                put_byte(pb, element->uid[15] + mxf->track_number_sign[i]);
-                mxf->track_number_sign[i] ++;
+                put_byte(pb, element->uid[15] + track_number_sign[i]);
+                track_number_sign[i] ++;
 
                 // set essence_element key
                 memcpy(mxf->track_essence_element_key[stream_index], element->uid, 16);
