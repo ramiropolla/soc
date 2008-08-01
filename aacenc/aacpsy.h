@@ -34,6 +34,18 @@ enum AACPsyModelType{
     AAC_NB_PSY_MODELS          ///< total number of psychoacoustic models
 };
 
+enum AACPsyModelMode{
+    PSY_MODE_CBR,              ///< follow bitrate as closely as possible
+    PSY_MODE_ABR,              ///< try to achieve bitrate but actual bitrate may differ significantly
+    PSY_MODE_QUALITY,          ///< try to achieve set quality instead of bitrate
+};
+
+#define PSY_MODEL_MODE_MASK  0x0000000F ///< bit fields for storing mode (CBR, ABR, VBR)
+#define PSY_MODEL_NO_PULSE   0x00000010 ///< disable pulse searching
+#define PSY_MODEL_NO_SWITCH  0x00000020 ///< disable window switching
+
+#define PSY_MODEL_MODE(a)  ((a) & PSY_MODEL_MODE_MASK)
+
 /**
  * context used by psychoacoustic model
  */
