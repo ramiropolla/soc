@@ -84,7 +84,6 @@ typedef struct {
 typedef struct MXFContext {
     UMID top_src_package_uid;
     int64_t header_byte_count;
-    int64_t header_start;
     int64_t header_byte_count_offset;
     int64_t header_footer_partition_offset;
     unsigned int random_state;
@@ -1022,9 +1021,6 @@ static int mux_write_header(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
     int64_t header_metadata_start;
 
-    // mark the header start position, for some fields update later
-    mxf->header_start = url_ftell(pb);
-
     // calculate the numner of essence container type
     mxf_build_essence_container_refs(s);
     mxf_write_partition(s, 0, 0, header_partition_key);
@@ -1081,7 +1077,7 @@ static int mux_write_footer(AVFormatContext *s)
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
 
-    int64_t this_partition = url_ftell(pb) - mxf->header_start;
+    int64_t this_partition = url_ftell(pb);
     mxf_write_partition(s, this_partition, 1, footer_partition_key);
 
     put_flush_packet(pb);
