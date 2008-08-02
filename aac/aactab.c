@@ -75,7 +75,7 @@ const uint8_t ff_aac_scalefactor_bits[121] = {
     19, 19, 19, 19, 19, 19, 19, 19, 19,
 };
 
-const uint16_t ff_aac_code1[81] = {
+static const uint16_t codes1[81] = {
     0x7f8, 0x1f1, 0x7fd, 0x3f5, 0x068, 0x3f0, 0x7f7, 0x1ec,
     0x7f5, 0x3f1, 0x072, 0x3f4, 0x074, 0x011, 0x076, 0x1eb,
     0x06c, 0x3f6, 0x7fc, 0x1e1, 0x7f1, 0x1f0, 0x061, 0x1f6,
@@ -89,7 +89,7 @@ const uint16_t ff_aac_code1[81] = {
     0x7f4,
 };
 
-const uint8_t ff_aac_bits1[81] = {
+static const uint8_t bits1[81] = {
     11,  9, 11, 10,  7, 10, 11,  9, 11, 10,  7, 10,  7,  5,  7,  9,
      7, 10, 11,  9, 11,  9,  7,  9, 11,  9, 11,  9,  7,  9,  7,  5,
      7,  9,  7,  9,  7,  5,  7,  5,  1,  5,  7,  5,  7,  9,  7,  9,
@@ -98,7 +98,7 @@ const uint8_t ff_aac_bits1[81] = {
     11,
 };
 
-const uint16_t ff_aac_code2[81] = {
+static const uint16_t codes2[81] = {
     0x1f3, 0x06f, 0x1fd, 0x0eb, 0x023, 0x0ea, 0x1f7, 0x0e8,
     0x1fa, 0x0f2, 0x02d, 0x070, 0x020, 0x006, 0x02b, 0x06e,
     0x028, 0x0e9, 0x1f9, 0x066, 0x0f8, 0x0e7, 0x01b, 0x0f1,
@@ -112,7 +112,7 @@ const uint16_t ff_aac_code2[81] = {
     0x1f6,
 };
 
-const uint8_t ff_aac_bits2[81] = {
+static const uint8_t bits2[81] = {
     9, 7, 9, 8, 6, 8, 9, 8, 9, 8, 6, 7, 6, 5, 6, 7,
     6, 8, 9, 7, 8, 8, 6, 8, 9, 7, 9, 8, 6, 7, 6, 5,
     6, 7, 6, 8, 6, 5, 6, 5, 3, 5, 6, 5, 6, 8, 6, 7,
@@ -121,7 +121,7 @@ const uint8_t ff_aac_bits2[81] = {
     9,
 };
 
-const uint16_t ff_aac_code3[81] = {
+static const uint16_t codes3[81] = {
     0x0000, 0x0009, 0x00ef, 0x000b, 0x0019, 0x00f0, 0x01eb, 0x01e6,
     0x03f2, 0x000a, 0x0035, 0x01ef, 0x0034, 0x0037, 0x01e9, 0x01ed,
     0x01e7, 0x03f3, 0x01ee, 0x03ed, 0x1ffa, 0x01ec, 0x01f2, 0x07f9,
@@ -135,7 +135,7 @@ const uint16_t ff_aac_code3[81] = {
     0x7ffa,
 };
 
-const uint8_t ff_aac_bits3[81] = {
+static const uint8_t bits3[81] = {
      1,  4,  8,  4,  5,  8,  9,  9, 10,  4,  6,  9,  6,  6,  9,  9,
      9, 10,  9, 10, 13,  9,  9, 11, 11, 10, 12,  4,  6, 10,  6,  7,
     10, 10, 10, 12,  5,  7, 11,  6,  7, 10,  9,  9, 11,  9, 10, 13,
@@ -144,7 +144,7 @@ const uint8_t ff_aac_bits3[81] = {
     15,
 };
 
-const uint16_t ff_aac_code4[81] = {
+static const uint16_t codes4[81] = {
     0x007, 0x016, 0x0f6, 0x018, 0x008, 0x0ef, 0x1ef, 0x0f3,
     0x7f8, 0x019, 0x017, 0x0ed, 0x015, 0x001, 0x0e2, 0x0f0,
     0x070, 0x3f0, 0x1ee, 0x0f1, 0x7fa, 0x0ee, 0x0e4, 0x3f2,
@@ -158,7 +158,7 @@ const uint16_t ff_aac_code4[81] = {
     0x7fc,
 };
 
-const uint8_t ff_aac_bits4[81] = {
+static const uint8_t bits4[81] = {
      4,  5,  8,  5,  4,  8,  9,  8, 11,  5,  5,  8,  5,  4,  8,  8,
      7, 10,  9,  8, 11,  8,  8, 10, 11, 10, 11,  4,  5,  8,  4,  4,
      8,  8,  8, 10,  4,  4,  8,  4,  4,  7,  8,  7,  9,  8,  8, 10,
@@ -167,7 +167,7 @@ const uint8_t ff_aac_bits4[81] = {
     11,
 };
 
-const uint16_t ff_aac_code5[81] = {
+static const uint16_t codes5[81] = {
     0x1fff, 0x0ff7, 0x07f4, 0x07e8, 0x03f1, 0x07ee, 0x07f9, 0x0ff8,
     0x1ffd, 0x0ffd, 0x07f1, 0x03e8, 0x01e8, 0x00f0, 0x01ec, 0x03ee,
     0x07f2, 0x0ffa, 0x0ff4, 0x03ef, 0x01f2, 0x00e8, 0x0070, 0x00ec,
@@ -181,7 +181,7 @@ const uint16_t ff_aac_code5[81] = {
     0x1ffe,
 };
 
-const uint8_t ff_aac_bits5[81] = {
+static const uint8_t bits5[81] = {
     13, 12, 11, 11, 10, 11, 11, 12, 13, 12, 11, 10,  9,  8,  9, 10,
     11, 12, 12, 10,  9,  8,  7,  8,  9, 10, 11, 11,  9,  8,  5,  4,
      5,  8,  9, 11, 10,  8,  7,  4,  1,  4,  7,  8, 11, 11,  9,  8,
@@ -190,7 +190,7 @@ const uint8_t ff_aac_bits5[81] = {
     13,
 };
 
-const uint16_t ff_aac_code6[81] = {
+static const uint16_t codes6[81] = {
     0x7fe, 0x3fd, 0x1f1, 0x1eb, 0x1f4, 0x1ea, 0x1f0, 0x3fc,
     0x7fd, 0x3f6, 0x1e5, 0x0ea, 0x06c, 0x071, 0x068, 0x0f0,
     0x1e6, 0x3f7, 0x1f3, 0x0ef, 0x032, 0x027, 0x028, 0x026,
@@ -204,7 +204,7 @@ const uint16_t ff_aac_code6[81] = {
     0x7fc,
 };
 
-const uint8_t ff_aac_bits6[81] = {
+static const uint8_t bits6[81] = {
     11, 10,  9,  9,  9,  9,  9, 10, 11, 10,  9,  8,  7,  7,  7,  8,
      9, 10,  9,  8,  6,  6,  6,  6,  6,  8,  9,  9,  7,  6,  4,  4,
      4,  6,  7,  9,  9,  7,  6,  4,  4,  4,  6,  7,  9,  9,  7,  6,
@@ -213,7 +213,7 @@ const uint8_t ff_aac_bits6[81] = {
     11,
 };
 
-const uint16_t ff_aac_code7[64] = {
+static const uint16_t codes7[64] = {
     0x000, 0x005, 0x037, 0x074, 0x0f2, 0x1eb, 0x3ed, 0x7f7,
     0x004, 0x00c, 0x035, 0x071, 0x0ec, 0x0ee, 0x1ee, 0x1f5,
     0x036, 0x034, 0x072, 0x0ea, 0x0f1, 0x1e9, 0x1f3, 0x3f5,
@@ -224,14 +224,14 @@ const uint16_t ff_aac_code7[64] = {
     0x7f6, 0x3f0, 0x3f2, 0x3f6, 0x7fa, 0x7fd, 0xffc, 0xfff,
 };
 
-const uint8_t ff_aac_bits7[64] = {
+static const uint8_t bits7[64] = {
      1,  3,  6,  7,  8,  9, 10, 11,  3,  4,  6,  7,  8,  8,  9,  9,
      6,  6,  7,  8,  8,  9,  9, 10,  7,  7,  8,  8,  9,  9, 10, 10,
      8,  8,  9,  9, 10, 10, 10, 11,  9,  8,  9,  9, 10, 10, 11, 11,
     10,  9,  9, 10, 10, 11, 12, 12, 11, 10, 10, 10, 11, 11, 12, 12,
 };
 
-const uint16_t ff_aac_code8[64] = {
+static const uint16_t codes8[64] = {
     0x00e, 0x005, 0x010, 0x030, 0x06f, 0x0f1, 0x1fa, 0x3fe,
     0x003, 0x000, 0x004, 0x012, 0x02c, 0x06a, 0x075, 0x0f8,
     0x00f, 0x002, 0x006, 0x014, 0x02e, 0x069, 0x072, 0x0f5,
@@ -242,14 +242,14 @@ const uint16_t ff_aac_code8[64] = {
     0x3fd, 0x0f3, 0x0f4, 0x0f7, 0x1f7, 0x1fb, 0x1fc, 0x3ff,
 };
 
-const uint8_t ff_aac_bits8[64] = {
+static const uint8_t bits8[64] = {
      5,  4,  5,  6,  7,  8,  9, 10,  4,  3,  4,  5,  6,  7,  7,  8,
      5,  4,  4,  5,  6,  7,  7,  8,  6,  5,  5,  6,  6,  7,  8,  8,
      7,  6,  6,  6,  7,  7,  8,  9,  8,  7,  6,  7,  7,  8,  8, 10,
      9,  7,  7,  8,  8,  8,  9,  9, 10,  8,  8,  8,  9,  9,  9, 10,
 };
 
-const uint16_t ff_aac_code9[169] = {
+static const uint16_t codes9[169] = {
     0x0000, 0x0005, 0x0037, 0x00e7, 0x01de, 0x03ce, 0x03d9, 0x07c8,
     0x07cd, 0x0fc8, 0x0fdd, 0x1fe4, 0x1fec, 0x0004, 0x000c, 0x0035,
     0x0072, 0x00ea, 0x00ed, 0x01e2, 0x03d1, 0x03d3, 0x03e0, 0x07d8,
@@ -274,7 +274,7 @@ const uint16_t ff_aac_code9[169] = {
     0x7fff,
 };
 
-const uint8_t ff_aac_bits9[169] = {
+static const uint8_t bits9[169] = {
      1,  3,  6,  8,  9, 10, 10, 11, 11, 12, 12, 13, 13,  3,  4,  6,
      7,  8,  8,  9, 10, 10, 10, 11, 12, 12,  6,  6,  7,  8,  8,  9,
     10, 10, 10, 11, 12, 12, 12,  8,  7,  8,  9,  9, 10, 10, 11, 11,
@@ -288,7 +288,7 @@ const uint8_t ff_aac_bits9[169] = {
     13, 13, 13, 13, 14, 14, 14, 14, 15,
 };
 
-const uint16_t ff_aac_code10[169] = {
+static const uint16_t codes10[169] = {
     0x022, 0x008, 0x01d, 0x026, 0x05f, 0x0d3, 0x1cf, 0x3d0,
     0x3d7, 0x3ed, 0x7f0, 0x7f6, 0xffd, 0x007, 0x000, 0x001,
     0x009, 0x020, 0x054, 0x060, 0x0d5, 0x0dc, 0x1d4, 0x3cd,
@@ -313,7 +313,7 @@ const uint16_t ff_aac_code10[169] = {
     0xfff,
 };
 
-const uint8_t ff_aac_bits10[169] = {
+static const uint8_t bits10[169] = {
      6,  5,  6,  6,  7,  8,  9, 10, 10, 10, 11, 11, 12,  5,  4,  4,
      5,  6,  7,  7,  8,  8,  9, 10, 10, 11,  6,  4,  5,  5,  6,  6,
      7,  8,  8,  9,  9, 10, 10,  6,  5,  5,  5,  6,  7,  7,  8,  8,
@@ -327,7 +327,7 @@ const uint8_t ff_aac_bits10[169] = {
     10, 10, 10, 11, 11, 12, 12, 12, 12,
 };
 
-const uint16_t ff_aac_code11[289] = {
+static const uint16_t codes11[289] = {
     0x000, 0x006, 0x019, 0x03d, 0x09c, 0x0c6, 0x1a7, 0x390,
     0x3c2, 0x3df, 0x7e6, 0x7f3, 0xffb, 0x7ec, 0xffa, 0xffe,
     0x38e, 0x005, 0x001, 0x008, 0x014, 0x037, 0x042, 0x092,
@@ -367,7 +367,7 @@ const uint16_t ff_aac_code11[289] = {
     0x004,
 };
 
-const uint8_t ff_aac_bits11[289] = {
+static const uint8_t bits11[289] = {
      4,  5,  6,  7,  8,  8,  9, 10, 10, 10, 11, 11, 12, 11, 12, 12,
     10,  5,  4,  5,  6,  7,  7,  8,  8,  9,  9,  9, 10, 10, 10, 10,
     11,  8,  6,  5,  5,  6,  7,  7,  8,  8,  8,  9,  9,  9, 10, 10,
@@ -387,6 +387,20 @@ const uint8_t ff_aac_bits11[289] = {
     10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 12, 12,  9,
      9,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  9,
      5,
+};
+
+const uint16_t *ff_aac_spectral_codes[11] = {
+    codes1,  codes2,  codes3, codes4, codes5, codes6, codes7, codes8,
+    codes9, codes10, codes11,
+};
+
+const uint8_t *ff_aac_spectral_bits[11] = {
+    bits1,  bits2,  bits3, bits4, bits5, bits6, bits7, bits8,
+    bits9, bits10, bits11,
+};
+
+const uint16_t ff_aac_spectral_sizes[11] = {
+    81, 81, 81, 81, 81, 81, 64, 64, 169, 169, 289,
 };
 
 static const int8_t codebook_vector0[324] = {

@@ -467,23 +467,6 @@ static int audio_specific_config(AACContext * ac, void *data, int data_size) {
 }
 
 static av_cold int aac_decode_init(AVCodecContext * avccontext) {
-    static const struct {
-        const uint16_t     *a_code;
-        const unsigned int s;
-        const uint8_t      *a_bits;
-    } tmp[] = {
-        { ff_aac_code1 , sizeof ff_aac_code1 , ff_aac_bits1  },
-        { ff_aac_code2 , sizeof ff_aac_code2 , ff_aac_bits2  },
-        { ff_aac_code3 , sizeof ff_aac_code3 , ff_aac_bits3  },
-        { ff_aac_code4 , sizeof ff_aac_code4 , ff_aac_bits4  },
-        { ff_aac_code5 , sizeof ff_aac_code5 , ff_aac_bits5  },
-        { ff_aac_code6 , sizeof ff_aac_code6 , ff_aac_bits6  },
-        { ff_aac_code7 , sizeof ff_aac_code7 , ff_aac_bits7  },
-        { ff_aac_code8 , sizeof ff_aac_code8 , ff_aac_bits8  },
-        { ff_aac_code9 , sizeof ff_aac_code9 , ff_aac_bits9  },
-        { ff_aac_code10, sizeof ff_aac_code10, ff_aac_bits10 },
-        { ff_aac_code11, sizeof ff_aac_code11, ff_aac_bits11 },
-    };
     AACContext * ac = avccontext->priv_data;
     int i;
 
@@ -496,50 +479,17 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
     avccontext->sample_rate = ac->m4ac.sample_rate;
     avccontext->frame_size  = 1024;
 
-    INIT_VLC_STATIC(&vlc_spectral[0], 6, tmp[0].s/sizeof(tmp[0].a_code[0]),
-        tmp[0].a_bits, sizeof(tmp[0].a_bits[0]), sizeof(tmp[0].a_bits[0]),
-        tmp[0].a_code, sizeof(tmp[0].a_code[0]), sizeof(tmp[0].a_code[0]),
-        144);
-    INIT_VLC_STATIC(&vlc_spectral[1], 6, tmp[1].s/sizeof(tmp[1].a_code[0]),
-        tmp[1].a_bits, sizeof(tmp[1].a_bits[0]), sizeof(tmp[1].a_bits[0]),
-        tmp[1].a_code, sizeof(tmp[1].a_code[0]), sizeof(tmp[1].a_code[0]),
-        114);
-    INIT_VLC_STATIC(&vlc_spectral[2], 6, tmp[2].s/sizeof(tmp[2].a_code[0]),
-        tmp[2].a_bits, sizeof(tmp[2].a_bits[0]), sizeof(tmp[2].a_bits[0]),
-        tmp[2].a_code, sizeof(tmp[2].a_code[0]), sizeof(tmp[2].a_code[0]),
-        188);
-    INIT_VLC_STATIC(&vlc_spectral[3], 6, tmp[3].s/sizeof(tmp[3].a_code[0]),
-        tmp[3].a_bits, sizeof(tmp[3].a_bits[0]), sizeof(tmp[3].a_bits[0]),
-        tmp[3].a_code, sizeof(tmp[3].a_code[0]), sizeof(tmp[3].a_code[0]),
-        180);
-    INIT_VLC_STATIC(&vlc_spectral[4], 6, tmp[4].s/sizeof(tmp[4].a_code[0]),
-        tmp[4].a_bits, sizeof(tmp[4].a_bits[0]), sizeof(tmp[4].a_bits[0]),
-        tmp[4].a_code, sizeof(tmp[4].a_code[0]), sizeof(tmp[4].a_code[0]),
-        172);
-    INIT_VLC_STATIC(&vlc_spectral[5], 6, tmp[5].s/sizeof(tmp[5].a_code[0]),
-        tmp[5].a_bits, sizeof(tmp[5].a_bits[0]), sizeof(tmp[5].a_bits[0]),
-        tmp[5].a_code, sizeof(tmp[5].a_code[0]), sizeof(tmp[5].a_code[0]),
-        140);
-    INIT_VLC_STATIC(&vlc_spectral[6], 6, tmp[6].s/sizeof(tmp[6].a_code[0]),
-        tmp[6].a_bits, sizeof(tmp[6].a_bits[0]), sizeof(tmp[6].a_bits[0]),
-        tmp[6].a_code, sizeof(tmp[6].a_code[0]), sizeof(tmp[6].a_code[0]),
-        168);
-    INIT_VLC_STATIC(&vlc_spectral[7], 6, tmp[7].s/sizeof(tmp[7].a_code[0]),
-        tmp[7].a_bits, sizeof(tmp[7].a_bits[0]), sizeof(tmp[7].a_bits[0]),
-        tmp[7].a_code, sizeof(tmp[7].a_code[0]), sizeof(tmp[7].a_code[0]),
-        114);
-    INIT_VLC_STATIC(&vlc_spectral[8], 6, tmp[8].s/sizeof(tmp[8].a_code[0]),
-        tmp[8].a_bits, sizeof(tmp[8].a_bits[0]), sizeof(tmp[8].a_bits[0]),
-        tmp[8].a_code, sizeof(tmp[8].a_code[0]), sizeof(tmp[8].a_code[0]),
-        262);
-    INIT_VLC_STATIC(&vlc_spectral[9], 6, tmp[9].s/sizeof(tmp[9].a_code[0]),
-        tmp[9].a_bits, sizeof(tmp[9].a_bits[0]), sizeof(tmp[9].a_bits[0]),
-        tmp[9].a_code, sizeof(tmp[9].a_code[0]), sizeof(tmp[9].a_code[0]),
-        248);
-    INIT_VLC_STATIC(&vlc_spectral[10], 6, tmp[10].s/sizeof(tmp[10].a_code[0]),
-        tmp[10].a_bits, sizeof(tmp[10].a_bits[0]), sizeof(tmp[10].a_bits[0]),
-        tmp[10].a_code, sizeof(tmp[10].a_code[0]), sizeof(tmp[10].a_code[0]),
-        384);
+    AAC_INIT_VLC_STATIC( 0, 144);
+    AAC_INIT_VLC_STATIC( 1, 114);
+    AAC_INIT_VLC_STATIC( 2, 188);
+    AAC_INIT_VLC_STATIC( 3, 180);
+    AAC_INIT_VLC_STATIC( 4, 172);
+    AAC_INIT_VLC_STATIC( 5, 140);
+    AAC_INIT_VLC_STATIC( 6, 168);
+    AAC_INIT_VLC_STATIC( 7, 114);
+    AAC_INIT_VLC_STATIC( 8, 262);
+    AAC_INIT_VLC_STATIC( 9, 248);
+    AAC_INIT_VLC_STATIC(10, 384);
 
     dsputil_init(&ac->dsp, avccontext);
 

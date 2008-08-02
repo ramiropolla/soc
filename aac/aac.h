@@ -53,6 +53,12 @@
 
 #include <stdint.h>
 
+#define AAC_INIT_VLC_STATIC(num, size) \
+    INIT_VLC_STATIC(&vlc_spectral[num], 6, ff_aac_spectral_sizes[num] * sizeof(ff_aac_spectral_codes[num]), \
+         ff_aac_spectral_bits[num], sizeof( ff_aac_spectral_bits[num]), sizeof( ff_aac_spectral_bits[num]), \
+        ff_aac_spectral_codes[num], sizeof(ff_aac_spectral_codes[num]), sizeof(ff_aac_spectral_codes[num]), \
+        size);
+
 #define MAX_CHANNELS 64
 #define MAX_TAGID 16
 
