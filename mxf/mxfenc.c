@@ -959,7 +959,7 @@ static int mxf_add_essence_container_ul(MXFContext *mxf, const MXFCodecUL *codec
 {
     mxf->essence_container_uls = av_realloc(mxf->essence_container_uls, (mxf->essence_container_count + 1) * 16);
     if (!mxf->essence_container_uls)
-        return -1;
+        return AVERROR(ENOMEM);
     memcpy(mxf->essence_container_uls[mxf->essence_container_count], codec_ul->uid, 16);
     mxf->essence_container_count++;
     return mxf->essence_container_count;
