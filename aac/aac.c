@@ -655,12 +655,12 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
                 ics->group_len[ics->num_window_groups-1] = 1;
             }
         }
-        ics->swb_offset    =    swb_offset_128[ac->m4ac.sampling_index];
-        ics->num_swb       = ff_aac_num_swb_128[ac->m4ac.sampling_index];
+        ics->swb_offset =     swb_offset_128[ac->m4ac.sampling_index];
+        ics->num_swb    = ff_aac_num_swb_128[ac->m4ac.sampling_index];
     } else {
-        ics->max_sfb = get_bits(gb, 6);
-        ics->swb_offset    =    swb_offset_1024[ac->m4ac.sampling_index];
-        ics->num_swb       = ff_aac_num_swb_1024[ac->m4ac.sampling_index];
+        ics->max_sfb    =                              get_bits(gb, 6);
+        ics->swb_offset =     swb_offset_1024[ac->m4ac.sampling_index];
+        ics->num_swb    = ff_aac_num_swb_1024[ac->m4ac.sampling_index];
     }
 
     if(ics->max_sfb > ics->num_swb) {
