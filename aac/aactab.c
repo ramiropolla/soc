@@ -45,7 +45,7 @@ const uint8_t ff_aac_num_swb_128[] = {
     12, 12, 12, 14, 14, 14, 15, 15, 15, 15, 15, 15
 };
 
-const uint32_t ff_aac_code[121] = {
+const uint32_t ff_aac_scalefactor_code[121] = {
     0x3ffe8, 0x3ffe6, 0x3ffe7, 0x3ffe5, 0x7fff5, 0x7fff1, 0x7ffed, 0x7fff6,
     0x7ffee, 0x7ffef, 0x7fff0, 0x7fffc, 0x7fffd, 0x7ffff, 0x7fffe, 0x7fff7,
     0x7fff8, 0x7fffb, 0x7fff9, 0x3ffe4, 0x7fffa, 0x3ffe3, 0x1ffef, 0x1fff0,
@@ -64,7 +64,7 @@ const uint32_t ff_aac_code[121] = {
     0x7fff3,
 };
 
-const uint8_t ff_aac_bits[121] = {
+const uint8_t ff_aac_scalefactor_bits[121] = {
     18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
     19, 19, 19, 18, 19, 18, 17, 17, 16, 17, 16, 16, 16, 16, 15, 15,
     14, 14, 14, 14, 14, 14, 13, 13, 12, 12, 12, 11, 12, 11, 10, 10,

@@ -43,8 +43,8 @@ DECLARE_ALIGNED(16, extern float, ff_aac_sine_short_128[128]);
 extern const uint8_t ff_aac_num_swb_1024[];
 extern const uint8_t ff_aac_num_swb_128 [];
 
-extern const uint32_t ff_aac_code  [121];
-extern const uint8_t  ff_aac_bits  [121];
+extern const uint32_t ff_aac_scalefactor_code[121];
+extern const uint8_t  ff_aac_scalefactor_bits[121];
 extern const uint16_t ff_aac_code1 [81];
 extern const uint8_t  ff_aac_bits1 [81];
 extern const uint16_t ff_aac_code2 [81];
