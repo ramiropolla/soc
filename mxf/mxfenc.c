@@ -75,7 +75,6 @@ typedef struct {
     UID *content_storage;
     UID **package;
     UID **track;
-    UID **sequence;
     UID **structural_component;
     UID *mul_desc;
     UID **sub_desc;
@@ -83,6 +82,7 @@ typedef struct {
 
 typedef struct {
     UID track_essence_element_key;
+    UID *sequence_refs;
 } MXFStreamContext;
 
 typedef struct MXFContext {
@@ -344,6 +344,7 @@ static void mxf_write_reference(ByteIOContext *pb, int ref_count, UID value)
 static void mxf_free(AVFormatContext *s)
 {
     MXFContext *mxf = s->priv_data;
+    AVStream *st;
     int i;
 
     av_freep(&mxf->reference.identification);
@@ -351,10 +352,10 @@ static void mxf_free(AVFormatContext *s)
     av_freep(&mxf->reference.package);
     av_freep(&mxf->reference.track);
     for (i = 0; i < s->nb_streams; i++) {
-        av_freep(&mxf->reference.sequence[i]);
+        st = s->streams[i];
         av_freep(&mxf->reference.structural_component[i]);
+        av_freep(&st->priv_data);
     }
-    av_freep(&mxf->reference.sequence);
     av_freep(&mxf->reference.structural_component);
     av_freep(&mxf->reference.track);
     av_freep(&mxf->reference.sub_desc);
@@ -571,9 +572,6 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     mxf_write_reference(pb, s->nb_streams, **refs->track);
 
     // every track have 1 sequence and 1 structural componet, malloc memory for the refs pointer
-    refs->sequence = av_mallocz(s->nb_streams * sizeof(*refs->sequence));
-    if (!refs->sequence)
-        return AVERROR(ENOMEM);
     refs->structural_component = av_mallocz(s->nb_streams * sizeof(*refs->structural_component));
     if (!refs->structural_component)
         return AVERROR(ENOMEM);
@@ -653,10 +651,10 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     put_be64(pb, 0);
 
     // write sequence refs
-    if (mxf_generate_reference(s, &refs->sequence[stream_index], 1) < 0)
+    if (mxf_generate_reference(s, &sc->sequence_refs, 1) < 0)
         return -1;
     mxf_write_local_tag(pb, 16, 0x4803);
-    put_buffer(pb, *refs->sequence[stream_index], 16);
+    put_buffer(pb, *sc->sequence_refs, 16);
     return 0;
 }
 
@@ -666,6 +664,7 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     AVStream *st;
+    MXFStreamContext *sc;
     const MXFDataDefinitionUL * data_def_ul;
 
     AV_WB24(klv->key + 13, 0x010f00);
@@ -674,13 +673,14 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     klv_encode_ber_length(pb, 80);
 
     st = s->streams[stream_index];
+    sc = st->priv_data;
 
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, *refs->sequence[stream_index], 16);
+    put_buffer(pb, *sc->sequence_refs, 16);
 
 #ifdef DEBUG
     PRINT_KEY(s, "sequence key", klv->key);
-    PRINT_KEY(s, "sequence uid", *refs->sequence[stream_index]);
+    PRINT_KEY(s, "sequence uid", *sc->sequence_refs);
 #endif
     // find data define uls
     data_def_ul = mxf_get_data_definition_ul(st->codec->codec_type);
