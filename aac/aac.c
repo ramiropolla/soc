@@ -914,7 +914,6 @@ static int decode_gain_control(AACContext * ac, GetBitContext * gb, SingleChanne
 static void decode_mid_side_stereo(AACContext * ac, GetBitContext * gb, ChannelElement * cpe) {
     MidSideStereo * ms = &cpe->ms;
     int g, i;
-    ms->present = get_bits(gb, 2);
     if (ms->present == 1) {
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
             for (i = 0; i < cpe->ch[0].ics.max_sfb; i++)
@@ -1109,7 +1108,6 @@ static void apply_mid_side_stereo(AACContext * ac, ChannelElement * cpe) {
     const IndividualChannelStream * ics = &cpe->ch[0].ics;
     float *ch0 = cpe->ch[0].coeffs;
     float *ch1 = cpe->ch[1].coeffs;
-    if (ms->present) {
         int g, i, k, gp;
         const uint16_t * offsets = ics->swb_offset;
         for (g = 0; g < ics->num_window_groups; g++) {
@@ -1128,7 +1126,6 @@ static void apply_mid_side_stereo(AACContext * ac, ChannelElement * cpe) {
                 ch1 += 128;
             }
         }
-    }
 }
 
 /**
@@ -1186,7 +1183,8 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
 #ifdef AAC_LTP
         cpe->ch[1].ics.ltp = cpe->ch[0].ics.ltp2;
 #endif /* AAC_LTP */
-        decode_mid_side_stereo(ac, gb, cpe);
+        if((cpe->ms.present = get_bits(gb, 2)))
+            decode_mid_side_stereo(ac, gb, cpe);
     } else {
         cpe->ms.present = 0;
     }
@@ -1195,7 +1193,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
     if ((ret = decode_ics(ac, gb, common_window, 0, &cpe->ch[1])))
         return ret;
 
-    if (common_window)
+    if (common_window && cpe->ms.present)
         apply_mid_side_stereo(ac, cpe);
 
     if (cpe->ch[1].ics.intensity_present)
@@ -1482,8 +1480,6 @@ static int apply_ltp(AACContext * ac, SingleChannelElement * sce) {
     const LongTermPrediction * ltp = &sce->ics.ltp;
     const uint16_t * offsets = sce->ics.swb_offset;
     int i, sfb;
-    if (!ltp->present)
-        return 0;
     if (!sce->ltp_state && !(sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t))))
         return AVERROR(ENOMEM);
     if (sce->ics.window_sequence[0] != EIGHT_SHORT_SEQUENCE && ac->is_saved) {
@@ -1811,9 +1807,10 @@ static int spectral_to_sample(AACContext * ac) {
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
-                    if((ret = apply_ltp(ac, &che->ch[0])))
+                    if(che->ch[0].ics.ltp.present && (ret = apply_ltp(ac, &che->ch[0])))
                         return ret;
-                    if(j == ID_CPE && (ret = apply_ltp(ac, &che->ch[1])))
+                    if(j == ID_CPE &&
+                       che->ch[1].ics.ltp.present && (ret = apply_ltp(ac, &che->ch[1])))
                         return ret;
                 }
 #endif /* AAC_LTP */
