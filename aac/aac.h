@@ -54,9 +54,9 @@
 #include <stdint.h>
 
 #define AAC_INIT_VLC_STATIC(num, size) \
-    INIT_VLC_STATIC(&vlc_spectral[num], 6, ff_aac_spectral_sizes[num] * sizeof(ff_aac_spectral_codes[num]), \
-         ff_aac_spectral_bits[num], sizeof( ff_aac_spectral_bits[num]), sizeof( ff_aac_spectral_bits[num]), \
-        ff_aac_spectral_codes[num], sizeof(ff_aac_spectral_codes[num]), sizeof(ff_aac_spectral_codes[num]), \
+    INIT_VLC_STATIC(&vlc_spectral[num], 6, ff_aac_spectral_sizes[num], \
+         ff_aac_spectral_bits[num], sizeof( ff_aac_spectral_bits[num][0]), sizeof( ff_aac_spectral_bits[num][0]), \
+        ff_aac_spectral_codes[num], sizeof(ff_aac_spectral_codes[num][0]), sizeof(ff_aac_spectral_codes[num][0]), \
         size);
 
 #define MAX_CHANNELS 64
