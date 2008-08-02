@@ -1108,24 +1108,24 @@ static void apply_mid_side_stereo(AACContext * ac, ChannelElement * cpe) {
     const IndividualChannelStream * ics = &cpe->ch[0].ics;
     float *ch0 = cpe->ch[0].coeffs;
     float *ch1 = cpe->ch[1].coeffs;
-        int g, i, k, gp;
-        const uint16_t * offsets = ics->swb_offset;
-        for (g = 0; g < ics->num_window_groups; g++) {
-            for (gp = 0; gp < ics->group_len[g]; gp++) {
-                for (i = 0; i < ics->max_sfb; i++) {
-                    if (ms->mask[g][i] &&
-                        cpe->ch[0].band_type[g][i] < NOISE_BT && cpe->ch[1].band_type[g][i] < NOISE_BT) {
-                        for (k = offsets[i]; k < offsets[i+1]; k++) {
-                            float tmp = ch0[k] - ch1[k];
-                            ch0[k] += ch1[k];
-                            ch1[k] = tmp;
-                        }
+    int g, i, k, gp;
+    const uint16_t * offsets = ics->swb_offset;
+    for (g = 0; g < ics->num_window_groups; g++) {
+        for (gp = 0; gp < ics->group_len[g]; gp++) {
+            for (i = 0; i < ics->max_sfb; i++) {
+                if (ms->mask[g][i] &&
+                    cpe->ch[0].band_type[g][i] < NOISE_BT && cpe->ch[1].band_type[g][i] < NOISE_BT) {
+                    for (k = offsets[i]; k < offsets[i+1]; k++) {
+                        float tmp = ch0[k] - ch1[k];
+                        ch0[k] += ch1[k];
+                        ch1[k] = tmp;
                     }
                 }
-                ch0 += 128;
-                ch1 += 128;
             }
+            ch0 += 128;
+            ch1 += 128;
         }
+    }
 }
 
 /**
