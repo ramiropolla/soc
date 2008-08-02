@@ -345,24 +345,17 @@ static void mxf_free(AVFormatContext *s)
 {
     MXFContext *mxf = s->priv_data;
     AVStream *st;
-    MXFStreamContext *sc;
     int i;
 
     av_freep(&mxf->reference.identification);
     av_freep(&mxf->reference.content_storage);
     av_freep(&mxf->reference.package);
-    av_freep(&mxf->reference.track);
     for (i = 0; i < s->nb_streams; i++) {
         st = s->streams[i];
-        sc= st->priv_data;
-        av_freep(&sc->structural_component_refs);
-        av_freep(&sc->sequence_refs);
         av_freep(&st->priv_data);
     }
-    av_freep(&mxf->reference.track);
     av_freep(&mxf->reference.sub_desc);
     av_freep(&mxf->reference.mul_desc);
-    av_freep(&mxf->reference.package);
     av_freep(&mxf->essence_container_uls);
 }
 
@@ -881,7 +874,10 @@ static const MXFDescriptorWriteTableEntry mxf_descriptor_read_table[] = {
 
 static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enum MXFMetadataSetType type)
 {
-    int i;
+    MXFContext *mxf = s->priv_data;
+    MXFReferenceContext *refs = &mxf->reference;
+    MXFStreamContext *sc;
+    int i, ret;
     const MXFDescriptorWriteTableEntry *desc = NULL;
 
     if (mxf_write_package(s, klv, type) < 0)
@@ -892,28 +888,37 @@ static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enu
     }
 
     for (i = 0;i < s->nb_streams; i++) {
-        if (mxf_write_track(s, klv, i, type) < 0)
-            return -1;
-
-        if (mxf_write_sequence(s, klv, i) < 0)
-            return -1;
-
-        if (mxf_write_structural_component(s, klv, i, type) < 0)
-            return -1;
+        ret = mxf_write_track(s, klv, i, type);
+        if ( ret < 0)
+            goto fail;
+        ret = mxf_write_sequence(s, klv, i);
+        if ( ret < 0)
+            goto fail;
+        ret = mxf_write_structural_component(s, klv, i, type);
+        if ( ret < 0)
+            goto fail;
 
         if (type == SourcePackage) {
             for (desc = mxf_descriptor_read_table; desc->write; desc++) {
                 if (s->streams[i]->codec->codec_id == desc->type) {
-                    if (desc->write(s, desc, i) < 0) {
+                    ret = desc->write(s, desc, i);
+                    if ( ret < 0) {
                         av_log(s, AV_LOG_ERROR, "error writing descriptor\n");
-                        return -1;
+                        goto fail;
                     }
                     break;
                 }
             }
         }
     }
-    return 0;
+fail:
+    for (i = 0; i < s->nb_streams; i++) {
+        sc = s->streams[i]->priv_data;
+        av_freep(&sc->structural_component_refs);
+        av_freep(&sc->sequence_refs);
+    }
+    av_freep(&refs->track);
+    return ret;
 }
 
 static int mxf_write_header_metadata_sets(AVFormatContext *s)
