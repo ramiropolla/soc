@@ -596,13 +596,6 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     st = s->streams[stream_index];
     sc = st->priv_data;
 
-    // set pts information
-    if (st->codec->codec_type == CODEC_TYPE_VIDEO) {
-        av_set_pts_info(st, 64, 1, st->codec->time_base.den);
-    } else if (st->codec->codec_type == CODEC_TYPE_AUDIO) {
-        av_set_pts_info(st, 64, 1, st->codec->sample_rate);
-    }
-
     // write track uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     put_buffer(pb, (*refs->track)[stream_index], 16);
@@ -945,6 +938,12 @@ static int mxf_write_header_metadata_sets(AVFormatContext *s)
         if (!sc)
             return AVERROR(ENOMEM);
         st->priv_data = sc;
+        // set pts information
+        if (st->codec->codec_type == CODEC_TYPE_VIDEO) {
+            av_set_pts_info(st, 64, 1, st->codec->time_base.den);
+        } else if (st->codec->codec_type == CODEC_TYPE_AUDIO) {
+            av_set_pts_info(st, 64, 1, st->codec->sample_rate);
+        }
     }
 
     if (mxf_build_structural_metadata(s, &klv, MaterialPackage) < 0)
