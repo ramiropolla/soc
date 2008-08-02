@@ -658,7 +658,6 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
 static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_index)
 {
     MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     AVStream *st;
     MXFStreamContext *sc;
@@ -698,7 +697,6 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
 static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, int stream_index, enum MXFMetadataSetType type)
 {
     MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     AVStream *st;
     MXFStreamContext *sc;
@@ -883,8 +881,6 @@ static const MXFDescriptorWriteTableEntry mxf_descriptor_read_table[] = {
 
 static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enum MXFMetadataSetType type)
 {
-    AVStream *st;
-    MXFStreamContext *sc = NULL;
     int i;
     const MXFDescriptorWriteTableEntry *desc = NULL;
 
@@ -896,12 +892,6 @@ static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enu
     }
 
     for (i = 0;i < s->nb_streams; i++) {
-        st = s->streams[i];
-        sc = av_mallocz(sizeof(MXFStreamContext));
-        if (!sc)
-            return AVERROR(ENOMEM);
-        st->priv_data = sc;
-
         if (mxf_write_track(s, klv, i, type) < 0)
             return -1;
 
@@ -928,7 +918,10 @@ static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enu
 
 static int mxf_write_header_metadata_sets(AVFormatContext *s)
 {
+    AVStream *st;
+    MXFStreamContext *sc = NULL;
     KLVPacket klv;
+    int i;
     memcpy(klv.key, header_metadata_key, 13);
     if (mxf_write_preface(s, &klv) < 0)
         return -1;
@@ -938,6 +931,14 @@ static int mxf_write_header_metadata_sets(AVFormatContext *s)
 
     if (mxf_write_content_storage(s, &klv) < 0)
         return -1;
+
+    for (i = 0; i < s->nb_streams; i++) {
+        st = s->streams[i];
+        sc = av_mallocz(sizeof(MXFStreamContext));
+        if (!sc)
+            return AVERROR(ENOMEM);
+        st->priv_data = sc;
+    }
 
     if (mxf_build_structural_metadata(s, &klv, MaterialPackage) < 0)
         return -1;
@@ -949,7 +950,6 @@ static int mxf_write_header_metadata_sets(AVFormatContext *s)
 
 static int mxf_add_essence_container_ul(MXFContext *mxf, const MXFCodecUL *codec_ul)
 {
-    int i;
     mxf->essence_container_uls = av_realloc(mxf->essence_container_uls, (mxf->essence_container_count + 1) * 16);
     if (!mxf->essence_container_uls)
         return -1;
@@ -1055,7 +1055,6 @@ fail:
 
 static int mux_write_packet(AVFormatContext *s, AVPacket *pkt)
 {
-    MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
     AVStream *st = s->streams[pkt->stream_index];
     MXFStreamContext *sc = st->priv_data;
@@ -1086,7 +1085,6 @@ static int mxf_update_header_partition(AVFormatContext *s, int64_t footer_partit
 
 static int mux_write_footer(AVFormatContext *s)
 {
-    MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
 
     int64_t this_partition = url_ftell(pb);
