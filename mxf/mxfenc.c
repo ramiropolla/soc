@@ -346,12 +346,14 @@ static void mxf_free(AVFormatContext *s)
     int i;
 
     av_freep(&mxf->reference.identification);
-    av_freep(&mxf->reference.content_storage);
+    av_freep(mxf->reference.package);
     av_freep(&mxf->reference.package);
+    av_freep(&mxf->reference.content_storage);
     for (i = 0; i < s->nb_streams; i++) {
         st = s->streams[i];
         av_freep(&st->priv_data);
     }
+    av_freep(mxf->reference.sub_desc);
     av_freep(&mxf->reference.sub_desc);
     av_freep(&mxf->reference.mul_desc);
     av_freep(&mxf->essence_container_uls);
@@ -916,6 +918,7 @@ fail:
         av_freep(&sc->structural_component_refs);
         av_freep(&sc->sequence_refs);
     }
+    av_freep(refs->track);
     av_freep(&refs->track);
     return ret;
 }
