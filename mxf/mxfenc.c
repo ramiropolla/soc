@@ -123,8 +123,6 @@ static const MXFEssenceElementKey mxf_essence_element_key[] = {
     { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }, CODEC_ID_NONE},
 };
 
-static track_number_sign[sizeof(mxf_essence_element_key)/sizeof(MXFEssenceElementKey)] = { 0 };
-
 /**
  * SMPTE RP224 http://www.smpte-ra.org/mdd/index.html
  */
@@ -586,6 +584,7 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     MXFStreamContext *sc;
     const MXFEssenceElementKey *element;
     int i = 0;
+    int track_number_sign[sizeof(mxf_essence_element_key)/sizeof(MXFEssenceElementKey)] = { 0 };
 
     AV_WB24(klv->key + 13, 0x013b00);
 
