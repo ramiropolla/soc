@@ -308,7 +308,6 @@ static const MXFCodecUL *mxf_get_essence_container_ul(enum CodecID type)
 static int mxf_write_primer_pack(AVFormatContext *s)
 {
     ByteIOContext *pb = s->pb;
-    const MXFLocalTagPair *local_tag_batch;
     int local_tag_number, i = 0;
 
     local_tag_number = sizeof(mxf_local_tag_batch) / sizeof(MXFLocalTagPair);
@@ -319,9 +318,9 @@ static int mxf_write_primer_pack(AVFormatContext *s)
     put_be32(pb, local_tag_number); // local_tag num
     put_be32(pb, 18); // item size, always 18 according to the specs
 
-    for (local_tag_batch = mxf_local_tag_batch; i < local_tag_number; local_tag_batch++, i++) {
-        put_be16(pb, local_tag_batch->local_tag);
-        put_buffer(pb, local_tag_batch->uid, 16);
+    for (i = 0; i < local_tag_number; i++) {
+        put_be16(pb, mxf_local_tag_batch[i].local_tag);
+        put_buffer(pb, mxf_local_tag_batch[i].uid, 16);
     }
     return 0;
 }
