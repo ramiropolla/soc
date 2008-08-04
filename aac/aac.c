@@ -553,7 +553,7 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
 /**
  * Decode a data_stream_element; reference: table 4.10.
  */
-static void skip_data_stream_element(AACContext * ac, GetBitContext * gb) {
+static void skip_data_stream_element(GetBitContext * gb) {
     int byte_align = get_bits1(gb);
     int count = get_bits(gb, 8);
     if (count == 255)
@@ -664,7 +664,7 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
  * @param   a   quantized value to be dequantized
  * @return  Returns dequantized value.
  */
-static inline float ivquant(AACContext * ac, int a) {
+static inline float ivquant(int a) {
     if (a + (unsigned int)IVQUANT_SIZE/2 - 1 < (unsigned int)IVQUANT_SIZE - 1)
         return ff_aac_ivquant_tab[a + IVQUANT_SIZE/2 - 1];
     else
@@ -783,7 +783,7 @@ static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_ga
 /**
  * Decode pulse data; reference: table 4.7.
  */
-static void decode_pulses(AACContext * ac, GetBitContext * gb, Pulse * pulse) {
+static void decode_pulses(GetBitContext * gb, Pulse * pulse) {
     int i;
     pulse->num_pulse = get_bits(gb, 2) + 1;
     pulse->start = get_bits(gb, 6);
@@ -829,7 +829,7 @@ static int decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChann
 }
 
 #ifdef AAC_SSR
-static int decode_gain_control(AACContext * ac, GetBitContext * gb, SingleChannelElement * sce) {
+static int decode_gain_control(GetBitContext * gb, SingleChannelElement * sce) {
     // wd_num wd_test aloc_size
     static const int gain_mode[4][3] = {
         {1, 0, 5}, //ONLY_LONG_SEQUENCE = 0,
@@ -862,7 +862,7 @@ static int decode_gain_control(AACContext * ac, GetBitContext * gb, SingleChanne
 /**
  * Decode Mid/Side data; reference: table 4.54.
  */
-static void decode_mid_side_stereo(AACContext * ac, GetBitContext * gb, ChannelElement * cpe) {
+static void decode_mid_side_stereo(GetBitContext * gb, ChannelElement * cpe) {
     MidSideStereo * ms = &cpe->ms;
     int g, i;
     if (ms->present == 1) {
@@ -953,7 +953,7 @@ static int decode_spectrum(AACContext * ac, GetBitContext * gb, const Individual
  * @param   pulse   pointer to pulse data struct
  * @param   icoef   array of quantized spectral data
  */
-static void add_pulses(AACContext * ac, const IndividualChannelStream * ics, const Pulse * pulse, int icoef[1024]) {
+static void add_pulses(const IndividualChannelStream * ics, const Pulse * pulse, int icoef[1024]) {
     int i, off = ics->swb_offset[pulse->start];
     for (i = 0; i < pulse->num_pulse; i++) {
         int ic;
@@ -991,7 +991,7 @@ static void dequant(AACContext * ac, const IndividualChannelStream * ics, const 
             } else if (band_type[g][i] != INTENSITY_BT && band_type[g][i] != INTENSITY_BT2) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
-                        coef[group*128+k] = ivquant(ac, icoef[group*128+k]) * sf[g][i];
+                        coef[group*128+k] = ivquant(icoef[group*128+k]) * sf[g][i];
                     }
                 }
             }
@@ -1038,14 +1038,14 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
                 av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in eight short sequence.\n");
                 return -1;
             }
-            decode_pulses(ac, gb, &pulse);
+            decode_pulses(gb, &pulse);
         }
         if ((tns->present = get_bits1(gb)) && decode_tns(ac, gb, ics, tns))
             return -1;
         if (get_bits1(gb)) {
 #ifdef AAC_SSR
             int ret;
-            if ((ret = decode_gain_control(ac, gb, sce))) return ret;
+            if ((ret = decode_gain_control(gb, sce))) return ret;
 #else
             av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supported.\n");
             return -1;
@@ -1056,7 +1056,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     if (decode_spectrum(ac, gb, ics, sce->band_type, icoeffs) < 0)
         return -1;
     if (pulse_present)
-        add_pulses(ac, ics, &pulse, icoeffs);
+        add_pulses(ics, &pulse, icoeffs);
     dequant(ac, ics, icoeffs, sce->band_type, sce->sf, out);
     return 0;
 }
@@ -1064,7 +1064,7 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
 /**
  * Mid/Side stereo decoding; reference: 4.6.8.1.3.
  */
-static void apply_mid_side_stereo(AACContext * ac, ChannelElement * cpe) {
+static void apply_mid_side_stereo(ChannelElement * cpe) {
     const MidSideStereo * ms = &cpe->ms;
     const IndividualChannelStream * ics = &cpe->ch[0].ics;
     float *ch0 = cpe->ch[0].coeffs;
@@ -1092,7 +1092,7 @@ static void apply_mid_side_stereo(AACContext * ac, ChannelElement * cpe) {
 /**
  * intensity stereo decoding; reference: 4.6.8.2.3
  */
-static void apply_intensity_stereo(AACContext * ac, ChannelElement * cpe) {
+static void apply_intensity_stereo(ChannelElement * cpe) {
     const IndividualChannelStream * ics = &cpe->ch[1].ics;
     SingleChannelElement * sce1 = &cpe->ch[1];
     float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
@@ -1145,7 +1145,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
         cpe->ch[1].ics.ltp = cpe->ch[0].ics.ltp2;
 #endif /* AAC_LTP */
         if((cpe->ms.present = get_bits(gb, 2)))
-            decode_mid_side_stereo(ac, gb, cpe);
+            decode_mid_side_stereo(gb, cpe);
     } else {
         cpe->ms.present = 0;
     }
@@ -1155,10 +1155,10 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
         return ret;
 
     if (common_window && cpe->ms.present)
-        apply_mid_side_stereo(ac, cpe);
+        apply_mid_side_stereo(cpe);
 
     if (cpe->ch[1].ics.intensity_present)
-        apply_intensity_stereo(ac, cpe);
+        apply_intensity_stereo(cpe);
     return 0;
 }
 
@@ -1350,7 +1350,7 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
  * @param   decode  1 if tool is used normally, 0 if tool is used in LTP.
  * @param   coef    spectral coefficients
  */
-static void apply_tns(AACContext * ac, int decode, SingleChannelElement * sce, float coef[1024]) {
+static void apply_tns(int decode, SingleChannelElement * sce, float coef[1024]) {
     const IndividualChannelStream * ics = &sce->ics;
     const TemporalNoiseShaping * tns = &sce->tns;
     const int mmm = FFMIN(ics->tns_max_bands,  ics->max_sfb);
@@ -1449,7 +1449,7 @@ static int apply_ltp(AACContext * ac, SingleChannelElement * sce) {
             x_est[i] = sce->ltp_state[i + 2 * 1024 - ltp->lag] * ltp->coef;
 
         windowing_and_mdct_ltp(ac, sce, x_est, X_est);
-        if(sce->tns.present) apply_tns(ac, 0, sce, X_est);
+        if(sce->tns.present) apply_tns(0, sce, X_est);
 
         for (sfb = 0; sfb < FFMIN(sce->ics.max_sfb, MAX_LTP_LONG_SFB); sfb++)
             if (ltp->used[sfb])
@@ -1591,30 +1591,30 @@ static void windowing_and_imdct_ssr(AACContext * ac, SingleChannelElement * sce,
     }
 }
 
-static void vector_add_dst(AACContext * ac, float * dst, const float * src0, const float * src1, int len) {
+static void vector_add_dst(float * dst, const float * src0, const float * src1, int len) {
     int i;
     for (i = 0; i < len; i++)
         dst[i] = src0[i] + src1[i];
 }
 
-static void apply_ssr_gains(AACContext * ac, SingleChannelElement * sce, int band, float * in, float * preret, float * saved) {
+static void apply_ssr_gains(SingleChannelElement * sce, int band, float * in, float * preret, float * saved) {
     // TODO: 'in' buffer gain normalization
     if (sce->ics.window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
-        vector_add_dst(ac, preret, in, saved, 256);
+        vector_add_dst(preret, in, saved, 256);
         memcpy(saved, in + 256, 256 * sizeof(float));
     } else {
         memcpy(preret, saved, 112 * sizeof(float));
         preret += 112; saved += 112;
-        vector_add_dst(ac, preret       , in            , saved    , 32);
-        vector_add_dst(ac, preret + 1*32, in + 0*64 + 32, in + 1*64, 32);
-        vector_add_dst(ac, preret + 2*32, in + 1*64 + 32, in + 2*64, 32);
-        vector_add_dst(ac, preret + 3*32, in + 2*64 + 32, in + 3*64, 32);
-        vector_add_dst(ac, preret + 4*32, in + 3*64 + 32, in + 4*64, 16);
+        vector_add_dst(preret       , in            , saved    , 32);
+        vector_add_dst(preret + 1*32, in + 0*64 + 32, in + 1*64, 32);
+        vector_add_dst(preret + 2*32, in + 1*64 + 32, in + 2*64, 32);
+        vector_add_dst(preret + 3*32, in + 2*64 + 32, in + 3*64, 32);
+        vector_add_dst(preret + 4*32, in + 3*64 + 32, in + 4*64, 16);
 
-        vector_add_dst(ac, saved            , in + 3*64 + 32 + 16, in + 4*64 + 16, 16);
-        vector_add_dst(ac, saved        + 16, in + 4*64 + 32     , in + 5*64     , 32);
-        vector_add_dst(ac, saved + 1*32 + 16, in + 5*64 + 32     , in + 6*64     , 32);
-        vector_add_dst(ac, saved + 2*32 + 16, in + 6*64 + 32     , in + 7*64     , 32);
+        vector_add_dst(saved            , in + 3*64 + 32 + 16, in + 4*64 + 16, 16);
+        vector_add_dst(saved        + 16, in + 4*64 + 32     , in + 5*64     , 32);
+        vector_add_dst(saved + 1*32 + 16, in + 5*64 + 32     , in + 6*64     , 32);
+        vector_add_dst(saved + 2*32 + 16, in + 6*64 + 32     , in + 7*64     , 32);
         memcpy(saved + 3*32 + 16, in + 7*64 + 32, 32 * sizeof(float));
         memset(saved + 144, 0, 112 * sizeof(float));
     }
@@ -1653,7 +1653,7 @@ static void inverse_polyphase_quadrature_filter(AACContext * ac, SingleChannelEl
     }
 }
 
-static void vector_reverse(AACContext * ac, float * dst, const float * src, int len) {
+static void vector_reverse(float * dst, const float * src, int len) {
     int i;
     for (i = 0; i < len; i++)
         dst[i] = src[len - i];
@@ -1666,11 +1666,11 @@ static void apply_ssr(AACContext * ac, SingleChannelElement * sce) {
     int b;
     for (b = 0; b < 4; b++) {
         if (b & 1) { // spectral reverse
-            vector_reverse(ac, tmp_buf, in + 256 * b, 256);
+            vector_reverse(tmp_buf, in + 256 * b, 256);
             memcpy(in + 256 * b, tmp_buf, 256 * sizeof(float));
         }
         windowing_and_imdct_ssr(ac, sce, in + 256 * b, tmp_buf);
-        apply_ssr_gains(ac, sce, b, tmp_buf, tmp_ret + 256 * b, sce->saved + 256 * b);
+        apply_ssr_gains(sce, b, tmp_buf, tmp_ret + 256 * b, sce->saved + 256 * b);
     }
     inverse_polyphase_quadrature_filter(ac, sce, tmp_ret);
 }
@@ -1776,9 +1776,9 @@ static int spectral_to_sample(AACContext * ac) {
                 }
 #endif /* AAC_LTP */
                 if(che->ch[0].tns.present)
-                    apply_tns(ac, 1, &che->ch[0], che->ch[0].coeffs);
+                    apply_tns(1, &che->ch[0], che->ch[0].coeffs);
                 if(che->ch[1].tns.present)
-                    apply_tns(ac, 1, &che->ch[1], che->ch[1].coeffs);
+                    apply_tns(1, &che->ch[1], che->ch[1].coeffs);
                 if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 1))
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_SSR
@@ -1930,7 +1930,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         }
 
         case ID_DSE:
-            skip_data_stream_element(ac, &gb);
+            skip_data_stream_element(&gb);
             err = 0;
             break;
 
