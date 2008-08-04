@@ -102,17 +102,17 @@ static VLC vlc_spectral[11];
 
 // TODO: Maybe add to dsputil?!
 #if defined(AAC_LTP) || defined(AAC_SSR)
-static void vector_fmul_dst(AACContext * ac, float * dst, const float * src0, const float * src1, int len) {
+static void vector_fmul_dst(DSPContext * dsp, float * dst, const float * src0, const float * src1, int len) {
     memcpy(dst, src0, len * sizeof(float));
-    ac->dsp.vector_fmul(dst, src1, len);
+    dsp->vector_fmul(dst, src1, len);
 }
 #endif
 
 #if 0
-static void vector_fmul_add_add_add(AACContext * ac, float * dst, const float * src0, const float * src1,
+static void vector_fmul_add_add_add(DSPContext * dsp, float * dst, const float * src0, const float * src1,
         const float * src2, const float * src3, float src4, int len) {
     int i;
-    ac->dsp.vector_fmul_add_add(dst, src0, src1, src2, src4, len, 1);
+    dsp->vector_fmul_add_add(dst, src0, src1, src2, src4, len, 1);
     for (i = 0; i < len; i++)
         dst[i] += src3[i];
 }
@@ -164,9 +164,8 @@ static void che_freep(ChannelElement **s) {
  *
  * \param newpcs New program configuration struct - we only do something if it differs from the current one.
  */
-static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
+static int output_configure(AACContext *ac, ProgramConfig *pcs, ProgramConfig *newpcs) {
     AVCodecContext *avctx = ac->avccontext;
-    ProgramConfig * pcs = &ac->pcs;
     int i, j, channels = 0;
     float a, b;
     ChannelElement *mixdown[3] = { NULL, NULL, NULL };
@@ -179,7 +178,7 @@ static int output_configure(AACContext *ac, ProgramConfig *newpcs) {
         0
     };
 
-    if(!memcmp(&ac->pcs, newpcs, sizeof(ProgramConfig)))
+    if(!memcmp(pcs, newpcs, sizeof(ProgramConfig)))
         return 0; /* no change */
 
     *pcs = *newpcs;
@@ -405,7 +404,7 @@ static int ga_specific_config(AACContext * ac, GetBitContext * gb, int channels)
         if((ret = program_config_element_default(ac, channels, &newpcs)))
             return ret;
     }
-    if((ret = output_configure(ac, &newpcs)))
+    if((ret = output_configure(ac, &ac->pcs, &newpcs)))
         return ret;
 
     if (extension_flag) {
@@ -1251,17 +1250,17 @@ static int decode_sbr_extension(AACContext * ac, GetBitContext * gb, int crc, in
  *
  * @return  Returns number of bytes consumed.
  */
-static int decode_drc_channel_exclusions(AACContext * ac, GetBitContext * gb) {
+static int decode_drc_channel_exclusions(DynamicRangeControl *che_drc, GetBitContext * gb) {
     int i;
     int n = 0;
     int num_excl_chan = 0;
 
     do {
         for (i = 0; i < 7; i++)
-            ac->che_drc.exclude_mask[num_excl_chan + i] = get_bits1(gb);
+            che_drc->exclude_mask[num_excl_chan + i] = get_bits1(gb);
         n++;
         num_excl_chan += 7;
-    } while (num_excl_chan < MAX_CHANNELS - 7 && (ac->che_drc.additional_excluded_chns[n-1] = get_bits1(gb)));
+    } while (num_excl_chan < MAX_CHANNELS - 7 && (che_drc->additional_excluded_chns[n-1] = get_bits1(gb)));
 
     return n;
 }
@@ -1272,45 +1271,45 @@ static int decode_drc_channel_exclusions(AACContext * ac, GetBitContext * gb) {
  * @param   cnt length of ID_FIL syntactic element in bytes
  * @return  Returns number of bytes consumed.
  */
-static int decode_dynamic_range(AACContext * ac, GetBitContext * gb, int cnt) {
+static int decode_dynamic_range(DynamicRangeControl *che_drc, GetBitContext * gb, int cnt) {
     int n = 1;
     int drc_num_bands = 1;
     int i;
 
     /* pce_tag_present? */
     if(get_bits1(gb)) {
-        ac->che_drc.pce_instance_tag  = get_bits(gb, 4);
+        che_drc->pce_instance_tag  = get_bits(gb, 4);
         skip_bits(gb, 4); // tag_reserved_bits
         n++;
     }
 
     /* excluded_chns_present? */
     if(get_bits1(gb)) {
-        n += decode_drc_channel_exclusions(ac, gb);
+        n += decode_drc_channel_exclusions(che_drc, gb);
     }
 
     /* drc_bands_present? */
     if (get_bits1(gb)) {
-        ac->che_drc.band_incr            = get_bits(gb, 4);
-        ac->che_drc.interpolation_scheme = get_bits(gb, 4);
+        che_drc->band_incr            = get_bits(gb, 4);
+        che_drc->interpolation_scheme = get_bits(gb, 4);
         n++;
-        drc_num_bands += ac->che_drc.band_incr;
+        drc_num_bands += che_drc->band_incr;
         for (i = 0; i < drc_num_bands; i++) {
-            ac->che_drc.band_top[i] = get_bits(gb, 8);
+            che_drc->band_top[i] = get_bits(gb, 8);
             n++;
         }
     }
 
     /* prog_ref_level_present? */
     if (get_bits1(gb)) {
-        ac->che_drc.prog_ref_level = get_bits(gb, 7);
+        che_drc->prog_ref_level = get_bits(gb, 7);
         skip_bits1(gb); // prog_ref_level_reserved_bits
         n++;
     }
 
     for (i = 0; i < drc_num_bands; i++) {
-        ac->che_drc.dyn_rng_sgn[i] = get_bits1(gb);
-        ac->che_drc.dyn_rng_ctl[i] = get_bits(gb, 7);
+        che_drc->dyn_rng_sgn[i] = get_bits1(gb);
+        che_drc->dyn_rng_ctl[i] = get_bits(gb, 7);
         n++;
     }
 
@@ -1332,7 +1331,7 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
             res = decode_sbr_extension(ac, gb, crc_flag, cnt);
             break;
         case EXT_DYNAMIC_RANGE:
-            res = decode_dynamic_range(ac, gb, cnt);
+            res = decode_dynamic_range(&ac->che_drc, gb, cnt);
             break;
         case EXT_FILL:
         case EXT_FILL_DATA:
@@ -1350,9 +1349,7 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
  * @param   decode  1 if tool is used normally, 0 if tool is used in LTP.
  * @param   coef    spectral coefficients
  */
-static void apply_tns(int decode, SingleChannelElement * sce, float coef[1024]) {
-    const IndividualChannelStream * ics = &sce->ics;
-    const TemporalNoiseShaping * tns = &sce->tns;
+static void apply_tns(int decode, TemporalNoiseShaping * tns, IndividualChannelStream * ics, float coef[1024]) {
     const int mmm = FFMIN(ics->tns_max_bands,  ics->max_sfb);
     int w, filt, m, i, ib;
     int bottom, top, order, start, end, size, inc;
@@ -1412,8 +1409,7 @@ static void apply_tns(int decode, SingleChannelElement * sce, float coef[1024]) 
 }
 
 #ifdef AAC_LTP
-static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
-    IndividualChannelStream * ics = &sce->ics;
+static void windowing_and_mdct_ltp(AACContext * ac, IndividualChannelStream * ics, float * in, float * out) {
     const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
     const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
     const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
@@ -1421,10 +1417,10 @@ static void windowing_and_mdct_ltp(AACContext * ac, SingleChannelElement * sce, 
     float * buf = ac->buf_mdct;
     assert(ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE);
     if (ics->window_sequence[0] != LONG_STOP_SEQUENCE) {
-        vector_fmul_dst(ac, buf, in, lwindow_prev, 1024);
+        vector_fmul_dst(&ac->dsp, buf, in, lwindow_prev, 1024);
     } else {
         memset(buf, 0, 448 * sizeof(float));
-        vector_fmul_dst(ac, buf + 448, in + 448, swindow_prev, 128);
+        vector_fmul_dst(&ac->dsp, buf + 448, in + 448, swindow_prev, 128);
         memcpy(buf + 576, in + 576, 448 * sizeof(float));
     }
     if (ics->window_sequence[0] != LONG_START_SEQUENCE) {
@@ -1448,8 +1444,8 @@ static int apply_ltp(AACContext * ac, SingleChannelElement * sce) {
         for (i = 0; i < 2 * 1024; i++)
             x_est[i] = sce->ltp_state[i + 2 * 1024 - ltp->lag] * ltp->coef;
 
-        windowing_and_mdct_ltp(ac, sce, x_est, X_est);
-        if(sce->tns.present) apply_tns(0, sce, X_est);
+        windowing_and_mdct_ltp(ac, &sce->ics, x_est, X_est);
+        if(sce->tns.present) apply_tns(0, &sce->tns, &sce->ics, X_est);
 
         for (sfb = 0; sfb < FFMIN(sce->ics.max_sfb, MAX_LTP_LONG_SFB); sfb++)
             if (ltp->used[sfb])
@@ -1477,11 +1473,11 @@ static inline int16_t ltp_round(float x) {
 }
 
 
-static int update_ltp(AACContext * ac, SingleChannelElement * sce) {
+static int update_ltp(int is_saved, SingleChannelElement * sce) {
     int i;
     if (!sce->ltp_state && !(sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t))))
         return AVERROR(ENOMEM);
-    if (ac->is_saved) {
+    if (is_saved) {
         for (i = 0; i < 1024; i++) {
             sce->ltp_state[i] = sce->ltp_state[i + 1024];
             sce->ltp_state[i + 1024] = ltp_round(sce->ret[i] - ac->add_bias);
@@ -1542,10 +1538,10 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
         ac->dsp.vector_fmul_add_add(out + 448 + 4*128, buf + 8*128, swindow,      ac->revers + 3*128, ac->add_bias,  64, 1);
 
 #if 0
-        vector_fmul_add_add_add(ac, out + 448 + 1*128, buf + 2*128, swindow,      saved + 448 + 1*128, ac->revers + 0*128, ac->add_bias, 128);
-        vector_fmul_add_add_add(ac, out + 448 + 2*128, buf + 4*128, swindow,      saved + 448 + 2*128, ac->revers + 1*128, ac->add_bias, 128);
-        vector_fmul_add_add_add(ac, out + 448 + 3*128, buf + 6*128, swindow,      saved + 448 + 3*128, ac->revers + 2*128, ac->add_bias, 128);
-        vector_fmul_add_add_add(ac, out + 448 + 4*128, buf + 8*128, swindow,      saved + 448 + 4*128, ac->revers + 3*128, ac->add_bias, 64);
+        vector_fmul_add_add_add(&ac->dsp, out + 448 + 1*128, buf + 2*128, swindow,      saved + 448 + 1*128, ac->revers + 0*128, ac->add_bias, 128);
+        vector_fmul_add_add_add(&ac->dsp, out + 448 + 2*128, buf + 4*128, swindow,      saved + 448 + 2*128, ac->revers + 1*128, ac->add_bias, 128);
+        vector_fmul_add_add_add(&ac->dsp, out + 448 + 3*128, buf + 6*128, swindow,      saved + 448 + 3*128, ac->revers + 2*128, ac->add_bias, 128);
+        vector_fmul_add_add_add(&ac->dsp, out + 448 + 4*128, buf + 8*128, swindow,      saved + 448 + 4*128, ac->revers + 3*128, ac->add_bias, 64);
 #endif
 
         ac->dsp.vector_fmul_add_add(saved,       buf + 1024 + 64,    swindow + 64, ac->revers + 3*128+64,  0, 64, 1);
@@ -1558,8 +1554,7 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
 }
 
 #ifdef AAC_SSR
-static void windowing_and_imdct_ssr(AACContext * ac, SingleChannelElement * sce, float * in, float * out) {
-    IndividualChannelStream * ics = &sce->ics;
+static void windowing_and_imdct_ssr(AACContext * ac, IndividualChannelStream * ics, float * in, float * out) {
     const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
     const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
     const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
@@ -1568,10 +1563,10 @@ static void windowing_and_imdct_ssr(AACContext * ac, SingleChannelElement * sce,
     if (ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
         ff_imdct_calc(&ac->mdct, buf, in, out);
         if (ics->window_sequence[0] != LONG_STOP_SEQUENCE) {
-            vector_fmul_dst(ac, out, buf, lwindow_prev, 256);
+            vector_fmul_dst(&ac->dsp, out, buf, lwindow_prev, 256);
         } else {
             memset(out, 0, 112 * sizeof(float));
-            vector_fmul_dst(ac, out + 112, buf + 112, swindow_prev, 32);
+            vector_fmul_dst(&ac->dsp, out + 112, buf + 112, swindow_prev, 32);
             memcpy(out + 144, buf + 144, 112 * sizeof(float));
         }
         if (ics->window_sequence[0] != LONG_START_SEQUENCE) {
@@ -1585,7 +1580,7 @@ static void windowing_and_imdct_ssr(AACContext * ac, SingleChannelElement * sce,
         int i;
         for (i = 0; i < 8; i++) {
             ff_imdct_calc(&ac->mdct_small, buf, in + i * 32, out);
-            vector_fmul_dst(ac, out + 64 * i, buf, (i == 0) ? swindow_prev : swindow, 32);
+            vector_fmul_dst(&ac->dsp, out + 64 * i, buf, (i == 0) ? swindow_prev : swindow, 32);
             ac->dsp.vector_fmul_reverse(out + 64 * i + 32, buf + 32, swindow, 32);
         }
     }
@@ -1669,7 +1664,7 @@ static void apply_ssr(AACContext * ac, SingleChannelElement * sce) {
             vector_reverse(tmp_buf, in + 256 * b, 256);
             memcpy(in + 256 * b, tmp_buf, 256 * sizeof(float));
         }
-        windowing_and_imdct_ssr(ac, sce, in + 256 * b, tmp_buf);
+        windowing_and_imdct_ssr(ac, &sce->ics, in + 256 * b, tmp_buf);
         apply_ssr_gains(sce, b, tmp_buf, tmp_ret + 256 * b, sce->saved + 256 * b);
     }
     inverse_polyphase_quadrature_filter(ac, sce, tmp_ret);
@@ -1776,9 +1771,9 @@ static int spectral_to_sample(AACContext * ac) {
                 }
 #endif /* AAC_LTP */
                 if(che->ch[0].tns.present)
-                    apply_tns(1, &che->ch[0], che->ch[0].coeffs);
+                    apply_tns(1, &che->ch[0].tns, &che->ch[0].ics, che->ch[0].coeffs);
                 if(che->ch[1].tns.present)
-                    apply_tns(1, &che->ch[1], che->ch[1].coeffs);
+                    apply_tns(1, &che->ch[1].tns, &che->ch[1].ics, che->ch[1].coeffs);
                 if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 1))
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_SSR
@@ -1799,9 +1794,9 @@ static int spectral_to_sample(AACContext * ac) {
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
-                    if((ret = update_ltp(ac, &che->ch[0])))
+                    if((ret = update_ltp(ac->is_saved, &che->ch[0])))
                         return ret;
-                    if(j == ID_CPE && (ret = update_ltp(ac, &che->ch[1])))
+                    if(j == ID_CPE && (ret = update_ltp(ac->is_saved, &che->ch[1])))
                         return ret;
                 }
 #endif /* AAC_LTP */
@@ -1925,7 +1920,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             memset(&newpcs, 0, sizeof(ProgramConfig));
             if((err = program_config_element(ac, &gb, &newpcs)))
                 break;
-            err = output_configure(ac, &newpcs);
+            err = output_configure(ac, &ac->pcs, &newpcs);
             break;
         }
 
