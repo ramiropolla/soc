@@ -903,8 +903,15 @@ static int decode_spectrum(AACContext * ac, GetBitContext * gb, const Individual
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
                         const int index = get_vlc2(gb, vlc_spectral[cur_band_type - 1].table, 6, 3);
                         const int coef_idx = (group << 7) + k;
-                        const int8_t *vq_ptr = &ff_aac_codebook_vectors[cur_band_type - 1][index * dim];
+                        const int8_t *vq_ptr;
                         int j;
+                        if(index >= ff_aac_spectral_sizes[cur_band_type - 1]) {
+                            av_log(ac->avccontext, AV_LOG_ERROR,
+                                "Read beyond end of ff_aac_codebook_vectors[%d][]. index %d >= %d\n",
+                                cur_band_type - 1, index, ff_aac_spectral_sizes[cur_band_type - 1]);
+                            return -1;
+                        }
+                        vq_ptr = &ff_aac_codebook_vectors[cur_band_type - 1][index * dim];
                         if (is_cb_unsigned) {
                             for (j = 0; j < dim; j++)
                                 if (vq_ptr[j])
