@@ -288,45 +288,6 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe
 }
 
 /**
- * Encode channel layout (aka program config element).
- * @see table 4.2
- */
-static void put_program_config_element(AVCodecContext *avctx, AACEncContext *s)
-{
-    int i;
-    ProgramConfig *pc = &s->pc;
-
-    put_bits(&s->pb, 2, 0); //object type - ?
-    put_bits(&s->pb, 4, s->samplerate_index); //sample rate index
-
-    put_bits(&s->pb, 4, avctx->channels/2); // all channels are front :)
-    put_bits(&s->pb, 4, 0); // no side channels
-    put_bits(&s->pb, 4, 0); // no back channels
-    put_bits(&s->pb, 2, 0); // no LFE
-    put_bits(&s->pb, 3, 0); // no associated data
-    put_bits(&s->pb, 4, 0); // no valid channel couplings
-
-    put_bits(&s->pb, 1, pc->mono_mixdown);
-    if(pc->mono_mixdown)
-        put_bits(&s->pb, 4, pc->mixdown_coeff_index);
-    put_bits(&s->pb, 1, pc->stereo_mixdown);
-    if(pc->stereo_mixdown)
-        put_bits(&s->pb, 4, pc->mixdown_coeff_index);
-    put_bits(&s->pb, 1, pc->matrix_mixdown);
-    if(pc->matrix_mixdown){
-        put_bits(&s->pb, 2, pc->mixdown_coeff_index);
-        put_bits(&s->pb, 1, pc->pseudo_surround);
-    }
-    //TODO: proper channel map output
-    for(i = 0; i < avctx->channels; i += 2){
-        put_bits(&s->pb, 1, 1); // channel is CPE
-        put_bits(&s->pb, 4, i/2);
-    }
-    align_put_bits(&s->pb);
-    put_bits(&s->pb, 8, 0); // no commentary bytes
-}
-
-/**
  * Encode ics_info element.
  * @see Table 4.6
  */
@@ -698,11 +659,6 @@ static int aac_encode_frame(AVCodecContext *avctx,
         put_bitstream_info(avctx, s, LIBAVCODEC_IDENT);
     }
     //encode channels as channel pairs and one optional single channel element
-    /*if(avctx->channels > 2){
-        put_bits(&s->pb, 3, ID_PCE);
-        put_bits(&s->pb, 4, 0);
-        put_program_config_element(avctx, s);
-    }*/
     start_ch = 0;
     memset(chan_el_counter, 0, sizeof(chan_el_counter));
     for(i = 0; i < chan_map[0]; i++){
