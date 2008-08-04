@@ -276,8 +276,8 @@ static int output_configure(AACContext *ac, ProgramConfig *pcs, ProgramConfig *n
  * @param sce_map mono (Single Channel Element) map
  * @param type speaker type/position for these channels
  */
-static void program_config_element_parse_tags(GetBitContext * gb, enum ChannelType *cpe_map,
-                                              enum ChannelType *sce_map, int n, enum ChannelType type) {
+static void program_config_element_parse_tags(enum ChannelType *cpe_map,
+        enum ChannelType *sce_map, enum ChannelType type, GetBitContext * gb, int n) {
     while(n--) {
         enum ChannelType *map = cpe_map && get_bits1(gb) ? cpe_map : sce_map; // stereo or mono map
         map[get_bits(gb, 4)] = type;
@@ -288,7 +288,7 @@ static void program_config_element_parse_tags(GetBitContext * gb, enum ChannelTy
 /**
  * Parse program configuration element; reference: table 4.2.
  */
-static int program_config_element(AACContext * ac, GetBitContext * gb, ProgramConfig *newpcs) {
+static int program_config_element(AACContext * ac, ProgramConfig *newpcs, GetBitContext * gb) {
     int num_front, num_side, num_back, num_lfe, num_assoc_data, num_cc;
 
     skip_bits(gb, 2);  // object_type
@@ -314,14 +314,14 @@ static int program_config_element(AACContext * ac, GetBitContext * gb, ProgramCo
         newpcs->pseudo_surround     = get_bits1(gb);
     }
 
-    program_config_element_parse_tags(gb, newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], num_front, AAC_CHANNEL_FRONT);
-    program_config_element_parse_tags(gb, newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], num_side,  AAC_CHANNEL_SIDE );
-    program_config_element_parse_tags(gb, newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], num_back,  AAC_CHANNEL_BACK );
-    program_config_element_parse_tags(gb, NULL,                     newpcs->che_type[ID_LFE], num_lfe,   AAC_CHANNEL_LFE  );
+    program_config_element_parse_tags(newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], AAC_CHANNEL_FRONT, gb, num_front);
+    program_config_element_parse_tags(newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], AAC_CHANNEL_SIDE,  gb, num_side );
+    program_config_element_parse_tags(newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], AAC_CHANNEL_BACK,  gb, num_back );
+    program_config_element_parse_tags(NULL,                     newpcs->che_type[ID_LFE], AAC_CHANNEL_LFE,   gb, num_lfe  );
 
     skip_bits_long(gb, 4 * num_assoc_data);
 
-    program_config_element_parse_tags(gb, newpcs->che_type[ID_CCE], newpcs->che_type[ID_CCE], num_cc,    AAC_CHANNEL_CC   );
+    program_config_element_parse_tags(newpcs->che_type[ID_CCE], newpcs->che_type[ID_CCE], AAC_CHANNEL_CC,    gb, num_cc   );
 
     align_get_bits(gb);
 
@@ -334,7 +334,7 @@ static int program_config_element(AACContext * ac, GetBitContext * gb, ProgramCo
  * Set up ProgramConfig, but based on a default channel configuration
  * as specified in table 1.17.
  */
-static int program_config_element_default(AACContext *ac, int channels, ProgramConfig *newpcs)
+static int program_config_element_default(AACContext *ac, ProgramConfig *newpcs, int channels)
 {
     /* Pre-mixed down-mix outputs are not available. */
     newpcs->mono_mixdown_tag   = -1;
@@ -398,10 +398,10 @@ static int ga_specific_config(AACContext * ac, GetBitContext * gb, int channels)
     memset(&newpcs, 0, sizeof(ProgramConfig));
     if (channels == 0) {
         skip_bits(gb, 4);  // element_instance_tag
-        if((ret  = program_config_element(ac, gb, &newpcs)))
+        if((ret  = program_config_element(ac, &newpcs, gb)))
             return ret;
     } else {
-        if((ret = program_config_element_default(ac, channels, &newpcs)))
+        if((ret = program_config_element_default(ac, &newpcs, channels)))
             return ret;
     }
     if((ret = output_configure(ac, &ac->pcs, &newpcs)))
@@ -563,7 +563,7 @@ static void skip_data_stream_element(GetBitContext * gb) {
 }
 
 #ifdef AAC_LTP
-static void decode_ltp(AACContext * ac, GetBitContext * gb, uint8_t max_sfb, LongTermPrediction * ltp) {
+static void decode_ltp(AACContext * ac, LongTermPrediction * ltp, GetBitContext * gb, uint8_t max_sfb) {
     int sfb;
     if (ac->m4ac.object_type == AOT_ER_AAC_LD) {
         assert(0);
@@ -581,7 +581,7 @@ static void decode_ltp(AACContext * ac, GetBitContext * gb, uint8_t max_sfb, Lon
  *
  * @param   common_window   Channels have independent [0], or shared [1], Individual Channel Stream information.
  */
-static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_window, IndividualChannelStream * ics) {
+static int decode_ics_info(AACContext * ac, IndividualChannelStream * ics, GetBitContext * gb, int common_window) {
     unsigned int grouping;
     if (get_bits1(gb)) {
         av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set.\n");
@@ -634,11 +634,11 @@ static int decode_ics_info(AACContext * ac, GetBitContext * gb, int common_windo
                 assert(0);
             } else {
                 if ((ics->ltp.present = get_bits(gb, 1))) {
-                    decode_ltp(ac, gb, ics->max_sfb, &ics->ltp);
+                    decode_ltp(ac, &ics->ltp, gb, ics->max_sfb);
                 }
                 if (common_window) {
                     if ((ics->ltp2.present = get_bits(gb, 1))) {
-                        decode_ltp(ac, gb, ics->max_sfb, &ics->ltp2);
+                        decode_ltp(ac, &ics->ltp2, gb, ics->max_sfb);
                     }
                 }
             }
@@ -679,7 +679,8 @@ static inline float ivquant(int a) {
  * The band_type* arrays have indices [window group][scalefactor band].
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_band_types(AACContext * ac, GetBitContext * gb, IndividualChannelStream * ics, enum BandType band_type[][64], int band_type_run_end[][64]) {
+static int decode_band_types(AACContext * ac, enum BandType band_type[][64],
+        int band_type_run_end[][64], GetBitContext * gb, IndividualChannelStream * ics) {
     int g;
     const int bits = (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
     for (g = 0; g < ics->num_window_groups; g++) {
@@ -722,8 +723,9 @@ static int decode_band_types(AACContext * ac, GetBitContext * gb, IndividualChan
  * The band_type* and sf arrays have indices [window group][scalefactor band].
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
-        IndividualChannelStream * ics, enum BandType band_type[][64], int band_type_run_end[][64], float sf[][64]) {
+static int decode_scalefactors(AACContext * ac, float sf[][64], GetBitContext * gb,
+        float mix_gain, unsigned int global_gain, IndividualChannelStream * ics,
+        enum BandType band_type[][64], int band_type_run_end[][64]) {
     const int sf_offset = ac->sf_offset + (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE ? 12 : 0);
     int g, i;
     int offset[3] = { global_gain, global_gain - 90, 100 };
@@ -782,7 +784,7 @@ static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_ga
 /**
  * Decode pulse data; reference: table 4.7.
  */
-static void decode_pulses(GetBitContext * gb, Pulse * pulse) {
+static void decode_pulses(Pulse * pulse, GetBitContext * gb) {
     int i;
     pulse->num_pulse = get_bits(gb, 2) + 1;
     pulse->start = get_bits(gb, 6);
@@ -795,7 +797,8 @@ static void decode_pulses(GetBitContext * gb, Pulse * pulse) {
 /**
  * Decode Temporal Noise Shaping data; reference: table 4.48.
  */
-static int decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, TemporalNoiseShaping * tns) {
+static int decode_tns(AACContext * ac, TemporalNoiseShaping * tns,
+        GetBitContext * gb, const IndividualChannelStream * ics) {
     int w, filt, i, coef_len, coef_res = 0, coef_compress;
     const int is8 = ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE;
     const int tns_max_order = is8 ? 7 : ac->m4ac.object_type == AOT_AAC_MAIN ? 20 : 12;
@@ -828,7 +831,7 @@ static int decode_tns(AACContext * ac, GetBitContext * gb, const IndividualChann
 }
 
 #ifdef AAC_SSR
-static int decode_gain_control(GetBitContext * gb, SingleChannelElement * sce) {
+static int decode_gain_control(SingleChannelElement * sce, GetBitContext * gb) {
     // wd_num wd_test aloc_size
     static const int gain_mode[4][3] = {
         {1, 0, 5}, //ONLY_LONG_SEQUENCE = 0,
@@ -861,7 +864,7 @@ static int decode_gain_control(GetBitContext * gb, SingleChannelElement * sce) {
 /**
  * Decode Mid/Side data; reference: table 4.54.
  */
-static void decode_mid_side_stereo(GetBitContext * gb, ChannelElement * cpe) {
+static void decode_mid_side_stereo(ChannelElement * cpe, GetBitContext * gb) {
     MidSideStereo * ms = &cpe->ms;
     int g, i;
     if (ms->present == 1) {
@@ -883,7 +886,8 @@ static void decode_mid_side_stereo(GetBitContext * gb, ChannelElement * cpe) {
  * The band_type array has indices [window group][scalefactor band]
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_spectrum(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, enum BandType band_type[][64], int icoef[1024]) {
+static int decode_spectrum(AACContext * ac, int icoef[1024], GetBitContext * gb,
+        const IndividualChannelStream * ics, enum BandType band_type[][64]) {
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
 
@@ -952,7 +956,7 @@ static int decode_spectrum(AACContext * ac, GetBitContext * gb, const Individual
  * @param   pulse   pointer to pulse data struct
  * @param   icoef   array of quantized spectral data
  */
-static void add_pulses(const IndividualChannelStream * ics, const Pulse * pulse, int icoef[1024]) {
+static void add_pulses(int icoef[1024], const Pulse * pulse, const IndividualChannelStream * ics) {
     int i, off = ics->swb_offset[pulse->start];
     for (i = 0; i < pulse->num_pulse; i++) {
         int ic;
@@ -972,8 +976,8 @@ static void add_pulses(const IndividualChannelStream * ics, const Pulse * pulse,
  *
  * The band_type and sf arrays have indices [window group][scalefactor band].
  */
-static void dequant(AACContext * ac, const IndividualChannelStream * ics, const int icoef[1024],
-        enum BandType band_type[][64], float sf[][64], float coef[1024]) {
+static void dequant(AACContext * ac, float coef[1024], const int icoef[1024], float sf[][64], const IndividualChannelStream * ics,
+        enum BandType band_type[][64]) {
     const uint16_t * offsets = ics->swb_offset;
     const int c = 1024/ics->num_window_groups;
     int g, i, group, k;
@@ -1007,7 +1011,7 @@ static void dequant(AACContext * ac, const IndividualChannelStream * ics, const 
  * @param   scale_flag      scalable [1] or non-scalable [0] AAC (Unused until scalable AAC is implemented.)
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, int scale_flag, SingleChannelElement * sce) {
+static int decode_ics(AACContext * ac, SingleChannelElement * sce, GetBitContext * gb, int common_window, int scale_flag) {
     int icoeffs[1024];
     Pulse pulse;
     TemporalNoiseShaping * tns = &sce->tns;
@@ -1021,13 +1025,13 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     global_gain = get_bits(gb, 8);
 
     if (!common_window && !scale_flag) {
-        if (decode_ics_info(ac, gb, 0, ics) < 0)
+        if (decode_ics_info(ac, ics, gb, 0) < 0)
             return -1;
     }
 
-    if (decode_band_types(ac, gb, ics, sce->band_type, sce->band_type_run_end) < 0)
+    if (decode_band_types(ac, sce->band_type, sce->band_type_run_end, gb, ics) < 0)
         return -1;
-    if (decode_scalefactors(ac, gb, sce->mixing_gain, global_gain, ics, sce->band_type, sce->band_type_run_end, sce->sf) < 0)
+    if (decode_scalefactors(ac, sce->sf, gb, sce->mixing_gain, global_gain, ics, sce->band_type, sce->band_type_run_end) < 0)
         return -1;
 
     pulse_present = 0;
@@ -1037,14 +1041,14 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
                 av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in eight short sequence.\n");
                 return -1;
             }
-            decode_pulses(gb, &pulse);
+            decode_pulses(&pulse, gb);
         }
-        if ((tns->present = get_bits1(gb)) && decode_tns(ac, gb, ics, tns))
+        if ((tns->present = get_bits1(gb)) && decode_tns(ac, tns, gb, ics))
             return -1;
         if (get_bits1(gb)) {
 #ifdef AAC_SSR
             int ret;
-            if ((ret = decode_gain_control(gb, sce))) return ret;
+            if ((ret = decode_gain_control(sce, gb))) return ret;
 #else
             av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supported.\n");
             return -1;
@@ -1052,11 +1056,11 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
         }
     }
 
-    if (decode_spectrum(ac, gb, ics, sce->band_type, icoeffs) < 0)
+    if (decode_spectrum(ac, icoeffs, gb, ics, sce->band_type) < 0)
         return -1;
     if (pulse_present)
-        add_pulses(ics, &pulse, icoeffs);
-    dequant(ac, ics, icoeffs, sce->band_type, sce->sf, out);
+        add_pulses(icoeffs, &pulse, ics);
+    dequant(ac, out, icoeffs, sce->sf, ics, sce->band_type);
     return 0;
 }
 
@@ -1135,7 +1139,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
     cpe = ac->che[ID_CPE][tag];
     common_window = get_bits1(gb);
     if (common_window) {
-        if (decode_ics_info(ac, gb, 1, &cpe->ch[0].ics))
+        if (decode_ics_info(ac, &cpe->ch[0].ics, gb, 1))
             return -1;
         i = cpe->ch[1].ics.use_kb_window[0];
         cpe->ch[1].ics = cpe->ch[0].ics;
@@ -1144,13 +1148,13 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
         cpe->ch[1].ics.ltp = cpe->ch[0].ics.ltp2;
 #endif /* AAC_LTP */
         if((cpe->ms.present = get_bits(gb, 2)))
-            decode_mid_side_stereo(gb, cpe);
+            decode_mid_side_stereo(cpe, gb);
     } else {
         cpe->ms.present = 0;
     }
-    if ((ret = decode_ics(ac, gb, common_window, 0, &cpe->ch[0])))
+    if ((ret = decode_ics(ac, &cpe->ch[0], gb, common_window, 0)))
         return ret;
-    if ((ret = decode_ics(ac, gb, common_window, 0, &cpe->ch[1])))
+    if ((ret = decode_ics(ac, &cpe->ch[1], gb, common_window, 0)))
         return ret;
 
     if (common_window && cpe->ms.present)
@@ -1197,7 +1201,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
     sign = get_bits(gb, 1);
     scale = pow(2., pow(2., get_bits(gb, 2) - 3));
 
-    if ((ret = decode_ics(ac, gb, 0, 0, sce)))
+    if ((ret = decode_ics(ac, sce, gb, 0, 0)))
         return ret;
 
     for (c = 0; c < num_gain; c++) {
@@ -1349,7 +1353,7 @@ static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
  * @param   decode  1 if tool is used normally, 0 if tool is used in LTP.
  * @param   coef    spectral coefficients
  */
-static void apply_tns(int decode, TemporalNoiseShaping * tns, IndividualChannelStream * ics, float coef[1024]) {
+static void apply_tns(float coef[1024], TemporalNoiseShaping * tns, IndividualChannelStream * ics, int decode) {
     const int mmm = FFMIN(ics->tns_max_bands,  ics->max_sfb);
     int w, filt, m, i, ib;
     int bottom, top, order, start, end, size, inc;
@@ -1409,7 +1413,7 @@ static void apply_tns(int decode, TemporalNoiseShaping * tns, IndividualChannelS
 }
 
 #ifdef AAC_LTP
-static void windowing_and_mdct_ltp(AACContext * ac, IndividualChannelStream * ics, float * in, float * out) {
+static void windowing_and_mdct_ltp(AACContext * ac, float * out, float * in, IndividualChannelStream * ics) {
     const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
     const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
     const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
@@ -1444,8 +1448,8 @@ static int apply_ltp(AACContext * ac, SingleChannelElement * sce) {
         for (i = 0; i < 2 * 1024; i++)
             x_est[i] = sce->ltp_state[i + 2 * 1024 - ltp->lag] * ltp->coef;
 
-        windowing_and_mdct_ltp(ac, &sce->ics, x_est, X_est);
-        if(sce->tns.present) apply_tns(0, &sce->tns, &sce->ics, X_est);
+        windowing_and_mdct_ltp(ac, X_est, x_est, &sce->ics);
+        if(sce->tns.present) apply_tns(X_est, &sce->tns, &sce->ics, 0);
 
         for (sfb = 0; sfb < FFMIN(sce->ics.max_sfb, MAX_LTP_LONG_SFB); sfb++)
             if (ltp->used[sfb])
@@ -1473,7 +1477,7 @@ static inline int16_t ltp_round(float x) {
 }
 
 
-static int update_ltp(int is_saved, SingleChannelElement * sce) {
+static int update_ltp(SingleChannelElement * sce, int is_saved) {
     int i;
     if (!sce->ltp_state && !(sce->ltp_state = av_mallocz(4 * 1024 * sizeof(int16_t))))
         return AVERROR(ENOMEM);
@@ -1554,7 +1558,7 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
 }
 
 #ifdef AAC_SSR
-static void windowing_and_imdct_ssr(AACContext * ac, IndividualChannelStream * ics, float * in, float * out) {
+static void windowing_and_imdct_ssr(AACContext * ac, float * out, float * in, IndividualChannelStream * ics) {
     const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
     const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
     const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
@@ -1592,7 +1596,7 @@ static void vector_add_dst(float * dst, const float * src0, const float * src1, 
         dst[i] = src0[i] + src1[i];
 }
 
-static void apply_ssr_gains(SingleChannelElement * sce, int band, float * in, float * preret, float * saved) {
+static void apply_ssr_gains(SingleChannelElement * sce, float * preret, float * saved, float * in, int band) {
     // TODO: 'in' buffer gain normalization
     if (sce->ics.window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
         vector_add_dst(preret, in, saved, 256);
@@ -1664,8 +1668,8 @@ static void apply_ssr(AACContext * ac, SingleChannelElement * sce) {
             vector_reverse(tmp_buf, in + 256 * b, 256);
             memcpy(in + 256 * b, tmp_buf, 256 * sizeof(float));
         }
-        windowing_and_imdct_ssr(ac, &sce->ics, in + 256 * b, tmp_buf);
-        apply_ssr_gains(sce, b, tmp_buf, tmp_ret + 256 * b, sce->saved + 256 * b);
+        windowing_and_imdct_ssr(ac, tmp_buf, in + 256 * b, &sce->ics);
+        apply_ssr_gains(sce, tmp_ret + 256 * b, sce->saved + 256 * b, tmp_buf, b);
     }
     inverse_polyphase_quadrature_filter(ac, sce, tmp_ret);
 }
@@ -1676,7 +1680,7 @@ static void apply_ssr(AACContext * ac, SingleChannelElement * sce) {
  *
  * @param   index   index into coupling gain array
  */
-static void apply_dependent_coupling(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
+static void apply_dependent_coupling(AACContext * ac, SingleChannelElement * sce, ChannelElement * cc, int index) {
     IndividualChannelStream * ics = &cc->ch[0].ics;
     const uint16_t * offsets = ics->swb_offset;
     float * dest = sce->coeffs;
@@ -1709,7 +1713,7 @@ static void apply_dependent_coupling(AACContext * ac, ChannelElement * cc, Singl
  *
  * @param   index   index into coupling gain array
  */
-static void apply_independent_coupling(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index) {
+static void apply_independent_coupling(AACContext * ac, SingleChannelElement * sce, ChannelElement * cc, int index) {
     int i;
     float gain = cc->coup.gain[index][0][0] * sce->mixing_gain;
     for (i = 0; i < 1024; i++)
@@ -1723,23 +1727,23 @@ static void apply_independent_coupling(AACContext * ac, ChannelElement * cc, Sin
  * @param   apply_coupling_method   pointer to (in)dependent coupling function
  */
 static void apply_channel_coupling(AACContext * ac, ChannelElement * cc,
-        void (*apply_coupling_method)(AACContext * ac, ChannelElement * cc, SingleChannelElement * sce, int index))
+        void (*apply_coupling_method)(AACContext * ac, SingleChannelElement * sce, ChannelElement * cc, int index))
 {
     int c;
     int index = 0;
     ChannelCoupling * coup = &cc->coup;
     for (c = 0; c <= coup->num_coupled; c++) {
         if (     !coup->is_cpe[c] && ac->che[ID_SCE][coup->tag_select[c]]) {
-            apply_coupling_method(ac, cc, &ac->che[ID_SCE][coup->tag_select[c]]->ch[0], index++);
+            apply_coupling_method(ac, &ac->che[ID_SCE][coup->tag_select[c]]->ch[0], cc, index++);
         } else if(coup->is_cpe[c] && ac->che[ID_CPE][coup->tag_select[c]]) {
             if (!coup->l[c] && !coup->r[c]) {
-                apply_coupling_method(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], index);
-                apply_coupling_method(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], index++);
+                apply_coupling_method(ac, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], cc, index);
+                apply_coupling_method(ac, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], cc, index++);
             }
             if (coup->l[c])
-                apply_coupling_method(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], index++);
+                apply_coupling_method(ac, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], cc, index++);
             if (coup->r[c])
-                apply_coupling_method(ac, cc, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], index++);
+                apply_coupling_method(ac, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], cc, index++);
         } else {
             av_log(ac->avccontext, AV_LOG_ERROR,
                    "coupling target %sE[%d] not available\n",
@@ -1771,9 +1775,9 @@ static int spectral_to_sample(AACContext * ac) {
                 }
 #endif /* AAC_LTP */
                 if(che->ch[0].tns.present)
-                    apply_tns(1, &che->ch[0].tns, &che->ch[0].ics, che->ch[0].coeffs);
+                    apply_tns(che->ch[0].coeffs, &che->ch[0].tns, &che->ch[0].ics, 1);
                 if(che->ch[1].tns.present)
-                    apply_tns(1, &che->ch[1].tns, &che->ch[1].ics, che->ch[1].coeffs);
+                    apply_tns(che->ch[1].coeffs, &che->ch[1].tns, &che->ch[1].ics, 1);
                 if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 1))
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_SSR
@@ -1794,9 +1798,9 @@ static int spectral_to_sample(AACContext * ac) {
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
-                    if((ret = update_ltp(ac->is_saved, &che->ch[0])))
+                    if((ret = update_ltp(&che->ch[0], ac->is_saved)))
                         return ret;
-                    if(j == ID_CPE && (ret = update_ltp(ac->is_saved, &che->ch[1])))
+                    if(j == ID_CPE && (ret = update_ltp(&che->ch[1], ac->is_saved)))
                         return ret;
                 }
 #endif /* AAC_LTP */
@@ -1898,7 +1902,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
                 } else
                     break;
             }
-            err = decode_ics(ac, &gb, 0, 0, &ac->che[ID_SCE][tag]->ch[0]);
+            err = decode_ics(ac, &ac->che[ID_SCE][tag]->ch[0], &gb, 0, 0);
             break;
 
         case ID_CPE:
@@ -1918,7 +1922,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         {
             ProgramConfig newpcs;
             memset(&newpcs, 0, sizeof(ProgramConfig));
-            if((err = program_config_element(ac, &gb, &newpcs)))
+            if((err = program_config_element(ac, &newpcs, &gb)))
                 break;
             err = output_configure(ac, &ac->pcs, &newpcs);
             break;
@@ -1936,7 +1940,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
 
         case ID_LFE:
             if (ac->che[ID_LFE][tag])
-                err = decode_ics(ac, &gb, 0, 0, &ac->che[ID_LFE][tag]->ch[0]);
+                err = decode_ics(ac, &ac->che[ID_LFE][tag]->ch[0], &gb, 0, 0);
             break;
 
         default:
