@@ -32,3 +32,6 @@ Features:
 Cosmetic:
 * Add more useful comments and remove bad comments
 * Add specification references
+
+NOTE: Untested code for spectral extension and enhanced coupling can be
+found in GSoC SVN revisions before r3012.
