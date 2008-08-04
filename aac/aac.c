@@ -1870,7 +1870,7 @@ static int mixdown_and_convert_to_int16(AVCodecContext * avccontext, uint16_t * 
 
         ac->dsp.float_to_int16(data, ac->interleaved_output, 1024 * avccontext->channels);
     } else {
-        ac->dsp.float_to_int16_interleave(data, ac->output_data, 1024, avccontext->channels);
+        ac->dsp.float_to_int16_interleave(data, (const float **)ac->output_data, 1024, avccontext->channels);
     }
 
     return 0;
