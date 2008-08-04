@@ -87,6 +87,7 @@
 #include "mpeg4audio.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <math.h>
 #include <string.h>
 
