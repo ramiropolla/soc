@@ -167,7 +167,7 @@ static void psy_null_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
     int chans = type == ID_CPE ? 2 : 1;
 
     for(ch = 0; ch < chans; ch++){
-        cpe->ch[ch].ics.window_sequence = ONLY_LONG_SEQUENCE;
+        cpe->ch[ch].ics.window_sequence[0] = ONLY_LONG_SEQUENCE;
         cpe->ch[ch].ics.use_kb_window[0] = 1;
         cpe->ch[ch].ics.num_windows = 1;
         cpe->ch[ch].ics.swb_sizes = apc->bands1024;
@@ -211,7 +211,7 @@ static void psy_null_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         for(g = 0; g < apc->num_bands1024; g++)
             if(!cpe->ch[ch].zeroes[0][g])
                 minscale = FFMIN(minscale, cpe->ch[ch].sf_idx[0][g]);
-        cpe->ch[ch].gain = minscale;
+        cpe->ch[ch].mixing_gain = minscale;
         for(g = 0; g < apc->num_bands1024; g++)
             if(!cpe->ch[ch].zeroes[0][g])
                 cpe->ch[ch].sf_idx[0][g] = FFMIN(minscale + SCALE_MAX_DIFF, cpe->ch[ch].sf_idx[0][g]);
@@ -225,17 +225,17 @@ static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int16_t *la, in
     int chans = type == ID_CPE ? 2 : 1;
 
     for(ch = 0; ch < chans; ch++){
-        int prev_seq = cpe->ch[ch].ics.window_sequence_prev;
+        int prev_seq = cpe->ch[ch].ics.window_sequence[1];
         cpe->ch[ch].ics.use_kb_window[1] = cpe->ch[ch].ics.use_kb_window[0];
-        cpe->ch[ch].ics.window_sequence_prev = cpe->ch[ch].ics.window_sequence;
-        switch(cpe->ch[ch].ics.window_sequence){
-        case ONLY_LONG_SEQUENCE:   if(prev_seq == ONLY_LONG_SEQUENCE)cpe->ch[ch].ics.window_sequence = LONG_START_SEQUENCE;   break;
-        case LONG_START_SEQUENCE:  cpe->ch[ch].ics.window_sequence = EIGHT_SHORT_SEQUENCE; break;
-        case EIGHT_SHORT_SEQUENCE: if(prev_seq == EIGHT_SHORT_SEQUENCE)cpe->ch[ch].ics.window_sequence = LONG_STOP_SEQUENCE;  break;
-        case LONG_STOP_SEQUENCE:   cpe->ch[ch].ics.window_sequence = ONLY_LONG_SEQUENCE;   break;
+        cpe->ch[ch].ics.window_sequence[1] = cpe->ch[ch].ics.window_sequence[0];
+        switch(cpe->ch[ch].ics.window_sequence[0]){
+        case ONLY_LONG_SEQUENCE:   if(prev_seq == ONLY_LONG_SEQUENCE)cpe->ch[ch].ics.window_sequence[0] = LONG_START_SEQUENCE;   break;
+        case LONG_START_SEQUENCE:  cpe->ch[ch].ics.window_sequence[0] = EIGHT_SHORT_SEQUENCE; break;
+        case EIGHT_SHORT_SEQUENCE: if(prev_seq == EIGHT_SHORT_SEQUENCE)cpe->ch[ch].ics.window_sequence[0] = LONG_STOP_SEQUENCE;  break;
+        case LONG_STOP_SEQUENCE:   cpe->ch[ch].ics.window_sequence[0] = ONLY_LONG_SEQUENCE;   break;
         }
 
-        if(cpe->ch[ch].ics.window_sequence != EIGHT_SHORT_SEQUENCE){
+        if(cpe->ch[ch].ics.window_sequence[0] != EIGHT_SHORT_SEQUENCE){
             cpe->ch[ch].ics.use_kb_window[0] = 1;
             cpe->ch[ch].ics.num_windows = 1;
             cpe->ch[ch].ics.swb_sizes = apc->bands1024;
@@ -273,7 +273,7 @@ static void psy_null8_process(AACPsyContext *apc, int tag, int type, ChannelElem
         }
     }
     for(ch = 0; ch < chans; ch++){
-        cpe->ch[ch].gain = SCALE_ONE_POS;
+        cpe->ch[ch].mixing_gain = SCALE_ONE_POS;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 cpe->ch[ch].sf_idx[w][g] = SCALE_ONE_POS;
@@ -468,7 +468,7 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
     if(la && !(apc->flags & PSY_MODEL_NO_SWITCH)){
         float s[8], v;
         for(ch = 0; ch < chans; ch++){
-            enum WindowSequence last_window_sequence = cpe->ch[ch].ics.window_sequence;
+            enum WindowSequence last_window_sequence = cpe->ch[ch].ics.window_sequence[0];
             int switch_to_eight = 0;
             float sum = 0.0, sum2 = 0.0;
             int attack_n = 0;
@@ -511,13 +511,13 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
         }
     }else{
         for(ch = 0; ch < chans; ch++){
-            win[ch] = (cpe->ch[ch].ics.window_sequence == EIGHT_SHORT_SEQUENCE) ? EIGHT_SHORT_SEQUENCE : ONLY_LONG_SEQUENCE;
-            grouping[ch] = (cpe->ch[ch].ics.window_sequence == EIGHT_SHORT_SEQUENCE) ? window_grouping[0] : 0;
+            win[ch] = (cpe->ch[ch].ics.window_sequence[0] == EIGHT_SHORT_SEQUENCE) ? EIGHT_SHORT_SEQUENCE : ONLY_LONG_SEQUENCE;
+            grouping[ch] = (cpe->ch[ch].ics.window_sequence[0] == EIGHT_SHORT_SEQUENCE) ? window_grouping[0] : 0;
         }
     }
 
     for(ch = 0; ch < chans; ch++){
-        cpe->ch[ch].ics.window_sequence = win[ch];
+        cpe->ch[ch].ics.window_sequence[0] = win[ch];
         cpe->ch[ch].ics.use_kb_window[0] = 1;
         if(win[ch] != EIGHT_SHORT_SEQUENCE){
             cpe->ch[ch].ics.num_windows = 1;
@@ -531,8 +531,8 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
         for(i = 0; i < 8; i++)
             cpe->ch[ch].ics.group_len[i] = (grouping[ch] >> i) & 1;
     }
-    cpe->common_window = chans > 1 && cpe->ch[0].ics.window_sequence == cpe->ch[1].ics.window_sequence && cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
-    if(cpe->common_window && cpe->ch[0].ics.window_sequence == EIGHT_SHORT_SEQUENCE && grouping[0] != grouping[1])
+    cpe->common_window = chans > 1 && cpe->ch[0].ics.window_sequence[0] == cpe->ch[1].ics.window_sequence[0] && cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
+    if(cpe->common_window && cpe->ch[0].ics.window_sequence[0] == EIGHT_SHORT_SEQUENCE && grouping[0] != grouping[1])
         cpe->common_window = 0;
     if(PSY_MODEL_MODE(apc->flags) > PSY_MODE_QUALITY){
         av_log(apc->avctx, AV_LOG_ERROR, "Unknown mode %d, defaulting to CBR\n", PSY_MODEL_MODE(apc->flags));
@@ -602,7 +602,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     memset(pch->band, 0, sizeof(pch->band));
     for(ch = 0; ch < chans; ch++){
         start = 0;
-        cpe->ch[ch].gain = 0;
+        cpe->ch[ch].mixing_gain = 0;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 g2 = w*16 + g;
@@ -741,7 +741,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         //determine scalefactors - 5.6.2
         for(ch = 0; ch < chans; ch++){
             prev_scale = -1;
-            cpe->ch[ch].gain = 0;
+            cpe->ch[ch].mixing_gain = 0;
             for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
                 for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                     g2 = w*16 + g;
@@ -799,7 +799,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 if(cpe->ch[ch].zeroes[w][g]) continue;
                 cpe->ch[ch].sf_idx[w][g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[w][g], 0, SCALE_MAX_POS);
-                if(!cpe->ch[ch].gain) cpe->ch[ch].gain = cpe->ch[ch].sf_idx[w][g];
+                if(!cpe->ch[ch].mixing_gain) cpe->ch[ch].mixing_gain = cpe->ch[ch].sf_idx[w][g];
             }
 
         //adjust scalefactors for window groups
