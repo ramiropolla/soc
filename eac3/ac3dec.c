@@ -41,6 +41,7 @@
 #include "bitstream.h"
 #include "dsputil.h"
 #include "ac3dec.h"
+#include "ac3dec_data.h"
 
 /** Large enough for maximum possible frame size when the specification limit is ignored */
 #define AC3_FRAME_BUFFER_SIZE 32768
@@ -291,7 +292,6 @@ static int parse_frame_header(AC3DecodeContext *s)
     s->fbw_channels                 = s->channels - s->lfe_on;
     s->lfe_ch                       = s->fbw_channels + 1;
     s->frame_size                   = hdr.frame_size;
-    s->bitstream_id                 = hdr.bitstream_id;
     s->center_mix_level             = hdr.center_mix_level;
     s->surround_mix_level           = hdr.surround_mix_level;
     s->num_blocks                   = hdr.num_blocks;
@@ -305,7 +305,7 @@ static int parse_frame_header(AC3DecodeContext *s)
         s->channel_in_cpl[s->lfe_ch] = 0;
     }
 
-    if(s->bitstream_id <= 10) {
+    if(hdr.bitstream_id <= 10) {
         s->eac3 = 0;
         return ac3_parse_header(s);
     } else {
@@ -321,8 +321,8 @@ static int parse_frame_header(AC3DecodeContext *s)
 static void set_downmix_coeffs(AC3DecodeContext *s)
 {
     int i;
-    float cmix = gain_levels[s->center_mix_level];
-    float smix = gain_levels[s->surround_mix_level];
+    float cmix = gain_levels[center_levels[s->center_mix_level]];
+    float smix = gain_levels[surround_levels[s->surround_mix_level]];
 
     for(i=0; i<s->fbw_channels; i++) {
         s->downmix_coeffs[i][0] = gain_levels[ac3_default_coeffs[s->channel_mode][i][0]];

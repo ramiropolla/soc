@@ -23,6 +23,7 @@
 #include "ac3.h"
 #include "ac3_parser.h"
 #include "ac3dec.h"
+#include "ac3dec_data.h"
 
 /** Channel gain adaptive quantization mode */
 typedef enum {
