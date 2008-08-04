@@ -658,7 +658,6 @@ static int aac_encode_frame(AVCodecContext *avctx,
     if(avctx->frame_number==1 && !(avctx->flags & CODEC_FLAG_BITEXACT)){
         put_bitstream_info(avctx, s, LIBAVCODEC_IDENT);
     }
-    //encode channels as channel pairs and one optional single channel element
     start_ch = 0;
     memset(chan_el_counter, 0, sizeof(chan_el_counter));
     for(i = 0; i < chan_map[0]; i++){
