@@ -1016,6 +1016,9 @@ static int decode_ics(AACContext * ac, GetBitContext * gb, int common_window, in
     float * out = sce->coeffs;
     int global_gain, pulse_present = 0;
 
+    pulse.num_pulse = 0;
+    pulse.start     = 0;
+
     global_gain = get_bits(gb, 8);
 
     if (!common_window && !scale_flag) {
