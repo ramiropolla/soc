@@ -280,10 +280,7 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
         return 1;
     }
 
-    while (tmp) {
-        tmp >>= 8;
-        size ++;
-    }
+    size = (av_log2(tmp) >> 3) + 1;
 
     // long form
     put_byte(pb, 0x80 + size);
