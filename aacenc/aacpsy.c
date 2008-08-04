@@ -581,22 +581,10 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     int ch, w, w2, g, g2, i;
     int prev_scale;
     Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
-    float stereo_att, pe_target;
+    float pe_target;
     int bits_avail;
     int chans = type == ID_CPE ? 2 : 1;
     Psy3gppChannel *pch = &pctx->ch[tag];
-
-    //calculate and apply stereo attenuation factor - 5.2
-    if(chans > 1 && cpe->common_window){
-        float l, r;
-        stereo_att = 1.0 / 2.0; //XXX: find some way to determine it
-        for(i = 0; i < 1024; i++){
-            l = cpe->ch[0].coeffs[i];
-            r = cpe->ch[1].coeffs[i];
-            cpe->ch[0].coeffs[i] = (0.5 + stereo_att) * l + (0.5 - stereo_att) * r;
-            cpe->ch[1].coeffs[i] = (0.5 - stereo_att) * l + (0.5 + stereo_att) * r;
-        }
-    }
 
     //calculate energies, initial thresholds and related values - 5.4.2
     memset(pch->band, 0, sizeof(pch->band));
@@ -858,6 +846,51 @@ static const AACPsyModel psy_models[AAC_NB_PSY_MODELS] =
     },
 };
 
+// low-pass filter declarations and code
+#define IIR_ORDER 4
+
+/**
+ * filter data for 4th order IIR lowpass Butterworth filter
+ *
+ * data format:
+ * normalized cutoff frequency | inverse filter gain | coefficients
+ */
+static const float lp_filter_data[][IIR_ORDER+2] = {
+    { 0.4535147392, 6.816645e-01, -0.4646665999, -2.2127207402, -3.9912017501, -3.2380429984 },
+    { 0.4166666667, 4.998150e-01, -0.2498216698, -1.3392807613, -2.7693097862, -2.6386277439 },
+    { 0.3628117914, 3.103469e-01, -0.0965076902, -0.5977763360, -1.4972580903, -1.7740085241 },
+    { 0.3333333333, 2.346995e-01, -0.0557639007, -0.3623690447, -1.0304538354, -1.3066051440 },
+    { 0.2916666667, 1.528432e-01, -0.0261686639, -0.1473794606, -0.6204721225, -0.6514716536 },
+    { 0.2267573696, 6.917529e-02, -0.0202414073,  0.0780167640, -0.5277442247,  0.3631641670 },
+    { 0.2187500000, 6.178391e-02, -0.0223681543,  0.1069446609, -0.5615167033,  0.4883976841 },
+    { 0.2083333333, 5.298685e-02, -0.0261686639,  0.1473794606, -0.6204721225,  0.6514716536 },
+    { 0.1587301587, 2.229030e-02, -0.0647354087,  0.4172275190, -1.1412129810,  1.4320761385 },
+    { 0.1458333333, 1.693903e-02, -0.0823177861,  0.5192354923, -1.3444768251,  1.6365345642 },
+    { 0.1133786848, 7.374053e-03, -0.1481421788,  0.8650973862, -1.9894244796,  2.1544844308 },
+    { 0.1041666667, 5.541768e-03, -0.1742301048,  0.9921936565, -2.2090801108,  2.3024482658 },
+};
+
+/**
+ * IIR filter state
+ */
+typedef struct LPFilterState{
+    float x[IIR_ORDER + 1];
+    float y[IIR_ORDER + 1];
+}LPFilterState;
+
+static av_always_inline float lowpass_iir_filter(LPFilterState *s, const float *coeffs, float in)
+{
+    memmove(s->x, s->x + 1, sizeof(s->x) - sizeof(s->x[0]));
+    memmove(s->y, s->y + 1, sizeof(s->y) - sizeof(s->y[0]));
+    s->x[IIR_ORDER] = in * coeffs[1];
+    //FIXME: made only for 4th order filter
+    s->y[IIR_ORDER] = (s->x[0] + s->x[4])*1 + (s->x[1] + s->x[3])*4 + s->x[2]*6
+                    + coeffs[2]*s->y[0] + coeffs[3]*s->y[1] + coeffs[4]*s->y[2] + coeffs[5]*s->y[3];
+    return s->y[IIR_ORDER];
+}
+
+// low-pass filter code ends here
+
 int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
                             enum AACPsyModelType model, int elements, int flags,
                             const uint8_t *bands1024, int num_bands1024,
@@ -882,6 +915,32 @@ int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
     dsputil_init(&ctx->dsp, avctx);
     ctx->model = &psy_models[model];
 
+    if(ctx->flags & PSY_MODEL_NO_ST_ATT)
+        ctx->stereo_att = 0.5f;
+    else{
+        ctx->stereo_att = 0.5f;//todo: adaptive
+    }
+    if(ctx->flags & PSY_MODEL_NO_LOWPASS || PSY_MODEL_MODE(ctx->flags) == PSY_MODE_QUALITY){
+        ctx->flags |= PSY_MODEL_NO_LOWPASS;
+        ctx->cutoff = 0;
+    }else{
+        float cutoff_ratio;
+        cutoff_ratio = avctx->bit_rate / elements / 8.0 / avctx->sample_rate;
+        ctx->cutoff = -1;
+        if(cutoff_ratio >= 0.5f){
+            ctx->flags |= PSY_MODEL_NO_LOWPASS;
+        }else{
+            ctx->lp_state = av_mallocz(sizeof(LPFilterState) * elements * 2);
+            for(i = 0; i < sizeof(lp_filter_data)/sizeof(lp_filter_data[0]); i++){
+                if(lp_filter_data[i][0] <= cutoff_ratio){
+                    ctx->cutoff = i;
+                    break;
+                }
+            }
+            if(ctx->cutoff == -1)
+                ctx->cutoff = i-1;
+        }
+    }
     if(ctx->model->init)
         return ctx->model->init(ctx, elements);
     return 0;
@@ -899,6 +958,41 @@ void ff_aac_psy_analyze(AACPsyContext *ctx, int tag, int type, ChannelElement *c
 
 void av_cold ff_aac_psy_end(AACPsyContext *ctx)
 {
+    av_freep(&ctx->lp_state);
     if(ctx->model->end)
         return ctx->model->end(ctx);
 }
+
+void ff_aac_psy_preprocess(AACPsyContext *ctx, int16_t *audio, int16_t *dest, int tag, int type)
+{
+    int chans = type == ID_CPE ? 2 : 1;
+    const int chstride = ctx->avctx->channels;
+    int i, ch;
+    float t[2];
+
+    if(chans == 1 || (ctx->flags & PSY_MODEL_NO_PREPROC) == PSY_MODEL_NO_PREPROC){
+        for(ch = 0; ch < chans; ch++){
+            for(i = 0; i < 1024; i++){
+                dest[i * chstride + ch] = audio[i * chstride + ch];
+            }
+        }
+    }else{
+        for(i = 0; i < 1024; i++){
+            if(ctx->flags & PSY_MODEL_NO_ST_ATT){
+                for(ch = 0; ch < 2; ch++)
+                    t[ch] = audio[i * chstride + ch];
+            }else{
+                t[0] = audio[i * chstride + 0] * (0.5 + ctx->stereo_att) + audio[i * chstride + 1] * (0.5 - ctx->stereo_att);
+                t[1] = audio[i * chstride + 0] * (0.5 - ctx->stereo_att) + audio[i * chstride + 1] * (0.5 + ctx->stereo_att);
+            }
+            if(!(ctx->flags & PSY_MODEL_NO_LOWPASS)){
+                LPFilterState *is = (LPFilterState*)ctx->lp_state + tag*2;
+                for(ch = 0; ch < 2; ch++)
+                    t[ch] = lowpass_iir_filter(is + ch, lp_filter_data[ctx->cutoff], t[ch]);
+            }
+            for(ch = 0; ch < 2; ch++)
+                dest[i * chstride + ch] = av_clip_int16(t[ch]);
+        }
+    }
+}
+

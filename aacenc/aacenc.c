@@ -223,6 +223,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     ff_sine_window_init(ff_aac_sine_long_1024, 1024);
     ff_sine_window_init(ff_aac_sine_short_128, 128);
 
+    s->samples = av_malloc(2 * 1024 * avctx->channels * sizeof(s->samples[0]));
     s->cpe = av_mallocz(sizeof(ChannelElement) * aac_chan_configs[avctx->channels-1][0]);
     //TODO: psy model selection with some option
     ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, aac_chan_configs[avctx->channels-1][0], 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
@@ -645,9 +646,18 @@ static int aac_encode_frame(AVCodecContext *avctx,
     const uint8_t *chan_map = aac_chan_configs[avctx->channels-1];
     int chan_el_counter[4];
 
-    if(!samples){
-        s->samples = av_malloc(1024 * avctx->channels * sizeof(s->samples[0]));
-        memcpy(s->samples, data, 1024 * avctx->channels * sizeof(s->samples[0]));
+    if(data){
+        start_ch = 0;
+        samples2 = s->samples + 1024 * avctx->channels;
+        for(i = 0; i < chan_map[0]; i++){
+            tag = chan_map[i+1];
+            chans = tag == ID_CPE ? 2 : 1;
+            ff_aac_psy_preprocess(&s->psy, (uint16_t*)data + start_ch, samples2 + start_ch, i, tag);
+            start_ch += chans;
+        }
+    }
+    if(!avctx->frame_number){
+        memmove(s->samples, s->samples + 1024 * avctx->channels, 1024 * avctx->channels * sizeof(s->samples[0]));
         return 0;
     }
 
@@ -662,7 +672,8 @@ static int aac_encode_frame(AVCodecContext *avctx,
         chans = tag == ID_CPE ? 2 : 1;
         cpe = &s->cpe[i];
         samples2 = samples + start_ch;
-        la = (uint16_t*)data + start_ch;
+        la = samples2 + 1024 * avctx->channels + start_ch;
+        if(!data) la = NULL;
         ff_aac_psy_suggest_window(&s->psy, samples2, la, i, tag, cpe);
         for(j = 0; j < chans; j++){
             analyze(avctx, s, cpe, samples2, j);
@@ -687,9 +698,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
     flush_put_bits(&s->pb);
     avctx->frame_bits = put_bits_count(&s->pb);
 
-    if(data){
-        memcpy(s->samples, data, 1024 * avctx->channels * sizeof(s->samples[0]));
-    }
+    memmove(s->samples, s->samples + 1024 * avctx->channels, 1024 * avctx->channels * sizeof(s->samples[0]));
     return put_bits_count(&s->pb)>>3;
 }
 

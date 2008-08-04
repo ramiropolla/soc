@@ -43,6 +43,10 @@ enum AACPsyModelMode{
 #define PSY_MODEL_MODE_MASK  0x0000000F ///< bit fields for storing mode (CBR, ABR, VBR)
 #define PSY_MODEL_NO_PULSE   0x00000010 ///< disable pulse searching
 #define PSY_MODEL_NO_SWITCH  0x00000020 ///< disable window switching
+#define PSY_MODEL_NO_ST_ATT  0x00000040 ///< disable stereo attenuation
+#define PSY_MODEL_NO_LOWPASS 0x00000080 ///< disable low-pass filtering
+
+#define PSY_MODEL_NO_PREPROC (PSY_MODEL_NO_ST_ATT | PSY_MODEL_NO_LOWPASS)
 
 #define PSY_MODEL_MODE(a)  ((a) & PSY_MODEL_MODE_MASK)
 
@@ -63,6 +67,10 @@ typedef struct AACPsyContext {
 
     const struct AACPsyModel *model;
     void* model_priv_data;
+
+    float stereo_att;
+    int   cutoff;
+    void* lp_state;
 }AACPsyContext;
 
 typedef struct AACPsyModel {
@@ -92,6 +100,17 @@ int ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
                     enum AACPsyModelType model, int elements, int flags,
                     const uint8_t *bands1024, int num_bands1024,
                     const uint8_t *bands128,  int num_bands128);
+
+/**
+ * Preprocess audio frame in order to compress it better.
+ *
+ * @param ctx   model context
+ * @param audio samples to preprocess
+ * @param dest  place to put filtered samples
+ * @param tag   number of channel element to analyze
+ * @param type  channel element type (e.g. ID_SCE or ID_CPE)
+ */
+void ff_aac_psy_preprocess(AACPsyContext *ctx, int16_t *audio, int16_t *dest, int tag, int type);
 
 /**
  * Set window sequence and related parameters for channel element.
