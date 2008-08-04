@@ -724,7 +724,7 @@ static int decode_band_types(AACContext * ac, GetBitContext * gb, IndividualChan
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_scalefactors(AACContext * ac, GetBitContext * gb, float mix_gain, unsigned int global_gain,
-        IndividualChannelStream * ics, const enum BandType band_type[][64], const int band_type_run_end[][64], float sf[][64]) {
+        IndividualChannelStream * ics, enum BandType band_type[][64], int band_type_run_end[][64], float sf[][64]) {
     const int sf_offset = ac->sf_offset + (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE ? 12 : 0);
     int g, i;
     int offset[3] = { global_gain, global_gain - 90, 100 };
@@ -884,7 +884,7 @@ static void decode_mid_side_stereo(AACContext * ac, GetBitContext * gb, ChannelE
  * The band_type array has indices [window group][scalefactor band]
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_spectrum(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, const enum BandType band_type[][64], int icoef[1024]) {
+static int decode_spectrum(AACContext * ac, GetBitContext * gb, const IndividualChannelStream * ics, enum BandType band_type[][64], int icoef[1024]) {
     int i, k, g;
     const uint16_t * offsets = ics->swb_offset;
 
@@ -974,7 +974,7 @@ static void add_pulses(AACContext * ac, const IndividualChannelStream * ics, con
  * The band_type and sf arrays have indices [window group][scalefactor band].
  */
 static void dequant(AACContext * ac, const IndividualChannelStream * ics, const int icoef[1024],
-        const enum BandType band_type[][64], const float sf[][64], float coef[1024]) {
+        enum BandType band_type[][64], float sf[][64], float coef[1024]) {
     const uint16_t * offsets = ics->swb_offset;
     const int c = 1024/ics->num_window_groups;
     int g, i, group, k;
