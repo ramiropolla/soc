@@ -425,10 +425,9 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
         /* AHT is only available in 6 block mode (numblkscod ==3) */
         /* coupling can use AHT only when coupling in use for all blocks */
         /* ncplregs derived from cplstre and cplexpstr - see Section E3.3.2 */
-        int nchregs;
         s->channel_uses_aht[CPL_CH]=0;
         for (ch = (num_cpl_blocks != 6); ch <= s->channels; ch++) {
-            nchregs = 0;
+            int nchregs = 0;
             for (blk = 0; blk < 6; blk++) {
                 if (ch)
                     nchregs += (s->exp_strategy[blk][ch] != EXP_REUSE);
