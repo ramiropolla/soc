@@ -16,15 +16,15 @@ Features:
 * Dependent Streams (more than 6 channels)
     - We do not currently have any samples which use dependent streams.
 
-* Mixed AC3 and EAC3
-    - Blu-ray uses AC3 for the independent stream, interleaved with
-      E-AC3 dependent stream(s) for extra channels.
+* Mixed AC-3 and E-AC-3
+    - Blu-ray uses AC-3 for the independent stream, interleaved with
+      E-AC-3 dependent stream(s) for extra channels.
 
 * Adaptive Hybrid Transform (w/ GAQ and VQ)
     - Works for the 2 samples we have which utilize it.
 
 * Reduced Sample Rates
-    - E-AC3 has the ability to use 1/2 sample rates
+    - E-AC-3 has the ability to use 1/2 sample rates
       (16kHz,22.05kHz,24kHz), but the specification does not say how to
       handle them (if at all) in the bit allocation. It is probably
       similar to RealAudio DolbyNet, but we need a sample to test.

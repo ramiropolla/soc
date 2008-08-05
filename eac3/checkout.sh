@@ -8,7 +8,7 @@ svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg -r 14540
 echo "patching ffmpeg"
 cd ffmpeg
 patch -p0 <../ffmpeg.patch
-echo "copying the E-AC3 files to ffmpeg/libavcodec"
+echo "copying the E-AC-3 files to ffmpeg/libavcodec"
 for i in $FILES; do
     rm -f libavcodec/$i
     ln -s ../../$i libavcodec/$i

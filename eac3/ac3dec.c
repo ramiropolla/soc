@@ -1,7 +1,7 @@
 /*
  * AC-3 Audio Decoder
  * This code was developed as part of Google Summer of Code 2006.
- * E-AC3 support was added as part of Google Summer of Code 2007.
+ * E-AC-3 support was added as part of Google Summer of Code 2007.
  *
  * Copyright (c) 2006 Kartikey Mahendra BHATT (bhattkm at gmail dot com).
  * Copyright (c) 2007-2008 Bartlomiej Wolowiec <bartek.wolowiec@gmail.com>
@@ -274,7 +274,7 @@ static int ac3_parse_header(AC3DecodeContext *s)
 }
 
 /**
- * Common function to parse AC3 or E-AC3 frame header
+ * Common function to parse AC-3 or E-AC-3 frame header
  */
 static int parse_frame_header(AC3DecodeContext *s)
 {
@@ -866,7 +866,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             av_log(s->avctx, AV_LOG_ERROR, "new coupling strategy must be present in block 0\n");
             return -1;
         } else {
-            /* for AC3, copy coupling use strategy from last block */
+            /* for AC-3, copy coupling use strategy from last block */
             s->cpl_in_use[blk] = s->cpl_in_use[blk-1];
         }
     }
@@ -1015,7 +1015,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             }
             s->snr_offset[ch] = snr;
 
-            /* fast gain (normal AC3 only) */
+            /* fast gain (normal AC-3 only) */
             if (!s->eac3) {
                 int prev = s->fast_gain[ch];
                 s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
@@ -1029,7 +1029,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         return -1;
     }
 
-    /* fast gain (E-AC3 only) */
+    /* fast gain (E-AC-3 only) */
     if(s->eac3) {
         if (s->fast_gain_syntax && get_bits1(gbc)) {
             for (ch = !cpl_in_use; ch <= s->channels; ch++) {
@@ -1045,7 +1045,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         }
     }
 
-    /* E-AC3 to AC3 converter SNR offset */
+    /* E-AC-3 to AC-3 converter SNR offset */
     if (s->eac3 && s->frame_type == EAC3_FRAME_TYPE_INDEPENDENT &&
             get_bits1(gbc)) {
         skip_bits(gbc, 10); // skip converter snr offset

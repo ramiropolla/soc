@@ -1,5 +1,5 @@
 /*
- * EAC3 decoder
+ * E-AC-3 decoder
  * Copyright (c) 2007 Bartlomiej Wolowiec <bartek.wolowiec@gmail.com>
  *
  * This file is part of FFmpeg.
@@ -154,7 +154,7 @@ static int parse_bsi(AC3DecodeContext *s){
     int i, blk;
     GetBitContext *gbc = &s->gbc;
 
-    /* an E-AC3 stream can have multiple independent streams which the
+    /* an E-AC-3 stream can have multiple independent streams which the
        application can select from. each independent stream can also contain
        dependent streams which are used to add or replace channels. */
     if (s->frame_type == EAC3_FRAME_TYPE_DEPENDENT) {
@@ -176,9 +176,9 @@ static int parse_bsi(AC3DecodeContext *s){
     }
 
     if (s->bit_alloc_params.sr_code == EAC3_SR_CODE_REDUCED) {
-        /* The E-AC3 specification does not tell how to handle reduced sample
+        /* The E-AC-3 specification does not tell how to handle reduced sample
            rates in bit allocation.  The best assumption would be that it is
-           handled like AC3 DolbyNet, but we cannot be sure until we have a
+           handled like AC-3 DolbyNet, but we cannot be sure until we have a
            sample which utilizes this feature. */
         ff_eac3_log_missing_feature(s->avctx, "Reduced Sampling Rates");
         return -1;
@@ -306,7 +306,7 @@ static int parse_bsi(AC3DecodeContext *s){
         skip_bits1(gbc); //converter synchronization flag
     }
 
-    /* original frame size code if this stream was converted from AC3 */
+    /* original frame size code if this stream was converted from AC-3 */
     if (s->frame_type == EAC3_FRAME_TYPE_AC3_CONVERT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
         skip_bits(gbc, 6); // skip Frame size code
@@ -411,7 +411,7 @@ static int parse_audfrm(AC3DecodeContext *s){
             s->exp_strategy[blk][s->lfe_ch] = get_bits1(gbc);
         }
     }
-    /* original exponent strategies if this stream was converted from AC3 */
+    /* original exponent strategies if this stream was converted from AC-3 */
     if (s->frame_type == EAC3_FRAME_TYPE_INDEPENDENT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
