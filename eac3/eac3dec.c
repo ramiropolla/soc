@@ -204,7 +204,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     }
     skip_bits(gbc, 5); // skip bitstream id
 
-    /* dialog normalization and compression gain are volume control params */
+    /* volume control params */
     for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
         skip_bits(gbc, 5); // skip dialog normalization
         if (get_bits1(gbc)) {
@@ -292,7 +292,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
 
     /* informational metadata */
     if (get_bits1(gbc)) {
-        skip_bits(gbc, 3); //skip Bit stream mode
+        skip_bits(gbc, 3); //skip bit stream mode
         skip_bits(gbc, 2); //skip copyright bit and original bitstream bit
         if (s->channel_mode == AC3_CHMODE_STEREO) {
             skip_bits(gbc, 4); //skip Dolby surround and headphone mode
@@ -302,11 +302,11 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
         }
         for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
             if (get_bits1(gbc)) {
-                skip_bits(gbc, 8); //skip Mix level, Room type and A/D converter type
+                skip_bits(gbc, 8); //skip mix level, room type and A/D converter type
             }
         }
         if (s->bit_alloc_params.sr_code != EAC3_SR_CODE_REDUCED) {
-            skip_bits1(gbc); //skip Source sample rate code
+            skip_bits1(gbc); //skip source sample rate code
         }
     }
 
@@ -321,7 +321,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     /* original frame size code if this stream was converted from AC-3 */
     if (s->frame_type == EAC3_FRAME_TYPE_AC3_CONVERT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
-        skip_bits(gbc, 6); // skip Frame size code
+        skip_bits(gbc, 6); // skip frame size code
     }
 
     /* additional bitstream info */
@@ -335,40 +335,43 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     /** Audio frame syntax flags, strategy data, and per-frame data */
 
     if (s->num_blocks == 6) {
-        /* LUT-based exponent strategy syntax */
         ac3_exponent_strategy = get_bits1(gbc);
         parse_aht_info = get_bits1(gbc);
     } else {
-        /* AC-3 style exponent strategy syntax */
+        /* always use AC-3-style exponent strategy syntax */
         ac3_exponent_strategy = 1;
+        /* AHT is not used if there are less than 6 blocks */
         parse_aht_info = 0;
     }
-    s->snr_offset_strategy = get_bits(gbc, 2);
+
+    s->snr_offset_strategy    = get_bits(gbc, 2);
     parse_transient_proc_info = get_bits1(gbc);
+
     s->block_switch_syntax = get_bits1(gbc);
     if (!s->block_switch_syntax)
         memset(s->block_switch, 0, sizeof(s->block_switch));
+
     s->dither_flag_syntax = get_bits1(gbc);
     if (!s->dither_flag_syntax) {
         s->dither_all = 1;
         for (ch = 1; ch <= s->fbw_channels; ch++)
-            s->dither_flag[ch] = 1; /* dither on */
+            s->dither_flag[ch] = 1;
     }
     s->dither_flag[CPL_CH] = s->dither_flag[s->lfe_ch] = 0;
 
-    /* frame-based syntax flags */
     s->bit_allocation_syntax = get_bits1(gbc);
     if (!s->bit_allocation_syntax) {
         /* set default bit allocation parameters */
-        s->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[2];  /* Table 7.6 */
-        s->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[1];  /* Table 7.7 */
-        s->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab [1];  /* Table 7.8 */
-        s->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[2];  /* Table 7.9 */
-        s->bit_alloc_params.floor      = ff_ac3_floor_tab     [7];  /* Table 7.10 */
+        s->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[2];
+        s->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[1];
+        s->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab [1];
+        s->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[2];
+        s->bit_alloc_params.floor      = ff_ac3_floor_tab     [7];
     }
-    s->fast_gain_syntax = get_bits1(gbc);
-    s->dba_syntax = get_bits1(gbc);
-    s->skip_syntax = get_bits1(gbc);
+
+    s->fast_gain_syntax  = get_bits1(gbc);
+    s->dba_syntax        = get_bits1(gbc);
+    s->skip_syntax       = get_bits1(gbc);
     parse_spx_atten_data = get_bits1(gbc);
 
     /* coupling strategy occurance and coupling use per block */
@@ -376,7 +379,6 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     if (s->channel_mode > 1) {
         for (blk = 0; blk < s->num_blocks; blk++) {
             s->cpl_strategy_exists[blk] = (!blk || get_bits1(gbc));
-
             if (s->cpl_strategy_exists[blk]) {
                 s->cpl_in_use[blk] = get_bits1(gbc);
             } else {
@@ -388,9 +390,9 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
         memset(s->cpl_in_use, 0, sizeof(s->cpl_in_use));
     }
 
-    /* Exponent strategy data */
+    /* exponent strategy data */
     if (ac3_exponent_strategy) {
-        /* AC-3 style exponent strategy syntax */
+        /* AC-3-style exponent strategy syntax */
         for (blk = 0; blk < s->num_blocks; blk++) {
             for (ch = !s->cpl_in_use[blk]; ch <= s->fbw_channels; ch++) {
                 s->exp_strategy[blk][ch] = get_bits(gbc, 2);
@@ -459,7 +461,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
         }
     }
 
-    /* Block start information */
+    /* block start information */
     if (s->num_blocks > 1 && get_bits1(gbc)) {
         /* reference: Section E2.3.2.27
            nblkstrtbits = (numblks - 1) * (4 + ceiling(log2(words_per_frame)))
@@ -469,7 +471,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
         skip_bits(gbc, block_start_bits);
     }
 
-    /* Syntax state initialization */
+    /* syntax state initialization */
     for (ch = 1; ch <= s->fbw_channels; ch++) {
         s->first_cpl_coords[ch] = 1;
     }
