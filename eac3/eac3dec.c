@@ -77,7 +77,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
         int hebap = s->bap[ch][bin];
         int bits = ff_eac3_bits_vs_hebap[hebap];
         if (!hebap) {
-            /* hebap=0 */
+            /* zero-mantissa dithering */
             for (blk = 0; blk < 6; blk++) {
                 s->pre_mantissa[blk][ch][bin] = (av_random(&s->dith_state) & 0x7FFFFF) - 4194304;
             }
