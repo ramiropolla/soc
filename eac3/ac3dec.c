@@ -46,8 +46,11 @@
 /** Large enough for maximum possible frame size when the specification limit is ignored */
 #define AC3_FRAME_BUFFER_SIZE 32768
 
-/** table for grouping exponents */
-static uint8_t exp_ungroup_tab[128][3];
+/**
+ * table for ungrouping 3 values in 7 bits.
+ * used for exponents and bap=2 mantissas
+ */
+static uint8_t ungroup_3_in_7_bits_tab[128][3];
 
 
 /** tables for ungrouping mantissas */
@@ -137,19 +140,27 @@ static av_cold void ac3_tables_init(void)
 {
     int i;
 
+    /* generate table for ungrouping 3 values in 7 bits
+       reference: Section 7.1.3 Exponent Decoding */
+    for(i=0; i<128; i++) {
+        ungroup_3_in_7_bits_tab[i][0] =  i / 25;
+        ungroup_3_in_7_bits_tab[i][1] = (i % 25) / 5;
+        ungroup_3_in_7_bits_tab[i][2] = (i % 25) % 5;
+    }
+
     /* generate grouped mantissa tables
        reference: Section 7.3.5 Ungrouping of Mantissas */
     for(i=0; i<32; i++) {
         /* bap=1 mantissas */
-        b1_mantissas[i][0] = symmetric_dequant( i / 9     , 3);
-        b1_mantissas[i][1] = symmetric_dequant((i % 9) / 3, 3);
-        b1_mantissas[i][2] = symmetric_dequant((i % 9) % 3, 3);
+        b1_mantissas[i][0] = symmetric_dequant(ff_ac3_ungroup_3_in_5_bits_tab[i][0], 3);
+        b1_mantissas[i][1] = symmetric_dequant(ff_ac3_ungroup_3_in_5_bits_tab[i][1], 3);
+        b1_mantissas[i][2] = symmetric_dequant(ff_ac3_ungroup_3_in_5_bits_tab[i][2], 3);
     }
     for(i=0; i<128; i++) {
         /* bap=2 mantissas */
-        b2_mantissas[i][0] = symmetric_dequant( i / 25     , 5);
-        b2_mantissas[i][1] = symmetric_dequant((i % 25) / 5, 5);
-        b2_mantissas[i][2] = symmetric_dequant((i % 25) % 5, 5);
+        b2_mantissas[i][0] = symmetric_dequant(ungroup_3_in_7_bits_tab[i][0], 5);
+        b2_mantissas[i][1] = symmetric_dequant(ungroup_3_in_7_bits_tab[i][1], 5);
+        b2_mantissas[i][2] = symmetric_dequant(ungroup_3_in_7_bits_tab[i][2], 5);
 
         /* bap=4 mantissas */
         b4_mantissas[i][0] = symmetric_dequant(i / 11, 11);
@@ -171,14 +182,6 @@ static av_cold void ac3_tables_init(void)
     for(i=0; i<256; i++) {
         int v = (i >> 5) - ((i >> 7) << 3) - 5;
         dynamic_range_tab[i] = powf(2.0f, v) * ((i & 0x1F) | 0x20);
-    }
-
-    /* generate exponent tables
-       reference: Section 7.1.3 Exponent Decoding */
-    for(i=0; i<128; i++) {
-        exp_ungroup_tab[i][0] =  i / 25;
-        exp_ungroup_tab[i][1] = (i % 25) / 5;
-        exp_ungroup_tab[i][2] = (i % 25) % 5;
     }
 }
 
@@ -219,18 +222,19 @@ static av_cold int ac3_decode_init(AVCodecContext *avctx)
 
     /* allocate context input buffer */
     if (avctx->error_resilience >= FF_ER_CAREFUL) {
-        s->input_buffer = av_mallocz(AC3_FRAME_BUFFER_SIZE);
+        s->input_buffer = av_mallocz(AC3_FRAME_BUFFER_SIZE + FF_INPUT_BUFFER_PADDING_SIZE);
         if (!s->input_buffer)
             return AVERROR_NOMEM;
     }
 
+    avctx->sample_fmt = SAMPLE_FMT_S16;
     return 0;
 }
 
 /**
  * Parse the 'sync info' and 'bit stream info' from the AC-3 bitstream.
  * GetBitContext within AC3DecodeContext must point to
- * start of the synchronized ac3 bitstream.
+ * the start of the synchronized AC-3 bitstream.
  */
 static int ac3_parse_header(AC3DecodeContext *s)
 {
@@ -365,9 +369,9 @@ static void decode_exponents(GetBitContext *gbc, int exp_strategy, int ngrps,
     group_size = exp_strategy + (exp_strategy == EXP_D45);
     for(grp=0,i=0; grp<ngrps; grp++) {
         expacc = get_bits(gbc, 7);
-        dexp[i++] = exp_ungroup_tab[expacc][0];
-        dexp[i++] = exp_ungroup_tab[expacc][1];
-        dexp[i++] = exp_ungroup_tab[expacc][2];
+        dexp[i++] = ungroup_3_in_7_bits_tab[expacc][0];
+        dexp[i++] = ungroup_3_in_7_bits_tab[expacc][1];
+        dexp[i++] = ungroup_3_in_7_bits_tab[expacc][2];
     }
 
     /* convert to absolute exps and expand groups */
@@ -442,7 +446,7 @@ static void ac3_get_transform_coeffs_ch(AC3DecodeContext *s, int ch_index, mant_
         tbap = bap[i];
         switch (tbap) {
             case 0:
-                coeffs[i] = (av_random(&s->dith_state) & 0x7FFFFF) - 4194304;
+                coeffs[i] = (av_random(&s->dith_state) & 0x7FFFFF) - 0x400000;
                 break;
 
             case 1:
@@ -1245,7 +1249,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
         switch(err) {
             case AC3_PARSE_ERROR_SYNC:
                 av_log(avctx, AV_LOG_ERROR, "frame sync error\n");
-                break;
+                return -1;
             case AC3_PARSE_ERROR_BSID:
                 av_log(avctx, AV_LOG_ERROR, "invalid bitstream id\n");
                 break;
@@ -1282,7 +1286,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
         if(s->lfe_on)
             s->output_mode |= AC3_OUTPUT_LFEON;
         if (avctx->request_channels > 0 && avctx->request_channels <= 2 &&
-            avctx->request_channels < s->channels) {
+                avctx->request_channels < s->channels) {
             s->out_channels = avctx->request_channels;
             s->output_mode  = avctx->request_channels == 1 ? AC3_CHMODE_MONO : AC3_CHMODE_STEREO;
         }
@@ -1300,7 +1304,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
     }
 
     /* parse the audio blocks */
-    for (blk = 0; blk <  s->num_blocks; blk++) {
+    for (blk = 0; blk < s->num_blocks; blk++) {
         if (!err && decode_audio_block(s, blk)) {
             av_log(avctx, AV_LOG_ERROR, "error parsing the audio block\n");
         }
@@ -1310,7 +1314,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
             for (ch = 0; ch < s->out_channels; ch++)
                 *(out_samples++) = s->int_output[ch][i];
     }
-    *data_size =  s->num_blocks * 256 * avctx->channels * sizeof (int16_t);
+    *data_size = s->num_blocks * 256 * avctx->channels * sizeof (int16_t);
     return s->frame_size;
 }
 
@@ -1336,5 +1340,5 @@ AVCodec ac3_decoder = {
     .init = ac3_decode_init,
     .close = ac3_decode_end,
     .decode = ac3_decode_frame,
-    .long_name = "ATSC A/52 (AC-3, E-AC-3)",
+    .long_name = NULL_IF_CONFIG_SMALL("ATSC A/52 (AC-3, E-AC-3)"),
 };
