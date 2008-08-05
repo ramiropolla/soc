@@ -2,14 +2,21 @@ Index: libavcodec/ac3dec.h
 ===================================================================
 --- libavcodec/ac3dec.h	(revision 14614)
 +++ libavcodec/ac3dec.h	(working copy)
-@@ -172,4 +172,9 @@
+@@ -172,4 +172,16 @@
  ///@}
  } AC3DecodeContext;
  
++/**
++ * Parse the E-AC-3 frame header.
++ * This parses both the bit stream info and audio frame header.
++ */
 +int ff_eac3_parse_header(AC3DecodeContext *s);
++
++/**
++ * Decode mantissas in a single channel for the entire frame.
++ * This is used when AHT mode is enabled.
++ */
 +void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
-+void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk);
-+void ff_eac3_tables_init(void);
 +
  #endif /* FFMPEG_AC3DEC_H */
 Index: libavcodec/utils.c
