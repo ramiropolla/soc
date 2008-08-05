@@ -37,8 +37,6 @@ typedef enum {
 
 static int idct_cos_tab[6][5];
 
-static int gaq_ungroup_tab[32][3];
-
 void ff_eac3_log_missing_feature(AVCodecContext *avctx, const char *log){
     av_log(avctx, AV_LOG_ERROR, "%s is not implemented. If you want to help, "
             "update your FFmpeg version to the newest one from SVN. If the "
@@ -75,9 +73,9 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
             if (s->bap[ch][bin] > 7 && s->bap[ch][bin] < end_bap) {
                 if(gc++ == 2) {
                     int group_gain = get_bits(gbc, 5);
-                    gaq_gain[gs++] = gaq_ungroup_tab[group_gain][0];
-                    gaq_gain[gs++] = gaq_ungroup_tab[group_gain][1];
-                    gaq_gain[gs++] = gaq_ungroup_tab[group_gain][2];
+                    gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][0];
+                    gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][1];
+                    gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][2];
                     gc = 0;
                 }
             }
@@ -494,12 +492,5 @@ void ff_eac3_tables_init(void) {
         for(i=1; i<6; i++) {
             idct_cos_tab[blk][i-1] = (M_SQRT2 * cos(M_PI*i*(2*blk + 1)/12) * 8388608.0) + 0.5;
         }
-    }
-
-    // initialize ungrouping table for 1.67-bit GAQ gain codes
-    for(i=0; i<32; i++) {
-        gaq_ungroup_tab[i][0] = i / 9;
-        gaq_ungroup_tab[i][1] = (i % 9) / 3;
-        gaq_ungroup_tab[i][2] = i % 3;
     }
 }
