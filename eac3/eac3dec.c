@@ -49,9 +49,9 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
 
     /* if GAQ gain is used, decode gain codes for bins with hebap between
        8 and end_bap */
+    gs = 0;
     if (gaq_mode == EAC3_GAQ_12 || gaq_mode == EAC3_GAQ_14) {
         /* read 1-bit GAQ gain codes */
-        gs = 0;
         for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
             if (s->bap[ch][bin] > 7 && s->bap[ch][bin] < end_bap)
                 gaq_gain[gs++] = get_bits1(gbc) << (gaq_mode-1);
@@ -59,7 +59,6 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
     } else if (gaq_mode == EAC3_GAQ_124) {
         /* read 1.67-bit GAQ gain codes (3 codes in 5 bits) */
         int gc = 2;
-        gs = 0;
         for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
             if (s->bap[ch][bin] > 7 && s->bap[ch][bin] < end_bap) {
                 if (gc++ == 2) {
