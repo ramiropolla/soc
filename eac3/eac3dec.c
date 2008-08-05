@@ -1,6 +1,7 @@
 /*
  * E-AC-3 decoder
  * Copyright (c) 2007 Bartlomiej Wolowiec <bartek.wolowiec@gmail.com>
+ * Copyright (c) 2008 Justin Ruggles
  *
  * This file is part of FFmpeg.
  *
@@ -35,7 +36,48 @@ typedef enum {
 
 #define EAC3_SR_CODE_REDUCED  3
 
-static int idct_cos_tab[6][5];
+/** lrint(M_SQRT2*cos(2*M_PI/12)*(1<<23)) */
+#define COEFF_0 10273905LL
+
+/** lrint(M_SQRT2*cos(0*M_PI/12)*(1<<23)) = lrint(M_SQRT2*(1<<23)) */
+#define COEFF_1 11863283LL
+
+/** lrint(M_SQRT2*cos(5*M_PI/12)*(1<<23)) */
+#define COEFF_2  3070444LL
+
+/**
+ * Calculate 6-point IDCT of the pre-mantissas.
+ * All calculations are 24-bit fixed-point.
+ */
+static void idct6(int pre_mant[6])
+{
+    int tmp;
+    int even0, even1, even2, odd0, odd1, odd2;
+
+    odd1 = pre_mant[1] - pre_mant[3] - pre_mant[5];
+
+    even2 = ( pre_mant[2]                * COEFF_0) >> 23;
+    tmp   = ( pre_mant[4]                * COEFF_1) >> 23;
+    odd0  = ((pre_mant[1] + pre_mant[5]) * COEFF_2) >> 23;
+
+    even0 = pre_mant[0] + (tmp >> 1);
+    even1 = pre_mant[0] - tmp;
+
+    tmp = even0;
+    even0 = tmp + even2;
+    even2 = tmp - even2;
+
+    tmp = odd0;
+    odd0 = tmp + pre_mant[1] + pre_mant[3];
+    odd2 = tmp + pre_mant[5] - pre_mant[3];
+
+    pre_mant[0] = even0 + odd0;
+    pre_mant[1] = even1 + odd1;
+    pre_mant[2] = even2 + odd2;
+    pre_mant[3] = even2 - odd2;
+    pre_mant[4] = even1 - odd1;
+    pre_mant[5] = even0 - odd0;
+}
 
 void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
 {
@@ -120,19 +162,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
                 s->pre_mantissa[ch][bin][blk] = mant;
             }
         }
-    }
-}
-
-void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk)
-{
-    int bin, i;
-    int64_t tmp;
-    for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-        tmp = s->pre_mantissa[ch][bin][0];
-        for (i = 1; i < 6; i++) {
-            tmp += ((int64_t)idct_cos_tab[blk][i-1] * (int64_t)s->pre_mantissa[ch][bin][i]) >> 23;
-        }
-        s->fixed_coeffs[ch][bin] = tmp >> s->dexps[ch][bin];
+        idct6(s->pre_mantissa[ch][bin]);
     }
 }
 
@@ -464,16 +494,4 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     if (!err)
         err = parse_audfrm(s);
     return err;
-}
-
-void ff_eac3_tables_init(void)
-{
-    int blk, i;
-
-    // initialize IDCT cosine table for use with AHT
-    for(blk=0; blk<6; blk++) {
-        for(i=1; i<6; i++) {
-            idct_cos_tab[blk][i-1] = (M_SQRT2 * cos(M_PI*i*(2*blk + 1)/12) * 8388608.0) + 0.5;
-        }
-    }
 }

@@ -196,7 +196,6 @@ static av_cold int ac3_decode_init(AVCodecContext *avctx)
 
     ac3_common_init();
     ac3_tables_init();
-    ff_eac3_tables_init();
     ff_mdct_init(&s->imdct_256, 8, 1);
     ff_mdct_init(&s->imdct_512, 9, 1);
     ff_kbd_window_init(s->window, 5.0, 256);
@@ -548,9 +547,14 @@ static void get_transform_coeffs_ch(AC3DecodeContext *s, int blk, int ch,
     if (!s->channel_uses_aht[ch]) {
         ac3_get_transform_coeffs_ch(s, ch, m);
     } else {
+        /* if AHT is used, mantissas for all blocks are encoded in the first
+           block of the frame. */
+        int bin;
         if (!blk)
             ff_eac3_get_transform_coeffs_aht_ch(s, ch);
-        ff_eac3_idct_transform_coeffs_ch(s, ch, blk);
+        for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
+            s->fixed_coeffs[ch][bin] = s->pre_mantissa[ch][bin][blk] >> s->dexps[ch][bin];
+        }
     }
 }
 
