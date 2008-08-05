@@ -183,20 +183,6 @@ static int parse_bsi(AC3DecodeContext *s)
         }
     }
 
-#if 0
-    /* dependent stream channel map */
-    if (s->frame_type == EAC3_FRAME_TYPE_DEPENDENT) {
-        if (get_bits1(gbc)) {
-            s->channel_map = get_bits(gbc, 16); //custom channel map
-        } else {
-            //default channel map based on acmod and lfeon
-            s->channel_map = ff_eac3_default_chmap[s->channel_mode];
-            if (s->lfe_on)
-                s->channel_map |= AC3_CHMAP_LFE;
-        }
-    }
-#endif
-
     /* mixing metadata */
     if (get_bits1(gbc)) {
         /* center and surround mix levels */
