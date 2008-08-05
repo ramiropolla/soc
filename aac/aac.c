@@ -742,7 +742,7 @@ static int decode_scalefactors(AACContext * ac, float sf[][64], GetBitContext * 
                 ics->intensity_present = 1;
                 for(; i < run_end; i++) {
                     offset[2] += get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
-                    if(offset[2] > 255) {
+                    if(offset[2] > 255U) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range.\n", sf_str[2], offset[2]);
                         return -1;
@@ -756,7 +756,7 @@ static int decode_scalefactors(AACContext * ac, float sf[][64], GetBitContext * 
                         offset[1] += get_bits(gb, 9) - 256;
                     else
                         offset[1] += get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
-                    if(offset[1] > 255) {
+                    if(offset[1] > 255U) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range.\n", sf_str[1], offset[1]);
                         return -1;
@@ -767,7 +767,7 @@ static int decode_scalefactors(AACContext * ac, float sf[][64], GetBitContext * 
             }else {
                 for(; i < run_end; i++) {
                     offset[0] += get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
-                    if(offset[0] > 255) {
+                    if(offset[0] > 255U) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range.\n", sf_str[0], offset[0]);
                         return -1;
