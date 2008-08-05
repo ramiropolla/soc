@@ -1,8 +1,8 @@
 Index: libavcodec/ac3dec.h
 ===================================================================
---- libavcodec/ac3dec.h	(revision 14540)
+--- libavcodec/ac3dec.h	(revision 14614)
 +++ libavcodec/ac3dec.h	(working copy)
-@@ -172,4 +172,10 @@
+@@ -172,4 +172,9 @@
  ///@}
  } AC3DecodeContext;
  
@@ -10,12 +10,32 @@ Index: libavcodec/ac3dec.h
 +void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
 +void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk);
 +void ff_eac3_tables_init(void);
-+void ff_eac3_log_missing_feature(AVCodecContext *avctx, const char *log);
 +
  #endif /* FFMPEG_AC3DEC_H */
+Index: libavcodec/utils.c
+===================================================================
+--- libavcodec/utils.c	(revision 14614)
++++ libavcodec/utils.c	(working copy)
+@@ -1513,3 +1513,16 @@
+     else
+         return 0;
+ }
++
++void av_log_missing_feature(void *avc, const char *feature, int want_sample)
++{
++    av_log(avc, AV_LOG_WARNING, "%s not implemented. Update your FFmpeg "
++            "version to the newest one from SVN. If the problem still "
++            "occurs, it means that your file has a feature which has not "
++            "been implemented.", feature);
++    if(want_sample)
++        av_log(avc, AV_LOG_WARNING, " If you want to help, upload a sample "
++                "of this file to ftp://upload.mplayerhq.hu/MPlayer/incoming/ "
++                "and contact the FFmpeg-devel mailing list.");
++    av_log(avc, AV_LOG_WARNING, "\n");
++}
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 14540)
+--- libavcodec/Makefile	(revision 14614)
 +++ libavcodec/Makefile	(working copy)
 @@ -26,7 +26,7 @@
  OBJS-$(CONFIG_ENCODERS)                += faandct.o jfdctfst.o jfdctint.o
@@ -26,9 +46,32 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
+Index: libavcodec/avcodec.h
+===================================================================
+--- libavcodec/avcodec.h	(revision 14614)
++++ libavcodec/avcodec.h	(working copy)
+@@ -3007,6 +3007,18 @@
+  */
+ int av_parse_video_frame_rate(AVRational *frame_rate, const char *str);
+ 
++/**
++ * Logs a generic warning message about a missing feature.
++ * @param[in] avc a pointer to an arbitrary struct of which the first field is
++ * a pointer to an AVClass struct
++ * @param[in] feature string containing the name of the missing feature
++ * @param[in] want_sample indicates if samples are wanted which exhibit this feature.
++ * If \p want_sample is non-zero, additional verbage will be added to the log
++ * message which tells the user how to report samples to the development
++ * mailing list.
++ */
++void av_log_missing_feature(void *avc, const char *feature, int want_sample);
++
+ /* error handling */
+ #if EINVAL > 0
+ #define AVERROR(e) (-(e)) /**< Returns a negative error code from a POSIX error code, to return from library functions. */
 Index: libavcodec/ac3enc.c
 ===================================================================
---- libavcodec/ac3enc.c	(revision 14540)
+--- libavcodec/ac3enc.c	(revision 14614)
 +++ libavcodec/ac3enc.c	(working copy)
 @@ -1365,5 +1365,5 @@
      AC3_encode_close,

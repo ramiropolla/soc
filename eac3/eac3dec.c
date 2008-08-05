@@ -37,16 +37,6 @@ typedef enum {
 
 static int idct_cos_tab[6][5];
 
-void ff_eac3_log_missing_feature(AVCodecContext *avctx, const char *log){
-    av_log(avctx, AV_LOG_ERROR, "%s is not implemented. If you want to help, "
-            "update your FFmpeg version to the newest one from SVN. If the "
-            "problem still occurs, it means that your file has extension "
-            "which has not been tested due to a lack of samples exhibiting "
-            "this feature. Upload a sample of the audio from this file to "
-            "ftp://upload.mplayerhq.hu/incoming and contact the ffmpeg-devel "
-            "mailing list.\n", log);
-}
-
 void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
     int bin, blk, gs;
     int end_bap, gaq_mode;
@@ -156,7 +146,7 @@ static int parse_bsi(AC3DecodeContext *s){
        application can select from. each independent stream can also contain
        dependent streams which are used to add or replace channels. */
     if (s->frame_type == EAC3_FRAME_TYPE_DEPENDENT) {
-        ff_eac3_log_missing_feature(s->avctx, "Dependent substream");
+        av_log_missing_feature(s->avctx, "Dependent substream decoding", 1);
         return AC3_PARSE_ERROR_FRAME_TYPE;
     } else if (s->frame_type == EAC3_FRAME_TYPE_RESERVED) {
         av_log(s->avctx, AV_LOG_ERROR, "Reserved frame type\n");
@@ -168,8 +158,7 @@ static int parse_bsi(AC3DecodeContext *s){
        associated to an independent stream have matching substream id's */
     if (s->substreamid) {
         // TODO: allow user to select which substream to decode
-        av_log(s->avctx, AV_LOG_INFO, "Skipping additional substream #%d\n",
-               s->substreamid);
+        av_log_missing_feature(s->avctx, "Additional substreams", 1);
         return AC3_PARSE_ERROR_FRAME_TYPE;
     }
 
@@ -178,7 +167,7 @@ static int parse_bsi(AC3DecodeContext *s){
            rates in bit allocation.  The best assumption would be that it is
            handled like AC-3 DolbyNet, but we cannot be sure until we have a
            sample which utilizes this feature. */
-        ff_eac3_log_missing_feature(s->avctx, "Reduced Sampling Rates");
+        av_log_missing_feature(s->avctx, "Reduced sampling rates", 1);
         return -1;
     }
     skip_bits(gbc, 5); // skip bitstream id
