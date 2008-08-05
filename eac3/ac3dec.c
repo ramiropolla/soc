@@ -309,8 +309,8 @@ static int parse_frame_header(AC3DecodeContext *s)
         s->channel_in_cpl[s->lfe_ch] = 0;
     }
 
-    if(hdr.bitstream_id <= 10) {
-        s->eac3 = 0;
+    if (hdr.bitstream_id <= 10) {
+        s->eac3                  = 0;
         s->snr_offset_strategy   = 2;
         s->block_switch_syntax   = 1;
         s->dither_flag_syntax    = 1;
@@ -548,8 +548,8 @@ static void get_transform_coeffs_ch(AC3DecodeContext *s, int blk, int ch,
     if (!s->channel_uses_aht[ch]) {
         ac3_get_transform_coeffs_ch(s, ch, m);
     } else {
-        if(!blk)
-        ff_eac3_get_transform_coeffs_aht_ch(s, ch);
+        if (!blk)
+            ff_eac3_get_transform_coeffs_aht_ch(s, ch);
         ff_eac3_idct_transform_coeffs_ch(s, ch, blk);
     }
 }
