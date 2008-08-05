@@ -189,7 +189,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
        independent stream has its own substream id, and the dependent streams
        associated to an independent stream have matching substream id's */
     if (s->substreamid) {
-        // TODO: allow user to select which substream to decode
+        /* only decode substream with id=0. skip any additional substreams. */
         av_log_missing_feature(s->avctx, "Additional substreams", 1);
         return AC3_PARSE_ERROR_FRAME_TYPE;
     }
