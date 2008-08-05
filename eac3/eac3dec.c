@@ -332,7 +332,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
         }
     }
 
-/** Audio frame syntax flags, strategy data, and per-frame data */
+    /** Audio frame syntax flags, strategy data, and per-frame data */
 
     if (s->num_blocks == 6) {
         /* LUT-based exponent strategy syntax */
