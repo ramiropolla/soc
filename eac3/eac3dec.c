@@ -62,7 +62,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
         gs = 0;
         for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
             if (s->bap[ch][bin] > 7 && s->bap[ch][bin] < end_bap) {
-                if(gc++ == 2) {
+                if (gc++ == 2) {
                     int group_gain = get_bits(gbc, 5);
                     gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][0];
                     gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][1];
@@ -191,7 +191,7 @@ static int parse_bsi(AC3DecodeContext *s)
         } else {
             //default channel map based on acmod and lfeon
             s->channel_map = ff_eac3_default_chmap[s->channel_mode];
-            if(s->lfe_on)
+            if (s->lfe_on)
                 s->channel_map |= AC3_CHMAP_LFE;
         }
     }
