@@ -799,7 +799,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     /* coupling strategy */
     if (!s->eac3)
         s->cpl_strategy_exists[blk] = get_bits1(gbc);
-    if (s->cpl_strategy_exists[blk] || (!s->eac3 && get_bits1(gbc))) {
+    if (s->cpl_strategy_exists[blk]) {
         memset(bit_alloc_stages, 3, AC3_MAX_CHANNELS);
         if (!s->eac3)
             s->cpl_in_use[blk] = get_bits1(gbc);
