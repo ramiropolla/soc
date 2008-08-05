@@ -166,9 +166,12 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
     }
 }
 
-static int parse_bsi(AC3DecodeContext *s)
+int ff_eac3_parse_header(AC3DecodeContext *s)
 {
-    int i, blk;
+    int i, blk, ch;
+    int ac3_exponent_strategy, parse_aht_info, parse_spx_atten_data;
+    int parse_transient_proc_info;
+    int num_cpl_blocks;
     GetBitContext *gbc = &s->gbc;
 
     /* an E-AC-3 stream can have multiple independent streams which the
@@ -329,17 +332,7 @@ static int parse_bsi(AC3DecodeContext *s)
         }
     }
 
-    return 0;
-}
-
 /** Audio frame syntax flags, strategy data, and per-frame data */
-static int parse_audfrm(AC3DecodeContext *s)
-{
-    int blk, ch;
-    int ac3_exponent_strategy, parse_aht_info, parse_spx_atten_data;
-    int parse_transient_proc_info;
-    int num_cpl_blocks;
-    GetBitContext *gbc = &s->gbc;
 
     if (s->num_blocks == 6) {
         /* LUT-based exponent strategy syntax */
@@ -486,12 +479,4 @@ static int parse_audfrm(AC3DecodeContext *s)
     s->first_cpl_leak = 1;
 
     return 0;
-}
-
-int ff_eac3_parse_header(AC3DecodeContext *s)
-{
-    int err = parse_bsi(s);
-    if (!err)
-        err = parse_audfrm(s);
-    return err;
 }
