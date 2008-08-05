@@ -346,10 +346,8 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     s->snr_offset_strategy = get_bits(gbc, 2);
     parse_transient_proc_info = get_bits1(gbc);
     s->block_switch_syntax = get_bits1(gbc);
-    if (!s->block_switch_syntax) {
-        for (ch = 1; ch <= s->fbw_channels; ch++)
-            s->block_switch[ch] = 0;
-    }
+    if (!s->block_switch_syntax)
+        memset(s->block_switch, 0, sizeof(s->block_switch));
     s->dither_flag_syntax = get_bits1(gbc);
     if (!s->dither_flag_syntax) {
         s->dither_all = 1;
