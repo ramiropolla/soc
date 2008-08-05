@@ -79,13 +79,13 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
         if (!hebap) {
             /* zero-mantissa dithering */
             for (blk = 0; blk < 6; blk++) {
-                s->pre_mantissa[blk][ch][bin] = (av_random(&s->dith_state) & 0x7FFFFF) - 0x400000;
+                s->pre_mantissa[ch][bin][blk] = (av_random(&s->dith_state) & 0x7FFFFF) - 0x400000;
             }
         } else if (hebap < 8) {
             /* Vector Quantization */
             int v = get_bits(gbc, bits);
             for (blk = 0; blk < 6; blk++) {
-                s->pre_mantissa[blk][ch][bin] = ff_eac3_vq_hebap[hebap][v][blk] << 8;
+                s->pre_mantissa[ch][bin][blk] = ff_eac3_vq_hebap[hebap][v][blk] << 8;
             }
         } else {
             /* Gain Adaptive Quantization */
@@ -117,7 +117,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
                         mant += ((int64_t)ff_eac3_gaq_remap_1[hebap-8] * mant) >> 15;
                     }
                 }
-                s->pre_mantissa[blk][ch][bin] = mant;
+                s->pre_mantissa[ch][bin][blk] = mant;
             }
         }
     }
@@ -128,9 +128,9 @@ void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk)
     int bin, i;
     int64_t tmp;
     for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-        tmp = s->pre_mantissa[0][ch][bin];
+        tmp = s->pre_mantissa[ch][bin][0];
         for (i = 1; i < 6; i++) {
-            tmp += ((int64_t)idct_cos_tab[blk][i-1] * (int64_t)s->pre_mantissa[i][ch][bin]) >> 23;
+            tmp += ((int64_t)idct_cos_tab[blk][i-1] * (int64_t)s->pre_mantissa[ch][bin][i]) >> 23;
         }
         s->fixed_coeffs[ch][bin] = tmp >> s->dexps[ch][bin];
     }
