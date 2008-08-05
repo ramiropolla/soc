@@ -320,7 +320,7 @@ static int parse_frame_header(AC3DecodeContext *s)
         s->dba_syntax            = 1;
         s->skip_syntax           = 1;
         memset(s->channel_uses_aht, 0, sizeof(s->channel_uses_aht));
-        return ac3_parse_header(s);
+    return ac3_parse_header(s);
     } else {
         s->eac3 = 1;
         return ff_eac3_parse_header(s);
@@ -756,21 +756,21 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     /* block switch flags */
     different_transforms = 0;
     if (s->block_switch_syntax) {
-        for (ch = 1; ch <= fbw_channels; ch++) {
-            s->block_switch[ch] = get_bits1(gbc);
-            if(ch > 1 && s->block_switch[ch] != s->block_switch[1])
-                different_transforms = 1;
-        }
+    for (ch = 1; ch <= fbw_channels; ch++) {
+        s->block_switch[ch] = get_bits1(gbc);
+        if(ch > 1 && s->block_switch[ch] != s->block_switch[1])
+            different_transforms = 1;
+    }
     }
 
     /* dithering flags */
     if (s->dither_flag_syntax) {
-        s->dither_all = 1;
-        for (ch = 1; ch <= fbw_channels; ch++) {
-            s->dither_flag[ch] = get_bits1(gbc);
-            if(!s->dither_flag[ch])
-                s->dither_all = 0;
-        }
+    s->dither_all = 1;
+    for (ch = 1; ch <= fbw_channels; ch++) {
+        s->dither_flag[ch] = get_bits1(gbc);
+        if(!s->dither_flag[ch])
+            s->dither_all = 0;
+    }
     }
 
     /* dynamic range */
@@ -801,7 +801,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     if (s->cpl_strategy_exists[blk]) {
         memset(bit_alloc_stages, 3, AC3_MAX_CHANNELS);
         if (!s->eac3)
-            s->cpl_in_use[blk] = get_bits1(gbc);
+        s->cpl_in_use[blk] = get_bits1(gbc);
         if (s->cpl_in_use[blk]) {
             /* coupling in use */
             int cpl_begin_freq, cpl_end_freq;
@@ -823,8 +823,8 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                 s->channel_in_cpl[1] = 1;
                 s->channel_in_cpl[2] = 1;
             } else {
-                for (ch = 1; ch <= fbw_channels; ch++)
-                    s->channel_in_cpl[ch] = get_bits1(gbc);
+            for (ch = 1; ch <= fbw_channels; ch++)
+                s->channel_in_cpl[ch] = get_bits1(gbc);
             }
 
             /* phase flags in use */
@@ -839,13 +839,13 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                 av_log(s->avctx, AV_LOG_ERROR, "3+cplendf = %d < cplbegf = %d\n", 3+cpl_end_freq, cpl_begin_freq);
                 return -1;
             }
-            s->num_cpl_subbands = 3 + cpl_end_freq - cpl_begin_freq;
+            s->num_cpl_bands = s->num_cpl_subbands = 3 + cpl_end_freq - cpl_begin_freq;
             s->start_freq[CPL_CH] = cpl_begin_freq * 12 + 37;
             s->end_freq[CPL_CH] = cpl_end_freq * 12 + 73;
 
             /* coupling band structure */
             if (!s->eac3 || get_bits1(gbc)) {
-                for (bnd = 0; bnd < s->num_cpl_subbands - 1; bnd++) {
+            for (bnd = 0; bnd < s->num_cpl_subbands - 1; bnd++) {
                     s->cpl_band_struct[bnd] = get_bits1(gbc);
                 }
             } else if (!blk) {
@@ -856,7 +856,6 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             s->cpl_band_struct[s->num_cpl_subbands-1] = 0;
 
             /* calculate number of coupling bands based on band structure */
-            s->num_cpl_bands = s->num_cpl_subbands;
             for (bnd = 0; bnd < s->num_cpl_subbands-1; bnd++) {
                 s->num_cpl_bands -= s->cpl_band_struct[bnd];
             }
@@ -871,12 +870,12 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         }
     } else if (!s->eac3) {
         if(!blk) {
-            av_log(s->avctx, AV_LOG_ERROR, "new coupling strategy must be present in block 0\n");
-            return -1;
-        } else {
-            /* for AC-3, copy coupling use strategy from last block */
-            s->cpl_in_use[blk] = s->cpl_in_use[blk-1];
-        }
+        av_log(s->avctx, AV_LOG_ERROR, "new coupling strategy must be present in block 0\n");
+        return -1;
+    } else {
+        /* for AC-3, copy coupling use strategy from last block */
+        s->cpl_in_use[blk] = s->cpl_in_use[blk-1];
+    }
     }
     cpl_in_use = s->cpl_in_use[blk];
 
@@ -994,18 +993,18 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
 
     /* bit allocation information */
     if (s->bit_allocation_syntax) {
-        if (get_bits1(gbc)) {
-            s->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[get_bits(gbc, 2)] >> s->bit_alloc_params.sr_shift;
-            s->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[get_bits(gbc, 2)] >> s->bit_alloc_params.sr_shift;
-            s->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab[get_bits(gbc, 2)];
-            s->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[get_bits(gbc, 2)];
-            s->bit_alloc_params.floor  = ff_ac3_floor_tab[get_bits(gbc, 3)];
-            for(ch=!cpl_in_use; ch<=s->channels; ch++)
-                bit_alloc_stages[ch] = FFMAX(bit_alloc_stages[ch], 2);
-        } else if (!blk) {
-            av_log(s->avctx, AV_LOG_ERROR, "new bit allocation info must be present in block 0\n");
-            return -1;
-        }
+    if (get_bits1(gbc)) {
+        s->bit_alloc_params.slow_decay = ff_ac3_slow_decay_tab[get_bits(gbc, 2)] >> s->bit_alloc_params.sr_shift;
+        s->bit_alloc_params.fast_decay = ff_ac3_fast_decay_tab[get_bits(gbc, 2)] >> s->bit_alloc_params.sr_shift;
+        s->bit_alloc_params.slow_gain  = ff_ac3_slow_gain_tab[get_bits(gbc, 2)];
+        s->bit_alloc_params.db_per_bit = ff_ac3_db_per_bit_tab[get_bits(gbc, 2)];
+        s->bit_alloc_params.floor  = ff_ac3_floor_tab[get_bits(gbc, 3)];
+        for(ch=!cpl_in_use; ch<=s->channels; ch++)
+            bit_alloc_stages[ch] = FFMAX(bit_alloc_stages[ch], 2);
+    } else if (!blk) {
+        av_log(s->avctx, AV_LOG_ERROR, "new bit allocation info must be present in block 0\n");
+        return -1;
+    }
     }
 
     /* signal-to-noise ratio offsets and fast gains (signal-to-mask ratios) */
@@ -1067,7 +1066,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                coupling leak changes */
             if(blk && (prev_fl != s->bit_alloc_params.cpl_fast_leak ||
                     prev_sl != s->bit_alloc_params.cpl_slow_leak)) {
-                bit_alloc_stages[CPL_CH] = FFMAX(bit_alloc_stages[CPL_CH], 2);
+            bit_alloc_stages[CPL_CH] = FFMAX(bit_alloc_stages[CPL_CH], 2);
             }
         } else if (!s->eac3 && !blk) {
             av_log(s->avctx, AV_LOG_ERROR, "new coupling leak info must be present in block 0\n");
