@@ -1308,10 +1308,10 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
             s->output_mode  = s->out_channels == 1 ? AC3_CHMODE_MONO : AC3_CHMODE_STEREO;
     }
 
-    /* parse the audio blocks */
+    /* decode the audio blocks */
     for (blk = 0; blk < s->num_blocks; blk++) {
         if (!err && decode_audio_block(s, blk)) {
-            av_log(avctx, AV_LOG_ERROR, "error parsing the audio block\n");
+            av_log(avctx, AV_LOG_ERROR, "error decoding the audio block\n");
         }
 
         /* interleave output samples */
