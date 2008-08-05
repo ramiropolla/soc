@@ -37,7 +37,8 @@ typedef enum {
 
 static int idct_cos_tab[6][5];
 
-void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
+void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
+{
     int bin, blk, gs;
     int end_bap, gaq_mode;
     GetBitContext *gbc = &s->gbc;
@@ -106,7 +107,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
                     mant = get_sbits(gbc, bits-2+log_gain) << (26-log_gain-bits);
                     /* remap mantissa value to correct for asymmetric quantization */
                     a = ff_eac3_gaq_remap_2_4_a[hebap-8][log_gain-1] + 32768;
-                    if(mant >= 0)
+                    if (mant >= 0)
                         b = 32768 >> log_gain;
                     else
                         b = ff_eac3_gaq_remap_2_4_b[hebap-8][log_gain-1];
@@ -114,7 +115,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
                 } else {
                     /* small mantissa, no GAQ, or Gk=1 */
                     mant = pre_mantissa << (24 - bits);
-                    if(!log_gain) {
+                    if (!log_gain) {
                         /* remap mantissa value for no GAQ or Gk=1 */
                         int64_t a = ff_eac3_gaq_remap_1[hebap-8] + 32768;
                         mant = (a * mant) >> 15;
@@ -126,7 +127,8 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch){
     }
 }
 
-void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk){
+void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk)
+{
     int bin, i;
     int64_t tmp;
     for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
@@ -138,7 +140,8 @@ void ff_eac3_idct_transform_coeffs_ch(AC3DecodeContext *s, int ch, int blk){
     }
 }
 
-static int parse_bsi(AC3DecodeContext *s){
+static int parse_bsi(AC3DecodeContext *s)
+{
     int i, blk;
     GetBitContext *gbc = &s->gbc;
 
@@ -311,7 +314,8 @@ static int parse_bsi(AC3DecodeContext *s){
 }
 
 /** Audio frame syntax flags, strategy data, and per-frame data */
-static int parse_audfrm(AC3DecodeContext *s){
+static int parse_audfrm(AC3DecodeContext *s)
+{
     int blk, ch;
     int ac3_exponent_strategy, parse_aht_info, parse_spx_atten_data;
     int parse_transient_proc_info;
@@ -468,12 +472,13 @@ static int parse_audfrm(AC3DecodeContext *s){
 int ff_eac3_parse_header(AC3DecodeContext *s)
 {
     int err = parse_bsi(s);
-    if(!err)
+    if (!err)
         err = parse_audfrm(s);
     return err;
 }
 
-void ff_eac3_tables_init(void) {
+void ff_eac3_tables_init(void)
+{
     int blk, i;
 
     // initialize IDCT cosine table for use with AHT
