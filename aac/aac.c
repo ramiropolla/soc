@@ -476,6 +476,7 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
         audio_specific_config(ac, avccontext->extradata, avccontext->extradata_size))
         return -1;
 
+    avccontext->sample_fmt  = SAMPLE_FMT_S16;
     avccontext->sample_rate = ac->m4ac.sample_rate;
     avccontext->frame_size  = 1024;
 
@@ -1988,5 +1989,6 @@ AVCodec aac_decoder = {
     aac_decode_close,
     aac_decode_frame,
     .long_name = NULL_IF_CONFIG_SMALL("Advanced Audio Coding"),
+    .sample_fmts = (enum SampleFormat[]){SAMPLE_FMT_S16,SAMPLE_FMT_NONE},
 };
 
