@@ -47,8 +47,6 @@
 
 #include "avcodec.h"
 #include "dsputil.h"
-#include "libavutil/random.h"
-
 #include "mpeg4audio.h"
 
 #include <stdint.h>
@@ -360,7 +358,7 @@ typedef struct {
 #ifdef AAC_SSR
     ssr_context ssrctx;
 #endif /* AAC_SSR */
-    AVRandomState random_state;
+    int32_t random_state;
     /** @} */
 
     /**

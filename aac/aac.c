@@ -79,7 +79,6 @@
 #include "avcodec.h"
 #include "bitstream.h"
 #include "dsputil.h"
-#include "libavutil/random.h"
 
 #include "aac.h"
 #include "aactab.h"
@@ -466,6 +465,11 @@ static int audio_specific_config(AACContext * ac, void *data, int data_size) {
     return 0;
 }
 
+static inline int32_t lcg_random(int32_t *state) {
+    *state = *state * 1664525 + 1013904223;
+    return *state;
+}
+
 static av_cold int aac_decode_init(AVCodecContext * avccontext) {
     AACContext * ac = avccontext->priv_data;
     int i;
@@ -494,7 +498,7 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
 
     dsputil_init(&ac->dsp, avccontext);
 
-    av_init_random(0x1f2e3d4c, &ac->random_state);
+    ac->random_state = 0x1f2e3d4c;
 
     // -1024 - Compensate wrong IMDCT method.
     // 32768 - Required to scale values to the correct range for the bias method
@@ -990,7 +994,7 @@ static void dequant(AACContext * ac, float coef[1024], const int icoef[1024], fl
                 const float scale = sf[g][i] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++)
-                        coef[group*128+k] = (int32_t)av_random(&ac->random_state) * scale;
+                        coef[group*128+k] = lcg_random(&ac->random_state) * scale;
                 }
             } else if (band_type[g][i] != INTENSITY_BT && band_type[g][i] != INTENSITY_BT2) {
                 for (group = 0; group < ics->group_len[g]; group++) {
