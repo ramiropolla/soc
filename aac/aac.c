@@ -375,9 +375,9 @@ static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channe
 
 
 /**
- * Parse GA "General Audio" specific configuration; reference: table 4.1.
+ * Decode GA "General Audio" specific configuration; reference: table 4.1.
  */
-static int ga_specific_config(AACContext * ac, GetBitContext * gb, int channels) {
+static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int channels) {
     ProgramConfig newpcs;
     int extension_flag, ret;
 
@@ -454,7 +454,7 @@ static int audio_specific_config(AACContext * ac, void *data, int data_size) {
 #ifdef AAC_LTP
     case AOT_AAC_LTP:
 #endif /* AAC_LTP */
-        if (ga_specific_config(ac, &gb, ac->m4ac.chan_config))
+        if (decode_ga_specific_config(ac, &gb, ac->m4ac.chan_config))
             return -1;
         break;
     default:
