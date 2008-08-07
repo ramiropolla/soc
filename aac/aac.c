@@ -1189,7 +1189,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
 static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
     int num_gain = 0;
     int c, g, sfb, ret;
-    int sign;
+    int is_indep_coup, domain, sign;
     float scale;
     SingleChannelElement * sce;
     ChannelCoupling * coup;
@@ -1199,7 +1199,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
 
     coup = &ac->che[ID_CCE][tag]->coup;
 
-    coup->is_indep_coup = get_bits1(gb);
+    is_indep_coup = get_bits1(gb);
     coup->num_coupled = get_bits(gb, 3);
     for (c = 0; c <= coup->num_coupled; c++) {
         num_gain++;
@@ -1212,7 +1212,15 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
                 num_gain++;
         }
     }
-    coup->domain = get_bits1(gb);
+    domain = get_bits1(gb);
+
+    if (is_indep_coup) {
+        coup->coupling_point = AFTER_IMDCT;
+    } else if(domain) {
+        coup->coupling_point = BETWEEN_TNS_AND_IMDCT;
+    } else
+        coup->coupling_point = BEFORE_TNS;
+
     sign = get_bits(gb, 1);
     scale = pow(2., pow(2., get_bits(gb, 2) - 3));
 
@@ -1224,7 +1232,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
         int gain = 0;
         float gain_cache = 1.;
         if (c) {
-            cge = coup->is_indep_coup ? 1 : get_bits1(gb);
+            cge = coup->coupling_point == AFTER_IMDCT ? 1 : get_bits1(gb);
             gain = cge ? get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60: 0;
             gain_cache = pow(scale, gain);
         }
@@ -1777,7 +1785,7 @@ static int spectral_to_sample(AACContext * ac) {
         for(j = 0; j < 4; j++) {
             ChannelElement *che = ac->che[j][i];
             if(che) {
-                if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 0))
+                if(j == ID_CCE && che->coup.coupling_point == BEFORE_TNS)
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
@@ -1793,7 +1801,7 @@ static int spectral_to_sample(AACContext * ac) {
                     apply_tns(che->ch[0].coeffs, &che->ch[0].tns, &che->ch[0].ics, 1);
                 if(che->ch[1].tns.present)
                     apply_tns(che->ch[1].coeffs, &che->ch[1].tns, &che->ch[1].ics, 1);
-                if(j == ID_CCE && !che->coup.is_indep_coup && (che->coup.domain == 1))
+                if(j == ID_CCE && che->coup.coupling_point == BETWEEN_TNS_AND_IMDCT)
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_SSR
                 if (ac->m4ac.object_type == AOT_AAC_SSR) {
@@ -1808,7 +1816,7 @@ static int spectral_to_sample(AACContext * ac) {
 #ifdef AAC_SSR
                 }
 #endif /* AAC_SSR */
-                if(j == ID_CCE && che->coup.is_indep_coup && (che->coup.domain == 1))
+                if(j == ID_CCE && che->coup.coupling_point == AFTER_IMDCT)
                     apply_channel_coupling(ac, che, apply_independent_coupling);
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {

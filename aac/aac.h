@@ -141,6 +141,15 @@ enum ChannelPosition {
 };
 
 /**
+ * The point during decoding at which channel coupling is applied.
+ */
+enum CouplingPoint {
+    BEFORE_TNS,
+    BETWEEN_TNS_AND_IMDCT,
+    AFTER_IMDCT,
+};
+
+/**
  * mix-down channel types
  */
 enum {
@@ -262,8 +271,7 @@ typedef struct {
  * coupling parameters
  */
 typedef struct {
-    int is_indep_coup;     ///< Set if independent coupling (i.e. after IMDCT).
-    int domain;            ///< Controls if coupling is performed before (0) or after (1) the TNS decoding of the target channels.
+    enum CouplingPoint coupling_point;  ///< The point during decoding at which coupling is applied.
     int num_coupled;       ///< number of target elements
     int is_cpe[9];         ///< Set if target is an CPE (otherwise it's an SCE).
     int tag_select[9];     ///< element tag index
