@@ -429,13 +429,13 @@ static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int ch
 
 
 /**
- * Parse audio specific configuration; reference: table 1.13.
+ * Decode audio specific configuration; reference: table 1.13.
  *
  * @param   data        pointer to AVCodecContext extradata
  * @param   data_size   size of AVCCodecContext extradata
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int audio_specific_config(AACContext * ac, void *data, int data_size) {
+static int decode_audio_specific_config(AACContext * ac, void *data, int data_size) {
     GetBitContext gb;
     int i;
 
@@ -477,7 +477,7 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
     ac->avccontext = avccontext;
 
     if (avccontext->extradata_size <= 0 ||
-        audio_specific_config(ac, avccontext->extradata, avccontext->extradata_size))
+        decode_audio_specific_config(ac, avccontext->extradata, avccontext->extradata_size))
         return -1;
 
     avccontext->sample_fmt  = SAMPLE_FMT_S16;
