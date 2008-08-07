@@ -26,7 +26,7 @@
 #include "ac3dec.h"
 #include "ac3dec_data.h"
 
-/** Channel gain adaptive quantization mode */
+/** gain adaptive quantization mode */
 typedef enum {
     EAC3_GAQ_NO =0,
     EAC3_GAQ_12,
@@ -174,7 +174,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     int num_cpl_blocks;
     GetBitContext *gbc = &s->gbc;
 
-    /* an E-AC-3 stream can have multiple independent streams which the
+    /* An E-AC-3 stream can have multiple independent streams which the
        application can select from. each independent stream can also contain
        dependent streams which are used to add or replace channels. */
     if (s->frame_type == EAC3_FRAME_TYPE_DEPENDENT) {
@@ -185,9 +185,9 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
         return AC3_PARSE_ERROR_FRAME_TYPE;
     }
 
-    /* the substream id indicates which substream this frame belongs to. each
+    /* The substream id indicates which substream this frame belongs to. each
        independent stream has its own substream id, and the dependent streams
-       associated to an independent stream have matching substream id's */
+       associated to an independent stream have matching substream id's. */
     if (s->substreamid) {
         /* only decode substream with id=0. skip any additional substreams. */
         av_log_missing_feature(s->avctx, "Additional substreams", 1);
@@ -208,7 +208,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
         skip_bits(gbc, 5); // skip dialog normalization
         if (get_bits1(gbc)) {
-            skip_bits(gbc, 8); //skip Compression gain word
+            skip_bits(gbc, 8); // skip compression gain word
         }
     }
 
@@ -270,7 +270,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
                         /* note: this is not in the ATSC A/52B specification
                            reference: ETSI TS 102 366 V1.1.1
                                       section: E.1.3.1.25 */
-                        skip_bits(gbc, 8);  // skip Pan mean direction index
+                        skip_bits(gbc, 8);  // skip pan mean direction index
                         skip_bits(gbc, 6);  // skip reserved paninfo bits
                     }
                 }
@@ -292,30 +292,30 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
 
     /* informational metadata */
     if (get_bits1(gbc)) {
-        skip_bits(gbc, 3); //skip bit stream mode
-        skip_bits(gbc, 2); //skip copyright bit and original bitstream bit
+        skip_bits(gbc, 3); // skip bit stream mode
+        skip_bits(gbc, 2); // skip copyright bit and original bitstream bit
         if (s->channel_mode == AC3_CHMODE_STEREO) {
-            skip_bits(gbc, 4); //skip Dolby surround and headphone mode
+            skip_bits(gbc, 4); // skip Dolby surround and headphone mode
         }
         if (s->channel_mode >= AC3_CHMODE_2F2R) {
-            skip_bits(gbc, 2); //skip Dolby surround EX mode
+            skip_bits(gbc, 2); // skip Dolby surround EX mode
         }
         for (i = 0; i < (s->channel_mode ? 1 : 2); i++) {
             if (get_bits1(gbc)) {
-                skip_bits(gbc, 8); //skip mix level, room type and A/D converter type
+                skip_bits(gbc, 8); // skip mix level, room type, and A/D converter type
             }
         }
         if (s->bit_alloc_params.sr_code != EAC3_SR_CODE_REDUCED) {
-            skip_bits1(gbc); //skip source sample rate code
+            skip_bits1(gbc); // skip source sample rate code
         }
     }
 
     /* converter synchronization flag
-       if frames are less than six blocks, this bit should be turned on
+       If frames are less than six blocks, this bit should be turned on
        once every 6 blocks to indicate the start of a frame set.
        reference: RFC 4598, Section 2.1.3  Frame Sets */
     if (s->frame_type == EAC3_FRAME_TYPE_INDEPENDENT && s->num_blocks != 6) {
-        skip_bits1(gbc); //converter synchronization flag
+        skip_bits1(gbc); // skip converter synchronization flag
     }
 
     /* original frame size code if this stream was converted from AC-3 */
@@ -328,19 +328,19 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     if (get_bits1(gbc)) {
         int addbsil = get_bits(gbc, 6);
         for (i = 0; i < addbsil + 1; i++) {
-            skip_bits(gbc, 8); // skip additional bit stream information
+            skip_bits(gbc, 8); // skip additional bit stream info
         }
     }
 
-    /** Audio frame syntax flags, strategy data, and per-frame data */
+    /* audio frame syntax flags, strategy data, and per-frame data */
 
     if (s->num_blocks == 6) {
         ac3_exponent_strategy = get_bits1(gbc);
         parse_aht_info = get_bits1(gbc);
     } else {
-        /* always use AC-3-style exponent strategy syntax */
+        /* less than 6 blocks, so use AC-3-style exponent strategy syntax, and
+           do not use AHT */
         ac3_exponent_strategy = 1;
-        /* AHT is not used if there are less than 6 blocks */
         parse_aht_info = 0;
     }
 
@@ -418,15 +418,16 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     if (s->frame_type == EAC3_FRAME_TYPE_INDEPENDENT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
-            skip_bits(gbc, 5); //skip Converter channel exponent strategy
+            skip_bits(gbc, 5); // skip converter channel exponent strategy
         }
     }
 
     /* determine which channels use AHT */
     if (parse_aht_info) {
-        /* AHT is only available in 6 block mode (numblkscod ==3) */
-        /* coupling can use AHT only when coupling in use for all blocks */
-        /* ncplregs derived from cplstre and cplexpstr - see Section E3.3.2 */
+        /* AHT is only available when there are 6 blocks in the frame.
+           The coupling channel can only use AHT when coupling is in use for
+           all blocks.
+           reference: Section E3.3.2 Bit Stream Helper Variables */
         s->channel_uses_aht[CPL_CH]=0;
         for (ch = (num_cpl_blocks != 6); ch <= s->channels; ch++) {
             int nchregs = 0;
@@ -465,8 +466,8 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     if (s->num_blocks > 1 && get_bits1(gbc)) {
         /* reference: Section E2.3.2.27
            nblkstrtbits = (numblks - 1) * (4 + ceiling(log2(words_per_frame)))
-           Great that the spec tells how to parse. Unfortunately it doesn't say
-           what this data is or what it's used for. */
+           The spec does not say what this data is or what it's used for.
+           It is likely the offset of each block within the frame. */
         int block_start_bits = (s->num_blocks-1) * (4 + av_log2(s->frame_size-2));
         skip_bits(gbc, block_start_bits);
     }
