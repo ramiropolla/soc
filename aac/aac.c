@@ -1028,6 +1028,9 @@ static int decode_ics(AACContext * ac, SingleChannelElement * sce, GetBitContext
     float * out = sce->coeffs;
     int global_gain, pulse_present = 0;
 
+    /* These two assignments are to silence some GCC warnings about the
+     * variables being used uninitialised when in fact they always are.
+     */
     pulse.num_pulse = 0;
     pulse.start     = 0;
 
