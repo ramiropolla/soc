@@ -266,9 +266,9 @@ typedef struct {
 typedef struct {
     enum CouplingPoint coupling_point;  ///< The point during decoding at which coupling is applied.
     int num_coupled;       ///< number of target elements
-    int is_cpe[9];         ///< Set if target is an CPE (otherwise it's an SCE).
-    int tag_select[9];     ///< element tag index
-    int ch_select[9];      /**< [0] shared list of gains; [1] list of gains for left channel;
+    int is_cpe[8];         ///< Set if target is an CPE (otherwise it's an SCE).
+    int tag_select[8];     ///< element tag index
+    int ch_select[8];      /**< [0] shared list of gains; [1] list of gains for left channel;
                             *   [2] list of gains for right channel; [3] lists of gains for both channels
                             */
     float gain[18][8][64];
