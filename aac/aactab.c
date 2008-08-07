@@ -809,7 +809,10 @@ const float ff_aac_ivquant_tab[IVQUANT_SIZE] = {
      4064.0312908,  4074.6805676,  4085.3368071,  4096.0000000,
 };
 
-/* [ 0, 255] scale factor decoding when using C dsp.float_to_int16
+/**
+ * Table of pow(2, (i - 200)/4.) used for different purposes depending on the
+ * range of indices to the table:
+ * [ 0, 255] scale factor decoding when using C dsp.float_to_int16
  * [60, 315] scale factor decoding when using SIMD dsp.float_to_int16
  * [45, 300] intensity stereo position decoding mapped in reverse order i.e. 0->300, 1->299, ..., 254->46, 255->45
  */
