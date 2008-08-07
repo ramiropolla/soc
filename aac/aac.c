@@ -717,7 +717,7 @@ static int decode_band_types(AACContext * ac, enum BandType band_type[][64],
 }
 
 /**
- * Decode scale_factor_data; reference: table 4.47.
+ * Decode scalefactors; reference: table 4.47.
  *
  * @param   mix_gain            channel gain (Not used by AAC bitstream.)
  * @param   global_gain         first scalefactor value as scalefactors are differentially coded
