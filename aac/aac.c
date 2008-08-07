@@ -555,7 +555,7 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
 }
 
 /**
- * Decode a data_stream_element; reference: table 4.10.
+ * Skip data_stream_element; reference: table 4.10.
  */
 static void skip_data_stream_element(GetBitContext * gb) {
     int byte_align = get_bits1(gb);
