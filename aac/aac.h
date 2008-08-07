@@ -132,7 +132,7 @@ enum BandType {
 
 #define IS_CODEBOOK_UNSIGNED(x) ((x - 1) & 10)
 
-enum ChannelType {
+enum ChannelPosition {
     AAC_CHANNEL_FRONT = 1,
     AAC_CHANNEL_SIDE  = 2,
     AAC_CHANNEL_BACK  = 3,
@@ -154,7 +154,7 @@ enum {
  * stream (ID_PCE) or created based on a default fixed channel arrangement.
  */
 typedef struct {
-    enum ChannelType che_type[4][MAX_TAGID]; ///< channel element type with the first index as the first 4 raw_data_block IDs
+    enum ChannelPosition che_type[4][MAX_TAGID]; ///< channel element type with the first index as the first 4 raw_data_block IDs
     int mono_mixdown_tag;                    ///< The SCE tag to use if user requests mono   output, -1 if not available.
     int stereo_mixdown_tag;                  ///< The CPE tag to use if user requests stereo output, -1 if not available.
     int mixdown_coeff_index;                 ///< 0-3

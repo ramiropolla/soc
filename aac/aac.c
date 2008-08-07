@@ -275,10 +275,10 @@ static int output_configure(AACContext *ac, ProgramConfig *pcs, ProgramConfig *n
  * @param sce_map mono (Single Channel Element) map
  * @param type speaker type/position for these channels
  */
-static void program_config_element_parse_tags(enum ChannelType *cpe_map,
-        enum ChannelType *sce_map, enum ChannelType type, GetBitContext * gb, int n) {
+static void program_config_element_parse_tags(enum ChannelPosition *cpe_map,
+        enum ChannelPosition *sce_map, enum ChannelPosition type, GetBitContext * gb, int n) {
     while(n--) {
-        enum ChannelType *map = cpe_map && get_bits1(gb) ? cpe_map : sce_map; // stereo or mono map
+        enum ChannelPosition *map = cpe_map && get_bits1(gb) ? cpe_map : sce_map; // stereo or mono map
         map[get_bits(gb, 4)] = type;
     }
 }
