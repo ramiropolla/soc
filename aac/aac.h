@@ -268,8 +268,9 @@ typedef struct {
     int num_coupled;       ///< number of target elements
     int is_cpe[9];         ///< Set if target is an CPE (otherwise it's an SCE).
     int tag_select[9];     ///< element tag index
-    int l[9];              ///< Indicates the presence of a channel specific list of gains for the left channel of a CPE.
-    int r[9];              ///< Indicates the presence of a channel specific list of gains for the right channel of a CPE.
+    int ch_select[9];      /**< [0] shared list of gains; [1] list of gains for left channel;
+                            *   [2] list of gains for right channel; [3] lists of gains for both channels
+                            */
     float gain[18][8][64];
 } ChannelCoupling;
 

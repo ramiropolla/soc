@@ -1204,9 +1204,8 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
         coup->is_cpe[c] = get_bits1(gb);
         coup->tag_select[c] = get_bits(gb, 4);
         if (coup->is_cpe[c]) {
-            coup->l[c] = get_bits1(gb);
-            coup->r[c] = get_bits1(gb);
-            if (coup->l[c] && coup->r[c])
+            coup->ch_select[c] = get_bits1(gb) + 2*get_bits1(gb);
+            if (coup->ch_select[c] == 3)
                 num_gain++;
         }
     }
@@ -1757,13 +1756,12 @@ static void apply_channel_coupling(AACContext * ac, ChannelElement * cc,
         if (     !coup->is_cpe[c] && ac->che[ID_SCE][coup->tag_select[c]]) {
             apply_coupling_method(ac, &ac->che[ID_SCE][coup->tag_select[c]]->ch[0], cc, index++);
         } else if(coup->is_cpe[c] && ac->che[ID_CPE][coup->tag_select[c]]) {
-            if (!coup->l[c] && !coup->r[c]) {
+            if (coup->ch_select[c] != 2) {
                 apply_coupling_method(ac, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], cc, index);
-                apply_coupling_method(ac, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], cc, index++);
+                if (coup->ch_select[c] != 0)
+                    index++;
             }
-            if (coup->l[c])
-                apply_coupling_method(ac, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], cc, index++);
-            if (coup->r[c])
+            if (coup->ch_select[c] != 1)
                 apply_coupling_method(ac, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], cc, index++);
         } else {
             av_log(ac->avccontext, AV_LOG_ERROR,
