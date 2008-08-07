@@ -875,15 +875,14 @@ static int decode_gain_control(SingleChannelElement * sce, GetBitContext * gb) {
  */
 static void decode_mid_side_stereo(ChannelElement * cpe, GetBitContext * gb,
         int ms_present) {
-    MidSideStereo * ms = &cpe->ms;
     int g, i;
     if (ms_present == 1) {
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
             for (i = 0; i < cpe->ch[0].ics.max_sfb; i++)
-                ms->mask[g][i] = get_bits1(gb);// << i;
+                cpe->ms_mask[g][i] = get_bits1(gb);// << i;
     } else if (ms_present == 2) {
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
-            memset(ms->mask[g], 1, cpe->ch[0].ics.max_sfb * sizeof(ms->mask[g][0]));
+            memset(cpe->ms_mask[g], 1, cpe->ch[0].ics.max_sfb * sizeof(cpe->ms_mask[g][0]));
     }
 }
 
@@ -1078,7 +1077,6 @@ static int decode_ics(AACContext * ac, SingleChannelElement * sce, GetBitContext
  * Mid/Side stereo decoding; reference: 4.6.8.1.3.
  */
 static void apply_mid_side_stereo(ChannelElement * cpe) {
-    const MidSideStereo * ms = &cpe->ms;
     const IndividualChannelStream * ics = &cpe->ch[0].ics;
     float *ch0 = cpe->ch[0].coeffs;
     float *ch1 = cpe->ch[1].coeffs;
@@ -1086,7 +1084,7 @@ static void apply_mid_side_stereo(ChannelElement * cpe) {
     const uint16_t * offsets = ics->swb_offset;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++) {
-            if (ms->mask[g][i] &&
+            if (cpe->ms_mask[g][i] &&
                 cpe->ch[0].band_type[g][i] < NOISE_BT && cpe->ch[1].band_type[g][i] < NOISE_BT) {
                 for (gp = 0; gp < ics->group_len[g]; gp++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
@@ -1124,7 +1122,7 @@ static void apply_intensity_stereo(ChannelElement * cpe, int ms_present) {
                 while (i < bt_run_end) {
                     c = -1 + 2 * (sce1->band_type[g][i] - 14);
                     if (ms_present)
-                        c *= 1 - 2 * cpe->ms.mask[g][i];
+                        c *= 1 - 2 * cpe->ms_mask[g][i];
                     scale = c * sce1->sf[g][i];
                     for (gp = 0; gp < ics->group_len[g]; gp++)
                         for (k = offsets[i]; k < offsets[i+1]; k++)

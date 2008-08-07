@@ -217,13 +217,6 @@ typedef struct {
 } TemporalNoiseShaping;
 
 /**
- * M/S joint channel coding
- */
-typedef struct {
-    uint8_t mask[8][64];
-} MidSideStereo;
-
-/**
  * Dynamic Range Control - decoded from the bitstream but not processed further.
  */
 typedef struct {
@@ -310,7 +303,7 @@ typedef struct {
  */
 typedef struct {
     // CPE specific
-    MidSideStereo ms;
+    uint8_t ms_mask[8][64];     ///< Set if mid/side stereo is used for each scalefactor window band
     // shared
     SingleChannelElement ch[2];
     // CCE specific
