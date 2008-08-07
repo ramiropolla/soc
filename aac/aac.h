@@ -142,13 +142,11 @@ enum ChannelType {
 
 /**
  * mix-down channel types
- * MIXDOWN_CENTER is the index into the mix-down arrays for a Single Channel Element with AAC_CHANNEL_FRONT.
- * MIXDOWN_(BACK|FRONT) are the indices for Channel Pair Elements with AAC_CHANNEL_(BACK|FRONT).
  */
 enum {
-    MIXDOWN_CENTER,
-    MIXDOWN_FRONT,
-    MIXDOWN_BACK,
+    MIXDOWN_CENTER, ///< MIXDOWN_CENTER is the index into the mix-down arrays for a Single Channel Element with AAC_CHANNEL_FRONT.
+    MIXDOWN_FRONT,  ///< MIXDOWN_FRONT is the index for a Channel Pair Element with AAC_CHANNEL_FRONT.
+    MIXDOWN_BACK,   ///< MIXDOWN_BACK is the index for a Channel Pair Element with AAC_CHANNEL_BACK.
 };
 
 /**
