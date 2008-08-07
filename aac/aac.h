@@ -233,9 +233,6 @@ typedef struct {
                                                         channels combined. */
 } DynamicRangeControl;
 
-/**
- * pulse tool
- */
 typedef struct {
     int num_pulse;
     int start;
