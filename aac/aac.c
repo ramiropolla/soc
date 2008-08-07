@@ -1080,10 +1080,10 @@ static void apply_mid_side_stereo(ChannelElement * cpe) {
     int g, i, k, gp;
     const uint16_t * offsets = ics->swb_offset;
     for (g = 0; g < ics->num_window_groups; g++) {
-            for (i = 0; i < ics->max_sfb; i++) {
-                if (ms->mask[g][i] &&
-                    cpe->ch[0].band_type[g][i] < NOISE_BT && cpe->ch[1].band_type[g][i] < NOISE_BT) {
-        for (gp = 0; gp < ics->group_len[g]; gp++) {
+        for (i = 0; i < ics->max_sfb; i++) {
+            if (ms->mask[g][i] &&
+                cpe->ch[0].band_type[g][i] < NOISE_BT && cpe->ch[1].band_type[g][i] < NOISE_BT) {
+                for (gp = 0; gp < ics->group_len[g]; gp++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
                         float tmp = ch0[gp*128 + k] - ch1[gp*128 + k];
                         ch0[gp*128 + k] += ch1[gp*128 + k];
@@ -1109,22 +1109,22 @@ static void apply_intensity_stereo(ChannelElement * cpe) {
     int c;
     float scale;
     for (g = 0; g < ics->num_window_groups; g++) {
-            for (i = 0; i < ics->max_sfb;) {
-                if (sce1->band_type[g][i] == INTENSITY_BT || sce1->band_type[g][i] == INTENSITY_BT2) {
-                    const int bt_run_end = sce1->band_type_run_end[g][i];
-                    while (i < bt_run_end) {
-                        c = -1 + 2 * (sce1->band_type[g][i] - 14);
-                        if (cpe->ms.present)
-                            c *= 1 - 2 * cpe->ms.mask[g][i];
-                        scale = c * sce1->sf[g][i];
-        for (gp = 0; gp < ics->group_len[g]; gp++)
+        for (i = 0; i < ics->max_sfb;) {
+            if (sce1->band_type[g][i] == INTENSITY_BT || sce1->band_type[g][i] == INTENSITY_BT2) {
+                const int bt_run_end = sce1->band_type_run_end[g][i];
+                while (i < bt_run_end) {
+                    c = -1 + 2 * (sce1->band_type[g][i] - 14);
+                    if (cpe->ms.present)
+                        c *= 1 - 2 * cpe->ms.mask[g][i];
+                    scale = c * sce1->sf[g][i];
+                    for (gp = 0; gp < ics->group_len[g]; gp++)
                         for (k = offsets[i]; k < offsets[i+1]; k++)
                             coef1[gp*128 + k] = scale * coef0[gp*128 + k];
-                        i++;
-                    }
-                } else
-                    i = sce1->band_type_run_end[g][i];
-            }
+                    i++;
+                }
+            } else
+                i = sce1->band_type_run_end[g][i];
+        }
         coef0 += ics->group_len[g]*128;
         coef1 += ics->group_len[g]*128;
     }
