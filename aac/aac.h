@@ -222,9 +222,6 @@ typedef struct {
     int dyn_rng_sgn[17];                            ///< DRC sign information; 0 - positive, 1 - negative
     int dyn_rng_ctl[17];                            ///< DRC magnitude information
     int exclude_mask[MAX_CHANNELS];                 ///< Channels to be excluded from DRC processing.
-    int additional_excluded_chns[MAX_CHANNELS / 7]; /**< The exclude_mask bits are
-                                                        coded in groups of 7 with 1 bit preceeding each group (except the first)
-                                                        indicating that 7 more mask bits are coded. */
     int band_incr;                                  ///< Number of DRC bands greater than 1 having DRC info.
     int interpolation_scheme;                       ///< Indicates the interpolation scheme used in the SBR QMF domain.
     int band_top[17];                               ///< Indicates the top of the i-th DRC band in units of 4 spectral lines.

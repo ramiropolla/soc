@@ -1279,7 +1279,7 @@ static int decode_drc_channel_exclusions(DynamicRangeControl *che_drc, GetBitCon
             che_drc->exclude_mask[num_excl_chan + i] = get_bits1(gb);
         n++;
         num_excl_chan += 7;
-    } while (num_excl_chan < MAX_CHANNELS - 7 && (che_drc->additional_excluded_chns[n-1] = get_bits1(gb)));
+    } while (num_excl_chan < MAX_CHANNELS - 7 && get_bits1(gb));
 
     return n;
 }
