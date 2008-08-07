@@ -868,15 +868,20 @@ static int decode_gain_control(SingleChannelElement * sce, GetBitContext * gb) {
 
 /**
  * Decode Mid/Side data; reference: table 4.54.
+ *
+ * @param   ms_present  Indicates mid/side stereo presence. [0] mask is all 0s;
+ *                      [1] mask is decoded from bitstream; [2] mask is all 1s;
+ *                      [3] reserved for scalable AAC
  */
-static void decode_mid_side_stereo(ChannelElement * cpe, GetBitContext * gb) {
+static void decode_mid_side_stereo(ChannelElement * cpe, GetBitContext * gb,
+        int ms_present) {
     MidSideStereo * ms = &cpe->ms;
     int g, i;
-    if (ms->present == 1) {
+    if (ms_present == 1) {
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
             for (i = 0; i < cpe->ch[0].ics.max_sfb; i++)
                 ms->mask[g][i] = get_bits1(gb);// << i;
-    } else if (ms->present == 2) {
+    } else if (ms_present == 2) {
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
             memset(ms->mask[g], 1, cpe->ch[0].ics.max_sfb * sizeof(ms->mask[g][0]));
     }
@@ -1099,8 +1104,12 @@ static void apply_mid_side_stereo(ChannelElement * cpe) {
 
 /**
  * intensity stereo decoding; reference: 4.6.8.2.3
+ *
+ * @param   ms_present  Indicates mid/side stereo presence. [0] mask is all 0s;
+ *                      [1] mask is decoded from bitstream; [2] mask is all 1s;
+ *                      [3] reserved for scalable AAC
  */
-static void apply_intensity_stereo(ChannelElement * cpe) {
+static void apply_intensity_stereo(ChannelElement * cpe, int ms_present) {
     const IndividualChannelStream * ics = &cpe->ch[1].ics;
     SingleChannelElement * sce1 = &cpe->ch[1];
     float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
@@ -1114,7 +1123,7 @@ static void apply_intensity_stereo(ChannelElement * cpe) {
                 const int bt_run_end = sce1->band_type_run_end[g][i];
                 while (i < bt_run_end) {
                     c = -1 + 2 * (sce1->band_type[g][i] - 14);
-                    if (cpe->ms.present)
+                    if (ms_present)
                         c *= 1 - 2 * cpe->ms.mask[g][i];
                     scale = c * sce1->sf[g][i];
                     for (gp = 0; gp < ics->group_len[g]; gp++)
@@ -1137,7 +1146,7 @@ static void apply_intensity_stereo(ChannelElement * cpe) {
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
-    int i, ret, common_window;
+    int i, ret, common_window, ms_present = 0;
     ChannelElement * cpe;
 
     cpe = ac->che[ID_CPE][tag];
@@ -1151,21 +1160,19 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
 #ifdef AAC_LTP
         cpe->ch[1].ics.ltp = cpe->ch[0].ics.ltp2;
 #endif /* AAC_LTP */
-        if((cpe->ms.present = get_bits(gb, 2)))
-            decode_mid_side_stereo(cpe, gb);
-    } else {
-        cpe->ms.present = 0;
+        if((ms_present = get_bits(gb, 2)))
+            decode_mid_side_stereo(cpe, gb, ms_present);
     }
     if ((ret = decode_ics(ac, &cpe->ch[0], gb, common_window, 0)))
         return ret;
     if ((ret = decode_ics(ac, &cpe->ch[1], gb, common_window, 0)))
         return ret;
 
-    if (common_window && cpe->ms.present)
+    if (common_window && ms_present)
         apply_mid_side_stereo(cpe);
 
     if (cpe->ch[1].ics.intensity_present)
-        apply_intensity_stereo(cpe);
+        apply_intensity_stereo(cpe, ms_present);
     return 0;
 }
 

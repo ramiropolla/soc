@@ -211,7 +211,6 @@ typedef struct {
  * M/S joint channel coding
  */
 typedef struct {
-    int present;
     uint8_t mask[8][64];
 } MidSideStereo;
 
