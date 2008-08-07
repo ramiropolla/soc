@@ -1325,11 +1325,11 @@ static int decode_dynamic_range(DynamicRangeControl *che_drc, GetBitContext * gb
 }
 
 /**
- * Parse extension data (incomplete); reference: table 4.51.
+ * Decode extension data (incomplete); reference: table 4.51.
  *
  * @param   cnt length of ID_FIL syntactic element in bytes
  */
-static int extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
+static int decode_extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
     int crc_flag = 0;
     int res = cnt;
     switch (get_bits(gb, 4)) { // extension type
@@ -1918,7 +1918,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             if (tag == 15)
                 tag += get_bits(&gb, 8) - 1;
             while (tag > 0)
-                tag -= extension_payload(ac, &gb, tag);
+                tag -= decode_extension_payload(ac, &gb, tag);
             err = 0; /* FIXME */
             break;
 
