@@ -333,15 +333,15 @@ static int program_config_element(AACContext * ac, ProgramConfig *newpcs, GetBit
  * Set up ProgramConfig, but based on a default channel configuration
  * as specified in table 1.17.
  */
-static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channels)
+static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channel_config)
 {
     /* Pre-mixed down-mix outputs are not available. */
     newpcs->mono_mixdown_tag   = -1;
     newpcs->stereo_mixdown_tag = -1;
 
-    if(channels < 1 || channels > 7) {
-        av_log(ac->avccontext, AV_LOG_ERROR, "invalid default channel configuration (%d channels)\n",
-               channels);
+    if(channel_config < 1 || channel_config > 7) {
+        av_log(ac->avccontext, AV_LOG_ERROR, "invalid default channel configuration (%d)\n",
+               channel_config);
         return -1;
     }
 
@@ -356,18 +356,18 @@ static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channe
      * 7ch : front center + L + R + outer front left + outer front right + back stereo + LFE
      */
 
-    if(channels != 2)
+    if(channel_config != 2)
         newpcs->che_type[ID_SCE][0] = AAC_CHANNEL_FRONT; // front center (or mono)
-    if(channels > 1)
+    if(channel_config > 1)
         newpcs->che_type[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or stereo)
-    if(channels == 4)
+    if(channel_config == 4)
         newpcs->che_type[ID_SCE][1] = AAC_CHANNEL_BACK;  // back center
-    if(channels > 4)
-        newpcs->che_type[ID_CPE][(channels == 7) + 1]
+    if(channel_config > 4)
+        newpcs->che_type[ID_CPE][(channel_config == 7) + 1]
                                 = AAC_CHANNEL_BACK;  // back stereo
-    if(channels > 5)
+    if(channel_config > 5)
         newpcs->che_type[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
-    if(channels == 7)
+    if(channel_config == 7)
         newpcs->che_type[ID_CPE][1] = AAC_CHANNEL_FRONT; // outer front left + outer front right
 
     return 0;
@@ -377,7 +377,7 @@ static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channe
 /**
  * Decode GA "General Audio" specific configuration; reference: table 4.1.
  */
-static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int channels) {
+static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int channel_config) {
     ProgramConfig newpcs;
     int extension_flag, ret;
 
@@ -395,12 +395,12 @@ static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int ch
         skip_bits(gb, 3);     // layerNr
 
     memset(&newpcs, 0, sizeof(ProgramConfig));
-    if (channels == 0) {
+    if (channel_config == 0) {
         skip_bits(gb, 4);  // element_instance_tag
         if((ret  = program_config_element(ac, &newpcs, gb)))
             return ret;
     } else {
-        if((ret = set_pce_to_defaults(ac, &newpcs, channels)))
+        if((ret = set_pce_to_defaults(ac, &newpcs, channel_config)))
             return ret;
     }
     if((ret = output_configure(ac, &ac->pcs, &newpcs)))
