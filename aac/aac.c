@@ -333,7 +333,7 @@ static int program_config_element(AACContext * ac, ProgramConfig *newpcs, GetBit
  * Set up ProgramConfig, but based on a default channel configuration
  * as specified in table 1.17.
  */
-static int program_config_element_default(AACContext *ac, ProgramConfig *newpcs, int channels)
+static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channels)
 {
     /* Pre-mixed down-mix outputs are not available. */
     newpcs->mono_mixdown_tag   = -1;
@@ -400,7 +400,7 @@ static int ga_specific_config(AACContext * ac, GetBitContext * gb, int channels)
         if((ret  = program_config_element(ac, &newpcs, gb)))
             return ret;
     } else {
-        if((ret = program_config_element_default(ac, &newpcs, channels)))
+        if((ret = set_pce_to_defaults(ac, &newpcs, channels)))
             return ret;
     }
     if((ret = output_configure(ac, &ac->pcs, &newpcs)))
