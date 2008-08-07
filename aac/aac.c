@@ -1160,7 +1160,11 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
 #ifdef AAC_LTP
         cpe->ch[1].ics.ltp = cpe->ch[0].ics.ltp2;
 #endif /* AAC_LTP */
-        if((ms_present = get_bits(gb, 2)))
+        ms_present = get_bits(gb, 2);
+        if(ms_present == 3) {
+            av_log(ac->avccontext, AV_LOG_ERROR, "ms_present = 3 is reserved.\n");
+            return -1;
+        } else if(ms_present)
             decode_mid_side_stereo(cpe, gb, ms_present);
     }
     if ((ret = decode_ics(ac, &cpe->ch[0], gb, common_window, 0)))
