@@ -1111,18 +1111,17 @@ static void apply_intensity_stereo(ChannelElement * cpe) {
     for (g = 0; g < ics->num_window_groups; g++) {
             for (i = 0; i < ics->max_sfb;) {
                 if (sce1->band_type[g][i] == INTENSITY_BT || sce1->band_type[g][i] == INTENSITY_BT2) {
-        for (gp = 0; gp < ics->group_len[g]; gp++) {
                     const int bt_run_end = sce1->band_type_run_end[g][i];
                     while (i < bt_run_end) {
                         c = -1 + 2 * (sce1->band_type[g][i] - 14);
                         if (cpe->ms.present)
                             c *= 1 - 2 * cpe->ms.mask[g][i];
                         scale = c * sce1->sf[g][i];
+        for (gp = 0; gp < ics->group_len[g]; gp++)
                         for (k = offsets[i]; k < offsets[i+1]; k++)
                             coef1[gp*128 + k] = scale * coef0[gp*128 + k];
                         i++;
                     }
-        }
                 } else
                     i = sce1->band_type_run_end[g][i];
             }
