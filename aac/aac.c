@@ -676,7 +676,7 @@ static inline float ivquant(int a) {
 }
 
 /**
- * Decode section_data payload; reference: table 4.46.
+ * Decode band types (section_data payload); reference: table 4.46.
  *
  * @param   band_type           array of the used band type
  * @param   band_type_run_end   array of the last scalefactor band of a band type run
