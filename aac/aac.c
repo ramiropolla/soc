@@ -163,14 +163,15 @@ static void che_freep(ChannelElement **s) {
  *
  * \param newpcs New program configuration struct - we only do something if it differs from the current one.
  */
-static int output_configure(AACContext *ac, ProgramConfig *pcs, ProgramConfig *newpcs) {
+static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_TAGID],
+        enum ChannelPosition new_che_pos[4][MAX_TAGID]) {
     AVCodecContext *avctx = ac->avccontext;
     int i, j, channels = 0;
 
-    if(!memcmp(pcs, newpcs, sizeof(ProgramConfig)))
+    if(!memcmp(che_pos, new_che_pos, 4 * MAX_TAGID * sizeof(new_che_pos[0][0])))
         return 0; /* no change */
 
-    *pcs = *newpcs;
+    memcpy(che_pos, new_che_pos, 4 * MAX_TAGID * sizeof(new_che_pos[0][0]));
 
     /* Allocate or free elements depending on if they are in the
      * current program configuration struct.
@@ -183,7 +184,7 @@ static int output_configure(AACContext *ac, ProgramConfig *pcs, ProgramConfig *n
 
     for(i = 0; i < MAX_TAGID; i++) {
         for(j = 0; j < 4; j++) {
-            if(pcs->che_pos[j][i]) {
+            if(che_pos[j][i]) {
                 if(!ac->che[j][i] && !(ac->che[j][i] = av_mallocz(sizeof(ChannelElement))))
                     return AVERROR(ENOMEM);
                 if(j != ID_CCE) {
@@ -223,7 +224,8 @@ static void program_config_element_parse_tags(enum ChannelPosition *cpe_map,
 /**
  * Parse program configuration element; reference: table 4.2.
  */
-static int program_config_element(AACContext * ac, ProgramConfig *newpcs, GetBitContext * gb) {
+static int program_config_element(AACContext * ac, enum ChannelPosition new_che_pos[4][MAX_TAGID],
+        GetBitContext * gb) {
     int num_front, num_side, num_back, num_lfe, num_assoc_data, num_cc;
 
     skip_bits(gb, 2);  // object_type
@@ -249,14 +251,14 @@ static int program_config_element(AACContext * ac, ProgramConfig *newpcs, GetBit
     if (get_bits1(gb))
         skip_bits(gb, 3); // mixdown_coeff_index and pseudo_surround
 
-    program_config_element_parse_tags(newpcs->che_pos[ID_CPE], newpcs->che_pos[ID_SCE], AAC_CHANNEL_FRONT, gb, num_front);
-    program_config_element_parse_tags(newpcs->che_pos[ID_CPE], newpcs->che_pos[ID_SCE], AAC_CHANNEL_SIDE,  gb, num_side );
-    program_config_element_parse_tags(newpcs->che_pos[ID_CPE], newpcs->che_pos[ID_SCE], AAC_CHANNEL_BACK,  gb, num_back );
-    program_config_element_parse_tags(NULL,                    newpcs->che_pos[ID_LFE], AAC_CHANNEL_LFE,   gb, num_lfe  );
+    program_config_element_parse_tags(new_che_pos[ID_CPE], new_che_pos[ID_SCE], AAC_CHANNEL_FRONT, gb, num_front);
+    program_config_element_parse_tags(new_che_pos[ID_CPE], new_che_pos[ID_SCE], AAC_CHANNEL_SIDE,  gb, num_side );
+    program_config_element_parse_tags(new_che_pos[ID_CPE], new_che_pos[ID_SCE], AAC_CHANNEL_BACK,  gb, num_back );
+    program_config_element_parse_tags(NULL,                new_che_pos[ID_LFE], AAC_CHANNEL_LFE,   gb, num_lfe  );
 
     skip_bits_long(gb, 4 * num_assoc_data);
 
-    program_config_element_parse_tags(newpcs->che_pos[ID_CCE], newpcs->che_pos[ID_CCE], AAC_CHANNEL_CC,    gb, num_cc   );
+    program_config_element_parse_tags(new_che_pos[ID_CCE], new_che_pos[ID_CCE], AAC_CHANNEL_CC,    gb, num_cc   );
 
     align_get_bits(gb);
 
@@ -269,7 +271,8 @@ static int program_config_element(AACContext * ac, ProgramConfig *newpcs, GetBit
  * Set up ProgramConfig, but based on a default channel configuration
  * as specified in table 1.17.
  */
-static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channel_config)
+static int set_pce_to_defaults(AACContext *ac, enum ChannelPosition new_che_pos[4][MAX_TAGID],
+        int channel_config)
 {
     if(channel_config < 1 || channel_config > 7) {
         av_log(ac->avccontext, AV_LOG_ERROR, "invalid default channel configuration (%d)\n",
@@ -289,18 +292,18 @@ static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channe
      */
 
     if(channel_config != 2)
-        newpcs->che_pos[ID_SCE][0] = AAC_CHANNEL_FRONT; // front center (or mono)
+        new_che_pos[ID_SCE][0] = AAC_CHANNEL_FRONT; // front center (or mono)
     if(channel_config > 1)
-        newpcs->che_pos[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or stereo)
+        new_che_pos[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or stereo)
     if(channel_config == 4)
-        newpcs->che_pos[ID_SCE][1] = AAC_CHANNEL_BACK;  // back center
+        new_che_pos[ID_SCE][1] = AAC_CHANNEL_BACK;  // back center
     if(channel_config > 4)
-        newpcs->che_pos[ID_CPE][(channel_config == 7) + 1]
+        new_che_pos[ID_CPE][(channel_config == 7) + 1]
                                 = AAC_CHANNEL_BACK;  // back stereo
     if(channel_config > 5)
-        newpcs->che_pos[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
+        new_che_pos[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
     if(channel_config == 7)
-        newpcs->che_pos[ID_CPE][1] = AAC_CHANNEL_FRONT; // outer front left + outer front right
+        new_che_pos[ID_CPE][1] = AAC_CHANNEL_FRONT; // outer front left + outer front right
 
     return 0;
 }
@@ -310,7 +313,7 @@ static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channe
  * Decode GA "General Audio" specific configuration; reference: table 4.1.
  */
 static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int channel_config) {
-    ProgramConfig newpcs;
+    enum ChannelPosition new_che_pos[4][MAX_TAGID];
     int extension_flag, ret;
 
     if(get_bits1(gb)) {  // frameLengthFlag
@@ -326,16 +329,16 @@ static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int ch
        ac->m4ac.object_type == AOT_ER_AAC_SCALABLE)
         skip_bits(gb, 3);     // layerNr
 
-    memset(&newpcs, 0, sizeof(ProgramConfig));
+    memset(new_che_pos, 0, 4 * MAX_TAGID * sizeof(new_che_pos[0][0]));
     if (channel_config == 0) {
         skip_bits(gb, 4);  // element_instance_tag
-        if((ret  = program_config_element(ac, &newpcs, gb)))
+        if((ret  = program_config_element(ac, new_che_pos, gb)))
             return ret;
     } else {
-        if((ret = set_pce_to_defaults(ac, &newpcs, channel_config)))
+        if((ret = set_pce_to_defaults(ac, new_che_pos, channel_config)))
             return ret;
     }
-    if((ret = output_configure(ac, &ac->pcs, &newpcs)))
+    if((ret = output_configure(ac, ac->che_pos, new_che_pos)))
         return ret;
 
     if (extension_flag) {
@@ -1840,11 +1843,11 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
 
         case ID_PCE:
         {
-            ProgramConfig newpcs;
-            memset(&newpcs, 0, sizeof(ProgramConfig));
-            if((err = program_config_element(ac, &newpcs, &gb)))
+            enum ChannelPosition new_che_pos[4][MAX_TAGID];
+            memset(new_che_pos, 0, 4 * MAX_TAGID * sizeof(new_che_pos[0][0]));
+            if((err = program_config_element(ac, new_che_pos, &gb)))
                 break;
-            err = output_configure(ac, &ac->pcs, &newpcs);
+            err = output_configure(ac, ac->che_pos, new_che_pos);
             break;
         }
 

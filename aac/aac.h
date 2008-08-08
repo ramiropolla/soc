@@ -149,16 +149,6 @@ enum CouplingPoint {
     AFTER_IMDCT,
 };
 
-/**
- * Program configuration - describes how channels are arranged. Either read from
- * stream (ID_PCE) or created based on a default fixed channel arrangement.
- */
-typedef struct {
-    enum ChannelPosition che_pos[4][MAX_TAGID]; /**< channel element channel mapping with the
-                                                 *   first index as the first 4 raw_data_block IDs
-                                                 */
-} ProgramConfig;
-
 #ifdef AAC_LTP
 /**
  * Long Term Prediction
@@ -315,7 +305,9 @@ typedef struct {
      * @defgroup elements
      * @{
      */
-    ProgramConfig pcs;
+    enum ChannelPosition che_pos[4][MAX_TAGID]; /**< channel element channel mapping with the
+                                                 *   first index as the first 4 raw_data_block IDs
+                                                 */
     ChannelElement * che[4][MAX_TAGID];
     /** @} */
 
