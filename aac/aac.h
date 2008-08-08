@@ -150,24 +150,11 @@ enum CouplingPoint {
 };
 
 /**
- * mix-down channel types
- */
-enum {
-    MIXDOWN_CENTER, ///< MIXDOWN_CENTER is the index into the mix-down arrays for a Single Channel Element with AAC_CHANNEL_FRONT.
-    MIXDOWN_FRONT,  ///< MIXDOWN_FRONT is the index for a Channel Pair Element with AAC_CHANNEL_FRONT.
-    MIXDOWN_BACK,   ///< MIXDOWN_BACK is the index for a Channel Pair Element with AAC_CHANNEL_BACK.
-};
-
-/**
  * Program configuration - describes how channels are arranged. Either read from
  * stream (ID_PCE) or created based on a default fixed channel arrangement.
  */
 typedef struct {
     enum ChannelPosition che_type[4][MAX_TAGID]; ///< channel element type with the first index as the first 4 raw_data_block IDs
-    int mono_mixdown_tag;                    ///< The SCE tag to use if user requests mono   output, -1 if not available.
-    int stereo_mixdown_tag;                  ///< The CPE tag to use if user requests stereo output, -1 if not available.
-    int mixdown_coeff_index;                 ///< 0-3
-    int pseudo_surround;                     ///< Mix surround channels out of phase.
 } ProgramConfig;
 
 #ifdef AAC_LTP
@@ -355,12 +342,10 @@ typedef struct {
     /** @} */
 
     /**
-     * @defgroup output   Members used for output interleaving and down-mixing.
+     * @defgroup output   Members used for output interleaving.
      * @{
      */
-    float *interleaved_output;                        ///< Interim buffer for interleaving PCM samples.
     float *output_data[MAX_CHANNELS];                 ///< Points to each element's 'ret' buffer (PCM output).
-    ChannelElement *mm[3];                            ///< Center/Front/Back channel elements to use for matrix mix-down.
     float add_bias;                                   ///< offset for dsp.float_to_int16
     float sf_scale;                                   ///< Pre-scale for correct IMDCT and dsp.float_to_int16.
     int sf_offset;                                    ///< offset into pow2sf_tab as appropriate for dsp.float_to_int16

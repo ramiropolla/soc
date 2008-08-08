@@ -166,16 +166,6 @@ static void che_freep(ChannelElement **s) {
 static int output_configure(AACContext *ac, ProgramConfig *pcs, ProgramConfig *newpcs) {
     AVCodecContext *avctx = ac->avccontext;
     int i, j, channels = 0;
-    float a, b;
-    ChannelElement *mixdown[3] = { NULL, NULL, NULL };
-
-    static const float mixdowncoeff[4] = {
-        /* matrix mix-down coefficient, table 4.70 */
-        1. / M_SQRT2,
-        1. / 2.,
-        1. / (2 * M_SQRT2),
-        0
-    };
 
     if(!memcmp(pcs, newpcs, sizeof(ProgramConfig)))
         return 0; /* no change */
@@ -189,8 +179,6 @@ static int output_configure(AACContext *ac, ProgramConfig *pcs, ProgramConfig *n
      *
      * For a 5.1 stream the output order will be:
      *    [ Front Left ] [ Front Right ] [ Center ] [ LFE ] [ Surround Left ] [ Surround Right ]
-     *
-     * Locate front, center and back channels for later matrix mix-down.
      */
 
     for(i = 0; i < MAX_TAGID; i++) {
@@ -204,62 +192,10 @@ static int output_configure(AACContext *ac, ProgramConfig *pcs, ProgramConfig *n
                     if(j == ID_CPE) {
                         ac->output_data[channels++] = ac->che[j][i]->ch[1].ret;
                         ac->che[j][i]->ch[1].mixing_gain = 1.0f;
-                        if(!mixdown[MIXDOWN_FRONT] && pcs->che_type[j][i] == AAC_CHANNEL_FRONT)
-                            mixdown[MIXDOWN_FRONT] = ac->che[j][i];
-                        if(!mixdown[MIXDOWN_BACK ] && pcs->che_type[j][i] == AAC_CHANNEL_BACK)
-                            mixdown[MIXDOWN_BACK ] = ac->che[j][i];
                     }
-                    if(j == ID_SCE && !mixdown[MIXDOWN_CENTER] && pcs->che_type[j][i] == AAC_CHANNEL_FRONT)
-                        mixdown[MIXDOWN_CENTER] = ac->che[j][i];
                 }
             } else
                 che_freep(&ac->che[j][i]);
-        }
-    }
-
-    // allocate appropriately aligned buffer for interleaved output
-    if(channels > avctx->channels)
-        av_freep(&ac->interleaved_output);
-    if(!ac->interleaved_output && !(ac->interleaved_output = av_malloc(channels * 1024 * sizeof(float))))
-        return AVERROR(ENOMEM);
-
-    ac->mm[MIXDOWN_FRONT] = ac->mm[MIXDOWN_BACK] = ac->mm[MIXDOWN_CENTER] = NULL;
-
-    /* Check for matrix mix-down to mono or stereo. */
-
-    if(avctx->request_channels && avctx->request_channels <= 2 &&
-       avctx->request_channels != channels) {
-
-        if((avctx->request_channels == 1 && pcs->mono_mixdown_tag   != -1) ||
-           (avctx->request_channels == 2 && pcs->stereo_mixdown_tag != -1)) {
-            /* Add support for this as soon as we get a sample so we can figure out
-               exactly how this is supposed to work. */
-            av_log(avctx, AV_LOG_ERROR,
-                   "Mix-down using pre-mixed elements is not supported, please file a bug. "
-                   "Reverting to matrix mix-down.\n");
-        }
-
-        /* We need 'center + L + R + sL + sR' for matrix mix-down. */
-        if(mixdown[MIXDOWN_CENTER] && mixdown[MIXDOWN_FRONT] && mixdown[MIXDOWN_BACK]) {
-            a = mixdowncoeff[pcs->mixdown_coeff_index];
-
-            if(avctx->request_channels == 2) {
-                b = 1. / (1. + (1. / M_SQRT2) + a * (pcs->pseudo_surround ? 2. : 1.));
-                mixdown[MIXDOWN_CENTER]->ch[0].mixing_gain      = b / M_SQRT2;
-            } else {
-                b = 1. / (3. + 2. * a);
-                mixdown[MIXDOWN_CENTER]->ch[0].mixing_gain      = b;
-            }
-            mixdown[MIXDOWN_FRONT]->ch[0].mixing_gain = b;
-            mixdown[MIXDOWN_FRONT]->ch[1].mixing_gain = b;
-            mixdown[MIXDOWN_BACK ]->ch[0].mixing_gain = b * a;
-            mixdown[MIXDOWN_BACK ]->ch[1].mixing_gain = b * a;
-            for(i = 0; i < 3; i++) ac->mm[i] = mixdown[i];
-
-            channels = avctx->request_channels;
-        } else {
-            av_log(avctx, AV_LOG_WARNING, "Matrix mixing from %d to %d channels is not supported.\n",
-                   channels, avctx->request_channels);
         }
     }
 
@@ -305,13 +241,13 @@ static int program_config_element(AACContext * ac, ProgramConfig *newpcs, GetBit
     num_assoc_data  = get_bits(gb, 3);
     num_cc          = get_bits(gb, 4);
 
-    newpcs->mono_mixdown_tag   = get_bits1(gb) ? get_bits(gb, 4) : -1;
-    newpcs->stereo_mixdown_tag = get_bits1(gb) ? get_bits(gb, 4) : -1;
+    if (get_bits1(gb))
+        skip_bits(gb, 4); // mono_mixdown_tag
+    if (get_bits1(gb))
+        skip_bits(gb, 4); // stereo_mixdown_tag
 
-    if (get_bits1(gb)) {
-        newpcs->mixdown_coeff_index = get_bits(gb, 2);
-        newpcs->pseudo_surround     = get_bits1(gb);
-    }
+    if (get_bits1(gb))
+        skip_bits(gb, 3); // mixdown_coeff_index and pseudo_surround
 
     program_config_element_parse_tags(newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], AAC_CHANNEL_FRONT, gb, num_front);
     program_config_element_parse_tags(newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], AAC_CHANNEL_SIDE,  gb, num_side );
@@ -335,10 +271,6 @@ static int program_config_element(AACContext * ac, ProgramConfig *newpcs, GetBit
  */
 static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channel_config)
 {
-    /* Pre-mixed down-mix outputs are not available. */
-    newpcs->mono_mixdown_tag   = -1;
-    newpcs->stereo_mixdown_tag = -1;
-
     if(channel_config < 1 || channel_config > 7) {
         av_log(ac->avccontext, AV_LOG_ERROR, "invalid default channel configuration (%d)\n",
                channel_config);
@@ -1833,16 +1765,15 @@ static int spectral_to_sample(AACContext * ac) {
 }
 
 /**
- * Conduct matrix mix-down and float to int16 conversion.
+ * Conduct float to int16 conversion.
  *
  * @param   data        pointer to output data
  * @param   data_size   output data size in bytes
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int mixdown_and_convert_to_int16(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
+static int convert_to_int16(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
     AACContext * ac = avccontext->priv_data;
     int i;
-    float *c, *l, *r, *sl, *sr, *out;
 
     if (!ac->is_saved) {
         ac->is_saved = 1;
@@ -1859,40 +1790,7 @@ static int mixdown_and_convert_to_int16(AVCodecContext * avccontext, uint16_t * 
     }
     *data_size = i;
 
-    if(ac->mm[MIXDOWN_CENTER]) {
-        /* matrix mix-down */
-        l   = ac->mm[MIXDOWN_FRONT ]->ch[0].ret;
-        r   = ac->mm[MIXDOWN_FRONT ]->ch[1].ret;
-        c   = ac->mm[MIXDOWN_CENTER]->ch[0].ret;
-        sl  = ac->mm[MIXDOWN_BACK  ]->ch[0].ret;
-        sr  = ac->mm[MIXDOWN_BACK  ]->ch[1].ret;
-        out = ac->interleaved_output;
-
-        // XXX dsputil-ize
-        if(avccontext->channels == 2) {
-            if(ac->pcs.pseudo_surround) {
-                for(i = 0; i < 1024; i++) {
-                    *out++ = *l++ + *c   - *sl   - *sr   + ac->add_bias;
-                    *out++ = *r++ + *c++ + *sl++ + *sr++ - ac->add_bias * 3;
-                }
-            } else {
-                for(i = 0; i < 1024; i++) {
-                    *out++ = *l++ + *c   + *sl++ - ac->add_bias * 2;
-                    *out++ = *r++ + *c++ + *sr++ - ac->add_bias * 2;
-                }
-            }
-
-        } else {
-            assert(avccontext->channels == 1);
-            for(i = 0; i < 1024; i++) {
-                *out++ = *l++ + *r++ + *c++ + *sl++ + *sr++ - ac->add_bias * 4;
-            }
-        }
-
-        ac->dsp.float_to_int16(data, ac->interleaved_output, 1024 * avccontext->channels);
-    } else {
         ac->dsp.float_to_int16_interleave(data, (const float **)ac->output_data, 1024, avccontext->channels);
-    }
 
     return 0;
 }
@@ -1976,7 +1874,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
 
     if((err = spectral_to_sample(ac)))
         return err;
-    if((err = mixdown_and_convert_to_int16(avccontext, data, data_size)))
+    if((err = convert_to_int16(avccontext, data, data_size)))
         return err;
 
     return buf_size;
@@ -1996,7 +1894,6 @@ static av_cold int aac_decode_close(AVCodecContext * avccontext) {
 #ifdef AAC_LTP
     ff_mdct_end(&ac->mdct_ltp);
 #endif /* AAC_LTP */
-    av_freep(&ac->interleaved_output);
     return 0 ;
 }
 
