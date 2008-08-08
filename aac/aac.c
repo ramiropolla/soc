@@ -1139,7 +1139,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
         coup->is_cpe[c] = get_bits1(gb);
         coup->tag_select[c] = get_bits(gb, 4);
         if (coup->is_cpe[c]) {
-            coup->ch_select[c] = get_bits1(gb) + 2*get_bits1(gb);
+            coup->ch_select[c] = get_bits(gb, 2);
             if (coup->ch_select[c] == 3)
                 num_gain++;
         }
