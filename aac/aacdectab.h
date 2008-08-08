@@ -34,6 +34,16 @@
 
 #include <stdint.h>
 
+/* scalefactor window band - term for scalefactor bands within a window,
+ * given in Table 4.110 to Table 4.128.
+ *
+ * scalefactor band - term for scalefactor band within a group. In case
+ * of EIGHT_SHORT_SEQUENCE and grouping a scalefactor band may contain
+ * several scalefactor window bands of corresponding frequency. For all
+ * other window_sequences scalefactor bands and scalefactor window bands
+ * are identical.
+ */
+
 static const uint16_t swb_offset_1024_96[] = {
       0,   4,   8,  12,  16,  20,  24,  28,
      32,  36,  40,  44,  48,  52,  56,  64,

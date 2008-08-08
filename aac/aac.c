@@ -158,10 +158,11 @@ static void che_freep(ChannelElement **s) {
 }
 
 /**
- * Configure output channel order and optional mixing based on the current
- * program configuration element and user requested channels.
+ * Configure output channel order based on the current program configuration element.
  *
- * \param newpcs New program configuration struct - we only do something if it differs from the current one.
+ * @param   che_pos current channel position configuration struct
+ * @param   new_che_pos New channel position configuration struct - we only do something if it differs from the current one.
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_TAGID],
         enum ChannelPosition new_che_pos[4][MAX_TAGID]) {
@@ -174,7 +175,7 @@ static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_
     memcpy(che_pos, new_che_pos, 4 * MAX_TAGID * sizeof(new_che_pos[0][0]));
 
     /* Allocate or free elements depending on if they are in the
-     * current program configuration struct.
+     * current program configuration.
      *
      * Set up default 1:1 output mapping.
      *
@@ -268,7 +269,7 @@ static int program_config_element(AACContext * ac, enum ChannelPosition new_che_
 }
 
 /**
- * Set up ProgramConfig, but based on a default channel configuration
+ * Set up channel positions based on a default channel configuration
  * as specified in table 1.17.
  */
 static int set_pce_to_defaults(AACContext *ac, enum ChannelPosition new_che_pos[4][MAX_TAGID],
