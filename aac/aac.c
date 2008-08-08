@@ -205,7 +205,6 @@ static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_
     return 0;
 }
 
-
 /**
  * Decode an array of 4 bit tag IDs, optionally interleaved with a stereo/mono switching bit.
  *
@@ -220,7 +219,6 @@ static void program_config_element_parse_tags(enum ChannelPosition *cpe_map,
         map[get_bits(gb, 4)] = type;
     }
 }
-
 
 /**
  * Parse program configuration element; reference: table 4.2.
@@ -300,7 +298,7 @@ static int set_pce_to_defaults(AACContext *ac, enum ChannelPosition new_che_pos[
         new_che_pos[ID_SCE][1] = AAC_CHANNEL_BACK;  // back center
     if(channel_config > 4)
         new_che_pos[ID_CPE][(channel_config == 7) + 1]
-                                = AAC_CHANNEL_BACK;  // back stereo
+                               = AAC_CHANNEL_BACK;  // back stereo
     if(channel_config > 5)
         new_che_pos[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
     if(channel_config == 7)
@@ -308,7 +306,6 @@ static int set_pce_to_defaults(AACContext *ac, enum ChannelPosition new_che_pos[
 
     return 0;
 }
-
 
 /**
  * Decode GA "General Audio" specific configuration; reference: table 4.1.
@@ -333,7 +330,7 @@ static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int ch
     memset(new_che_pos, 0, 4 * MAX_TAGID * sizeof(new_che_pos[0][0]));
     if (channel_config == 0) {
         skip_bits(gb, 4);  // element_instance_tag
-        if((ret  = program_config_element(ac, new_che_pos, gb)))
+        if((ret = program_config_element(ac, new_che_pos, gb)))
             return ret;
     } else {
         if((ret = set_pce_to_defaults(ac, new_che_pos, channel_config)))
@@ -362,7 +359,6 @@ static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int ch
     }
     return 0;
 }
-
 
 /**
  * Decode audio specific configuration; reference: table 1.13.
@@ -1418,7 +1414,6 @@ static int apply_ltp(AACContext * ac, SingleChannelElement * sce) {
     return 0;
 }
 
-
 /**
  * @todo: Replace this with float_to_int16().
  */
@@ -1434,7 +1429,6 @@ static inline int16_t ltp_round(float x) {
 
     return lrintf(32768 * x);
 }
-
 
 static int update_ltp(SingleChannelElement * sce, int is_saved) {
     int i;
@@ -1794,11 +1788,10 @@ static int convert_to_int16(AVCodecContext * avccontext, uint16_t * data, int * 
     }
     *data_size = i;
 
-        ac->dsp.float_to_int16_interleave(data, (const float **)ac->output_data, 1024, avccontext->channels);
+    ac->dsp.float_to_int16_interleave(data, (const float **)ac->output_data, 1024, avccontext->channels);
 
     return 0;
 }
-
 
 static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data_size, const uint8_t * buf, int buf_size) {
     AACContext * ac = avccontext->priv_data;
@@ -1913,4 +1906,3 @@ AVCodec aac_decoder = {
     .long_name = NULL_IF_CONFIG_SMALL("Advanced Audio Coding"),
     .sample_fmts = (enum SampleFormat[]){SAMPLE_FMT_S16,SAMPLE_FMT_NONE},
 };
-
