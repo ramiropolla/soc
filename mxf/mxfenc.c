@@ -377,7 +377,7 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     AV_WB24(klv->key + 13, 0x012f00);
 
     put_buffer(pb, klv->key, 16);
-    klv_encode_ber_length(pb, 146);
+    klv_encode_ber_length(pb, 130 + 16 * mxf->essence_container_count);
 
     // write preface set uid
     mxf_generate_uuid(s, uid);
