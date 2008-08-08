@@ -183,7 +183,7 @@ static int output_configure(AACContext *ac, ProgramConfig *pcs, ProgramConfig *n
 
     for(i = 0; i < MAX_TAGID; i++) {
         for(j = 0; j < 4; j++) {
-            if(pcs->che_type[j][i]) {
+            if(pcs->che_pos[j][i]) {
                 if(!ac->che[j][i] && !(ac->che[j][i] = av_mallocz(sizeof(ChannelElement))))
                     return AVERROR(ENOMEM);
                 if(j != ID_CCE) {
@@ -249,14 +249,14 @@ static int program_config_element(AACContext * ac, ProgramConfig *newpcs, GetBit
     if (get_bits1(gb))
         skip_bits(gb, 3); // mixdown_coeff_index and pseudo_surround
 
-    program_config_element_parse_tags(newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], AAC_CHANNEL_FRONT, gb, num_front);
-    program_config_element_parse_tags(newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], AAC_CHANNEL_SIDE,  gb, num_side );
-    program_config_element_parse_tags(newpcs->che_type[ID_CPE], newpcs->che_type[ID_SCE], AAC_CHANNEL_BACK,  gb, num_back );
-    program_config_element_parse_tags(NULL,                     newpcs->che_type[ID_LFE], AAC_CHANNEL_LFE,   gb, num_lfe  );
+    program_config_element_parse_tags(newpcs->che_pos[ID_CPE], newpcs->che_pos[ID_SCE], AAC_CHANNEL_FRONT, gb, num_front);
+    program_config_element_parse_tags(newpcs->che_pos[ID_CPE], newpcs->che_pos[ID_SCE], AAC_CHANNEL_SIDE,  gb, num_side );
+    program_config_element_parse_tags(newpcs->che_pos[ID_CPE], newpcs->che_pos[ID_SCE], AAC_CHANNEL_BACK,  gb, num_back );
+    program_config_element_parse_tags(NULL,                    newpcs->che_pos[ID_LFE], AAC_CHANNEL_LFE,   gb, num_lfe  );
 
     skip_bits_long(gb, 4 * num_assoc_data);
 
-    program_config_element_parse_tags(newpcs->che_type[ID_CCE], newpcs->che_type[ID_CCE], AAC_CHANNEL_CC,    gb, num_cc   );
+    program_config_element_parse_tags(newpcs->che_pos[ID_CCE], newpcs->che_pos[ID_CCE], AAC_CHANNEL_CC,    gb, num_cc   );
 
     align_get_bits(gb);
 
@@ -289,18 +289,18 @@ static int set_pce_to_defaults(AACContext *ac, ProgramConfig *newpcs, int channe
      */
 
     if(channel_config != 2)
-        newpcs->che_type[ID_SCE][0] = AAC_CHANNEL_FRONT; // front center (or mono)
+        newpcs->che_pos[ID_SCE][0] = AAC_CHANNEL_FRONT; // front center (or mono)
     if(channel_config > 1)
-        newpcs->che_type[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or stereo)
+        newpcs->che_pos[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or stereo)
     if(channel_config == 4)
-        newpcs->che_type[ID_SCE][1] = AAC_CHANNEL_BACK;  // back center
+        newpcs->che_pos[ID_SCE][1] = AAC_CHANNEL_BACK;  // back center
     if(channel_config > 4)
-        newpcs->che_type[ID_CPE][(channel_config == 7) + 1]
+        newpcs->che_pos[ID_CPE][(channel_config == 7) + 1]
                                 = AAC_CHANNEL_BACK;  // back stereo
     if(channel_config > 5)
-        newpcs->che_type[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
+        newpcs->che_pos[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
     if(channel_config == 7)
-        newpcs->che_type[ID_CPE][1] = AAC_CHANNEL_FRONT; // outer front left + outer front right
+        newpcs->che_pos[ID_CPE][1] = AAC_CHANNEL_FRONT; // outer front left + outer front right
 
     return 0;
 }

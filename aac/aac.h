@@ -154,7 +154,9 @@ enum CouplingPoint {
  * stream (ID_PCE) or created based on a default fixed channel arrangement.
  */
 typedef struct {
-    enum ChannelPosition che_type[4][MAX_TAGID]; ///< channel element type with the first index as the first 4 raw_data_block IDs
+    enum ChannelPosition che_pos[4][MAX_TAGID]; /**< channel element channel mapping with the
+                                                 *   first index as the first 4 raw_data_block IDs
+                                                 */
 } ProgramConfig;
 
 #ifdef AAC_LTP
