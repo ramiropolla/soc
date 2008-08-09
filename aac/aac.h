@@ -250,7 +250,7 @@ typedef struct {
     int ch_select[8];      /**< [0] shared list of gains; [1] list of gains for left channel;
                             *   [2] list of gains for right channel; [3] lists of gains for both channels
                             */
-    float gain[18][120];
+    float gain[16][120];
 } ChannelCoupling;
 
 
