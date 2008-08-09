@@ -333,7 +333,7 @@ typedef struct {
 #ifdef AAC_SSR
     ssr_context ssrctx;
 #endif /* AAC_SSR */
-    int32_t random_state;
+    int random_state;
     /** @} */
 
     /**

@@ -412,13 +412,12 @@ static int decode_audio_specific_config(AACContext * ac, void *data, int data_si
 /**
  * linear congruential pseudorandom number generator
  *
- * @param   state   pointer to the current state of the generator
+ * @param   previous_val    pointer to the current state of the generator
  *
  * @return  Returns a 32-bit pseudorandom integer
  */
-static inline int32_t lcg_random(int32_t *state) {
-    *state = *state * 1664525 + 1013904223;
-    return *state;
+static always_inline int lcg_random(int previous_val) {
+    return previous_val * 1664525 + 1013904223;
 }
 
 static av_cold int aac_decode_init(AVCodecContext * avccontext) {
@@ -945,8 +944,10 @@ static void dequant(AACContext * ac, float coef[1024], const int icoef[1024], fl
             if (band_type[idx] == NOISE_BT) {
                 const float scale = sf[idx] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
                 for (group = 0; group < ics->group_len[g]; group++) {
-                    for (k = offsets[i]; k < offsets[i+1]; k++)
-                        coef[group*128+k] = lcg_random(&ac->random_state) * scale;
+                    for (k = offsets[i]; k < offsets[i+1]; k++) {
+                        ac->random_state  = lcg_random(ac->random_state);
+                        coef[group*128+k] = ac->random_state * scale;
+                    }
                 }
             } else if (band_type[idx] != INTENSITY_BT && band_type[idx] != INTENSITY_BT2) {
                 for (group = 0; group < ics->group_len[g]; group++) {
