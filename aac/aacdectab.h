@@ -34,6 +34,21 @@
 
 #include <stdint.h>
 
+/* @name swb_offsets
+ * Sample offset into the window indicating the beginning of a scalefactor
+ * window band
+ *
+ * scalefactor window band - term for scalefactor bands within a window,
+ * given in Table 4.110 to Table 4.128.
+ *
+ * scalefactor band - a set of spectral coefficients which are scaled by one
+ * scalefactor. In case of EIGHT_SHORT_SEQUENCE and grouping a scalefactor band
+ * may contain several scalefactor window bands of corresponding frequency. For
+ * all other window_sequences scalefactor bands and scalefactor window bands are
+ * identical.
+ * @{
+ */
+
 static const uint16_t swb_offset_1024_96[] = {
       0,   4,   8,  12,  16,  20,  24,  28,
      32,  36,  40,  44,  48,  52,  56,  64,
@@ -139,12 +154,20 @@ static const uint16_t *swb_offset_128[] = {
     swb_offset_128_16, swb_offset_128_16, swb_offset_128_8
 };
 
+// @}
+
 #ifdef AAC_LTP
 static const float ltp_coef[] = {
     -1.141658, -1.393232, -1.626008, -1.822608, -1.969800, -2.135788, -2.389202, -2.739066,
 };
 #endif /* AAC_LTP */
 
+/* @name tns_max_bands
+ * The maximum number of scalefactor bands on which TNS can operate for the long
+ * and short transforms respectively. The index to these tables is related to
+ * the sample rate of the audio.
+ * @{
+ */
 static const uint8_t tns_max_bands_1024[] = {
     31, 31, 34, 40, 42, 51, 46, 46, 42, 42, 42, 39
 };
@@ -152,7 +175,14 @@ static const uint8_t tns_max_bands_1024[] = {
 static const uint8_t tns_max_bands_128[] = {
     9, 9, 10, 14, 14, 14, 14, 14, 14, 14, 14, 14
 };
+// @}
 
+/* @name tns_tmp2_map
+ * Tables of the tmp2[] arrays of LPC coefficients used for TNS.
+ * The suffix _M_N[] indicate the values of coef_compress and coef_res
+ * respectively.
+ * @{
+ */
 static const float tns_tmp2_map_1_3[TNS_MAX_ORDER] = {
      0.00000000,  0.43388373, -0.64278758, -0.34202015,
      0.97492790,  0.78183150, -0.64278758, -0.34202015,
@@ -191,6 +221,7 @@ static const float *tns_tmp2_map[4] = {
     tns_tmp2_map_1_3,
     tns_tmp2_map_1_4
 };
+// @}
 
 #ifdef AAC_SSR
 static const float ssr_q_table[] = {

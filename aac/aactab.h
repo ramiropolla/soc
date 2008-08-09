@@ -35,13 +35,21 @@
 
 #include <stdint.h>
 
+/* @name window coefficients
+ * @{
+ */
 DECLARE_ALIGNED(16, extern float,  ff_aac_kbd_long_1024[1024]);
 DECLARE_ALIGNED(16, extern float,  ff_aac_kbd_short_128[128]);
 DECLARE_ALIGNED(16, extern float, ff_aac_sine_long_1024[1024]);
 DECLARE_ALIGNED(16, extern float, ff_aac_sine_short_128[128]);
+// @}
 
+/* @name number of scalefactor window bands for long and short transform windows respectively
+ * @{
+ */
 extern const uint8_t ff_aac_num_swb_1024[];
 extern const uint8_t ff_aac_num_swb_128 [];
+// @}
 
 extern const uint32_t ff_aac_scalefactor_code[121];
 extern const uint8_t  ff_aac_scalefactor_bits[121];
