@@ -164,15 +164,15 @@ static void che_freep(ChannelElement **s) {
  * @param   new_che_pos New channel position configuration struct - we only do something if it differs from the current one.
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_TAGID],
-        enum ChannelPosition new_che_pos[4][MAX_TAGID]) {
+static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_ELEM_ID],
+        enum ChannelPosition new_che_pos[4][MAX_ELEM_ID]) {
     AVCodecContext *avctx = ac->avccontext;
     int i, j, channels = 0;
 
-    if(!memcmp(che_pos, new_che_pos, 4 * MAX_TAGID * sizeof(new_che_pos[0][0])))
+    if(!memcmp(che_pos, new_che_pos, 4 * MAX_ELEM_ID * sizeof(new_che_pos[0][0])))
         return 0; /* no change */
 
-    memcpy(che_pos, new_che_pos, 4 * MAX_TAGID * sizeof(new_che_pos[0][0]));
+    memcpy(che_pos, new_che_pos, 4 * MAX_ELEM_ID * sizeof(new_che_pos[0][0]));
 
     /* Allocate or free elements depending on if they are in the
      * current program configuration.
@@ -183,15 +183,15 @@ static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_
      *    [ Front Left ] [ Front Right ] [ Center ] [ LFE ] [ Surround Left ] [ Surround Right ]
      */
 
-    for(i = 0; i < MAX_TAGID; i++) {
+    for(i = 0; i < MAX_ELEM_ID; i++) {
         for(j = 0; j < 4; j++) {
             if(che_pos[j][i]) {
                 if(!ac->che[j][i] && !(ac->che[j][i] = av_mallocz(sizeof(ChannelElement))))
                     return AVERROR(ENOMEM);
-                if(j != ID_CCE) {
+                if(j != TYPE_CCE) {
                     ac->output_data[channels++] = ac->che[j][i]->ch[0].ret;
                     ac->che[j][i]->ch[0].mixing_gain = 1.0f;
-                    if(j == ID_CPE) {
+                    if(j == TYPE_CPE) {
                         ac->output_data[channels++] = ac->che[j][i]->ch[1].ret;
                         ac->che[j][i]->ch[1].mixing_gain = 1.0f;
                     }
@@ -206,13 +206,13 @@ static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_
 }
 
 /**
- * Decode an array of 4 bit tag IDs, optionally interleaved with a stereo/mono switching bit.
+ * Decode an array of 4 bit element IDs, optionally interleaved with a stereo/mono switching bit.
  *
  * @param cpe_map Stereo (Channel Pair Element) map, NULL if stereo bit is not present.
  * @param sce_map mono (Single Channel Element) map
  * @param type speaker type/position for these channels
  */
-static void program_config_element_parse_tags(enum ChannelPosition *cpe_map,
+static void decode_channel_map(enum ChannelPosition *cpe_map,
         enum ChannelPosition *sce_map, enum ChannelPosition type, GetBitContext * gb, int n) {
     while(n--) {
         enum ChannelPosition *map = cpe_map && get_bits1(gb) ? cpe_map : sce_map; // stereo or mono map
@@ -221,9 +221,9 @@ static void program_config_element_parse_tags(enum ChannelPosition *cpe_map,
 }
 
 /**
- * Parse program configuration element; reference: table 4.2.
+ * Decode program configuration element; reference: table 4.2.
  */
-static int program_config_element(AACContext * ac, enum ChannelPosition new_che_pos[4][MAX_TAGID],
+static int decode_pce(AACContext * ac, enum ChannelPosition new_che_pos[4][MAX_ELEM_ID],
         GetBitContext * gb) {
     int num_front, num_side, num_back, num_lfe, num_assoc_data, num_cc;
 
@@ -250,14 +250,14 @@ static int program_config_element(AACContext * ac, enum ChannelPosition new_che_
     if (get_bits1(gb))
         skip_bits(gb, 3); // mixdown_coeff_index and pseudo_surround
 
-    program_config_element_parse_tags(new_che_pos[ID_CPE], new_che_pos[ID_SCE], AAC_CHANNEL_FRONT, gb, num_front);
-    program_config_element_parse_tags(new_che_pos[ID_CPE], new_che_pos[ID_SCE], AAC_CHANNEL_SIDE,  gb, num_side );
-    program_config_element_parse_tags(new_che_pos[ID_CPE], new_che_pos[ID_SCE], AAC_CHANNEL_BACK,  gb, num_back );
-    program_config_element_parse_tags(NULL,                new_che_pos[ID_LFE], AAC_CHANNEL_LFE,   gb, num_lfe  );
+    decode_channel_map(new_che_pos[TYPE_CPE], new_che_pos[TYPE_SCE], AAC_CHANNEL_FRONT, gb, num_front);
+    decode_channel_map(new_che_pos[TYPE_CPE], new_che_pos[TYPE_SCE], AAC_CHANNEL_SIDE,  gb, num_side );
+    decode_channel_map(new_che_pos[TYPE_CPE], new_che_pos[TYPE_SCE], AAC_CHANNEL_BACK,  gb, num_back );
+    decode_channel_map(NULL,                  new_che_pos[TYPE_LFE], AAC_CHANNEL_LFE,   gb, num_lfe  );
 
     skip_bits_long(gb, 4 * num_assoc_data);
 
-    program_config_element_parse_tags(new_che_pos[ID_CCE], new_che_pos[ID_CCE], AAC_CHANNEL_CC,    gb, num_cc   );
+    decode_channel_map(new_che_pos[TYPE_CCE], new_che_pos[TYPE_CCE], AAC_CHANNEL_CC,    gb, num_cc   );
 
     align_get_bits(gb);
 
@@ -270,7 +270,7 @@ static int program_config_element(AACContext * ac, enum ChannelPosition new_che_
  * Set up channel positions based on a default channel configuration
  * as specified in table 1.17.
  */
-static int set_pce_to_defaults(AACContext *ac, enum ChannelPosition new_che_pos[4][MAX_TAGID],
+static int set_default_channel_config(AACContext *ac, enum ChannelPosition new_che_pos[4][MAX_ELEM_ID],
         int channel_config)
 {
     if(channel_config < 1 || channel_config > 7) {
@@ -291,18 +291,18 @@ static int set_pce_to_defaults(AACContext *ac, enum ChannelPosition new_che_pos[
      */
 
     if(channel_config != 2)
-        new_che_pos[ID_SCE][0] = AAC_CHANNEL_FRONT; // front center (or mono)
+        new_che_pos[TYPE_SCE][0] = AAC_CHANNEL_FRONT; // front center (or mono)
     if(channel_config > 1)
-        new_che_pos[ID_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or stereo)
+        new_che_pos[TYPE_CPE][0] = AAC_CHANNEL_FRONT; // L + R (or stereo)
     if(channel_config == 4)
-        new_che_pos[ID_SCE][1] = AAC_CHANNEL_BACK;  // back center
+        new_che_pos[TYPE_SCE][1] = AAC_CHANNEL_BACK;  // back center
     if(channel_config > 4)
-        new_che_pos[ID_CPE][(channel_config == 7) + 1]
+        new_che_pos[TYPE_CPE][(channel_config == 7) + 1]
                                = AAC_CHANNEL_BACK;  // back stereo
     if(channel_config > 5)
-        new_che_pos[ID_LFE][0] = AAC_CHANNEL_LFE;   // LFE
+        new_che_pos[TYPE_LFE][0] = AAC_CHANNEL_LFE;   // LFE
     if(channel_config == 7)
-        new_che_pos[ID_CPE][1] = AAC_CHANNEL_FRONT; // outer front left + outer front right
+        new_che_pos[TYPE_CPE][1] = AAC_CHANNEL_FRONT; // outer front left + outer front right
 
     return 0;
 }
@@ -311,7 +311,7 @@ static int set_pce_to_defaults(AACContext *ac, enum ChannelPosition new_che_pos[
  * Decode GA "General Audio" specific configuration; reference: table 4.1.
  */
 static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int channel_config) {
-    enum ChannelPosition new_che_pos[4][MAX_TAGID];
+    enum ChannelPosition new_che_pos[4][MAX_ELEM_ID];
     int extension_flag, ret;
 
     if(get_bits1(gb)) {  // frameLengthFlag
@@ -327,13 +327,13 @@ static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int ch
        ac->m4ac.object_type == AOT_ER_AAC_SCALABLE)
         skip_bits(gb, 3);     // layerNr
 
-    memset(new_che_pos, 0, 4 * MAX_TAGID * sizeof(new_che_pos[0][0]));
+    memset(new_che_pos, 0, 4 * MAX_ELEM_ID * sizeof(new_che_pos[0][0]));
     if (channel_config == 0) {
         skip_bits(gb, 4);  // element_instance_tag
-        if((ret = program_config_element(ac, new_che_pos, gb)))
+        if((ret = decode_pce(ac, new_che_pos, gb)))
             return ret;
     } else {
-        if((ret = set_pce_to_defaults(ac, new_che_pos, channel_config)))
+        if((ret = set_default_channel_config(ac, new_che_pos, channel_config)))
             return ret;
     }
     if((ret = output_configure(ac, ac->che_pos, new_che_pos)))
@@ -1075,14 +1075,14 @@ static void apply_intensity_stereo(ChannelElement * cpe, int ms_present) {
 /**
  * Decode a channel_pair_element; reference: table 4.4.
  *
- * @param   tag Identifies the instance of a syntax element.
+ * @param   elem_id Identifies the instance of a syntax element.
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
+static int decode_cpe(AACContext * ac, GetBitContext * gb, int elem_id) {
     int i, ret, common_window, ms_present = 0;
     ChannelElement * cpe;
 
-    cpe = ac->che[ID_CPE][tag];
+    cpe = ac->che[TYPE_CPE][elem_id];
     common_window = get_bits1(gb);
     if (common_window) {
         if (decode_ics_info(ac, &cpe->ch[0].ics, gb, 1))
@@ -1116,10 +1116,10 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int tag) {
 /**
  * Decode coupling_channel_element; reference: table 4.8.
  *
- * @param   tag Identifies the instance of a syntax element.
+ * @param   elem_id Identifies the instance of a syntax element.
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
+static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
     int num_gain = 0;
     int c, g, sfb, ret;
     int is_indep_coup, domain, sign;
@@ -1127,17 +1127,17 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
     SingleChannelElement * sce;
     ChannelCoupling * coup;
 
-    sce = &ac->che[ID_CCE][tag]->ch[0];
+    sce = &ac->che[TYPE_CCE][elem_id]->ch[0];
     sce->mixing_gain = 1.0;
 
-    coup = &ac->che[ID_CCE][tag]->coup;
+    coup = &ac->che[TYPE_CCE][elem_id]->coup;
 
     is_indep_coup = get_bits1(gb);
     coup->num_coupled = get_bits(gb, 3);
     for (c = 0; c <= coup->num_coupled; c++) {
         num_gain++;
         coup->is_cpe[c] = get_bits1(gb);
-        coup->tag_select[c] = get_bits(gb, 4);
+        coup->id_select[c] = get_bits(gb, 4);
         if (coup->is_cpe[c]) {
             coup->ch_select[c] = get_bits(gb, 2);
             if (coup->ch_select[c] == 3)
@@ -1194,8 +1194,8 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int tag) {
  * Parse Spectral Band Replication extension data; reference: table 4.55.
  *
  * @param   crc flag indicating the presence of CRC checksum
- * @param   cnt length of ID_FIL syntactic element in bytes
- * @return  Returns number of bytes consumed from the ID_FIL element.
+ * @param   cnt length of TYPE_FIL syntactic element in bytes
+ * @return  Returns number of bytes consumed from the TYPE_FIL element.
  */
 static int decode_sbr_extension(AACContext * ac, GetBitContext * gb, int crc, int cnt) {
     // TODO : sbr_extension implementation
@@ -1227,7 +1227,7 @@ static int decode_drc_channel_exclusions(DynamicRangeControl *che_drc, GetBitCon
 /**
  * Decode dynamic range information; reference: table 4.52.
  *
- * @param   cnt length of ID_FIL syntactic element in bytes
+ * @param   cnt length of TYPE_FIL syntactic element in bytes
  * @return  Returns number of bytes consumed.
  */
 static int decode_dynamic_range(DynamicRangeControl *che_drc, GetBitContext * gb, int cnt) {
@@ -1278,7 +1278,7 @@ static int decode_dynamic_range(DynamicRangeControl *che_drc, GetBitContext * gb
 /**
  * Decode extension data (incomplete); reference: table 4.51.
  *
- * @param   cnt length of ID_FIL syntactic element in bytes
+ * @param   cnt length of TYPE_FIL syntactic element in bytes
  */
 static int decode_extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
     int crc_flag = 0;
@@ -1686,20 +1686,20 @@ static void apply_channel_coupling(AACContext * ac, ChannelElement * cc,
     int index = 0;
     ChannelCoupling * coup = &cc->coup;
     for (c = 0; c <= coup->num_coupled; c++) {
-        if (     !coup->is_cpe[c] && ac->che[ID_SCE][coup->tag_select[c]]) {
-            apply_coupling_method(ac, &ac->che[ID_SCE][coup->tag_select[c]]->ch[0], cc, index++);
-        } else if(coup->is_cpe[c] && ac->che[ID_CPE][coup->tag_select[c]]) {
+        if (     !coup->is_cpe[c] && ac->che[TYPE_SCE][coup->id_select[c]]) {
+            apply_coupling_method(ac, &ac->che[TYPE_SCE][coup->id_select[c]]->ch[0], cc, index++);
+        } else if(coup->is_cpe[c] && ac->che[TYPE_CPE][coup->id_select[c]]) {
             if (coup->ch_select[c] != 2) {
-                apply_coupling_method(ac, &ac->che[ID_CPE][coup->tag_select[c]]->ch[0], cc, index);
+                apply_coupling_method(ac, &ac->che[TYPE_CPE][coup->id_select[c]]->ch[0], cc, index);
                 if (coup->ch_select[c] != 0)
                     index++;
             }
             if (coup->ch_select[c] != 1)
-                apply_coupling_method(ac, &ac->che[ID_CPE][coup->tag_select[c]]->ch[1], cc, index++);
+                apply_coupling_method(ac, &ac->che[TYPE_CPE][coup->id_select[c]]->ch[1], cc, index++);
         } else {
             av_log(ac->avccontext, AV_LOG_ERROR,
                    "coupling target %sE[%d] not available\n",
-                   coup->is_cpe[c] ? "CP" : "SC", coup->tag_select[c]);
+                   coup->is_cpe[c] ? "CP" : "SC", coup->id_select[c]);
             break;
         }
     }
@@ -1710,18 +1710,18 @@ static void apply_channel_coupling(AACContext * ac, ChannelElement * cc,
  */
 static int spectral_to_sample(AACContext * ac) {
     int i, j;
-    for (i = 0; i < MAX_TAGID; i++) {
+    for (i = 0; i < MAX_ELEM_ID; i++) {
         for(j = 0; j < 4; j++) {
             ChannelElement *che = ac->che[j][i];
             if(che) {
-                if(j == ID_CCE && che->coup.coupling_point == BEFORE_TNS)
+                if(j == TYPE_CCE && che->coup.coupling_point == BEFORE_TNS)
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
                     if(che->ch[0].ics.ltp.present && (ret = apply_ltp(ac, &che->ch[0])))
                         return ret;
-                    if(j == ID_CPE &&
+                    if(j == TYPE_CPE &&
                        che->ch[1].ics.ltp.present && (ret = apply_ltp(ac, &che->ch[1])))
                         return ret;
                 }
@@ -1730,29 +1730,29 @@ static int spectral_to_sample(AACContext * ac) {
                     apply_tns(che->ch[0].coeffs, &che->ch[0].tns, &che->ch[0].ics, 1);
                 if(che->ch[1].tns.present)
                     apply_tns(che->ch[1].coeffs, &che->ch[1].tns, &che->ch[1].ics, 1);
-                if(j == ID_CCE && che->coup.coupling_point == BETWEEN_TNS_AND_IMDCT)
+                if(j == TYPE_CCE && che->coup.coupling_point == BETWEEN_TNS_AND_IMDCT)
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_SSR
                 if (ac->m4ac.object_type == AOT_AAC_SSR) {
                     apply_ssr(ac, &che->ch[0]);
-                    if(j == ID_CPE)
+                    if(j == TYPE_CPE)
                         apply_ssr(ac, &che->ch[1]);
                 } else {
 #endif /* AAC_SSR */
                     imdct_and_windowing(ac, &che->ch[0]);
-                    if(j == ID_CPE)
+                    if(j == TYPE_CPE)
                         imdct_and_windowing(ac, &che->ch[1]);
 #ifdef AAC_SSR
                 }
 #endif /* AAC_SSR */
-                if(j == ID_CCE && che->coup.coupling_point == AFTER_IMDCT)
+                if(j == TYPE_CCE && che->coup.coupling_point == AFTER_IMDCT)
                     apply_channel_coupling(ac, che, apply_independent_coupling);
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
                     if((ret = update_ltp(&che->ch[0], ac->is_saved)))
                         return ret;
-                    if(j == ID_CPE && (ret = update_ltp(&che->ch[1], ac->is_saved)))
+                    if(j == TYPE_CPE && (ret = update_ltp(&che->ch[1], ac->is_saved)))
                         return ret;
                 }
 #endif /* AAC_LTP */
@@ -1796,68 +1796,68 @@ static int convert_to_int16(AVCodecContext * avccontext, uint16_t * data, int * 
 static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data_size, const uint8_t * buf, int buf_size) {
     AACContext * ac = avccontext->priv_data;
     GetBitContext gb;
-    enum RawDataBlockID id;
-    int err, tag;
+    enum RawDataBlockType elem_type;
+    int err, elem_id;
 
     init_get_bits(&gb, buf, buf_size*8);
 
     // parse
-    while ((id = get_bits(&gb, 3)) != ID_END) {
-        tag = get_bits(&gb, 4);
+    while ((elem_type = get_bits(&gb, 3)) != TYPE_END) {
+        elem_id = get_bits(&gb, 4);
         err = -1;
-        switch (id) {
+        switch (elem_type) {
 
-        case ID_SCE:
-            if(!ac->che[ID_SCE][tag]) {
-                if(tag == 1 && ac->che[ID_LFE][0]) {
+        case TYPE_SCE:
+            if(!ac->che[TYPE_SCE][elem_id]) {
+                if(elem_id == 1 && ac->che[TYPE_LFE][0]) {
                     /* Some streams incorrectly code 5.1 audio as SCE[0] CPE[0] CPE[1] SCE[1]
                        instead of SCE[0] CPE[0] CPE[0] LFE[0].
                        If we seem to have encountered such a stream,
                        transfer the LFE[0] element to SCE[1] */
-                    ac->che[ID_SCE][tag] = ac->che[ID_LFE][0];
-                    ac->che[ID_LFE][0] = NULL;
+                    ac->che[TYPE_SCE][elem_id] = ac->che[TYPE_LFE][0];
+                    ac->che[TYPE_LFE][0] = NULL;
                 } else
                     break;
             }
-            err = decode_ics(ac, &ac->che[ID_SCE][tag]->ch[0], &gb, 0, 0);
+            err = decode_ics(ac, &ac->che[TYPE_SCE][elem_id]->ch[0], &gb, 0, 0);
             break;
 
-        case ID_CPE:
-            if (ac->che[ID_CPE][tag])
-                err = decode_cpe(ac, &gb, tag);
+        case TYPE_CPE:
+            if (ac->che[TYPE_CPE][elem_id])
+                err = decode_cpe(ac, &gb, elem_id);
             break;
 
-        case ID_FIL:
-            if (tag == 15)
-                tag += get_bits(&gb, 8) - 1;
-            while (tag > 0)
-                tag -= decode_extension_payload(ac, &gb, tag);
+        case TYPE_FIL:
+            if (elem_id == 15)
+                elem_id += get_bits(&gb, 8) - 1;
+            while (elem_id > 0)
+                elem_id -= decode_extension_payload(ac, &gb, elem_id);
             err = 0; /* FIXME */
             break;
 
-        case ID_PCE:
+        case TYPE_PCE:
         {
-            enum ChannelPosition new_che_pos[4][MAX_TAGID];
-            memset(new_che_pos, 0, 4 * MAX_TAGID * sizeof(new_che_pos[0][0]));
-            if((err = program_config_element(ac, new_che_pos, &gb)))
+            enum ChannelPosition new_che_pos[4][MAX_ELEM_ID];
+            memset(new_che_pos, 0, 4 * MAX_ELEM_ID * sizeof(new_che_pos[0][0]));
+            if((err = decode_pce(ac, new_che_pos, &gb)))
                 break;
             err = output_configure(ac, ac->che_pos, new_che_pos);
             break;
         }
 
-        case ID_DSE:
+        case TYPE_DSE:
             skip_data_stream_element(&gb);
             err = 0;
             break;
 
-        case ID_CCE:
-            if (ac->che[ID_CCE][tag])
-                err = decode_cce(ac, &gb, tag);
+        case TYPE_CCE:
+            if (ac->che[TYPE_CCE][elem_id])
+                err = decode_cce(ac, &gb, elem_id);
             break;
 
-        case ID_LFE:
-            if (ac->che[ID_LFE][tag])
-                err = decode_ics(ac, &ac->che[ID_LFE][tag]->ch[0], &gb, 0, 0);
+        case TYPE_LFE:
+            if (ac->che[TYPE_LFE][elem_id])
+                err = decode_ics(ac, &ac->che[TYPE_LFE][elem_id]->ch[0], &gb, 0, 0);
             break;
 
         default:
@@ -1881,7 +1881,7 @@ static av_cold int aac_decode_close(AVCodecContext * avccontext) {
     AACContext * ac = avccontext->priv_data;
     int i, j;
 
-    for (i = 0; i < MAX_TAGID; i++) {
+    for (i = 0; i < MAX_ELEM_ID; i++) {
         for(j = 0; j < 4; j++)
             che_freep(&ac->che[j][i]);
     }

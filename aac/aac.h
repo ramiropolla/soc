@@ -58,7 +58,7 @@
         size);
 
 #define MAX_CHANNELS 64
-#define MAX_TAGID 16
+#define MAX_ELEM_ID 16
 
 #define TNS_MAX_ORDER 20
 #define PNS_MEAN_ENERGY 3719550720.0f // sqrt(3.0) * 1<<31
@@ -94,15 +94,15 @@ enum AudioObjectType {
     AOT_SSC,                   ///< N                       SinuSoidal Coding
 };
 
-enum RawDataBlockID {
-    ID_SCE,
-    ID_CPE,
-    ID_CCE,
-    ID_LFE,
-    ID_DSE,
-    ID_PCE,
-    ID_FIL,
-    ID_END,
+enum RawDataBlockType {
+    TYPE_SCE,
+    TYPE_CPE,
+    TYPE_CCE,
+    TYPE_LFE,
+    TYPE_DSE,
+    TYPE_PCE,
+    TYPE_FIL,
+    TYPE_END,
 };
 
 enum ExtensionPayloadID {
@@ -246,7 +246,7 @@ typedef struct {
     enum CouplingPoint coupling_point;  ///< The point during decoding at which coupling is applied.
     int num_coupled;       ///< number of target elements
     int is_cpe[8];         ///< Set if target is an CPE (otherwise it's an SCE).
-    int tag_select[8];     ///< element tag index
+    int id_select[8];      ///< element id
     int ch_select[8];      /**< [0] shared list of gains; [1] list of gains for left channel;
                             *   [2] list of gains for right channel; [3] lists of gains for both channels
                             */
@@ -305,10 +305,10 @@ typedef struct {
      * @defgroup elements
      * @{
      */
-    enum ChannelPosition che_pos[4][MAX_TAGID]; /**< channel element channel mapping with the
-                                                 *   first index as the first 4 raw_data_block IDs
+    enum ChannelPosition che_pos[4][MAX_ELEM_ID]; /**< channel element channel mapping with the
+                                                   *   first index as the first 4 raw data block types
                                                  */
-    ChannelElement * che[4][MAX_TAGID];
+    ChannelElement * che[4][MAX_ELEM_ID];
     /** @} */
 
     /**
