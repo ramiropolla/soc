@@ -420,7 +420,7 @@ static int decode_audio_specific_config(AACContext * ac, void *data, int data_si
  *
  * @return  Returns a 32-bit pseudorandom integer
  */
-static always_inline int lcg_random(int previous_val) {
+static av_always_inline int lcg_random(int previous_val) {
     return previous_val * 1664525 + 1013904223;
 }
 
