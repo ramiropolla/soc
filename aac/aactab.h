@@ -62,7 +62,7 @@ extern const int8_t *ff_aac_codebook_vectors[];
 
 #ifdef CONFIG_HARDCODED_TABLES
 extern const float ff_aac_ivquant_tab[IVQUANT_SIZE];
-extern const float  ff_aac_pow2sf_tab[316];
+extern const float ff_aac_pow2sf_tab[316];
 #endif /* CONFIG_HARDCODED_TABLES */
 
 #endif /* FFMPEG_AACTAB_H */
