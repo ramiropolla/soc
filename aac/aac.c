@@ -168,7 +168,7 @@ static void che_freep(ChannelElement **s) {
 static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_ELEM_ID],
         enum ChannelPosition new_che_pos[4][MAX_ELEM_ID]) {
     AVCodecContext *avctx = ac->avccontext;
-    int i, j, channels = 0;
+    int i, type, channels = 0;
 
     if(!memcmp(che_pos, new_che_pos, 4 * MAX_ELEM_ID * sizeof(new_che_pos[0][0])))
         return 0; /* no change */
@@ -185,20 +185,20 @@ static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_
      */
 
     for(i = 0; i < MAX_ELEM_ID; i++) {
-        for(j = 0; j < 4; j++) {
-            if(che_pos[j][i]) {
-                if(!ac->che[j][i] && !(ac->che[j][i] = av_mallocz(sizeof(ChannelElement))))
+        for(type = 0; type < 4; type++) {
+            if(che_pos[type][i]) {
+                if(!ac->che[type][i] && !(ac->che[type][i] = av_mallocz(sizeof(ChannelElement))))
                     return AVERROR(ENOMEM);
-                if(j != TYPE_CCE) {
-                    ac->output_data[channels++] = ac->che[j][i]->ch[0].ret;
-                    ac->che[j][i]->ch[0].mixing_gain = 1.0f;
-                    if(j == TYPE_CPE) {
-                        ac->output_data[channels++] = ac->che[j][i]->ch[1].ret;
-                        ac->che[j][i]->ch[1].mixing_gain = 1.0f;
+                if(type != TYPE_CCE) {
+                    ac->output_data[channels++] = ac->che[type][i]->ch[0].ret;
+                    ac->che[type][i]->ch[0].mixing_gain = 1.0f;
+                    if(type == TYPE_CPE) {
+                        ac->output_data[channels++] = ac->che[type][i]->ch[1].ret;
+                        ac->che[type][i]->ch[1].mixing_gain = 1.0f;
                     }
                 }
             } else
-                che_freep(&ac->che[j][i]);
+                che_freep(&ac->che[type][i]);
         }
     }
 
@@ -1731,19 +1731,19 @@ static void apply_channel_coupling(AACContext * ac, ChannelElement * cc,
  * Convert spectral data to float samples, applying all supported tools as appropriate.
  */
 static int spectral_to_sample(AACContext * ac) {
-    int i, j;
+    int i, type;
     for (i = 0; i < MAX_ELEM_ID; i++) {
-        for(j = 0; j < 4; j++) {
-            ChannelElement *che = ac->che[j][i];
+        for(type = 0; type < 4; type++) {
+            ChannelElement *che = ac->che[type][i];
             if(che) {
-                if(j == TYPE_CCE && che->coup.coupling_point == BEFORE_TNS)
+                if(type == TYPE_CCE && che->coup.coupling_point == BEFORE_TNS)
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
                     if(che->ch[0].ics.ltp.present && (ret = apply_ltp(ac, &che->ch[0])))
                         return ret;
-                    if(j == TYPE_CPE &&
+                    if(type == TYPE_CPE &&
                        che->ch[1].ics.ltp.present && (ret = apply_ltp(ac, &che->ch[1])))
                         return ret;
                 }
@@ -1752,29 +1752,29 @@ static int spectral_to_sample(AACContext * ac) {
                     apply_tns(che->ch[0].coeffs, &che->ch[0].tns, &che->ch[0].ics, 1);
                 if(che->ch[1].tns.present)
                     apply_tns(che->ch[1].coeffs, &che->ch[1].tns, &che->ch[1].ics, 1);
-                if(j == TYPE_CCE && che->coup.coupling_point == BETWEEN_TNS_AND_IMDCT)
+                if(type == TYPE_CCE && che->coup.coupling_point == BETWEEN_TNS_AND_IMDCT)
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_SSR
                 if (ac->m4ac.object_type == AOT_AAC_SSR) {
                     apply_ssr(ac, &che->ch[0]);
-                    if(j == TYPE_CPE)
+                    if(type == TYPE_CPE)
                         apply_ssr(ac, &che->ch[1]);
                 } else {
 #endif /* AAC_SSR */
                     imdct_and_windowing(ac, &che->ch[0]);
-                    if(j == TYPE_CPE)
+                    if(type == TYPE_CPE)
                         imdct_and_windowing(ac, &che->ch[1]);
 #ifdef AAC_SSR
                 }
 #endif /* AAC_SSR */
-                if(j == TYPE_CCE && che->coup.coupling_point == AFTER_IMDCT)
+                if(type == TYPE_CCE && che->coup.coupling_point == AFTER_IMDCT)
                     apply_channel_coupling(ac, che, apply_independent_coupling);
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
                     int ret;
                     if((ret = update_ltp(&che->ch[0], ac->is_saved)))
                         return ret;
-                    if(j == TYPE_CPE && (ret = update_ltp(&che->ch[1], ac->is_saved)))
+                    if(type == TYPE_CPE && (ret = update_ltp(&che->ch[1], ac->is_saved)))
                         return ret;
                 }
 #endif /* AAC_LTP */
@@ -1902,11 +1902,11 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
 
 static av_cold int aac_decode_close(AVCodecContext * avccontext) {
     AACContext * ac = avccontext->priv_data;
-    int i, j;
+    int i, type;
 
     for (i = 0; i < MAX_ELEM_ID; i++) {
-        for(j = 0; j < 4; j++)
-            che_freep(&ac->che[j][i]);
+        for(type = 0; type < 4; type++)
+            che_freep(&ac->che[type][i]);
     }
 
     ff_mdct_end(&ac->mdct);
