@@ -1033,17 +1033,17 @@ static void apply_mid_side_stereo(ChannelElement * cpe) {
     const IndividualChannelStream * ics = &cpe->ch[0].ics;
     float *ch0 = cpe->ch[0].coeffs;
     float *ch1 = cpe->ch[1].coeffs;
-    int g, i, k, gp, idx = 0;
+    int g, i, k, group, idx = 0;
     const uint16_t * offsets = ics->swb_offset;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++, idx++) {
             if (cpe->ms_mask[idx] &&
                 cpe->ch[0].band_type[idx] < NOISE_BT && cpe->ch[1].band_type[idx] < NOISE_BT) {
-                for (gp = 0; gp < ics->group_len[g]; gp++) {
+                for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
-                        float tmp = ch0[gp*128 + k] - ch1[gp*128 + k];
-                        ch0[gp*128 + k] += ch1[gp*128 + k];
-                        ch1[gp*128 + k] = tmp;
+                        float tmp = ch0[group*128 + k] - ch1[group*128 + k];
+                        ch0[group*128 + k] += ch1[group*128 + k];
+                        ch1[group*128 + k] = tmp;
                     }
                 }
             }
@@ -1065,7 +1065,7 @@ static void apply_intensity_stereo(ChannelElement * cpe, int ms_present) {
     SingleChannelElement * sce1 = &cpe->ch[1];
     float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
     const uint16_t * offsets = ics->swb_offset;
-    int g, gp, i, k, idx = 0;
+    int g, group, i, k, idx = 0;
     int c;
     float scale;
     for (g = 0; g < ics->num_window_groups; g++) {
@@ -1077,9 +1077,9 @@ static void apply_intensity_stereo(ChannelElement * cpe, int ms_present) {
                     if (ms_present)
                         c *= 1 - 2 * cpe->ms_mask[idx];
                     scale = c * sce1->sf[idx];
-                    for (gp = 0; gp < ics->group_len[g]; gp++)
+                    for (group = 0; group < ics->group_len[g]; group++)
                         for (k = offsets[i]; k < offsets[i+1]; k++)
-                            coef1[gp*128 + k] = scale * coef0[gp*128 + k];
+                            coef1[group*128 + k] = scale * coef0[group*128 + k];
                 }
             } else {
                 idx += sce1->band_type_run_end[idx] - i;
