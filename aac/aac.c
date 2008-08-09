@@ -827,14 +827,12 @@ static int decode_gain_control(SingleChannelElement * sce, GetBitContext * gb) {
  */
 static void decode_mid_side_stereo(ChannelElement * cpe, GetBitContext * gb,
         int ms_present) {
-    int g, i, idx = 0;
+    int idx;
     if (ms_present == 1) {
-        for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
-            for (i = 0; i < cpe->ch[0].ics.max_sfb; i++, idx++)
+        for (idx = 0; idx < cpe->ch[0].ics.num_window_groups * cpe->ch[0].ics.max_sfb; idx++)
                 cpe->ms_mask[idx] = get_bits1(gb);
     } else if (ms_present == 2) {
-        for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
-            memset(&cpe->ms_mask[g*cpe->ch[0].ics.max_sfb], 1, cpe->ch[0].ics.max_sfb * sizeof(cpe->ms_mask[0]));
+        memset(cpe->ms_mask, 1, cpe->ch[0].ics.num_window_groups * cpe->ch[0].ics.max_sfb * sizeof(cpe->ms_mask[0]));
     }
 }
 
