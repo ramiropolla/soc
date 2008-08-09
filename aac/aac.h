@@ -250,7 +250,7 @@ typedef struct {
     int ch_select[8];      /**< [0] shared list of gains; [1] list of gains for left channel;
                             *   [2] list of gains for right channel; [3] lists of gains for both channels
                             */
-    float gain[18][8][64];
+    float gain[18][120];
 } ChannelCoupling;
 
 
@@ -264,9 +264,9 @@ typedef struct {
                                                */
     IndividualChannelStream ics;
     TemporalNoiseShaping tns;
-    enum BandType band_type[8][64];           ///< band types
-    int band_type_run_end[8][64];             ///< band type run end points
-    float sf[8][64];                          ///< scalefactors
+    enum BandType band_type[120];             ///< band types
+    int band_type_run_end[120];               ///< band type run end points
+    float sf[120];                            ///< scalefactors
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< coefficients for IMDCT
     DECLARE_ALIGNED_16(float, saved[1024]);   ///< overlap
     DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
@@ -283,7 +283,7 @@ typedef struct {
  */
 typedef struct {
     // CPE specific
-    uint8_t ms_mask[8][64];     ///< Set if mid/side stereo is used for each scalefactor window band
+    uint8_t ms_mask[120];     ///< Set if mid/side stereo is used for each scalefactor window band
     // shared
     SingleChannelElement ch[2];
     // CCE specific

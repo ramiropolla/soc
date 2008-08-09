@@ -616,9 +616,9 @@ static inline float ivquant(int a) {
  * The band_type* arrays have indices [window group][scalefactor band].
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_band_types(AACContext * ac, enum BandType band_type[][64],
-        int band_type_run_end[][64], GetBitContext * gb, IndividualChannelStream * ics) {
-    int g;
+static int decode_band_types(AACContext * ac, enum BandType band_type[120],
+        int band_type_run_end[120], GetBitContext * gb, IndividualChannelStream * ics) {
+    int g, idx = 0;
     const int bits = (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) ? 3 : 5;
     for (g = 0; g < ics->num_window_groups; g++) {
         int k = 0;
@@ -640,8 +640,8 @@ static int decode_band_types(AACContext * ac, enum BandType band_type[][64],
                 return -1;
             }
             for (; k < sect_len; k++) {
-                band_type        [g][k] = sect_band_type;
-                band_type_run_end[g][k] = sect_len;
+                band_type        [idx]   = sect_band_type;
+                band_type_run_end[idx++] = sect_len;
             }
         }
     }
@@ -660,35 +660,35 @@ static int decode_band_types(AACContext * ac, enum BandType band_type[][64],
  * The band_type* and sf arrays have indices [window group][scalefactor band].
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_scalefactors(AACContext * ac, float sf[][64], GetBitContext * gb,
+static int decode_scalefactors(AACContext * ac, float sf[120], GetBitContext * gb,
         float mix_gain, unsigned int global_gain, IndividualChannelStream * ics,
-        enum BandType band_type[][64], int band_type_run_end[][64]) {
+        enum BandType band_type[120], int band_type_run_end[120]) {
     const int sf_offset = ac->sf_offset + (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE ? 12 : 0);
-    int g, i;
+    int g, i, idx = 0;
     int offset[3] = { global_gain, global_gain - 90, 100 };
     int noise_flag = 1;
     static const char *sf_str[3] = { "Global gain", "Noise gain", "Intensity stereo position" };
     ics->intensity_present = 0;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb;) {
-            int run_end = band_type_run_end[g][i];
-            if (band_type[g][i] == ZERO_BT) {
-                for(; i < run_end; i++)
-                    sf[g][i] = 0.;
-            }else if((band_type[g][i] == INTENSITY_BT) || (band_type[g][i] == INTENSITY_BT2)) {
+            int run_end = band_type_run_end[idx];
+            if (band_type[idx] == ZERO_BT) {
+                for(; i < run_end; i++, idx++)
+                    sf[idx] = 0.;
+            }else if((band_type[idx] == INTENSITY_BT) || (band_type[idx] == INTENSITY_BT2)) {
                 ics->intensity_present = 1;
-                for(; i < run_end; i++) {
+                for(; i < run_end; i++, idx++) {
                     offset[2] += get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
                     if(offset[2] > 255U) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range.\n", sf_str[2], offset[2]);
                         return -1;
                     }
-                    sf[g][i] =  ff_aac_pow2sf_tab[-offset[2] + 300];
-                    sf[g][i] *= mix_gain;
+                    sf[idx]  = ff_aac_pow2sf_tab[-offset[2] + 300];
+                    sf[idx] *= mix_gain;
                 }
-            }else if(band_type[g][i] == NOISE_BT) {
-                for(; i < run_end; i++) {
+            }else if(band_type[idx] == NOISE_BT) {
+                for(; i < run_end; i++, idx++) {
                     if(noise_flag-- > 0)
                         offset[1] += get_bits(gb, 9) - 256;
                     else
@@ -698,19 +698,19 @@ static int decode_scalefactors(AACContext * ac, float sf[][64], GetBitContext * 
                             "%s (%d) out of range.\n", sf_str[1], offset[1]);
                         return -1;
                     }
-                    sf[g][i] = -ff_aac_pow2sf_tab[ offset[1] + sf_offset];
-                    sf[g][i] *= mix_gain;
+                    sf[idx]  = -ff_aac_pow2sf_tab[ offset[1] + sf_offset];
+                    sf[idx] *= mix_gain;
                 }
             }else {
-                for(; i < run_end; i++) {
+                for(; i < run_end; i++, idx++) {
                     offset[0] += get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
                     if(offset[0] > 255U) {
                         av_log(ac->avccontext, AV_LOG_ERROR,
                             "%s (%d) out of range.\n", sf_str[0], offset[0]);
                         return -1;
                     }
-                    sf[g][i] = -ff_aac_pow2sf_tab[ offset[0] + sf_offset];
-                    sf[g][i] *= mix_gain;
+                    sf[idx] = -ff_aac_pow2sf_tab[ offset[0] + sf_offset];
+                    sf[idx] *= mix_gain;
                 }
             }
         }
@@ -807,14 +807,14 @@ static int decode_gain_control(SingleChannelElement * sce, GetBitContext * gb) {
  */
 static void decode_mid_side_stereo(ChannelElement * cpe, GetBitContext * gb,
         int ms_present) {
-    int g, i;
+    int g, i, idx = 0;
     if (ms_present == 1) {
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
-            for (i = 0; i < cpe->ch[0].ics.max_sfb; i++)
-                cpe->ms_mask[g][i] = get_bits1(gb);// << i;
+            for (i = 0; i < cpe->ch[0].ics.max_sfb; i++, idx++)
+                cpe->ms_mask[idx] = get_bits1(gb);// << i;
     } else if (ms_present == 2) {
         for (g = 0; g < cpe->ch[0].ics.num_window_groups; g++)
-            memset(cpe->ms_mask[g], 1, cpe->ch[0].ics.max_sfb * sizeof(cpe->ms_mask[g][0]));
+            memset(&cpe->ms_mask[g*cpe->ch[0].ics.max_sfb], 1, cpe->ch[0].ics.max_sfb * sizeof(cpe->ms_mask[0]));
     }
 }
 
@@ -828,13 +828,13 @@ static void decode_mid_side_stereo(ChannelElement * cpe, GetBitContext * gb,
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_spectrum(AACContext * ac, int icoef[1024], GetBitContext * gb,
-        const IndividualChannelStream * ics, enum BandType band_type[][64]) {
-    int i, k, g;
+        const IndividualChannelStream * ics, enum BandType band_type[120]) {
+    int i, k, g, idx = 0;
     const uint16_t * offsets = ics->swb_offset;
 
     for (g = 0; g < ics->num_window_groups; g++) {
-        for (i = 0; i < ics->max_sfb; i++) {
-            const int cur_band_type = band_type[g][i];
+        for (i = 0; i < ics->max_sfb; i++, idx++) {
+            const int cur_band_type = band_type[idx];
             const int dim = cur_band_type >= FIRST_PAIR_BT ? 2 : 4;
             const int is_cb_unsigned = IS_CODEBOOK_UNSIGNED(cur_band_type);
             int group;
@@ -917,25 +917,25 @@ static void add_pulses(int icoef[1024], const Pulse * pulse, const IndividualCha
  *
  * The band_type and sf arrays have indices [window group][scalefactor band].
  */
-static void dequant(AACContext * ac, float coef[1024], const int icoef[1024], float sf[][64], const IndividualChannelStream * ics,
-        enum BandType band_type[][64]) {
+static void dequant(AACContext * ac, float coef[1024], const int icoef[1024], float sf[120],
+        const IndividualChannelStream * ics, enum BandType band_type[120]) {
     const uint16_t * offsets = ics->swb_offset;
     const int c = 1024/ics->num_window_groups;
-    int g, i, group, k;
+    int g, i, group, k, idx = 0;
 
     for (g = 0; g < ics->num_window_groups; g++) {
         memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(c - offsets[ics->max_sfb]));
-        for (i = 0; i < ics->max_sfb; i++) {
-            if (band_type[g][i] == NOISE_BT) {
-                const float scale = sf[g][i] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
+        for (i = 0; i < ics->max_sfb; i++, idx++) {
+            if (band_type[idx] == NOISE_BT) {
+                const float scale = sf[idx] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++)
                         coef[group*128+k] = lcg_random(&ac->random_state) * scale;
                 }
-            } else if (band_type[g][i] != INTENSITY_BT && band_type[g][i] != INTENSITY_BT2) {
+            } else if (band_type[idx] != INTENSITY_BT && band_type[idx] != INTENSITY_BT2) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
-                        coef[group*128+k] = ivquant(icoef[group*128+k]) * sf[g][i];
+                        coef[group*128+k] = ivquant(icoef[group*128+k]) * sf[idx];
                     }
                 }
             }
@@ -1015,12 +1015,12 @@ static void apply_mid_side_stereo(ChannelElement * cpe) {
     const IndividualChannelStream * ics = &cpe->ch[0].ics;
     float *ch0 = cpe->ch[0].coeffs;
     float *ch1 = cpe->ch[1].coeffs;
-    int g, i, k, gp;
+    int g, i, k, gp, idx = 0;
     const uint16_t * offsets = ics->swb_offset;
     for (g = 0; g < ics->num_window_groups; g++) {
-        for (i = 0; i < ics->max_sfb; i++) {
-            if (cpe->ms_mask[g][i] &&
-                cpe->ch[0].band_type[g][i] < NOISE_BT && cpe->ch[1].band_type[g][i] < NOISE_BT) {
+        for (i = 0; i < ics->max_sfb; i++, idx++) {
+            if (cpe->ms_mask[idx] &&
+                cpe->ch[0].band_type[idx] < NOISE_BT && cpe->ch[1].band_type[idx] < NOISE_BT) {
                 for (gp = 0; gp < ics->group_len[g]; gp++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
                         float tmp = ch0[gp*128 + k] - ch1[gp*128 + k];
@@ -1047,25 +1047,24 @@ static void apply_intensity_stereo(ChannelElement * cpe, int ms_present) {
     SingleChannelElement * sce1 = &cpe->ch[1];
     float *coef0 = cpe->ch[0].coeffs, *coef1 = cpe->ch[1].coeffs;
     const uint16_t * offsets = ics->swb_offset;
-    int g, gp, i, k;
+    int g, gp, i, k, idx = 0;
     int c;
     float scale;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb;) {
-            if (sce1->band_type[g][i] == INTENSITY_BT || sce1->band_type[g][i] == INTENSITY_BT2) {
-                const int bt_run_end = sce1->band_type_run_end[g][i];
-                while (i < bt_run_end) {
-                    c = -1 + 2 * (sce1->band_type[g][i] - 14);
+            if (sce1->band_type[idx] == INTENSITY_BT || sce1->band_type[idx] == INTENSITY_BT2) {
+                const int bt_run_end = sce1->band_type_run_end[idx];
+                for (; i < bt_run_end; i++, idx++) {
+                    c = -1 + 2 * (sce1->band_type[idx] - 14);
                     if (ms_present)
-                        c *= 1 - 2 * cpe->ms_mask[g][i];
-                    scale = c * sce1->sf[g][i];
+                        c *= 1 - 2 * cpe->ms_mask[idx];
+                    scale = c * sce1->sf[idx];
                     for (gp = 0; gp < ics->group_len[g]; gp++)
                         for (k = offsets[i]; k < offsets[i+1]; k++)
                             coef1[gp*128 + k] = scale * coef0[gp*128 + k];
-                    i++;
                 }
             } else
-                i = sce1->band_type_run_end[g][i];
+                idx = g*ics->max_sfb + sce1->band_type_run_end[idx];
         }
         coef0 += ics->group_len[g]*128;
         coef1 += ics->group_len[g]*128;
@@ -1121,7 +1120,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int elem_id) {
  */
 static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
     int num_gain = 0;
-    int c, g, sfb, ret;
+    int c, g, sfb, ret, idx = 0;
     int is_indep_coup, domain, sign;
     float scale;
     SingleChannelElement * sce;
@@ -1169,12 +1168,12 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
             gain_cache = pow(scale, gain);
         }
         for (g = 0; g < sce->ics.num_window_groups; g++)
-            for (sfb = 0; sfb < sce->ics.max_sfb; sfb++)
-                if (sce->band_type[g][sfb] == ZERO_BT) {
-                    coup->gain[c][g][sfb] = 0;
+            for (sfb = 0; sfb < sce->ics.max_sfb; sfb++, idx++)
+                if (sce->band_type[idx] == ZERO_BT) {
+                    coup->gain[c][idx] = 0;
                 } else {
                     if (cge) {
-                        coup->gain[c][g][sfb] = gain_cache;
+                        coup->gain[c][idx] = gain_cache;
                     } else {
                         int s, t = get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
                         if (sign) {
@@ -1183,7 +1182,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
                         } else
                             s = 1;
                         gain += t;
-                        coup->gain[c][g][sfb] = pow(scale, gain) * s;
+                        coup->gain[c][idx] = pow(scale, gain) * s;
                     }
                 }
     }
@@ -1638,16 +1637,16 @@ static void apply_dependent_coupling(AACContext * ac, SingleChannelElement * sce
     const uint16_t * offsets = ics->swb_offset;
     float * dest = sce->coeffs;
     const float * src = cc->ch[0].coeffs;
-    int g, i, group, k;
+    int g, i, group, k, idx = 0;
     if(ac->m4ac.object_type == AOT_AAC_LTP) {
         av_log(ac->avccontext, AV_LOG_ERROR,
                "Dependent coupling is not supported together with LTP\n");
         return;
     }
     for (g = 0; g < ics->num_window_groups; g++) {
-        for (i = 0; i < ics->max_sfb; i++) {
-            if (cc->ch[0].band_type[g][i] != ZERO_BT) {
-                float gain = cc->coup.gain[index][g][i] * sce->mixing_gain;
+        for (i = 0; i < ics->max_sfb; i++, idx++) {
+            if (cc->ch[0].band_type[idx] != ZERO_BT) {
+                float gain = cc->coup.gain[index][idx] * sce->mixing_gain;
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
                         // XXX dsputil-ize
@@ -1668,7 +1667,7 @@ static void apply_dependent_coupling(AACContext * ac, SingleChannelElement * sce
  */
 static void apply_independent_coupling(AACContext * ac, SingleChannelElement * sce, ChannelElement * cc, int index) {
     int i;
-    float gain = cc->coup.gain[index][0][0] * sce->mixing_gain;
+    float gain = cc->coup.gain[index][0] * sce->mixing_gain;
     for (i = 0; i < 1024; i++)
         sce->ret[i] += gain * (cc->ch[0].ret[i] - ac->add_bias);
 }
