@@ -307,7 +307,7 @@ typedef struct {
      */
     enum ChannelPosition che_pos[4][MAX_ELEM_ID]; /**< channel element channel mapping with the
                                                    *   first index as the first 4 raw data block types
-                                                 */
+                                                   */
     ChannelElement * che[4][MAX_ELEM_ID];
     /** @} */
 

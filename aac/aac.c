@@ -298,7 +298,7 @@ static int set_default_channel_config(AACContext *ac, enum ChannelPosition new_c
         new_che_pos[TYPE_SCE][1] = AAC_CHANNEL_BACK;  // back center
     if(channel_config > 4)
         new_che_pos[TYPE_CPE][(channel_config == 7) + 1]
-                               = AAC_CHANNEL_BACK;  // back stereo
+                                 = AAC_CHANNEL_BACK;  // back stereo
     if(channel_config > 5)
         new_che_pos[TYPE_LFE][0] = AAC_CHANNEL_LFE;   // LFE
     if(channel_config == 7)
