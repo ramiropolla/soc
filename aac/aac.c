@@ -613,7 +613,6 @@ static inline float ivquant(int a) {
  * @param   band_type           array of the used band type
  * @param   band_type_run_end   array of the last scalefactor band of a band type run
  *
- * The band_type* arrays have indices [window group][scalefactor band].
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_band_types(AACContext * ac, enum BandType band_type[120],
@@ -657,7 +656,6 @@ static int decode_band_types(AACContext * ac, enum BandType band_type[120],
  * @param   band_type_run_end   array of the last scalefactor band of a band type run
  * @param   sf                  array of scalefactors or intensity stereo positions
  *
- * The band_type* and sf arrays have indices [window group][scalefactor band].
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_scalefactors(AACContext * ac, float sf[120], GetBitContext * gb,
@@ -824,7 +822,6 @@ static void decode_mid_side_stereo(ChannelElement * cpe, GetBitContext * gb,
  * @param   band_type   array of the used band type
  * @param   icoef       array of quantized spectral data
  *
- * The band_type array has indices [window group][scalefactor band]
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_spectrum(AACContext * ac, int icoef[1024], GetBitContext * gb,
@@ -914,8 +911,6 @@ static void add_pulses(int icoef[1024], const Pulse * pulse, const IndividualCha
  * @param   band_type   array of the used band type
  * @param   sf          array of scalefactors or intensity stereo positions
  * @param   coef        array of dequantized, scaled spectral data
- *
- * The band_type and sf arrays have indices [window group][scalefactor band].
  */
 static void dequant(AACContext * ac, float coef[1024], const int icoef[1024], float sf[120],
         const IndividualChannelStream * ics, enum BandType band_type[120]) {
