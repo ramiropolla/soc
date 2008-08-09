@@ -537,7 +537,6 @@ static void decode_ltp(AACContext * ac, LongTermPrediction * ltp, GetBitContext 
  * @param   common_window   Channels have independent [0], or shared [1], Individual Channel Stream information.
  */
 static int decode_ics_info(AACContext * ac, IndividualChannelStream * ics, GetBitContext * gb, int common_window) {
-    unsigned int grouping;
     if (get_bits1(gb)) {
         av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set.\n");
         return -1;
@@ -551,9 +550,8 @@ static int decode_ics_info(AACContext * ac, IndividualChannelStream * ics, GetBi
     if (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) {
         int i;
         ics->max_sfb = get_bits(gb, 4);
-        grouping = get_bits(gb, 7);
         for (i = 0; i < 7; i++) {
-            if (grouping & (1<<(6-i))) {
+            if (get_bits1(gb)) {
                 ics->group_len[ics->num_window_groups-1]++;
             } else {
                 ics->num_window_groups++;
