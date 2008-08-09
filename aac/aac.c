@@ -235,7 +235,7 @@ static int decode_pce(AACContext * ac, enum ChannelPosition new_che_pos[4][MAX_E
     skip_bits(gb, 2);  // object_type
 
     ac->m4ac.sampling_index = get_bits(gb, 4);
-    if(ac->m4ac.sampling_index > 12) {
+    if(ac->m4ac.sampling_index > 11) {
         av_log(ac->avccontext, AV_LOG_ERROR, "invalid sampling rate index %d\n", ac->m4ac.sampling_index);
         return -1;
     }
