@@ -207,7 +207,8 @@ typedef struct {
     int interpolation_scheme;                       ///< Indicates the interpolation scheme used in the SBR QMF domain.
     int band_top[17];                               ///< Indicates the top of the i-th DRC band in units of 4 spectral lines.
     int prog_ref_level;                             /**< A reference level for the long-term program audio level for all
-                                                        channels combined. */
+                                                     *   channels combined.
+                                                     */
 } DynamicRangeControl;
 
 typedef struct {

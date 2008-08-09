@@ -160,8 +160,9 @@ static void che_freep(ChannelElement **s) {
 /**
  * Configure output channel order based on the current program configuration element.
  *
- * @param   che_pos current channel position configuration struct
- * @param   new_che_pos New channel position configuration struct - we only do something if it differs from the current one.
+ * @param   che_pos current channel position configuration
+ * @param   new_che_pos New channel position configuration - we only do something if it differs from the current one.
+ *
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_ELEM_ID],
@@ -222,6 +223,10 @@ static void decode_channel_map(enum ChannelPosition *cpe_map,
 
 /**
  * Decode program configuration element; reference: table 4.2.
+ *
+ * @param   new_che_pos New channel position configuration - we only do something if it differs from the current one.
+ *
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_pce(AACContext * ac, enum ChannelPosition new_che_pos[4][MAX_ELEM_ID],
         GetBitContext * gb) {
@@ -269,6 +274,10 @@ static int decode_pce(AACContext * ac, enum ChannelPosition new_che_pos[4][MAX_E
 /**
  * Set up channel positions based on a default channel configuration
  * as specified in table 1.17.
+ *
+ * @param   new_che_pos New channel position configuration - we only do something if it differs from the current one.
+ *
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int set_default_channel_config(AACContext *ac, enum ChannelPosition new_che_pos[4][MAX_ELEM_ID],
         int channel_config)
@@ -309,6 +318,8 @@ static int set_default_channel_config(AACContext *ac, enum ChannelPosition new_c
 
 /**
  * Decode GA "General Audio" specific configuration; reference: table 4.1.
+ *
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int channel_config) {
     enum ChannelPosition new_che_pos[4][MAX_ELEM_ID];
@@ -365,6 +376,7 @@ static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int ch
  *
  * @param   data        pointer to AVCodecContext extradata
  * @param   data_size   size of AVCCodecContext extradata
+ *
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_audio_specific_config(AACContext * ac, void *data, int data_size) {
@@ -397,6 +409,13 @@ static int decode_audio_specific_config(AACContext * ac, void *data, int data_si
     return 0;
 }
 
+/**
+ * linear congruential pseudorandom number generator
+ *
+ * @param   state   pointer to the current state of the generator
+ *
+ * @return  Returns a 32-bit pseudorandom integer
+ */
 static inline int32_t lcg_random(int32_t *state) {
     *state = *state * 1664525 + 1013904223;
     return *state;
@@ -731,6 +750,8 @@ static void decode_pulses(Pulse * pulse, GetBitContext * gb) {
 
 /**
  * Decode Temporal Noise Shaping data; reference: table 4.48.
+ *
+ * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_tns(AACContext * ac, TemporalNoiseShaping * tns,
         GetBitContext * gb, const IndividualChannelStream * ics) {
@@ -945,6 +966,7 @@ static void dequant(AACContext * ac, float coef[1024], const int icoef[1024], fl
  *
  * @param   common_window   Channels have independent [0], or shared [1], Individual Channel Stream information.
  * @param   scale_flag      scalable [1] or non-scalable [0] AAC (Unused until scalable AAC is implemented.)
+ *
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_ics(AACContext * ac, SingleChannelElement * sce, GetBitContext * gb, int common_window, int scale_flag) {
@@ -1070,6 +1092,7 @@ static void apply_intensity_stereo(ChannelElement * cpe, int ms_present) {
  * Decode a channel_pair_element; reference: table 4.4.
  *
  * @param   elem_id Identifies the instance of a syntax element.
+ *
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_cpe(AACContext * ac, GetBitContext * gb, int elem_id) {
@@ -1111,6 +1134,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int elem_id) {
  * Decode coupling_channel_element; reference: table 4.8.
  *
  * @param   elem_id Identifies the instance of a syntax element.
+ *
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
@@ -1185,10 +1209,11 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
 }
 
 /**
- * Parse Spectral Band Replication extension data; reference: table 4.55.
+ * Decode Spectral Band Replication extension data; reference: table 4.55.
  *
  * @param   crc flag indicating the presence of CRC checksum
  * @param   cnt length of TYPE_FIL syntactic element in bytes
+ *
  * @return  Returns number of bytes consumed from the TYPE_FIL element.
  */
 static int decode_sbr_extension(AACContext * ac, GetBitContext * gb, int crc, int cnt) {
@@ -1222,6 +1247,7 @@ static int decode_drc_channel_exclusions(DynamicRangeControl *che_drc, GetBitCon
  * Decode dynamic range information; reference: table 4.52.
  *
  * @param   cnt length of TYPE_FIL syntactic element in bytes
+ *
  * @return  Returns number of bytes consumed.
  */
 static int decode_dynamic_range(DynamicRangeControl *che_drc, GetBitContext * gb, int cnt) {
@@ -1273,6 +1299,8 @@ static int decode_dynamic_range(DynamicRangeControl *che_drc, GetBitContext * gb
  * Decode extension data (incomplete); reference: table 4.51.
  *
  * @param   cnt length of TYPE_FIL syntactic element in bytes
+ *
+ * @return Returns number of bytes consumed
  */
 static int decode_extension_payload(AACContext * ac, GetBitContext * gb, int cnt) {
     int crc_flag = 0;
@@ -1761,6 +1789,7 @@ static int spectral_to_sample(AACContext * ac) {
  *
  * @param   data        pointer to output data
  * @param   data_size   output data size in bytes
+ *
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int convert_to_int16(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
