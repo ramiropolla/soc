@@ -324,7 +324,7 @@ static int decode_ga_specific_config(AACContext * ac, GetBitContext * gb, int ch
     int extension_flag, ret;
 
     if(get_bits1(gb)) {  // frameLengthFlag
-        av_log(ac->avccontext, AV_LOG_ERROR, "960/120 MDCT window is not supported.\n");
+        av_log_missing_feature(ac->avccontext, "960/120 MDCT window is", 1);
         return -1;
     }
 
@@ -585,8 +585,7 @@ static int decode_ics_info(AACContext * ac, IndividualChannelStream * ics, GetBi
                 }
             }
 #else /* AAC_LTP */
-            av_log(ac->avccontext, AV_LOG_ERROR,
-                   "Predictor bit set but LTP is not supported.\n");
+            av_log_missing_feature(ac->avccontext, "Predictor bit set but LTP is", 1);
             return -1;
 #endif /* AAC_LTP */
 #ifdef AAC_LTP
@@ -1005,7 +1004,7 @@ static int decode_ics(AACContext * ac, SingleChannelElement * sce, GetBitContext
             int ret;
             if ((ret = decode_gain_control(sce, gb))) return ret;
 #else
-            av_log(ac->avccontext, AV_LOG_ERROR, "SSR not supported.\n");
+            av_log_missing_feature(ac->avccontext, "SSR", 1);
             return -1;
 #endif
         }
@@ -1213,7 +1212,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
  */
 static int decode_sbr_extension(AACContext * ac, GetBitContext * gb, int crc, int cnt) {
     // TODO : sbr_extension implementation
-    av_log(ac->avccontext, AV_LOG_DEBUG, "aac: SBR not yet supported.\n");
+    av_log_missing_feature(ac->avccontext, "SBR", 0);
     skip_bits_long(gb, 8*cnt - 4); // -4 due to reading extension type
     return cnt;
 }
