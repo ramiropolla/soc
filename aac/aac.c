@@ -926,11 +926,13 @@ static void add_pulses(int icoef[1024], const Pulse * pulse, const IndividualCha
 static void dequant(AACContext * ac, float coef[1024], const int icoef[1024], float sf[120],
         const IndividualChannelStream * ics, enum BandType band_type[120]) {
     const uint16_t * offsets = ics->swb_offset;
-    const int c = 1024/ics->num_window_groups;
+    const int c = 1024/ics->num_windows;
     int g, i, group, k, idx = 0;
 
-    for (g = 0; g < ics->num_window_groups; g++) {
+    for (g = 0; g < ics->num_windows; g++)
         memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(c - offsets[ics->max_sfb]));
+
+    for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++, idx++) {
             if (band_type[idx] == NOISE_BT) {
                 const float scale = sf[idx] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
