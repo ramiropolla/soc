@@ -1483,23 +1483,7 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
     float * buf = ac->buf_mdct;
     int i;
 
-    if (ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
-        ff_imdct_calc(&ac->mdct, buf, in, out); // Out can be abused, for now, as a temp buffer.
-        if (ics->window_sequence[0] != LONG_STOP_SEQUENCE) {
-            ac->dsp.vector_fmul_add_add(out, buf, lwindow_prev, saved, ac->add_bias, 1024, 1);
-        } else {
-            for (i = 0;   i < 448;  i++)   out[i] =          saved[i] + ac->add_bias;
-            ac->dsp.vector_fmul_add_add(out + 448, buf + 448, swindow_prev, saved + 448, ac->add_bias, 128, 1);
-            for (i = 576; i < 1024; i++)   out[i] = buf[i] + saved[i] + ac->add_bias;
-        }
-        if (ics->window_sequence[0] != LONG_START_SEQUENCE) {
-            ac->dsp.vector_fmul_reverse(saved, buf + 1024, lwindow, 1024);
-        } else {
-            memcpy(saved, buf + 1024, 448 * sizeof(float));
-            ac->dsp.vector_fmul_reverse(saved + 448, buf + 1024 + 448, swindow, 128);
-            memset(saved + 576, 0, 448 * sizeof(float));
-        }
-    } else {
+    if (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) {
         if (ics->window_sequence[1] == ONLY_LONG_SEQUENCE || ics->window_sequence[1] == LONG_STOP_SEQUENCE)
             av_log(ac->avccontext, AV_LOG_WARNING,
                    "Transition from an ONLY_LONG or LONG_STOP to an EIGHT_SHORT sequence detected. "
@@ -1529,6 +1513,22 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
         ac->dsp.vector_fmul_add_add(saved + 320, buf + 1024 + 6*128, swindow,      ac->revers + 6*128,     0, 128, 1);
         memcpy(                     saved + 448, ac->revers + 7*128, 128 * sizeof(float));
         memset(                     saved + 576, 0,                  448 * sizeof(float));
+    } else {
+        ff_imdct_calc(&ac->mdct, buf, in, out); // Out can be abused, for now, as a temp buffer.
+        if (ics->window_sequence[0] == LONG_STOP_SEQUENCE) {
+            for (i = 0;   i < 448;  i++)   out[i] =          saved[i] + ac->add_bias;
+            ac->dsp.vector_fmul_add_add(out + 448, buf + 448, swindow_prev, saved + 448, ac->add_bias, 128, 1);
+            for (i = 576; i < 1024; i++)   out[i] = buf[i] + saved[i] + ac->add_bias;
+        } else {
+            ac->dsp.vector_fmul_add_add(out, buf, lwindow_prev, saved, ac->add_bias, 1024, 1);
+        }
+        if (ics->window_sequence[0] == LONG_START_SEQUENCE) {
+            memcpy(saved, buf + 1024, 448 * sizeof(float));
+            ac->dsp.vector_fmul_reverse(saved + 448, buf + 1024 + 448, swindow, 128);
+            memset(saved + 576, 0, 448 * sizeof(float));
+        } else {
+            ac->dsp.vector_fmul_reverse(saved, buf + 1024, lwindow, 1024);
+        }
     }
 }
 
