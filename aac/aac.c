@@ -1848,15 +1848,15 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             break;
 
         case TYPE_CPE:
-                err = decode_cpe(ac, &gb, elem_id);
+            err = decode_cpe(ac, &gb, elem_id);
             break;
 
         case TYPE_CCE:
-                err = decode_cce(ac, &gb, elem_id);
+            err = decode_cce(ac, &gb, elem_id);
             break;
 
         case TYPE_LFE:
-                err = decode_ics(ac, &ac->che[TYPE_LFE][elem_id]->ch[0], &gb, 0, 0);
+            err = decode_ics(ac, &ac->che[TYPE_LFE][elem_id]->ch[0], &gb, 0, 0);
             break;
 
         case TYPE_DSE:
