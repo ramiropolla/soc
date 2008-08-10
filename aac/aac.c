@@ -1192,9 +1192,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
         }
         for (g = 0; g < sce->ics.num_window_groups; g++)
             for (sfb = 0; sfb < sce->ics.max_sfb; sfb++, idx++)
-                if (sce->band_type[idx] == ZERO_BT) {
-                    coup->gain[c][idx] = 0;
-                } else {
+                if (sce->band_type[idx] != ZERO_BT) {
                     if (!cge) {
                         int t = get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
                         if (t) {
