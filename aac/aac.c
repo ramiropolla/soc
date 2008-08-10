@@ -1773,43 +1773,11 @@ static int spectral_to_sample(AACContext * ac) {
     return 0;
 }
 
-/**
- * Conduct float to int16 conversion.
- *
- * @param   data        pointer to output data
- * @param   data_size   output data size in bytes
- *
- * @return  Returns error status. 0 - OK, !0 - error
- */
-static int convert_to_int16(AVCodecContext * avccontext, uint16_t * data, int * data_size) {
-    AACContext * ac = avccontext->priv_data;
-    int i;
-
-    if (!ac->is_saved) {
-        ac->is_saved = 1;
-        *data_size = 0;
-        return 0;
-    }
-
-    i = 1024 * avccontext->channels * sizeof(int16_t);
-    if(*data_size < i) {
-        av_log(avccontext, AV_LOG_ERROR,
-               "Output buffer too small (%d) or trying to output too many samples (%d) for this frame.\n",
-               *data_size, i);
-        return -1;
-    }
-    *data_size = i;
-
-    ac->dsp.float_to_int16_interleave(data, (const float **)ac->output_data, 1024, avccontext->channels);
-
-    return 0;
-}
-
 static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data_size, const uint8_t * buf, int buf_size) {
     AACContext * ac = avccontext->priv_data;
     GetBitContext gb;
     enum RawDataBlockType elem_type;
-    int err, elem_id;
+    int err, elem_id, data_size_tmp;
 
     init_get_bits(&gb, buf, buf_size*8);
 
@@ -1884,8 +1852,23 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
 
     if((err = spectral_to_sample(ac)))
         return err;
-    if((err = convert_to_int16(avccontext, data, data_size)))
-        return err;
+
+    if (!ac->is_saved) {
+        ac->is_saved = 1;
+        *data_size = 0;
+        return 0;
+    }
+
+    data_size_tmp = 1024 * avccontext->channels * sizeof(int16_t);
+    if(*data_size < data_size_tmp) {
+        av_log(avccontext, AV_LOG_ERROR,
+               "Output buffer too small (%d) or trying to output too many samples (%d) for this frame.\n",
+               *data_size, data_size_tmp);
+        return -1;
+    }
+    *data_size = data_size_tmp;
+
+    ac->dsp.float_to_int16_interleave(data, (const float **)ac->output_data, 1024, avccontext->channels);
 
     return buf_size;
 }
