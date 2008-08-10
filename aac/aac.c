@@ -1195,18 +1195,19 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
                 if (sce->band_type[idx] == ZERO_BT) {
                     coup->gain[c][idx] = 0;
                 } else {
-                    if (cge) {
-                        coup->gain[c][idx] = gain_cache;
-                    } else {
-                        int s, t = get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
-                        if (sign) {
-                            s = 1 - 2 * (t & 0x1);
-                            t >>= 1;
-                        } else
-                            s = 1;
-                        gain += t;
-                        coup->gain[c][idx] = pow(scale, gain) * s;
+                    if (!cge) {
+                        int t = get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
+                        if (t) {
+                            int s = 1;
+                            if (sign) {
+                                s  -= 2 * (t & 0x1);
+                                t >>= 1;
+                            }
+                            gain += t;
+                            gain_cache = pow(scale, gain) * s;
+                        }
                     }
+                    coup->gain[c][idx] = gain_cache;
                 }
     }
     return 0;
