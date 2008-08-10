@@ -1233,17 +1233,14 @@ static int decode_sbr_extension(AACContext * ac, GetBitContext * gb, int crc, in
  */
 static int decode_drc_channel_exclusions(DynamicRangeControl *che_drc, GetBitContext * gb) {
     int i;
-    int n = 0;
     int num_excl_chan = 0;
 
     do {
         for (i = 0; i < 7; i++)
-            che_drc->exclude_mask[num_excl_chan + i] = get_bits1(gb);
-        n++;
-        num_excl_chan += 7;
+            che_drc->exclude_mask[num_excl_chan++] = get_bits1(gb);
     } while (num_excl_chan < MAX_CHANNELS - 7 && get_bits1(gb));
 
-    return n;
+    return num_excl_chan / 7;
 }
 
 /**
