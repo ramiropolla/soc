@@ -1785,14 +1785,14 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         elem_id = get_bits(&gb, 4);
         err = -1;
 
-            if(elem_type == TYPE_SCE && elem_id = 1 && !ac->che[TYPE_SCE][elem_id] && ac->che[TYPE_LFE][0]) {
-                    /* Some streams incorrectly code 5.1 audio as SCE[0] CPE[0] CPE[1] SCE[1]
-                       instead of SCE[0] CPE[0] CPE[0] LFE[0].
-                       If we seem to have encountered such a stream,
-                       transfer the LFE[0] element to SCE[1] */
-                    ac->che[TYPE_SCE][elem_id] = ac->che[TYPE_LFE][0];
-                    ac->che[TYPE_LFE][0] = NULL;
-            }
+        if(elem_type == TYPE_SCE && elem_id = 1 &&
+                !ac->che[TYPE_SCE][elem_id] && ac->che[TYPE_LFE][0]) {
+            /* Some streams incorrectly code 5.1 audio as SCE[0] CPE[0] CPE[1] SCE[1]
+               instead of SCE[0] CPE[0] CPE[0] LFE[0]. If we seem to have
+               encountered such a stream, transfer the LFE[0] element to SCE[1] */
+            ac->che[TYPE_SCE][elem_id] = ac->che[TYPE_LFE][0];
+            ac->che[TYPE_LFE][0] = NULL;
+        }
         if(elem_type && elem_type < TYPE_DSE && !ac->che[elem_type][elem_id])
             return -1;
 
