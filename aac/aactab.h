@@ -35,6 +35,11 @@
 
 #include <stdint.h>
 
+/* NOTE:
+ * Tables in this file are used by the AAC decoder and will be used by the AAC
+ * encoder.
+ */
+
 /* @name window coefficients
  * @{
  */
