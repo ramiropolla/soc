@@ -1826,6 +1826,10 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     while ((elem_type = get_bits(&gb, 3)) != TYPE_END) {
         elem_id = get_bits(&gb, 4);
         err = -1;
+
+        if(elem_type && elem_type < TYPE_DSE && !ac->che[elem_type][elem_id])
+            return -1;
+
         switch (elem_type) {
 
         case TYPE_SCE:
@@ -1844,17 +1848,14 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             break;
 
         case TYPE_CPE:
-            if (ac->che[TYPE_CPE][elem_id])
                 err = decode_cpe(ac, &gb, elem_id);
             break;
 
         case TYPE_CCE:
-            if (ac->che[TYPE_CCE][elem_id])
                 err = decode_cce(ac, &gb, elem_id);
             break;
 
         case TYPE_LFE:
-            if (ac->che[TYPE_LFE][elem_id])
                 err = decode_ics(ac, &ac->che[TYPE_LFE][elem_id]->ch[0], &gb, 0, 0);
             break;
 
