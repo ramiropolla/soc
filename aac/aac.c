@@ -1157,13 +1157,14 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
     coup->num_coupled = get_bits(gb, 3);
     for (c = 0; c <= coup->num_coupled; c++) {
         num_gain++;
-        coup->is_cpe[c] = get_bits1(gb);
+        coup->type[c] = get_bits1(gb) ? TYPE_CPE : TYPE_SCE;
         coup->id_select[c] = get_bits(gb, 4);
-        if (coup->is_cpe[c]) {
+        if (coup->type[c] == TYPE_CPE) {
             coup->ch_select[c] = get_bits(gb, 2);
             if (coup->ch_select[c] == 3)
                 num_gain++;
-        }
+        } else
+            coup->ch_select[c] = 1;
     }
     domain = get_bits1(gb);
 
@@ -1711,20 +1712,18 @@ static void apply_channel_coupling(AACContext * ac, ChannelElement * cc,
     int index = 0;
     ChannelCoupling * coup = &cc->coup;
     for (c = 0; c <= coup->num_coupled; c++) {
-        if (     !coup->is_cpe[c] && ac->che[TYPE_SCE][coup->id_select[c]]) {
-            apply_coupling_method(ac, &ac->che[TYPE_SCE][coup->id_select[c]]->ch[0], cc, index++);
-        } else if(coup->is_cpe[c] && ac->che[TYPE_CPE][coup->id_select[c]]) {
+        if (ac->che[coup->type[c]][coup->id_select[c]]) {
             if (coup->ch_select[c] != 2) {
-                apply_coupling_method(ac, &ac->che[TYPE_CPE][coup->id_select[c]]->ch[0], cc, index);
+                apply_coupling_method(ac, &ac->che[coup->type[c]][coup->id_select[c]]->ch[0], cc, index);
                 if (coup->ch_select[c] != 0)
                     index++;
             }
             if (coup->ch_select[c] != 1)
-                apply_coupling_method(ac, &ac->che[TYPE_CPE][coup->id_select[c]]->ch[1], cc, index++);
+                apply_coupling_method(ac, &ac->che[coup->type[c]][coup->id_select[c]]->ch[1], cc, index++);
         } else {
             av_log(ac->avccontext, AV_LOG_ERROR,
                    "coupling target %sE[%d] not available\n",
-                   coup->is_cpe[c] ? "CP" : "SC", coup->id_select[c]);
+                   coup->type[c] == TYPE_CPE ? "CP" : "SC", coup->id_select[c]);
             break;
         }
     }
