@@ -541,6 +541,7 @@ static void decode_ltp(AACContext * ac, LongTermPrediction * ltp, GetBitContext 
 static int decode_ics_info(AACContext * ac, IndividualChannelStream * ics, GetBitContext * gb, int common_window) {
     if (get_bits1(gb)) {
         av_log(ac->avccontext, AV_LOG_ERROR, "Reserved bit set.\n");
+        memset(ics, 0, sizeof(IndividualChannelStream));
         return -1;
     }
     ics->window_sequence[1] = ics->window_sequence[0];
@@ -586,6 +587,7 @@ static int decode_ics_info(AACContext * ac, IndividualChannelStream * ics, GetBi
             }
 #else /* AAC_LTP */
             av_log_missing_feature(ac->avccontext, "Predictor bit set but LTP is", 1);
+            memset(ics, 0, sizeof(IndividualChannelStream));
             return -1;
 #endif /* AAC_LTP */
 #ifdef AAC_LTP
@@ -600,8 +602,7 @@ static int decode_ics_info(AACContext * ac, IndividualChannelStream * ics, GetBi
         av_log(ac->avccontext, AV_LOG_ERROR,
             "Number of scalefactor bands in group (%d) exceeds limit (%d).\n",
             ics->max_sfb, ics->num_swb);
-        ics->max_sfb = 0;
-        ics->num_swb = 0;
+        memset(ics, 0, sizeof(IndividualChannelStream));
         return -1;
     }
 
