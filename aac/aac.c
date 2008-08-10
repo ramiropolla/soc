@@ -191,10 +191,8 @@ static int output_configure(AACContext *ac, enum ChannelPosition che_pos[4][MAX_
                     return AVERROR(ENOMEM);
                 if(type != TYPE_CCE) {
                     ac->output_data[channels++] = ac->che[type][i]->ch[0].ret;
-                    ac->che[type][i]->ch[0].mixing_gain = 1.0f;
                     if(type == TYPE_CPE) {
                         ac->output_data[channels++] = ac->che[type][i]->ch[1].ret;
-                        ac->che[type][i]->ch[1].mixing_gain = 1.0f;
                     }
                 }
             } else
@@ -670,7 +668,6 @@ static int decode_band_types(AACContext * ac, enum BandType band_type[120],
 /**
  * Decode scalefactors; reference: table 4.47.
  *
- * @param   mix_gain            channel gain (Not used by AAC bitstream.)
  * @param   global_gain         first scalefactor value as scalefactors are differentially coded
  * @param   band_type           array of the used band type
  * @param   band_type_run_end   array of the last scalefactor band of a band type run
@@ -679,7 +676,7 @@ static int decode_band_types(AACContext * ac, enum BandType band_type[120],
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_scalefactors(AACContext * ac, float sf[120], GetBitContext * gb,
-        float mix_gain, unsigned int global_gain, IndividualChannelStream * ics,
+        unsigned int global_gain, IndividualChannelStream * ics,
         enum BandType band_type[120], int band_type_run_end[120]) {
     const int sf_offset = ac->sf_offset + (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE ? 12 : 0);
     int g, i, idx = 0;
@@ -703,7 +700,6 @@ static int decode_scalefactors(AACContext * ac, float sf[120], GetBitContext * g
                         return -1;
                     }
                     sf[idx]  = ff_aac_pow2sf_tab[-offset[2] + 300];
-                    sf[idx] *= mix_gain;
                 }
             }else if(band_type[idx] == NOISE_BT) {
                 for(; i < run_end; i++, idx++) {
@@ -717,7 +713,6 @@ static int decode_scalefactors(AACContext * ac, float sf[120], GetBitContext * g
                         return -1;
                     }
                     sf[idx]  = -ff_aac_pow2sf_tab[ offset[1] + sf_offset];
-                    sf[idx] *= mix_gain;
                 }
             }else {
                 for(; i < run_end; i++, idx++) {
@@ -728,7 +723,6 @@ static int decode_scalefactors(AACContext * ac, float sf[120], GetBitContext * g
                         return -1;
                     }
                     sf[idx] = -ff_aac_pow2sf_tab[ offset[0] + sf_offset];
-                    sf[idx] *= mix_gain;
                 }
             }
         }
@@ -993,7 +987,7 @@ static int decode_ics(AACContext * ac, SingleChannelElement * sce, GetBitContext
 
     if (decode_band_types(ac, sce->band_type, sce->band_type_run_end, gb, ics) < 0)
         return -1;
-    if (decode_scalefactors(ac, sce->sf, gb, sce->mixing_gain, global_gain, ics, sce->band_type, sce->band_type_run_end) < 0)
+    if (decode_scalefactors(ac, sce->sf, gb, global_gain, ics, sce->band_type, sce->band_type_run_end) < 0)
         return -1;
 
     pulse_present = 0;
@@ -1149,7 +1143,6 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
     ChannelCoupling * coup;
 
     sce = &ac->che[TYPE_CCE][elem_id]->ch[0];
-    sce->mixing_gain = 1.0;
 
     coup = &ac->che[TYPE_CCE][elem_id]->coup;
 
@@ -1669,11 +1662,10 @@ static void apply_dependent_coupling(AACContext * ac, SingleChannelElement * sce
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++, idx++) {
             if (cc->ch[0].band_type[idx] != ZERO_BT) {
-                float gain = cc->coup.gain[index][idx] * sce->mixing_gain;
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k++) {
                         // XXX dsputil-ize
-                        dest[group*128+k] += gain * src[group*128+k];
+                        dest[group*128+k] += cc->coup.gain[index][idx] * src[group*128+k];
                     }
                 }
             }
@@ -1690,9 +1682,8 @@ static void apply_dependent_coupling(AACContext * ac, SingleChannelElement * sce
  */
 static void apply_independent_coupling(AACContext * ac, SingleChannelElement * sce, ChannelElement * cc, int index) {
     int i;
-    float gain = cc->coup.gain[index][0] * sce->mixing_gain;
     for (i = 0; i < 1024; i++)
-        sce->ret[i] += gain * (cc->ch[0].ret[i] - ac->add_bias);
+        sce->ret[i] += cc->coup.gain[index][0] * (cc->ch[0].ret[i] - ac->add_bias);
 }
 
 /**

@@ -259,10 +259,6 @@ typedef struct {
  * Single Channel Element - used for both SCE and LFE elements.
  */
 typedef struct {
-    float mixing_gain;                        /**< Channel gain (not used by AAC bitstream).
-                                               *   Note that this is applied before joint stereo decoding.
-                                               *   Thus, when used inside CPE elements, both channels must have equal gain.
-                                               */
     IndividualChannelStream ics;
     TemporalNoiseShaping tns;
     enum BandType band_type[120];             ///< band types
