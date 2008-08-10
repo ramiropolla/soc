@@ -562,25 +562,12 @@ static int decode_ics_info(AACContext * ac, IndividualChannelStream * ics, GetBi
         }
         ics->swb_offset =     swb_offset_128[ac->m4ac.sampling_index];
         ics->num_swb    = ff_aac_num_swb_128[ac->m4ac.sampling_index];
+        ics->num_windows   = 8;
+        ics->tns_max_bands = tns_max_bands_128[ac->m4ac.sampling_index];
     } else {
         ics->max_sfb    =                              get_bits(gb, 6);
         ics->swb_offset =     swb_offset_1024[ac->m4ac.sampling_index];
         ics->num_swb    = ff_aac_num_swb_1024[ac->m4ac.sampling_index];
-    }
-
-    if(ics->max_sfb > ics->num_swb) {
-        av_log(ac->avccontext, AV_LOG_ERROR,
-            "Number of scalefactor bands in group (%d) exceeds limit (%d).\n",
-            ics->max_sfb, ics->num_swb);
-        ics->max_sfb = 0;
-        ics->num_swb = 0;
-        return -1;
-    }
-
-    if (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) {
-        ics->num_windows   = 8;
-        ics->tns_max_bands = tns_max_bands_128[ac->m4ac.sampling_index];
-    } else {
         ics->num_windows   = 1;
         ics->tns_max_bands = tns_max_bands_1024[ac->m4ac.sampling_index];
         if (get_bits1(gb)) {
@@ -609,6 +596,16 @@ static int decode_ics_info(AACContext * ac, IndividualChannelStream * ics, GetBi
 #endif /* AAC_LTP */
         }
     }
+
+    if(ics->max_sfb > ics->num_swb) {
+        av_log(ac->avccontext, AV_LOG_ERROR,
+            "Number of scalefactor bands in group (%d) exceeds limit (%d).\n",
+            ics->max_sfb, ics->num_swb);
+        ics->max_sfb = 0;
+        ics->num_swb = 0;
+        return -1;
+    }
+
     return 0;
 }
 
