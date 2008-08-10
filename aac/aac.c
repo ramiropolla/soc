@@ -1848,12 +1848,19 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
                 err = decode_cpe(ac, &gb, elem_id);
             break;
 
-        case TYPE_FIL:
-            if (elem_id == 15)
-                elem_id += get_bits(&gb, 8) - 1;
-            while (elem_id > 0)
-                elem_id -= decode_extension_payload(ac, &gb, elem_id);
-            err = 0; /* FIXME */
+        case TYPE_CCE:
+            if (ac->che[TYPE_CCE][elem_id])
+                err = decode_cce(ac, &gb, elem_id);
+            break;
+
+        case TYPE_LFE:
+            if (ac->che[TYPE_LFE][elem_id])
+                err = decode_ics(ac, &ac->che[TYPE_LFE][elem_id]->ch[0], &gb, 0, 0);
+            break;
+
+        case TYPE_DSE:
+            skip_data_stream_element(&gb);
+            err = 0;
             break;
 
         case TYPE_PCE:
@@ -1866,19 +1873,12 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             break;
         }
 
-        case TYPE_DSE:
-            skip_data_stream_element(&gb);
-            err = 0;
-            break;
-
-        case TYPE_CCE:
-            if (ac->che[TYPE_CCE][elem_id])
-                err = decode_cce(ac, &gb, elem_id);
-            break;
-
-        case TYPE_LFE:
-            if (ac->che[TYPE_LFE][elem_id])
-                err = decode_ics(ac, &ac->che[TYPE_LFE][elem_id]->ch[0], &gb, 0, 0);
+        case TYPE_FIL:
+            if (elem_id == 15)
+                elem_id += get_bits(&gb, 8) - 1;
+            while (elem_id > 0)
+                elem_id -= decode_extension_payload(ac, &gb, elem_id);
+            err = 0; /* FIXME */
             break;
 
         default:
