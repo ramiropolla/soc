@@ -1136,7 +1136,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int elem_id) {
 static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
     int num_gain = 0;
     int c, g, sfb, ret, idx = 0;
-    int is_indep_coup, domain, sign;
+    int sign;
     float scale;
     SingleChannelElement * sce;
     ChannelCoupling * coup;
@@ -1145,7 +1145,7 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
 
     coup = &ac->che[TYPE_CCE][elem_id]->coup;
 
-    is_indep_coup = get_bits1(gb);
+    coup->coupling_point = 2*get_bits1(gb);
     coup->num_coupled = get_bits(gb, 3);
     for (c = 0; c <= coup->num_coupled; c++) {
         num_gain++;
@@ -1158,14 +1158,14 @@ static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
         } else
             coup->ch_select[c] = 1;
     }
-    domain = get_bits1(gb);
+    coup->coupling_point += get_bits1(gb);
 
-    if (is_indep_coup) {
-        coup->coupling_point = AFTER_IMDCT;
-    } else if(domain) {
-        coup->coupling_point = BETWEEN_TNS_AND_IMDCT;
-    } else
-        coup->coupling_point = BEFORE_TNS;
+    if (coup->coupling_point == 2) {
+        av_log(ac->avccontext, AV_LOG_ERROR,
+            "Independently switched CCE with 'invalid' domain signalled.\n");
+        memset(coup, 0, sizeof(ChannelCoupling));
+        return -1;
+    }
 
     sign = get_bits(gb, 1);
     scale = pow(2., pow(2., get_bits(gb, 2) - 3));

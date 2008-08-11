@@ -146,7 +146,7 @@ enum ChannelPosition {
 enum CouplingPoint {
     BEFORE_TNS,
     BETWEEN_TNS_AND_IMDCT,
-    AFTER_IMDCT,
+    AFTER_IMDCT = 3,
 };
 
 #ifdef AAC_LTP
