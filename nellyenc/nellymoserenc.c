@@ -166,7 +166,7 @@ static void encode_block(NellyMoserEncodeContext *s,
     PutBitContext2 pb;
     int bits[NELLY_BUF_LEN];
     int i, j, k, l, b;
-    int bs, bk;
+    int bk;
     int val=0;
     float pval;
     float tmp, stmp;
@@ -221,11 +221,9 @@ static void encode_block(NellyMoserEncodeContext *s,
 
     ff_nelly_get_sample_bits(s->pows, bits);
 
-    bs=0;
     for (i = 0; i < 2; i++) { //2
 
         for (j = 0; j < NELLY_FILL_LEN; j++) {
-            bs+=bits[j];
             if (bits[j] > 0) {
                 tmp = s->mdct_out[i*NELLY_BUF_LEN + j];
 
@@ -248,7 +246,6 @@ static void encode_block(NellyMoserEncodeContext *s,
                 );
     }
 
-    av_log(s->avctx, AV_LOG_DEBUG, "bs=%i\n", bs);
 }
 
 static int encode_tag(AVCodecContext *avctx,
