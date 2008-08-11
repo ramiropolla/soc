@@ -226,7 +226,10 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     s->samples = av_malloc(2 * 1024 * avctx->channels * sizeof(s->samples[0]));
     s->cpe = av_mallocz(sizeof(ChannelElement) * aac_chan_configs[avctx->channels-1][0]);
     //TODO: psy model selection with some option
-    ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, aac_chan_configs[avctx->channels-1][0], 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128);
+    if(ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, aac_chan_configs[avctx->channels-1][0], 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128) < 0){
+        av_log(avctx, AV_LOG_ERROR, "Cannot initialize selected model.\n");
+        return -1;
+    }
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
