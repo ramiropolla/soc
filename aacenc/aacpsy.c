@@ -915,10 +915,11 @@ int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
     dsputil_init(&ctx->dsp, avctx);
     ctx->model = &psy_models[model];
 
-    if(ctx->flags & PSY_MODEL_NO_ST_ATT)
+    if(ctx->flags & PSY_MODEL_NO_ST_ATT || PSY_MODEL_MODE(ctx->flags) == PSY_MODE_QUALITY){
+        ctx->flags |= PSY_MODEL_NO_ST_ATT;
         ctx->stereo_att = 0.5f;
-    else{
-        ctx->stereo_att = 0.5f;//todo: adaptive
+    }else{
+        ctx->stereo_att = av_clipf(avctx->bit_rate / elements / 192000.0, 0.0f, 0.5f);
     }
     if(ctx->flags & PSY_MODEL_NO_LOWPASS || PSY_MODEL_MODE(ctx->flags) == PSY_MODE_QUALITY){
         ctx->flags |= PSY_MODEL_NO_LOWPASS;
