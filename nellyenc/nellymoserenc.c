@@ -170,6 +170,7 @@ static void encode_block(NellyMoserEncodeContext *s,
     int val=0;
     float pval;
     float tmp, stmp;
+    int band_start, band_end;
 
     for(i=0; i<NELLY_BUF_LEN*3; i++){
         s->float_buf[i] = samples[i];
@@ -184,11 +185,13 @@ static void encode_block(NellyMoserEncodeContext *s,
 
     init_put_bits2(&pb, buf, buf_size*8);
 
-    for(i=0, j=0; i<NELLY_BANDS; j+=ff_nelly_band_sizes_table[i++]){
+    band_start = 0;
+    band_end = ff_nelly_band_sizes_table[0];
+    for(i=0; i<NELLY_BANDS; i++){
         stmp = 0;
-        for(l=0; l<ff_nelly_band_sizes_table[i]; l++){
+        for(l=band_start; l<band_end; l++){
             for(b=0; b<2; b++){
-                tmp = s->mdct_out[j+l+b*NELLY_BUF_LEN];
+                tmp = s->mdct_out[l+b*NELLY_BUF_LEN];
                 stmp += tmp*tmp;
             }
         }
@@ -212,11 +215,14 @@ static void encode_block(NellyMoserEncodeContext *s,
         }else{
             pval = -pow(2, -val/2048.0 - 3.0);
         }
-        for (k = 0; k < ff_nelly_band_sizes_table[i]; k++) {
-            s->mdct_out[j+k] *= pval;
-            s->mdct_out[j+k+NELLY_BUF_LEN] *= pval;
-            s->pows[j+k] = val;
+        for (k = band_start; k < band_end; k++) {
+            s->mdct_out[k] *= pval;
+            s->mdct_out[k+NELLY_BUF_LEN] *= pval;
+            s->pows[k] = val;
         }
+        band_start = band_end;
+        if(i!=NELLY_BANDS-1)
+            band_end += ff_nelly_band_sizes_table[i+1];
     }
 
     ff_nelly_get_sample_bits(s->pows, bits);
