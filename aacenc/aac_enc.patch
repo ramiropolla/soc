@@ -6,7 +6,7 @@ index d4f6d1c..0ed9057 100644
  
  OBJS-$(CONFIG_ENCODERS)                += faandct.o jfdctfst.o jfdctint.o
  
-+OBJS-$(CONFIG_AAC_ENCODER)             += aacenc.o aacpsy.o aactab.o mdct.o fft.o mpeg4audio.o
++OBJS-$(CONFIG_AAC_ENCODER)             += aacenc.o aacpsy.o aactab.o lowpass.o mdct.o fft.o mpeg4audio.o
  OBJS-$(CONFIG_AASC_DECODER)            += aasc.o
  OBJS-$(CONFIG_AC3_DECODER)             += ac3dec.o ac3tab.o ac3.o mdct.o fft.o
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
