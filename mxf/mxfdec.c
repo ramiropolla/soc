@@ -46,23 +46,7 @@
 //#define DEBUG
 
 #include "libavutil/aes.h"
-#include "libavcodec/bytestream.h"
-#include "avformat.h"
-
-typedef uint8_t UID[16];
-
-enum MXFMetadataSetType {
-    AnyType,
-    MaterialPackage,
-    SourcePackage,
-    SourceClip,
-    TimecodeComponent,
-    Sequence,
-    MultipleDescriptor,
-    Descriptor,
-    Track,
-    CryptoContext,
-};
+#include "mxf.h"
 
 typedef struct {
     UID uid;
@@ -143,27 +127,10 @@ typedef struct {
     int local_tags_count;
 } MXFContext;
 
-typedef struct {
-    UID key;
-    offset_t offset;
-    uint64_t length;
-} KLVPacket;
-
 enum MXFWrappingScheme {
     Frame,
     Clip,
 };
-
-typedef struct {
-    UID uid;
-    unsigned matching_len;
-    enum CodecID id;
-} MXFCodecUL;
-
-typedef struct {
-    UID uid;
-    enum CodecType type;
-} MXFDataDefinitionUL;
 
 typedef struct {
     const UID key;

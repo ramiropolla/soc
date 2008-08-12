@@ -31,38 +31,14 @@
 
 #define DEBUG
 
-#include "avformat.h"
-#include "libavcodec/bytestream.h"
+#include "mxf.h"
 
-typedef uint8_t UID[16];
 typedef uint8_t UMID[32];
-
-enum MXFMetadataSetType {
-    MaterialPackage,
-    SourcePackage,
-};
-
-typedef struct {
-    UID key;
-    offset_t offset;
-    uint64_t length;
-} KLVPacket;
-
-typedef struct {
-    UID uid;
-    unsigned matching_len;
-    enum CodecID id;
-} MXFCodecUL;
 
 typedef struct {
     int local_tag;
     UID uid;
 } MXFLocalTagPair;
-
-typedef struct {
-    UID uid;
-    enum CodecType type;
-} MXFDataDefinitionUL;
 
 typedef struct {
     UID uid;
