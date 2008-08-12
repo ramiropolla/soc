@@ -212,8 +212,7 @@ typedef struct {
 
 typedef struct {
     int num_pulse;
-    int start;
-    int offset[4];
+    int pos[4];
     int amp[4];
 } Pulse;
 

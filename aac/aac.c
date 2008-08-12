@@ -728,13 +728,14 @@ static int decode_scalefactors(AACContext * ac, float sf[120], GetBitContext * g
 /**
  * Decode pulse data; reference: table 4.7.
  */
-static void decode_pulses(Pulse * pulse, GetBitContext * gb) {
+static void decode_pulses(Pulse * pulse, GetBitContext * gb, const uint16_t * swb_offset) {
     int i;
     pulse->num_pulse = get_bits(gb, 2) + 1;
-    pulse->start = get_bits(gb, 6);
-    for (i = 0; i < pulse->num_pulse; i++) {
-        pulse->offset[i] = get_bits(gb, 5);
-        pulse->amp   [i] = get_bits(gb, 4);
+    pulse->pos[0]    = get_bits(gb, 5) + swb_offset[get_bits(gb, 6)];
+    pulse->amp[0]    = get_bits(gb, 4);
+    for (i = 1; i < pulse->num_pulse; i++) {
+        pulse->pos[i] = get_bits(gb, 5) + pulse->pos[i-1];
+        pulse->amp[i] = get_bits(gb, 4);
     }
 }
 
@@ -827,16 +828,26 @@ static void decode_mid_side_stereo(ChannelElement * cpe, GetBitContext * gb,
 
 /**
  * Decode spectral data; reference: table 4.50.
+ * Dequantize and scale spectral data; reference: 4.6.3.3.
  *
- * @param   band_type   array of the used band type
- * @param   icoef       array of quantized spectral data
+ * @param   coef            array of dequantized, scaled spectral data
+ * @param   sf              array of scalefactors or intensity stereo positions
+ * @param   pulse_present   set if pulses are present
+ * @param   pulse           pointer to pulse data struct
+ * @param   band_type       array of the used band type
  *
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_spectrum(AACContext * ac, int icoef[1024], GetBitContext * gb,
-        const IndividualChannelStream * ics, enum BandType band_type[120]) {
-    int i, k, g, idx = 0;
+static int decode_spectrum_and_dequant(AACContext * ac, float coef[1024], GetBitContext * gb, float sf[120],
+        int pulse_present, const Pulse * pulse, const IndividualChannelStream * ics, enum BandType band_type[120]) {
+    int i, k, g, idx = 0, icoef_idx = 0;
+    const int c = 1024/ics->num_windows;
+    int icoef[1024];
     const uint16_t * offsets = ics->swb_offset;
+    float *coef_base = coef;
+
+    for (g = 0; g < ics->num_windows; g++)
+        memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(c - offsets[ics->max_sfb]));
 
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb; i++, idx++) {
@@ -846,13 +857,21 @@ static int decode_spectrum(AACContext * ac, int icoef[1024], GetBitContext * gb,
             int group;
             if (cur_band_type == ZERO_BT) {
                 for (group = 0; group < ics->group_len[g]; group++) {
-                    memset(icoef + group * 128 + offsets[i], 0, (offsets[i+1] - offsets[i])*sizeof(int));
+                    memset(coef + group * 128 + offsets[i], 0, (offsets[i+1] - offsets[i])*sizeof(float));
                 }
-            }else if (cur_band_type != NOISE_BT && cur_band_type != INTENSITY_BT2 && cur_band_type != INTENSITY_BT) {
+            }else if (cur_band_type == NOISE_BT) {
+                const float scale = sf[idx] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
+                for (group = 0; group < ics->group_len[g]; group++) {
+                    for (k = offsets[i]; k < offsets[i+1]; k++) {
+                        ac->random_state  = lcg_random(ac->random_state);
+                        coef[group*128+k] = ac->random_state * scale;
+                    }
+                }
+            }else if (cur_band_type != INTENSITY_BT2 && cur_band_type != INTENSITY_BT) {
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
                         const int index = get_vlc2(gb, vlc_spectral[cur_band_type - 1].table, 6, 3);
-                        const int coef_idx = (group << 7) + k;
+                        const int icoef_tmp_idx = icoef_idx + (group << 7) + k;
                         const int8_t *vq_ptr;
                         int j;
                         if(index >= ff_aac_spectral_sizes[cur_band_type - 1]) {
@@ -865,10 +884,10 @@ static int decode_spectrum(AACContext * ac, int icoef[1024], GetBitContext * gb,
                         if (is_cb_unsigned) {
                             for (j = 0; j < dim; j++)
                                 if (vq_ptr[j])
-                                    icoef[coef_idx + j] = 1 - 2*get_bits1(gb);
+                                    icoef[icoef_tmp_idx + j] = 1 - 2*get_bits1(gb);
                         }else {
                             for (j = 0; j < dim; j++)
-                                icoef[coef_idx + j] = 1;
+                                icoef[icoef_tmp_idx + j] = 1;
                         }
                         if (cur_band_type == ESC_BT) {
                             for (j = 0; j < 2; j++) {
@@ -881,76 +900,31 @@ static int decode_spectrum(AACContext * ac, int icoef[1024], GetBitContext * gb,
                                         av_log(ac->avccontext, AV_LOG_ERROR, "error in spectral data, ESC overflow\n");
                                         return -1;
                                     }
-                                    icoef[coef_idx + j] *= (1<<n) + get_bits(gb, n);
+                                    icoef[icoef_tmp_idx + j] *= (1<<n) + get_bits(gb, n);
                                 }else
-                                    icoef[coef_idx + j] *= vq_ptr[j];
+                                    icoef[icoef_tmp_idx + j] *= vq_ptr[j];
                             }
                         }else
                             for (j = 0; j < dim; j++)
-                                icoef[coef_idx + j] *= vq_ptr[j];
+                                icoef[icoef_tmp_idx + j] *= vq_ptr[j];
+                        for (j = 0; j < dim; j++)
+                            coef[(group << 7) + k + j] = ivquant(icoef[icoef_tmp_idx + k]) * sf[idx];
                     }
                 }
             }
         }
-        icoef += ics->group_len[g]<<7;
+        coef      += ics->group_len[g]<<7;
+        icoef_idx += ics->group_len[g]<<7;
+    }
+
+    if (pulse_present) {
+        for(i = 0; i < pulse->num_pulse; i++){
+            float co  = coef_base[ pulse->pos[i] ];
+            float ico = co / sqrtf(sqrtf(fabsf(co))) + pulse->amp[i];
+            coef_base[ pulse->pos[i] ] = cbrtf(fabsf(ico)) * ico;
+        }
     }
     return 0;
-}
-
-/**
- * Add pulses with particular amplitudes to the quantized spectral data; reference: 4.6.3.3.
- *
- * @param   pulse   pointer to pulse data struct
- * @param   icoef   array of quantized spectral data
- */
-static void add_pulses(int icoef[1024], const Pulse * pulse, const IndividualChannelStream * ics) {
-    int i, off = ics->swb_offset[pulse->start];
-    for (i = 0; i < pulse->num_pulse; i++) {
-        int ic;
-        off += pulse->offset[i];
-        ic = (icoef[off] - 1)>>31;
-        icoef[off] += (pulse->amp[i]^ic) - ic;
-    }
-}
-
-/**
- * Dequantize and scale spectral data; reference: 4.6.3.3.
- *
- * @param   icoef       array of quantized spectral data
- * @param   band_type   array of the used band type
- * @param   sf          array of scalefactors or intensity stereo positions
- * @param   coef        array of dequantized, scaled spectral data
- */
-static void dequant(AACContext * ac, float coef[1024], const int icoef[1024], float sf[120],
-        const IndividualChannelStream * ics, enum BandType band_type[120]) {
-    const uint16_t * offsets = ics->swb_offset;
-    const int c = 1024/ics->num_windows;
-    int g, i, group, k, idx = 0;
-
-    for (g = 0; g < ics->num_windows; g++)
-        memset(coef + g * 128 + offsets[ics->max_sfb], 0, sizeof(float)*(c - offsets[ics->max_sfb]));
-
-    for (g = 0; g < ics->num_window_groups; g++) {
-        for (i = 0; i < ics->max_sfb; i++, idx++) {
-            if (band_type[idx] == NOISE_BT) {
-                const float scale = sf[idx] / ((offsets[i+1] - offsets[i]) * PNS_MEAN_ENERGY);
-                for (group = 0; group < ics->group_len[g]; group++) {
-                    for (k = offsets[i]; k < offsets[i+1]; k++) {
-                        ac->random_state  = lcg_random(ac->random_state);
-                        coef[group*128+k] = ac->random_state * scale;
-                    }
-                }
-            } else if (band_type[idx] != INTENSITY_BT && band_type[idx] != INTENSITY_BT2) {
-                for (group = 0; group < ics->group_len[g]; group++) {
-                    for (k = offsets[i]; k < offsets[i+1]; k++) {
-                        coef[group*128+k] = ivquant(icoef[group*128+k]) * sf[idx];
-                    }
-                }
-            }
-        }
-        coef  += ics->group_len[g]*128;
-        icoef += ics->group_len[g]*128;
-    }
 }
 
 /**
@@ -962,18 +936,16 @@ static void dequant(AACContext * ac, float coef[1024], const int icoef[1024], fl
  * @return  Returns error status. 0 - OK, !0 - error
  */
 static int decode_ics(AACContext * ac, SingleChannelElement * sce, GetBitContext * gb, int common_window, int scale_flag) {
-    int icoeffs[1024];
     Pulse pulse;
     TemporalNoiseShaping * tns = &sce->tns;
     IndividualChannelStream * ics = &sce->ics;
     float * out = sce->coeffs;
     int global_gain, pulse_present = 0;
 
-    /* These two assignments are to silence some GCC warnings about the
-     * variables being used uninitialised when in fact they always are.
+    /* This assignment is to silence a GCC warning about the variable being used
+     * uninitialized when in fact it always is.
      */
     pulse.num_pulse = 0;
-    pulse.start     = 0;
 
     global_gain = get_bits(gb, 8);
 
@@ -994,7 +966,7 @@ static int decode_ics(AACContext * ac, SingleChannelElement * sce, GetBitContext
                 av_log(ac->avccontext, AV_LOG_ERROR, "Pulse tool not allowed in eight short sequence.\n");
                 return -1;
             }
-            decode_pulses(&pulse, gb);
+            decode_pulses(&pulse, gb, ics->swb_offset);
         }
         if ((tns->present = get_bits1(gb)) && decode_tns(ac, tns, gb, ics))
             return -1;
@@ -1009,11 +981,8 @@ static int decode_ics(AACContext * ac, SingleChannelElement * sce, GetBitContext
         }
     }
 
-    if (decode_spectrum(ac, icoeffs, gb, ics, sce->band_type) < 0)
+    if (decode_spectrum_and_dequant(ac, out, gb, sce->sf, pulse_present, &pulse, ics, sce->band_type) < 0)
         return -1;
-    if (pulse_present)
-        add_pulses(icoeffs, &pulse, ics);
-    dequant(ac, out, icoeffs, sce->sf, ics, sce->band_type);
     return 0;
 }
 
