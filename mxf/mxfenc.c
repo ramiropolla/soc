@@ -31,7 +31,6 @@
 
 #define DEBUG
 
-#include "libavutil/random.h"
 #include "avformat.h"
 #include "libavcodec/bytestream.h"
 
