@@ -212,9 +212,9 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     }
     s->samplerate_index = i;
     s->swb_sizes1024 = swb_size_1024[i];
-    s->swb_num1024 = ff_aac_num_swb_1024[i];
-    s->swb_sizes128 = swb_size_128[i];
-    s->swb_num128 = ff_aac_num_swb_128[i];
+    s->swb_num1024   = ff_aac_num_swb_1024[i];
+    s->swb_sizes128  = swb_size_128[i];
+    s->swb_num128    = ff_aac_num_swb_128[i];
 
     dsputil_init(&s->dsp, avctx);
     ff_mdct_init(&s->mdct1024, 11, 0);
@@ -408,7 +408,7 @@ static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int cha
  */
 static void encode_codebook(AACEncContext *s, ChannelElement *cpe, int channel, int start, int size, int cb)
 {
-    const uint8_t *bits = ff_aac_spectral_bits[aac_cb_info[cb].cb_num];
+    const uint8_t  *bits  = ff_aac_spectral_bits [aac_cb_info[cb].cb_num];
     const uint16_t *codes = ff_aac_spectral_codes[aac_cb_info[cb].cb_num];
     const int dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
     int i, j, idx;
