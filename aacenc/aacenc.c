@@ -524,8 +524,8 @@ static void encode_pulses(AVCodecContext *avctx, AACEncContext *s, ChannelElemen
 {
     int i;
 
-    put_bits(&s->pb, 1, cpe->ch[channel].pulse.present);
-    if(!cpe->ch[channel].pulse.present) return;
+    put_bits(&s->pb, 1, !!cpe->ch[channel].pulse.num_pulse);
+    if(!cpe->ch[channel].pulse.num_pulse) return;
 
     put_bits(&s->pb, 2, cpe->ch[channel].pulse.num_pulse - 1);
     put_bits(&s->pb, 6, cpe->ch[channel].pulse.start);

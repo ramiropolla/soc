@@ -79,7 +79,7 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
     for(ch = 0; ch < chans; ch++){
         start = 0;
         maxsfb = 0;
-        cpe->ch[ch].pulse.present = 0;
+        cpe->ch[ch].pulse.num_pulse = 0;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 sum = 0;
@@ -96,7 +96,7 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
                     memset(cpe->ch[ch].icoefs + start, 0, cpe->ch[ch].ics.swb_sizes[g] * sizeof(cpe->ch[0].icoefs[0]));
                 cpe->ch[ch].zeroes[w][g] = !sum;
                 //try finding pulses
-                if(search_pulses && cpe->ch[ch].ics.num_windows == 1 && !cpe->ch[ch].pulse.present){
+                if(search_pulses && cpe->ch[ch].ics.num_windows == 1 && !cpe->ch[ch].pulse.num_pulse){
                     pulses = 0;
                     memset(poff,0,sizeof(poff));
                     memset(pamp,0,sizeof(pamp));
@@ -109,7 +109,6 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
                         }
                     }
                     if(pulses){
-                        cpe->ch[ch].pulse.present = 1;
                         cpe->ch[ch].pulse.start = g;
                         cpe->ch[ch].pulse.num_pulse = pulses;
                         for(i = 0; i < pulses; i++){

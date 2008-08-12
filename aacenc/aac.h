@@ -250,7 +250,6 @@ typedef struct {
  * pulse tool
  */
 typedef struct {
-    int present;
     int num_pulse;
     int start;
     int offset[4];
