@@ -416,7 +416,7 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
     const int dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
     int i, j, idx;
 
-    if(!bits || !codes) return;
+    if(!bits) return;
 
     //TODO: factorize?
     if(aac_cb_info[cb].flags & CB_ESCAPE){
