@@ -1133,17 +1133,13 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int elem_id) {
  *
  * @return  Returns error status. 0 - OK, !0 - error
  */
-static int decode_cce(AACContext * ac, GetBitContext * gb, int elem_id) {
+static int decode_cce(AACContext * ac, GetBitContext * gb, ChannelElement * che) {
     int num_gain = 0;
     int c, g, sfb, ret, idx = 0;
     int sign;
     float scale;
-    SingleChannelElement * sce;
-    ChannelCoupling * coup;
-
-    sce = &ac->che[TYPE_CCE][elem_id]->ch[0];
-
-    coup = &ac->che[TYPE_CCE][elem_id]->coup;
+    SingleChannelElement * sce = &che->ch[0];
+    ChannelCoupling * coup     = &che->coup;
 
     coup->coupling_point = 2*get_bits1(gb);
     coup->num_coupled = get_bits(gb, 3);
@@ -1807,7 +1803,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             break;
 
         case TYPE_CCE:
-            err = decode_cce(ac, &gb, elem_id);
+            err = decode_cce(ac, &gb, ac->che[TYPE_SCE][elem_id]);
             break;
 
         case TYPE_LFE:
