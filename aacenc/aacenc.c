@@ -165,7 +165,6 @@ typedef struct {
     const uint8_t *swb_sizes128;
     int swb_num128;
 
-    ProgramConfig pc;
     ChannelElement *cpe;
     AACPsyContext psy;
 } AACEncContext;
