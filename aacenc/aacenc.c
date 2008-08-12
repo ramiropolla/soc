@@ -341,17 +341,19 @@ static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int cha
 {
     int i, j, w;
     int maxval, sign;
-    int score, best, cb, bestcb, dim, idx;
+    int score, best, cb, bestcb, dim, idx, start2;
 
     maxval = 0;
     sign = 0;
     w = win;
+    start2 = start;
     do{
-        for(i = start + (w-win)*128; i < start + (w-win)*128 + size; i++){
+        for(i = start2; i < start2 + size; i++){
             maxval = FFMAX(maxval, FFABS(cpe->ch[channel].icoefs[i]));
             if(cpe->ch[channel].icoefs[i] < 0) sign = 1;
         }
         w++;
+        start2 += 128;
     }while(w < cpe->ch[channel].ics.num_windows && cpe->ch[channel].ics.group_len[w]);
 
     if(maxval > 12) return 11;
@@ -360,17 +362,19 @@ static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int cha
     for(cb = 0; cb < 12; cb++)
         if(aac_cb_info[cb].maxval >= maxval)
             break;
-    best = 9999;
+    best = INT_MAX;
     bestcb = 11;
+    //TODO: change greedy search into something more optimal, like Viterbi
     for(; cb < 12; cb++){
         score = 0;
         dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
         if(!band || cpe->ch[channel].band_type[win][band - 1] != cb)
             score += 9; //that's for new codebook entry
         w = win;
+        start2 = start;
         if(aac_cb_info[cb].flags & CB_UNSIGNED){
             do{
-                for(i = start + (w-win)*128; i < start + (w-win)*128 + size; i += dim){
+                for(i = start2; i < start2 + size; i += dim){
                     idx = 0;
                     for(j = 0; j < dim; j++)
                         idx = idx * aac_cb_info[cb].maxval + FFABS(cpe->ch[channel].icoefs[i+j]);
@@ -380,16 +384,18 @@ static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int cha
                             score++;
                 }
                 w++;
+                start2 += 128;
             }while(w < cpe->ch[channel].ics.num_windows && cpe->ch[channel].ics.group_len[w]);
         }else{
             do{
-                for(i = start + (w-win)*128; i < start + (w-win)*128 + size; i += dim){
+                for(i = start2; i < start2 + size; i += dim){
                     idx = 0;
                     for(j = 0; j < dim; j++)
                         idx = idx * (aac_cb_info[cb].maxval*2 + 1) + cpe->ch[channel].icoefs[i+j] + aac_cb_info[cb].maxval;
                     score += ff_aac_spectral_bits[aac_cb_info[cb].cb_num][idx];
                 }
                 w++;
+                start2 += 128;
             }while(w < cpe->ch[channel].ics.num_windows && cpe->ch[channel].ics.group_len[w]);
         }
         if(score < best){
@@ -602,6 +608,7 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
     AACEncContext *s = avctx->priv_data;
     int i, g, w;
 
+    //TODO: determine run lengths along with codebook
     for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
         i = w << 7;
         if(cpe->ch[channel].ics.group_len[w]) continue;
