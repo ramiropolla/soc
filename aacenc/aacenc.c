@@ -238,10 +238,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     return 0;
 }
 
-/**
- * Perform windowing and MDCT.
- */
-static void analyze(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, short *audio, int channel)
+static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, short *audio, int channel)
 {
     int i, j, k;
     const float * lwindow = cpe->ch[channel].ics.use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
@@ -406,7 +403,7 @@ static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int cha
 /**
  * Encode one scalefactor band with selected codebook.
  */
-static void encode_codebook(AACEncContext *s, ChannelElement *cpe, int channel, int start, int size, int cb)
+static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channel, int start, int size, int cb)
 {
     const uint8_t  *bits  = ff_aac_spectral_bits [aac_cb_info[cb].cb_num];
     const uint16_t *codes = ff_aac_spectral_codes[aac_cb_info[cb].cb_num];
@@ -459,7 +456,7 @@ static void encode_codebook(AACEncContext *s, ChannelElement *cpe, int channel, 
 /**
  * Encode scalefactor band coding type.
  */
-static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
+static void encode_band_info(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int i, w;
     int bits = cpe->ch[channel].ics.num_windows == 1 ? 5 : 3;
@@ -496,7 +493,7 @@ static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, Channel
 /**
  * Encode scalefactors.
  */
-static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
+static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int off = cpe->ch[channel].mixing_gain, diff;
     int i, w;
@@ -517,7 +514,7 @@ static void encode_scale_factor_data(AVCodecContext *avctx, AACEncContext *s, Ch
 /**
  * Encode pulse data.
  */
-static void encode_pulse_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
+static void encode_pulses(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int i;
 
@@ -575,7 +572,7 @@ static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, ChannelElem
 /**
  * Encode spectral coefficients processed by psychoacoustic model.
  */
-static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
+static void encode_spectral_coeffs(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int start, i, w, w2;
 
@@ -589,7 +586,7 @@ static void encode_spectral_data(AVCodecContext *avctx, AACEncContext *s, Channe
             }
             w2 = w;
             do{
-                encode_codebook(s, cpe, channel, start + w2*128, cpe->ch[channel].ics.swb_sizes[i], cpe->ch[channel].band_type[w][i]);
+                encode_band_coeffs(s, cpe, channel, start + w2*128, cpe->ch[channel].ics.swb_sizes[i], cpe->ch[channel].band_type[w][i]);
                 w2++;
             }while(w2 < cpe->ch[channel].ics.num_windows && cpe->ch[channel].ics.group_len[w2]);
             start += cpe->ch[channel].ics.swb_sizes[i];
@@ -620,12 +617,12 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
 
     put_bits(&s->pb, 8, cpe->ch[channel].mixing_gain); //global gain
     if(!cpe->common_window) put_ics_info(avctx, &cpe->ch[channel].ics);
-    encode_section_data(avctx, s, cpe, channel);
-    encode_scale_factor_data(avctx, s, cpe, channel);
-    encode_pulse_data(avctx, s, cpe, channel);
+    encode_band_info(avctx, s, cpe, channel);
+    encode_scale_factors(avctx, s, cpe, channel);
+    encode_pulses(avctx, s, cpe, channel);
     encode_tns_data(avctx, s, cpe, channel);
     put_bits(&s->pb, 1, 0); //ssr
-    encode_spectral_data(avctx, s, cpe, channel);
+    encode_spectral_coeffs(avctx, s, cpe, channel);
     return 0;
 }
 
@@ -689,7 +686,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
         if(!data) la = NULL;
         ff_aac_psy_suggest_window(&s->psy, samples2, la, i, tag, cpe);
         for(j = 0; j < chans; j++){
-            analyze(avctx, s, cpe, samples2, j);
+            apply_window_and_mdct(avctx, s, cpe, samples2, j);
         }
         ff_aac_psy_analyze(&s->psy, i, tag, cpe);
         put_bits(&s->pb, 3, tag);
