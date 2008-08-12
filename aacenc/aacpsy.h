@@ -137,5 +137,6 @@ void ff_aac_psy_analyze(AACPsyContext *ctx, int tag, int type, ChannelElement *c
  * @param ctx model context
  */
 void ff_aac_psy_end(AACPsyContext *ctx);
+
 #endif /* FFMPEG_AACPSY_H */
 
