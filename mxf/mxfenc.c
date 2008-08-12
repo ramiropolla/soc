@@ -1036,7 +1036,7 @@ static int mux_write_header(AVFormatContext *s)
 
     // calculate the numner of essence container type
     mxf_build_essence_container_refs(s);
-    mxf_write_partition(s, 0, 0, header_partition_key);
+    mxf_write_partition(s, 0, 1, header_partition_key);
 
     // generate Source Package Set UMID for op1a
     // will be used by material_package->source_track->sequence->structual_component->source_package_id
@@ -1091,7 +1091,7 @@ static int mux_write_footer(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
 
     int64_t this_partition = url_ftell(pb);
-    mxf_write_partition(s, this_partition, 1, footer_partition_key);
+    mxf_write_partition(s, this_partition, 0, footer_partition_key);
 
     put_flush_packet(pb);
 
