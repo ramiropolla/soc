@@ -34,7 +34,7 @@ static float pow2sf_tab[340];
 /**
  * Convert coefficients to integers.
  * @return sum of coefficients
- * @see 3GPP TS26.403 5.6.2
+ * @see 3GPP TS26.403 5.6.2 "Scalefactor determination"
  */
 static inline int convert_coeffs(float *in, int *out, int size, int scale_idx)
 {
@@ -68,7 +68,7 @@ static inline float calc_distortion(float *c, int size, int scale_idx)
 }
 
 /**
- * Produce integer coefficients from scalefactors provided by model.
+ * Produce integer coefficients from scalefactors provided by the model.
  */
 static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans, int search_pulses)
 {

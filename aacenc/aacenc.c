@@ -150,28 +150,31 @@ static const uint8_t aac_chan_configs[6][5] = {
  {4, ID_SCE, ID_CPE, ID_CPE, ID_LFE}, // 6 channels - front center + stereo + back stereo + LFE
 };
 
+/**
+ * AAC encoder context
+ */
 typedef struct {
     PutBitContext pb;
-    MDCTContext mdct1024;
-    MDCTContext mdct128;
+    MDCTContext mdct1024;                        ///< long (1024 samples) frame transform context
+    MDCTContext mdct128;                         ///< short (128 samples) frame transform context
     DSPContext  dsp;
-    DECLARE_ALIGNED_16(FFTSample, output[2048]);
-    DECLARE_ALIGNED_16(FFTSample, tmp[1024]);
-    int16_t* samples;
+    DECLARE_ALIGNED_16(FFTSample, output[2048]); ///< temporary buffer for MDCT input coefficients
+    DECLARE_ALIGNED_16(FFTSample, tmp[1024]);    ///< temporary buffer used by MDCT
+    int16_t* samples;                            ///< saved preprocessed input
 
-    int samplerate_index;
-    const uint8_t *swb_sizes1024;
-    int swb_num1024;
-    const uint8_t *swb_sizes128;
-    int swb_num128;
+    int samplerate_index;                        ///< MPEG-4 samplerate index
+    const uint8_t *swb_sizes1024;                ///< scalefactor band sizes for long frame
+    int swb_num1024;                             ///< number of scalefactor bands for long frame
+    const uint8_t *swb_sizes128;                 ///< scalefactor band sizes for short frame
+    int swb_num128;                              ///< number of scalefactor bands for short frame
 
-    ChannelElement *cpe;
-    AACPsyContext psy;
+    ChannelElement *cpe;                         ///< channel elements
+    AACPsyContext psy;                           ///< psychoacoustic model context
 } AACEncContext;
 
 /**
  * Make AAC audio config object.
- * @see 1.6.2.1
+ * @see 1.6.2.1 "Syntax - AudioSpecificConfig"
  */
 static void put_audio_specific_config(AVCodecContext *avctx)
 {
@@ -289,7 +292,7 @@ static void analyze(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe
 
 /**
  * Encode ics_info element.
- * @see Table 4.6
+ * @see Table 4.6 (syntax of ics_info)
  */
 static void put_ics_info(AVCodecContext *avctx, IndividualChannelStream *info)
 {
@@ -311,7 +314,7 @@ static void put_ics_info(AVCodecContext *avctx, IndividualChannelStream *info)
 
 /**
  * Encode MS data.
- * @see 4.6.8.1
+ * @see 4.6.8.1 "Joint Coding - M/S Stereo"
  */
 static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
 {
@@ -327,7 +330,15 @@ static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
 }
 
 /**
- * Scan spectral band and determine optimal codebook for it.
+ * Scan scalefactor band and determine optimal codebook for it.
+ *
+ * @param s       encoder context
+ * @param cpe     channel element
+ * @param channel channel number inside channel pair
+ * @param win     window group start number
+ * @param band    scalefactor band to analyze
+ * @param start   scalefactor band position in spectral coefficients
+ * @param size    scalefactor band size
  */
 static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int channel, int win, int band, int start, int size)
 {
@@ -446,7 +457,7 @@ static void encode_codebook(AACEncContext *s, ChannelElement *cpe, int channel, 
 }
 
 /**
- * Encode information about codebooks used for scalefactor bands coding.
+ * Encode scalefactor band coding type.
  */
 static void encode_section_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
@@ -619,7 +630,7 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
 }
 
 /**
- * Write some auxiliary information about created AAC file.
+ * Write some auxiliary information about the created AAC file.
  */
 static void put_bitstream_info(AVCodecContext *avctx, AACEncContext *s, const char *name)
 {

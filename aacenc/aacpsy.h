@@ -26,11 +26,11 @@
 #include "aac.h"
 
 enum AACPsyModelType{
-    AAC_PSY_NULL,              ///< do nothing on frequencies
-    AAC_PSY_NULL8,             ///< do nothing on frequencies but work with short windows
+    AAC_PSY_NULL,              ///< do nothing with frequencies
+    AAC_PSY_NULL8,             ///< do nothing with frequencies but work with short windows
     AAC_PSY_3GPP,              ///< model following recommendations from 3GPP TS 26.403
 
-    AAC_NB_PSY_MODELS          ///< total number of psychoacoustic models
+    AAC_NB_PSY_MODELS          ///< total number of psychoacoustic models, since it's not a part of the ABI new models can be added freely
 };
 
 enum AACPsyModelMode{
@@ -53,20 +53,20 @@ enum AACPsyModelMode{
  * context used by psychoacoustic model
  */
 typedef struct AACPsyContext {
-    AVCodecContext *avctx;
+    AVCodecContext *avctx;            ///< encoder context
 
-    int flags;
-    const uint8_t *bands1024;
-    int num_bands1024;
-    const uint8_t *bands128;
-    int num_bands128;
+    int flags;                        ///< model flags
+    const uint8_t *bands1024;         ///< scalefactor band sizes for long (1024 samples) frame
+    int num_bands1024;                ///< number of scalefactor bands for long frame
+    const uint8_t *bands128;          ///< scalefactor band sizes for short (128 samples) frame
+    int num_bands128;                 ///< number of scalefactor bands for short frame
 
-    const struct AACPsyModel *model;
-    void* model_priv_data;
+    const struct AACPsyModel *model;  ///< pointer to the psychoacoustic model implementation
+    void* model_priv_data;            ///< psychoacoustic model implementation private data
 
-    float stereo_att;
-    int   cutoff;
-    void* lp_state;
+    float stereo_att;                 ///< stereo attenuation factor
+    int   cutoff;                     ///< cutoff frequency index used for lowpass filtering
+    void* lp_state;                   ///< lowpass filter state
 }AACPsyContext;
 
 typedef struct AACPsyModel {
