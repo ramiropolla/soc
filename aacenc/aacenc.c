@@ -170,6 +170,7 @@ typedef struct {
 
     ChannelElement *cpe;                         ///< channel elements
     AACPsyContext psy;                           ///< psychoacoustic model context
+    int last_frame;
 } AACEncContext;
 
 /**
@@ -663,6 +664,8 @@ static int aac_encode_frame(AVCodecContext *avctx,
     const uint8_t *chan_map = aac_chan_configs[avctx->channels-1];
     int chan_el_counter[4];
 
+    if(s->last_frame)
+        return 0;
     if(data){
         start_ch = 0;
         samples2 = s->samples + 1024 * avctx->channels;
@@ -715,6 +718,8 @@ static int aac_encode_frame(AVCodecContext *avctx,
     flush_put_bits(&s->pb);
     avctx->frame_bits = put_bits_count(&s->pb);
 
+    if(!data)
+        s->last_frame = 1;
     memmove(s->samples, s->samples + 1024 * avctx->channels, 1024 * avctx->channels * sizeof(s->samples[0]));
     return put_bits_count(&s->pb)>>3;
 }
@@ -739,7 +744,7 @@ AVCodec aac_encoder = {
     aac_encode_init,
     aac_encode_frame,
     aac_encode_end,
-    .capabilities = CODEC_CAP_SMALL_LAST_FRAME,
+    .capabilities = CODEC_CAP_SMALL_LAST_FRAME | CODEC_CAP_DELAY,
     .sample_fmts = (enum SampleFormat[]){SAMPLE_FMT_S16,SAMPLE_FMT_NONE},
     .long_name = NULL_IF_CONFIG_SMALL("Advanced Audio Coding"),
 };
