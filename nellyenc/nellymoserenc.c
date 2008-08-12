@@ -104,12 +104,19 @@ static av_cold int encode_init(AVCodecContext * avctx) {
     NellyMoserEncodeContext *s = avctx->priv_data;
     int i;
 
-    //TODO check bitrate
     if(avctx->channels!=1){
         av_log(avctx, AV_LOG_ERROR, "Nellymoser supports only 1 channel\n");
         return -1;
     }
-    av_log(avctx, AV_LOG_DEBUG, "bit_rate=%i\n", avctx->bit_rate);
+
+    if(avctx->sample_rate != 8000 &&
+            avctx->sample_rate != 11025 &&
+            avctx->sample_rate != 22050 &&
+            avctx->sample_rate != 44100){
+        av_log(avctx, AV_LOG_ERROR,
+                "Nellymoser works only with 8000, 11025, 22050 and 44100 sample rate\n");
+        return -1;
+    }
 
     avctx->frame_size = NELLY_SAMPLES;
 
