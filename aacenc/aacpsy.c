@@ -617,11 +617,17 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 1; g < cpe->ch[ch].ics.num_swb; g++){
                 g2 = w*16 + g;
-                pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2-1].thr * pctx->s_low_l[g-1]);
+                if(cpe->ch[ch].ics.num_swb == apc->num_bands1024)
+                    pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2-1].thr * pctx->s_low_l[g-1]);
+                else
+                    pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2-1].thr * pctx->s_low_s[g-1]);
             }
             for(g = cpe->ch[ch].ics.num_swb - 2; g >= 0; g--){
                 g2 = w*16 + g;
-                pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2+1].thr * pctx->s_hi_l[g+1]);
+                if(cpe->ch[ch].ics.num_swb == apc->num_bands1024)
+                    pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2+1].thr * pctx->s_hi_l[g+1]);
+                else
+                    pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2+1].thr * pctx->s_hi_s[g+1]);
             }
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 g2 = w*16 + g;
