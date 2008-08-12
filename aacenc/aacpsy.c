@@ -25,7 +25,6 @@
  */
 
 #include "avcodec.h"
-#include "dsputil.h"
 #include "aacpsy.h"
 
 //borrowed from aac.c
@@ -912,7 +911,6 @@ int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
     ctx->num_bands1024 = num_bands1024;
     ctx->bands128 = bands128;
     ctx->num_bands128 = num_bands128;
-    dsputil_init(&ctx->dsp, avctx);
     ctx->model = &psy_models[model];
 
     if(ctx->flags & PSY_MODEL_NO_ST_ATT || PSY_MODEL_MODE(ctx->flags) == PSY_MODE_QUALITY){

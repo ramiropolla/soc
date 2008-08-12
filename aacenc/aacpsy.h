@@ -23,7 +23,6 @@
 #define FFMPEG_AACPSY_H
 
 #include "avcodec.h"
-#include "dsputil.h"
 #include "aac.h"
 
 enum AACPsyModelType{
@@ -55,11 +54,8 @@ enum AACPsyModelMode{
  */
 typedef struct AACPsyContext {
     AVCodecContext *avctx;
-    DSPContext dsp;
 
     int flags;
-    int window_type[2];
-    int window_shape[2];
     const uint8_t *bands1024;
     int num_bands1024;
     const uint8_t *bands128;
