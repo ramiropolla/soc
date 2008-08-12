@@ -319,34 +319,34 @@ typedef struct Psy3gppBand{
  * single/pair channel context for psychoacoustic model
  */
 typedef struct Psy3gppChannel{
-    float       a[2];
-    float       b[2];
-    float       pe[2];
-    float       thr[2];
-    Psy3gppBand band[2][128];
-    Psy3gppBand prev_band[2][128];
+    float       a[2];                       ///< parameter used for perceptual entropy - constant part
+    float       b[2];                       ///< parameter used for perceptual entropy - variable part
+    float       pe[2];                      ///< channel perceptual entropy
+    float       thr[2];                     ///< channel thresholds sum
+    Psy3gppBand band[2][128];               ///< bands information
+    Psy3gppBand prev_band[2][128];          ///< bands information from the previous frame
 
-    float       win_nrg[2];
-    float       iir_state[2][2];
-    uint8_t     next_grouping[2];
-    enum WindowSequence next_window_seq[2];
+    float       win_nrg[2];                 ///< sliding average of channel energy
+    float       iir_state[2][2];            ///< hi-pass IIR filter state
+    uint8_t     next_grouping[2];           ///< stored grouping scheme for the next frame (in case of 8 short window sequence)
+    enum WindowSequence next_window_seq[2]; ///< window sequence to be used in the next frame
 }Psy3gppChannel;
 
 /**
  * 3GPP TS26.403-inspired psychoacoustic model specific data
  */
 typedef struct Psy3gppContext{
-    float       barks [1024];
-    float       bark_l[64];
-    float       bark_s[16];
-    float       s_low_l[64];
-    float       s_low_s[16];
-    float       s_hi_l [64];
-    float       s_hi_s [16];
-    int         reservoir;
-    int         avg_bits;
-    float       ath_l[64];
-    float       ath_s[16];
+    float       barks [1024]; ///< Bark value for each spectral line
+    float       bark_l[64];   ///< Bark value for each spectral band in long frame
+    float       bark_s[16];   ///< Bark value for each spectral band in short frame
+    float       s_low_l[64];  ///< spreading factor for low-to-high threshold spreading in long frame
+    float       s_low_s[16];  ///< spreading factor for low-to-high threshold spreading in short frame
+    float       s_hi_l [64];  ///< spreading factor for high-to-low threshold spreading in long frame
+    float       s_hi_s [16];  ///< spreading factor for high-to-low threshold spreading in short frame
+    int         reservoir;    ///< bit reservoir fullness
+    int         avg_bits;     ///< average frame size of bits for CBR
+    float       ath_l[64];    ///< absolute threshold of hearing per bands in long frame
+    float       ath_s[16];    ///< absolute threshold of hearing per bands in short frame
     Psy3gppChannel *ch;
 }Psy3gppContext;
 
@@ -450,7 +450,7 @@ static const uint8_t window_grouping[9] = {
 
 /**
  * Tell encoder which window types to use.
- * @see 3GPP TS26.403 5.4.1
+ * @see 3GPP TS26.403 5.4.1 "Blockswitching"
  */
 static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe)
 {
@@ -540,7 +540,7 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
 
 /**
  * Modify threshold by adding some value in loudness domain.
- * @see 3GPP TS26.403 5.6.1.1.1
+ * @see 3GPP TS26.403 5.6.1.1.1 "Addition of noise with equal loudness"
  */
 static inline float modify_thr(float thr, float r){
     float t;
@@ -548,6 +548,10 @@ static inline float modify_thr(float thr, float r){
     return t*t*t*t;
 }
 
+/**
+ * Calculate perceptual entropy and its corresponding values for one band.
+ * @see 3GPP TS26.403 5.6.1.3 "Calculation of the reduction value"
+ */
 static void calc_pe(Psy3gppBand *band, int band_width)
 {
     if(band->energy <= band->thr){
@@ -572,7 +576,7 @@ static void calc_pe(Psy3gppBand *band, int band_width)
 
 /**
  * Determine scalefactors and prepare coefficients for encoding.
- * @see 3GPP TS26.403 5.4
+ * @see 3GPP TS26.403 5.4 "Psychoacoustic model"
  */
 static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelElement *cpe)
 {
@@ -585,7 +589,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     int chans = type == ID_CPE ? 2 : 1;
     Psy3gppChannel *pch = &pctx->ch[tag];
 
-    //calculate energies, initial thresholds and related values - 5.4.2
+    //calculate energies, initial thresholds and related values - 5.4.2 "Threshold Calculation"
     memset(pch->band, 0, sizeof(pch->band));
     for(ch = 0; ch < chans; ch++){
         start = 0;
@@ -608,7 +612,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         }
     }
 
-    //modify thresholds - spread, threshold in quiet - 5.4.3
+    //modify thresholds - spread, threshold in quiet - 5.4.3 "Spreaded Energy Calculation"
     for(ch = 0; ch < chans; ch++){
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 1; g < cpe->ch[ch].ics.num_swb; g++){
@@ -631,7 +635,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         }
     }
 
-    // M/S detection - 5.5.2
+    // M/S detection - 5.5.2 "Mid/Side Stereo"
     if(chans > 1 && cpe->common_window){
         start = 0;
         for(w = 0; w < cpe->ch[0].ics.num_windows; w++){
@@ -685,7 +689,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     switch(PSY_MODEL_MODE(apc->flags)){
     case PSY_MODE_CBR:
     case PSY_MODE_ABR:
-        //bitrate reduction - 5.6.1
+        //bitrate reduction - 5.6.1 "Reduction of psychoacoustic requirements"
         if(PSY_MODEL_MODE(apc->flags) != PSY_MODE_ABR){
             pctx->reservoir += pctx->avg_bits - apc->avctx->frame_bits;
             bits_avail = pctx->avg_bits + pctx->reservoir;
@@ -725,7 +729,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         }
         //TODO: linearization
 
-        //determine scalefactors - 5.6.2
+        //determine scalefactors - 5.6.2 "Scalefactor determination"
         for(ch = 0; ch < chans; ch++){
             prev_scale = -1;
             cpe->ch[ch].mixing_gain = 0;
