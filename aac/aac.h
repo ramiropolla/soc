@@ -166,7 +166,6 @@ typedef struct {
  * Individual Channel Stream
  */
 typedef struct {
-    int intensity_present;
     uint8_t max_sfb;            ///< number of scalefactor bands per group
     enum WindowSequence window_sequence[2];
     uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window.

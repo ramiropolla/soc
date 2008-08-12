@@ -680,7 +680,6 @@ static int decode_scalefactors(AACContext * ac, float sf[120], GetBitContext * g
     int offset[3] = { global_gain, global_gain - 90, 100 };
     int noise_flag = 1;
     static const char *sf_str[3] = { "Global gain", "Noise gain", "Intensity stereo position" };
-    ics->intensity_present = 0;
     for (g = 0; g < ics->num_window_groups; g++) {
         for (i = 0; i < ics->max_sfb;) {
             int run_end = band_type_run_end[idx];
@@ -688,7 +687,6 @@ static int decode_scalefactors(AACContext * ac, float sf[120], GetBitContext * g
                 for(; i < run_end; i++, idx++)
                     sf[idx] = 0.;
             }else if((band_type[idx] == INTENSITY_BT) || (band_type[idx] == INTENSITY_BT2)) {
-                ics->intensity_present = 1;
                 for(; i < run_end; i++, idx++) {
                     offset[2] += get_vlc2(gb, vlc_scalefactors.table, 7, 3) - 60;
                     if(offset[2] > 255U) {
@@ -1121,7 +1119,6 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int elem_id) {
     if (common_window && ms_present)
         apply_mid_side_stereo(cpe);
 
-    if (cpe->ch[1].ics.intensity_present)
         apply_intensity_stereo(cpe, ms_present);
     return 0;
 }
