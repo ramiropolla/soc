@@ -24,6 +24,7 @@
 
 #include "avcodec.h"
 #include "aac.h"
+#include "lowpass.h"
 
 enum AACPsyModelType{
     AAC_PSY_NULL,              ///< do nothing with frequencies
@@ -65,8 +66,8 @@ typedef struct AACPsyContext {
     void* model_priv_data;            ///< psychoacoustic model implementation private data
 
     float stereo_att;                 ///< stereo attenuation factor
-    int   cutoff;                     ///< cutoff frequency index used for lowpass filtering
-    void* lp_state;                   ///< lowpass filter state
+    LPFilterCoeffs lp_coeffs;         ///< lowpass filter coefficients
+    LPFilterState *lp_state;          ///< lowpass filter state
 }AACPsyContext;
 
 typedef struct AACPsyModel {
