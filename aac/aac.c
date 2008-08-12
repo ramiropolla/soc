@@ -1119,7 +1119,7 @@ static int decode_cpe(AACContext * ac, GetBitContext * gb, int elem_id) {
     if (common_window && ms_present)
         apply_mid_side_stereo(cpe);
 
-        apply_intensity_stereo(cpe, ms_present);
+    apply_intensity_stereo(cpe, ms_present);
     return 0;
 }
 
