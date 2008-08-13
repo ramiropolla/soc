@@ -908,7 +908,7 @@ static int decode_spectrum_and_dequant(AACContext * ac, float coef[1024], GetBit
                             for (j = 0; j < dim; j++)
                                 icoef[icoef_tmp_idx + j] *= vq_ptr[j];
                         for (j = 0; j < dim; j++)
-                            coef[(group << 7) + k + j] = ivquant(icoef[icoef_tmp_idx + k]) * sf[idx];
+                            coef[(group << 7) + k + j] = ivquant(icoef[icoef_tmp_idx + j]) * sf[idx];
                     }
                 }
             }
