@@ -392,6 +392,7 @@ static av_cold int psy_3gpp_init(AACPsyContext *apc, int elements)
         pctx->s_low_l[g] = pow(10.0, -(pctx->bark_l[g+1] - pctx->bark_l[g]) * PSY_3GPP_SPREAD_LOW);
         pctx->s_hi_l [g] = pow(10.0, -(pctx->bark_l[g+1] - pctx->bark_l[g]) * PSY_3GPP_SPREAD_HI);
     }
+    i = 0;
     prev = 0.0;
     for(g = 0; g < apc->num_bands128; g++){
         i += apc->bands128[g];
