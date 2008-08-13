@@ -26,10 +26,7 @@
 
 #include "avcodec.h"
 #include "aacpsy.h"
-
-//borrowed from aac.c
-static float pow2sf_tab[340];
-
+#include "aactab.h"
 
 /**
  * Convert coefficients to integers.
@@ -41,8 +38,8 @@ static inline int convert_coeffs(float *in, int *out, int size, int scale_idx)
     int i, sign, sum = 0;
     for(i = 0; i < size; i++){
         sign = in[i] > 0.0;
-        out[i] = (int)(pow(FFABS(in[i]) * pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512], 0.75) + 0.4054);
-        if(out[i] > 8191) out[i] = 8191;
+        out[i] = (int)(pow(FFABS(in[i]) * ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512], 0.75) + 0.4054);
+        out[i] = av_clip(out[i], 0, 8191);
         sum += out[i];
         if(sign) out[i] = -out[i];
     }
@@ -50,7 +47,7 @@ static inline int convert_coeffs(float *in, int *out, int size, int scale_idx)
 }
 
 static inline float unquant(int q, int scale_idx){
-    return (FFABS(q) * cbrt(q*1.0)) * pow2sf_tab[200 + scale_idx - SCALE_ONE_POS];
+    return (FFABS(q) * cbrt(q*1.0)) * ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS];
 }
 static inline float calc_distortion(float *c, int size, int scale_idx)
 {
@@ -59,9 +56,9 @@ static inline float calc_distortion(float *c, int size, int scale_idx)
     float coef, unquant, sum = 0.0f;
     for(i = 0; i < size; i++){
         coef = FFABS(c[i]);
-        q = (int)(pow(FFABS(coef) * pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512], 0.75) + 0.4054);
+        q = (int)(pow(FFABS(coef) * ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512], 0.75) + 0.4054);
         q = av_clip(q, 0, 8191);
-        unquant = (q * cbrt(q)) * pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
+        unquant = (q * cbrt(q)) * ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
         sum += (coef - unquant) * (coef - unquant);
     }
     return sum;
@@ -873,8 +870,10 @@ int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
          return -1;
     }
 
-    for (i = 0; i < 340; i++)
-        pow2sf_tab[i] = pow(2, (i - 200)/4.);
+#ifndef CONFIG_HARDCODED_TABLES
+   for (i = 0; i < 316; i++)
+        ff_aac_pow2sf_tab[i] = pow(2, (i - 200)/4.);
+#endif /* CONFIG_HARDCODED_TABLES */
 
     ctx->avctx = avctx;
     ctx->flags = flags;
