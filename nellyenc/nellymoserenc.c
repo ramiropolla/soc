@@ -20,6 +20,20 @@
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
+/**
+ * @file nellymoserenc.c
+ * Nellymoser encoder
+ * by Bartlomiej Wolowiec
+ *
+ * Generic codec information: libavcodec/nellymoserdec.c
+ * Log search algorithm idea: http://www1.mplayerhq.hu/ASAO/ASAO.zip
+ * (Copyright Joseph Artsimovich and UAB "DKD")
+ *
+ * for more information about nellymoser format, visit:
+ * http://wiki.multimedia.cx/index.php?title=Nellymoser
+ */
+
 #include "nellymoser.h"
 #include "avcodec.h"
 #include "dsputil.h"
