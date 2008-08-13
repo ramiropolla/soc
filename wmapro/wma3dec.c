@@ -79,7 +79,10 @@ typedef struct WMA3DecodeContext {
 
 } WMA3DecodeContext;
 
-
+/**
+ *@brief helper function to print the most important members of the context
+ *@param s context
+ */
 static void dump_context(WMA3DecodeContext *s)
 {
 #define PRINT(a,b) av_log(NULL,AV_LOG_ERROR," %s = %d\n", a, b);
@@ -98,7 +101,10 @@ static void dump_context(WMA3DecodeContext *s)
 
 
 /**
- *  Get the samples per frame for this stream
+ *@brief Get the samples per frame for this stream
+ *@param sample_rate output sample_rate
+ *@param decode_flags codec compression features
+ *@return number of output samples per frame
  */
 static int get_samples_per_frame(int sample_rate, unsigned int decode_flags) {
 
@@ -133,6 +139,11 @@ static int get_samples_per_frame(int sample_rate, unsigned int decode_flags) {
     return samples_per_frame;
 }
 
+/**
+ *@brief initialize the decoder
+ *@param avctx codec context
+ *@return 0 on success, -1 otherwise
+ */
 static av_cold int wma3_decode_init(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
@@ -429,12 +440,20 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
 }
 
 
-/* calculate remaining bits from the input buffer */
+/**
+ *@brief calculate remaining input buffer len
+ *@param s codec context
+ *@return remaining size in bits
+ */
 static int remaining_bits(WMA3DecodeContext *s){
     return s->buf_bit_size - get_bits_count(&s->gb);
 }
 
-/* store bits from the prev frame into a temporary buffer */
+/**
+ *@brief fill the bit reservoir with a partial frame
+ *@param s codec context
+ *@param len length of the partial frame
+ */
 static void save_bits(WMA3DecodeContext *s,int len){
     int buflen = (s->prev_frame_bit_size + len + 8) / 8;
     int bit_offset = s->prev_frame_bit_size % 8;
@@ -466,6 +485,15 @@ static void save_bits(WMA3DecodeContext *s,int len){
         s->prev_frame[pos++] = get_bits(&s->gb,len) << (8 - len);
 }
 
+/**
+ *@brief decode a single wma packet
+ *@param avctx codec context
+ *@param data the output buffer
+ *@param data_size number of bytes that were written to the output buffer
+ *@param buf input buffer
+ *@param buf_size input buffer length
+ *@return number of bytes that were read from the input buffer
+ */
 static int wma3_decode_packet(AVCodecContext *avctx,
                              void *data, int *data_size,
                              const uint8_t *buf, int buf_size)
@@ -538,6 +566,11 @@ static int wma3_decode_packet(AVCodecContext *avctx,
     return avctx->block_align;
 }
 
+/**
+ *@brief uninitialize the decoder and free all ressources
+ *@param avctx codec context
+ *@return 0 on success, < 0 otherwise
+ */
 static av_cold int wma3_decode_end(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
@@ -546,6 +579,9 @@ static av_cold int wma3_decode_end(AVCodecContext *avctx)
     return 0;
 }
 
+/**
+ *@brief WMA9 decoder
+ */
 AVCodec wmav3pro_decoder =
 {
     "wmav3Pro",
