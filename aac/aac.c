@@ -1443,7 +1443,7 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
                    "Transition from an ONLY_LONG or LONG_STOP to an EIGHT_SHORT sequence detected. "
                    "If you heard an audible artifact, please submit the sample to the FFmpeg developers.\n");
         for (i = 0; i < 2048; i += 256) {
-            ff_imdct_calc(&ac->mdct_small, buf + i, in + i/2, out);
+            ff_imdct_calc(&ac->mdct_small, buf + i, in + i/2);
             ac->dsp.vector_fmul_reverse(ac->revers + i/2, buf + i + 128, swindow, 128);
         }
         for (i = 0; i < 448; i++)   out[i] = saved[i] + ac->add_bias;
@@ -1468,7 +1468,7 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
         memcpy(                     saved + 448, ac->revers + 7*128, 128 * sizeof(float));
         memset(                     saved + 576, 0,                  448 * sizeof(float));
     } else {
-        ff_imdct_calc(&ac->mdct, buf, in, out); // Out can be abused, for now, as a temp buffer.
+        ff_imdct_calc(&ac->mdct, buf, in);
         if (ics->window_sequence[0] == LONG_STOP_SEQUENCE) {
             for (i = 0;   i < 448;  i++)   out[i] =          saved[i] + ac->add_bias;
             ac->dsp.vector_fmul_add_add(out + 448, buf + 448, swindow_prev, saved + 448, ac->add_bias, 128, 1);
@@ -1494,7 +1494,7 @@ static void windowing_and_imdct_ssr(AACContext * ac, float * out, float * in, In
     const float * swindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
     float * buf = ac->buf_mdct;
     if (ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
-        ff_imdct_calc(&ac->mdct, buf, in, out);
+        ff_imdct_calc(&ac->mdct, buf, in);
         if (ics->window_sequence[0] != LONG_STOP_SEQUENCE) {
             vector_fmul_dst(&ac->dsp, out, buf, lwindow_prev, 256);
         } else {
@@ -1512,7 +1512,7 @@ static void windowing_and_imdct_ssr(AACContext * ac, float * out, float * in, In
     } else {
         int i;
         for (i = 0; i < 8; i++) {
-            ff_imdct_calc(&ac->mdct_small, buf, in + i * 32, out);
+            ff_imdct_calc(&ac->mdct_small, buf, in + i * 32);
             vector_fmul_dst(&ac->dsp, out + 64 * i, buf, (i == 0) ? swindow_prev : swindow, 32);
             ac->dsp.vector_fmul_reverse(out + 64 * i + 32, buf + 32, swindow, 32);
         }
