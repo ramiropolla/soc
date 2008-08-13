@@ -327,48 +327,59 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
              /** if the frames are not evenly split get the next subframe len
                  from the bitstream */
              if(subframe_len != missing_samples / num_channels){
-                  int log2_subframe_len;
+                  int log2_subframe_len = 0;
                   /* 1 bit indicates if the subframe len is zero */
                   if(subframe_len_zero_bit){
-                      log2_subframe_len = get_bits1(gb);
-                      if(log2_subframe_len){
-                          log2_subframe_len = get_bits(gb,subframe_len_bits-1) + 1;
+                      if(get_bits1(gb)){
+                          log2_subframe_len = get_bits(gb,subframe_len_bits-1);
+                          ++log2_subframe_len;
                       }
                   }else
                       log2_subframe_len = get_bits(gb,subframe_len_bits);
 
-                  if(s->lossless)
-                      subframe_len = s->samples_per_frame / s->max_num_subframes * (log2_subframe_len + 1);
-                  else
-                      subframe_len = s->samples_per_frame / (1 << log2_subframe_len);
+                  if(s->lossless){
+                      subframe_len =
+                          s->samples_per_frame / s->max_num_subframes;
+                      subframe_len *= log2_subframe_len + 1;
+                  }else
+                      subframe_len =
+                          s->samples_per_frame / (1 << log2_subframe_len);
 
              }
 
              /** sanity check the len */
-             if(subframe_len < s->min_samples_per_subframe || subframe_len > s->samples_per_frame){
-                  av_log(s->avctx, AV_LOG_ERROR, "broken frame: subframe_len %i\n",subframe_len);
+             if(subframe_len < s->min_samples_per_subframe
+                  || subframe_len > s->samples_per_frame){
+                  av_log(s->avctx, AV_LOG_ERROR,
+                         "broken frame: subframe_len %i\n", subframe_len);
                   return -1;
              }
              for(c=0; c<s->nb_channels;c++){
-                  if(s->channel[c].num_subframes > 32){
-                      av_log(s->avctx, AV_LOG_ERROR, "broken frame: num subframes %i\n",s->channel[c].num_subframes);
+                  wma_channel_t* chan = &s->channel[c];
+                  if(chan->num_subframes > 32){
+                      av_log(s->avctx, AV_LOG_ERROR,
+                             "broken frame: num subframes %i\n",
+                             chan->num_subframes);
                       return -1;
                   }
 
                   /** add subframes to the individual channels */
-                  if(min_channel_len == s->channel[c].channel_len){
+                  if(min_channel_len == chan->channel_len){
                        --num_channels;
                        if(tileinfo & (1<<num_channels)){
-                            if(s->channel[c].num_subframes > 31){
-                               av_log(s->avctx, AV_LOG_ERROR, "broken frame: num subframes > 31\n");
+                            if(chan->num_subframes > 31){
+                               av_log(s->avctx, AV_LOG_ERROR,
+                                      "broken frame: num subframes > 31\n");
                                return -1;
                             }
-                            s->channel[c].subframe_len[s->channel[c].num_subframes] = subframe_len;
-                            s->channel[c].channel_len += subframe_len;
+                            chan->subframe_len[chan->num_subframes] = subframe_len;
+                            chan->channel_len += subframe_len;
                             missing_samples -= subframe_len;
-                            ++s->channel[c].num_subframes;
-                            if(missing_samples < 0 || s->channel[c].channel_len > s->samples_per_frame){
-                                av_log(s->avctx, AV_LOG_ERROR, "broken frame: channel len > samples_per_frame\n");
+                            ++chan->num_subframes;
+                            if(missing_samples < 0
+                               || chan->channel_len > s->samples_per_frame){
+                                av_log(s->avctx, AV_LOG_ERROR,"broken frame: "
+                                       "channel len > samples_per_frame\n");
                                 return -1;
                             }
                         }
@@ -381,7 +392,8 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
     for(c=0;c<s->nb_channels;c++){
         int i;
         for(i=0;i<s->channel[c].num_subframes;i++){
-            av_log(s->avctx, AV_LOG_INFO,"frame[%i] channel[%i] subframe[%i] len %i\n",s->frame_num,c,i,s->channel[c].subframe_len[i]);
+            av_log(s->avctx, AV_LOG_INFO,"frame[%i] channel[%i] subframe[%i]"
+                   " len %i\n",s->frame_num,c,i,s->channel[c].subframe_len[i]);
         }
     }
 
