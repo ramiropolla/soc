@@ -716,6 +716,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                 b0  += pch->b[ch];
                 pe0 += pch->pe[ch];
             }
+            if(pe0 == 0.0f) break;
             t0 = pow(2.0, (a0 - pe0)       / (4.0 * b0));
             r  = pow(2.0, (a0 - pe_target) / (4.0 * b0)) - t0;
 
