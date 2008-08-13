@@ -153,6 +153,7 @@ enum {
     MIXDOWN_BACK,
 };
 
+#define SCALE_DIV_512    36    ///< scalefactor difference that corresponds to scale difference in 512 times
 #define SCALE_ONE_POS   140    ///< scalefactor index that corresponds to scale=1.0
 #define SCALE_MAX_POS   255    ///< scalefactor index maximum value
 #define SCALE_MAX_DIFF   60    ///< maximum scalefactor difference allowed by standard

@@ -41,7 +41,7 @@ static inline int convert_coeffs(float *in, int *out, int size, int scale_idx)
     int i, sign, sum = 0;
     for(i = 0; i < size; i++){
         sign = in[i] > 0.0;
-        out[i] = (int)(pow(FFABS(in[i]) * pow2sf_tab[200 - scale_idx + SCALE_ONE_POS], 0.75) + 0.4054);
+        out[i] = (int)(pow(FFABS(in[i]) * pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512], 0.75) + 0.4054);
         if(out[i] > 8191) out[i] = 8191;
         sum += out[i];
         if(sign) out[i] = -out[i];
@@ -59,9 +59,9 @@ static inline float calc_distortion(float *c, int size, int scale_idx)
     float coef, unquant, sum = 0.0f;
     for(i = 0; i < size; i++){
         coef = FFABS(c[i]);
-        q = (int)(pow(FFABS(coef) * pow2sf_tab[200 - scale_idx + SCALE_ONE_POS], 0.75) + 0.4054);
+        q = (int)(pow(FFABS(coef) * pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512], 0.75) + 0.4054);
         q = av_clip(q, 0, 8191);
-        unquant = (q * cbrt(q)) * pow2sf_tab[200 + scale_idx - SCALE_ONE_POS];
+        unquant = (q * cbrt(q)) * pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
         sum += (coef - unquant) * (coef - unquant);
     }
     return sum;
@@ -598,6 +598,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                 g2 = w*16 + g;
                 for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++)
                     pch->band[ch][g2].energy +=  cpe->ch[ch].coeffs[start+i] *  cpe->ch[ch].coeffs[start+i];
+                pch->band[ch][g2].energy /= 262144.0f;
                 pch->band[ch][g2].thr = pch->band[ch][g2].energy * 0.001258925f;
                 start += cpe->ch[ch].ics.swb_sizes[g];
                 if(pch->band[ch][g2].energy != 0.0){
@@ -605,7 +606,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
 
                     for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++)
                         ffac += sqrt(FFABS(cpe->ch[ch].coeffs[start+i]));
-                    pch->band[ch][g2].ffac = ffac;
+                    pch->band[ch][g2].ffac = ffac / sqrt(512.0);
                 }
             }
         }
@@ -660,6 +661,10 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                     ff_m += sqrt(FFABS(m));
                     ff_s += sqrt(FFABS(s));
                 }
+                en_m /= 262144.0;
+                en_s /= 262144.0;
+                ff_m /= sqrt(512.0);
+                ff_s /= sqrt(512.0);
                 l1 = FFMIN(pch->band[0][g2].thr, pch->band[1][g2].thr);
                 if(en_m == 0.0 || en_s == 0.0 || l1*l1 / (en_m * en_s) >= (pch->band[0][g2].thr * pch->band[1][g2].thr / (pch->band[0][g2].energy * pch->band[1][g2].energy))){
                     cpe->ms.mask[w][g] = 1;

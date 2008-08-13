@@ -258,19 +258,19 @@ static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s, Chann
         if(cpe->ch[channel].ics.window_sequence[0] != LONG_START_SEQUENCE){
             j = channel;
             for (i = 0; i < 1024; i++, j += avctx->channels){
-                s->output[i+1024]         = audio[j] / 512.0 * lwindow[1024 - i - 1];
-                cpe->ch[channel].saved[i] = audio[j] / 512.0 * lwindow[i];
+                s->output[i+1024]         = audio[j] * lwindow[1024 - i - 1];
+                cpe->ch[channel].saved[i] = audio[j] * lwindow[i];
             }
         }else{
             j = channel;
             for(i = 0; i < 448; i++, j += avctx->channels)
-                s->output[i+1024]         = audio[j] / 512.0;
+                s->output[i+1024]         = audio[j];
             for(i = 448; i < 576; i++, j += avctx->channels)
-                s->output[i+1024]         = audio[j] / 512.0 * swindow[576 - i - 1];
+                s->output[i+1024]         = audio[j] * swindow[576 - i - 1];
             memset(s->output+1024+576, 0, sizeof(s->output[0]) * 448);
             j = channel;
             for(i = 0; i < 1024; i++, j += avctx->channels)
-                cpe->ch[channel].saved[i] = audio[j] / 512.0;
+                cpe->ch[channel].saved[i] = audio[j];
         }
         ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs, s->output, s->tmp);
     }else{
@@ -284,7 +284,7 @@ static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s, Chann
         }
         j = channel;
         for(i = 0; i < 1024; i++, j += avctx->channels)
-            cpe->ch[channel].saved[i] = audio[j] / 512.0;
+            cpe->ch[channel].saved[i] = audio[j];
     }
 }
 
