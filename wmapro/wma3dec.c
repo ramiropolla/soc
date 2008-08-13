@@ -426,14 +426,14 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
     }
 
 
-    /** postproc transform */
+    /** read postproc transform */
     if(get_bits1(gb)){
         av_log(s->avctx,AV_LOG_ERROR,"Unsupported postproc transform found\n");
         s->packet_loss = 1;
         return 0;
     }
 
-    /** drc info */
+    /** read drc info */
     if(s->dynamic_range_compression){
         s->drc_gain = get_bits(gb,8);
         av_log(s->avctx,AV_LOG_INFO,"drc_gain %i\n",s->drc_gain);
@@ -441,7 +441,7 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
 
     s->update_samples_per_frame = 0;
 
-    /** transmit frame length */
+    /** check if num output samples might change */
     if(get_bits(gb,1)){
         s->update_samples_per_frame = get_bits1(gb);
 
