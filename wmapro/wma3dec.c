@@ -216,17 +216,20 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
 /**
  *@brief decode how the data in the frame is split into subframes
- *       every wma frame contains the encoded data for a fixed number of samples per channel
- *       the data for every channel might be split into several subframes
- *       this function will reconstruct the list of subframes for every channel
+ *       every wma frame contains the encoded data for a fixed number of
+ *       samples per channel the data for every channel might be split
+ *       into several subframes this function will reconstruct the list of
+ *       subframes for every channel
  *
- *       If the subframes are not evenly split the algorithm estimates the channels with
- *       the lowest number of total samples.
- *       Afterwards for every of these channels a bit is read from the bitstream
- *       that indicates if the channel contains a frame with the next subframesize that is going to
- *       be read from the bitstream or not.
- *       If a channel contains such a subframe the subframesize gets added to the channel's subframelist.
- *       The algorithm repeats these steps until the frame is properly divided between the individual channels.
+ *       If the subframes are not evenly split the algorithm estimates the
+ *       channels with the lowest number of total samples.
+ *       Afterwards for every of these channels a bit is read from the
+ *       bitstream that indicates if the channel contains a frame with the
+ *       next subframesize that is going to be read from the bitstream or not.
+ *       If a channel contains such a subframe the subframesize gets added to
+ *       the channel's subframelist.
+ *       The algorithm repeats these steps until the frame is properly divided
+ *       between the individual channels.
  *
  *
  *@param s context
@@ -306,8 +309,8 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
              if(num_subframes_per_channel != 1){
                  int total_num_bits = num_channels;
                  tileinfo = 0;
-                 /** for every channel with the minimum len 1 bit is transmitted that
-                     informs us if the channel
+                 /** for every channel with the minimum len 1 bit is
+                     transmitted that informs us if the channel
                      contains a subframe with the next subframe_len */
                  while(total_num_bits){
                     int num_bits = total_num_bits;
@@ -321,7 +324,8 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
              }
 
 
-             /** if the frames are not evenly split get the next subframe len from the bitstream */
+             /** if the frames are not evenly split get the next subframe len
+                 from the bitstream */
              if(subframe_len != missing_samples / num_channels){
                   int log2_subframe_len;
                   /* 1 bit indicates if the subframe len is zero */
