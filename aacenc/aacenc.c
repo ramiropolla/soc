@@ -670,6 +670,9 @@ static int aac_encode_frame(AVCodecContext *avctx,
     if(s->last_frame)
         return 0;
     if(data){
+        if((s->psy.flags & PSY_MODEL_NO_PREPROC) == PSY_MODEL_NO_PREPROC){
+            memcpy(s->samples + 1024 * avctx->channels, data, 1024 * avctx->channels * sizeof(s->samples[0]));
+        }else{
         start_ch = 0;
         samples2 = s->samples + 1024 * avctx->channels;
         for(i = 0; i < chan_map[0]; i++){
@@ -677,6 +680,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
             chans = tag == ID_CPE ? 2 : 1;
             ff_aac_psy_preprocess(&s->psy, (uint16_t*)data + start_ch, samples2 + start_ch, i, tag);
             start_ch += chans;
+        }
         }
     }
     if(!avctx->frame_number){

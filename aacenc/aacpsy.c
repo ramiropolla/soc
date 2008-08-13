@@ -939,7 +939,7 @@ void ff_aac_psy_preprocess(AACPsyContext *ctx, int16_t *audio, int16_t *dest, in
     int i, ch;
     float t[2];
 
-    if(chans == 1 || (ctx->flags & PSY_MODEL_NO_PREPROC) == PSY_MODEL_NO_PREPROC){
+    if(chans == 1){
         for(ch = 0; ch < chans; ch++){
             for(i = 0; i < 1024; i++){
                 dest[i * chstride + ch] = audio[i * chstride + ch];
