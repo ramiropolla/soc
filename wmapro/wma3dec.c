@@ -20,64 +20,66 @@
 #include "avcodec.h"
 #include "bitstream.h"
 
-#define MAX_CHANNELS 6
-#define MAX_SUBFRAMES 32
+#define MAX_CHANNELS 6               //< max number of handled channels
+#define MAX_SUBFRAMES 32             //< max number of subframes per channel
 
 /* TODO
    shrink types
 */
 
+/**
+ *@brief decoder context for a single channel
+ */
 typedef struct {
-    int num_subframes;
+    int num_subframes;               //< number of subframes for the current channel
     int subframe_len[MAX_SUBFRAMES]; //< subframe len in samples
     int channel_len;                 //< channel len in samples
 } wma_channel_t;
 
+
+/**
+ *@brief main decoder context
+ */
 typedef struct WMA3DecodeContext {
-    AVCodecContext*     avctx;
-    GetBitContext       gb;
-    int                 buf_bit_size;
+    AVCodecContext*  avctx;           //< codec context for av_log
+    GetBitContext    gb;              //< getbitcontext for the packet
+    int              buf_bit_size;    //< buffer size in bits
 
-    // Packet info
-    int                 packet_sequence_number;
-    int                 bit5;   // might be that packet contains padding data, last packet in some cbr files have it
-    int                 bit6;
+    /** Packet info */
+    int              packet_sequence_number; //< current packet nr
+    int              bit5;                   //< padding bit? (cbr files)
+    int              bit6;
+    unsigned int     packet_loss;            //< set in case of bitstream error
 
-    // Stream info
-    unsigned int        samples_per_frame;
-    unsigned int        log2_block_align;
-    unsigned int        log2_block_align_bits;
-    unsigned int        log2_frame_size;
-    int                 lossless;
-    int                 nb_channels;
-    wma_channel_t       channel[MAX_CHANNELS];
-    int                 no_tiling;
+    /** Stream info */
+    unsigned int     samples_per_frame;     //< nr of outputed samples
+    unsigned int     log2_block_align;      //< block align bits
+    unsigned int     log2_block_align_bits; //< nr bits for block align len
+    unsigned int     log2_frame_size;       //< frame size
+    int              lossless;              //< lossless mode
+    int              no_tiling;             //< frames are split in subframes
+    int              nb_channels;           //< nr of channels
+    wma_channel_t    channel[MAX_CHANNELS]; //< per channel data
 
-    // Extradata
-    unsigned int        decode_flags;
-    unsigned int        dwChannelMask;
-    unsigned int        sample_bit_depth;
+    /** Extradata */
+    unsigned int     decode_flags;          //< used compression features
+    unsigned int     dwChannelMask;
+    unsigned int     sample_bit_depth;
 
-    // Packet loss variables
-    unsigned int        packet_loss;
-
-    // General frame info
-    unsigned int        frame_num;
-    int                 len_prefix; //< true if the frame is prefixed with its len
-    int                 allow_subframes;
-    int                 max_num_subframes;
-    int                 min_samples_per_subframe;
-
-    // Buffered frame data
-    int                 prev_frame_bit_size;
-    uint8_t*            prev_frame;
+    /** General frame info */
+    unsigned int     frame_num;             //< current frame number
+    int              len_prefix;            //< frame is prefixed with its len
+    int              allow_subframes;       //< frames may contain subframes
+    int              max_num_subframes;     //< maximum number of subframes
+    int              min_samples_per_subframe; //< minimum samples per subframe
+    int8_t           dynamic_range_compression;//< frame contains drc data
+    uint8_t          drc_gain;                 //< gain for the drc tool
+    int8_t           update_samples_per_frame; //< recalculate output size
 
 
-    // from the packet header
-    int8_t use_dynamic_range_compression;
-    uint8_t drc_gain;
-
-    int8_t update_samples_per_frame;
+    /** Buffered frame data */
+    int              prev_frame_bit_size;      //< saved number of bits
+    uint8_t*         prev_frame;               //< prev frame data
 
 } WMA3DecodeContext;
 
@@ -180,7 +182,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     s->max_num_subframes = 1 << log2_max_num_subframes;
     s->allow_subframes = s->max_num_subframes > 1;
     s->min_samples_per_subframe = s->samples_per_frame / s->max_num_subframes;
-    s->use_dynamic_range_compression = s->decode_flags & 0x80;
+    s->dynamic_range_compression = s->decode_flags & 0x80;
 
     if(s->max_num_subframes > MAX_SUBFRAMES){
         av_log(avctx, AV_LOG_ERROR, "invalid number of subframes %i\n",s->max_num_subframes);
@@ -405,7 +407,7 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
     }
 
     /** drc info */
-    if(s->use_dynamic_range_compression){
+    if(s->dynamic_range_compression){
         s->drc_gain = get_bits(gb,8);
         av_log(s->avctx,AV_LOG_INFO,"drc_gain %i\n",s->drc_gain);
     }
