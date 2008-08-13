@@ -799,7 +799,7 @@ static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableE
     return 0;
 }
 
-static const MXFDescriptorWriteTableEntry mxf_descriptor_read_table[] = {
+static const MXFDescriptorWriteTableEntry mxf_descriptor_write_table[] = {
     { { 0x06,0x0E,0x2B,0x34,0x02,0x53,0x01,0x01,0x0d,0x01,0x01,0x01,0x01,0x01,0x51,0x00 }, mxf_write_mpeg_video_desc, CODEC_ID_MPEG2VIDEO},
     { { 0x06,0x0E,0x2B,0x34,0x02,0x53,0x01,0x01,0x0d,0x01,0x01,0x01,0x01,0x01,0x48,0x00 }, mxf_write_wav_desc, CODEC_ID_PCM_S16LE},
     { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }, NULL, CODEC_ID_NONE},
@@ -832,7 +832,7 @@ static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enu
             goto fail;
 
         if (type == SourcePackage) {
-            for (desc = mxf_descriptor_read_table; desc->write; desc++) {
+            for (desc = mxf_descriptor_write_table; desc->write; desc++) {
                 if (s->streams[i]->codec->codec_id == desc->type) {
                     ret = desc->write(s, desc, i);
                     if ( ret < 0) {
