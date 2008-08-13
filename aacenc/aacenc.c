@@ -24,6 +24,13 @@
  * AAC encoder
  */
 
+/***********************************
+ *              TODOs:
+ * psy model selection with some option
+ * change greedy codebook search into something more optimal, like Viterbi algorithm
+ * determine run lengths along with codebook
+ ***********************************/
+
 #include "avcodec.h"
 #include "bitstream.h"
 #include "dsputil.h"
@@ -228,7 +235,6 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
 
     s->samples = av_malloc(2 * 1024 * avctx->channels * sizeof(s->samples[0]));
     s->cpe = av_mallocz(sizeof(ChannelElement) * aac_chan_configs[avctx->channels-1][0]);
-    //TODO: psy model selection with some option
     if(ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, aac_chan_configs[avctx->channels-1][0], 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128) < 0){
         av_log(avctx, AV_LOG_ERROR, "Cannot initialize selected model.\n");
         return -1;
@@ -365,7 +371,6 @@ static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int cha
             break;
     best = INT_MAX;
     bestcb = 11;
-    //TODO: change greedy search into something more optimal, like Viterbi
     for(; cb < 12; cb++){
         score = 0;
         dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
@@ -419,7 +424,6 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
 
     if(!bits) return;
 
-    //TODO: factorize?
     if(aac_cb_info[cb].flags & CB_ESCAPE){
         for(i = start; i < start + size; i += dim){
             idx = 0;
@@ -609,7 +613,6 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
     AACEncContext *s = avctx->priv_data;
     int i, g, w;
 
-    //TODO: determine run lengths along with codebook
     for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
         i = w << 7;
         if(cpe->ch[channel].ics.group_len[w]) continue;

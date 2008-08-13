@@ -28,6 +28,18 @@
 #include "aacpsy.h"
 #include "aactab.h"
 
+/***********************************
+ *              TODOs:
+ * General:
+ * better audio preprocessing (add DC highpass filter?)
+ * more psy models
+ *
+ * 3GPP-based psy model:
+ * thresholds linearization after their modifications for attaining given bitrate
+ * try other bitrate controlling mechanism (maybe use ratecontrol.c?)
+ * control quality for quality-based output
+ **********************************/
+
 /**
  * Convert coefficients to integers.
  * @return sum of coefficients
@@ -736,7 +748,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                 }
             }
         }
-        //TODO: linearization
 
         //determine scalefactors - 5.6.2 "Scalefactor determination"
         for(ch = 0; ch < chans; ch++){
@@ -762,7 +773,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
             for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
                 for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                     g2 = w*16 + g;
-                    //TODO: make controllable quality
                     if(pch->band[ch][g2].thr >= pch->band[ch][g2].energy){
                         cpe->ch[ch].sf_idx[w][g] = 0;
                         cpe->ch[ch].zeroes[w][g] = 1;
