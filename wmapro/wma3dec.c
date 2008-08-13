@@ -72,6 +72,13 @@ typedef struct WMA3DecodeContext {
     int                 prev_frame_bit_size;
     uint8_t*            prev_frame;
 
+
+    // from the packet header
+    int8_t use_dynamic_range_compression;
+    uint8_t drc_gain;
+
+    int8_t update_samples_per_frame;
+
 } WMA3DecodeContext;
 
 
@@ -173,6 +180,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     s->max_num_subframes = 1 << log2_max_num_subframes;
     s->allow_subframes = s->max_num_subframes > 1;
     s->min_samples_per_subframe = s->samples_per_frame / s->max_num_subframes;
+    s->use_dynamic_range_compression = s->decode_flags & 0x80;
 
     if(s->max_num_subframes > MAX_SUBFRAMES){
         av_log(avctx, AV_LOG_ERROR, "invalid number of subframes %i\n",s->max_num_subframes);
@@ -352,16 +360,13 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
         }
 
     }
-#if 0
-#undef printf
 
     for(c=0;c<s->nb_channels;c++){
         int i;
         for(i=0;i<s->channel[c].num_subframes;i++){
-            printf("frame[%i] channel[%i] subframe[%i] len %i\n",s->frame_num,c,i,s->channel[c].subframe_len[i]);
+            av_log(s->avctx, AV_LOG_INFO,"frame[%i] channel[%i] subframe[%i] len %i\n",s->frame_num,c,i,s->channel[c].subframe_len[i]);
         }
     }
-#endif
 
     return 0;
 }
@@ -391,6 +396,30 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
         return 0;
     }
 
+
+    /** postproc transform */
+    if(get_bits1(gb)){
+        av_log(s->avctx,AV_LOG_ERROR,"Unsupported postproc transform found\n");
+        s->packet_loss = 1;
+        return 0;
+    }
+
+    /** drc info */
+    if(s->use_dynamic_range_compression){
+        s->drc_gain = get_bits(gb,8);
+        av_log(s->avctx,AV_LOG_INFO,"drc_gain %i\n",s->drc_gain);
+    }
+
+    s->update_samples_per_frame = 0;
+
+    /** transmit frame length */
+    if(get_bits(gb,1)){
+        s->update_samples_per_frame = get_bits1(gb);
+
+        if(s->update_samples_per_frame){
+            get_bits(gb,av_log2(s->samples_per_frame * 2));
+        }
+     }
     /* skip the rest of the frame data */
     skip_bits_long(gb,len - (get_bits_count(gb) - gb_start_count) - 1);
 
@@ -498,8 +527,6 @@ static int wma3_decode_packet(AVCodecContext *avctx,
             /* decode the frame */
             more_frames = wma_decode_frame(s,&s->gb);
 
-            /** the linspire wma decoder does not decode the last frames from the last
-                packet when more_frames is false */
             if(!more_frames){
                 av_log(avctx, AV_LOG_ERROR, "no more frames\n");
             }
