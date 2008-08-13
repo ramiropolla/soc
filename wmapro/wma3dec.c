@@ -335,7 +335,7 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
                           log2_subframe_len = get_bits(gb,subframe_len_bits-1) + 1;
                       }
                   }else
-                          log2_subframe_len = get_bits(gb,subframe_len_bits);
+                      log2_subframe_len = get_bits(gb,subframe_len_bits);
 
                   if(s->lossless)
                       subframe_len = s->samples_per_frame / s->max_num_subframes * (log2_subframe_len + 1);
