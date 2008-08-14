@@ -512,9 +512,9 @@ static void encode_band_info(AVCodecContext *avctx, AACEncContext *s, ChannelEle
 /**
  * Encode scalefactors.
  */
-static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
+static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel, int global_gain)
 {
-    int off = cpe->ch[channel].mixing_gain, diff;
+    int off = global_gain, diff;
     int i, w;
 
     for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
@@ -620,6 +620,7 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
 {
     AACEncContext *s = avctx->priv_data;
     int i, g, w;
+    int global_gain;
 
     for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
         i = w << 7;
@@ -634,10 +635,23 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
         }
     }
 
-    put_bits(&s->pb, 8, cpe->ch[channel].mixing_gain); //global gain
+    //determine global gain as standard recommends - the first scalefactor value
+    global_gain = 0;
+    for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
+        if(cpe->ch[channel].ics.group_len[w]) continue;
+        for(g = 0; g < cpe->ch[channel].ics.max_sfb; g++){
+            if(!cpe->ch[channel].zeroes[w][g]){
+                global_gain = cpe->ch[channel].sf_idx[w][g];
+                break;
+            }
+        }
+        if(global_gain) break;
+    }
+
+    put_bits(&s->pb, 8, global_gain);
     if(!cpe->common_window) put_ics_info(avctx, &cpe->ch[channel].ics);
     encode_band_info(avctx, s, cpe, channel);
-    encode_scale_factors(avctx, s, cpe, channel);
+    encode_scale_factors(avctx, s, cpe, channel, global_gain);
     encode_pulses(avctx, s, cpe, channel);
     encode_tns_data(avctx, s, cpe, channel);
     put_bits(&s->pb, 1, 0); //ssr

@@ -218,7 +218,6 @@ static void psy_null_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         for(g = 0; g < apc->num_bands1024; g++)
             if(!cpe->ch[ch].zeroes[0][g])
                 minscale = FFMIN(minscale, cpe->ch[ch].sf_idx[0][g]);
-        cpe->ch[ch].mixing_gain = minscale;
         for(g = 0; g < apc->num_bands1024; g++)
             if(!cpe->ch[ch].zeroes[0][g])
                 cpe->ch[ch].sf_idx[0][g] = FFMIN(minscale + SCALE_MAX_DIFF, cpe->ch[ch].sf_idx[0][g]);
@@ -280,7 +279,6 @@ static void psy_null8_process(AACPsyContext *apc, int tag, int type, ChannelElem
         }
     }
     for(ch = 0; ch < chans; ch++){
-        cpe->ch[ch].mixing_gain = SCALE_ONE_POS;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 cpe->ch[ch].sf_idx[w][g] = SCALE_ONE_POS;
@@ -602,7 +600,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     memset(pch->band, 0, sizeof(pch->band));
     for(ch = 0; ch < chans; ch++){
         start = 0;
-        cpe->ch[ch].mixing_gain = 0;
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 g2 = w*16 + g;
@@ -752,7 +749,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         //determine scalefactors - 5.6.2 "Scalefactor determination"
         for(ch = 0; ch < chans; ch++){
             prev_scale = -1;
-            cpe->ch[ch].mixing_gain = 0;
             for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
                 for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                     g2 = w*16 + g;
@@ -809,7 +805,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
                 if(cpe->ch[ch].zeroes[w][g]) continue;
                 cpe->ch[ch].sf_idx[w][g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[w][g], 0, SCALE_MAX_POS);
-                if(!cpe->ch[ch].mixing_gain) cpe->ch[ch].mixing_gain = cpe->ch[ch].sf_idx[w][g];
             }
 
         //adjust scalefactors for window groups
