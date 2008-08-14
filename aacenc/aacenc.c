@@ -420,15 +420,23 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
     const uint8_t  *bits  = ff_aac_spectral_bits [aac_cb_info[cb].cb_num];
     const uint16_t *codes = ff_aac_spectral_codes[aac_cb_info[cb].cb_num];
     const int dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
-    int i, j, idx;
+    int i, j, idx, range;
 
     if(!bits) return;
 
+    if(aac_cb_info[cb].flags & CB_UNSIGNED)
+        range = aac_cb_info[cb].maxval + 1;
+    else
+        range = aac_cb_info[cb].maxval*2 + 1;
+
     if(aac_cb_info[cb].flags & CB_ESCAPE){
+        int coef_abs[2];
         for(i = start; i < start + size; i += dim){
             idx = 0;
             for(j = 0; j < dim; j++)
-                idx = idx*17 + FFMIN(FFABS(cpe->ch[channel].icoefs[i+j]), 16);
+                coef_abs[j] = FFABS(cpe->ch[channel].icoefs[i+j]);
+            for(j = 0; j < dim; j++)
+                idx = idx*17 + FFMIN(coef_abs[j], 16);
             put_bits(&s->pb, bits[idx], codes[idx]);
             //output signs
             for(j = 0; j < dim; j++)
@@ -436,18 +444,18 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
                     put_bits(&s->pb, 1, cpe->ch[channel].icoefs[i+j] < 0);
             //output escape values
             for(j = 0; j < dim; j++)
-                if(FFABS(cpe->ch[channel].icoefs[i+j]) > 15){
-                    int l = av_log2(FFABS(cpe->ch[channel].icoefs[i+j]));
+                if(coef_abs[j] > 15){
+                    int l = av_log2(coef_abs[j]);
 
                     put_bits(&s->pb, l - 4 + 1, (1 << (l - 4 + 1)) - 2);
-                    put_bits(&s->pb, l, FFABS(cpe->ch[channel].icoefs[i+j]) & ((1 << l) - 1));
+                    put_bits(&s->pb, l, coef_abs[j] & ((1 << l) - 1));
                 }
         }
     }else if(aac_cb_info[cb].flags & CB_UNSIGNED){
         for(i = start; i < start + size; i += dim){
             idx = 0;
             for(j = 0; j < dim; j++)
-                idx = idx * (aac_cb_info[cb].maxval + 1) + FFABS(cpe->ch[channel].icoefs[i+j]);
+                idx = idx * range + FFABS(cpe->ch[channel].icoefs[i+j]);
             put_bits(&s->pb, bits[idx], codes[idx]);
             //output signs
             for(j = 0; j < dim; j++)
@@ -458,7 +466,7 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
         for(i = start; i < start + size; i += dim){
             idx = 0;
             for(j = 0; j < dim; j++)
-                idx = idx * (aac_cb_info[cb].maxval*2 + 1) + cpe->ch[channel].icoefs[i+j] + aac_cb_info[cb].maxval;
+                idx = idx * range + cpe->ch[channel].icoefs[i+j] + aac_cb_info[cb].maxval;
             put_bits(&s->pb, bits[idx], codes[idx]);
         }
     }
