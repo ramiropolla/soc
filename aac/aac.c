@@ -1666,7 +1666,7 @@ static int spectral_to_sample(AACContext * ac) {
         for(type = 0; type < 4; type++) {
             ChannelElement *che = ac->che[type][i];
             if(che) {
-                if(type == TYPE_CCE && che->coup.coupling_point == BEFORE_TNS)
+                if(che->coup.coupling_point == BEFORE_TNS)
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
@@ -1682,7 +1682,7 @@ static int spectral_to_sample(AACContext * ac) {
                     apply_tns(che->ch[0].coeffs, &che->ch[0].tns, &che->ch[0].ics, 1);
                 if(che->ch[1].tns.present)
                     apply_tns(che->ch[1].coeffs, &che->ch[1].tns, &che->ch[1].ics, 1);
-                if(type == TYPE_CCE && che->coup.coupling_point == BETWEEN_TNS_AND_IMDCT)
+                if(che->coup.coupling_point == BETWEEN_TNS_AND_IMDCT)
                     apply_channel_coupling(ac, che, apply_dependent_coupling);
 #ifdef AAC_SSR
                 if (ac->m4ac.object_type == AOT_AAC_SSR) {
@@ -1697,7 +1697,7 @@ static int spectral_to_sample(AACContext * ac) {
 #ifdef AAC_SSR
                 }
 #endif /* AAC_SSR */
-                if(type == TYPE_CCE && che->coup.coupling_point == AFTER_IMDCT)
+                if(che->coup.coupling_point == AFTER_IMDCT)
                     apply_channel_coupling(ac, che, apply_independent_coupling);
 #ifdef AAC_LTP
                 if (ac->m4ac.object_type == AOT_AAC_LTP) {
@@ -1735,8 +1735,12 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
             ac->che[TYPE_SCE][elem_id] = ac->che[TYPE_LFE][0];
             ac->che[TYPE_LFE][0] = NULL;
         }
-        if(elem_type && elem_type < TYPE_DSE && !ac->che[elem_type][elem_id])
+        if(elem_type && elem_type < TYPE_DSE) {
+            if(!ac->che[elem_type][elem_id])
             return -1;
+            if(elem_type != TYPE_CCE)
+                ac->che[elem_type][elem_id]->coup.coupling_point = 4;
+        }
 
         switch (elem_type) {
 
