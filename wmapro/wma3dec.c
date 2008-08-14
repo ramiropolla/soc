@@ -1,6 +1,7 @@
 /*
  * WMA 9/3/PRO compatible decoder
- * Copyright (c) 2007 - 2008 The FFmpeg Project.
+ * Copyright (c) 2007 Baptiste Coudurier, Benjamin Larsson, Ulion
+ * Copyright (c) 2008 Sascha Sommer
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
