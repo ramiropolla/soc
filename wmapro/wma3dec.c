@@ -28,7 +28,7 @@
  *@brief decoder context for a single channel
  */
 typedef struct {
-    uint8_t num_subframes;     //< number of subframes for the current channel
+    uint8_t num_subframes;                //< number of subframes for the current channel
     uint16_t subframe_len[MAX_SUBFRAMES]; //< subframe len in samples
     uint16_t channel_len;                 //< channel len in samples
 } wma_channel_t;
@@ -38,36 +38,36 @@ typedef struct {
  *@brief main decoder context
  */
 typedef struct WMA3DecodeContext {
-    AVCodecContext*  avctx;           //< codec context for av_log
-    GetBitContext    gb;              //< getbitcontext for the packet
-    int              buf_bit_size;    //< buffer size in bits
+    AVCodecContext*  avctx;                    //< codec context for av_log
+    GetBitContext    gb;                       //< getbitcontext for the packet
+    int              buf_bit_size;             //< buffer size in bits
 
     /** Packet info */
-    uint8_t          packet_sequence_number; //< current packet nr
-    uint8_t          bit5;                   //< padding bit? (cbr files)
+    uint8_t          packet_sequence_number;   //< current packet nr
+    uint8_t          bit5;                     //< padding bit? (cbr files)
     uint8_t          bit6;
-    uint8_t          packet_loss;            //< set in case of bitstream error
+    uint8_t          packet_loss;              //< set in case of bitstream error
 
     /** Stream info */
-    uint16_t         samples_per_frame;     //< nr of outputed samples
-    uint8_t          log2_block_align;      //< block align bits
-    uint8_t          log2_block_align_bits; //< nr bits for block align len
-    uint16_t         log2_frame_size;       //< frame size
-    uint8_t          lossless;              //< lossless mode
-    uint8_t          no_tiling;             //< frames are split in subframes
-    int8_t           nb_channels;           //< nr of channels
-    wma_channel_t    channel[MAX_CHANNELS]; //< per channel data
+    uint16_t         samples_per_frame;        //< nr of outputed samples
+    uint8_t          log2_block_align;         //< block align bits
+    uint8_t          log2_block_align_bits;    //< nr bits for block align len
+    uint16_t         log2_frame_size;          //< frame size
+    uint8_t          lossless;                 //< lossless mode
+    uint8_t          no_tiling;                //< frames are split in subframes
+    int8_t           nb_channels;              //< nr of channels
+    wma_channel_t    channel[MAX_CHANNELS];    //< per channel data
 
     /** Extradata */
-    unsigned int     decode_flags;          //< used compression features
+    unsigned int     decode_flags;             //< used compression features
     unsigned int     dwChannelMask;
-    uint8_t          sample_bit_depth;      //< bits per sample
+    uint8_t          sample_bit_depth;         //< bits per sample
 
     /** General frame info */
-    unsigned int     frame_num;             //< current frame number
-    uint8_t          len_prefix;            //< frame is prefixed with its len
-    uint8_t          allow_subframes;       //< frames may contain subframes
-    uint8_t          max_num_subframes;     //< maximum number of subframes
+    unsigned int     frame_num;                //< current frame number
+    uint8_t          len_prefix;               //< frame is prefixed with its len
+    uint8_t          allow_subframes;          //< frames may contain subframes
+    uint8_t          max_num_subframes;        //< maximum number of subframes
     uint16_t         min_samples_per_subframe; //< minimum samples per subframe
     uint8_t          dynamic_range_compression;//< frame contains drc data
     uint8_t          drc_gain;                 //< gain for the drc tool
