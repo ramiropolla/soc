@@ -619,5 +619,5 @@ AVCodec wmav3pro_decoder =
     NULL,
     wma3_decode_end,
     wma3_decode_packet,
-    .long_name = "Windows Media Audio 9 Professional",
+    .long_name = NULL_IF_CONFIG_SMALL("Windows Media Audio 9 Professional"),
 };
