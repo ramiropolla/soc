@@ -445,10 +445,10 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
             //output escape values
             for(j = 0; j < dim; j++)
                 if(coef_abs[j] > 15){
-                    int l = av_log2(coef_abs[j]);
+                    int len = av_log2(coef_abs[j]);
 
-                    put_bits(&s->pb, l - 4 + 1, (1 << (l - 4 + 1)) - 2);
-                    put_bits(&s->pb, l, coef_abs[j] & ((1 << l) - 1));
+                    put_bits(&s->pb, len - 4 + 1, (1 << (len - 4 + 1)) - 2);
+                    put_bits(&s->pb, len, coef_abs[j] & ((1 << len) - 1));
                 }
         }
     }else if(aac_cb_info[cb].flags & CB_UNSIGNED){
