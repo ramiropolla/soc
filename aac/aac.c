@@ -91,7 +91,6 @@
 #include <string.h>
 
 #ifndef CONFIG_HARDCODED_TABLES
-    static float ff_aac_ivquant_tab[IVQUANT_SIZE];
     static float ff_aac_pow2sf_tab[316];
 #endif /* CONFIG_HARDCODED_TABLES */
 
@@ -467,8 +466,6 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
     }
 
 #ifndef CONFIG_HARDCODED_TABLES
-    for (i = 1 - IVQUANT_SIZE/2; i < IVQUANT_SIZE/2; i++)
-        ff_aac_ivquant_tab[i + IVQUANT_SIZE/2 - 1] =  cbrt(fabs(i)) * i;
     for (i = 0; i < 316; i++)
         ff_aac_pow2sf_tab[i] = pow(2, (i - 200)/4.);
 #endif /* CONFIG_HARDCODED_TABLES */
@@ -607,19 +604,6 @@ static int decode_ics_info(AACContext * ac, IndividualChannelStream * ics, GetBi
     }
 
     return 0;
-}
-
-/**
- * inverse quantization
- *
- * @param   a   quantized value to be dequantized
- * @return  Returns dequantized value.
- */
-static inline float ivquant(int a) {
-    if (a + (unsigned int)IVQUANT_SIZE/2 - 1 < (unsigned int)IVQUANT_SIZE - 1)
-        return ff_aac_ivquant_tab[a + IVQUANT_SIZE/2 - 1];
-    else
-        return cbrtf(fabsf(a)) * a;
 }
 
 /**
@@ -840,9 +824,8 @@ static void decode_mid_side_stereo(ChannelElement * cpe, GetBitContext * gb,
  */
 static int decode_spectrum_and_dequant(AACContext * ac, float coef[1024], GetBitContext * gb, float sf[120],
         int pulse_present, const Pulse * pulse, const IndividualChannelStream * ics, enum BandType band_type[120]) {
-    int i, k, g, idx = 0, icoef_idx = 0;
+    int i, k, g, idx = 0;
     const int c = 1024/ics->num_windows;
-    int icoef[1024];
     const uint16_t * offsets = ics->swb_offset;
     float *coef_base = coef;
 
@@ -871,8 +854,8 @@ static int decode_spectrum_and_dequant(AACContext * ac, float coef[1024], GetBit
                 for (group = 0; group < ics->group_len[g]; group++) {
                     for (k = offsets[i]; k < offsets[i+1]; k += dim) {
                         const int index = get_vlc2(gb, vlc_spectral[cur_band_type - 1].table, 6, 3);
-                        const int icoef_tmp_idx = icoef_idx + (group << 7) + k;
-                        const int8_t *vq_ptr;
+                        const int coef_tmp_idx = (group << 7) + k;
+                        const float *vq_ptr;
                         int j;
                         if(index >= ff_aac_spectral_sizes[cur_band_type - 1]) {
                             av_log(ac->avccontext, AV_LOG_ERROR,
@@ -884,14 +867,14 @@ static int decode_spectrum_and_dequant(AACContext * ac, float coef[1024], GetBit
                         if (is_cb_unsigned) {
                             for (j = 0; j < dim; j++)
                                 if (vq_ptr[j])
-                                    icoef[icoef_tmp_idx + j] = 1 - 2*get_bits1(gb);
+                                    coef[coef_tmp_idx + j] = 1 - 2*(int)get_bits1(gb);
                         }else {
                             for (j = 0; j < dim; j++)
-                                icoef[icoef_tmp_idx + j] = 1;
+                                coef[coef_tmp_idx + j] = 1.0f;
                         }
                         if (cur_band_type == ESC_BT) {
                             for (j = 0; j < 2; j++) {
-                                if (vq_ptr[j] == 16) {
+                                if (vq_ptr[j] == 64.0f) {
                                     int n = 4;
                                     /* The total length of escape_sequence must be < 22 bits according
                                        to the specification (i.e. max is 11111111110xxxxxxxxxx). */
@@ -900,21 +883,21 @@ static int decode_spectrum_and_dequant(AACContext * ac, float coef[1024], GetBit
                                         av_log(ac->avccontext, AV_LOG_ERROR, "error in spectral data, ESC overflow\n");
                                         return -1;
                                     }
-                                    icoef[icoef_tmp_idx + j] *= (1<<n) + get_bits(gb, n);
+                                    n = (1<<n) + get_bits(gb, n);
+                                    coef[coef_tmp_idx + j] *= cbrtf(fabsf(n)) * n;
                                 }else
-                                    icoef[icoef_tmp_idx + j] *= vq_ptr[j];
+                                    coef[coef_tmp_idx + j] *= vq_ptr[j];
                             }
                         }else
                             for (j = 0; j < dim; j++)
-                                icoef[icoef_tmp_idx + j] *= vq_ptr[j];
+                                coef[coef_tmp_idx + j] *= vq_ptr[j];
                         for (j = 0; j < dim; j++)
-                            coef[(group << 7) + k + j] = ivquant(icoef[icoef_tmp_idx + j]) * sf[idx];
+                            coef[coef_tmp_idx + j] *= sf[idx];
                     }
                 }
             }
         }
         coef      += ics->group_len[g]<<7;
-        icoef_idx += ics->group_len[g]<<7;
     }
 
     if (pulse_present) {

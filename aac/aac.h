@@ -62,7 +62,6 @@
 
 #define TNS_MAX_ORDER 20
 #define PNS_MEAN_ENERGY 3719550720.0f // sqrt(3.0) * 1<<31
-#define IVQUANT_SIZE 1024
 
 enum AudioObjectType {
     AOT_NULL,
