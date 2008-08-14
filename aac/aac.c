@@ -481,8 +481,8 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
         // window initialization
         ff_kbd_window_init(ff_aac_kbd_long_1024, 4.0, 256);
         ff_kbd_window_init(ff_aac_kbd_short_128, 6.0, 32);
-        ff_sine_window_init(ff_aac_sine_long_1024, 256);
-        ff_sine_window_init(ff_aac_sine_short_128, 32);
+        ff_sine_window_init(ff_sine_1024, 256);
+        ff_sine_window_init(ff_sine_128, 32);
         ssr_context_init(&ac->ssrctx);
     } else {
 #endif /* AAC_SSR */
@@ -491,8 +491,8 @@ static av_cold int aac_decode_init(AVCodecContext * avccontext) {
         // window initialization
         ff_kbd_window_init(ff_aac_kbd_long_1024, 4.0, 1024);
         ff_kbd_window_init(ff_aac_kbd_short_128, 6.0, 128);
-        ff_sine_window_init(ff_aac_sine_long_1024, 1024);
-        ff_sine_window_init(ff_aac_sine_short_128, 128);
+        ff_sine_window_init(ff_sine_1024, 1024);
+        ff_sine_window_init(ff_sine_128, 128);
 #ifdef AAC_SSR
     }
 #endif /* AAC_SSR */
@@ -1325,10 +1325,10 @@ static void apply_tns(float coef[1024], TemporalNoiseShaping * tns, IndividualCh
 
 #ifdef AAC_LTP
 static void windowing_and_mdct_ltp(AACContext * ac, float * out, float * in, IndividualChannelStream * ics) {
-    const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
-    const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
-    const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
-    const float * swindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
+    const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_sine_1024;
+    const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_sine_128;
+    const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_sine_1024;
+    const float * swindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_short_128 : ff_sine_128;
     float * buf = ac->buf_mdct;
     assert(ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE);
     if (ics->window_sequence[0] != LONG_STOP_SEQUENCE) {
@@ -1410,10 +1410,10 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
     float * in = sce->coeffs;
     float * out = sce->ret;
     float * saved = sce->saved;
-    const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
-    const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
-    const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
-    const float * swindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
+    const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_sine_1024;
+    const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_sine_128;
+    const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_sine_1024;
+    const float * swindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_short_128 : ff_sine_128;
     float * buf = ac->buf_mdct;
     int i;
 
@@ -1468,10 +1468,10 @@ static void imdct_and_windowing(AACContext * ac, SingleChannelElement * sce) {
 
 #ifdef AAC_SSR
 static void windowing_and_imdct_ssr(AACContext * ac, float * out, float * in, IndividualChannelStream * ics) {
-    const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
-    const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
-    const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
-    const float * swindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
+    const float * lwindow      = ics->use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_sine_1024;
+    const float * swindow      = ics->use_kb_window[0] ? ff_aac_kbd_short_128 : ff_sine_128;
+    const float * lwindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_long_1024 : ff_sine_1024;
+    const float * swindow_prev = ics->use_kb_window[1] ? ff_aac_kbd_short_128 : ff_sine_128;
     float * buf = ac->buf_mdct;
     if (ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
         ff_imdct_calc(&ac->mdct, buf, in);
