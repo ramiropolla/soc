@@ -613,7 +613,7 @@ static av_cold int wma3_decode_end(AVCodecContext *avctx)
  */
 AVCodec wmav3pro_decoder =
 {
-    "wmav3Pro",
+    "wmav3pro",
     CODEC_TYPE_AUDIO,
     CODEC_ID_WMAPRO,
     sizeof(WMA3DecodeContext),
