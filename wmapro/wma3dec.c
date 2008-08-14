@@ -50,8 +50,6 @@ typedef struct WMA3DecodeContext {
 
     /** Stream info */
     uint16_t         samples_per_frame;        //< nr of outputed samples
-    uint8_t          log2_block_align;         //< block align bits
-    uint8_t          log2_block_align_bits;    //< nr bits for block align len
     uint16_t         log2_frame_size;          //< frame size
     uint8_t          lossless;                 //< lossless mode
     uint8_t          no_tiling;                //< frames are split in subframes
@@ -175,9 +173,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
     /** Generic init */
     s->packet_loss = 0;
-    s->log2_block_align = av_log2(avctx->block_align);
-    s->log2_block_align_bits = av_log2(avctx->block_align*8);
-    s->log2_frame_size = s->log2_block_align_bits + 1;
+    s->log2_frame_size = av_log2(avctx->block_align*8)+1;
 
     /** frame info */
     s->len_prefix = s->decode_flags & 0x40;
