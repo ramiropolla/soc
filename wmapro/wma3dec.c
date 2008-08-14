@@ -45,17 +45,17 @@ typedef struct WMA3DecodeContext {
     int              buf_bit_size;             //< buffer size in bits
 
     /** packet info */
-    uint8_t          packet_sequence_number;   //< current packet nr
-    uint8_t          bit5;                     //< padding bit? (cbr files)
+    uint8_t          packet_sequence_number;   //< current packet number
+    uint8_t          bit5;                     //< padding bit? (CBR files)
     uint8_t          bit6;
     uint8_t          packet_loss;              //< set in case of bitstream error
 
     /** stream info */
-    uint16_t         samples_per_frame;        //< nr of outputed samples
+    uint16_t         samples_per_frame;        //< number of outputed samples
     uint16_t         log2_frame_size;          //< frame size
     uint8_t          lossless;                 //< lossless mode
     uint8_t          no_tiling;                //< frames are split in subframes
-    int8_t           nb_channels;              //< nr of channels
+    int8_t           nb_channels;              //< number of channels
     wma_channel_t    channel[MAX_CHANNELS];    //< per channel data
 
     /** extradata */
@@ -102,7 +102,7 @@ static void dump_context(WMA3DecodeContext *s)
 
 
 /**
- *@brief Get the samples per frame for this stream
+ *@brief Get the samples per frame for this stream.
  *@param sample_rate output sample_rate
  *@param decode_flags codec compression features
  *@return number of output samples per frame
@@ -123,7 +123,7 @@ static int get_samples_per_frame(int sample_rate, unsigned int decode_flags) {
     else
         samples_per_frame = 8192;
 
- /* wma voice code  if (decode_flags & 0x800) {
+ /* WMA voice code  if (decode_flags & 0x800) {
         tmp = ((decode_flags & 6) >> 1) | ((decode_flags & 0x600) >> 7);
         samples_per_frame = (tmp+1)*160;
     } else { */
@@ -141,7 +141,7 @@ static int get_samples_per_frame(int sample_rate, unsigned int decode_flags) {
 }
 
 /**
- *@brief initialize the decoder
+ *@brief Initialize the decoder.
  *@param avctx codec context
  *@return 0 on success, -1 otherwise
  */
@@ -159,7 +159,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
         s->dwChannelMask    = AV_RL32(edata_ptr+2);
         s->sample_bit_depth = AV_RL16(edata_ptr);
 
-        /** Dump the extradata */
+        /** dump the extradata */
         for (i=0 ; i<avctx->extradata_size ; i++)
             av_log(avctx, AV_LOG_ERROR, "[%x] ",avctx->extradata[i]);
         av_log(avctx, AV_LOG_ERROR, "\n");
@@ -173,7 +173,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     s->samples_per_frame = get_samples_per_frame(avctx->sample_rate,
                                                  s->decode_flags);
 
-    /** Generic init */
+    /** generic init */
     s->packet_loss = 0;
     s->log2_frame_size = av_log2(avctx->block_align*8)+1;
 
@@ -214,19 +214,19 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
 
 /**
- *@brief decode how the data in the frame is split into subframes
- *       every wma frame contains the encoded data for a fixed number of
+ *@brief Decode how the data in the frame is split into subframes
+ *       every WMA frame contains the encoded data for a fixed number of
  *       samples per channel the data for every channel might be split
  *       into several subframes this function will reconstruct the list of
  *       subframes for every channel
  *
  *       If the subframes are not evenly split the algorithm estimates the
  *       channels with the lowest number of total samples.
- *       Afterwards for every of these channels a bit is read from the
+ *       Afterwards for each of these channels a bit is read from the
  *       bitstream that indicates if the channel contains a frame with the
- *       next subframesize that is going to be read from the bitstream or not.
- *       If a channel contains such a subframe the subframesize gets added to
- *       the channel's subframelist.
+ *       next subframe size that is going to be read from the bitstream or not.
+ *       If a channel contains such a subframe the subframe size gets added to
+ *       the channel's subframe list.
  *       The algorithm repeats these steps until the frame is properly divided
  *       between the individual channels.
  *
@@ -401,10 +401,10 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
 
 
 /**
- *@brief decode one wma frame
+ *@brief Decode one WMA frame.
  *@param s context
  *@param gb current get bit context
- *@return 0 if the trailer bit indicates that this is the last frame
+ *@return 0 if the trailer bit indicates that this is the last frame,
  *        1 if there are more frames
  */
 static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
@@ -460,7 +460,7 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
 
 
 /**
- *@brief calculate remaining input buffer len
+ *@brief Calculate remaining input buffer len.
  *@param s codec context
  *@return remaining size in bits
  */
@@ -469,7 +469,7 @@ static int remaining_bits(WMA3DecodeContext *s){
 }
 
 /**
- *@brief fill the bit reservoir with a partial frame
+ *@brief Fill the bit reservoir with a partial frame.
  *@param s codec context
  *@param len length of the partial frame
  */
@@ -508,7 +508,7 @@ static void save_bits(WMA3DecodeContext *s,int len){
 }
 
 /**
- *@brief decode a single wma packet
+ *@brief Decode a single WMA packet.
  *@param avctx codec context
  *@param data the output buffer
  *@param data_size number of bytes that were written to the output buffer
@@ -594,7 +594,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
 }
 
 /**
- *@brief uninitialize the decoder and free all ressources
+ *@brief Uninitialize the decoder and free all ressources.
  *@param avctx codec context
  *@return 0 on success, < 0 otherwise
  */
