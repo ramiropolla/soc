@@ -86,8 +86,8 @@ typedef struct WMA3DecodeContext {
  */
 static void dump_context(WMA3DecodeContext *s)
 {
-#define PRINT(a,b) av_log(NULL,AV_LOG_ERROR," %s = %d\n", a, b);
-#define PRINT_HEX(a,b) av_log(NULL,AV_LOG_ERROR," %s = %x\n", a, b);
+#define PRINT(a,b) av_log(s->avctx,AV_LOG_ERROR," %s = %d\n", a, b);
+#define PRINT_HEX(a,b) av_log(s->avctx,AV_LOG_ERROR," %s = %x\n", a, b);
 
     PRINT_HEX("ed channelmask",s->dwChannelMask);
     PRINT("ed sample bit depth",s->sample_bit_depth);
