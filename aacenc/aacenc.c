@@ -692,7 +692,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
         }
     }
     if(!avctx->frame_number){
-        memmove(s->samples, s->samples + 1024 * avctx->channels, 1024 * avctx->channels * sizeof(s->samples[0]));
+        memcpy(s->samples, s->samples + 1024 * avctx->channels, 1024 * avctx->channels * sizeof(s->samples[0]));
         return 0;
     }
 
@@ -735,7 +735,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
 
     if(!data)
         s->last_frame = 1;
-    memmove(s->samples, s->samples + 1024 * avctx->channels, 1024 * avctx->channels * sizeof(s->samples[0]));
+    memcpy(s->samples, s->samples + 1024 * avctx->channels, 1024 * avctx->channels * sizeof(s->samples[0]));
     return put_bits_count(&s->pb)>>3;
 }
 
