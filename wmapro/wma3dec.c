@@ -315,12 +315,12 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
                      contains a subframe with the next subframe_len */
                  while(total_num_bits){
                     int num_bits = total_num_bits;
-                    if(num_bits > 24)
-                        num_bits = 24;
-                    tileinfo |= get_bits(gb,num_bits);
+                    if(num_bits > 32)
+                        num_bits = 32;
+                    tileinfo |= get_bits_long(gb,num_bits);
                     total_num_bits -= num_bits;
                     num_bits = total_num_bits;
-                    tileinfo <<= (num_bits > 24)? 24 : num_bits;
+                    tileinfo <<= (num_bits > 32)? 32 : num_bits;
                  }
              }
 
