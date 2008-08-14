@@ -460,7 +460,7 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
 
 
 /**
- *@brief Calculate remaining input buffer len.
+ *@brief Calculate remaining input buffer length.
  *@param s codec context
  *@return remaining size in bits
  */
