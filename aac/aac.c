@@ -1737,7 +1737,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
         }
         if(elem_type && elem_type < TYPE_DSE) {
             if(!ac->che[elem_type][elem_id])
-            return -1;
+                return -1;
             if(elem_type != TYPE_CCE)
                 ac->che[elem_type][elem_id]->coup.coupling_point = 4;
         }
