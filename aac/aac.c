@@ -1814,7 +1814,7 @@ static int aac_decode_frame(AVCodecContext * avccontext, void * data, int * data
     if (!ac->is_saved) {
         ac->is_saved = 1;
         *data_size = 0;
-        return 0;
+        return buf_size;
     }
 
     data_size_tmp = 1024 * avccontext->channels * sizeof(int16_t);
