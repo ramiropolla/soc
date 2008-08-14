@@ -676,6 +676,14 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     return 0;
 }
 
+static void mxf_write_essence_container_ul(ByteIOContext *pb, enum CodecID type)
+{
+    const MXFCodecUL *codec_ul;
+    codec_ul = mxf_get_essence_container_ul(type);
+    mxf_write_local_tag(pb, 16, 0x3004);
+    put_buffer(pb, codec_ul->uid, 16);
+}
+
 static int mxf_write_multi_descriptor(AVFormatContext *s, KLVPacket *klv)
 {
     MXFContext *mxf = s->priv_data;
@@ -719,7 +727,6 @@ static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWrit
     MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     AVStream *st;
-    const MXFCodecUL *codec_ul = NULL;
 
     st = s->streams[stream_index];
 
@@ -736,9 +743,7 @@ static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWrit
     av_log(s, AV_LOG_DEBUG, "linked track ID:%d\n", stream_index);
 #endif
 
-    codec_ul = mxf_get_essence_container_ul(st->codec->codec_id);
-    mxf_write_local_tag(pb, 16, 0x3004);
-    put_buffer(pb, codec_ul->uid, 16);
+    mxf_write_essence_container_ul(pb, st->codec->codec_id);
 
     mxf_write_local_tag(pb, 4, 0x3203);
     put_be32(pb, st->codec->width);
@@ -762,7 +767,6 @@ static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableE
     MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     AVStream *st;
-    const MXFCodecUL *codec_ul = NULL;
 
     st = s->streams[stream_index];
 
@@ -777,9 +781,7 @@ static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableE
 #ifdef DEBUG
     PRINT_KEY(s, "wav desc uid", (*refs->track)[stream_index]);
 #endif
-    codec_ul = mxf_get_essence_container_ul(st->codec->codec_id);
-    mxf_write_local_tag(pb, 16, 0x3004);
-    put_buffer(pb, codec_ul->uid, 16);
+    mxf_write_essence_container_ul(pb, st->codec->codec_id);
 
     // write audio sampling rate
     mxf_write_local_tag(pb, 8, 0x3D03);
