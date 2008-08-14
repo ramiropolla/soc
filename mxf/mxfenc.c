@@ -215,15 +215,14 @@ static int mxf_generate_reference(AVFormatContext *s, UID **refs, int ref_count)
 static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
 {
     // Determine the best BER size
-    int size = 0;
-    uint64_t tmp = len;
+    int size;
     if (len < 128) {
         //short form
         put_byte(pb, len);
         return 1;
     }
 
-    size = (av_log2(tmp) >> 3) + 1;
+    size = (av_log2(len) >> 3) + 1;
 
     // long form
     put_byte(pb, 0x80 + size);
