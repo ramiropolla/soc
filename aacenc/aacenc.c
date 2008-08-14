@@ -533,18 +533,18 @@ static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, Channe
 /**
  * Encode pulse data.
  */
-static void encode_pulses(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
+static void encode_pulses(AVCodecContext *avctx, AACEncContext *s, Pulse *pulse, int channel)
 {
     int i;
 
-    put_bits(&s->pb, 1, !!cpe->ch[channel].pulse.num_pulse);
-    if(!cpe->ch[channel].pulse.num_pulse) return;
+    put_bits(&s->pb, 1, !!pulse->num_pulse);
+    if(!pulse->num_pulse) return;
 
-    put_bits(&s->pb, 2, cpe->ch[channel].pulse.num_pulse - 1);
-    put_bits(&s->pb, 6, cpe->ch[channel].pulse.start);
-    for(i = 0; i < cpe->ch[channel].pulse.num_pulse; i++){
-        put_bits(&s->pb, 5, cpe->ch[channel].pulse.offset[i]);
-        put_bits(&s->pb, 4, cpe->ch[channel].pulse.amp[i]);
+    put_bits(&s->pb, 2, pulse->num_pulse - 1);
+    put_bits(&s->pb, 6, pulse->start);
+    for(i = 0; i < pulse->num_pulse; i++){
+        put_bits(&s->pb, 5, pulse->offset[i]);
+        put_bits(&s->pb, 4, pulse->amp[i]);
     }
 }
 
@@ -652,7 +652,7 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
     if(!cpe->common_window) put_ics_info(avctx, &cpe->ch[channel].ics);
     encode_band_info(avctx, s, cpe, channel);
     encode_scale_factors(avctx, s, cpe, channel, global_gain);
-    encode_pulses(avctx, s, cpe, channel);
+    encode_pulses(avctx, s, &cpe->ch[channel].pulse, channel);
     encode_tns_data(avctx, s, cpe, channel);
     put_bits(&s->pb, 1, 0); //ssr
     encode_spectral_coeffs(avctx, s, cpe, channel);
