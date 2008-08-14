@@ -1018,13 +1018,18 @@ static int mxf_update_header_partition(AVFormatContext *s, int64_t footer_partit
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
 
-    url_fseek(pb, mxf->header_byte_count_offset, SEEK_SET);
-    put_be64(pb, mxf->header_byte_count);
-    put_flush_packet(pb);
+    if (!url_is_streamed(s->pb)) {
+        url_fseek(pb, mxf->header_byte_count_offset, SEEK_SET);
+        put_be64(pb, mxf->header_byte_count);
+        put_flush_packet(pb);
 
-    url_fseek(pb, mxf->header_footer_partition_offset, SEEK_SET);
-    put_be64(pb, footer_partition_offset);
-    put_flush_packet(pb);
+        url_fseek(pb, mxf->header_footer_partition_offset, SEEK_SET);
+        put_be64(pb, footer_partition_offset);
+        put_flush_packet(pb);
+    } else {
+        av_log(s, AV_LOG_ERROR, "update header partition failed, non streamble out put\n");
+        return -1;
+    }
     return 0;
 }
 
