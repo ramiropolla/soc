@@ -977,7 +977,7 @@ static int mux_write_header(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
     int64_t header_metadata_start;
 
-    // calculate the numner of essence container type
+    // calculate the number of essence container type
     mxf_build_essence_container_refs(s);
     mxf_write_partition(s, 0, 1, header_partition_key);
 
