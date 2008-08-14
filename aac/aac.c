@@ -90,10 +90,6 @@
 #include <math.h>
 #include <string.h>
 
-#ifndef CONFIG_HARDCODED_TABLES
-    static float ff_aac_pow2sf_tab[316];
-#endif /* CONFIG_HARDCODED_TABLES */
-
 static VLC vlc_scalefactors;
 static VLC vlc_spectral[11];
 

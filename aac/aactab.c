@@ -988,4 +988,8 @@ const float ff_aac_pow2sf_tab[316] = {
     2.68435456e+08, 3.19225354e+08, 3.79625062e+08, 4.51452825e+08,
 };
 
+#else
+
+float ff_aac_pow2sf_tab[316];
+
 #endif /* CONFIG_HARDCODED_TABLES */
