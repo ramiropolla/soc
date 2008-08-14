@@ -44,13 +44,13 @@ typedef struct WMA3DecodeContext {
     GetBitContext    gb;                       //< getbitcontext for the packet
     int              buf_bit_size;             //< buffer size in bits
 
-    /** Packet info */
+    /** packet info */
     uint8_t          packet_sequence_number;   //< current packet nr
     uint8_t          bit5;                     //< padding bit? (cbr files)
     uint8_t          bit6;
     uint8_t          packet_loss;              //< set in case of bitstream error
 
-    /** Stream info */
+    /** stream info */
     uint16_t         samples_per_frame;        //< nr of outputed samples
     uint16_t         log2_frame_size;          //< frame size
     uint8_t          lossless;                 //< lossless mode
@@ -58,12 +58,12 @@ typedef struct WMA3DecodeContext {
     int8_t           nb_channels;              //< nr of channels
     wma_channel_t    channel[MAX_CHANNELS];    //< per channel data
 
-    /** Extradata */
+    /** extradata */
     unsigned int     decode_flags;             //< used compression features
     unsigned int     dwChannelMask;
     uint8_t          sample_bit_depth;         //< bits per sample
 
-    /** General frame info */
+    /** general frame info */
     unsigned int     frame_num;                //< current frame number
     uint8_t          len_prefix;               //< frame is prefixed with its len
     uint8_t          allow_subframes;          //< frames may contain subframes
@@ -74,7 +74,7 @@ typedef struct WMA3DecodeContext {
     uint8_t          update_samples_per_frame; //< recalculate output size
 
 
-    /** Buffered frame data */
+    /** buffered frame data */
     int              prev_frame_bit_size;      //< saved number of bits
     uint8_t*         prev_frame;               //< prev frame data
 
