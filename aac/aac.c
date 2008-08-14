@@ -1042,8 +1042,9 @@ static void apply_intensity_stereo(ChannelElement * cpe, int ms_present) {
                             coef1[group*128 + k] = scale * coef0[group*128 + k];
                 }
             } else {
-                idx += sce1->band_type_run_end[idx] - i;
-                i    = sce1->band_type_run_end[idx];
+                int bt_run_end = sce1->band_type_run_end[idx];
+                idx += bt_run_end - i;
+                i    = bt_run_end;
             }
         }
         coef0 += ics->group_len[g]*128;
