@@ -733,7 +733,7 @@ static int decode_tns(AACContext * ac, TemporalNoiseShaping * tns,
         tns->n_filt[w] = get_bits(gb, 2 - is8);
 
         if (tns->n_filt[w])
-            coef_res = get_bits1(gb) + 3;
+            coef_res = get_bits1(gb);
 
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
             tns->length[w][filt] = get_bits(gb, 6 - 2*is8);
@@ -746,8 +746,8 @@ static int decode_tns(AACContext * ac, TemporalNoiseShaping * tns,
             }
             tns->direction[w][filt] = get_bits1(gb);
             coef_compress = get_bits1(gb);
-            coef_len = coef_res - coef_compress;
-            tns->tmp2_map[w][filt] = tns_tmp2_map[2*coef_compress + coef_res - 3];
+            coef_len = coef_res + 3 - coef_compress;
+            tns->tmp2_map[w][filt] = tns_tmp2_map[2*coef_compress + coef_res];
 
             for (i = 0; i < tns->order[w][filt]; i++)
                 tns->coef[w][filt][i] = get_bits(gb, coef_len);
