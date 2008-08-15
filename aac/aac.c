@@ -1276,7 +1276,7 @@ static void apply_tns(float coef[1024], TemporalNoiseShaping * tns, IndividualCh
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
             top = bottom;
             bottom = FFMAX(                  0, top - tns->length[w][filt]);
-            order  = FFMIN(tns->order[w][filt], TNS_MAX_ORDER);
+            order  = tns->order[w][filt];
             if (order == 0)
                 continue;
 
