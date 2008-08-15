@@ -41,9 +41,18 @@
  **********************************/
 
 /**
+ * Quantize one coefficient.
+ * @return absolute value of the quantized coefficient
+ * @see 3GPP TS26.403 5.6.2 "Scalefactor determination"
+ */
+static av_always_inline int quant(float coef, const float Q)
+{
+    return av_clip((int)(pow(fabsf(coef) * Q, 0.75) + 0.4054), 0, 8191);
+}
+
+/**
  * Convert coefficients to integers.
  * @return sum of coefficients
- * @see 3GPP TS26.403 5.6.2 "Scalefactor determination"
  */
 static inline int quantize_coeffs(float *in, int *out, int size, int scale_idx)
 {
@@ -51,8 +60,7 @@ static inline int quantize_coeffs(float *in, int *out, int size, int scale_idx)
     const float Q = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
     for(i = 0; i < size; i++){
         sign = in[i] > 0.0;
-        out[i] = (int)(pow(FFABS(in[i]) * Q, 0.75) + 0.4054);
-        out[i] = av_clip(out[i], 0, 8191);
+        out[i] = quant(in[i], Q);
         sum += out[i];
         if(sign) out[i] = -out[i];
     }
@@ -67,9 +75,7 @@ static inline float calc_distortion(float *c, int size, int scale_idx)
     const float Q  = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
     const float IQ = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
     for(i = 0; i < size; i++){
-        coef = FFABS(c[i]);
-        q = (int)(pow(FFABS(coef) * Q, 0.75) + 0.4054);
-        q = av_clip(q, 0, 8191);
+        q = quant(c[i], Q);
         unquant = (q * cbrt(q)) * IQ;
         sum += (coef - unquant) * (coef - unquant);
     }
