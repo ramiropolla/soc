@@ -57,6 +57,8 @@ typedef struct AlacEncodeContext {
     int write_sample_size;
     int32_t *sample_buf[MAX_CHANNELS];
     int32_t *predictor_buf;
+    int interlacing_shift;
+    int interlacing_leftweight;
     PutBitContext pbctx;
     RiceContext rc;
     LPCContext lpc[MAX_CHANNELS];
@@ -257,6 +259,21 @@ static void calc_predictor_params(AlacEncodeContext *s, int ch)
     quantize_lpc_coefs(lpc[order-1], order, MAX_LPC_PRECISION, s->lpc[ch].lpc_coeff, &s->lpc[ch].lpc_quant);
 }
 
+static void alac_stereo_decorrelation(AlacEncodeContext *s)
+{
+    int32_t *left = s->sample_buf[0], *right = s->sample_buf[1];
+    int32_t tmp;
+    int i;
+
+    for(i=0; i<s->avctx->frame_size; i++) {
+        tmp = left[i];
+        left[i] = (tmp + right[i]) >> 1;
+        right[i] = tmp - right[i];
+    }
+    s->interlacing_leftweight = 1;
+    s->interlacing_shift = 1;
+}
+
 static void alac_linear_predictor(AlacEncodeContext *s, int ch)
 {
     int i;
@@ -373,8 +390,10 @@ static void write_compressed_frame(AlacEncodeContext *s)
 {
     int i, j;
 
-    put_bits(&s->pbctx, 8, 0);      // FIXME: interlacing shift
-    put_bits(&s->pbctx, 8, 0);      // FIXME: interlacing leftweight
+    /* only simple mid/side decorrelation supported as of now */
+    alac_stereo_decorrelation(s);
+    put_bits(&s->pbctx, 8, s->interlacing_shift);
+    put_bits(&s->pbctx, 8, s->interlacing_leftweight);
 
     for(i=0;i<s->channels;i++) {
 
