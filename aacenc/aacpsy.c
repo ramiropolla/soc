@@ -89,7 +89,6 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
 {
     int i, w, w2, wg, g, ch;
     int start, sum, maxsfb, cmaxsfb;
-    int pulses, poff[4], pamp[4];
 
     for(ch = 0; ch < chans; ch++){
         start = 0;
