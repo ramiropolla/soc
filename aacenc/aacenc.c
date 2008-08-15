@@ -27,7 +27,7 @@
 /***********************************
  *              TODOs:
  * psy model selection with some option
- * change greedy codebook search into something more optimal, like Viterbi algorithm
+ * change greedy codebook search into something more optimal, like Viterbi algorithm, add sane pulse detection
  * determine run lengths along with codebook
  ***********************************/
 

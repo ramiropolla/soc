@@ -41,7 +41,6 @@ enum AACPsyModelMode{
 };
 
 #define PSY_MODEL_MODE_MASK  0x0000000F ///< bit fields for storing mode (CBR, ABR, VBR)
-#define PSY_MODEL_NO_PULSE   0x00000010 ///< disable pulse searching
 #define PSY_MODEL_NO_SWITCH  0x00000020 ///< disable window switching
 #define PSY_MODEL_NO_ST_ATT  0x00000040 ///< disable stereo attenuation
 #define PSY_MODEL_NO_LOWPASS 0x00000080 ///< disable low-pass filtering

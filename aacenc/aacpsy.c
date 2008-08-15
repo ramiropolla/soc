@@ -79,7 +79,7 @@ static inline float calc_distortion(float *c, int size, int scale_idx)
 /**
  * Produce integer coefficients from scalefactors provided by the model.
  */
-static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans, int search_pulses)
+static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans)
 {
     int i, w, w2, wg, g, ch;
     int start, sum, maxsfb, cmaxsfb;
@@ -104,33 +104,6 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
                 else
                     memset(cpe->ch[ch].icoefs + start, 0, cpe->ch[ch].ics.swb_sizes[g] * sizeof(cpe->ch[0].icoefs[0]));
                 cpe->ch[ch].zeroes[w][g] = !sum;
-                //try finding pulses
-                if(search_pulses && cpe->ch[ch].ics.num_windows == 1 && !cpe->ch[ch].pulse.num_pulse){
-                    pulses = 0;
-                    memset(poff,0,sizeof(poff));
-                    memset(pamp,0,sizeof(pamp));
-                    for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++){
-                        if(pulses > 4 || (pulses && i > cpe->ch[ch].pulse.offset[pulses-1] - 31)) break;
-                        if(FFABS(cpe->ch[ch].icoefs[start+i]) > 4 && pulses < 4){
-                            poff[pulses] = i;
-                            pamp[pulses] = FFMIN(FFABS(cpe->ch[ch].icoefs[start+i]) - 1, 15);
-                            pulses++;
-                        }
-                    }
-                    if(pulses){
-                        cpe->ch[ch].pulse.start = g;
-                        cpe->ch[ch].pulse.num_pulse = pulses;
-                        for(i = 0; i < pulses; i++){
-                            cpe->ch[ch].pulse.amp[i] = pamp[i];
-                            cpe->ch[ch].pulse.offset[i] = i ? poff[i] - poff[i-1] : poff[0];
-
-                            if(cpe->ch[ch].icoefs[start+poff[i]] > 0)
-                                cpe->ch[ch].icoefs[start+poff[i]] -= pamp[i];
-                            else
-                                cpe->ch[ch].icoefs[start+poff[i]] += pamp[i];
-                        }
-                    }
-                }
                 start += cpe->ch[ch].ics.swb_sizes[g];
             }
             for(cmaxsfb = cpe->ch[ch].ics.num_swb; cmaxsfb > 0 && cpe->ch[ch].zeroes[w][cmaxsfb-1]; cmaxsfb--);
@@ -222,7 +195,7 @@ static void psy_null_process(AACPsyContext *apc, int tag, int type, ChannelEleme
             if(!cpe->ch[ch].zeroes[0][g])
                 cpe->ch[ch].sf_idx[0][g] = FFMIN(minscale + SCALE_MAX_DIFF, cpe->ch[ch].sf_idx[0][g]);
     }
-    psy_create_output(apc, cpe, chans, 1);
+    psy_create_output(apc, cpe, chans);
 }
 
 static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe)
@@ -288,7 +261,7 @@ static void psy_null8_process(AACPsyContext *apc, int tag, int type, ChannelElem
             }
         }
     }
-    psy_create_output(apc, cpe, chans, 0);
+    psy_create_output(apc, cpe, chans);
 }
 
 /**
@@ -837,7 +810,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     }
 
     memcpy(pch->prev_band, pch->band, sizeof(pch->band));
-    psy_create_output(apc, cpe, chans, !(apc->flags & PSY_MODEL_NO_PULSE));
+    psy_create_output(apc, cpe, chans);
 }
 
 static av_cold void psy_3gpp_end(AACPsyContext *apc)
