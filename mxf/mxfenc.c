@@ -320,7 +320,6 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
 {
     MXFContext *mxf = s->priv_data;
     MXFReferenceContext *refs = &mxf->reference;
-    UID uid;
     ByteIOContext *pb = s->pb;
 
     AV_WB24(klv->key + 13, 0x012f00);
