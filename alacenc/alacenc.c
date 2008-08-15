@@ -132,13 +132,13 @@ static void encode_scalar(AlacEncodeContext *s, int x, int k, int write_sample_s
     }
 }
 
-static void write_frame_header(AlacEncodeContext *s)
+static void write_frame_header(AlacEncodeContext *s, int is_verbatim)
 {
     put_bits(&s->pbctx, 3,  s->channels-1);                 // No. of channels -1
     put_bits(&s->pbctx, 16, 0);                             // Seems to be zero
     put_bits(&s->pbctx, 1,  1);                             // Sample count is in the header
     put_bits(&s->pbctx, 2,  0);                             // FIXME: Wasted bytes field
-    put_bits(&s->pbctx, 1,  !s->compression_level);         // Audio block is verbatim
+    put_bits(&s->pbctx, 1,  is_verbatim);                   // Audio block is verbatim
     put_bits(&s->pbctx, 32, s->avctx->frame_size);          // No. of samples in the frame
 }
 
@@ -362,7 +362,7 @@ static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
 {
     AlacEncodeContext *s = avctx->priv_data;
     PutBitContext *pb = &s->pbctx;
-    int i;
+    int i, out_bytes;
 
     if(avctx->frame_size > DEFAULT_FRAME_SIZE) {
         av_log(avctx, AV_LOG_ERROR, "input frame size exceeded\n");
@@ -375,22 +375,45 @@ static int alac_encode_frame(AVCodecContext *avctx, uint8_t *frame,
     }
 
     init_put_bits(pb, frame, buf_size);
-    write_frame_header(s);
 
     if(s->compression_level == 0) {
         // Verbatim mode
         int16_t *samples = data;
+        write_frame_header(s, 1);
         for(i=0; i<avctx->frame_size*s->channels; i++) {
             put_sbits(pb, 16, *samples++);
         }
     } else {
         init_sample_buffers(s, data);
+        write_frame_header(s, 0);
         write_compressed_frame(s);
     }
 
     put_bits(pb, 3, 7);
     flush_put_bits(pb);
-    return(put_bits_count(pb)>>3);
+    out_bytes = put_bits_count(pb) >> 3;
+
+    if(out_bytes > s->max_coded_frame_size) {
+        /* frame too large. use verbatim mode */
+        int16_t *samples = data;
+        init_put_bits(pb, frame, buf_size);
+        write_frame_header(s, 0);
+
+        for(i=0; i<avctx->frame_size*s->channels; i++) {
+            put_sbits(pb, 16, *samples++);
+        }
+        put_bits(pb, 3, 7);
+        flush_put_bits(pb);
+        out_bytes = put_bits_count(pb) >> 3;
+
+        if(out_bytes > s->max_coded_frame_size || out_bytes >= buf_size) {
+            /* still too large. must be an error. */
+            av_log(avctx, AV_LOG_ERROR, "error encoding frame\n");
+            return -1;
+        }
+    }
+
+    return out_bytes;
 }
 
 static av_cold int alac_encode_close(AVCodecContext *avctx)
