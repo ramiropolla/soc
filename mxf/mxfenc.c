@@ -298,7 +298,6 @@ static void mxf_free(AVFormatContext *s)
     int i;
 
     av_freep(&mxf->reference.identification);
-    av_freep(mxf->reference.package);
     av_freep(&mxf->reference.package);
     av_freep(&mxf->reference.content_storage);
     for (i = 0; i < s->nb_streams; i++) {
@@ -446,13 +445,10 @@ static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
     PRINT_KEY(s, "content storage uid", pb->buf_ptr - 16);
 #endif
     // write package reference
-    refs->package= av_mallocz(s->nb_streams * sizeof(*refs->package));
-    if (!refs->package)
-        return AVERROR(ENOMEM);
-    if (mxf_generate_reference(s, refs->package, 2) < 0)
-        return -1;
     mxf_write_local_tag(pb, 16 * 2 + 8, 0x1901);
-    mxf_write_reference(pb, 2, **refs->package);
+    mxf_write_refs_count(pb, 2);
+    mxf_write_uuid(pb, MaterialPackage, 0);
+    mxf_write_uuid(pb, SourcePackage, 0);
     return 0;
 }
 
@@ -477,11 +473,11 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     // write uid
     i = type == MaterialPackage ? 0 : 1;
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, (*refs->package)[i], 16);
+    mxf_write_uuid(pb, type, 0);
 #ifdef DEBUG
     av_log(s,AV_LOG_DEBUG, "package type:%d\n", type);
     PRINT_KEY(s, "package", klv->key);
-    PRINT_KEY(s, "package uid", (*refs->package)[i]);
+    PRINT_KEY(s, "package uid", pb->buf_ptr - 16);
     PRINT_KEY(s, "package umid first part", umid);
     PRINT_KEY(s, "package umid second part", umid + 16);
 #endif
