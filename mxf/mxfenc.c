@@ -220,6 +220,12 @@ static void mxf_write_uuid(ByteIOContext *pb, enum CodecID type, int value)
     put_be16(pb, value);
 }
 
+static void mxf_write_refs_count(ByteIOContext *pb, int ref_count)
+{
+    put_be32(pb, ref_count);
+    put_be32(pb, 16);
+}
+
 static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
 {
     // Determine the best BER size
