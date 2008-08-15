@@ -30,7 +30,7 @@
 #define ALAC_FRAME_FOOTER_SIZE    3
 
 #define ALAC_ESCAPE_CODE          0x1FF
-#define MAX_LPC_COEFFS            31
+#define MAX_LPC_ORDER             30
 
 typedef struct RiceContext {
     int history_mult;
@@ -41,7 +41,7 @@ typedef struct RiceContext {
 
 typedef struct LPCContext {
     int lpc_order;
-    int lpc_coeff[MAX_LPC_COEFFS];
+    int lpc_coeff[MAX_LPC_ORDER+1];
     int lpc_quant;
 } LPCContext;
 
