@@ -794,8 +794,10 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
             }
         for(w = 0; w < cpe->ch[ch].ics.num_windows; w++)
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                if(cpe->ch[ch].zeroes[w][g]) continue;
-                cpe->ch[ch].sf_idx[w][g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[w][g], 0, SCALE_MAX_POS);
+                if(cpe->ch[ch].zeroes[w][g])
+                    cpe->ch[ch].sf_idx[w][g] = 256;
+                else
+                    cpe->ch[ch].sf_idx[w][g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[w][g], 0, SCALE_MAX_POS);
             }
 
         //adjust scalefactors for window groups
