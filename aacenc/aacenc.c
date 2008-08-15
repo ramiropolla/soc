@@ -166,7 +166,6 @@ typedef struct {
     MDCTContext mdct128;                         ///< short (128 samples) frame transform context
     DSPContext  dsp;
     DECLARE_ALIGNED_16(FFTSample, output[2048]); ///< temporary buffer for MDCT input coefficients
-    DECLARE_ALIGNED_16(FFTSample, tmp[1024]);    ///< temporary buffer used by MDCT
     int16_t* samples;                            ///< saved preprocessed input
 
     int samplerate_index;                        ///< MPEG-4 samplerate index
@@ -230,8 +229,8 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     // window init
     ff_kbd_window_init(ff_aac_kbd_long_1024, 4.0, 1024);
     ff_kbd_window_init(ff_aac_kbd_short_128, 6.0, 128);
-    ff_sine_window_init(ff_aac_sine_long_1024, 1024);
-    ff_sine_window_init(ff_aac_sine_short_128, 128);
+    ff_sine_window_init(ff_sine_1024, 1024);
+    ff_sine_window_init(ff_sine_128, 128);
 
     s->samples = av_malloc(2 * 1024 * avctx->channels * sizeof(s->samples[0]));
     s->cpe = av_mallocz(sizeof(ChannelElement) * aac_chan_configs[avctx->channels-1][0]);
@@ -248,9 +247,9 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
 static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, short *audio, int channel)
 {
     int i, j, k;
-    const float * lwindow = cpe->ch[channel].ics.use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_aac_sine_long_1024;
-    const float * swindow = cpe->ch[channel].ics.use_kb_window[0] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
-    const float * pwindow = cpe->ch[channel].ics.use_kb_window[1] ? ff_aac_kbd_short_128 : ff_aac_sine_short_128;
+    const float * lwindow = cpe->ch[channel].ics.use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_sine_1024;
+    const float * swindow = cpe->ch[channel].ics.use_kb_window[0] ? ff_aac_kbd_short_128 : ff_sine_128;
+    const float * pwindow = cpe->ch[channel].ics.use_kb_window[1] ? ff_aac_kbd_short_128 : ff_sine_128;
 
     if (cpe->ch[channel].ics.window_sequence[0] != EIGHT_SHORT_SEQUENCE) {
         memcpy(s->output, cpe->ch[channel].saved, sizeof(float)*1024);
@@ -278,7 +277,7 @@ static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s, Chann
             for(i = 0; i < 1024; i++, j += avctx->channels)
                 cpe->ch[channel].saved[i] = audio[j];
         }
-        ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs, s->output, s->tmp);
+        ff_mdct_calc(&s->mdct1024, cpe->ch[channel].coeffs, s->output);
     }else{
         j = channel;
         for (k = 0; k < 1024; k += 128) {
@@ -286,7 +285,7 @@ static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s, Chann
                 s->output[i - 448 - k] = (i < 1024) ? cpe->ch[channel].saved[i] : audio[channel + (i-1024)*avctx->channels] / 512.0;
             s->dsp.vector_fmul        (s->output,     k ?  swindow : pwindow, 128);
             s->dsp.vector_fmul_reverse(s->output+128, s->output+128, swindow, 128);
-            ff_mdct_calc(&s->mdct128, cpe->ch[channel].coeffs + k, s->output, s->tmp);
+            ff_mdct_calc(&s->mdct128, cpe->ch[channel].coeffs + k, s->output);
         }
         j = channel;
         for(i = 0; i < 1024; i++, j += avctx->channels)
