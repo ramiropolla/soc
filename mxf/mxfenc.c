@@ -499,13 +499,10 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     put_be64(pb, 0);
 
     // write track refs
-    refs->track = av_mallocz(s->nb_streams * sizeof(*refs->track));
-    if (!refs->track)
-        return AVERROR(ENOMEM);
-    if (mxf_generate_reference(s, refs->track, s->nb_streams) < 0)
-        return -1;
     mxf_write_local_tag(pb, s->nb_streams * 16 + 8, 0x4403);
-    mxf_write_reference(pb, s->nb_streams, **refs->track);
+    mxf_write_refs_count(pb, s->nb_streams);
+    for (i = 0; i < s->nb_streams; i++)
+        mxf_write_uuid(pb, Track * type, i);
 
     // malloc memory for track number sign
     if (type == SourcePackage) {
@@ -539,10 +536,10 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
 
     // write track uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, (*refs->track)[stream_index], 16);
+    mxf_write_uuid(pb, Track * type, stream_index);
 #ifdef DEBUG
     PRINT_KEY(s, "track key", klv->key);
-    PRINT_KEY(s, "track uid", (*refs->track)[stream_index]);
+    PRINT_KEY(s, "track uid", pb->buf_ptr - 16);
 #endif
     // write track id
     mxf_write_local_tag(pb, 4, 0x4801);
@@ -742,7 +739,6 @@ static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWrit
     mxf_write_local_tag(pb, 4, 0x3006);
     put_be32(pb, stream_index);
 #ifdef DEBUG
-    PRINT_KEY(s, "mpeg2video uid", (*refs->track)[stream_index]);
     av_log(s, AV_LOG_DEBUG, "linked track ID:%d\n", stream_index);
 #endif
 
@@ -782,7 +778,7 @@ static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableE
     mxf_write_local_tag(pb, 4, 0x3006);
     put_be32(pb, stream_index);
 #ifdef DEBUG
-    PRINT_KEY(s, "wav desc uid", (*refs->track)[stream_index]);
+//    PRINT_KEY(s, "wav desc uid", (*refs->track)[stream_index]);
 #endif
     mxf_write_essence_container_ul(pb, st->codec->codec_id);
 
@@ -854,7 +850,6 @@ fail:
         av_freep(&sc->structural_component_refs);
         av_freep(&sc->sequence_refs);
     }
-    av_freep(refs->track);
     av_freep(&refs->track);
     return ret;
 }
