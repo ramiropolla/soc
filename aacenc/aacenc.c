@@ -27,8 +27,7 @@
 /***********************************
  *              TODOs:
  * psy model selection with some option
- * change greedy codebook search into something more optimal, like Viterbi algorithm, add sane pulse detection
- * determine run lengths along with codebook
+ * add sane pulse detection
  ***********************************/
 
 #include "avcodec.h"
@@ -158,6 +157,15 @@ static const uint8_t aac_chan_configs[6][5] = {
 };
 
 /**
+ * structure used in optimal codebook search
+ */
+typedef struct BandCodingPath {
+    int prev_idx; ///< pointer to the previous path point
+    int codebook; ///< codebook for coding band run
+    int bits;     ///< number of bit needed to code given number of bands
+} BandCodingPath;
+
+/**
  * AAC encoder context
  */
 typedef struct {
@@ -177,6 +185,8 @@ typedef struct {
     ChannelElement *cpe;                         ///< channel elements
     AACPsyContext psy;                           ///< psychoacoustic model context
     int last_frame;
+    BandCodingPath path[64];                     ///< auxiliary data needed for optimal band info coding
+    int band_bits[64][12];                       ///< bits needed to encode each band with each codebook
 } AACEncContext;
 
 /**
@@ -339,78 +349,180 @@ static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
 }
 
 /**
- * Scan scalefactor band and determine optimal codebook for it.
+ * Return number of bits needed to write codebook run length value.
+ *
+ * @param run     run length
+ * @param bits    number of bits used to code value (5 for long frames, 3 for short frames)
+ */
+static av_always_inline int calculate_run_bits(int run, const int bits)
+{
+    int esc = (1 << bits) - 1;
+    return (1 + (run >= esc)) * bits;
+}
+
+/**
+ * Calculate the number of bits needed to code given band with given codebook.
  *
  * @param s       encoder context
  * @param cpe     channel element
  * @param channel channel number inside channel pair
  * @param win     window group start number
- * @param band    scalefactor band to analyze
  * @param start   scalefactor band position in spectral coefficients
  * @param size    scalefactor band size
+ * @param cb      codebook number
  */
-static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int channel, int win, int group_len, int band, int start, int size)
+static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channel, int win, int group_len, int start, int size, int cb)
 {
     int i, j, w;
-    int maxval, sign;
-    int score, best, cb, bestcb, dim, idx, start2;
+    int score = 0, dim, idx, start2;
+    int range;
 
-    maxval = 0;
-    sign = 0;
-    w = win;
+    if(!cb) return 0;
+    cb--;
+    dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
+    if(aac_cb_info[cb].flags & CB_UNSIGNED)
+        range = aac_cb_info[cb].maxval + 1;
+    else
+        range = aac_cb_info[cb].maxval*2 + 1;
+
     start2 = start;
-    for(w = win; w < win + group_len; w++){
-        for(i = start2; i < start2 + size; i++){
-            maxval = FFMAX(maxval, FFABS(cpe->ch[channel].icoefs[i]));
-            if(cpe->ch[channel].icoefs[i] < 0) sign = 1;
+    if(aac_cb_info[cb].flags & CB_ESCAPE){
+        int coef_abs[2];
+        for(w = win; w < win + group_len; w++){
+            for(i = start2; i < start2 + size; i += dim){
+                idx = 0;
+                for(j = 0; j < dim; j++)
+                    coef_abs[j] = FFABS(cpe->ch[channel].icoefs[i+j]);
+                for(j = 0; j < dim; j++)
+                    idx = idx*17 + FFMIN(coef_abs[j], 16);
+                score += ff_aac_spectral_bits[cb][idx];
+                for(j = 0; j < dim; j++)
+                    if(cpe->ch[channel].icoefs[i+j])
+                        score++;
+                for(j = 0; j < dim; j++)
+                    if(coef_abs[j] > 15)
+                        score += av_log2(coef_abs[j]) * 2 - 4 + 1;
+            }
+            start2 += 128;
+       }
+    }else if(aac_cb_info[cb].flags & CB_UNSIGNED){
+        for(w = win; w < win + group_len; w++){
+            for(i = start2; i < start2 + size; i += dim){
+                idx = 0;
+                for(j = 0; j < dim; j++)
+                    idx = idx * range + FFABS(cpe->ch[channel].icoefs[i+j]);
+                score += ff_aac_spectral_bits[cb][idx];
+                for(j = 0; j < dim; j++)
+                     if(cpe->ch[channel].icoefs[i+j])
+                         score++;
+            }
+            start2 += 128;
         }
-        start2 += 128;
+    }else{
+        for(w = win; w < win + group_len; w++){
+            for(i = start2; i < start2 + size; i += dim){
+                idx = 0;
+                for(j = 0; j < dim; j++)
+                    idx = idx * range + cpe->ch[channel].icoefs[i+j] + aac_cb_info[cb].maxval;
+                score += ff_aac_spectral_bits[cb][idx];
+            }
+            start2 += 128;
+        }
     }
+    return score;
+}
 
-    if(maxval > 12) return 11;
-    if(!maxval) return 0;
+/**
+ * Encode band info for single window group bands.
+ */
+static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int channel, int win, int group_len){
+    int maxval;
+    int w, swb, cb, ccb, start, start2, size;
+    int i, j, k;
+    const int max_sfb = cpe->ch[channel].ics.max_sfb;
+    const int run_bits = cpe->ch[channel].ics.num_windows == 1 ? 5 : 3;
+    const int run_esc = (1 << run_bits) - 1;
+    int bits, idx, count;
+    int stack[64], stack_len;
 
-    for(cb = 0; cb < 12; cb++)
-        if(aac_cb_info[cb].maxval >= maxval)
-            break;
-    best = INT_MAX;
-    bestcb = 11;
-    for(; cb < 12; cb++){
-        score = 0;
-        dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
-        if(!band || cpe->ch[channel].band_type[win][band - 1] != cb)
-            score += 9; //that's for new codebook entry
+    start = win*128;
+    for(swb = 0; swb < max_sfb; swb++){
+        maxval = 0;
         start2 = start;
-        if(aac_cb_info[cb].flags & CB_UNSIGNED){
+        size = cpe->ch[channel].ics.swb_sizes[swb];
+        if(cpe->ch[channel].zeroes[win][swb])
+            maxval = 0;
+        else{
             for(w = win; w < win + group_len; w++){
-                for(i = start2; i < start2 + size; i += dim){
-                    idx = 0;
-                    for(j = 0; j < dim; j++)
-                        idx = idx * aac_cb_info[cb].maxval + FFABS(cpe->ch[channel].icoefs[i+j]);
-                    score += ff_aac_spectral_bits[aac_cb_info[cb].cb_num][idx];
-                    for(j = 0; j < dim; j++)
-                        if(cpe->ch[channel].icoefs[i+j])
-                            score++;
-                }
-                start2 += 128;
-            }
-        }else{
-            for(w = win; w < win + group_len; w++){
-                for(i = start2; i < start2 + size; i += dim){
-                    idx = 0;
-                    for(j = 0; j < dim; j++)
-                        idx = idx * (aac_cb_info[cb].maxval*2 + 1) + cpe->ch[channel].icoefs[i+j] + aac_cb_info[cb].maxval;
-                    score += ff_aac_spectral_bits[aac_cb_info[cb].cb_num][idx];
+                for(i = start2; i < start2 + size; i++){
+                    maxval = FFMAX(maxval, FFABS(cpe->ch[channel].icoefs[i]));
                 }
                 start2 += 128;
             }
         }
-        if(score < best){
-            best = score;
-            bestcb = cb;
+        for(cb = 0; cb < 12; cb++){
+            if(aac_cb_info[cb].maxval < maxval)
+                s->band_bits[swb][cb] = INT_MAX;
+            else
+                s->band_bits[swb][cb] = calculate_band_bits(s, cpe, channel, win, group_len, start, size, cb);
+        }
+        start += cpe->ch[channel].ics.swb_sizes[swb];
+    }
+    s->path[0].bits = 0;
+    for(i = 1; i <= max_sfb; i++)
+        s->path[i].bits = INT_MAX;
+    for(i = 0; i < max_sfb; i++){
+        for(j = 1; j <= max_sfb - i; j++){
+            bits = INT_MAX;
+            ccb = 0;
+            for(cb = 0; cb < 12; cb++){
+                int sum = 0;
+                for(k = 0; k < j; k++){
+                    if(s->band_bits[i + k][cb] == INT_MAX){
+                        sum = INT_MAX;
+                        break;
+                    }
+                    sum += s->band_bits[i + k][cb];
+                }
+                if(sum < bits){
+                    bits = sum;
+                    ccb  = cb;
+                }
+            }
+            assert(bits != INT_MAX);
+            bits += s->path[i].bits + calculate_run_bits(j, run_bits);
+            if(bits < s->path[i+j].bits){
+                s->path[i+j].bits     = bits;
+                s->path[i+j].codebook = ccb;
+                s->path[i+j].prev_idx = i;
+            }
         }
     }
-    return bestcb;
+
+    //convert resulting path from backward-linked list
+    stack_len = 0;
+    idx = max_sfb;
+    while(idx > 0){
+        stack[stack_len++] = idx;
+        idx = s->path[idx].prev_idx;
+    }
+
+    //perform actual band info encoding
+    start = 0;
+    for(i = stack_len - 1; i >= 0; i--){
+        put_bits(&s->pb, 4, s->path[stack[i]].codebook);
+        count = stack[i] - s->path[stack[i]].prev_idx;
+        for(j = 0; j < count; j++){
+            cpe->ch[channel].band_type[win][start] =  s->path[stack[i]].codebook;
+            cpe->ch[channel].zeroes[win][start]    = !s->path[stack[i]].codebook;
+            start++;
+        }
+        while(count >= run_esc){
+            put_bits(&s->pb, run_bits, run_esc);
+            count -= run_esc;
+        }
+        put_bits(&s->pb, run_bits, count);
+    }
 }
 
 /**
@@ -478,35 +590,11 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
  */
 static void encode_band_info(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
-    int i, w, wg;
-    int bits = cpe->ch[channel].ics.num_windows == 1 ? 5 : 3;
-    int esc = (1 << bits) - 1;
-    int count;
+    int w, wg;
 
     w = 0;
     for(wg = 0; wg < cpe->ch[channel].ics.num_window_groups; wg++){
-        count = 0;
-        for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
-            if(!i || cpe->ch[channel].band_type[w][i] != cpe->ch[channel].band_type[w][i-1]){
-                if(count){
-                    while(count >= esc){
-                        put_bits(&s->pb, bits, esc);
-                        count -= esc;
-                    }
-                    put_bits(&s->pb, bits, count);
-                }
-                put_bits(&s->pb, 4, cpe->ch[channel].band_type[w][i]);
-                count = 1;
-            }else
-                count++;
-        }
-        if(count){
-            while(count >= esc){
-                put_bits(&s->pb, bits, esc);
-                count -= esc;
-            }
-            put_bits(&s->pb, bits, count);
-        }
+        encode_window_bands_info(s, cpe, channel, w, cpe->ch[channel].ics.group_len[wg]);
         w += cpe->ch[channel].ics.group_len[wg];
     }
 }
@@ -622,22 +710,8 @@ static void encode_spectral_coeffs(AVCodecContext *avctx, AACEncContext *s, Chan
 static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe, int channel)
 {
     AACEncContext *s = avctx->priv_data;
-    int i, g, w, wg;
+    int g, w, wg;
     int global_gain;
-
-    w = 0;
-    for(wg = 0; wg < cpe->ch[channel].ics.num_window_groups; wg++){
-        i = w << 7;
-        for(g = 0; g < cpe->ch[channel].ics.max_sfb; g++){
-            if(!cpe->ch[channel].zeroes[w][g]){
-                cpe->ch[channel].band_type[w][g] = determine_section_info(s, cpe, channel, w, cpe->ch[channel].ics.group_len[wg], g, i, cpe->ch[channel].ics.swb_sizes[g]);
-                cpe->ch[channel].zeroes[w][g] = !cpe->ch[channel].band_type[w][g];
-            }else
-                cpe->ch[channel].band_type[w][g] = 0;
-            i += cpe->ch[channel].ics.swb_sizes[g];
-        }
-        w += cpe->ch[channel].ics.group_len[wg];
-    }
 
     //determine global gain as standard recommends - the first scalefactor value
     global_gain = 0;
