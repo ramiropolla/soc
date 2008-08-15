@@ -75,6 +75,7 @@ static inline float calc_distortion(float *c, int size, int scale_idx)
     const float Q  = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
     const float IQ = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
     for(i = 0; i < size; i++){
+        coef = fabs(c[i]);
         q = quant(c[i], Q);
         unquant = (q * cbrt(q)) * IQ;
         sum += (coef - unquant) * (coef - unquant);
