@@ -45,7 +45,7 @@
  * @return sum of coefficients
  * @see 3GPP TS26.403 5.6.2 "Scalefactor determination"
  */
-static inline int convert_coeffs(float *in, int *out, int size, int scale_idx)
+static inline int quantize_coeffs(float *in, int *out, int size, int scale_idx)
 {
     int i, sign, sum = 0;
     for(i = 0; i < size; i++){
@@ -100,7 +100,7 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
                     }
                 }
                 if(!cpe->ch[ch].zeroes[w][g])
-                    sum = convert_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, cpe->ch[ch].ics.swb_sizes[g], cpe->ch[ch].sf_idx[w][g]);
+                    sum = quantize_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, cpe->ch[ch].ics.swb_sizes[g], cpe->ch[ch].sf_idx[w][g]);
                 else
                     memset(cpe->ch[ch].icoefs + start, 0, cpe->ch[ch].ics.swb_sizes[g] * sizeof(cpe->ch[0].icoefs[0]));
                 cpe->ch[ch].zeroes[w][g] = !sum;
