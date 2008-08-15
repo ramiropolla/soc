@@ -77,6 +77,7 @@ typedef struct {
     enum CodecType type;
 } MXFDescriptorWriteTableEntry;
 
+static const uint8_t uuid_base[]            = { 0xAD,0xAB,0x44,0x24,0x2f,0x25,0x4d,0xc7,0x92,0xff,0x29,0xbd };
 static const uint8_t umid_base[]            = { 0x06,0x0A,0x2B,0x34,0x01,0x01,0x01,0x01,0x01,0x01,0x0F,0x00,0x13,0x00,0x00,0x00 };
 
 /**
@@ -212,6 +213,13 @@ static int mxf_generate_reference(AVFormatContext *s, UID **refs, int ref_count)
     return 0;
 }
 
+static void mxf_write_uuid(ByteIOContext *pb, enum CodecID type, int value)
+{
+    put_buffer(pb, uuid_base, 12);
+    put_be16(pb, type);
+    put_be16(pb, value);
+}
+
 static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
 {
     // Determine the best BER size
@@ -321,13 +329,11 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     klv_encode_ber_length(pb, 130 + 16 * mxf->essence_container_count);
 
     // write preface set uid
-    mxf_generate_uuid(s, uid);
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, uid, 16);
-
+    mxf_write_uuid(pb, Preface, 0);
 #ifdef DEBUG
     PRINT_KEY(s, "preface key", klv->key);
-    PRINT_KEY(s, "preface uid", uid);
+    PRINT_KEY(s, "preface uid", pb->buf_ptr - 16);
 #endif
 
     // write create date as unknown

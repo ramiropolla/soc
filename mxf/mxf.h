@@ -37,6 +37,7 @@ enum MXFMetadataSetType {
     Descriptor,
     Track,
     CryptoContext,
+    Preface,
 };
 
 typedef struct {
