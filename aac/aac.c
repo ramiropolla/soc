@@ -893,7 +893,7 @@ static int decode_spectrum_and_dequant(AACContext * ac, float coef[1024], GetBit
                 }
             }
         }
-        coef      += ics->group_len[g]<<7;
+        coef += ics->group_len[g]<<7;
     }
 
     if (pulse_present) {
