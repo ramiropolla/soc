@@ -726,7 +726,7 @@ static void decode_pulses(Pulse * pulse, GetBitContext * gb, const uint16_t * sw
  */
 static int decode_tns(AACContext * ac, TemporalNoiseShaping * tns,
         GetBitContext * gb, const IndividualChannelStream * ics) {
-    int w, filt, i, coef_len, coef_res = 0, coef_compress;
+    int w, filt, i, coef_len, coef_res, coef_compress;
     const int is8 = ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE;
     const int tns_max_order = is8 ? 7 : ac->m4ac.object_type == AOT_AAC_MAIN ? 20 : 12;
     for (w = 0; w < ics->num_windows; w++) {
