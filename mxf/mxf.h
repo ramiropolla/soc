@@ -39,6 +39,7 @@ enum MXFMetadataSetType {
     CryptoContext,
     Preface,
     Identification,
+    ContentStorage,
 };
 
 typedef struct {

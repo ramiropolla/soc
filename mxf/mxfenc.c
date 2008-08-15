@@ -355,10 +355,8 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     mxf_write_uuid(pb, Identification, 0);
 
     // write content_storage_refs
-    if (mxf_generate_reference(s, &refs->content_storage, 1) < 0)
-        return -1;
     mxf_write_local_tag(pb, 16, 0x3B03);
-    put_buffer(pb, *refs->content_storage, 16);
+    mxf_write_uuid(pb, ContentStorage, 0);
 
     mxf_write_local_tag(pb, 16, 0x3B09);
     put_buffer(pb, op1a_ul, 16);
@@ -442,10 +440,10 @@ static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
 
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, *refs->content_storage, 16);
+    mxf_write_uuid(pb, ContentStorage, 0);
 #ifdef DEBUG
     PRINT_KEY(s, "content storage key", klv->key);
-    PRINT_KEY(s, "content storage uid", *refs->content_storage);
+    PRINT_KEY(s, "content storage uid", pb->buf_ptr - 16);
 #endif
     // write package reference
     refs->package= av_mallocz(s->nb_streams * sizeof(*refs->package));
