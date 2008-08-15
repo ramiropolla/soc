@@ -58,9 +58,6 @@ static inline int quantize_coeffs(float *in, int *out, int size, int scale_idx)
     return sum;
 }
 
-static inline float unquant(int q, int scale_idx){
-    return (FFABS(q) * cbrt(q*1.0)) * ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS];
-}
 static inline float calc_distortion(float *c, int size, int scale_idx)
 {
     int i;
