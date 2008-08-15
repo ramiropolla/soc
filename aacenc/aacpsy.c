@@ -48,9 +48,10 @@
 static inline int quantize_coeffs(float *in, int *out, int size, int scale_idx)
 {
     int i, sign, sum = 0;
+    const float Q = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
     for(i = 0; i < size; i++){
         sign = in[i] > 0.0;
-        out[i] = (int)(pow(FFABS(in[i]) * ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512], 0.75) + 0.4054);
+        out[i] = (int)(pow(FFABS(in[i]) * Q, 0.75) + 0.4054);
         out[i] = av_clip(out[i], 0, 8191);
         sum += out[i];
         if(sign) out[i] = -out[i];
@@ -63,11 +64,13 @@ static inline float calc_distortion(float *c, int size, int scale_idx)
     int i;
     int q;
     float coef, unquant, sum = 0.0f;
+    const float Q  = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
+    const float IQ = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
     for(i = 0; i < size; i++){
         coef = FFABS(c[i]);
-        q = (int)(pow(FFABS(coef) * ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512], 0.75) + 0.4054);
+        q = (int)(pow(FFABS(coef) * Q, 0.75) + 0.4054);
         q = av_clip(q, 0, 8191);
-        unquant = (q * cbrt(q)) * ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
+        unquant = (q * cbrt(q)) * IQ;
         sum += (coef - unquant) * (coef - unquant);
     }
     return sum;
