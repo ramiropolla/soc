@@ -301,7 +301,7 @@ static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s, Chann
 static void put_ics_info(AVCodecContext *avctx, IndividualChannelStream *info)
 {
     AACEncContext *s = avctx->priv_data;
-    int i;
+    int wg;
 
     put_bits(&s->pb, 1, 0);                // ics_reserved bit
     put_bits(&s->pb, 2, info->window_sequence[0]);
@@ -311,8 +311,12 @@ static void put_ics_info(AVCodecContext *avctx, IndividualChannelStream *info)
         put_bits(&s->pb, 1, 0);            // no prediction
     }else{
         put_bits(&s->pb, 4, info->max_sfb);
-        for(i = 1; i < info->num_windows; i++)
-            put_bits(&s->pb, 1, info->group_len[i]);
+        for(wg = 0; wg < info->num_window_groups; wg++){
+            if(wg)
+                put_bits(&s->pb, 1, 0);
+            if(info->group_len[wg] > 1)
+                put_sbits(&s->pb, info->group_len[wg] - 1, 0xFF);
+        }
     }
 }
 
@@ -322,15 +326,17 @@ static void put_ics_info(AVCodecContext *avctx, IndividualChannelStream *info)
  */
 static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
 {
-    int i, w;
+    int i, w, wg;
 
     put_bits(pb, 2, cpe->ms.present);
-    if(cpe->ms.present == 1)
-        for(w = 0; w < cpe->ch[0].ics.num_windows; w++){
-            if(cpe->ch[0].ics.group_len[w]) continue;
+    if(cpe->ms.present == 1){
+        w = 0;
+        for(wg = 0; wg < cpe->ch[0].ics.num_window_groups; wg++){
             for(i = 0; i < cpe->ch[0].ics.max_sfb; i++)
                 put_bits(pb, 1, cpe->ms.mask[w][i]);
+            w += cpe->ch[0].ics.group_len[wg];
         }
+    }
 }
 
 /**
@@ -344,7 +350,7 @@ static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
  * @param start   scalefactor band position in spectral coefficients
  * @param size    scalefactor band size
  */
-static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int channel, int win, int band, int start, int size)
+static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int channel, int win, int group_len, int band, int start, int size)
 {
     int i, j, w;
     int maxval, sign;
@@ -354,14 +360,13 @@ static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int cha
     sign = 0;
     w = win;
     start2 = start;
-    do{
+    for(w = win; w < win + group_len; w++){
         for(i = start2; i < start2 + size; i++){
             maxval = FFMAX(maxval, FFABS(cpe->ch[channel].icoefs[i]));
             if(cpe->ch[channel].icoefs[i] < 0) sign = 1;
         }
-        w++;
         start2 += 128;
-    }while(w < cpe->ch[channel].ics.num_windows && cpe->ch[channel].ics.group_len[w]);
+    }
 
     if(maxval > 12) return 11;
     if(!maxval) return 0;
@@ -376,10 +381,9 @@ static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int cha
         dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
         if(!band || cpe->ch[channel].band_type[win][band - 1] != cb)
             score += 9; //that's for new codebook entry
-        w = win;
         start2 = start;
         if(aac_cb_info[cb].flags & CB_UNSIGNED){
-            do{
+            for(w = win; w < win + group_len; w++){
                 for(i = start2; i < start2 + size; i += dim){
                     idx = 0;
                     for(j = 0; j < dim; j++)
@@ -389,20 +393,18 @@ static int determine_section_info(AACEncContext *s, ChannelElement *cpe, int cha
                         if(cpe->ch[channel].icoefs[i+j])
                             score++;
                 }
-                w++;
                 start2 += 128;
-            }while(w < cpe->ch[channel].ics.num_windows && cpe->ch[channel].ics.group_len[w]);
+            }
         }else{
-            do{
+            for(w = win; w < win + group_len; w++){
                 for(i = start2; i < start2 + size; i += dim){
                     idx = 0;
                     for(j = 0; j < dim; j++)
                         idx = idx * (aac_cb_info[cb].maxval*2 + 1) + cpe->ch[channel].icoefs[i+j] + aac_cb_info[cb].maxval;
                     score += ff_aac_spectral_bits[aac_cb_info[cb].cb_num][idx];
                 }
-                w++;
                 start2 += 128;
-            }while(w < cpe->ch[channel].ics.num_windows && cpe->ch[channel].ics.group_len[w]);
+            }
         }
         if(score < best){
             best = score;
@@ -477,13 +479,13 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
  */
 static void encode_band_info(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
-    int i, w;
+    int i, w, wg;
     int bits = cpe->ch[channel].ics.num_windows == 1 ? 5 : 3;
     int esc = (1 << bits) - 1;
     int count;
 
-    for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
-        if(cpe->ch[channel].ics.group_len[w]) continue;
+    w = 0;
+    for(wg = 0; wg < cpe->ch[channel].ics.num_window_groups; wg++){
         count = 0;
         for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
             if(!i || cpe->ch[channel].band_type[w][i] != cpe->ch[channel].band_type[w][i-1]){
@@ -506,6 +508,7 @@ static void encode_band_info(AVCodecContext *avctx, AACEncContext *s, ChannelEle
             }
             put_bits(&s->pb, bits, count);
         }
+        w += cpe->ch[channel].ics.group_len[wg];
     }
 }
 
@@ -515,10 +518,10 @@ static void encode_band_info(AVCodecContext *avctx, AACEncContext *s, ChannelEle
 static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel, int global_gain)
 {
     int off = global_gain, diff;
-    int i, w;
+    int i, w, wg;
 
-    for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
-        if(cpe->ch[channel].ics.group_len[w]) continue;
+    w = 0;
+    for(wg = 0; wg < cpe->ch[channel].ics.num_window_groups; wg++){
         for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
             if(!cpe->ch[channel].zeroes[w][i]){
                 diff = cpe->ch[channel].sf_idx[w][i] - off + SCALE_DIFF_ZERO;
@@ -527,6 +530,7 @@ static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, Channe
                 put_bits(&s->pb, ff_aac_scalefactor_bits[diff], ff_aac_scalefactor_code[diff]);
             }
         }
+        w += cpe->ch[channel].ics.group_len[wg];
     }
 }
 
@@ -593,23 +597,22 @@ static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, ChannelElem
  */
 static void encode_spectral_coeffs(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
-    int start, i, w, w2;
+    int start, i, w, w2, wg;
 
-    for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
-        if(cpe->ch[channel].ics.group_len[w]) continue;
+    w = 0;
+    for(wg = 0; wg < cpe->ch[channel].ics.num_window_groups; wg++){
         start = 0;
         for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
             if(cpe->ch[channel].zeroes[w][i]){
                 start += cpe->ch[channel].ics.swb_sizes[i];
                 continue;
             }
-            w2 = w;
-            do{
+            for(w2 = w; w2 < w + cpe->ch[channel].ics.group_len[wg]; w2++){
                 encode_band_coeffs(s, cpe, channel, start + w2*128, cpe->ch[channel].ics.swb_sizes[i], cpe->ch[channel].band_type[w][i]);
-                w2++;
-            }while(w2 < cpe->ch[channel].ics.num_windows && cpe->ch[channel].ics.group_len[w2]);
+            }
             start += cpe->ch[channel].ics.swb_sizes[i];
         }
+        w += cpe->ch[channel].ics.group_len[wg];
     }
 }
 
@@ -619,26 +622,27 @@ static void encode_spectral_coeffs(AVCodecContext *avctx, AACEncContext *s, Chan
 static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe, int channel)
 {
     AACEncContext *s = avctx->priv_data;
-    int i, g, w;
+    int i, g, w, wg;
     int global_gain;
 
-    for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
+    w = 0;
+    for(wg = 0; wg < cpe->ch[channel].ics.num_window_groups; wg++){
         i = w << 7;
-        if(cpe->ch[channel].ics.group_len[w]) continue;
         for(g = 0; g < cpe->ch[channel].ics.max_sfb; g++){
             if(!cpe->ch[channel].zeroes[w][g]){
-                cpe->ch[channel].band_type[w][g] = determine_section_info(s, cpe, channel, w, g, i, cpe->ch[channel].ics.swb_sizes[g]);
+                cpe->ch[channel].band_type[w][g] = determine_section_info(s, cpe, channel, w, cpe->ch[channel].ics.group_len[wg], g, i, cpe->ch[channel].ics.swb_sizes[g]);
                 cpe->ch[channel].zeroes[w][g] = !cpe->ch[channel].band_type[w][g];
             }else
                 cpe->ch[channel].band_type[w][g] = 0;
             i += cpe->ch[channel].ics.swb_sizes[g];
         }
+        w += cpe->ch[channel].ics.group_len[wg];
     }
 
     //determine global gain as standard recommends - the first scalefactor value
     global_gain = 0;
-    for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
-        if(cpe->ch[channel].ics.group_len[w]) continue;
+    w = 0;
+    for(wg = 0; wg < cpe->ch[channel].ics.num_window_groups; wg++){
         for(g = 0; g < cpe->ch[channel].ics.max_sfb; g++){
             if(!cpe->ch[channel].zeroes[w][g]){
                 global_gain = cpe->ch[channel].sf_idx[w][g];
@@ -646,6 +650,7 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
             }
         }
         if(global_gain) break;
+        w += cpe->ch[channel].ics.group_len[wg];
     }
 
     put_bits(&s->pb, 8, global_gain);

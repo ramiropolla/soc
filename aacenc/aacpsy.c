@@ -81,7 +81,7 @@ static inline float calc_distortion(float *c, int size, int scale_idx)
  */
 static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans, int search_pulses)
 {
-    int i, w, w2, g, ch;
+    int i, w, w2, wg, g, ch;
     int start, sum, maxsfb, cmaxsfb;
     int pulses, poff[4], pamp[4];
 
@@ -139,20 +139,19 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
         cpe->ch[ch].ics.max_sfb = maxsfb;
 
         //adjust zero bands for window groups
-        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
-            if(cpe->ch[ch].ics.group_len[w]) continue;
+        w = 0;
+        for(wg = 0; wg < cpe->ch[ch].ics.num_window_groups; wg++){
             for(g = 0; g < cpe->ch[ch].ics.max_sfb; g++){
                 i = 1;
-                w2 = w;
-                do{
-                    if(!cpe->ch[ch].zeroes[w2][g]){
+                for(w2 = 0; w2 < cpe->ch[ch].ics.group_len[wg]; w2++){
+                    if(!cpe->ch[ch].zeroes[w + w2][g]){
                         i = 0;
                         break;
                     }
-                    w2++;
-                }while(w2 < cpe->ch[ch].ics.num_windows && cpe->ch[ch].ics.group_len[w2]);
+                }
                 cpe->ch[ch].zeroes[w][g] = i;
             }
+            w += cpe->ch[ch].ics.group_len[wg];
         }
     }
 
@@ -179,7 +178,8 @@ static void psy_null_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
         cpe->ch[ch].ics.num_windows = 1;
         cpe->ch[ch].ics.swb_sizes = apc->bands1024;
         cpe->ch[ch].ics.num_swb = apc->num_bands1024;
-        cpe->ch[ch].ics.group_len[0] = 0;
+        cpe->ch[ch].ics.num_window_groups = 1;
+        cpe->ch[ch].ics.group_len[0] = 1;
     }
     cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
 }
@@ -246,14 +246,16 @@ static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int16_t *la, in
             cpe->ch[ch].ics.num_windows = 1;
             cpe->ch[ch].ics.swb_sizes = apc->bands1024;
             cpe->ch[ch].ics.num_swb = apc->num_bands1024;
-            cpe->ch[ch].ics.group_len[0] = 0;
+            cpe->ch[ch].ics.num_window_groups = 1;
+            cpe->ch[ch].ics.group_len[0] = 1;
         }else{
             cpe->ch[ch].ics.use_kb_window[0] = 1;
             cpe->ch[ch].ics.num_windows = 8;
             cpe->ch[ch].ics.swb_sizes = apc->bands128;
             cpe->ch[ch].ics.num_swb = apc->num_bands128;
-            for(i = 0; i < cpe->ch[ch].ics.num_windows; i++)
-                cpe->ch[ch].ics.group_len[i] = i & 1;
+            cpe->ch[ch].ics.num_window_groups = 4;
+            for(i = 0; i < 4; i++)
+                cpe->ch[ch].ics.group_len[i] = 2;
         }
     }
     cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
@@ -529,13 +531,23 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
             cpe->ch[ch].ics.num_windows = 1;
             cpe->ch[ch].ics.swb_sizes = apc->bands1024;
             cpe->ch[ch].ics.num_swb = apc->num_bands1024;
+            cpe->ch[ch].ics.num_window_groups = 1;
+            cpe->ch[ch].ics.group_len[0] = 1;
         }else{
             cpe->ch[ch].ics.num_windows = 8;
             cpe->ch[ch].ics.swb_sizes = apc->bands128;
             cpe->ch[ch].ics.num_swb = apc->num_bands128;
+            cpe->ch[ch].ics.num_window_groups = 0;
+            cpe->ch[ch].ics.group_len[0] = 1;
+            for(i = 0; i < 8; i++){
+                if((grouping[ch] >> i) & 1){
+                    cpe->ch[ch].ics.group_len[cpe->ch[ch].ics.num_window_groups - 1]++;
+                }else{
+                    cpe->ch[ch].ics.num_window_groups++;
+                    cpe->ch[ch].ics.group_len[cpe->ch[ch].ics.num_window_groups - 1] = 1;
+                }
+            }
         }
-        for(i = 0; i < 8; i++)
-            cpe->ch[ch].ics.group_len[i] = (grouping[ch] >> i) & 1;
     }
     cpe->common_window = chans > 1 && cpe->ch[0].ics.window_sequence[0] == cpe->ch[1].ics.window_sequence[0] && cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
     if(cpe->common_window && cpe->ch[0].ics.window_sequence[0] == EIGHT_SHORT_SEQUENCE && grouping[0] != grouping[1])
@@ -588,7 +600,7 @@ static void calc_pe(Psy3gppBand *band, int band_width)
 static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelElement *cpe)
 {
     int start;
-    int ch, w, w2, g, g2, i;
+    int ch, w, wg, g, g2, i;
     int prev_scale;
     Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
     float pe_target;
@@ -808,22 +820,19 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
             }
 
         //adjust scalefactors for window groups
-        for(w = 0; w < cpe->ch[ch].ics.num_windows - 1; w++){
+        w = 0;
+        for(wg = 0; wg < cpe->ch[ch].ics.num_window_groups; wg++){
             int min_scale = 256;
 
-            if(cpe->ch[ch].ics.group_len[w]) continue;
-            w2 = w;
-            do{
-                w2++;
-            }while(w2 < cpe->ch[ch].ics.num_windows && cpe->ch[ch].ics.group_len[w2]);
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                for(i = w; i < w2; i++){
+                for(i = w; i < w + cpe->ch[ch].ics.group_len[wg]; i++){
                     if(cpe->ch[ch].zeroes[i][g]) continue;
                     min_scale = FFMIN(min_scale, cpe->ch[ch].sf_idx[i][g]);
                 }
-                for(i = w; i < w2; i++)
+                for(i = w; i < w + cpe->ch[ch].ics.group_len[wg]; i++)
                     cpe->ch[ch].sf_idx[i][g] = min_scale;
             }
+            w += cpe->ch[ch].ics.group_len[wg];
         }
     }
 
