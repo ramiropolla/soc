@@ -504,7 +504,6 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     for (i = 0; i < s->nb_streams; i++)
         mxf_write_uuid(pb, Track * type, i);
 
-    // malloc memory for track number sign
     if (type == SourcePackage) {
         // write multiple descriptor reference
         if (mxf_generate_reference(s, &refs->mul_desc, 1) < 0)
