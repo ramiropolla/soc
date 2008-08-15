@@ -744,13 +744,13 @@ static int decode_tns(AACContext * ac, TemporalNoiseShaping * tns,
                 tns->order[w][filt] = 0;
                 return -1;
             }
-                tns->direction[w][filt] = get_bits1(gb);
-                coef_compress = get_bits1(gb);
-                coef_len = coef_res - coef_compress;
-                tns->tmp2_map[w][filt] = tns_tmp2_map[2*coef_compress + coef_res - 3];
+            tns->direction[w][filt] = get_bits1(gb);
+            coef_compress = get_bits1(gb);
+            coef_len = coef_res - coef_compress;
+            tns->tmp2_map[w][filt] = tns_tmp2_map[2*coef_compress + coef_res - 3];
 
-                for (i = 0; i < tns->order[w][filt]; i++)
-                    tns->coef[w][filt][i] = get_bits(gb, coef_len);
+            for (i = 0; i < tns->order[w][filt]; i++)
+                tns->coef[w][filt][i] = get_bits(gb, coef_len);
         }
     }
     return 0;
