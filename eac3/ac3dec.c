@@ -203,7 +203,7 @@ static av_cold int ac3_decode_init(AVCodecContext *avctx)
     av_init_random(0, &s->dith_state);
 
     /* set bias values for float to int16 conversion */
-    if(s->dsp.float_to_int16 == ff_float_to_int16_c) {
+    if(s->dsp.float_to_int16_interleave == ff_float_to_int16_interleave_c) {
         s->add_bias = 385.0f;
         s->mul_bias = 1.0f;
     } else {
@@ -335,6 +335,7 @@ static void set_downmix_coeffs(AC3DecodeContext *s)
     int i;
     float cmix = gain_levels[center_levels[s->center_mix_level]];
     float smix = gain_levels[surround_levels[s->surround_mix_level]];
+    float norm0, norm1;
 
     for(i=0; i<s->fbw_channels; i++) {
         s->downmix_coeffs[i][0] = gain_levels[ac3_default_coeffs[s->channel_mode][i][0]];
@@ -352,14 +353,23 @@ static void set_downmix_coeffs(AC3DecodeContext *s)
         s->downmix_coeffs[nf][0] = s->downmix_coeffs[nf+1][1] = smix;
     }
 
-    /* calculate adjustment needed for each channel to avoid clipping */
-    s->downmix_coeff_adjust[0] = s->downmix_coeff_adjust[1] = 0.0f;
+    /* renormalize */
+    norm0 = norm1 = 0.0;
     for(i=0; i<s->fbw_channels; i++) {
-        s->downmix_coeff_adjust[0] += s->downmix_coeffs[i][0];
-        s->downmix_coeff_adjust[1] += s->downmix_coeffs[i][1];
+        norm0 += s->downmix_coeffs[i][0];
+        norm1 += s->downmix_coeffs[i][1];
     }
-    s->downmix_coeff_adjust[0] = 1.0f / s->downmix_coeff_adjust[0];
-    s->downmix_coeff_adjust[1] = 1.0f / s->downmix_coeff_adjust[1];
+    norm0 = 1.0f / norm0;
+    norm1 = 1.0f / norm1;
+    for(i=0; i<s->fbw_channels; i++) {
+        s->downmix_coeffs[i][0] *= norm0;
+        s->downmix_coeffs[i][1] *= norm1;
+    }
+
+    if(s->output_mode == AC3_CHMODE_MONO) {
+        for(i=0; i<s->fbw_channels; i++)
+            s->downmix_coeffs[i][0] = (s->downmix_coeffs[i][0] + s->downmix_coeffs[i][1]) * LEVEL_MINUS_3DB;
+    }
 }
 
 /**
@@ -620,47 +630,6 @@ static void do_rematrixing(AC3DecodeContext *s)
 }
 
 /**
- * Perform the 256-point IMDCT
- */
-static void do_imdct_256(AC3DecodeContext *s, int chindex)
-{
-    int i, k;
-    DECLARE_ALIGNED_16(float, x[128]);
-    FFTComplex z[2][64];
-    float *o_ptr = s->tmp_output;
-
-    for(i=0; i<2; i++) {
-        /* de-interleave coefficients */
-        for(k=0; k<128; k++) {
-            x[k] = s->transform_coeffs[chindex][2*k+i];
-        }
-
-        /* run standard IMDCT */
-        s->imdct_256.fft.imdct_calc(&s->imdct_256, o_ptr, x, s->tmp_imdct);
-
-        /* reverse the post-rotation & reordering from standard IMDCT */
-        for(k=0; k<32; k++) {
-            z[i][32+k].re = -o_ptr[128+2*k];
-            z[i][32+k].im = -o_ptr[2*k];
-            z[i][31-k].re =  o_ptr[2*k+1];
-            z[i][31-k].im =  o_ptr[128+2*k+1];
-        }
-    }
-
-    /* apply AC-3 post-rotation & reordering */
-    for(k=0; k<64; k++) {
-        o_ptr[    2*k  ] = -z[0][   k].im;
-        o_ptr[    2*k+1] =  z[0][63-k].re;
-        o_ptr[128+2*k  ] = -z[0][   k].re;
-        o_ptr[128+2*k+1] =  z[0][63-k].im;
-        o_ptr[256+2*k  ] = -z[1][   k].re;
-        o_ptr[256+2*k+1] =  z[1][63-k].im;
-        o_ptr[384+2*k  ] =  z[1][   k].im;
-        o_ptr[384+2*k+1] = -z[1][63-k].re;
-    }
-}
-
-/**
  * Inverse MDCT Transform.
  * Convert frequency domain coefficients to time-domain audio samples.
  * reference: Section 7.9.4 Transformation Equations
@@ -668,47 +637,52 @@ static void do_imdct_256(AC3DecodeContext *s, int chindex)
 static inline void do_imdct(AC3DecodeContext *s, int channels)
 {
     int ch;
+    float add_bias = s->add_bias;
+    if(s->out_channels==1 && channels>1)
+        add_bias *= LEVEL_MINUS_3DB; // compensate for the gain in downmix
 
     for (ch=1; ch<=channels; ch++) {
         if (s->block_switch[ch]) {
-            do_imdct_256(s, ch);
+            int i;
+            float *x = s->tmp_output+128;
+            for(i=0; i<128; i++)
+                x[i] = s->transform_coeffs[ch][2*i];
+            ff_imdct_half(&s->imdct_256, s->tmp_output, x);
+            s->dsp.vector_fmul_window(s->output[ch-1], s->delay[ch-1], s->tmp_output, s->window, add_bias, 128);
+            for(i=0; i<128; i++)
+                x[i] = s->transform_coeffs[ch][2*i+1];
+            ff_imdct_half(&s->imdct_256, s->delay[ch-1], x);
         } else {
-            s->imdct_512.fft.imdct_calc(&s->imdct_512, s->tmp_output,
-                                        s->transform_coeffs[ch], s->tmp_imdct);
+            ff_imdct_half(&s->imdct_512, s->tmp_output, s->transform_coeffs[ch]);
+            s->dsp.vector_fmul_window(s->output[ch-1], s->delay[ch-1], s->tmp_output, s->window, add_bias, 128);
+            memcpy(s->delay[ch-1], s->tmp_output+128, 128*sizeof(float));
         }
-        /* For the first half of the block, apply the window, add the delay
-           from the previous block, and send to output */
-        s->dsp.vector_fmul_add_add(s->output[ch-1], s->tmp_output,
-                                     s->window, s->delay[ch-1], 0, 256, 1);
-        /* For the second half of the block, apply the window and store the
-           samples to delay, to be combined with the next block */
-        s->dsp.vector_fmul_reverse(s->delay[ch-1], s->tmp_output+256,
-                                   s->window, 256);
     }
 }
 
 /**
  * Downmix the output to mono or stereo.
  */
-static void ac3_downmix(AC3DecodeContext *s,
-                        float samples[AC3_MAX_CHANNELS][256], int ch_offset)
+void ff_ac3_downmix_c(float (*samples)[256], float (*matrix)[2], int out_ch, int in_ch, int len)
 {
     int i, j;
     float v0, v1;
-
-    for(i=0; i<256; i++) {
-        v0 = v1 = 0.0f;
-        for(j=0; j<s->fbw_channels; j++) {
-            v0 += samples[j+ch_offset][i] * s->downmix_coeffs[j][0];
-            v1 += samples[j+ch_offset][i] * s->downmix_coeffs[j][1];
+    if(out_ch == 2) {
+        for(i=0; i<len; i++) {
+            v0 = v1 = 0.0f;
+            for(j=0; j<in_ch; j++) {
+                v0 += samples[j][i] * matrix[j][0];
+                v1 += samples[j][i] * matrix[j][1];
+            }
+            samples[0][i] = v0;
+            samples[1][i] = v1;
         }
-        v0 *= s->downmix_coeff_adjust[0];
-        v1 *= s->downmix_coeff_adjust[1];
-        if(s->output_mode == AC3_CHMODE_MONO) {
-            samples[ch_offset][i] = (v0 + v1) * LEVEL_MINUS_3DB;
-        } else if(s->output_mode == AC3_CHMODE_STEREO) {
-            samples[  ch_offset][i] = v0;
-            samples[1+ch_offset][i] = v1;
+    } else if(out_ch == 1) {
+        for(i=0; i<len; i++) {
+            v0 = 0.0f;
+            for(j=0; j<in_ch; j++)
+                v0 += samples[j][i] * matrix[j][0];
+            samples[0][i] = v0;
         }
     }
 }
@@ -1165,9 +1139,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         } else {
             gain *= s->dynamic_range[0];
         }
-        for(i=0; i<256; i++) {
-            s->transform_coeffs[ch][i] = s->fixed_coeffs[ch][i] * gain;
-        }
+        s->dsp.int32_to_float_fmul_scalar(s->transform_coeffs[ch], s->fixed_coeffs[ch], gain, 256);
     }
 
     /* downmix and MDCT. order depends on whether block switching is used for
@@ -1187,27 +1159,19 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         do_imdct(s, s->channels);
 
         if(downmix_output) {
-            ac3_downmix(s, s->output, 0);
+            s->dsp.ac3_downmix(s->output, s->downmix_coeffs, s->out_channels, s->fbw_channels, 256);
         }
     } else {
         if(downmix_output) {
-            ac3_downmix(s, s->transform_coeffs, 1);
+            s->dsp.ac3_downmix(s->transform_coeffs+1, s->downmix_coeffs, s->out_channels, s->fbw_channels, 256);
         }
 
-        if(!s->downmixed) {
+        if(downmix_output && !s->downmixed) {
             s->downmixed = 1;
-            ac3_downmix(s, s->delay, 0);
+            s->dsp.ac3_downmix(s->delay, s->downmix_coeffs, s->out_channels, s->fbw_channels, 128);
         }
 
         do_imdct(s, s->out_channels);
-    }
-
-    /* convert float to 16-bit integer */
-    for(ch=0; ch<s->out_channels; ch++) {
-        for(i=0; i<256; i++) {
-            s->output[ch][i] += s->add_bias;
-        }
-        s->dsp.float_to_int16(s->int_output[ch], s->output[ch], 256);
     }
 
     return 0;
@@ -1221,7 +1185,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
 {
     AC3DecodeContext *s = avctx->priv_data;
     int16_t *out_samples = (int16_t *)data;
-    int i, blk, ch, err;
+    int blk, ch, err;
 
     /* initialize the GetBitContext with the start of valid AC-3 Frame */
     if (s->input_buffer) {
@@ -1311,14 +1275,14 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data, int *data_size,
 
     /* decode the audio blocks */
     for (blk = 0; blk < s->num_blocks; blk++) {
+        const float *output[s->out_channels];
         if (!err && decode_audio_block(s, blk)) {
             av_log(avctx, AV_LOG_ERROR, "error decoding the audio block\n");
         }
-
-        /* interleave output samples */
-        for (i = 0; i < 256; i++)
-            for (ch = 0; ch < s->out_channels; ch++)
-                *(out_samples++) = s->int_output[ch][i];
+        for (ch = 0; ch < s->out_channels; ch++)
+            output[ch] = s->output[ch];
+        s->dsp.float_to_int16_interleave(out_samples, output, 256, s->out_channels);
+        out_samples += 256 * s->out_channels;
     }
     *data_size = s->num_blocks * 256 * avctx->channels * sizeof (int16_t);
     return s->frame_size;
