@@ -738,7 +738,12 @@ static int decode_tns(AACContext * ac, TemporalNoiseShaping * tns,
         for (filt = 0; filt < tns->n_filt[w]; filt++) {
             tns->length[w][filt] = get_bits(gb, 6 - 2*is8);
 
-            if ((tns->order[w][filt] = get_bits(gb, 5 - 2*is8)) <= tns_max_order) {
+            if ((tns->order[w][filt] = get_bits(gb, 5 - 2*is8)) > tns_max_order) {
+                av_log(ac->avccontext, AV_LOG_ERROR, "TNS filter order %d is greater than maximum %d.",
+                       tns->order[w][filt], tns_max_order);
+                tns->order[w][filt] = 0;
+                return -1;
+            } else {
                 tns->direction[w][filt] = get_bits1(gb);
                 coef_compress = get_bits1(gb);
                 coef_len = coef_res - coef_compress;
@@ -746,11 +751,6 @@ static int decode_tns(AACContext * ac, TemporalNoiseShaping * tns,
 
                 for (i = 0; i < tns->order[w][filt]; i++)
                     tns->coef[w][filt][i] = get_bits(gb, coef_len);
-            } else {
-                av_log(ac->avccontext, AV_LOG_ERROR, "TNS filter order %d is greater than maximum %d.",
-                       tns->order[w][filt], tns_max_order);
-                tns->order[w][filt] = 0;
-                return -1;
             }
         }
     }
