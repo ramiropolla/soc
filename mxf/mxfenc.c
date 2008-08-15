@@ -350,10 +350,9 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     put_be16(pb, 1);
 
     // write identification_refs
-    if (mxf_generate_reference(s, &refs->identification, 1) < 0)
-        return -1;
     mxf_write_local_tag(pb, 16 + 8, 0x3B06);
-    mxf_write_reference(pb, 1, *refs->identification);
+    mxf_write_refs_count(pb, 1);
+    mxf_write_uuid(pb, Identification, 0);
 
     // write content_storage_refs
     if (mxf_generate_reference(s, &refs->content_storage, 1) < 0)
@@ -398,10 +397,10 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
 
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, *refs->identification, 16);
+    mxf_write_uuid(pb, Identification, 0);
 #ifdef DEBUG
     PRINT_KEY(s, "identification key", klv->key);
-    PRINT_KEY(s, "identification uid", *refs->identification);
+    PRINT_KEY(s, "identification uid", pb->buf_ptr - 16);
 #endif
     // write generation uid
     mxf_generate_uuid(s, uid);
