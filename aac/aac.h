@@ -251,7 +251,6 @@ typedef struct {
     float gain[16][120];
 } ChannelCoupling;
 
-
 /**
  * Single Channel Element - used for both SCE and LFE elements.
  */
