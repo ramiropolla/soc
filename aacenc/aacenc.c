@@ -795,7 +795,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
     }
 
     init_put_bits(&s->pb, frame, buf_size*8);
-    if(avctx->frame_number==1 && !(avctx->flags & CODEC_FLAG_BITEXACT)){
+    if((avctx->frame_number & 0xFF)==1 && !(avctx->flags & CODEC_FLAG_BITEXACT)){
         put_bitstream_info(avctx, s, LIBAVCODEC_IDENT);
     }
     start_ch = 0;
