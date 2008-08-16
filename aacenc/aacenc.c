@@ -612,7 +612,12 @@ static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, Channe
     for(wg = 0; wg < cpe->ch[channel].ics.num_window_groups; wg++){
         for(i = 0; i < cpe->ch[channel].ics.max_sfb; i++){
             if(!cpe->ch[channel].zeroes[w][i]){
-                if(cpe->ch[channel].sf_idx[w][i] == 256) cpe->ch[channel].sf_idx[w][i] = off;
+                /* if we have encountered scale=256 it means empty band
+                 * which was decided to be coded by encoder, so assign it
+                 * last scalefactor value for compression efficiency
+                 */
+                if(cpe->ch[channel].sf_idx[w][i] == 256)
+                    cpe->ch[channel].sf_idx[w][i] = off;
                 diff = cpe->ch[channel].sf_idx[w][i] - off + SCALE_DIFF_ZERO;
                 if(diff < 0 || diff > 120) av_log(avctx, AV_LOG_ERROR, "Scalefactor difference is too big to be coded\n");
                 off = cpe->ch[channel].sf_idx[w][i];
