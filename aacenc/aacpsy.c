@@ -521,7 +521,7 @@ static void calc_pe(Psy3gppBand *band, int band_width)
 static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelElement *cpe)
 {
     int start;
-    int ch, w, wg, g, g2, i;
+    int ch, w, wg, g, i;
     int prev_scale;
     Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
     float pe_target;
@@ -533,20 +533,19 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     memset(pch->band, 0, sizeof(pch->band));
     for(ch = 0; ch < chans; ch++){
         start = 0;
-        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+        for(w = 0; w < cpe->ch[ch].ics.num_windows*16; w += 16){
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                g2 = w*16 + g;
                 for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++)
-                    pch->band[ch][g2].energy +=  cpe->ch[ch].coeffs[start+i] *  cpe->ch[ch].coeffs[start+i];
-                pch->band[ch][g2].energy /= 262144.0f;
-                pch->band[ch][g2].thr = pch->band[ch][g2].energy * 0.001258925f;
+                    pch->band[ch][w+g].energy +=  cpe->ch[ch].coeffs[start+i] *  cpe->ch[ch].coeffs[start+i];
+                pch->band[ch][w+g].energy /= 262144.0f;
+                pch->band[ch][w+g].thr = pch->band[ch][w+g].energy * 0.001258925f;
                 start += cpe->ch[ch].ics.swb_sizes[g];
-                if(pch->band[ch][g2].energy != 0.0){
+                if(pch->band[ch][w+g].energy != 0.0){
                     float ffac = 0.0;
 
                     for(i = 0; i < cpe->ch[ch].ics.swb_sizes[g]; i++)
                         ffac += sqrt(FFABS(cpe->ch[ch].coeffs[start+i]));
-                    pch->band[ch][g2].ffac = ffac / sqrt(512.0);
+                    pch->band[ch][w+g].ffac = ffac / sqrt(512.0);
                 }
             }
         }
@@ -554,29 +553,26 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
 
     //modify thresholds - spread, threshold in quiet - 5.4.3 "Spreaded Energy Calculation"
     for(ch = 0; ch < chans; ch++){
-        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+        for(w = 0; w < cpe->ch[ch].ics.num_windows*16; w += 16){
             for(g = 1; g < cpe->ch[ch].ics.num_swb; g++){
-                g2 = w*16 + g;
                 if(cpe->ch[ch].ics.num_swb == apc->num_bands1024)
-                    pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2-1].thr * pctx->s_low_l[g-1]);
+                    pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g-1].thr * pctx->s_low_l[g-1]);
                 else
-                    pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2-1].thr * pctx->s_low_s[g-1]);
+                    pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g-1].thr * pctx->s_low_s[g-1]);
             }
             for(g = cpe->ch[ch].ics.num_swb - 2; g >= 0; g--){
-                g2 = w*16 + g;
                 if(cpe->ch[ch].ics.num_swb == apc->num_bands1024)
-                    pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2+1].thr * pctx->s_hi_l[g+1]);
+                    pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g+1].thr * pctx->s_hi_l[g+1]);
                 else
-                    pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2+1].thr * pctx->s_hi_s[g+1]);
+                    pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g+1].thr * pctx->s_hi_s[g+1]);
             }
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                g2 = w*16 + g;
                 if(cpe->ch[ch].ics.num_swb == apc->num_bands1024)
-                    pch->band[ch][g2].thr_quiet = FFMAX(pch->band[ch][g2].thr, pctx->ath_l[g]);
+                    pch->band[ch][w+g].thr_quiet = FFMAX(pch->band[ch][w+g].thr, pctx->ath_l[g]);
                 else
-                    pch->band[ch][g2].thr_quiet = FFMAX(pch->band[ch][g2].thr, pctx->ath_s[g]);
-                pch->band[ch][g2].thr_quiet = fmaxf(PSY_3GPP_RPEMIN*pch->band[ch][g2].thr_quiet, fminf(pch->band[ch][g2].thr_quiet, PSY_3GPP_RPELEV*pch->prev_band[ch][g2].thr_quiet));
-                pch->band[ch][g2].thr = FFMAX(pch->band[ch][g2].thr, pch->band[ch][g2].thr_quiet * 0.25);
+                    pch->band[ch][w+g].thr_quiet = FFMAX(pch->band[ch][w+g].thr, pctx->ath_s[g]);
+                pch->band[ch][w+g].thr_quiet = fmaxf(PSY_3GPP_RPEMIN*pch->band[ch][w+g].thr_quiet, fminf(pch->band[ch][w+g].thr_quiet, PSY_3GPP_RPELEV*pch->prev_band[ch][w+g].thr_quiet));
+                pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g].thr_quiet * 0.25);
             }
         }
     }
@@ -584,14 +580,13 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     // M/S detection - 5.5.2 "Mid/Side Stereo"
     if(chans > 1 && cpe->common_window){
         start = 0;
-        for(w = 0; w < cpe->ch[0].ics.num_windows; w++){
+        for(w = 0; w < cpe->ch[0].ics.num_windows*16; w += 16){
             for(g = 0; g < cpe->ch[0].ics.num_swb; g++){
                 double en_m = 0.0, en_s = 0.0, ff_m = 0.0, ff_s = 0.0, minthr;
                 float m, s;
 
-                g2 = w*16 + g;
-                cpe->ms_mask[g2] = 0;
-                if(pch->band[0][g2].energy == 0.0 || pch->band[1][g2].energy == 0.0)
+                cpe->ms_mask[w+g] = 0;
+                if(pch->band[0][w+g].energy == 0.0 || pch->band[1][w+g].energy == 0.0)
                     continue;
                 for(i = 0; i < cpe->ch[0].ics.swb_sizes[g]; i++){
                     m = cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i];
@@ -601,21 +596,21 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                 }
                 en_m /= 262144.0*2.0;
                 en_s /= 262144.0*2.0;
-                minthr = FFMIN(pch->band[0][g2].thr, pch->band[1][g2].thr);
-                if(minthr * minthr * pch->band[0][g2].energy * pch->band[1][g2].energy  >= (pch->band[0][g2].thr * pch->band[1][g2].thr * en_m * en_s)){
-                    cpe->ms_mask[g2] = 1;
-                    pch->band[0][g2].energy = en_m;
-                    pch->band[1][g2].energy = en_s;
-                    pch->band[0][g2].thr = en_m * 0.001258925f;
-                    pch->band[1][g2].thr = en_s * 0.001258925f;
+                minthr = FFMIN(pch->band[0][w+g].thr, pch->band[1][w+g].thr);
+                if(minthr * minthr * pch->band[0][w+g].energy * pch->band[1][w+g].energy  >= (pch->band[0][w+g].thr * pch->band[1][w+g].thr * en_m * en_s)){
+                    cpe->ms_mask[w+g] = 1;
+                    pch->band[0][w+g].energy = en_m;
+                    pch->band[1][w+g].energy = en_s;
+                    pch->band[0][w+g].thr = en_m * 0.001258925f;
+                    pch->band[1][w+g].thr = en_s * 0.001258925f;
                     for(i = 0; i < cpe->ch[0].ics.swb_sizes[g]; i++){
                         m = cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i];
                         s = cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
                         ff_m += sqrt(fabs(m));
                         ff_s += sqrt(fabs(s));
                     }
-                    pch->band[0][g2].ffac = ff_m / 32.0;
-                    pch->band[1][g2].ffac = ff_s / 32.0;
+                    pch->band[0][w+g].ffac = ff_m / 32.0;
+                    pch->band[1][w+g].ffac = ff_s / 32.0;
                 }
             }
         }
@@ -623,16 +618,15 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
 
     for(ch = 0; ch < chans; ch++){
         pch->a[ch] = pch->b[ch] = pch->pe[ch] = pch->thr[ch] = 0.0f;
-        for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+        for(w = 0; w < cpe->ch[ch].ics.num_windows*16; w += 16){
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                g2 = w*16 + g;
-                if(pch->band[ch][g2].energy != 0.0)
-                    calc_pe(&pch->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
-                if(pch->band[ch][g2].thr < pch->band[ch][g2].energy){
-                    pch->a[ch]   += pch->band[ch][g2].a;
-                    pch->b[ch]   += pch->band[ch][g2].b;
-                    pch->pe[ch]  += pch->band[ch][g2].pe;
-                    pch->thr[ch] += pch->band[ch][g2].thr;
+                if(pch->band[ch][w+g].energy != 0.0)
+                    calc_pe(&pch->band[ch][w+g], cpe->ch[ch].ics.swb_sizes[g]);
+                if(pch->band[ch][w+g].thr < pch->band[ch][w+g].energy){
+                    pch->a[ch]   += pch->band[ch][w+g].a;
+                    pch->b[ch]   += pch->band[ch][w+g].b;
+                    pch->pe[ch]  += pch->band[ch][w+g].pe;
+                    pch->thr[ch] += pch->band[ch][w+g].thr;
                 }
             }
         }
@@ -665,16 +659,15 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
             for(ch = 0; ch < chans; ch++){
                 pch->a[ch] = pch->b[ch] = pch->pe[ch] = pch->thr[ch] = 0.0;
                 pe = 0.0f;
-                for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+                for(w = 0; w < cpe->ch[ch].ics.num_windows*16; w += 16){
                     for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                        g2 = w*16 + g;
-                        pch->band[ch][g2].thr = modify_thr(pch->band[ch][g2].thr, r);
-                        calc_pe(&pch->band[ch][g2], cpe->ch[ch].ics.swb_sizes[g]);
-                        if(pch->band[ch][g2].thr < pch->band[ch][g2].energy){
-                            pch->a[ch]   += pch->band[ch][g2].a;
-                            pch->b[ch]   += pch->band[ch][g2].b;
-                            pch->pe[ch]  += pch->band[ch][g2].pe;
-                            pch->thr[ch] += pch->band[ch][g2].thr;
+                        pch->band[ch][w+g].thr = modify_thr(pch->band[ch][w+g].thr, r);
+                        calc_pe(&pch->band[ch][w+g], cpe->ch[ch].ics.swb_sizes[g]);
+                        if(pch->band[ch][w+g].thr < pch->band[ch][w+g].energy){
+                            pch->a[ch]   += pch->band[ch][w+g].a;
+                            pch->b[ch]   += pch->band[ch][w+g].b;
+                            pch->pe[ch]  += pch->band[ch][w+g].pe;
+                            pch->thr[ch] += pch->band[ch][w+g].thr;
                         }
                     }
                 }
@@ -684,16 +677,15 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         //determine scalefactors - 5.6.2 "Scalefactor determination"
         for(ch = 0; ch < chans; ch++){
             prev_scale = -1;
-            for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+            for(w = 0; w < cpe->ch[ch].ics.num_windows*16; w += 16){
                 for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                    g2 = w*16 + g;
-                    cpe->ch[ch].zeroes[g2] = pch->band[ch][g2].thr >= pch->band[ch][g2].energy;
-                    if(cpe->ch[ch].zeroes[g2]) continue;
+                    cpe->ch[ch].zeroes[w+g] = pch->band[ch][w+g].thr >= pch->band[ch][w+g].energy;
+                    if(cpe->ch[ch].zeroes[w+g]) continue;
                     //spec gives constant for lg() but we scaled it for log2()
-                    cpe->ch[ch].sf_idx[g2] = (int)(2.66667 * (log2(6.75*pch->band[ch][g2].thr) - log2(pch->band[ch][g2].ffac)));
+                    cpe->ch[ch].sf_idx[w+g] = (int)(2.66667 * (log2(6.75*pch->band[ch][w+g].thr) - log2(pch->band[ch][w+g].ffac)));
                     if(prev_scale != -1)
-                        cpe->ch[ch].sf_idx[g2] = av_clip(cpe->ch[ch].sf_idx[g2], prev_scale - SCALE_MAX_DIFF, prev_scale + SCALE_MAX_DIFF);
-                    prev_scale = cpe->ch[ch].sf_idx[g2];
+                        cpe->ch[ch].sf_idx[w+g] = av_clip(cpe->ch[ch].sf_idx[w+g], prev_scale - SCALE_MAX_DIFF, prev_scale + SCALE_MAX_DIFF);
+                    prev_scale = cpe->ch[ch].sf_idx[w+g];
                 }
             }
         }
@@ -701,19 +693,18 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
     case PSY_MODE_QUALITY:
         for(ch = 0; ch < chans; ch++){
             start = 0;
-            for(w = 0; w < cpe->ch[ch].ics.num_windows; w++){
+            for(w = 0; w < cpe->ch[ch].ics.num_windows*16; w += 16){
                 for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                    g2 = w*16 + g;
-                    if(pch->band[ch][g2].thr >= pch->band[ch][g2].energy){
-                        cpe->ch[ch].sf_idx[g2] = 0;
-                        cpe->ch[ch].zeroes[g2] = 1;
+                    if(pch->band[ch][w+g].thr >= pch->band[ch][w+g].energy){
+                        cpe->ch[ch].sf_idx[w+g] = 0;
+                        cpe->ch[ch].zeroes[w+g] = 1;
                     }else{
-                        cpe->ch[ch].zeroes[g2] = 0;
-                        cpe->ch[ch].sf_idx[g2] = (int)(2.66667 * (log2(6.75*pch->band[ch][g2].thr) - log2(pch->band[ch][g2].ffac)));
-                        while(cpe->ch[ch].sf_idx[g2] > 3){
-                            float dist = calc_distortion(cpe->ch[ch].coeffs + start, cpe->ch[ch].ics.swb_sizes[g], SCALE_ONE_POS + cpe->ch[ch].sf_idx[g2]);
-                            if(dist < pch->band[ch][g2].thr) break;
-                            cpe->ch[ch].sf_idx[g2] -= 3;
+                        cpe->ch[ch].zeroes[w+g] = 0;
+                        cpe->ch[ch].sf_idx[w+g] = (int)(2.66667 * (log2(6.75*pch->band[ch][w+g].thr) - log2(pch->band[ch][w+g].ffac)));
+                        while(cpe->ch[ch].sf_idx[w+g] > 3){
+                            float dist = calc_distortion(cpe->ch[ch].coeffs + start, cpe->ch[ch].ics.swb_sizes[g], SCALE_ONE_POS + cpe->ch[ch].sf_idx[w+g]);
+                            if(dist < pch->band[ch][w+g].thr) break;
+                            cpe->ch[ch].sf_idx[w+g] -= 3;
                         }
                     }
                     start += cpe->ch[ch].ics.swb_sizes[g];
