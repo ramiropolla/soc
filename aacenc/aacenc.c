@@ -146,6 +146,23 @@ static const struct {
     {   -1, -1, 0 }, // intensity in-phase
 };
 
+/** bits needed to code codebook run value for long windows */
+static const uint8_t run_value_bits_long[64] = {
+     5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,
+     5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5, 10,
+    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 15
+};
+
+/** bits needed to code codebook run value for short windows */
+static const uint8_t run_value_bits_short[16] = {
+    3, 3, 3, 3, 3, 3, 3, 6, 6, 6, 6, 6, 6, 6, 6, 9
+};
+
+static const uint8_t* run_value_bits[2] = {
+    run_value_bits_long, run_value_bits_short
+};
+
 /** default channel configurations */
 static const uint8_t aac_chan_configs[6][5] = {
  {1, ID_SCE},                         // 1 channel  - single channel element
@@ -349,18 +366,6 @@ static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
 }
 
 /**
- * Return number of bits needed to write codebook run length value.
- *
- * @param run     run length
- * @param bits    number of bits used to code value (5 for long frames, 3 for short frames)
- */
-static av_always_inline int calculate_run_bits(int run, const int bits)
-{
-    int esc = (1 << bits) - 1;
-    return (1 + (run >= esc)) * bits;
-}
-
-/**
  * Calculate the number of bits needed to code given band with given codebook.
  *
  * @param s       encoder context
@@ -490,7 +495,7 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
                 }
             }
             assert(bits != INT_MAX);
-            bits += s->path[i].bits + calculate_run_bits(j, run_bits);
+            bits += s->path[i].bits + run_value_bits[cpe->ch[channel].ics.num_windows == 8][j];
             if(bits < s->path[i+j].bits){
                 s->path[i+j].bits     = bits;
                 s->path[i+j].codebook = ccb;
