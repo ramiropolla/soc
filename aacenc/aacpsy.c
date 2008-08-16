@@ -797,7 +797,7 @@ int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
 {
     int i;
 
-    if(model >= AAC_NB_PSY_MODELS || !psy_models[model].window || !psy_models[model].process){
+    if(model < 0 || model >= AAC_NB_PSY_MODELS){
          av_log(avctx, AV_LOG_ERROR, "Invalid psy model\n");
          return -1;
     }
