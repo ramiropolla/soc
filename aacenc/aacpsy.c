@@ -146,7 +146,7 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
     }
 }
 
-static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe)
+static void psy_test_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe)
 {
     int ch, i;
     int chans = type == TYPE_CPE ? 2 : 1;
@@ -182,7 +182,7 @@ static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int16_t *la, in
     cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
 }
 
-static void psy_null8_process(AACPsyContext *apc, int tag, int type, ChannelElement *cpe)
+static void psy_test_process(AACPsyContext *apc, int tag, int type, ChannelElement *cpe)
 {
     int start;
     int w, ch, g, i;
@@ -773,10 +773,10 @@ static av_cold void psy_3gpp_end(AACPsyContext *apc)
 static const AACPsyModel psy_models[AAC_NB_PSY_MODELS] =
 {
     {
-       "Null model - short windows",
+       "Test model",
         NULL,
-        psy_null8_window,
-        psy_null8_process,
+        psy_test_window,
+        psy_test_process,
         NULL,
     },
     {
