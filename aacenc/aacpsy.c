@@ -52,7 +52,7 @@ static av_always_inline int quant(float coef, const float Q)
 
 /**
  * Convert coefficients to integers.
- * @return sum of coefficients
+ * @return sum of coefficient absolute values
  */
 static inline int quantize_coeffs(float *in, int *out, int size, int scale_idx)
 {
