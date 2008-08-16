@@ -1,6 +1,6 @@
 /*
  * MXF muxer
- * Copyright (c) 2008 GUCAS, Zhentan Feng<spyfeng at gmail dot com>
+ * Copyright (c) 2008 GUCAS, Zhentan Feng <spyfeng at gmail dot com>
  *
  * This file is part of FFmpeg.
  *
@@ -29,7 +29,7 @@
  * SMPTE RP224: Registry of SMPTE Universal Labels
  */
 
-#define DEBUG
+//#define DEBUG
 
 #include "mxf.h"
 
