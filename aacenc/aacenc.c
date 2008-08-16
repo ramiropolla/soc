@@ -125,25 +125,24 @@ static const uint8_t *swb_size_128[] = {
 /** spectral coefficients codebook information */
 static const struct {
     int16_t maxval;         ///< maximum possible value
-     int8_t cb_num;         ///< codebook number
-    uint8_t flags;          ///< codebook features
+     int8_t range;          ///< value used in vector calculation
 } aac_cb_info[] = {
-    {    0, -1, CB_UNSIGNED }, // zero codebook
-    {    1,  0, 0 },
-    {    1,  1, 0 },
-    {    2,  2, CB_UNSIGNED },
-    {    2,  3, CB_UNSIGNED },
-    {    4,  4, CB_PAIRS },
-    {    4,  5, CB_PAIRS },
-    {    7,  6, CB_PAIRS | CB_UNSIGNED },
-    {    7,  7, CB_PAIRS | CB_UNSIGNED },
-    {   12,  8, CB_PAIRS | CB_UNSIGNED },
-    {   12,  9, CB_PAIRS | CB_UNSIGNED },
-    { 8191, 10, CB_PAIRS | CB_UNSIGNED | CB_ESCAPE },
-    {   -1, -1, 0 }, // reserved
-    {   -1, -1, 0 }, // perceptual noise substitution
-    {   -1, -1, 0 }, // intensity out-of-phase
-    {   -1, -1, 0 }, // intensity in-phase
+    {    0, -1 }, // zero codebook
+    {    1,  3 },
+    {    1,  3 },
+    {    2,  3 },
+    {    2,  3 },
+    {    4,  9 },
+    {    4,  9 },
+    {    7,  8 },
+    {    7,  8 },
+    {   12, 13 },
+    {   12, 13 },
+    { 8191, 17 },
+    {   -1, -1 }, // reserved
+    {   -1, -1 }, // perceptual noise substitution
+    {   -1, -1 }, // intensity out-of-phase
+    {   -1, -1 }, // intensity in-phase
 };
 
 /** bits needed to code codebook run value for long windows */
@@ -380,26 +379,22 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
 {
     int i, j, w;
     int score = 0, dim, idx, start2;
-    int range;
+    int range = aac_cb_info[cb].range;
 
-    if(!cb) return 0;
+    if(!range) return 0;
     cb--;
-    dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
-    if(aac_cb_info[cb].flags & CB_UNSIGNED)
-        range = aac_cb_info[cb].maxval + 1;
-    else
-        range = aac_cb_info[cb].maxval*2 + 1;
+    dim = cb < FIRST_PAIR_BT ? 4 : 2;
 
     start2 = start;
-    if(aac_cb_info[cb].flags & CB_ESCAPE){
+    if(cb == ESC_BT){
         int coef_abs[2];
         for(w = win; w < win + group_len; w++){
             for(i = start2; i < start2 + size; i += dim){
                 idx = 0;
-                for(j = 0; j < dim; j++)
+                for(j = 0; j < dim; j++){
                     coef_abs[j] = FFABS(cpe->ch[channel].icoefs[i+j]);
-                for(j = 0; j < dim; j++)
                     idx = idx*17 + FFMIN(coef_abs[j], 16);
+                }
                 score += ff_aac_spectral_bits[cb][idx];
                 for(j = 0; j < dim; j++)
                     if(cpe->ch[channel].icoefs[i+j])
@@ -410,7 +405,7 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
             }
             start2 += 128;
        }
-    }else if(aac_cb_info[cb].flags & CB_UNSIGNED){
+    }else if(IS_CODEBOOK_UNSIGNED(cb)){
         for(w = win; w < win + group_len; w++){
             for(i = start2; i < start2 + size; i += dim){
                 idx = 0;
@@ -537,26 +532,23 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
  */
 static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channel, int start, int size, int cb)
 {
-    const uint8_t  *bits  = ff_aac_spectral_bits [aac_cb_info[cb].cb_num];
-    const uint16_t *codes = ff_aac_spectral_codes[aac_cb_info[cb].cb_num];
-    const int dim = (aac_cb_info[cb].flags & CB_PAIRS) ? 2 : 4;
-    int i, j, idx, range;
+    const uint8_t  *bits  = ff_aac_spectral_bits [cb - 1];
+    const uint16_t *codes = ff_aac_spectral_codes[cb - 1];
+    const int range = aac_cb_info[cb].range;
+    const int dim = (cb < FIRST_PAIR_BT) ? 4 : 2;
+    int i, j, idx;
 
-    if(!bits) return;
+    //do not encode zero or special codebooks
+    if(range == -1) return;
 
-    if(aac_cb_info[cb].flags & CB_UNSIGNED)
-        range = aac_cb_info[cb].maxval + 1;
-    else
-        range = aac_cb_info[cb].maxval*2 + 1;
-
-    if(aac_cb_info[cb].flags & CB_ESCAPE){
+    if(cb == ESC_BT){
         int coef_abs[2];
         for(i = start; i < start + size; i += dim){
             idx = 0;
-            for(j = 0; j < dim; j++)
+            for(j = 0; j < dim; j++){
                 coef_abs[j] = FFABS(cpe->ch[channel].icoefs[i+j]);
-            for(j = 0; j < dim; j++)
                 idx = idx*17 + FFMIN(coef_abs[j], 16);
+            }
             put_bits(&s->pb, bits[idx], codes[idx]);
             //output signs
             for(j = 0; j < dim; j++)
@@ -571,7 +563,7 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
                     put_bits(&s->pb, len, coef_abs[j] & ((1 << len) - 1));
                 }
         }
-    }else if(aac_cb_info[cb].flags & CB_UNSIGNED){
+    }else if(IS_CODEBOOK_UNSIGNED(cb)){
         for(i = start; i < start + size; i += dim){
             idx = 0;
             for(j = 0; j < dim; j++)
