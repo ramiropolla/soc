@@ -852,7 +852,7 @@ static int mxf_build_essence_container_refs(AVFormatContext *s)
     return 0;
 }
 
-static void mxf_write_partition(AVFormatContext *s, int64_t this_partition, int bodysid, const uint8_t *key)
+static void mxf_write_partition(AVFormatContext *s, int64_t byte_position, int bodysid, const uint8_t *key)
 {
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
@@ -868,16 +868,16 @@ static void mxf_write_partition(AVFormatContext *s, int64_t this_partition, int 
     put_be16(pb, 2); // minorVersion
     put_be32(pb, 1); // kagSize
 
-    put_be64(pb, this_partition); // thisPartition
+    put_be64(pb, byte_position); // thisPartition
     put_be64(pb, 0); // previousPartition
 
     // set offset
-    if (!this_partition)
+    if (!byte_position)
         mxf->header_footer_partition_offset = url_ftell(pb);
-    put_be64(pb, this_partition); // footerPartition,update later
+    put_be64(pb, byte_position); // footerPartition,update later
 
     // set offset
-    if (!this_partition)
+    if (!byte_position)
         mxf->header_byte_count_offset = url_ftell(pb);
     put_be64(pb, 0); // headerByteCount, update later
 
