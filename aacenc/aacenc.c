@@ -717,10 +717,9 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
 {
     AACEncContext *s = avctx->priv_data;
     int g, w, wg;
-    int global_gain;
+    int global_gain = 0;
 
     //determine global gain as standard recommends - the first scalefactor value
-    global_gain = 0;
     w = 0;
     for(wg = 0; wg < cpe->ch[channel].ics.num_window_groups; wg++){
         for(g = 0; g < cpe->ch[channel].ics.max_sfb; g++){
