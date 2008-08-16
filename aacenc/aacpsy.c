@@ -255,7 +255,7 @@ typedef struct Psy3gppChannel{
     Psy3gppBand band[2][128];               ///< bands information
     Psy3gppBand prev_band[2][128];          ///< bands information from the previous frame
 
-    float       win_nrg[2];                 ///< sliding average of channel energy
+    float       win_energy[2];              ///< sliding average of channel energy
     float       iir_state[2][2];            ///< hi-pass IIR filter state
     uint8_t     next_grouping[2];           ///< stored grouping scheme for the next frame (in case of 8 short window sequence)
     enum WindowSequence next_window_seq[2]; ///< window sequence to be used in the next frame
@@ -410,13 +410,13 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
                 sum2 += sum;
             }
             for(i = 0; i < 8; i++){
-                if(s[i] > pch->win_nrg[ch] * attack_ratio){
+                if(s[i] > pch->win_energy[ch] * attack_ratio){
                     attack_n = i + 1;
                     switch_to_eight = 1;
                     break;
                 }
             }
-            pch->win_nrg[ch] = pch->win_nrg[ch]*7/8 + sum2/64;
+            pch->win_energy[ch] = pch->win_energy[ch]*7/8 + sum2/64;
 
             switch(last_window_sequence){
             case ONLY_LONG_SEQUENCE:
