@@ -304,7 +304,6 @@ static void mxf_free(AVFormatContext *s)
         st = s->streams[i];
         av_freep(&st->priv_data);
     }
-    av_freep(mxf->reference.sub_desc);
     av_freep(&mxf->reference.sub_desc);
     av_freep(&mxf->reference.mul_desc);
     av_freep(&mxf->essence_container_uls);
@@ -683,6 +682,7 @@ static int mxf_write_multi_descriptor(AVFormatContext *s, KLVPacket *klv)
     MXFContext *mxf = s->priv_data;
     MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
+    int i;
 
     AV_WB24(klv->key + 13, 0x014400);
 
@@ -705,13 +705,11 @@ static int mxf_write_multi_descriptor(AVFormatContext *s, KLVPacket *klv)
     put_buffer(pb, multiple_desc_ul, 16);
 
     // write sub descriptor refs
-    refs->sub_desc= av_mallocz(s->nb_streams * sizeof(*refs->sub_desc));
-    if (!refs->sub_desc)
-        return AVERROR(ENOMEM);
-    if (mxf_generate_reference(s, refs->sub_desc, s->nb_streams) < 0)
-        return -1;
     mxf_write_local_tag(pb, s->nb_streams * 16 + 8, 0x3F01);
-    mxf_write_reference(pb, s->nb_streams, **refs->sub_desc);
+    mxf_write_refs_count(pb, s->nb_streams);
+    for (i = 0; i < s->nb_streams; i++) {
+        mxf_write_uuid(pb, SubDescriptor, i);
+    }
     return 0;
 }
 
@@ -728,7 +726,7 @@ static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWrit
     klv_encode_ber_length(pb, 96);
 
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, (*refs->sub_desc)[stream_index], 16);
+    mxf_write_uuid(pb, SubDescriptor, stream_index);
 
     mxf_write_local_tag(pb, 4, 0x3006);
     put_be32(pb, stream_index);
@@ -767,7 +765,7 @@ static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableE
     klv_encode_ber_length(pb, 96);
 
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, (*refs->sub_desc)[stream_index], 16);
+    mxf_write_uuid(pb, SubDescriptor, stream_index);
 
     mxf_write_local_tag(pb, 4, 0x3006);
     put_be32(pb, stream_index);

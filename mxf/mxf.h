@@ -40,6 +40,7 @@ enum MXFMetadataSetType {
     Preface,
     Identification,
     ContentStorage,
+    SubDescriptor,
 };
 
 typedef struct {
