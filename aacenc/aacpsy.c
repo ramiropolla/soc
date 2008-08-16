@@ -485,7 +485,7 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
 static inline float modify_thr(float thr, float r){
     float t;
     t = pow(thr, 0.25) + r;
-    return t*t*t*t;
+    return (t*t)*(t*t);
 }
 
 /**
