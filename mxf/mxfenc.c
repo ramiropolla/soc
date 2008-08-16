@@ -89,17 +89,6 @@ static const MXFEssenceElementKey mxf_essence_element_key[] = {
 
 static const uint8_t multiple_desc_ul[] = { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x03,0x0D,0x01,0x03,0x01,0x02,0x7F,0x01,0x00 };
 
-static const MXFCodecUL mxf_essence_container_uls[] = {
-    // picture essence container
-    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x02,0x0D,0x01,0x03,0x01,0x02,0x04,0x60,0x01 }, 14, CODEC_ID_MPEG2VIDEO }, /* MPEG-ES Frame wrapped */
-//    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x0D,0x01,0x03,0x01,0x02,0x02,0x41,0x01 }, 14,    CODEC_ID_DVVIDEO }, /* DV 625 25mbps */
-    // audio essence conatiner uls
-    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x0D,0x01,0x03,0x01,0x02,0x06,0x01,0x00 }, 14, CODEC_ID_PCM_S16LE }, /* BWF Frame wrapped */
-//    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x02,0x0D,0x01,0x03,0x01,0x02,0x04,0x40,0x01 }, 14,       CODEC_ID_MP2 }, /* MPEG-ES Frame wrapped, 0x40 ??? stream id */
-//    { { 0x06,0x0E,0x2B,0x34,0x04,0x01,0x01,0x01,0x0D,0x01,0x03,0x01,0x02,0x01,0x01,0x01 }, 14, CODEC_ID_PCM_S16LE }, /* D-10 Mapping 50Mbps PAL Extended Template */
-    { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 },  0,      CODEC_ID_NONE },
-};
-
 /**
  * SMPTE RP210 http://www.smpte-ra.org/mdd/index.html
  */
@@ -222,7 +211,7 @@ static int klv_encode_ber_length(ByteIOContext *pb, uint64_t len)
 
 static const MXFCodecUL *mxf_get_essence_container_ul(enum CodecID type)
 {
-    const MXFCodecUL *uls = mxf_essence_container_uls;
+    const MXFCodecUL *uls = ff_mxf_essence_container_uls;
     while (uls->id != CODEC_ID_NONE) {
         if (uls->id == type)
             break;
@@ -839,7 +828,7 @@ static int mxf_build_essence_container_refs(AVFormatContext *s)
     int i;
     const MXFCodecUL *codec_ul = NULL;
 
-    for (codec_ul = mxf_essence_container_uls; codec_ul->id; codec_ul++) {
+    for (codec_ul = ff_mxf_essence_container_uls; codec_ul->id; codec_ul++) {
         for (i = 0; i < s->nb_streams; i++) {
             st = s->streams[i];
             if (st->codec->codec_id == codec_ul->id) {
@@ -848,6 +837,10 @@ static int mxf_build_essence_container_refs(AVFormatContext *s)
                 break;
             }
         }
+        // considering WAV/AES3 frame wrapped, when get the first CODEC_ID_PCM_S16LE, break;
+        // this is a temporary method, when we can get  more information, modofy this.
+        if (codec_ul->id == CODEC_ID_PCM_S16LE)
+            break;
     }
     return 0;
 }
