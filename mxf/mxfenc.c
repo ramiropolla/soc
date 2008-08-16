@@ -257,13 +257,6 @@ static void mxf_write_local_tag(ByteIOContext *pb, int value_size, int tag)
     put_be16(pb, value_size);
 }
 
-static void mxf_write_reference(ByteIOContext *pb, int ref_count, UID value)
-{
-    put_be32(pb, ref_count);
-    put_be32(pb, 16);
-    put_buffer(pb, value, sizeof(UID) * ref_count);
-}
-
 static void mxf_free(AVFormatContext *s)
 {
     MXFContext *mxf = s->priv_data;
@@ -328,7 +321,8 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
 
     // write essence_container_refs
     mxf_write_local_tag(pb, 8 + 16 * mxf->essence_container_count, 0x3B0A);
-    mxf_write_reference(pb, mxf->essence_container_count, *mxf->essence_container_uls);
+    mxf_write_refs_count(pb, mxf->essence_container_count);
+    put_buffer(pb, *mxf->essence_container_uls, sizeof(UID) * mxf->essence_container_count);
 
     // write dm_scheme_refs
     mxf_write_local_tag(pb, 8, 0x3B0B);
@@ -896,7 +890,8 @@ static void mxf_write_partition(AVFormatContext *s, int64_t this_partition, int 
     put_buffer(pb, op1a_ul, 16); // operational pattern
 
     // essence container
-    mxf_write_reference(pb, mxf->essence_container_count, *mxf->essence_container_uls);
+    mxf_write_refs_count(pb, mxf->essence_container_count);
+    put_buffer(pb, *mxf->essence_container_uls, sizeof(UID) * mxf->essence_container_count);
 #ifdef DEBUG
     av_log(s,AV_LOG_DEBUG, "essence container count:%d\n", mxf->essence_container_count);
     for (i = 0; i < mxf->essence_container_count; i++)
