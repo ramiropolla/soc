@@ -146,64 +146,6 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
     }
 }
 
-static void psy_null_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe)
-{
-    int ch;
-    int chans = type == TYPE_CPE ? 2 : 1;
-
-    for(ch = 0; ch < chans; ch++){
-        cpe->ch[ch].ics.window_sequence[0] = ONLY_LONG_SEQUENCE;
-        cpe->ch[ch].ics.use_kb_window[0] = 1;
-        cpe->ch[ch].ics.num_windows = 1;
-        cpe->ch[ch].ics.swb_sizes = apc->bands1024;
-        cpe->ch[ch].ics.num_swb = apc->num_bands1024;
-        cpe->ch[ch].ics.num_window_groups = 1;
-        cpe->ch[ch].ics.group_len[0] = 1;
-    }
-    cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
-}
-
-static void psy_null_process(AACPsyContext *apc, int tag, int type, ChannelElement *cpe)
-{
-    int start;
-    int ch, g, i;
-    int minscale;
-    int chans = type == TYPE_CPE ? 2 : 1;
-
-    for(ch = 0; ch < chans; ch++){
-        start = 0;
-        for(g = 0; g < apc->num_bands1024; g++){
-            float energy = 0.0f, ffac = 0.0f, thr, dist;
-
-            for(i = 0; i < apc->bands1024[g]; i++){
-                energy += cpe->ch[ch].coeffs[start+i]*cpe->ch[ch].coeffs[start+i];
-                ffac += sqrt(FFABS(cpe->ch[ch].coeffs[start+i]));
-            }
-            thr = energy * 0.001258925f;
-            cpe->ch[ch].sf_idx[g] = 136;
-            cpe->ch[ch].zeroes[g] = (energy == 0.0);
-            if(cpe->ch[ch].zeroes[g]) continue;
-            minscale = (int)(2.66667 * (log2(6.75*thr) - log2(ffac)));
-            cpe->ch[ch].sf_idx[g] = SCALE_ONE_POS - minscale;
-            while(cpe->ch[ch].sf_idx[g] > 3){
-                dist = calc_distortion(cpe->ch[ch].coeffs + start, apc->bands1024[g], cpe->ch[ch].sf_idx[g]);
-                if(dist < thr) break;
-                cpe->ch[ch].sf_idx[g] -= 3;
-            }
-        }
-    }
-    for(ch = 0; ch < chans; ch++){
-        minscale = 255;
-        for(g = 0; g < apc->num_bands1024; g++)
-            if(!cpe->ch[ch].zeroes[g])
-                minscale = FFMIN(minscale, cpe->ch[ch].sf_idx[g]);
-        for(g = 0; g < apc->num_bands1024; g++)
-            if(!cpe->ch[ch].zeroes[g])
-                cpe->ch[ch].sf_idx[g] = FFMIN(minscale + SCALE_MAX_DIFF, cpe->ch[ch].sf_idx[g]);
-    }
-    psy_create_output(apc, cpe, chans);
-}
-
 static void psy_null8_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe)
 {
     int ch, i;
@@ -830,13 +772,6 @@ static av_cold void psy_3gpp_end(AACPsyContext *apc)
 
 static const AACPsyModel psy_models[AAC_NB_PSY_MODELS] =
 {
-    {
-       "Null model",
-        NULL,
-        psy_null_window,
-        psy_null_process,
-        NULL,
-    },
     {
        "Null model - short windows",
         NULL,

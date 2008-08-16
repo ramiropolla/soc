@@ -27,7 +27,6 @@
 #include "lowpass.h"
 
 enum AACPsyModelType{
-    AAC_PSY_NULL,              ///< do nothing with frequencies
     AAC_PSY_NULL8,             ///< do nothing with frequencies but work with short windows
     AAC_PSY_3GPP,              ///< model following recommendations from 3GPP TS 26.403
 
