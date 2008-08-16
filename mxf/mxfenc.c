@@ -272,7 +272,7 @@ static void mxf_free(AVFormatContext *s)
 
 static const MXFDataDefinitionUL *mxf_get_data_definition_ul(enum CodecType type)
 {
-    const MXFDataDefinitionUL *uls = mxf_data_definition_uls;
+    const MXFDataDefinitionUL *uls = ff_mxf_data_definition_uls;
     while (uls->type != CODEC_TYPE_DATA) {
         if (type == uls->type)
             break;
@@ -693,7 +693,7 @@ static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWrit
 
     // tmp write, will modified later
     mxf_write_local_tag(pb, 16, 0x3201);
-    put_buffer(pb, mxf_codec_uls->uid, 16);
+    put_buffer(pb, ff_mxf_codec_uls->uid, 16);
     return 0;
 }
 
@@ -730,7 +730,7 @@ static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableE
 
     // tmp write, will modified later
     mxf_write_local_tag(pb, 16, 0x3201);
-    put_buffer(pb, (mxf_codec_uls + 8) ->uid, 16);
+    put_buffer(pb, (ff_mxf_codec_uls + 8) ->uid, 16);
     return 0;
 }
 

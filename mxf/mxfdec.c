@@ -742,7 +742,7 @@ static int mxf_parse_structural_metadata(MXFContext *mxf)
 #ifdef DEBUG
         PRINT_KEY(mxf->fc, "data definition   ul", source_track->sequence->data_definition_ul);
 #endif
-        st->codec->codec_type = mxf_get_codec_type(mxf_data_definition_uls, &source_track->sequence->data_definition_ul);
+        st->codec->codec_type = mxf_get_codec_type(ff_mxf_data_definition_uls, &source_track->sequence->data_definition_ul);
 
         source_package->descriptor = mxf_resolve_strong_ref(mxf, &source_package->descriptor_ref, AnyType);
         if (source_package->descriptor) {
@@ -784,7 +784,7 @@ static int mxf_parse_structural_metadata(MXFContext *mxf)
             }
         }
         /* TODO: drop PictureEssenceCoding and SoundEssenceCompression, only check EssenceContainer */
-        codec_ul = mxf_get_codec_ul(mxf_codec_uls, &descriptor->essence_codec_ul);
+        codec_ul = mxf_get_codec_ul(ff_mxf_codec_uls, &descriptor->essence_codec_ul);
         st->codec->codec_id = codec_ul->id;
         if (descriptor->extradata) {
             st->codec->extradata = descriptor->extradata;
