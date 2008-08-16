@@ -594,8 +594,8 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                     en_m += m*m;
                     en_s += s*s;
                 }
-                en_m /= 262144.0*2.0;
-                en_s /= 262144.0*2.0;
+                en_m /= 262144.0*4.0;
+                en_s /= 262144.0*4.0;
                 minthr = FFMIN(pch->band[0][w+g].thr, pch->band[1][w+g].thr);
                 if(minthr * minthr * pch->band[0][w+g].energy * pch->band[1][w+g].energy  >= (pch->band[0][w+g].thr * pch->band[1][w+g].thr * en_m * en_s)){
                     cpe->ms_mask[w+g] = 1;
