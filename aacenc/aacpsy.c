@@ -594,26 +594,28 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                 if(pch->band[0][g2].energy == 0.0 || pch->band[1][g2].energy == 0.0)
                     continue;
                 for(i = 0; i < cpe->ch[0].ics.swb_sizes[g]; i++){
-                    m = (cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i]) / 2.0;
-                    s = (cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i]) / 2.0;
+                    m = cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i];
+                    s = cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
                     en_m += m*m;
                     en_s += s*s;
-                    ff_m += sqrt(FFABS(m));
-                    ff_s += sqrt(FFABS(s));
                 }
-                en_m /= 262144.0;
-                en_s /= 262144.0;
-                ff_m /= sqrt(512.0);
-                ff_s /= sqrt(512.0);
+                en_m /= 262144.0*2.0;
+                en_s /= 262144.0*2.0;
                 l1 = FFMIN(pch->band[0][g2].thr, pch->band[1][g2].thr);
                 if(en_m == 0.0 || en_s == 0.0 || l1*l1 / (en_m * en_s) >= (pch->band[0][g2].thr * pch->band[1][g2].thr / (pch->band[0][g2].energy * pch->band[1][g2].energy))){
                     cpe->ms_mask[g2] = 1;
                     pch->band[0][g2].energy = en_m;
                     pch->band[1][g2].energy = en_s;
-                    pch->band[0][g2].ffac = ff_m;
-                    pch->band[1][g2].ffac = ff_s;
                     pch->band[0][g2].thr = en_m * 0.001258925f;
                     pch->band[1][g2].thr = en_s * 0.001258925f;
+                    for(i = 0; i < cpe->ch[0].ics.swb_sizes[g]; i++){
+                        m = cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i];
+                        s = cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
+                        ff_m += sqrt(fabs(m));
+                        ff_s += sqrt(fabs(s));
+                    }
+                    pch->band[0][g2].ffac = ff_m / 32.0;
+                    pch->band[1][g2].ffac = ff_s / 32.0;
                 }
             }
         }
