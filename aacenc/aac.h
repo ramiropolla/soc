@@ -47,8 +47,6 @@
 
 #include "avcodec.h"
 #include "dsputil.h"
-#include "libavutil/random.h"
-
 #include "mpeg4audio.h"
 
 #include <stdint.h>
@@ -60,11 +58,10 @@
         size);
 
 #define MAX_CHANNELS 64
-#define MAX_TAGID 16
+#define MAX_ELEM_ID 16
 
 #define TNS_MAX_ORDER 20
 #define PNS_MEAN_ENERGY 3719550720.0f // sqrt(3.0) * 1<<31
-#define IVQUANT_SIZE 1024
 
 enum AudioObjectType {
     AOT_NULL,
@@ -96,15 +93,15 @@ enum AudioObjectType {
     AOT_SSC,                   ///< N                       SinuSoidal Coding
 };
 
-enum RawDataBlockID {
-    ID_SCE,
-    ID_CPE,
-    ID_CCE,
-    ID_LFE,
-    ID_DSE,
-    ID_PCE,
-    ID_FIL,
-    ID_END,
+enum RawDataBlockType {
+    TYPE_SCE,
+    TYPE_CPE,
+    TYPE_CCE,
+    TYPE_LFE,
+    TYPE_DSE,
+    TYPE_PCE,
+    TYPE_FIL,
+    TYPE_END,
 };
 
 enum ExtensionPayloadID {
@@ -134,7 +131,7 @@ enum BandType {
 
 #define IS_CODEBOOK_UNSIGNED(x) ((x - 1) & 10)
 
-enum ChannelType {
+enum ChannelPosition {
     AAC_CHANNEL_FRONT = 1,
     AAC_CHANNEL_SIDE  = 2,
     AAC_CHANNEL_BACK  = 3,
@@ -143,14 +140,12 @@ enum ChannelType {
 };
 
 /**
- * mix-down channel types
- * MIXDOWN_CENTER is the index into the mix-down arrays for a Single Channel Element with AAC_CHANNEL_FRONT.
- * MIXDOWN_(BACK|FRONT) are the indices for Channel Pair Elements with AAC_CHANNEL_(BACK|FRONT).
+ * The point during decoding at which channel coupling is applied.
  */
-enum {
-    MIXDOWN_CENTER,
-    MIXDOWN_FRONT,
-    MIXDOWN_BACK,
+enum CouplingPoint {
+    BEFORE_TNS,
+    BETWEEN_TNS_AND_IMDCT,
+    AFTER_IMDCT = 3,
 };
 
 #define SCALE_DIV_512    36    ///< scalefactor difference that corresponds to scale difference in 512 times
@@ -158,18 +153,6 @@ enum {
 #define SCALE_MAX_POS   255    ///< scalefactor index maximum value
 #define SCALE_MAX_DIFF   60    ///< maximum scalefactor difference allowed by standard
 #define SCALE_DIFF_ZERO  60    ///< codebook index corresponding to zero scalefactor indices difference
-
-/**
- * Program configuration - describes how channels are arranged. Either read from
- * stream (ID_PCE) or created based on a default fixed channel arrangement.
- */
-typedef struct {
-    enum ChannelType che_type[4][MAX_TAGID]; ///< channel element type with the first index as the first 4 raw_data_block IDs
-    int mono_mixdown_tag;                    ///< The SCE tag to use if user requests mono   output, -1 if not available.
-    int stereo_mixdown_tag;                  ///< The CPE tag to use if user requests stereo output, -1 if not available.
-    int mixdown_coeff_index;                 ///< 0-3
-    int pseudo_surround;                     ///< Mix surround channels out of phase.
-} ProgramConfig;
 
 #ifdef AAC_LTP
 /**
@@ -188,7 +171,6 @@ typedef struct {
  * Individual Channel Stream
  */
 typedef struct {
-    int intensity_present;
     uint8_t max_sfb;            ///< number of scalefactor bands per group
     enum WindowSequence window_sequence[2];
     uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window.
@@ -222,14 +204,6 @@ typedef struct {
 } TemporalNoiseShaping;
 
 /**
- * M/S joint channel coding
- */
-typedef struct {
-    int present;
-    uint8_t mask[8][64];
-} MidSideStereo;
-
-/**
  * Dynamic Range Control - decoded from the bitstream but not processed further.
  */
 typedef struct {
@@ -237,23 +211,18 @@ typedef struct {
     int dyn_rng_sgn[17];                            ///< DRC sign information; 0 - positive, 1 - negative
     int dyn_rng_ctl[17];                            ///< DRC magnitude information
     int exclude_mask[MAX_CHANNELS];                 ///< Channels to be excluded from DRC processing.
-    int additional_excluded_chns[MAX_CHANNELS / 7]; /**< The exclude_mask bits are
-                                                        coded in groups of 7 with 1 bit preceeding each group (except the first)
-                                                        indicating that 7 more mask bits are coded. */
     int band_incr;                                  ///< Number of DRC bands greater than 1 having DRC info.
     int interpolation_scheme;                       ///< Indicates the interpolation scheme used in the SBR QMF domain.
     int band_top[17];                               ///< Indicates the top of the i-th DRC band in units of 4 spectral lines.
     int prog_ref_level;                             /**< A reference level for the long-term program audio level for all
-                                                        channels combined. */
+                                                     *   channels combined.
+                                                     */
 } DynamicRangeControl;
 
-/**
- * pulse tool
- */
 typedef struct {
     int num_pulse;
     int start;
-    int offset[4];
+    int pos[4];
     int amp[4];
 } Pulse;
 
@@ -283,33 +252,28 @@ typedef struct {
  * coupling parameters
  */
 typedef struct {
-    int is_indep_coup;     ///< Set if independent coupling (i.e. after IMDCT).
-    int domain;            ///< Controls if coupling is performed before (0) or after (1) the TNS decoding of the target channels.
+    enum CouplingPoint coupling_point;  ///< The point during decoding at which coupling is applied.
     int num_coupled;       ///< number of target elements
-    int is_cpe[9];         ///< Set if target is an CPE (otherwise it's an SCE).
-    int tag_select[9];     ///< element tag index
-    int l[9];              ///< Apply gain to left channel of a CPE.
-    int r[9];              ///< Apply gain to right channel of a CPE.
-    float gain[18][8][64];
+    enum RawDataBlockType type[8];   ///< Type of channel element to be coupled - SCE or CPE.
+    int id_select[8];      ///< element id
+    int ch_select[8];      /**< [0] shared list of gains; [1] list of gains for left channel;
+                            *   [2] list of gains for right channel; [3] lists of gains for both channels
+                            */
+    float gain[16][120];
 } ChannelCoupling;
-
 
 /**
  * Single Channel Element - used for both SCE and LFE elements.
  */
 typedef struct {
-    float mixing_gain;                        /**< Channel gain (not used by AAC bitstream).
-                                               *   Note that this is applied before joint stereo decoding.
-                                               *   Thus, when used inside CPE elements, both channels must have equal gain.
-                                               */
     IndividualChannelStream ics;
     TemporalNoiseShaping tns;
     Pulse pulse;
-    enum BandType band_type[8][64];           ///< band types
-    int band_type_run_end[8][64];             ///< band type run end points
-    float sf[8][64];                          ///< scalefactors
-    int sf_idx[8][64];                        ///< scalefactor indices (used by encoder)
-    int zeroes[8][64];                        ///< band is not coded (used by encoder)
+    enum BandType band_type[128];             ///< band types
+    int band_type_run_end[128];               ///< band type run end points
+    float sf[128];                            ///< scalefactors
+    int sf_idx[128];                          ///< scalefactor indices (used by encoder)
+    int zeroes[128];                          ///< band is not coded (used by encoder)
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< coefficients for IMDCT
     DECLARE_ALIGNED_16(float, saved[1024]);   ///< overlap
     DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
@@ -327,8 +291,9 @@ typedef struct {
  */
 typedef struct {
     // CPE specific
-    int common_window;     ///< Set if channels share a common 'IndividualChannelStream' in bitstream.
-    MidSideStereo ms;
+    int common_window;        ///< Set if channels share a common 'IndividualChannelStream' in bitstream.
+    int     ms_mode;          ///< Signals mid/side stereo flags coding mode (used by encoder)
+    uint8_t ms_mask[120];     ///< Set if mid/side stereo is used for each scalefactor window band
     // shared
     SingleChannelElement ch[2];
     // CCE specific
@@ -350,8 +315,10 @@ typedef struct {
      * @defgroup elements
      * @{
      */
-    ProgramConfig pcs;
-    ChannelElement * che[4][MAX_TAGID];
+    enum ChannelPosition che_pos[4][MAX_ELEM_ID]; /**< channel element channel mapping with the
+                                                   *   first index as the first 4 raw data block types
+                                                   */
+    ChannelElement * che[4][MAX_ELEM_ID];
     /** @} */
 
     /**
@@ -375,16 +342,14 @@ typedef struct {
 #ifdef AAC_SSR
     ssr_context ssrctx;
 #endif /* AAC_SSR */
-    AVRandomState random_state;
+    int random_state;
     /** @} */
 
     /**
-     * @defgroup output   Members used for output interleaving and down-mixing.
+     * @defgroup output   Members used for output interleaving.
      * @{
      */
-    float *interleaved_output;                        ///< Interim buffer for interleaving PCM samples.
     float *output_data[MAX_CHANNELS];                 ///< Points to each element's 'ret' buffer (PCM output).
-    ChannelElement *mm[3];                            ///< Center/Front/Back channel elements to use for matrix mix-down.
     float add_bias;                                   ///< offset for dsp.float_to_int16
     float sf_scale;                                   ///< Pre-scale for correct IMDCT and dsp.float_to_int16.
     int sf_offset;                                    ///< offset into pow2sf_tab as appropriate for dsp.float_to_int16
