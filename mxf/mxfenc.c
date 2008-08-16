@@ -506,10 +506,8 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
 
     if (type == SourcePackage) {
         // write multiple descriptor reference
-        if (mxf_generate_reference(s, &refs->mul_desc, 1) < 0)
-            return -1;
         mxf_write_local_tag(pb, 16, 0x4701);
-        put_buffer(pb, *refs->mul_desc, 16);
+        mxf_write_uuid(pb, MultipleDescriptor, 0);
     }
     return 0;
 }
@@ -692,9 +690,9 @@ static int mxf_write_multi_descriptor(AVFormatContext *s, KLVPacket *klv)
     klv_encode_ber_length(pb, 64 + 16 * s->nb_streams);
 
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, *refs->mul_desc, 16);
+    mxf_write_uuid(pb, MultipleDescriptor, 0);
 #ifdef DEBUG
-    PRINT_KEY(s, "multi_desc uid", *refs->mul_desc);
+    PRINT_KEY(s, "multi_desc uid", pb->buf_ptr - 16);
 #endif
     // write sample rate
     // SMPTE377M D.1 says this field is necessary,
