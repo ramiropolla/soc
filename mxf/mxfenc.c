@@ -609,10 +609,9 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     put_be64(pb, st->duration);
 
     // write structural component
-    if (mxf_generate_reference(s, &sc->structural_component_refs, 1) < 0)
-        return -1;
     mxf_write_local_tag(pb, 16 + 8, 0x1001);
-    mxf_write_reference(pb, 1, *sc->structural_component_refs);
+    mxf_write_refs_count(pb, 1);
+    mxf_write_uuid(pb, SourceClip * Track * type, stream_index);
     return 0;
 }
 
@@ -635,11 +634,11 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
 
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    put_buffer(pb, *sc->structural_component_refs, 16);
+    mxf_write_uuid(pb, SourceClip * Track * type, stream_index);
 
 #ifdef DEBUG
     PRINT_KEY(s, "structural component key", klv->key);
-    PRINT_KEY(s, "structural component uid", *sc->structural_component_refs);
+    PRINT_KEY(s, "structural component uid", pb->buf_ptr - 16);
 #endif
     data_def_ul = mxf_get_data_definition_ul(st->codec->codec_type);
     mxf_write_local_tag(pb, 16, 0x0201);
