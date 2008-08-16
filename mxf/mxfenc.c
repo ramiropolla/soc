@@ -46,18 +46,7 @@ typedef struct {
 } MXFEssenceElementKey;
 
 typedef struct {
-    UID *identification;
-    UID *content_storage;
-    UID **package;
-    UID **track;
-    UID *mul_desc;
-    UID **sub_desc;
-} MXFReferenceContext;
-
-typedef struct {
     UID track_essence_element_key;
-    UID *sequence_refs;
-    UID *structural_component_refs;
 } MXFStreamContext;
 
 typedef struct MXFContext {
@@ -66,7 +55,6 @@ typedef struct MXFContext {
     int64_t header_byte_count_offset;
     int64_t header_footer_partition_offset;
     unsigned int random_state;
-    MXFReferenceContext reference;
     int essence_container_count;
     UID *essence_container_uls;
 } MXFContext;
@@ -198,21 +186,6 @@ static void mxf_generate_umid(AVFormatContext *s, UMID umid)
     mxf_generate_uuid(s, umid + 16);
 }
 
-static int mxf_generate_reference(AVFormatContext *s, UID **refs, int ref_count)
-{
-    int i;
-    UID *p;
-    *refs = av_mallocz(ref_count * sizeof(UID));
-    if (!*refs)
-        return AVERROR(ENOMEM);
-    p = *refs;
-    for (i = 0; i < ref_count; i++) {
-        mxf_generate_uuid(s, *p);
-        p ++;
-    }
-    return 0;
-}
-
 static void mxf_write_uuid(ByteIOContext *pb, enum CodecID type, int value)
 {
     put_buffer(pb, uuid_base, 12);
@@ -297,15 +270,10 @@ static void mxf_free(AVFormatContext *s)
     AVStream *st;
     int i;
 
-    av_freep(&mxf->reference.identification);
-    av_freep(&mxf->reference.package);
-    av_freep(&mxf->reference.content_storage);
     for (i = 0; i < s->nb_streams; i++) {
         st = s->streams[i];
         av_freep(&st->priv_data);
     }
-    av_freep(&mxf->reference.sub_desc);
-    av_freep(&mxf->reference.mul_desc);
     av_freep(&mxf->essence_container_uls);
 }
 
@@ -323,7 +291,6 @@ static const MXFDataDefinitionUL *mxf_get_data_definition_ul(enum CodecType type
 static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
 {
     MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
 
     AV_WB24(klv->key + 13, 0x012f00);
@@ -371,8 +338,6 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
 
 static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
 {
-    MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     UID uid;
     int length, company_name_len, product_name_len, version_string_len;
@@ -427,8 +392,6 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
 
 static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
 {
-    MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
 
     AV_WB24(klv->key + 13, 0x011800);
@@ -454,7 +417,6 @@ static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
 static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadataSetType type)
 {
     MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     UMID umid;
     int i;
@@ -513,8 +475,6 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
 
 static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index, enum MXFMetadataSetType type)
 {
-    MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     AVStream *st;
     MXFStreamContext *sc;
@@ -576,10 +536,8 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
 
 static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_index, enum MXFMetadataSetType type)
 {
-    MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
     AVStream *st;
-    MXFStreamContext *sc;
     const MXFDataDefinitionUL * data_def_ul;
 
     AV_WB24(klv->key + 13, 0x010f00);
@@ -588,7 +546,6 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     klv_encode_ber_length(pb, 80);
 
     st = s->streams[stream_index];
-    sc = st->priv_data;
 
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, Sequence * Track * type, stream_index);
@@ -617,7 +574,6 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
     AVStream *st;
-    MXFStreamContext *sc;
     const MXFDataDefinitionUL * data_def_ul;
     int i;
 
@@ -627,7 +583,6 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     klv_encode_ber_length(pb, 108);
 
     st = s->streams[stream_index];
-    sc= st->priv_data;
 
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
@@ -679,8 +634,6 @@ static void mxf_write_essence_container_ul(ByteIOContext *pb, enum CodecID type)
 
 static int mxf_write_multi_descriptor(AVFormatContext *s, KLVPacket *klv)
 {
-    MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     int i;
 
@@ -715,8 +668,6 @@ static int mxf_write_multi_descriptor(AVFormatContext *s, KLVPacket *klv)
 
 static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWriteTableEntry *desc_tbl, int stream_index)
 {
-    MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     AVStream *st;
 
@@ -754,8 +705,6 @@ static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWrit
 
 static int mxf_write_wav_desc(AVFormatContext *s, const MXFDescriptorWriteTableEntry *desc_tbl, int stream_index)
 {
-    MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     ByteIOContext *pb = s->pb;
     AVStream *st;
 
@@ -799,8 +748,6 @@ static const MXFDescriptorWriteTableEntry mxf_descriptor_write_table[] = {
 
 static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enum MXFMetadataSetType type)
 {
-    MXFContext *mxf = s->priv_data;
-    MXFReferenceContext *refs = &mxf->reference;
     MXFStreamContext *sc;
     int i, ret;
     const MXFDescriptorWriteTableEntry *desc = NULL;
@@ -839,10 +786,7 @@ static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enu
 fail:
     for (i = 0; i < s->nb_streams; i++) {
         sc = s->streams[i]->priv_data;
-        av_freep(&sc->structural_component_refs);
-        av_freep(&sc->sequence_refs);
     }
-    av_freep(&refs->track);
     return ret;
 }
 
