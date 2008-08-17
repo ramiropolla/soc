@@ -402,8 +402,8 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
     }else{
         for(w = win; w < win + group_len; w++){
             for(i = start2; i < start2 + size; i += dim){
-                idx = 0;
-                for(j = 0; j < dim; j++)
+                idx = cpe->ch[channel].icoefs[i];
+                for(j = 1; j < dim; j++)
                     idx = idx * range + cpe->ch[channel].icoefs[i+j];
                 //it turned out that all signed codebooks use the same offset for index coding
                 idx += 40;
@@ -548,8 +548,8 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
         }
     }else if(IS_CODEBOOK_UNSIGNED(cb)){
         for(i = start; i < start + size; i += dim){
-            idx = 0;
-            for(j = 0; j < dim; j++)
+            idx = FFABS(cpe->ch[channel].icoefs[i]);
+            for(j = 1; j < dim; j++)
                 idx = idx * range + FFABS(cpe->ch[channel].icoefs[i+j]);
             put_bits(&s->pb, bits[idx], codes[idx]);
             //output signs
@@ -559,8 +559,8 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
         }
     }else{
         for(i = start; i < start + size; i += dim){
-            idx = 0;
-            for(j = 0; j < dim; j++)
+            idx = cpe->ch[channel].icoefs[i];
+            for(j = 1; j < dim; j++)
                 idx = idx * range + cpe->ch[channel].icoefs[i+j];
             //it turned out that all signed codebooks use the same offset for index coding
             idx += 40;
