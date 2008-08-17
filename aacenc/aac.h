@@ -273,7 +273,7 @@ typedef struct {
     int band_type_run_end[128];               ///< band type run end points
     float sf[128];                            ///< scalefactors
     int sf_idx[128];                          ///< scalefactor indices (used by encoder)
-    int zeroes[128];                          ///< band is not coded (used by encoder)
+    uint8_t zeroes[128];                      ///< band is not coded (used by encoder)
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< coefficients for IMDCT
     DECLARE_ALIGNED_16(float, saved[1024]);   ///< overlap
     DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output

@@ -487,9 +487,10 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
     for(i = stack_len - 1; i >= 0; i--){
         put_bits(&s->pb, 4, path[stack[i]].codebook);
         count = stack[i] - path[stack[i]].prev_idx;
+        memset(cpe->ch[channel].zeroes + win*16 + start, !path[stack[i]].codebook, count);
+        //XXX: memset when band_type is also uint8_t
         for(j = 0; j < count; j++){
             cpe->ch[channel].band_type[win*16 + start] =  path[stack[i]].codebook;
-            cpe->ch[channel].zeroes[win*16 + start]    = !path[stack[i]].codebook;
             start++;
         }
         while(count >= run_esc){
