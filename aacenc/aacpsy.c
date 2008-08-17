@@ -515,8 +515,7 @@ static void calc_pe(Psy3gppBand *band, int band_width)
     }
     band->pe = band->a - band->b * log2(band->thr);
     band->min_snr = 1.0 / (pow(2.0, band->pe / band_width) - 1.5);
-    if(band->min_snr < 1.26f)     band->min_snr = 1.26f;
-    if(band->min_snr > 316.2277f) band->min_snr = 316.2277f;
+    band->min_snr = av_clipf(band->min_snr, 1.26f, 316.2277f);
 }
 
 /**
