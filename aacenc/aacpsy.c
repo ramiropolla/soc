@@ -275,7 +275,6 @@ typedef struct Psy3gppChannel{
  * 3GPP TS26.403-inspired psychoacoustic model specific data
  */
 typedef struct Psy3gppContext{
-    float       barks [1024]; ///< Bark value for each spectral line
     float       bark_l[64];   ///< Bark value for each spectral band in long frame
     float       bark_s[16];   ///< Bark value for each spectral band in short frame
     float       s_low_l[64];  ///< spreading factor for low-to-high threshold spreading in long frame
@@ -314,19 +313,20 @@ static inline float ath(float f, float add)
 static av_cold int psy_3gpp_init(AACPsyContext *apc, int elements)
 {
     Psy3gppContext *pctx;
+    float barks[1024];
     int i, g, start;
     float prev, minscale, minath;
     apc->model_priv_data = av_mallocz(sizeof(Psy3gppContext));
     pctx = (Psy3gppContext*) apc->model_priv_data;
 
     for(i = 0; i < 1024; i++)
-        pctx->barks[i] = calc_bark(i * apc->avctx->sample_rate / 2048.0);
+        barks[i] = calc_bark(i * apc->avctx->sample_rate / 2048.0);
     i = 0;
     prev = 0.0;
     for(g = 0; g < apc->num_bands1024; g++){
         i += apc->bands1024[g];
-        pctx->bark_l[g] = (pctx->barks[i - 1] + prev) / 2.0;
-        prev = pctx->barks[i - 1];
+        pctx->bark_l[g] = (barks[i - 1] + prev) / 2.0;
+        prev = barks[i - 1];
     }
     for(g = 0; g < apc->num_bands1024 - 1; g++){
         pctx->s_low_l[g] = pow(10.0, -(pctx->bark_l[g+1] - pctx->bark_l[g]) * PSY_3GPP_SPREAD_LOW);
@@ -336,8 +336,8 @@ static av_cold int psy_3gpp_init(AACPsyContext *apc, int elements)
     prev = 0.0;
     for(g = 0; g < apc->num_bands128; g++){
         i += apc->bands128[g];
-        pctx->bark_s[g] = (pctx->barks[i - 1] + prev) / 2.0;
-        prev = pctx->barks[i - 1];
+        pctx->bark_s[g] = (barks[i - 1] + prev) / 2.0;
+        prev = barks[i - 1];
     }
     for(g = 0; g < apc->num_bands128 - 1; g++){
         pctx->s_low_s[g] = pow(10.0, -(pctx->bark_s[g+1] - pctx->bark_s[g]) * PSY_3GPP_SPREAD_LOW);
