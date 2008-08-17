@@ -1,3 +1,32 @@
+/* Copyright (c) 2003-2004, Mark Borgerding
+ *
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * * Redistributions of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ * * Neither the author nor the names of any contributors may be used to
+ *   endorse or promote products derived from this software without
+ *   specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -419,18 +448,18 @@ void kf_work(
 
     switch (p) {
         case 2: kf_bfly2(Fout,fstride,st,m); break;
-        case 3: kf_bfly3(Fout,fstride,st,m); break; 
+        case 3: kf_bfly3(Fout,fstride,st,m); break;
         case 4: kf_bfly4(Fout,fstride,st,m); break;
-        case 5: kf_bfly5(Fout,fstride,st,m); break; 
+        case 5: kf_bfly5(Fout,fstride,st,m); break;
         default: kf_bfly_generic(Fout,fstride,st,m,p); break;
     }
 }
 
 /*  facbuf is populated by p1,m1,p2,m2, ...
-    where 
+    where
     p[i] * m[i] = m[i-1]
     m0 = n                  */
-static 
+static
 void kf_factor(int n,int * facbuf)
 {
     int p=4;
@@ -508,7 +537,7 @@ static void kiss_fft(kiss_fft_cfg cfg,const kiss_fft_cpx *fin,kiss_fft_cpx *fout
 }
 
 
-/* not really necessary to call, but if someone is doing in-place ffts, they may want to free the 
+/* not really necessary to call, but if someone is doing in-place ffts, they may want to free the
    buffers from CHECKBUF
  */
 static void kiss_fft_cleanup(void) {
@@ -547,13 +576,13 @@ void ff_fft_calc_c(FFTContext *s, FFTComplex *z);
 #if defined(HAVE_MMX)
 #include <xmmintrin.h>
 
-static const float p1p1p1m1[4] __attribute__((aligned(16))) = 
+static const float p1p1p1m1[4] __attribute__((aligned(16))) =
     { 1.0, 1.0, 1.0, -1.0 };
 
-static const float p1p1m1p1[4] __attribute__((aligned(16))) = 
+static const float p1p1m1p1[4] __attribute__((aligned(16))) =
     { 1.0, 1.0, -1.0, 1.0 };
 
-static const float p1p1m1m1[4] __attribute__((aligned(16))) = 
+static const float p1p1m1m1[4] __attribute__((aligned(16))) =
     { 1.0, 1.0, -1.0, -1.0 };
 
 void ff_fft_calc_sse(FFTContext *s, FFTComplex *z)
@@ -621,27 +650,27 @@ void ff_fft_calc_sse(FFTContext *s, FFTComplex *z)
 
                 a = *(__m128 *)p;
                 b = *(__m128 *)q;
-                
+
                 /* complex mul */
                 c = *(__m128 *)cptr;
                 /*  cre*re cim*re */
-                t1 = _mm_mul_ps(c, 
-                                _mm_shuffle_ps(b, b, _MM_SHUFFLE(2, 2, 0, 0))); 
+                t1 = _mm_mul_ps(c,
+                                _mm_shuffle_ps(b, b, _MM_SHUFFLE(2, 2, 0, 0)));
                 c = *(__m128 *)(cptr + 2);
                 /*  -cim*im cre*im */
                 t2 = _mm_mul_ps(c,
-                                _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 3, 1, 1))); 
+                                _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 3, 1, 1)));
                 b = _mm_add_ps(t1, t2);
-                
+
                 /* butterfly */
                 *(__m128 *)p = _mm_add_ps(a, b);
                 *(__m128 *)q = _mm_sub_ps(a, b);
-                
+
                 p += 2;
                 q += 2;
                 cptr += 4;
             } while (--k);
-        
+
             p += nloops;
             q += nloops;
         } while (--j);
@@ -681,7 +710,7 @@ int ff_fft_init(FFTContext *s, int nbits, int inverse)
     {
             int np, nblocks, np2, l;
             FFTComplex *q;
-            
+
             np = 1 << nbits;
             nblocks = np >> 3;
             np2 = np >> 1;
@@ -743,7 +772,7 @@ int ff_fft_init(FFTContext *s, int nbits, int inverse)
 /**
  * Do a complex FFT with the parameters defined in ff_fft_init(). The
  * input data must be permuted before with s->revtab table. No
- * 1.0/sqrt(n) normalization is done.  
+ * 1.0/sqrt(n) normalization is done.
  */
 void ff_fft_calc_c(FFTContext *s, FFTComplex *z)
 {
@@ -762,29 +791,29 @@ void ff_fft_calc_c(FFTContext *s, FFTComplex *z)
     p=&z[0];
     j=(np >> 1);
     do {
-        BF(p[0].re, p[0].im, p[1].re, p[1].im, 
+        BF(p[0].re, p[0].im, p[1].re, p[1].im,
            p[0].re, p[0].im, p[1].re, p[1].im);
         p+=2;
     } while (--j != 0);
 
     /* pass 1 */
 
-    
+
     p=&z[0];
     j=np >> 2;
     if (s->inverse) {
         do {
-            BF(p[0].re, p[0].im, p[2].re, p[2].im, 
+            BF(p[0].re, p[0].im, p[2].re, p[2].im,
                p[0].re, p[0].im, p[2].re, p[2].im);
-            BF(p[1].re, p[1].im, p[3].re, p[3].im, 
+            BF(p[1].re, p[1].im, p[3].re, p[3].im,
                p[1].re, p[1].im, -p[3].im, p[3].re);
             p+=4;
         } while (--j != 0);
     } else {
         do {
-            BF(p[0].re, p[0].im, p[2].re, p[2].im, 
+            BF(p[0].re, p[0].im, p[2].re, p[2].im,
                p[0].re, p[0].im, p[2].re, p[2].im);
-            BF(p[1].re, p[1].im, p[3].re, p[3].im, 
+            BF(p[1].re, p[1].im, p[3].re, p[3].im,
                p[1].re, p[1].im, p[3].im, -p[3].re);
             p+=4;
         } while (--j != 0);
@@ -800,7 +829,7 @@ void ff_fft_calc_c(FFTContext *s, FFTComplex *z)
         for (j = 0; j < nblocks; ++j) {
             BF(p->re, p->im, q->re, q->im,
                p->re, p->im, q->re, q->im);
-            
+
             p++;
             q++;
             for(l = nblocks; l < np2; l += nblocks) {
@@ -827,7 +856,7 @@ void ff_fft_permute(FFTContext *s, FFTComplex *z)
     int j, k, np;
     FFTComplex tmp;
     const uint16_t *revtab = s->revtab;
-    
+
     /* reverse */
     np = 1 << s->nbits;
     for(j=0;j<np;j++) {
