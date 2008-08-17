@@ -322,9 +322,8 @@ static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s,
  * Encode ics_info element.
  * @see Table 4.6 (syntax of ics_info)
  */
-static void put_ics_info(AVCodecContext *avctx, IndividualChannelStream *info)
+static void put_ics_info(AACEncContext *s, IndividualChannelStream *info)
 {
-    AACEncContext *s = avctx->priv_data;
     int wg;
 
     put_bits(&s->pb, 1, 0);                // ics_reserved bit
@@ -572,7 +571,7 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
 /**
  * Encode scalefactor band coding type.
  */
-static void encode_band_info(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
+static void encode_band_info(AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int w, wg;
 
@@ -586,8 +585,7 @@ static void encode_band_info(AVCodecContext *avctx, AACEncContext *s, ChannelEle
 /**
  * Encode scalefactors.
  */
-static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s,
-                                 ChannelElement *cpe, int channel, int global_gain)
+static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel, int global_gain)
 {
     int off = global_gain, diff;
     int i, w, wg;
@@ -615,7 +613,7 @@ static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s,
 /**
  * Encode pulse data.
  */
-static void encode_pulses(AVCodecContext *avctx, AACEncContext *s, Pulse *pulse, int channel)
+static void encode_pulses(AACEncContext *s, Pulse *pulse, int channel)
 {
     int i;
 
@@ -633,7 +631,7 @@ static void encode_pulses(AVCodecContext *avctx, AACEncContext *s, Pulse *pulse,
 /**
  * Encode temporal noise shaping data.
  */
-static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
+static void encode_tns_data(AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int i, w;
     TemporalNoiseShaping *tns = &cpe->ch[channel].tns;
@@ -674,8 +672,7 @@ static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, ChannelElem
 /**
  * Encode spectral coefficients processed by psychoacoustic model.
  */
-static void encode_spectral_coeffs(AVCodecContext *avctx, AACEncContext *s,
-                                   ChannelElement *cpe, int channel)
+static void encode_spectral_coeffs(AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int start, i, w, w2, wg;
 
@@ -701,9 +698,8 @@ static void encode_spectral_coeffs(AVCodecContext *avctx, AACEncContext *s,
 /**
  * Encode one channel of audio data.
  */
-static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe, int channel)
+static int encode_individual_channel(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
-    AACEncContext *s = avctx->priv_data;
     int g, w, wg;
     int global_gain = 0;
 
@@ -721,13 +717,13 @@ static int encode_individual_channel(AVCodecContext *avctx, ChannelElement *cpe,
     }
 
     put_bits(&s->pb, 8, global_gain);
-    if(!cpe->common_window) put_ics_info(avctx, &cpe->ch[channel].ics);
-    encode_band_info(avctx, s, cpe, channel);
+    if(!cpe->common_window) put_ics_info(s, &cpe->ch[channel].ics);
+    encode_band_info(s, cpe, channel);
     encode_scale_factors(avctx, s, cpe, channel, global_gain);
-    encode_pulses(avctx, s, &cpe->ch[channel].pulse, channel);
-    encode_tns_data(avctx, s, cpe, channel);
+    encode_pulses(s, &cpe->ch[channel].pulse, channel);
+    encode_tns_data(s, cpe, channel);
     put_bits(&s->pb, 1, 0); //ssr
-    encode_spectral_coeffs(avctx, s, cpe, channel);
+    encode_spectral_coeffs(s, cpe, channel);
     return 0;
 }
 
@@ -805,12 +801,12 @@ static int aac_encode_frame(AVCodecContext *avctx,
         if(chans == 2){
             put_bits(&s->pb, 1, cpe->common_window);
             if(cpe->common_window){
-                put_ics_info(avctx, &cpe->ch[0].ics);
+                put_ics_info(s, &cpe->ch[0].ics);
                 encode_ms_info(&s->pb, cpe);
             }
         }
         for(j = 0; j < chans; j++){
-            encode_individual_channel(avctx, cpe, j);
+            encode_individual_channel(avctx, s, cpe, j);
         }
         start_ch += chans;
     }
