@@ -197,8 +197,6 @@ typedef struct {
     ChannelElement *cpe;                         ///< channel elements
     AACPsyContext psy;                           ///< psychoacoustic model context
     int last_frame;
-    BandCodingPath path[64];                     ///< auxiliary data needed for optimal band info coding
-    int band_bits[64][12];                       ///< bits needed to encode each band with each codebook
 } AACEncContext;
 
 /**
@@ -421,6 +419,8 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
  * Encode band info for single window group bands.
  */
 static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int channel, int win, int group_len){
+    BandCodingPath path[64];
+    int band_bits[64][12];
     int maxval;
     int w, swb, cb, ccb, start, start2, size;
     int i, j, k;
@@ -447,15 +447,15 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
         }
         for(cb = 0; cb < 12; cb++){
             if(aac_cb_info[cb].maxval < maxval)
-                s->band_bits[swb][cb] = INT_MAX;
+                band_bits[swb][cb] = INT_MAX;
             else
-                s->band_bits[swb][cb] = calculate_band_bits(s, cpe, channel, win, group_len, start, size, cb);
+                band_bits[swb][cb] = calculate_band_bits(s, cpe, channel, win, group_len, start, size, cb);
         }
         start += cpe->ch[channel].ics.swb_sizes[swb];
     }
-    s->path[0].bits = 0;
+    path[0].bits = 0;
     for(i = 1; i <= max_sfb; i++)
-        s->path[i].bits = INT_MAX;
+        path[i].bits = INT_MAX;
     for(i = 0; i < max_sfb; i++){
         for(j = 1; j <= max_sfb - i; j++){
             bits = INT_MAX;
@@ -463,11 +463,11 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
             for(cb = 0; cb < 12; cb++){
                 int sum = 0;
                 for(k = 0; k < j; k++){
-                    if(s->band_bits[i + k][cb] == INT_MAX){
+                    if(band_bits[i + k][cb] == INT_MAX){
                         sum = INT_MAX;
                         break;
                     }
-                    sum += s->band_bits[i + k][cb];
+                    sum += band_bits[i + k][cb];
                 }
                 if(sum < bits){
                     bits = sum;
@@ -475,11 +475,11 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
                 }
             }
             assert(bits != INT_MAX);
-            bits += s->path[i].bits + run_value_bits[cpe->ch[channel].ics.num_windows == 8][j];
-            if(bits < s->path[i+j].bits){
-                s->path[i+j].bits     = bits;
-                s->path[i+j].codebook = ccb;
-                s->path[i+j].prev_idx = i;
+            bits += path[i].bits + run_value_bits[cpe->ch[channel].ics.num_windows == 8][j];
+            if(bits < path[i+j].bits){
+                path[i+j].bits     = bits;
+                path[i+j].codebook = ccb;
+                path[i+j].prev_idx = i;
             }
         }
     }
@@ -489,17 +489,17 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
     idx = max_sfb;
     while(idx > 0){
         stack[stack_len++] = idx;
-        idx = s->path[idx].prev_idx;
+        idx = path[idx].prev_idx;
     }
 
     //perform actual band info encoding
     start = 0;
     for(i = stack_len - 1; i >= 0; i--){
-        put_bits(&s->pb, 4, s->path[stack[i]].codebook);
-        count = stack[i] - s->path[stack[i]].prev_idx;
+        put_bits(&s->pb, 4, path[stack[i]].codebook);
+        count = stack[i] - path[stack[i]].prev_idx;
         for(j = 0; j < count; j++){
-            cpe->ch[channel].band_type[win*16 + start] =  s->path[stack[i]].codebook;
-            cpe->ch[channel].zeroes[win*16 + start]    = !s->path[stack[i]].codebook;
+            cpe->ch[channel].band_type[win*16 + start] =  path[stack[i]].codebook;
+            cpe->ch[channel].zeroes[win*16 + start]    = !path[stack[i]].codebook;
             start++;
         }
         while(count >= run_esc){
