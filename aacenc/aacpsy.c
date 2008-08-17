@@ -531,6 +531,16 @@ static void calc_pe(Psy3gppBand *band, int band_width)
 }
 
 /**
+ * Determine scalefactor from band threshold and form factor.
+ * @see 3GPP TS26.403 5.4 5.6.2 "Scalefactor determination"
+ */
+static inline int determine_scalefactor(Psy3gppBand *band)
+{
+    //spec gives constant for lg() but we scaled it for log2()
+    return (int)(2.66667 * (log2(6.75*band->thr) - log2(band->ffac)));
+}
+
+/**
  * Determine scalefactors and prepare coefficients for encoding.
  * @see 3GPP TS26.403 5.4 "Psychoacoustic model"
  */
@@ -702,8 +712,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                     Psy3gppBand *band = &pch->band[ch][w+g];
                     cpe->ch[ch].zeroes[w+g] = band->thr >= band->energy;
                     if(cpe->ch[ch].zeroes[w+g]) continue;
-                    //spec gives constant for lg() but we scaled it for log2()
-                    cpe->ch[ch].sf_idx[w+g] = (int)(2.66667 * (log2(6.75*band->thr) - log2(band->ffac)));
+                    cpe->ch[ch].sf_idx[w+g] = determine_scalefactor(band);
                 }
             }
         }
@@ -720,7 +729,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                         cpe->ch[ch].zeroes[w+g] = 1;
                     }else{
                         cpe->ch[ch].zeroes[w+g] = 0;
-                        cpe->ch[ch].sf_idx[w+g] = (int)(2.66667 * (log2(6.75*band->thr) - log2(band->ffac)));
+                        cpe->ch[ch].sf_idx[w+g] = determine_scalefactor(band);
                         while(cpe->ch[ch].sf_idx[w+g] > 3){
                             float dist = calc_distortion(cpe->ch[ch].coeffs + start,
                                                          ics->swb_sizes[g],
