@@ -382,35 +382,22 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
     dim = cb < FIRST_PAIR_BT ? 4 : 2;
 
     start2 = start;
-    if(cb == ESC_BT){
+    if(IS_CODEBOOK_UNSIGNED(cb)){
         int coef_abs[2];
         for(w = win; w < win + group_len; w++){
             for(i = start2; i < start2 + size; i += dim){
                 idx = 0;
                 for(j = 0; j < dim; j++){
                     coef_abs[j] = FFABS(cpe->ch[channel].icoefs[i+j]);
-                    idx = idx*17 + FFMIN(coef_abs[j], 16);
+                    idx = idx * range + FFMIN(coef_abs[j], 16);
                 }
                 score += ff_aac_spectral_bits[cb][idx];
-                for(j = 0; j < dim; j++)
+                for(j = 0; j < dim; j++){
                     if(cpe->ch[channel].icoefs[i+j])
                         score++;
-                for(j = 0; j < dim; j++)
-                    if(coef_abs[j] > 15)
+                    if(cb == ESC_BT && coef_abs[j] > 15)
                         score += av_log2(coef_abs[j]) * 2 - 4 + 1;
-            }
-            start2 += 128;
-       }
-    }else if(IS_CODEBOOK_UNSIGNED(cb)){
-        for(w = win; w < win + group_len; w++){
-            for(i = start2; i < start2 + size; i += dim){
-                idx = 0;
-                for(j = 0; j < dim; j++)
-                    idx = idx * range + FFABS(cpe->ch[channel].icoefs[i+j]);
-                score += ff_aac_spectral_bits[cb][idx];
-                for(j = 0; j < dim; j++)
-                     if(cpe->ch[channel].icoefs[i+j])
-                         score++;
+                }
             }
             start2 += 128;
         }
