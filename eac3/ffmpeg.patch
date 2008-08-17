@@ -1,8 +1,8 @@
 Index: libavcodec/ac3dec.h
 ===================================================================
---- libavcodec/ac3dec.h	(revision 14773)
+--- libavcodec/ac3dec.h	(revision 14819)
 +++ libavcodec/ac3dec.h	(working copy)
-@@ -169,4 +169,16 @@
+@@ -168,4 +168,16 @@
  ///@}
  } AC3DecodeContext;
  
@@ -21,7 +21,7 @@ Index: libavcodec/ac3dec.h
  #endif /* FFMPEG_AC3DEC_H */
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 14773)
+--- libavcodec/Makefile	(revision 14819)
 +++ libavcodec/Makefile	(working copy)
 @@ -26,7 +26,7 @@
  OBJS-$(CONFIG_ENCODERS)                += faandct.o jfdctfst.o jfdctint.o
@@ -34,7 +34,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
 Index: libavcodec/ac3enc.c
 ===================================================================
---- libavcodec/ac3enc.c	(revision 14773)
+--- libavcodec/ac3enc.c	(revision 14819)
 +++ libavcodec/ac3enc.c	(working copy)
 @@ -1365,5 +1365,5 @@
      AC3_encode_close,

@@ -121,7 +121,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
         if (!hebap) {
             /* zero-mantissa dithering */
             for (blk = 0; blk < 6; blk++) {
-                s->pre_mantissa[ch][bin][blk] = (av_random(&s->dith_state) & 0x7FFFFF) - 0x400000;
+                s->pre_mantissa[ch][bin][blk] = (av_lfg_get(&s->dith_state) & 0x7FFFFF) - 0x400000;
             }
         } else if (hebap < 8) {
             /* Vector Quantization */
