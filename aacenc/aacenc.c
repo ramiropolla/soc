@@ -118,10 +118,6 @@ static const uint8_t *swb_size_128[] = {
     swb_size_128_16, swb_size_128_16, swb_size_128_8
 };
 
-#define CB_UNSIGNED 0x01    ///< coefficients are coded as absolute values
-#define CB_PAIRS    0x02    ///< coefficients are grouped into pairs before coding (quads by default)
-#define CB_ESCAPE   0x04    ///< codebook allows escapes
-
 /** spectral coefficients codebook information */
 static const struct {
     int16_t maxval;         ///< maximum possible value
