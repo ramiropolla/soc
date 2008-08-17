@@ -511,7 +511,7 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
 }
 
 /**
- * Encode one scalefactor band with selected codebook.
+ * Encode the coefficients of one scalefactor band with selected codebook.
  */
 static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channel, int start, int size, int cb)
 {
