@@ -565,7 +565,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                 Psy3gppBand *band = &pch->band[ch][w+g];
                 for(i = 0; i < ics->swb_sizes[g]; i++)
                     band->energy +=  cpe->ch[ch].coeffs[start+i] * cpe->ch[ch].coeffs[start+i];
-                band->energy /= 262144.0f;
+                band->energy *= 1.0f / (512*512);
                 band->thr = band->energy * 0.001258925f;
                 start += ics->swb_sizes[g];
                 if(band->energy != 0.0){
@@ -620,8 +620,8 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                     en_m += m*m;
                     en_s += s*s;
                 }
-                en_m /= 262144.0*4.0;
-                en_s /= 262144.0*4.0;
+                en_m *= 1.0f / (512*512*4);
+                en_s *= 1.0f / (512*512*4);
                 minthr = FFMIN(band0->thr, band1->thr);
                 if(minthr * minthr * band0->energy * band1->energy >= band0->thr * band1->thr * en_m * en_s){
                     cpe->ms_mask[w+g] = 1;
@@ -635,8 +635,8 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                         ff_m += sqrt(fabs(m));
                         ff_s += sqrt(fabs(s));
                     }
-                    band0->ffac = ff_m / 32.0;
-                    band1->ffac = ff_s / 32.0;
+                    band0->ffac = ff_m * (1.0f / 32.0f); // sqrt(512)*sqrt(2)
+                    band1->ffac = ff_s * (1.0f / 32.0f);
                 }
             }
         }
