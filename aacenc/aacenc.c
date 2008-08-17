@@ -363,6 +363,24 @@ static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
 }
 
 /**
+ * Calculate the number of bits needed to code all coefficient signs in current band.
+ */
+static int calculate_band_sign_bits(AACEncContext *s, ChannelElement *cpe, int channel,
+                                    int win, int group_len, int start, int size)
+{
+    int score = 0, start2 = start;
+    int i, w;
+    for(w = win; w < win + group_len; w++){
+        for(i = start2; i < start2 + size; i++){
+            if(cpe->ch[channel].icoefs[i])
+                score++;
+        }
+        start2 += 128;
+    }
+    return score;
+}
+
+/**
  * Calculate the number of bits needed to code given band with given codebook.
  *
  * @param s       encoder context
@@ -396,8 +414,6 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
                 }
                 score += ff_aac_spectral_bits[cb][idx];
                 for(j = 0; j < dim; j++){
-                    if(cpe->ch[channel].icoefs[i+j])
-                        score++;
                     if(cb == ESC_BT && coef_abs[j] > 15)
                         score += av_log2(coef_abs[j]) * 2 - 4 + 1;
                 }
@@ -434,7 +450,7 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe,
     const int max_sfb = cpe->ch[channel].ics.max_sfb;
     const int run_bits = cpe->ch[channel].ics.num_windows == 1 ? 5 : 3;
     const int run_esc = (1 << run_bits) - 1;
-    int bits, idx, count;
+    int bits, sbits, idx, count;
     int stack[64], stack_len;
 
     start = win*128;
@@ -452,11 +468,16 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe,
                 start2 += 128;
             }
         }
+        sbits = calculate_band_sign_bits(s, cpe, channel, win, group_len, start, size);
         for(cb = 0; cb < 12; cb++){
             if(aac_cb_info[cb].maxval < maxval)
                 band_bits[swb][cb] = INT_MAX;
-            else
+            else{
                 band_bits[swb][cb] = calculate_band_bits(s, cpe, channel, win, group_len, start, size, cb);
+                if(IS_CODEBOOK_UNSIGNED(cb-1)){
+                    band_bits[swb][cb] += sbits;
+                }
+            }
         }
         start += cpe->ch[channel].ics.swb_sizes[swb];
     }
