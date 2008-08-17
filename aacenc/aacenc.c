@@ -422,8 +422,8 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
     BandCodingPath path[64];
     int band_bits[64][12];
     int maxval;
-    int w, swb, cb, ccb, start, start2, size;
-    int i, j, k;
+    int w, swb, cb, start, start2, size;
+    int i, j;
     const int max_sfb = cpe->ch[channel].ics.max_sfb;
     const int run_bits = cpe->ch[channel].ics.num_windows == 1 ? 5 : 3;
     const int run_esc = (1 << run_bits) - 1;
@@ -457,32 +457,22 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
     for(i = 1; i <= max_sfb; i++)
         path[i].bits = INT_MAX;
     for(i = 0; i < max_sfb; i++){
-        for(j = 1; j <= max_sfb - i; j++){
-            bits = INT_MAX;
-            ccb = 0;
-            for(cb = 0; cb < 12; cb++){
-                int sum = 0;
-                for(k = 0; k < j; k++){
-                    if(band_bits[i + k][cb] == INT_MAX){
-                        sum = INT_MAX;
-                        break;
-                    }
-                    sum += band_bits[i + k][cb];
+        for(cb = 0; cb < 12; cb++){
+            int sum = 0;
+            for(j = 1; j <= max_sfb - i; j++){
+                if(band_bits[i+j-1][cb] == INT_MAX)
+                    break;
+                sum += band_bits[i+j-1][cb];
+                bits = sum + path[i].bits + run_value_bits[cpe->ch[channel].ics.num_windows == 8][j];
+                if(bits < path[i+j].bits){
+                    path[i+j].bits     = bits;
+                    path[i+j].codebook = cb;
+                    path[i+j].prev_idx = i;
                 }
-                if(sum < bits){
-                    bits = sum;
-                    ccb  = cb;
-                }
-            }
-            assert(bits != INT_MAX);
-            bits += path[i].bits + run_value_bits[cpe->ch[channel].ics.num_windows == 8][j];
-            if(bits < path[i+j].bits){
-                path[i+j].bits     = bits;
-                path[i+j].codebook = ccb;
-                path[i+j].prev_idx = i;
             }
         }
     }
+    assert(path[max_sfb].bits != INT_MAX);
 
     //convert resulting path from backward-linked list
     stack_len = 0;
