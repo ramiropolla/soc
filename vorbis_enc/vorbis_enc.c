@@ -825,7 +825,7 @@ static void create_vorbis_context(venc_context_t * venc, AVCodecContext * avccon
             { 24, 25, -1, -1, -1, -1, -1, -1, },
             { 26, 27, 28, -1, -1, -1, -1, -1, },
         };
-    	memcpy(rc->books, a, sizeof a);
+        memcpy(rc->books, a, sizeof a);
     }
     ready_residue(rc, venc);
 
@@ -1363,8 +1363,8 @@ static int vorbis_encode_init(AVCodecContext * avccontext)
     venc_context_t * venc = avccontext->priv_data;
 
     if (avccontext->channels != 2) {
-    	av_log(avccontext, AV_LOG_ERROR, "Current FFmpeg Vorbis encoder only supports 2 channels.\n");
-    	return -1;
+        av_log(avccontext, AV_LOG_ERROR, "Current FFmpeg Vorbis encoder only supports 2 channels.\n");
+        return -1;
     }
 
     create_vorbis_context(venc, avccontext);
