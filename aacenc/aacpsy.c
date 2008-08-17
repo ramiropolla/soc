@@ -33,6 +33,7 @@
  * General:
  * better audio preprocessing (add DC highpass filter?)
  * more psy models
+ * maybe improve coefficient quantization function in some way
  *
  * 3GPP-based psy model:
  * thresholds linearization after their modifications for attaining given bitrate
