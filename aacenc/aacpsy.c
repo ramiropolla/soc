@@ -156,10 +156,20 @@ static void psy_test_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
         cpe->ch[ch].ics.use_kb_window[1] = cpe->ch[ch].ics.use_kb_window[0];
         cpe->ch[ch].ics.window_sequence[1] = cpe->ch[ch].ics.window_sequence[0];
         switch(cpe->ch[ch].ics.window_sequence[0]){
-        case ONLY_LONG_SEQUENCE:   if(prev_seq == ONLY_LONG_SEQUENCE)cpe->ch[ch].ics.window_sequence[0] = LONG_START_SEQUENCE;   break;
-        case LONG_START_SEQUENCE:  cpe->ch[ch].ics.window_sequence[0] = EIGHT_SHORT_SEQUENCE; break;
-        case EIGHT_SHORT_SEQUENCE: if(prev_seq == EIGHT_SHORT_SEQUENCE)cpe->ch[ch].ics.window_sequence[0] = LONG_STOP_SEQUENCE;  break;
-        case LONG_STOP_SEQUENCE:   cpe->ch[ch].ics.window_sequence[0] = ONLY_LONG_SEQUENCE;   break;
+        case ONLY_LONG_SEQUENCE:
+            if(prev_seq == ONLY_LONG_SEQUENCE)
+                cpe->ch[ch].ics.window_sequence[0] = LONG_START_SEQUENCE;
+            break;
+        case LONG_START_SEQUENCE:
+            cpe->ch[ch].ics.window_sequence[0] = EIGHT_SHORT_SEQUENCE;
+            break;
+        case EIGHT_SHORT_SEQUENCE:
+            if(prev_seq == EIGHT_SHORT_SEQUENCE)
+                cpe->ch[ch].ics.window_sequence[0] = LONG_STOP_SEQUENCE;
+            break;
+        case LONG_STOP_SEQUENCE:
+            cpe->ch[ch].ics.window_sequence[0] = ONLY_LONG_SEQUENCE;
+            break;
         }
 
         if(cpe->ch[ch].ics.window_sequence[0] != EIGHT_SHORT_SEQUENCE){
