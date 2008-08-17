@@ -396,6 +396,7 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
     Psy3gppChannel *pch = &pctx->ch[tag];
     uint8_t grouping[2];
     enum WindowSequence win[2];
+    IndividualChannelStream *ics0 = &cpe->ch[0].ics, *ics1 = &cpe->ch[1].ics;
 
     if(la && !(apc->flags & PSY_MODEL_NO_SWITCH)){
         float s[8], v;
@@ -475,8 +476,11 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
             }
         }
     }
-    cpe->common_window = chans > 1 && cpe->ch[0].ics.window_sequence[0] == cpe->ch[1].ics.window_sequence[0] && cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
-    if(cpe->common_window && cpe->ch[0].ics.window_sequence[0] == EIGHT_SHORT_SEQUENCE && grouping[0] != grouping[1])
+    cpe->common_window = 0;
+    if(chans > 1
+            && ics0->window_sequence[0] == ics1->window_sequence[0]
+            && ics0->use_kb_window[0]   == ics1->use_kb_window[0]
+            && !(ics0->window_sequence[0] == EIGHT_SHORT_SEQUENCE && grouping[0] != grouping[1]))
         cpe->common_window = 0;
     if(PSY_MODEL_MODE(apc->flags) > PSY_MODE_QUALITY){
         av_log(apc->avctx, AV_LOG_ERROR, "Unknown mode %d, defaulting to CBR\n", PSY_MODEL_MODE(apc->flags));
