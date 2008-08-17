@@ -380,7 +380,7 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
     int score = 0, dim, idx, start2;
     int range = aac_cb_info[cb].range;
 
-    if(!range) return 0;
+    if(range == -1) return 0;
     cb--;
     dim = cb < FIRST_PAIR_BT ? 4 : 2;
 
