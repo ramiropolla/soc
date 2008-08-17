@@ -272,19 +272,22 @@ typedef struct Psy3gppChannel{
 }Psy3gppChannel;
 
 /**
+ * psychoacoustic model frame type-dependent coefficients
+ */
+typedef struct Psy3gppCoeffs{
+    float ath       [64]; ///< absolute threshold of hearing per bands
+    float barks     [64]; ///< Bark value for each spectral band in long frame
+    float spread_low[64]; ///< spreading factor for low-to-high threshold spreading in long frame
+    float spread_hi [64]; ///< spreading factor for high-to-low threshold spreading in long frame
+}Psy3gppCoeffs;
+
+/**
  * 3GPP TS26.403-inspired psychoacoustic model specific data
  */
 typedef struct Psy3gppContext{
-    float       bark_l[64];   ///< Bark value for each spectral band in long frame
-    float       bark_s[16];   ///< Bark value for each spectral band in short frame
-    float       s_low_l[64];  ///< spreading factor for low-to-high threshold spreading in long frame
-    float       s_low_s[16];  ///< spreading factor for low-to-high threshold spreading in short frame
-    float       s_hi_l [64];  ///< spreading factor for high-to-low threshold spreading in long frame
-    float       s_hi_s [16];  ///< spreading factor for high-to-low threshold spreading in short frame
+    Psy3gppCoeffs psy_coef[2];
     int         reservoir;    ///< bit reservoir fullness
     int         avg_bits;     ///< average frame size of bits for CBR
-    float       ath_l[64];    ///< absolute threshold of hearing per bands in long frame
-    float       ath_s[16];    ///< absolute threshold of hearing per bands in short frame
     Psy3gppChannel *ch;
 }Psy3gppContext;
 
@@ -314,53 +317,38 @@ static av_cold int psy_3gpp_init(AACPsyContext *apc, int elements)
 {
     Psy3gppContext *pctx;
     float barks[1024];
-    int i, g, start;
+    int i, j, g, start;
     float prev, minscale, minath;
     apc->model_priv_data = av_mallocz(sizeof(Psy3gppContext));
     pctx = (Psy3gppContext*) apc->model_priv_data;
 
     for(i = 0; i < 1024; i++)
         barks[i] = calc_bark(i * apc->avctx->sample_rate / 2048.0);
-    i = 0;
-    prev = 0.0;
-    for(g = 0; g < apc->num_bands1024; g++){
-        i += apc->bands1024[g];
-        pctx->bark_l[g] = (barks[i - 1] + prev) / 2.0;
-        prev = barks[i - 1];
-    }
-    for(g = 0; g < apc->num_bands1024 - 1; g++){
-        pctx->s_low_l[g] = pow(10.0, -(pctx->bark_l[g+1] - pctx->bark_l[g]) * PSY_3GPP_SPREAD_LOW);
-        pctx->s_hi_l [g] = pow(10.0, -(pctx->bark_l[g+1] - pctx->bark_l[g]) * PSY_3GPP_SPREAD_HI);
-    }
-    i = 0;
-    prev = 0.0;
-    for(g = 0; g < apc->num_bands128; g++){
-        i += apc->bands128[g];
-        pctx->bark_s[g] = (barks[i - 1] + prev) / 2.0;
-        prev = barks[i - 1];
-    }
-    for(g = 0; g < apc->num_bands128 - 1; g++){
-        pctx->s_low_s[g] = pow(10.0, -(pctx->bark_s[g+1] - pctx->bark_s[g]) * PSY_3GPP_SPREAD_LOW);
-        pctx->s_hi_s [g] = pow(10.0, -(pctx->bark_s[g+1] - pctx->bark_s[g]) * PSY_3GPP_SPREAD_HI);
-    }
-    start = 0;
     minath = ath(3410, ATH_ADD);
-    for(g = 0; g < apc->num_bands1024; g++){
-        minscale = ath(apc->avctx->sample_rate * start / 1024.0, ATH_ADD);
-        for(i = 1; i < apc->bands1024[g]; i++){
-            minscale = fminf(minscale, ath(apc->avctx->sample_rate * (start + i) / 1024.0 / 2.0, ATH_ADD));
+    for(j = 0; j < 2; j++){
+        Psy3gppCoeffs *coeffs = &pctx->psy_coef[j];
+        int bands = j ? apc->num_bands128 : apc->num_bands1024;
+        i = 0;
+        prev = 0.0;
+        for(g = 0; g < bands; g++){
+            i += j ? apc->bands128[g] : apc->bands1024[g];
+            coeffs->barks[g] = (barks[i - 1] + prev) / 2.0;
+            prev = barks[i - 1];
         }
-        pctx->ath_l[g] = minscale - minath;
-        start += apc->bands1024[g];
-    }
-    start = 0;
-    for(g = 0; g < apc->num_bands128; g++){
-        minscale = ath(apc->avctx->sample_rate * start / 1024.0, ATH_ADD);
-        for(i = 1; i < apc->bands128[g]; i++){
-            minscale = fminf(minscale, ath(apc->avctx->sample_rate * (start + i) / 1024.0 / 2.0, ATH_ADD));
+        for(g = 0; g < bands - 1; g++){
+            coeffs->spread_low[g] = pow(10.0, -(coeffs->barks[g+1] - coeffs->barks[g]) * PSY_3GPP_SPREAD_LOW);
+            coeffs->spread_hi [g] = pow(10.0, -(coeffs->barks[g+1] - coeffs->barks[g]) * PSY_3GPP_SPREAD_HI);
         }
-        pctx->ath_s[g] = minscale - minath;
-        start += apc->bands128[g];
+        start = 0;
+        for(g = 0; g < bands; g++){
+            int size = j ? apc->bands128[g] : apc->bands1024[g];
+            minscale = ath(apc->avctx->sample_rate * start / 1024.0, ATH_ADD);
+            for(i = 1; i < size; i++){
+                minscale = fminf(minscale, ath(apc->avctx->sample_rate * (start + i) / 1024.0 / 2.0, ATH_ADD));
+            }
+            coeffs->ath[g] = minscale - minath;
+            start += size;
+        }
     }
 
     pctx->avg_bits = apc->avctx->bit_rate * 1024 / apc->avctx->sample_rate;
@@ -563,24 +551,16 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
 
     //modify thresholds - spread, threshold in quiet - 5.4.3 "Spreaded Energy Calculation"
     for(ch = 0; ch < chans; ch++){
+        Psy3gppCoeffs *coeffs = &pctx->psy_coef[cpe->ch[ch].ics.num_windows == 8];
         for(w = 0; w < cpe->ch[ch].ics.num_windows*16; w += 16){
             for(g = 1; g < cpe->ch[ch].ics.num_swb; g++){
-                if(cpe->ch[ch].ics.num_swb == apc->num_bands1024)
-                    pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g-1].thr * pctx->s_low_l[g-1]);
-                else
-                    pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g-1].thr * pctx->s_low_s[g-1]);
+                pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g-1].thr * coeffs->spread_low[g-1]);
             }
             for(g = cpe->ch[ch].ics.num_swb - 2; g >= 0; g--){
-                if(cpe->ch[ch].ics.num_swb == apc->num_bands1024)
-                    pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g+1].thr * pctx->s_hi_l[g+1]);
-                else
-                    pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g+1].thr * pctx->s_hi_s[g+1]);
+                pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g+1].thr * coeffs->spread_hi [g+1]);
             }
             for(g = 0; g < cpe->ch[ch].ics.num_swb; g++){
-                if(cpe->ch[ch].ics.num_swb == apc->num_bands1024)
-                    pch->band[ch][w+g].thr_quiet = FFMAX(pch->band[ch][w+g].thr, pctx->ath_l[g]);
-                else
-                    pch->band[ch][w+g].thr_quiet = FFMAX(pch->band[ch][w+g].thr, pctx->ath_s[g]);
+                pch->band[ch][w+g].thr_quiet = FFMAX(pch->band[ch][w+g].thr, coeffs->ath[g]);
                 pch->band[ch][w+g].thr_quiet = fmaxf(PSY_3GPP_RPEMIN*pch->band[ch][w+g].thr_quiet, fminf(pch->band[ch][w+g].thr_quiet, PSY_3GPP_RPELEV*pch->prev_band[ch][w+g].thr_quiet));
                 pch->band[ch][w+g].thr = FFMAX(pch->band[ch][w+g].thr, pch->band[ch][w+g].thr_quiet * 0.25);
             }
