@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2006 Kartikey Mahendra BHATT (bhattkm at gmail dot com).
  * Copyright (c) 2007-2008 Bartlomiej Wolowiec <bartek.wolowiec@gmail.com>
- * Copyright (c) 2007-2008 Justin Ruggles
+ * Copyright (c) 2007 Justin Ruggles <justin.ruggles@gmail.com>
  *
  * Portions of this code are derived from liba52
  * http://liba52.sourceforge.net
