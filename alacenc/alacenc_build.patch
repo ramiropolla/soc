@@ -1,20 +1,20 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 14032)
+--- libavcodec/Makefile	(revision 14797)
 +++ libavcodec/Makefile	(working copy)
 @@ -29,6 +29,7 @@
  OBJS-$(CONFIG_AC3_DECODER)             += ac3dec.o ac3tab.o ac3dec_data.o ac3.o mdct.o fft.o
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
-+OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o
++OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o lpc.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
  OBJS-$(CONFIG_APE_DECODER)             += apedec.o
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 14032)
+--- libavcodec/allcodecs.c	(revision 14797)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -179,7 +179,7 @@
+@@ -182,7 +182,7 @@
  
      /* audio codecs */
      REGISTER_ENCDEC  (AC3, ac3);
