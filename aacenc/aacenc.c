@@ -425,7 +425,8 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
  * Encode band info for single window group bands.
  */
 static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe,
-                                     int channel, int win, int group_len){
+                                     int channel, int win, int group_len)
+{
     BandCodingPath path[64];
     int band_bits[64][12];
     int maxval;
