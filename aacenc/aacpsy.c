@@ -107,7 +107,10 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
                     }
                 }
                 if(!cpe->ch[ch].zeroes[w + g])
-                    sum = quantize_coeffs(cpe->ch[ch].coeffs + start, cpe->ch[ch].icoefs + start, ics->swb_sizes[g], cpe->ch[ch].sf_idx[w + g]);
+                    sum = quantize_coeffs(cpe->ch[ch].coeffs + start,
+                                          cpe->ch[ch].icoefs + start,
+                                          ics->swb_sizes[g],
+                                          cpe->ch[ch].sf_idx[w + g]);
                 else
                     memset(cpe->ch[ch].icoefs + start, 0, ics->swb_sizes[g] * sizeof(cpe->ch[0].icoefs[0]));
                 cpe->ch[ch].zeroes[w + g] = !sum;
@@ -149,7 +152,8 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
     }
 }
 
-static void psy_test_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe)
+static void psy_test_window(AACPsyContext *apc, int16_t *audio, int16_t *la,
+                            int tag, int type, ChannelElement *cpe)
 {
     int ch, i;
     int chans = type == TYPE_CPE ? 2 : 1;
@@ -385,7 +389,8 @@ static const uint8_t window_grouping[9] = {
  * Tell encoder which window types to use.
  * @see 3GPP TS26.403 5.4.1 "Blockswitching"
  */
-static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe)
+static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la,
+                            int tag, int type, ChannelElement *cpe)
 {
     int ch;
     int chans = type == TYPE_CPE ? 2 : 1;
@@ -445,7 +450,9 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la, int
     }else{
         for(ch = 0; ch < chans; ch++){
             IndividualChannelStream *ics = &cpe->ch[ch].ics;
-            win[ch] = (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) ? EIGHT_SHORT_SEQUENCE : ONLY_LONG_SEQUENCE;
+            win[ch] = (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE)
+                      ? EIGHT_SHORT_SEQUENCE
+                      : ONLY_LONG_SEQUENCE;
             grouping[ch] = (ics->window_sequence[0] == EIGHT_SHORT_SEQUENCE) ? window_grouping[0] : 0;
         }
     }
@@ -575,7 +582,9 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
             }
             for(g = 0; g < ics->num_swb; g++){
                 band[g].thr_quiet = FFMAX(band[g].thr, coeffs->ath[g]);
-                band[g].thr_quiet = fmaxf(PSY_3GPP_RPEMIN*band[g].thr_quiet, fminf(band[g].thr_quiet, PSY_3GPP_RPELEV*pch->prev_band[ch][w+g].thr_quiet));
+                band[g].thr_quiet = fmaxf(PSY_3GPP_RPEMIN*band[g].thr_quiet,
+                                          fminf(band[g].thr_quiet,
+                                                PSY_3GPP_RPELEV*pch->prev_band[ch][w+g].thr_quiet));
                 band[g].thr = FFMAX(band[g].thr, band[g].thr_quiet * 0.25);
             }
         }
@@ -603,7 +612,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                 en_m /= 262144.0*4.0;
                 en_s /= 262144.0*4.0;
                 minthr = FFMIN(band0->thr, band1->thr);
-                if(minthr * minthr * band0->energy * band1->energy  >= (band0->thr * band1->thr * en_m * en_s)){
+                if(minthr * minthr * band0->energy * band1->energy >= band0->thr * band1->thr * en_m * en_s){
                     cpe->ms_mask[w+g] = 1;
                     band0->energy = en_m;
                     band1->energy = en_s;
@@ -687,7 +696,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
         //determine scalefactors - 5.6.2 "Scalefactor determination"
         for(ch = 0; ch < chans; ch++){
             IndividualChannelStream *ics = &cpe->ch[ch].ics;
-            prev_scale = -1;
             for(w = 0; w < ics->num_windows*16; w += 16){
                 for(g = 0; g < ics->num_swb; g++){
                     Psy3gppBand *band = &pch->band[ch][w+g];
@@ -695,9 +703,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                     if(cpe->ch[ch].zeroes[w+g]) continue;
                     //spec gives constant for lg() but we scaled it for log2()
                     cpe->ch[ch].sf_idx[w+g] = (int)(2.66667 * (log2(6.75*band->thr) - log2(band->ffac)));
-                    if(prev_scale != -1)
-                        cpe->ch[ch].sf_idx[w+g] = av_clip(cpe->ch[ch].sf_idx[w+g], prev_scale - SCALE_MAX_DIFF, prev_scale + SCALE_MAX_DIFF);
-                    prev_scale = cpe->ch[ch].sf_idx[w+g];
                 }
             }
         }
@@ -716,7 +721,9 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                         cpe->ch[ch].zeroes[w+g] = 0;
                         cpe->ch[ch].sf_idx[w+g] = (int)(2.66667 * (log2(6.75*band->thr) - log2(band->ffac)));
                         while(cpe->ch[ch].sf_idx[w+g] > 3){
-                            float dist = calc_distortion(cpe->ch[ch].coeffs + start, ics->swb_sizes[g], SCALE_ONE_POS + cpe->ch[ch].sf_idx[w+g]);
+                            float dist = calc_distortion(cpe->ch[ch].coeffs + start,
+                                                         ics->swb_sizes[g],
+                                                         SCALE_ONE_POS + cpe->ch[ch].sf_idx[w+g]);
                             if(dist < band->thr) break;
                             cpe->ch[ch].sf_idx[w+g] -= 3;
                         }
@@ -747,7 +754,9 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                 if(cpe->ch[ch].zeroes[w + g])
                     cpe->ch[ch].sf_idx[w + g] = 256;
                 else
-                    cpe->ch[ch].sf_idx[w + g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[w + g], 0, SCALE_MAX_POS);
+                    cpe->ch[ch].sf_idx[w + g] = av_clip(SCALE_ONE_POS + cpe->ch[ch].sf_idx[w + g],
+                                                        0,
+                                                        SCALE_MAX_POS);
             }
 
         //adjust scalefactors for window groups
@@ -843,7 +852,8 @@ int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
     return 0;
 }
 
-void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int16_t *la, int tag, int type, ChannelElement *cpe)
+void ff_aac_psy_suggest_window(AACPsyContext *ctx, int16_t *audio, int16_t *la,
+                               int tag, int type, ChannelElement *cpe)
 {
     ctx->model->window(ctx, audio, la, tag, type, cpe);
 }
