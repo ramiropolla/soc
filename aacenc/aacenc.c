@@ -636,35 +636,36 @@ static void encode_pulses(AVCodecContext *avctx, AACEncContext *s, Pulse *pulse,
 static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
 {
     int i, w;
+    TemporalNoiseShaping *tns = &cpe->ch[channel].tns;
 
-    put_bits(&s->pb, 1, cpe->ch[channel].tns.present);
-    if(!cpe->ch[channel].tns.present) return;
+    put_bits(&s->pb, 1, tns->present);
+    if(!tns->present) return;
     if(cpe->ch[channel].ics.window_sequence[0] == EIGHT_SHORT_SEQUENCE){
         for(w = 0; w < cpe->ch[channel].ics.num_windows; w++){
-            put_bits(&s->pb, 1, cpe->ch[channel].tns.n_filt[w]);
-            if(!cpe->ch[channel].tns.n_filt[w]) continue;
-            put_bits(&s->pb, 1, cpe->ch[channel].tns.coef_res[w] - 3);
-            put_bits(&s->pb, 4, cpe->ch[channel].tns.length[w][0]);
-            put_bits(&s->pb, 3, cpe->ch[channel].tns.order[w][0]);
-            if(cpe->ch[channel].tns.order[w][0]){
-                put_bits(&s->pb, 1, cpe->ch[channel].tns.direction[w][0]);
-                put_bits(&s->pb, 1, cpe->ch[channel].tns.coef_compress[w][0]);
-                for(i = 0; i < cpe->ch[channel].tns.order[w][0]; i++)
-                     put_bits(&s->pb, cpe->ch[channel].tns.coef_len[w][0], cpe->ch[channel].tns.coef[w][0][i]);
+            put_bits(&s->pb, 1, tns->n_filt[w]);
+            if(!tns->n_filt[w]) continue;
+            put_bits(&s->pb, 1, tns->coef_res[w] - 3);
+            put_bits(&s->pb, 4, tns->length[w][0]);
+            put_bits(&s->pb, 3, tns->order[w][0]);
+            if(tns->order[w][0]){
+                put_bits(&s->pb, 1, tns->direction[w][0]);
+                put_bits(&s->pb, 1, tns->coef_compress[w][0]);
+                for(i = 0; i < tns->order[w][0]; i++)
+                     put_bits(&s->pb, tns->coef_len[w][0], tns->coef[w][0][i]);
             }
         }
     }else{
-        put_bits(&s->pb, 1, cpe->ch[channel].tns.n_filt[0]);
-        if(!cpe->ch[channel].tns.n_filt[0]) return;
-        put_bits(&s->pb, 1, cpe->ch[channel].tns.coef_res[0] - 3);
-        for(w = 0; w < cpe->ch[channel].tns.n_filt[0]; w++){
-            put_bits(&s->pb, 6, cpe->ch[channel].tns.length[0][w]);
-            put_bits(&s->pb, 5, cpe->ch[channel].tns.order[0][w]);
-            if(cpe->ch[channel].tns.order[0][w]){
-                put_bits(&s->pb, 1, cpe->ch[channel].tns.direction[0][w]);
-                put_bits(&s->pb, 1, cpe->ch[channel].tns.coef_compress[0][w]);
-                for(i = 0; i < cpe->ch[channel].tns.order[0][w]; i++)
-                     put_bits(&s->pb, cpe->ch[channel].tns.coef_len[0][w], cpe->ch[channel].tns.coef[0][w][i]);
+        put_bits(&s->pb, 1, tns->n_filt[0]);
+        if(!tns->n_filt[0]) return;
+        put_bits(&s->pb, 1, tns->coef_res[0] - 3);
+        for(w = 0; w < tns->n_filt[0]; w++){
+            put_bits(&s->pb, 6, tns->length[0][w]);
+            put_bits(&s->pb, 5, tns->order[0][w]);
+            if(tns->order[0][w]){
+                put_bits(&s->pb, 1, tns->direction[0][w]);
+                put_bits(&s->pb, 1, tns->coef_compress[0][w]);
+                for(i = 0; i < tns->order[0][w]; i++)
+                     put_bits(&s->pb, tns->coef_len[0][w], tns->coef[0][w][i]);
             }
         }
     }
