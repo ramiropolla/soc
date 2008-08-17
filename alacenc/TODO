@@ -1,8 +1,6 @@
 TODO list for the ALAC Encoder:
 
-* Simple fixed-order linear prediction
-* Adaptive prediction
-* Stereo correlation
+* GSoC feature set is complete
 
 Additonal Stuff:
 
@@ -13,6 +11,7 @@ Additonal Stuff:
 
 Experiments:
 
+* Adaptive stereo decorrelation
 * Adaptive Rice History based encoding
 * Estimate size of entropy coded data for faster prediction order search
 * Test different LPC coeff quantization levels
