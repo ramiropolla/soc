@@ -489,7 +489,7 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la,
             && ics0->window_sequence[0] == ics1->window_sequence[0]
             && ics0->use_kb_window[0]   == ics1->use_kb_window[0]
             && !(ics0->window_sequence[0] == EIGHT_SHORT_SEQUENCE && grouping[0] != grouping[1]))
-        cpe->common_window = 0;
+        cpe->common_window = 1;
     if(PSY_MODEL_MODE(apc->flags) > PSY_MODE_QUALITY){
         av_log(apc->avctx, AV_LOG_ERROR, "Unknown mode %d, defaulting to CBR\n", PSY_MODEL_MODE(apc->flags));
     }
