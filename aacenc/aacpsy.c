@@ -537,7 +537,7 @@ static void calc_pe(Psy3gppBand *band, int band_width)
 static inline int determine_scalefactor(Psy3gppBand *band)
 {
     //spec gives constant for lg() but we scaled it for log2()
-    return (int)(2.66667 * (log2(6.75*band->thr/band->ffac)));
+    return (int)(2.66667 * log2(6.75*band->thr/band->ffac));
 }
 
 /**
