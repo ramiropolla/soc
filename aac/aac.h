@@ -189,8 +189,7 @@ typedef struct {
     int length[8][4];
     int direction[8][4];
     int order[8][4];
-    const float *tmp2_map[8][4];
-    int coef[8][4][TNS_MAX_ORDER];
+    float coef[8][4][TNS_MAX_ORDER];
 } TemporalNoiseShaping;
 
 /**
