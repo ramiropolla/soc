@@ -22,6 +22,7 @@
 #include "avcodec.h"
 #include "bitstream.h"
 #include "dsputil.h"
+#include "lpc.h"
 
 #define DEFAULT_FRAME_SIZE        4096
 #define DEFAULT_SAMPLE_SIZE       16
@@ -31,10 +32,11 @@
 #define ALAC_FRAME_FOOTER_SIZE    3
 
 #define ALAC_ESCAPE_CODE          0x1FF
-#define MAX_LPC_ORDER             30
+#define ALAC_MAX_LPC_ORDER        30
 #define DEFAULT_MAX_PRED_ORDER    6
-#define MAX_LPC_PRECISION         9
-#define MAX_LPC_SHIFT             9
+#define DEFAULT_MIN_PRED_ORDER    4
+#define ALAC_MAX_LPC_PRECISION    9
+#define ALAC_MAX_LPC_SHIFT        9
 
 typedef struct RiceContext {
     int history_mult;
@@ -45,7 +47,7 @@ typedef struct RiceContext {
 
 typedef struct LPCContext {
     int lpc_order;
-    int lpc_coeff[MAX_LPC_ORDER+1];
+    int lpc_coeff[ALAC_MAX_LPC_ORDER+1];
     int lpc_quant;
 } LPCContext;
 
@@ -65,112 +67,6 @@ typedef struct AlacEncodeContext {
     DSPContext dspctx;
     AVCodecContext *avctx;
 } AlacEncodeContext;
-
-/**
- * put_sbits
- * @param pb PutBitContext pointer
- * @param bits Number of bits to output
- * @param val data Bits
- */
-static void put_sbits(PutBitContext *pb, int bits, int32_t val)
-{
-    put_bits(pb, bits, val & ((1<<bits)-1));
-}
-
-/**
- * Levinson-Durbin recursion.
- * Produces LPC coefficients from autocorrelation data.
- * TODO: reuse code from flacenc
-*/
-static void compute_lpc_coefs(const double *autoc, int max_order,
-                              double lpc[][MAX_LPC_ORDER], double *ref)
-{
-    int i, j, i2;
-    double r, err, tmp;
-    double lpc_tmp[MAX_LPC_ORDER];
-
-    for(i=0; i<max_order; i++) lpc_tmp[i] = 0;
-    err = autoc[0];
-
-    for(i=0; i<max_order; i++) {
-        r = -autoc[i+1];
-        for(j=0; j<i; j++) {
-            r -= lpc_tmp[j] * autoc[i-j];
-        }
-        r /= err;
-        ref[i] = fabs(r);
-
-        err *= 1.0 - (r * r);
-
-        i2 = (i >> 1);
-        lpc_tmp[i] = r;
-        for(j=0; j<i2; j++) {
-            tmp = lpc_tmp[j];
-            lpc_tmp[j] += r * lpc_tmp[i-1-j];
-            lpc_tmp[i-1-j] += r * tmp;
-        }
-        if(i & 1) {
-            lpc_tmp[j] += lpc_tmp[j] * r;
-        }
-
-        for(j=0; j<=i; j++) {
-            lpc[i][j] = -lpc_tmp[j];
-        }
-    }
-}
-
-/**
- * Quantize LPC coefficients
- * TODO: reuse code from flacenc
- */
-static void quantize_lpc_coefs(double *lpc_in, int order, int precision,
-                               int32_t *lpc_out, int *shift)
-{
-    int i;
-    double cmax, error;
-    int32_t qmax;
-    int sh;
-
-    /* define maximum levels */
-    qmax = (1 << (precision - 1)) - 1;
-
-    /* find maximum coefficient value */
-    cmax = 0.0;
-    for(i=0; i<order; i++) {
-        cmax= FFMAX(cmax, fabs(lpc_in[i]));
-    }
-
-    /* if maximum value quantizes to zero, return all zeros */
-    if(cmax * (1 << MAX_LPC_SHIFT) < 1.0) {
-        *shift = 1;
-        memset(lpc_out, 0, sizeof(int32_t) * order);
-        return;
-    }
-
-    /* calculate level shift which scales max coeff to available bits */
-    sh = MAX_LPC_SHIFT;
-    while((cmax * (1 << sh) > qmax) && (sh > 0)) {
-        sh--;
-    }
-
-    /* since negative shift values are unsupported in decoder, scale down
-    coefficients instead */
-    if(sh == 0 && cmax > qmax) {
-        double scale = ((double)qmax) / cmax;
-        for(i=0; i<order; i++) {
-            lpc_in[i] *= scale;
-        }
-    }
-
-    /* output quantized coefficients and level shift */
-    error=0;
-    for(i=0; i<order; i++) {
-        error += lpc_in[i] * (1 << sh);
-        lpc_out[i] = av_clip(lrintf(error), -qmax, qmax);
-        error -= lpc_out[i];
-    }
-    *shift = sh;
-}
 
 
 static void allocate_sample_buffers(AlacEncodeContext *s)
@@ -247,16 +143,16 @@ static void write_frame_header(AlacEncodeContext *s, int is_verbatim)
 
 static void calc_predictor_params(AlacEncodeContext *s, int ch)
 {
-    double autoc[MAX_LPC_ORDER+1];
-    double ref[MAX_LPC_ORDER];
-    double lpc[MAX_LPC_ORDER][MAX_LPC_ORDER];
-    int order;
+    int32_t coefs[MAX_LPC_ORDER][MAX_LPC_ORDER];
+    int shift[MAX_LPC_ORDER];
+    int opt_order;
 
-    s->dspctx.flac_compute_autocorr(s->sample_buf[ch], s->avctx->frame_size, DEFAULT_MAX_PRED_ORDER, autoc);
-    compute_lpc_coefs(autoc, DEFAULT_MAX_PRED_ORDER, lpc, ref);
-    order = (ref[5] > ref[3]) ? 6 : 4;
-    s->lpc[ch].lpc_order = order;
-    quantize_lpc_coefs(lpc[order-1], order, MAX_LPC_PRECISION, s->lpc[ch].lpc_coeff, &s->lpc[ch].lpc_quant);
+    opt_order = ff_lpc_calc_coefs(&s->dspctx, s->sample_buf[ch], s->avctx->frame_size, DEFAULT_MIN_PRED_ORDER, DEFAULT_MAX_PRED_ORDER,
+                                   ALAC_MAX_LPC_PRECISION, coefs, shift, 1, ORDER_METHOD_EST, ALAC_MAX_LPC_SHIFT, 1);
+
+    s->lpc[ch].lpc_order = opt_order;
+    s->lpc[ch].lpc_quant = shift[opt_order-1];
+    memcpy(s->lpc[ch].lpc_coeff, coefs[opt_order-1], opt_order*sizeof(int));
 }
 
 static void alac_stereo_decorrelation(AlacEncodeContext *s)
