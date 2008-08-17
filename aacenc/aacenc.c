@@ -254,7 +254,9 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
 
     s->samples = av_malloc(2 * 1024 * avctx->channels * sizeof(s->samples[0]));
     s->cpe = av_mallocz(sizeof(ChannelElement) * aac_chan_configs[avctx->channels-1][0]);
-    if(ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP, aac_chan_configs[avctx->channels-1][0], 0, s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128) < 0){
+    if(ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP,
+                       aac_chan_configs[avctx->channels-1][0], 0,
+                       s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128) < 0){
         av_log(avctx, AV_LOG_ERROR, "Cannot initialize selected model.\n");
         return -1;
     }
@@ -264,7 +266,8 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     return 0;
 }
 
-static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, short *audio, int channel)
+static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s,
+                                  ChannelElement *cpe, short *audio, int channel)
 {
     int i, j, k;
     const float * lwindow = cpe->ch[channel].ics.use_kb_window[0] ? ff_aac_kbd_long_1024 : ff_sine_1024;
@@ -302,7 +305,9 @@ static void apply_window_and_mdct(AVCodecContext *avctx, AACEncContext *s, Chann
         j = channel;
         for (k = 0; k < 1024; k += 128) {
             for(i = 448 + k; i < 448 + k + 256; i++)
-                s->output[i - 448 - k] = (i < 1024) ? cpe->ch[channel].saved[i] : audio[channel + (i-1024)*avctx->channels] / 512.0;
+                s->output[i - 448 - k] = (i < 1024)
+                                         ? cpe->ch[channel].saved[i]
+                                         : audio[channel + (i-1024)*avctx->channels] / 512.0;
             s->dsp.vector_fmul        (s->output,     k ?  swindow : pwindow, 128);
             s->dsp.vector_fmul_reverse(s->output+128, s->output+128, swindow, 128);
             ff_mdct_calc(&s->mdct128, cpe->ch[channel].coeffs + k, s->output);
@@ -369,7 +374,8 @@ static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
  * @param size    scalefactor band size
  * @param cb      codebook number
  */
-static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channel, int win, int group_len, int start, int size, int cb)
+static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channel,
+                               int win, int group_len, int start, int size, int cb)
 {
     int i, j, w;
     int score = 0, dim, idx, start2;
@@ -418,7 +424,8 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
 /**
  * Encode band info for single window group bands.
  */
-static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int channel, int win, int group_len){
+static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe,
+                                     int channel, int win, int group_len){
     BandCodingPath path[64];
     int band_bits[64][12];
     int maxval;
@@ -504,7 +511,8 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe, int 
 /**
  * Encode the coefficients of one scalefactor band with selected codebook.
  */
-static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channel, int start, int size, int cb)
+static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channel,
+                               int start, int size, int cb)
 {
     const uint8_t  *bits  = ff_aac_spectral_bits [cb - 1];
     const uint16_t *codes = ff_aac_spectral_codes[cb - 1];
@@ -577,7 +585,8 @@ static void encode_band_info(AVCodecContext *avctx, AACEncContext *s, ChannelEle
 /**
  * Encode scalefactors.
  */
-static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel, int global_gain)
+static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s,
+                                 ChannelElement *cpe, int channel, int global_gain)
 {
     int off = global_gain, diff;
     int i, w, wg;
@@ -663,7 +672,8 @@ static void encode_tns_data(AVCodecContext *avctx, AACEncContext *s, ChannelElem
 /**
  * Encode spectral coefficients processed by psychoacoustic model.
  */
-static void encode_spectral_coeffs(AVCodecContext *avctx, AACEncContext *s, ChannelElement *cpe, int channel)
+static void encode_spectral_coeffs(AVCodecContext *avctx, AACEncContext *s,
+                                   ChannelElement *cpe, int channel)
 {
     int start, i, w, w2, wg;
 
@@ -676,7 +686,9 @@ static void encode_spectral_coeffs(AVCodecContext *avctx, AACEncContext *s, Chan
                 continue;
             }
             for(w2 = w; w2 < w + cpe->ch[channel].ics.group_len[wg]; w2++){
-                encode_band_coeffs(s, cpe, channel, start + w2*128, cpe->ch[channel].ics.swb_sizes[i], cpe->ch[channel].band_type[w*16 + i]);
+                encode_band_coeffs(s, cpe, channel, start + w2*128,
+                                   cpe->ch[channel].ics.swb_sizes[i],
+                                   cpe->ch[channel].band_type[w*16 + i]);
             }
             start += cpe->ch[channel].ics.swb_sizes[i];
         }
