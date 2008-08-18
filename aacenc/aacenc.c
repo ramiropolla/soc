@@ -378,6 +378,7 @@ static int calculate_band_sign_bits(AACEncContext *s, ChannelElement *cpe, int c
  * @param s       encoder context
  * @param cpe     channel element
  * @param channel channel number inside channel pair
+ * @param group_len window group length
  * @param start   scalefactor band position in spectral coefficients
  * @param size    scalefactor band size
  * @param cb      codebook number
