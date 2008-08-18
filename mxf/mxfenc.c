@@ -33,8 +33,6 @@
 
 #include "mxf.h"
 
-typedef uint8_t UMID[32];
-
 typedef struct {
     int local_tag;
     UID uid;
@@ -45,7 +43,6 @@ typedef struct {
 } MXFStreamContext;
 
 typedef struct MXFContext {
-    UMID top_src_package_uid;
     int64_t header_byte_count;
     int64_t header_byte_count_offset;
     int64_t header_footer_partition_offset;
@@ -146,35 +143,17 @@ static const MXFLocalTagPair mxf_local_tag_batch[] = {
     { 0x3D06, {0x06,0x0E,0x2B,0x34,0x01,0x01,0x01,0x02,0x04,0x01,0x06,0x01,0x00,0x00,0x00,0x00}}, /* sound essence compression */
 };
 
-static void mxf_generate_uuid(AVFormatContext *s, UID uuid)
-{
-    MXFContext *mxf = s->priv_data;
-    int i;
-
-    for (i = 0; i < 16; i++) {
-        mxf->random_state= mxf->random_state*1664525+10139042;
-        uuid[i]= mxf->random_state>>24;
-    }
-    // the 7th byte is version according to ISO 11578
-    uuid[6] &= 0x0f;
-    uuid[6] |= 0x40;
-
-    // the 8th byte is variant for current use according to ISO 11578
-    uuid[8] &= 0x3f;
-    uuid[8] |= 0x80;
-}
-
-static void mxf_generate_umid(AVFormatContext *s, UMID umid)
-{
-    memcpy(umid, umid_base, 16);
-    mxf_generate_uuid(s, umid + 16);
-}
-
 static void mxf_write_uuid(ByteIOContext *pb, enum CodecID type, int value)
 {
     put_buffer(pb, uuid_base, 12);
     put_be16(pb, type);
     put_be16(pb, value);
+}
+
+static void mxf_write_umid(ByteIOContext *pb, enum CodecID type, int value)
+{
+    put_buffer(pb, umid_base, 16);
+    mxf_write_uuid(pb, type, value);
 }
 
 static void mxf_write_refs_count(ByteIOContext *pb, int ref_count)
@@ -323,7 +302,6 @@ static int mxf_write_preface(AVFormatContext *s)
 static int mxf_write_identification(AVFormatContext *s)
 {
     ByteIOContext *pb = s->pb;
-    UID uid;
     int length, company_name_len, product_name_len, version_string_len;
 
     mxf_write_metadata_key(pb, 0x013000);
@@ -347,9 +325,8 @@ static int mxf_write_identification(AVFormatContext *s)
     PRINT_KEY(s, "identification uid", pb->buf_ptr - 16);
 #endif
     // write generation uid
-    mxf_generate_uuid(s, uid);
     mxf_write_local_tag(pb, 16, 0x3C09);
-    put_buffer(pb, uid, 16);
+    mxf_write_uuid(pb, Identification, 1);
 
     mxf_write_local_tag(pb, company_name_len, 0x3C01);
     put_buffer(pb, "FFmpeg", company_name_len);
@@ -363,9 +340,8 @@ static int mxf_write_identification(AVFormatContext *s)
     }
 
     // write product uid
-    mxf_generate_uuid(s, uid);
     mxf_write_local_tag(pb, 16, 0x3C05);
-    put_buffer(pb, uid, 16);
+    mxf_write_uuid(pb, Identification, 2);
 
     // write modified date
     mxf_write_local_tag(pb, 8, 0x3C06);
@@ -399,9 +375,7 @@ static int mxf_write_content_storage(AVFormatContext *s)
 
 static int mxf_write_package(AVFormatContext *s, enum MXFMetadataSetType type)
 {
-    MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
-    UMID umid;
     int i;
 
     if (type == MaterialPackage) {
@@ -425,19 +399,18 @@ static int mxf_write_package(AVFormatContext *s, enum MXFMetadataSetType type)
 #ifdef DEBUG
     av_log(s,AV_LOG_DEBUG, "package type:%d\n", type);
     PRINT_KEY(s, "package uid", pb->buf_ptr - 16);
-    PRINT_KEY(s, "package umid first part", umid);
-    PRINT_KEY(s, "package umid second part", umid + 16);
 #endif
 
     // write package umid
     mxf_write_local_tag(pb, 32, 0x4401);
     if (type == MaterialPackage) {
-        mxf_generate_umid(s, umid);
-        put_buffer(pb, umid, 32);
+        mxf_write_umid(pb, MaterialPackage, 0);
     } else {
-        put_buffer(pb, mxf->top_src_package_uid, 32);
+        mxf_write_umid(pb, SourcePackage, 0);
     }
-
+#ifdef DEBUG
+    PRINT_KEY(s, "package umid second part", pb->buf_ptr - 16);
+#endif
     // write create date
     mxf_write_local_tag(pb, 8, 0x4405);
     put_be64(pb, 0);
@@ -557,7 +530,6 @@ static int mxf_write_sequence(AVFormatContext *s, int stream_index, enum MXFMeta
 
 static int mxf_write_structural_component(AVFormatContext *s, int stream_index, enum MXFMetadataSetType type)
 {
-    MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
     AVStream *st;
     const MXFDataDefinitionUL * data_def_ul;
@@ -602,7 +574,7 @@ static int mxf_write_structural_component(AVFormatContext *s, int stream_index, 
         put_be32(pb, 0);
     } else {
         mxf_write_local_tag(pb, 32, 0x1101);
-        put_buffer(pb, mxf->top_src_package_uid, 32);
+        mxf_write_umid(pb, SourcePackage, 0);
 
         mxf_write_local_tag(pb, 4, 0x1102);
         put_be32(pb, stream_index);
@@ -905,10 +877,6 @@ static int mux_write_header(AVFormatContext *s)
     // calculate the number of essence container type
     mxf_build_essence_container_refs(s);
     mxf_write_partition(s, 0, 1, header_partition_key);
-
-    // generate Source Package Set UMID for op1a
-    // will be used by material_package->source_track->sequence->structual_component->source_package_id
-    mxf_generate_umid(s, mxf->top_src_package_uid);
 
     // mark the start of the headermetadata and calculate metadata size
     header_metadata_start = url_ftell(s->pb);
