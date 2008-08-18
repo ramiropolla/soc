@@ -46,9 +46,7 @@ typedef struct MXFContext {
     int64_t header_byte_count;
     int64_t header_byte_count_offset;
     int64_t header_footer_partition_offset;
-    unsigned int random_state;
     int essence_container_count;
-    UID *essence_container_uls;
 } MXFContext;
 
 typedef struct {
@@ -228,7 +226,6 @@ static void mxf_write_metadata_key(ByteIOContext *pb, unsigned int value)
 
 static void mxf_free(AVFormatContext *s)
 {
-    MXFContext *mxf = s->priv_data;
     AVStream *st;
     int i;
 
@@ -236,7 +233,6 @@ static void mxf_free(AVFormatContext *s)
         st = s->streams[i];
         av_freep(&st->priv_data);
     }
-    av_freep(&mxf->essence_container_uls);
 }
 
 static const MXFDataDefinitionUL *mxf_get_data_definition_ul(enum CodecType type)
@@ -248,6 +244,46 @@ static const MXFDataDefinitionUL *mxf_get_data_definition_ul(enum CodecType type
         uls ++;
     }
     return uls;
+}
+
+static int mxf_write_essence_container_refs(AVFormatContext *s)
+{
+    MXFContext *mxf = s->priv_data;
+    ByteIOContext *pb = s->pb;
+    AVStream *st;
+    int i, count = 0, j = 0;
+    int essence_container_ul_sign[32] = { 0 };
+    const MXFCodecUL *codec_ul = NULL;
+
+    for (codec_ul = ff_mxf_essence_container_uls; codec_ul->id; codec_ul++) {
+        for (i = 0; i < s->nb_streams; i++) {
+            st = s->streams[i];
+            if (st->codec->codec_id == codec_ul->id) {
+                essence_container_ul_sign[count] = j;
+                count++;
+                break;
+            }
+        }
+        j++;
+        // considering WAV/AES3 frame wrapped, when get the first CODEC_ID_PCM_S16LE, break;
+        // this is a temporary method, when we can get  more information, modofy this.
+        if (codec_ul->id == CODEC_ID_PCM_S16LE)
+            break;
+    }
+    // set the count of essence container for caculating the size of the references in other metadata sets
+    if (!mxf->essence_container_count)
+        mxf->essence_container_count = count;
+
+    mxf_write_refs_count(pb, count);
+    for (i = 0; i < count; i++) {
+        put_buffer(pb, ff_mxf_essence_container_uls[essence_container_ul_sign[i]].uid, 16);
+    }
+#ifdef DEBUG
+    av_log(s,AV_LOG_DEBUG, "essence container count:%d\n", count);
+    for (i = 0; i < count; i++)
+        PRINT_KEY(s, "essence container ul:\n", ff_mxf_essence_container_uls[essence_container_ul_sign[i]].uid);
+#endif
+    return 0;
 }
 
 static int mxf_write_preface(AVFormatContext *s)
@@ -290,8 +326,7 @@ static int mxf_write_preface(AVFormatContext *s)
 
     // write essence_container_refs
     mxf_write_local_tag(pb, 8 + 16 * mxf->essence_container_count, 0x3B0A);
-    mxf_write_refs_count(pb, mxf->essence_container_count);
-    put_buffer(pb, *mxf->essence_container_uls, sizeof(UID) * mxf->essence_container_count);
+    mxf_write_essence_container_refs(s);
 
     // write dm_scheme_refs
     mxf_write_local_tag(pb, 8, 0x3B0B);
@@ -633,9 +668,6 @@ static void mxf_write_header_desc(ByteIOContext *pb, const MXFDescriptorWriteTab
 
     mxf_write_local_tag(pb, 4, 0x3006);
     put_be32(pb, st->index);
-#ifdef DEBUG
-    av_log(s, AV_LOG_DEBUG, "linked track ID:%d\n", st->index);
-#endif
 
     mxf_write_essence_container_ul(pb, st->codec->codec_id);
 }
@@ -767,47 +799,10 @@ static int mxf_write_header_metadata_sets(AVFormatContext *s)
     return 0;
 }
 
-static int mxf_add_essence_container_ul(MXFContext *mxf, const MXFCodecUL *codec_ul)
-{
-    mxf->essence_container_uls = av_realloc(mxf->essence_container_uls, (mxf->essence_container_count + 1) * 16);
-    if (!mxf->essence_container_uls)
-        return AVERROR(ENOMEM);
-    memcpy(mxf->essence_container_uls[mxf->essence_container_count], codec_ul->uid, 16);
-    mxf->essence_container_count++;
-    return mxf->essence_container_count;
-}
-
-static int mxf_build_essence_container_refs(AVFormatContext *s)
-{
-    MXFContext *mxf = s->priv_data;
-    AVStream *st;
-    int i;
-    const MXFCodecUL *codec_ul = NULL;
-
-    for (codec_ul = ff_mxf_essence_container_uls; codec_ul->id; codec_ul++) {
-        for (i = 0; i < s->nb_streams; i++) {
-            st = s->streams[i];
-            if (st->codec->codec_id == codec_ul->id) {
-                if (mxf_add_essence_container_ul(mxf, codec_ul) < 0 )
-                    return -1;
-                break;
-            }
-        }
-        // considering WAV/AES3 frame wrapped, when get the first CODEC_ID_PCM_S16LE, break;
-        // this is a temporary method, when we can get  more information, modofy this.
-        if (codec_ul->id == CODEC_ID_PCM_S16LE)
-            break;
-    }
-    return 0;
-}
-
 static void mxf_write_partition(AVFormatContext *s, int64_t byte_position, int bodysid, const uint8_t *key)
 {
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
-#ifdef DEBUG
-    int i;
-#endif
     // write klv
     put_buffer(pb, key, 16);
     klv_encode_ber_length(pb, 88 + 16 * mxf->essence_container_count);
@@ -839,14 +834,7 @@ static void mxf_write_partition(AVFormatContext *s, int64_t byte_position, int b
     put_buffer(pb, op1a_ul, 16); // operational pattern
 
     // essence container
-    mxf_write_refs_count(pb, mxf->essence_container_count);
-    put_buffer(pb, *mxf->essence_container_uls, sizeof(UID) * mxf->essence_container_count);
-#ifdef DEBUG
-    av_log(s,AV_LOG_DEBUG, "essence container count:%d\n", mxf->essence_container_count);
-    for (i = 0; i < mxf->essence_container_count; i++)
-        PRINT_KEY(s, "essence container ul:\n", mxf->essence_container_uls[i]);
-
-#endif
+    mxf_write_essence_container_refs(s);
 }
 
 static int mux_write_header(AVFormatContext *s)
@@ -855,8 +843,6 @@ static int mux_write_header(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
     int64_t header_metadata_start;
 
-    // calculate the number of essence container type
-    mxf_build_essence_container_refs(s);
     mxf_write_partition(s, 0, 1, header_partition_key);
 
     // mark the start of the headermetadata and calculate metadata size
