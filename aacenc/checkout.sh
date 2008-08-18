@@ -9,9 +9,12 @@ patch -p1 < ../aac_enc.patch && \
 cd libavcodec
 
 echo "Copying and downloading source code to libavcodec dir"
+cp ../../aac.h .
 cp ../../aacenc.c .
 cp ../../aacpsy.c .
 cp ../../aacpsy.h .
+cp ../../lowpass.c .
+cp ../../lowpass.h .
 
 cd ../..
 svn co svn://svn.mplayerhq.hu/soc/aac
