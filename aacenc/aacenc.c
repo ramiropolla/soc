@@ -402,12 +402,10 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
                 for(j = 0; j < dim; j++){
                     coef_abs[j] = FFABS(cpe->ch[channel].icoefs[start+i+j]);
                     idx = idx * range + FFMIN(coef_abs[j], 16);
-                }
-                bits += ff_aac_spectral_bits[cb][idx];
-                for(j = 0; j < dim; j++){
                     if(cb == ESC_BT && coef_abs[j] > 15)
                         bits += av_log2(coef_abs[j]) * 2 - 4 + 1;
                 }
+                bits += ff_aac_spectral_bits[cb][idx];
             }
             start += 128;
         }
