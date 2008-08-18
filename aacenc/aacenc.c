@@ -450,7 +450,7 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe,
         if(cpe->ch[channel].zeroes[win*16 + swb])
             maxval = 0;
         else{
-            for(w = win; w < win + group_len; w++){
+            for(w = 0; w < group_len; w++){
                 for(i = start2; i < start2 + size; i++){
                     maxval = FFMAX(maxval, FFABS(cpe->ch[channel].icoefs[i]));
                 }
