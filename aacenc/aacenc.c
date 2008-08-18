@@ -360,14 +360,14 @@ static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
 static int calculate_band_sign_bits(AACEncContext *s, ChannelElement *cpe, int channel,
                                     int win, int group_len, int start, int size)
 {
-    int bits = 0, start2 = start;
+    int bits = 0;
     int i, w;
     for(w = win; w < win + group_len; w++){
-        for(i = start2; i < start2 + size; i++){
-            if(cpe->ch[channel].icoefs[i])
+        for(i = 0; i < size; i++){
+            if(cpe->ch[channel].icoefs[start + i])
                 bits++;
         }
-        start2 += 128;
+        start += 128;
     }
     return bits;
 }
@@ -387,21 +387,20 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
                                int win, int group_len, int start, int size, int cb)
 {
     int i, j, w;
-    int bits = 0, dim, idx, start2;
+    int bits = 0, dim, idx;
     int range = aac_cb_info[cb].range;
 
     if(range == -1) return 0;
     cb--;
     dim = cb < FIRST_PAIR_BT ? 4 : 2;
 
-    start2 = start;
     if(IS_CODEBOOK_UNSIGNED(cb)){
         int coef_abs[2];
         for(w = win; w < win + group_len; w++){
-            for(i = start2; i < start2 + size; i += dim){
+            for(i = 0; i < size; i += dim){
                 idx = 0;
                 for(j = 0; j < dim; j++){
-                    coef_abs[j] = FFABS(cpe->ch[channel].icoefs[i+j]);
+                    coef_abs[j] = FFABS(cpe->ch[channel].icoefs[start+i+j]);
                     idx = idx * range + FFMIN(coef_abs[j], 16);
                 }
                 bits += ff_aac_spectral_bits[cb][idx];
@@ -410,19 +409,19 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
                         bits += av_log2(coef_abs[j]) * 2 - 4 + 1;
                 }
             }
-            start2 += 128;
+            start += 128;
         }
     }else{
         for(w = win; w < win + group_len; w++){
-            for(i = start2; i < start2 + size; i += dim){
-                idx = cpe->ch[channel].icoefs[i];
+            for(i = 0; i < size; i += dim){
+                idx = cpe->ch[channel].icoefs[start+i];
                 for(j = 1; j < dim; j++)
-                    idx = idx * range + cpe->ch[channel].icoefs[i+j];
+                    idx = idx * range + cpe->ch[channel].icoefs[start+i+j];
                 //it turned out that all signed codebooks use the same offset for index coding
                 idx += 40;
                 bits += ff_aac_spectral_bits[cb][idx];
             }
-            start2 += 128;
+            start += 128;
         }
     }
     return bits;
