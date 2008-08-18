@@ -375,13 +375,13 @@ static int calculate_band_sign_bits(AACEncContext *s, ChannelElement *cpe, int c
 /**
  * Calculate the number of bits needed to code given band with given codebook.
  *
- * @param s       encoder context
- * @param cpe     channel element
- * @param channel channel number inside channel pair
+ * @param s         encoder context
+ * @param cpe       channel element
+ * @param channel   channel number inside channel pair
  * @param group_len window group length
- * @param start   scalefactor band position in spectral coefficients
- * @param size    scalefactor band size
- * @param cb      codebook number
+ * @param start     scalefactor band position in spectral coefficients
+ * @param size      scalefactor band size
+ * @param cb        codebook number
  */
 static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channel,
                                int group_len, int start, int size, int cb)
