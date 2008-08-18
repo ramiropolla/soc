@@ -189,10 +189,6 @@ typedef struct {
     int16_t* samples;                            ///< saved preprocessed input
 
     int samplerate_index;                        ///< MPEG-4 samplerate index
-    const uint8_t *swb_sizes1024;                ///< scalefactor band sizes for long frame
-    int swb_num1024;                             ///< number of scalefactor bands for long frame
-    const uint8_t *swb_sizes128;                 ///< scalefactor band sizes for short frame
-    int swb_num128;                              ///< number of scalefactor bands for short frame
 
     ChannelElement *cpe;                         ///< channel elements
     AACPsyContext psy;                           ///< psychoacoustic model context
@@ -238,10 +234,6 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
         return -1;
     }
     s->samplerate_index = i;
-    s->swb_sizes1024 = swb_size_1024[i];
-    s->swb_num1024   = ff_aac_num_swb_1024[i];
-    s->swb_sizes128  = swb_size_128[i];
-    s->swb_num128    = ff_aac_num_swb_128[i];
 
     dsputil_init(&s->dsp, avctx);
     ff_mdct_init(&s->mdct1024, 11, 0);
@@ -256,7 +248,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     s->cpe = av_mallocz(sizeof(ChannelElement) * aac_chan_configs[avctx->channels-1][0]);
     if(ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP,
                        aac_chan_configs[avctx->channels-1][0], 0,
-                       s->swb_sizes1024, s->swb_num1024, s->swb_sizes128, s->swb_num128) < 0){
+                       swb_size_1024[i], ff_aac_num_swb_1024[i], swb_size_128[i], ff_aac_num_swb_128[i]) < 0){
         av_log(avctx, AV_LOG_ERROR, "Cannot initialize selected model.\n");
         return -1;
     }
