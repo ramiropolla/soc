@@ -273,16 +273,18 @@ static int mxf_write_essence_container_refs(AVFormatContext *s)
     // set the count of essence container for caculating the size of the references in other metadata sets
     if (!mxf->essence_container_count)
         mxf->essence_container_count = count;
-
-    mxf_write_refs_count(pb, count);
-    for (i = 0; i < count; i++) {
-        put_buffer(pb, ff_mxf_essence_container_uls[essence_container_ul_sign[i]].uid, 16);
-    }
+    else {
+        mxf_write_refs_count(pb, count);
+        for (i = 0; i < count; i++) {
+            put_buffer(pb, ff_mxf_essence_container_uls[essence_container_ul_sign[i]].uid, 16);
+        }
 #ifdef DEBUG
-    av_log(s,AV_LOG_DEBUG, "essence container count:%d\n", count);
-    for (i = 0; i < count; i++)
-        PRINT_KEY(s, "essence container ul:\n", ff_mxf_essence_container_uls[essence_container_ul_sign[i]].uid);
+        av_log(s,AV_LOG_DEBUG, "essence container count:%d\n", count);
+        for (i = 0; i < count; i++)
+            PRINT_KEY(s, "essence container ul:\n", ff_mxf_essence_container_uls[essence_container_ul_sign[i]].uid);
 #endif
+    }
+
     return 0;
 }
 
@@ -805,6 +807,8 @@ static void mxf_write_partition(AVFormatContext *s, int64_t byte_position, int b
     ByteIOContext *pb = s->pb;
     // write klv
     put_buffer(pb, key, 16);
+    if (!mxf->essence_container_count)
+        mxf_write_essence_container_refs(s);
     klv_encode_ber_length(pb, 88 + 16 * mxf->essence_container_count);
 
     // write partition value
