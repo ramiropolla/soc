@@ -241,6 +241,12 @@ static void mxf_write_local_tag(ByteIOContext *pb, int value_size, int tag)
     put_be16(pb, value_size);
 }
 
+static void mxf_write_metadata_key(ByteIOContext *pb, unsigned int value)
+{
+    put_buffer(pb, header_metadata_key, 13);
+    put_be24(pb, value);
+}
+
 static void mxf_free(AVFormatContext *s)
 {
     MXFContext *mxf = s->priv_data;
@@ -265,21 +271,21 @@ static const MXFDataDefinitionUL *mxf_get_data_definition_ul(enum CodecType type
     return uls;
 }
 
-static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
+static int mxf_write_preface(AVFormatContext *s)
 {
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
 
-    AV_WB24(klv->key + 13, 0x012f00);
-
-    put_buffer(pb, klv->key, 16);
+    mxf_write_metadata_key(pb, 0x012f00);
+#ifdef DEBUG
+    PRINT_KEY(s, "preface key", pb->buf_ptr - 16);
+#endif
     klv_encode_ber_length(pb, 130 + 16 * mxf->essence_container_count);
 
     // write preface set uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, Preface, 0);
 #ifdef DEBUG
-    PRINT_KEY(s, "preface key", klv->key);
     PRINT_KEY(s, "preface uid", pb->buf_ptr - 16);
 #endif
 
@@ -314,16 +320,16 @@ static int mxf_write_preface(AVFormatContext *s, KLVPacket *klv)
     return 0;
 }
 
-static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
+static int mxf_write_identification(AVFormatContext *s)
 {
     ByteIOContext *pb = s->pb;
     UID uid;
     int length, company_name_len, product_name_len, version_string_len;
 
-    AV_WB24(klv->key + 13, 0x013000);
-
-    put_buffer(pb, klv->key, 16);
-
+    mxf_write_metadata_key(pb, 0x013000);
+#ifdef DEBUG
+    PRINT_KEY(s, "identification key", pb->buf_ptr - 16);
+#endif
     company_name_len = sizeof("FFmpeg");
     product_name_len = sizeof("OP1a Muxer");
 
@@ -338,7 +344,6 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, Identification, 0);
 #ifdef DEBUG
-    PRINT_KEY(s, "identification key", klv->key);
     PRINT_KEY(s, "identification uid", pb->buf_ptr - 16);
 #endif
     // write generation uid
@@ -368,20 +373,20 @@ static int mxf_write_identification(AVFormatContext *s, KLVPacket *klv)
     return 0;
 }
 
-static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
+static int mxf_write_content_storage(AVFormatContext *s)
 {
     ByteIOContext *pb = s->pb;
 
-    AV_WB24(klv->key + 13, 0x011800);
-
-    put_buffer(pb, klv->key, 16);
+    mxf_write_metadata_key(pb, 0x011800);
+#ifdef DEBUG
+    PRINT_KEY(s, "content storage key", pb->buf_ptr - 16);
+#endif
     klv_encode_ber_length(pb, 64);
 
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, ContentStorage, 0);
 #ifdef DEBUG
-    PRINT_KEY(s, "content storage key", klv->key);
     PRINT_KEY(s, "content storage uid", pb->buf_ptr - 16);
 #endif
     // write package reference
@@ -392,29 +397,33 @@ static int mxf_write_content_storage(AVFormatContext *s, KLVPacket *klv)
     return 0;
 }
 
-static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadataSetType type)
+static int mxf_write_package(AVFormatContext *s, enum MXFMetadataSetType type)
 {
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
     UMID umid;
     int i;
 
-    klv->key[13] = 0x01;
-    klv->key[14] = type == MaterialPackage ? 0x36 : 0x37;
-    klv->key[15] = 0x00;
-
-    put_buffer(pb, klv->key, 16);
-    if (type == MaterialPackage)
+    if (type == MaterialPackage) {
+        mxf_write_metadata_key(pb, 0x013600);
+#ifdef DEBUG
+    PRINT_KEY(s, "Material Package key", pb->buf_ptr - 16);
+#endif
         klv_encode_ber_length(pb, 92 + 16 * s->nb_streams);
-    else
+    }
+    else {
+        mxf_write_metadata_key(pb, 0x013700);
+#ifdef DEBUG
+    PRINT_KEY(s, "Source Package key", pb->buf_ptr - 16);
+#endif
         klv_encode_ber_length(pb, 112 + 16 * s->nb_streams); // 20 bytes length for descriptor reference
+    }
 
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, type, 0);
 #ifdef DEBUG
     av_log(s,AV_LOG_DEBUG, "package type:%d\n", type);
-    PRINT_KEY(s, "package", klv->key);
     PRINT_KEY(s, "package uid", pb->buf_ptr - 16);
     PRINT_KEY(s, "package umid first part", umid);
     PRINT_KEY(s, "package umid second part", umid + 16);
@@ -451,7 +460,7 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     return 0;
 }
 
-static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index, enum MXFMetadataSetType type, int *track_number_sign)
+static int mxf_write_track(AVFormatContext *s, int stream_index, enum MXFMetadataSetType type, int *track_number_sign)
 {
     ByteIOContext *pb = s->pb;
     AVStream *st;
@@ -459,9 +468,10 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     const MXFCodecUL *element;
     int i = 0;
 
-    AV_WB24(klv->key + 13, 0x013b00);
-
-    put_buffer(pb, klv->key, 16);
+    mxf_write_metadata_key(pb, 0x013b00);
+#ifdef DEBUG
+    PRINT_KEY(s, "track key", pb->buf_ptr - 16);
+#endif
     klv_encode_ber_length(pb, 80);
 
     st = s->streams[stream_index];
@@ -471,7 +481,6 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, Track * type, stream_index);
 #ifdef DEBUG
-    PRINT_KEY(s, "track key", klv->key);
     PRINT_KEY(s, "track uid", pb->buf_ptr - 16);
 #endif
     // write track id
@@ -511,15 +520,16 @@ static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index,
     return 0;
 }
 
-static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_index, enum MXFMetadataSetType type)
+static int mxf_write_sequence(AVFormatContext *s, int stream_index, enum MXFMetadataSetType type)
 {
     ByteIOContext *pb = s->pb;
     AVStream *st;
     const MXFDataDefinitionUL * data_def_ul;
 
-    AV_WB24(klv->key + 13, 0x010f00);
-
-    put_buffer(pb, klv->key, 16);
+    mxf_write_metadata_key(pb, 0x010f00);
+#ifdef DEBUG
+    PRINT_KEY(s, "sequence key", pb->buf_ptr - 16);
+#endif
     klv_encode_ber_length(pb, 80);
 
     st = s->streams[stream_index];
@@ -528,7 +538,6 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     mxf_write_uuid(pb, Sequence * Track * type, stream_index);
 
 #ifdef DEBUG
-    PRINT_KEY(s, "sequence key", klv->key);
     PRINT_KEY(s, "sequence uid", pb->buf_ptr - 16);
 #endif
     // find data define uls
@@ -546,7 +555,7 @@ static int mxf_write_sequence(AVFormatContext *s, KLVPacket *klv, int stream_ind
     return 0;
 }
 
-static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, int stream_index, enum MXFMetadataSetType type)
+static int mxf_write_structural_component(AVFormatContext *s, int stream_index, enum MXFMetadataSetType type)
 {
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
@@ -554,9 +563,10 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     const MXFDataDefinitionUL * data_def_ul;
     int i;
 
-    AV_WB24(klv->key + 13, 0x011100);
-
-    put_buffer(pb, klv->key, 16);
+    mxf_write_metadata_key(pb, 0x011100);
+#ifdef DEBUG
+    PRINT_KEY(s, "sturctural component key", pb->buf_ptr - 16);
+#endif
     klv_encode_ber_length(pb, 108);
 
     st = s->streams[stream_index];
@@ -566,7 +576,6 @@ static int mxf_write_structural_component(AVFormatContext *s, KLVPacket *klv, in
     mxf_write_uuid(pb, SourceClip * Track * type, stream_index);
 
 #ifdef DEBUG
-    PRINT_KEY(s, "structural component key", klv->key);
     PRINT_KEY(s, "structural component uid", pb->buf_ptr - 16);
 #endif
     data_def_ul = mxf_get_data_definition_ul(st->codec->codec_type);
@@ -609,14 +618,15 @@ static void mxf_write_essence_container_ul(ByteIOContext *pb, enum CodecID type)
     put_buffer(pb, codec_ul->uid, 16);
 }
 
-static int mxf_write_multi_descriptor(AVFormatContext *s, KLVPacket *klv)
+static int mxf_write_multi_descriptor(AVFormatContext *s)
 {
     ByteIOContext *pb = s->pb;
     int i;
 
-    AV_WB24(klv->key + 13, 0x014400);
-
-    put_buffer(pb, klv->key, 16);
+    mxf_write_metadata_key(pb, 0x014400);
+#ifdef DEBUG
+    PRINT_KEY(s, "multiple descriptor key", pb->buf_ptr - 16);
+#endif
     klv_encode_ber_length(pb, 64 + 16 * s->nb_streams);
 
     mxf_write_local_tag(pb, 16, 0x3C0A);
@@ -723,28 +733,28 @@ static const MXFDescriptorWriteTableEntry mxf_descriptor_write_table[] = {
     { { 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 }, NULL, CODEC_ID_NONE},
 };
 
-static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enum MXFMetadataSetType type)
+static int mxf_build_structural_metadata(AVFormatContext *s, enum MXFMetadataSetType type)
 {
     MXFStreamContext *sc;
     int i, ret;
     const MXFDescriptorWriteTableEntry *desc = NULL;
     int track_number_sign[sizeof(mxf_essence_element_key)/sizeof(MXFCodecUL)] = { 0 };
 
-    if (mxf_write_package(s, klv, type) < 0)
+    if (mxf_write_package(s, type) < 0)
         return -1;
     if (type == SourcePackage) {
-        if (mxf_write_multi_descriptor(s, klv) < 0)
+        if (mxf_write_multi_descriptor(s) < 0)
             return -1;
     }
 
     for (i = 0;i < s->nb_streams; i++) {
-        ret = mxf_write_track(s, klv, i, type, track_number_sign);
+        ret = mxf_write_track(s, i, type, track_number_sign);
         if ( ret < 0)
             goto fail;
-        ret = mxf_write_sequence(s, klv, i, type);
+        ret = mxf_write_sequence(s, i, type);
         if ( ret < 0)
             goto fail;
-        ret = mxf_write_structural_component(s, klv, i, type);
+        ret = mxf_write_structural_component(s, i, type);
         if ( ret < 0)
             goto fail;
 
@@ -772,16 +782,14 @@ static int mxf_write_header_metadata_sets(AVFormatContext *s)
 {
     AVStream *st;
     MXFStreamContext *sc = NULL;
-    KLVPacket klv;
     int i;
-    memcpy(klv.key, header_metadata_key, 13);
-    if (mxf_write_preface(s, &klv) < 0)
+    if (mxf_write_preface(s) < 0)
         return -1;
 
-    if (mxf_write_identification(s,&klv) < 0)
+    if (mxf_write_identification(s) < 0)
         return -1;
 
-    if (mxf_write_content_storage(s, &klv) < 0)
+    if (mxf_write_content_storage(s) < 0)
         return -1;
 
     for (i = 0; i < s->nb_streams; i++) {
@@ -798,10 +806,10 @@ static int mxf_write_header_metadata_sets(AVFormatContext *s)
         }
     }
 
-    if (mxf_build_structural_metadata(s, &klv, MaterialPackage) < 0)
+    if (mxf_build_structural_metadata(s, MaterialPackage) < 0)
         return -1;
 
-    if (mxf_build_structural_metadata(s, &klv, SourcePackage) < 0)
+    if (mxf_build_structural_metadata(s, SourcePackage) < 0)
         return -1;
     return 0;
 }
