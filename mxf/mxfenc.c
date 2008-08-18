@@ -451,14 +451,13 @@ static int mxf_write_package(AVFormatContext *s, KLVPacket *klv, enum MXFMetadat
     return 0;
 }
 
-static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index, enum MXFMetadataSetType type)
+static int mxf_write_track(AVFormatContext *s, KLVPacket *klv, int stream_index, enum MXFMetadataSetType type, int *track_number_sign)
 {
     ByteIOContext *pb = s->pb;
     AVStream *st;
     MXFStreamContext *sc;
     const MXFCodecUL *element;
     int i = 0;
-    int track_number_sign[sizeof(mxf_essence_element_key)/sizeof(MXFCodecUL)] = { 0 };
 
     AV_WB24(klv->key + 13, 0x013b00);
 
@@ -729,6 +728,7 @@ static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enu
     MXFStreamContext *sc;
     int i, ret;
     const MXFDescriptorWriteTableEntry *desc = NULL;
+    int track_number_sign[sizeof(mxf_essence_element_key)/sizeof(MXFCodecUL)] = { 0 };
 
     if (mxf_write_package(s, klv, type) < 0)
         return -1;
@@ -738,7 +738,7 @@ static int mxf_build_structural_metadata(AVFormatContext *s, KLVPacket* klv, enu
     }
 
     for (i = 0;i < s->nb_streams; i++) {
-        ret = mxf_write_track(s, klv, i, type);
+        ret = mxf_write_track(s, klv, i, type, track_number_sign);
         if ( ret < 0)
             goto fail;
         ret = mxf_write_sequence(s, klv, i, type);
