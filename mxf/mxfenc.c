@@ -697,8 +697,7 @@ static const MXFDescriptorWriteTableEntry mxf_descriptor_write_table[] = {
 
 static int mxf_build_structural_metadata(AVFormatContext *s, enum MXFMetadataSetType type)
 {
-    MXFStreamContext *sc;
-    int i, ret;
+    int i;
     const MXFDescriptorWriteTableEntry *desc = NULL;
     int track_number_sign[sizeof(mxf_essence_element_key)/sizeof(MXFCodecUL)] = { 0 };
 
@@ -710,34 +709,26 @@ static int mxf_build_structural_metadata(AVFormatContext *s, enum MXFMetadataSet
     }
 
     for (i = 0;i < s->nb_streams; i++) {
-        ret = mxf_write_track(s, i, type, track_number_sign);
-        if ( ret < 0)
-            goto fail;
-        ret = mxf_write_sequence(s, i, type);
-        if ( ret < 0)
-            goto fail;
-        ret = mxf_write_structural_component(s, i, type);
-        if ( ret < 0)
-            goto fail;
+        if ( mxf_write_track(s, i, type, track_number_sign) < 0)
+            return -1;
+        if ( mxf_write_sequence(s, i, type) < 0)
+            return -1;
+        if ( mxf_write_structural_component(s, i, type) < 0)
+            return -1;
 
         if (type == SourcePackage) {
             for (desc = mxf_descriptor_write_table; desc->write; desc++) {
                 if (s->streams[i]->codec->codec_id == desc->type) {
-                    ret = desc->write(s, desc, i);
-                    if ( ret < 0) {
+                    if ( desc->write(s, desc, i) < 0) {
                         av_log(s, AV_LOG_ERROR, "error writing descriptor\n");
-                        goto fail;
+                        return -1;
                     }
                     break;
                 }
             }
         }
     }
-fail:
-    for (i = 0; i < s->nb_streams; i++) {
-        sc = s->streams[i]->priv_data;
-    }
-    return ret;
+    return 0;
 }
 
 static int mxf_write_header_metadata_sets(AVFormatContext *s)
