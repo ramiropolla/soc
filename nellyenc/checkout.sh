@@ -1,5 +1,5 @@
 #!/bin/sh
-FILES="nellymoserenc.c"
+FILES="nellymoserenc.c lowpass.c lowpass.h"
 
 echo "checking out ffmpeg svn"
 for i in $FILES Makefile allcodecs.c; do
