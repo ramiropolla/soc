@@ -358,11 +358,11 @@ static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
  * Calculate the number of bits needed to code all coefficient signs in current band.
  */
 static int calculate_band_sign_bits(AACEncContext *s, ChannelElement *cpe, int channel,
-                                    int win, int group_len, int start, int size)
+                                    int group_len, int start, int size)
 {
     int bits = 0;
     int i, w;
-    for(w = win; w < win + group_len; w++){
+    for(w = 0; w < group_len; w++){
         for(i = 0; i < size; i++){
             if(cpe->ch[channel].icoefs[start + i])
                 bits++;
@@ -378,13 +378,12 @@ static int calculate_band_sign_bits(AACEncContext *s, ChannelElement *cpe, int c
  * @param s       encoder context
  * @param cpe     channel element
  * @param channel channel number inside channel pair
- * @param win     window group start number
  * @param start   scalefactor band position in spectral coefficients
  * @param size    scalefactor band size
  * @param cb      codebook number
  */
 static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channel,
-                               int win, int group_len, int start, int size, int cb)
+                               int group_len, int start, int size, int cb)
 {
     int i, j, w;
     int bits = 0, dim, idx;
@@ -396,7 +395,7 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
 
     if(IS_CODEBOOK_UNSIGNED(cb)){
         int coef_abs[2];
-        for(w = win; w < win + group_len; w++){
+        for(w = 0; w < group_len; w++){
             for(i = 0; i < size; i += dim){
                 idx = 0;
                 for(j = 0; j < dim; j++){
@@ -412,7 +411,7 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
             start += 128;
         }
     }else{
-        for(w = win; w < win + group_len; w++){
+        for(w = 0; w < group_len; w++){
             for(i = 0; i < size; i += dim){
                 idx = cpe->ch[channel].icoefs[start+i];
                 for(j = 1; j < dim; j++)
@@ -459,12 +458,12 @@ static void encode_window_bands_info(AACEncContext *s, ChannelElement *cpe,
                 start2 += 128;
             }
         }
-        sbits = calculate_band_sign_bits(s, cpe, channel, win, group_len, start, size);
+        sbits = calculate_band_sign_bits(s, cpe, channel, group_len, start, size);
         for(cb = 0; cb < 12; cb++){
             if(aac_cb_info[cb].maxval < maxval)
                 band_bits[swb][cb] = INT_MAX;
             else{
-                band_bits[swb][cb] = calculate_band_bits(s, cpe, channel, win, group_len, start, size, cb);
+                band_bits[swb][cb] = calculate_band_bits(s, cpe, channel, group_len, start, size, cb);
                 if(IS_CODEBOOK_UNSIGNED(cb-1)){
                     band_bits[swb][cb] += sbits;
                 }
