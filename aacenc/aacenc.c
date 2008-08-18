@@ -535,19 +535,19 @@ static void encode_band_coeffs(AACEncContext *s, ChannelElement *cpe, int channe
 
     if(cb == ESC_BT){
         int coef_abs[2];
-        for(i = start; i < start + size; i += dim){
+        for(i = start; i < start + size; i += 2){
             idx = 0;
-            for(j = 0; j < dim; j++){
+            for(j = 0; j < 2; j++){
                 coef_abs[j] = FFABS(cpe->ch[channel].icoefs[i+j]);
                 idx = idx*17 + FFMIN(coef_abs[j], 16);
             }
             put_bits(&s->pb, bits[idx], codes[idx]);
             //output signs
-            for(j = 0; j < dim; j++)
+            for(j = 0; j < 2; j++)
                 if(cpe->ch[channel].icoefs[i+j])
                     put_bits(&s->pb, 1, cpe->ch[channel].icoefs[i+j] < 0);
             //output escape values
-            for(j = 0; j < dim; j++)
+            for(j = 0; j < 2; j++)
                 if(coef_abs[j] > 15){
                     int len = av_log2(coef_abs[j]);
 
