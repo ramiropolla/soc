@@ -562,23 +562,21 @@ static int mxf_write_structural_component(AVFormatContext *s, int stream_index, 
     mxf_write_local_tag(pb, 8, 0x0202);
     put_be64(pb, st->duration);
 
+    mxf_write_local_tag(pb, 32, 0x1101);
     if (type == SourcePackage) {
         // write source package uid, end of the reference
-        mxf_write_local_tag(pb, 32, 0x1101);
         for (i = 0; i < 4; i++) {
             put_be64(pb, 0);
         }
-
-        // write source track id
-        mxf_write_local_tag(pb, 4, 0x1102);
-        put_be32(pb, 0);
-    } else {
-        mxf_write_local_tag(pb, 32, 0x1101);
+    } else
         mxf_write_umid(pb, SourcePackage, 0);
 
-        mxf_write_local_tag(pb, 4, 0x1102);
+    mxf_write_local_tag(pb, 4, 0x1102);
+    if (type == SourcePackage)
+        // write source track id
+        put_be32(pb, 0);
+    else
         put_be32(pb, stream_index);
-    }
     return 0;
 }
 
