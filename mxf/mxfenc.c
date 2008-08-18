@@ -845,7 +845,7 @@ static int mux_write_header(AVFormatContext *s)
 {
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
-    int64_t header_metadata_start;
+    int64_t header_metadata_start, offset_now;
 
     mxf_write_partition(s, 0, 1, header_partition_key);
 
@@ -854,8 +854,15 @@ static int mux_write_header(AVFormatContext *s)
     mxf_write_primer_pack(s);
     if (mxf_write_header_metadata_sets(s) < 0)
         goto fail;
-    mxf->header_byte_count = url_ftell(s->pb) - header_metadata_start;
+    offset_now = url_ftell(s->pb);
+    mxf->header_byte_count = offset_now - header_metadata_start;
 
+    // if streamed file, update header_byte_count field here, before put_flush_packet()
+    if (url_is_streamed(s->pb)) {
+        url_fseek(pb, mxf->header_byte_count_offset, SEEK_SET);
+        put_be64(pb, mxf->header_byte_count);
+        url_fseek(pb, offset_now, SEEK_SET);
+    }
     put_flush_packet(pb);
     return 0;
 fail:
@@ -882,18 +889,13 @@ static int mxf_update_header_partition(AVFormatContext *s, int64_t footer_partit
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
 
-    if (!url_is_streamed(s->pb)) {
-        url_fseek(pb, mxf->header_byte_count_offset, SEEK_SET);
-        put_be64(pb, mxf->header_byte_count);
-        put_flush_packet(pb);
+    url_fseek(pb, mxf->header_byte_count_offset, SEEK_SET);
+    put_be64(pb, mxf->header_byte_count);
+    put_flush_packet(pb);
 
-        url_fseek(pb, mxf->header_footer_partition_offset, SEEK_SET);
-        put_be64(pb, footer_partition_offset);
-        put_flush_packet(pb);
-    } else {
-        av_log(s, AV_LOG_ERROR, "update header partition failed, non streamble out put\n");
-        return -1;
-    }
+    url_fseek(pb, mxf->header_footer_partition_offset, SEEK_SET);
+    put_be64(pb, footer_partition_offset);
+    put_flush_packet(pb);
     return 0;
 }
 
@@ -903,11 +905,14 @@ static int mux_write_footer(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
 
     int64_t byte_position= url_ftell(pb);
+    if (url_is_streamed(s->pb))
+        goto end;
     mxf_write_partition(s, byte_position, 0, footer_partition_key);
 
     put_flush_packet(pb);
 
     mxf_update_header_partition(s, byte_position);
+end:
     mxf_free(s);
     return 0;
 }
