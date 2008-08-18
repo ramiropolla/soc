@@ -360,16 +360,16 @@ static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
 static int calculate_band_sign_bits(AACEncContext *s, ChannelElement *cpe, int channel,
                                     int win, int group_len, int start, int size)
 {
-    int score = 0, start2 = start;
+    int bits = 0, start2 = start;
     int i, w;
     for(w = win; w < win + group_len; w++){
         for(i = start2; i < start2 + size; i++){
             if(cpe->ch[channel].icoefs[i])
-                score++;
+                bits++;
         }
         start2 += 128;
     }
-    return score;
+    return bits;
 }
 
 /**
@@ -387,7 +387,7 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
                                int win, int group_len, int start, int size, int cb)
 {
     int i, j, w;
-    int score = 0, dim, idx, start2;
+    int bits = 0, dim, idx, start2;
     int range = aac_cb_info[cb].range;
 
     if(range == -1) return 0;
@@ -404,10 +404,10 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
                     coef_abs[j] = FFABS(cpe->ch[channel].icoefs[i+j]);
                     idx = idx * range + FFMIN(coef_abs[j], 16);
                 }
-                score += ff_aac_spectral_bits[cb][idx];
+                bits += ff_aac_spectral_bits[cb][idx];
                 for(j = 0; j < dim; j++){
                     if(cb == ESC_BT && coef_abs[j] > 15)
-                        score += av_log2(coef_abs[j]) * 2 - 4 + 1;
+                        bits += av_log2(coef_abs[j]) * 2 - 4 + 1;
                 }
             }
             start2 += 128;
@@ -420,12 +420,12 @@ static int calculate_band_bits(AACEncContext *s, ChannelElement *cpe, int channe
                     idx = idx * range + cpe->ch[channel].icoefs[i+j];
                 //it turned out that all signed codebooks use the same offset for index coding
                 idx += 40;
-                score += ff_aac_spectral_bits[cb][idx];
+                bits += ff_aac_spectral_bits[cb][idx];
             }
             start2 += 128;
         }
     }
-    return score;
+    return bits;
 }
 
 /**
