@@ -1269,7 +1269,7 @@ static void apply_tns(float coef[1024], TemporalNoiseShaping * tns, IndividualCh
     int w, filt, m, i, ib;
     int bottom, top, order, start, end, size, inc;
     float tmp;
-    float lpc[TNS_MAX_ORDER + 1], b[2 * TNS_MAX_ORDER];
+    float lpc[TNS_MAX_ORDER + 1], b[TNS_MAX_ORDER + 1];
 
     for (w = 0; w < ics->num_windows; w++) {
         bottom = ics->num_swb;
@@ -1302,23 +1302,19 @@ static void apply_tns(float coef[1024], TemporalNoiseShaping * tns, IndividualCh
             start += w * 128;
 
             // ar filter
-            memset(b, 0, sizeof(b));
-            ib = 0;
-            for (m = 0; m < size; m++) {
-                tmp = coef[start];
-                if (decode) {
-                    for (i = 0; i < order; i++)
-                        tmp -= b[ib + i] * lpc[i + 1];
-                } else { // encode
-                    for (i = 0; i < order; i++)
-                        tmp += b[i]      * lpc[i + 1];
-                }
-                if (--ib < 0)
-                    ib = order - 1;
-                b[ib] = b[ib + order] = tmp;
-                coef[start] = tmp;
-                start += inc;
+#ifdef AAC_LTP
+            if (decode) {
+#endif /* AAC_LTP */
+            for (m = 0; m < size; m++, start += inc)
+                for (i = 1; i <= FFMIN(m, order); i++)
+                    coef[start] -= coef[start - i*inc] * lpc[i];
+#ifdef AAC_LTP
+            } else {
+                for (m = 0; m < size; m++, start += inc)
+                    for (i = 1; i <= FFMIN(m, order); i++)
+                        coef[start] += coef[start - i*inc] * lpc[i];
             }
+#endif /* AAC_LTP */
         }
     }
 }
