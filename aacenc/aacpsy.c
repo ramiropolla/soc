@@ -153,85 +153,6 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
     }
 }
 
-static void psy_test_window(AACPsyContext *apc, int16_t *audio, int16_t *la,
-                            int tag, int type, ChannelElement *cpe)
-{
-    int ch, i;
-    int chans = type == TYPE_CPE ? 2 : 1;
-
-    for(ch = 0; ch < chans; ch++){
-        IndividualChannelStream *ics = &cpe->ch[ch].ics;
-        int prev_seq = ics->window_sequence[1];
-        ics->use_kb_window[1] = ics->use_kb_window[0];
-        ics->window_sequence[1] = ics->window_sequence[0];
-        switch(ics->window_sequence[0]){
-        case ONLY_LONG_SEQUENCE:
-            if(prev_seq == ONLY_LONG_SEQUENCE)
-                ics->window_sequence[0] = LONG_START_SEQUENCE;
-            break;
-        case LONG_START_SEQUENCE:
-            ics->window_sequence[0] = EIGHT_SHORT_SEQUENCE;
-            break;
-        case EIGHT_SHORT_SEQUENCE:
-            if(prev_seq == EIGHT_SHORT_SEQUENCE)
-                ics->window_sequence[0] = LONG_STOP_SEQUENCE;
-            break;
-        case LONG_STOP_SEQUENCE:
-            ics->window_sequence[0] = ONLY_LONG_SEQUENCE;
-            break;
-        }
-
-        if(ics->window_sequence[0] != EIGHT_SHORT_SEQUENCE){
-            ics->use_kb_window[0] = 1;
-            ics->num_windows = 1;
-            ics->swb_sizes = apc->bands1024;
-            ics->num_swb = apc->num_bands1024;
-            ics->num_window_groups = 1;
-            ics->group_len[0] = 1;
-        }else{
-            ics->use_kb_window[0] = 1;
-            ics->num_windows = 8;
-            ics->swb_sizes = apc->bands128;
-            ics->num_swb = apc->num_bands128;
-            ics->num_window_groups = 4;
-            for(i = 0; i < 4; i++)
-                ics->group_len[i] = 2;
-        }
-    }
-    cpe->common_window = cpe->ch[0].ics.use_kb_window[0] == cpe->ch[1].ics.use_kb_window[0];
-}
-
-static void psy_test_process(AACPsyContext *apc, int tag, int type, ChannelElement *cpe)
-{
-    int start;
-    int w, ch, g, i;
-    int chans = type == TYPE_CPE ? 2 : 1;
-
-    //detect M/S
-    if(chans > 1 && cpe->common_window){
-        start = 0;
-        for(w = 0; w < cpe->ch[0].ics.num_windows*16; w += 16){
-            for(g = 0; g < cpe->ch[0].ics.num_swb; g++){
-                float diff = 0.0f;
-
-                for(i = 0; i < cpe->ch[0].ics.swb_sizes[g]; i++)
-                    diff += fabs(cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i]);
-                cpe->ms_mask[w + g] = diff == 0.0;
-            }
-        }
-    }
-    for(ch = 0; ch < chans; ch++){
-        IndividualChannelStream *ics = &cpe->ch[ch].ics;
-        for(w = 0; w < ics->num_windows*16; w += 16){
-            for(g = 0; g < ics->num_swb; g++){
-                cpe->ch[ch].sf_idx[w + g] = SCALE_ONE_POS;
-                cpe->ch[ch].zeroes[w + g] = 0;
-            }
-        }
-    }
-    psy_create_output(apc, cpe, chans);
-}
-
 /**
  * constants for 3GPP AAC psychoacoustic model
  * @{
@@ -799,13 +720,6 @@ static av_cold void psy_3gpp_end(AACPsyContext *apc)
 
 static const AACPsyModel psy_models[AAC_NB_PSY_MODELS] =
 {
-    {
-       "Test model",
-        NULL,
-        psy_test_window,
-        psy_test_process,
-        NULL,
-    },
     {
        "3GPP TS 26.403-inspired model",
         psy_3gpp_init,
