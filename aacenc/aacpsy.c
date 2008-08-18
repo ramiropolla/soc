@@ -68,7 +68,7 @@ static inline int quantize_coeffs(float *in, int *out, int size, int scale_idx)
     return sum;
 }
 
-static inline float calc_distortion(float *c, int size, int scale_idx)
+static inline float get_approximate_quant_error(float *c, int size, int scale_idx)
 {
     int i;
     int q;
@@ -731,7 +731,7 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
                         cpe->ch[ch].zeroes[w+g] = 0;
                         cpe->ch[ch].sf_idx[w+g] = determine_scalefactor(band);
                         while(cpe->ch[ch].sf_idx[w+g] > 3){
-                            float dist = calc_distortion(cpe->ch[ch].coeffs + start,
+                            float dist = get_approximate_quant_error(cpe->ch[ch].coeffs + start,
                                                          ics->swb_sizes[g],
                                                          SCALE_ONE_POS + cpe->ch[ch].sf_idx[w+g]);
                             if(dist < band->thr) break;
