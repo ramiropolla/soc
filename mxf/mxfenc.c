@@ -854,13 +854,11 @@ static int mux_write_header(AVFormatContext *s)
         goto fail;
     offset_now = url_ftell(s->pb);
     mxf->header_byte_count = offset_now - header_metadata_start;
+    // update header_byte_count
+    url_fseek(pb, mxf->header_byte_count_offset, SEEK_SET);
+    put_be64(pb, mxf->header_byte_count);
+    url_fseek(pb, offset_now, SEEK_SET);
 
-    // if streamed file, update header_byte_count field here, before put_flush_packet()
-    if (url_is_streamed(s->pb)) {
-        url_fseek(pb, mxf->header_byte_count_offset, SEEK_SET);
-        put_be64(pb, mxf->header_byte_count);
-        url_fseek(pb, offset_now, SEEK_SET);
-    }
     put_flush_packet(pb);
     return 0;
 fail:
@@ -886,10 +884,6 @@ static int mxf_update_header_partition(AVFormatContext *s, int64_t footer_partit
 {
     MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
-
-    url_fseek(pb, mxf->header_byte_count_offset, SEEK_SET);
-    put_be64(pb, mxf->header_byte_count);
-    put_flush_packet(pb);
 
     url_fseek(pb, mxf->header_footer_partition_offset, SEEK_SET);
     put_be64(pb, footer_partition_offset);
