@@ -897,14 +897,13 @@ static int mux_write_footer(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
 
     int64_t byte_position= url_ftell(pb);
-    if (url_is_streamed(s->pb))
-        goto end;
-    mxf_write_partition(s, byte_position, 0, footer_partition_key);
+    if (!url_is_streamed(s->pb)) {
+        mxf_write_partition(s, byte_position, 0, footer_partition_key);
 
-    put_flush_packet(pb);
+        put_flush_packet(pb);
 
-    mxf_update_header_partition(s, byte_position);
-end:
+        mxf_update_header_partition(s, byte_position);
+    }
     mxf_free(s);
     return 0;
 }
