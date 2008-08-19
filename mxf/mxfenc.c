@@ -505,10 +505,11 @@ static int mxf_write_track(AVFormatContext *s, int stream_index, enum MXFMetadat
                 // write track number
                 put_buffer(pb, element->uid + 12, 3);
                 put_byte(pb, element->uid[15] + track_number_sign[i]);
-                track_number_sign[i] ++;
 
                 // set essence_element key
                 memcpy(sc->track_essence_element_key, element->uid, 16);
+                sc->track_essence_element_key[15] += track_number_sign[i];
+                track_number_sign[i] ++;
                 break;
             }
             i++;
