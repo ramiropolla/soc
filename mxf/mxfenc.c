@@ -619,14 +619,6 @@ static int mxf_write_structural_component(AVFormatContext *s, int stream_index, 
     return 0;
 }
 
-static void mxf_write_essence_container_ul(ByteIOContext *pb, enum CodecID type)
-{
-    const MXFCodecUL *codec_ul;
-    codec_ul = mxf_get_essence_container_ul(type);
-    mxf_write_local_tag(pb, 16, 0x3004);
-    put_buffer(pb, codec_ul->uid, 16);
-}
-
 static int mxf_write_multi_descriptor(AVFormatContext *s)
 {
     ByteIOContext *pb = s->pb;
@@ -664,6 +656,8 @@ static int mxf_write_multi_descriptor(AVFormatContext *s)
 
 static void mxf_write_header_desc(ByteIOContext *pb, const MXFDescriptorWriteTableEntry *desc_tbl, AVStream *st)
 {
+    const MXFCodecUL *codec_ul;
+
     put_buffer(pb, desc_tbl->key, 16);
     klv_encode_ber_length(pb, 96);
 
@@ -673,7 +667,9 @@ static void mxf_write_header_desc(ByteIOContext *pb, const MXFDescriptorWriteTab
     mxf_write_local_tag(pb, 4, 0x3006);
     put_be32(pb, st->index);
 
-    mxf_write_essence_container_ul(pb, st->codec->codec_id);
+    codec_ul = mxf_get_essence_container_ul(st->codec->codec_id);
+    mxf_write_local_tag(pb, 16, 0x3004);
+    put_buffer(pb, codec_ul->uid, 16);
 }
 
 static int mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWriteTableEntry *desc_tbl, int stream_index)
