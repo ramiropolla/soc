@@ -461,7 +461,7 @@ static int mxf_write_package(AVFormatContext *s, enum MXFMetadataSetType type)
     mxf_write_local_tag(pb, s->nb_streams * 16 + 8, 0x4403);
     mxf_write_refs_count(pb, s->nb_streams);
     for (i = 0; i < s->nb_streams; i++)
-        mxf_write_uuid(pb, Track * type, i);
+        mxf_write_uuid(pb, type == MaterialPackage ? Track : Track + 0xf0, i);
 
     if (type == SourcePackage) {
         // write multiple descriptor reference
@@ -490,7 +490,7 @@ static int mxf_write_track(AVFormatContext *s, int stream_index, enum MXFMetadat
 
     // write track uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    mxf_write_uuid(pb, Track * type, stream_index);
+    mxf_write_uuid(pb, type == MaterialPackage ? Track : Track + 0xf0, stream_index);
 #ifdef DEBUG
     PRINT_KEY(s, "track uid", pb->buf_ptr - 16);
 #endif
@@ -528,7 +528,7 @@ static int mxf_write_track(AVFormatContext *s, int stream_index, enum MXFMetadat
 
     // write sequence refs
     mxf_write_local_tag(pb, 16, 0x4803);
-    mxf_write_uuid(pb, Sequence * Track * type, stream_index);
+    mxf_write_uuid(pb, type == MaterialPackage ? Sequence: Sequence + 0xf0, stream_index);
     return 0;
 }
 
@@ -547,7 +547,7 @@ static int mxf_write_sequence(AVFormatContext *s, int stream_index, enum MXFMeta
     st = s->streams[stream_index];
 
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    mxf_write_uuid(pb, Sequence * Track * type, stream_index);
+    mxf_write_uuid(pb, type == MaterialPackage ? Sequence: Sequence + 0xf0, stream_index);
 
 #ifdef DEBUG
     PRINT_KEY(s, "sequence uid", pb->buf_ptr - 16);
@@ -563,7 +563,7 @@ static int mxf_write_sequence(AVFormatContext *s, int stream_index, enum MXFMeta
     // write structural component
     mxf_write_local_tag(pb, 16 + 8, 0x1001);
     mxf_write_refs_count(pb, 1);
-    mxf_write_uuid(pb, SourceClip * Track * type, stream_index);
+    mxf_write_uuid(pb, type == MaterialPackage ? SourceClip: SourceClip + 0xf0, stream_index);
     return 0;
 }
 
@@ -584,7 +584,7 @@ static int mxf_write_structural_component(AVFormatContext *s, int stream_index, 
 
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
-    mxf_write_uuid(pb, SourceClip * Track * type, stream_index);
+    mxf_write_uuid(pb, type == MaterialPackage ? SourceClip: SourceClip + 0xf0, stream_index);
 
 #ifdef DEBUG
     PRINT_KEY(s, "structural component uid", pb->buf_ptr - 16);
