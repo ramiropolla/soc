@@ -280,11 +280,9 @@ static int mxf_write_essence_container_refs(AVFormatContext *s, int write)
         for (i = 0; i < count; i++) {
             put_buffer(pb, ff_mxf_essence_container_uls[essence_container_ul_sign[i]].uid, 16);
         }
-#ifdef DEBUG
         av_log(s,AV_LOG_DEBUG, "essence container count:%d\n", count);
         for (i = 0; i < count; i++)
             PRINT_KEY(s, "essence container ul:\n", ff_mxf_essence_container_uls[essence_container_ul_sign[i]].uid);
-#endif
     }
     return mxf->essence_container_count;
 }
@@ -295,17 +293,13 @@ static int mxf_write_preface(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
 
     mxf_write_metadata_key(pb, 0x012f00);
-#ifdef DEBUG
     PRINT_KEY(s, "preface key", pb->buf_ptr - 16);
-#endif
     klv_encode_ber_length(pb, 130 + 16 * mxf->essence_container_count);
 
     // write preface set uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, Preface, 0);
-#ifdef DEBUG
     PRINT_KEY(s, "preface uid", pb->buf_ptr - 16);
-#endif
 
     // write create date as unknown
     mxf_write_local_tag(pb, 8, 0x3B02);
@@ -343,9 +337,7 @@ static int mxf_write_identification(AVFormatContext *s)
     int length, company_name_len, product_name_len, version_string_len;
 
     mxf_write_metadata_key(pb, 0x013000);
-#ifdef DEBUG
     PRINT_KEY(s, "identification key", pb->buf_ptr - 16);
-#endif
     company_name_len = sizeof("FFmpeg");
     product_name_len = sizeof("OP1a Muxer");
 
@@ -359,9 +351,7 @@ static int mxf_write_identification(AVFormatContext *s)
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, Identification, 0);
-#ifdef DEBUG
     PRINT_KEY(s, "identification uid", pb->buf_ptr - 16);
-#endif
     // write generation uid
     mxf_write_local_tag(pb, 16, 0x3C09);
     mxf_write_uuid(pb, Identification, 1);
@@ -392,17 +382,13 @@ static int mxf_write_content_storage(AVFormatContext *s)
     ByteIOContext *pb = s->pb;
 
     mxf_write_metadata_key(pb, 0x011800);
-#ifdef DEBUG
     PRINT_KEY(s, "content storage key", pb->buf_ptr - 16);
-#endif
     klv_encode_ber_length(pb, 64);
 
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, ContentStorage, 0);
-#ifdef DEBUG
     PRINT_KEY(s, "content storage uid", pb->buf_ptr - 16);
-#endif
     // write package reference
     mxf_write_local_tag(pb, 16 * 2 + 8, 0x1901);
     mxf_write_refs_count(pb, 2);
@@ -418,26 +404,20 @@ static int mxf_write_package(AVFormatContext *s, enum MXFMetadataSetType type)
 
     if (type == MaterialPackage) {
         mxf_write_metadata_key(pb, 0x013600);
-#ifdef DEBUG
-    PRINT_KEY(s, "Material Package key", pb->buf_ptr - 16);
-#endif
+        PRINT_KEY(s, "Material Package key", pb->buf_ptr - 16);
         klv_encode_ber_length(pb, 92 + 16 * s->nb_streams);
     }
     else {
         mxf_write_metadata_key(pb, 0x013700);
-#ifdef DEBUG
-    PRINT_KEY(s, "Source Package key", pb->buf_ptr - 16);
-#endif
+        PRINT_KEY(s, "Source Package key", pb->buf_ptr - 16);
         klv_encode_ber_length(pb, 112 + 16 * s->nb_streams); // 20 bytes length for descriptor reference
     }
 
     // write uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, type, 0);
-#ifdef DEBUG
     av_log(s,AV_LOG_DEBUG, "package type:%d\n", type);
     PRINT_KEY(s, "package uid", pb->buf_ptr - 16);
-#endif
 
     // write package umid
     mxf_write_local_tag(pb, 32, 0x4401);
@@ -446,9 +426,7 @@ static int mxf_write_package(AVFormatContext *s, enum MXFMetadataSetType type)
     } else {
         mxf_write_umid(pb, SourcePackage, 0);
     }
-#ifdef DEBUG
     PRINT_KEY(s, "package umid second part", pb->buf_ptr - 16);
-#endif
     // write create date
     mxf_write_local_tag(pb, 8, 0x4405);
     put_be64(pb, 0);
@@ -480,9 +458,7 @@ static int mxf_write_track(AVFormatContext *s, int stream_index, enum MXFMetadat
     int i = 0;
 
     mxf_write_metadata_key(pb, 0x013b00);
-#ifdef DEBUG
     PRINT_KEY(s, "track key", pb->buf_ptr - 16);
-#endif
     klv_encode_ber_length(pb, 80);
 
     st = s->streams[stream_index];
@@ -491,9 +467,7 @@ static int mxf_write_track(AVFormatContext *s, int stream_index, enum MXFMetadat
     // write track uid
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, type == MaterialPackage ? Track : Track + 0xf0, stream_index);
-#ifdef DEBUG
     PRINT_KEY(s, "track uid", pb->buf_ptr - 16);
-#endif
     // write track id
     mxf_write_local_tag(pb, 4, 0x4801);
     put_be32(pb, stream_index);
@@ -552,9 +526,7 @@ static int mxf_write_sequence(AVFormatContext *s, int stream_index, enum MXFMeta
     AVStream *st;
 
     mxf_write_metadata_key(pb, 0x010f00);
-#ifdef DEBUG
     PRINT_KEY(s, "sequence key", pb->buf_ptr - 16);
-#endif
     klv_encode_ber_length(pb, 80);
 
     st = s->streams[stream_index];
@@ -562,9 +534,7 @@ static int mxf_write_sequence(AVFormatContext *s, int stream_index, enum MXFMeta
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, type == MaterialPackage ? Sequence: Sequence + 0xf0, stream_index);
 
-#ifdef DEBUG
     PRINT_KEY(s, "sequence uid", pb->buf_ptr - 16);
-#endif
     mxf_write_common_fields(pb, st);
 
     // write structural component
@@ -581,9 +551,7 @@ static int mxf_write_structural_component(AVFormatContext *s, int stream_index, 
     int i;
 
     mxf_write_metadata_key(pb, 0x011100);
-#ifdef DEBUG
     PRINT_KEY(s, "sturctural component key", pb->buf_ptr - 16);
-#endif
     klv_encode_ber_length(pb, 108);
 
     st = s->streams[stream_index];
@@ -592,9 +560,7 @@ static int mxf_write_structural_component(AVFormatContext *s, int stream_index, 
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, type == MaterialPackage ? SourceClip: SourceClip + 0xf0, stream_index);
 
-#ifdef DEBUG
     PRINT_KEY(s, "structural component uid", pb->buf_ptr - 16);
-#endif
     mxf_write_common_fields(pb, st);
 
     // write start_position
@@ -625,16 +591,12 @@ static int mxf_write_multi_descriptor(AVFormatContext *s)
     int i;
 
     mxf_write_metadata_key(pb, 0x014400);
-#ifdef DEBUG
     PRINT_KEY(s, "multiple descriptor key", pb->buf_ptr - 16);
-#endif
     klv_encode_ber_length(pb, 64 + 16 * s->nb_streams);
 
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, MultipleDescriptor, 0);
-#ifdef DEBUG
     PRINT_KEY(s, "multi_desc uid", pb->buf_ptr - 16);
-#endif
     // write sample rate
     // SMPTE377M D.1 says this field is necessary,
     // but mxf.c actually do not read the field,so we set 0 as default.
