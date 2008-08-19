@@ -532,11 +532,24 @@ static int mxf_write_track(AVFormatContext *s, int stream_index, enum MXFMetadat
     return 0;
 }
 
+static void mxf_write_common_fields(    ByteIOContext *pb, AVStream *st)
+{
+    const MXFDataDefinitionUL * data_def_ul;
+
+    // find data define uls
+    data_def_ul = mxf_get_data_definition_ul(st->codec->codec_type);
+    mxf_write_local_tag(pb, 16, 0x0201);
+    put_buffer(pb, data_def_ul->uid, 16);
+
+    // write duration
+    mxf_write_local_tag(pb, 8, 0x0202);
+    put_be64(pb, st->duration);
+}
+
 static int mxf_write_sequence(AVFormatContext *s, int stream_index, enum MXFMetadataSetType type)
 {
     ByteIOContext *pb = s->pb;
     AVStream *st;
-    const MXFDataDefinitionUL * data_def_ul;
 
     mxf_write_metadata_key(pb, 0x010f00);
 #ifdef DEBUG
@@ -552,13 +565,7 @@ static int mxf_write_sequence(AVFormatContext *s, int stream_index, enum MXFMeta
 #ifdef DEBUG
     PRINT_KEY(s, "sequence uid", pb->buf_ptr - 16);
 #endif
-    // find data define uls
-    data_def_ul = mxf_get_data_definition_ul(st->codec->codec_type);
-    mxf_write_local_tag(pb, 16, 0x0201);
-    put_buffer(pb, data_def_ul->uid, 16);
-
-    mxf_write_local_tag(pb, 8, 0x0202);
-    put_be64(pb, st->duration);
+    mxf_write_common_fields(pb, st);
 
     // write structural component
     mxf_write_local_tag(pb, 16 + 8, 0x1001);
@@ -571,7 +578,6 @@ static int mxf_write_structural_component(AVFormatContext *s, int stream_index, 
 {
     ByteIOContext *pb = s->pb;
     AVStream *st;
-    const MXFDataDefinitionUL * data_def_ul;
     int i;
 
     mxf_write_metadata_key(pb, 0x011100);
@@ -589,17 +595,11 @@ static int mxf_write_structural_component(AVFormatContext *s, int stream_index, 
 #ifdef DEBUG
     PRINT_KEY(s, "structural component uid", pb->buf_ptr - 16);
 #endif
-    data_def_ul = mxf_get_data_definition_ul(st->codec->codec_type);
-    mxf_write_local_tag(pb, 16, 0x0201);
-    put_buffer(pb, data_def_ul->uid, 16);
+    mxf_write_common_fields(pb, st);
 
     // write start_position
     mxf_write_local_tag(pb, 8, 0x1201);
     put_be64(pb, 0);
-
-    // write duration
-    mxf_write_local_tag(pb, 8, 0x0202);
-    put_be64(pb, st->duration);
 
     mxf_write_local_tag(pb, 32, 0x1101);
     if (type == SourcePackage) {
