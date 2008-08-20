@@ -1,6 +1,6 @@
 Index: libavcodec/ac3dec.h
 ===================================================================
---- libavcodec/ac3dec.h	(revision 14819)
+--- libavcodec/ac3dec.h	(revision 14863)
 +++ libavcodec/ac3dec.h	(working copy)
 @@ -168,4 +168,16 @@
  ///@}
@@ -21,7 +21,7 @@ Index: libavcodec/ac3dec.h
  #endif /* FFMPEG_AC3DEC_H */
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 14819)
+--- libavcodec/Makefile	(revision 14863)
 +++ libavcodec/Makefile	(working copy)
 @@ -26,7 +26,7 @@
  OBJS-$(CONFIG_ENCODERS)                += faandct.o jfdctfst.o jfdctint.o
@@ -31,15 +31,4 @@ Index: libavcodec/Makefile
 +OBJS-$(CONFIG_AC3_DECODER)             += eac3dec.o ac3dec.o ac3tab.o ac3dec_data.o ac3.o mdct.o fft.o
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
- OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
-Index: libavcodec/ac3enc.c
-===================================================================
---- libavcodec/ac3enc.c	(revision 14819)
-+++ libavcodec/ac3enc.c	(working copy)
-@@ -1365,5 +1365,5 @@
-     AC3_encode_close,
-     NULL,
-     .sample_fmts = (enum SampleFormat[]){SAMPLE_FMT_S16,SAMPLE_FMT_NONE},
--    .long_name = NULL_IF_CONFIG_SMALL("ATSC A/52 / AC-3"),
-+    .long_name = NULL_IF_CONFIG_SMALL("ATSC A/52 (AC-3, E-AC-3)"),
- };
+ OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o lpc.o
