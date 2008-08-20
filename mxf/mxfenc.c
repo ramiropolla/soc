@@ -417,11 +417,7 @@ static void mxf_write_package(AVFormatContext *s, enum MXFMetadataSetType type)
 
     // write package umid
     mxf_write_local_tag(pb, 32, 0x4401);
-    if (type == MaterialPackage) {
-        mxf_write_umid(pb, MaterialPackage, 0);
-    } else {
-        mxf_write_umid(pb, SourcePackage, 0);
-    }
+    mxf_write_umid(pb, type, 0);
     PRINT_KEY(s, "package umid second part", pb->buf_ptr - 16);
     // write create date
     mxf_write_local_tag(pb, 8, 0x4405);
