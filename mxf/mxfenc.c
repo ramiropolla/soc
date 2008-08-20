@@ -467,13 +467,12 @@ static void mxf_write_track(AVFormatContext *s, int stream_index, enum MXFMetada
     if (type != MaterialPackage) {
         for (element = mxf_essence_element_key; element->id != CODEC_ID_NONE; element++) {
             if (st->codec->codec_id== element->id) {
-                // write track number
-                put_buffer(pb, element->uid + 12, 3);
-                put_byte(pb, element->uid[15] + track_number_sign[i]);
-
                 // set essence_element key
                 memcpy(sc->track_essence_element_key, element->uid, 16);
                 sc->track_essence_element_key[15] += track_number_sign[i];
+                // write track number
+                put_buffer(pb, sc->track_essence_element_key + 12, 4);
+
                 track_number_sign[i] ++;
                 break;
             }
