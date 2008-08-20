@@ -20,6 +20,7 @@
  */
 #ifndef FFMPEG_MXF_H
 #define FFMPEG_MXF_H
+
 #include "avformat.h"
 #include "libavcodec/bytestream.h"
 
