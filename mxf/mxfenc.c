@@ -584,11 +584,11 @@ static void mxf_write_multi_descriptor(AVFormatContext *s)
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, MultipleDescriptor, 0);
     PRINT_KEY(s, "multi_desc uid", pb->buf_ptr - 16);
+
     // write sample rate
-    // SMPTE377M D.1 says this field is necessary,
-    // but mxf.c actually do not read the field,so we set 0 as default.
     mxf_write_local_tag(pb, 8, 0x3001);
-    put_be64(pb, 0);
+    put_be32(pb, s->streams[0]->time_base.den);
+    put_be32(pb, s->streams[0]->time_base.num);
 
     // write essence container ul
     mxf_write_local_tag(pb, 16, 0x3004);
@@ -607,13 +607,17 @@ static void mxf_write_header_desc(ByteIOContext *pb, const MXFDescriptorWriteTab
     const MXFCodecUL *codec_ul;
 
     put_buffer(pb, desc_tbl->key, 16);
-    klv_encode_ber_length(pb, 96);
+    klv_encode_ber_length(pb, 108);
 
     mxf_write_local_tag(pb, 16, 0x3C0A);
     mxf_write_uuid(pb, SubDescriptor, st->index);
 
     mxf_write_local_tag(pb, 4, 0x3006);
     put_be32(pb, st->index);
+
+    mxf_write_local_tag(pb, 8, 0x3001);
+    put_be32(pb, st->time_base.den);
+    put_be32(pb, st->time_base.num);
 
     codec_ul = mxf_get_essence_container_ul(st->codec->codec_id);
     mxf_write_local_tag(pb, 16, 0x3004);
