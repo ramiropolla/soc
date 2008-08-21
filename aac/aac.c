@@ -1280,7 +1280,7 @@ static void apply_tns(float coef[1024], TemporalNoiseShaping * tns, IndividualCh
                 continue;
 
             /* tns_decode_coef
-             * NOTE: This duplicates the functionality of some double code in lpc.c.
+             * FIXME: This duplicates the functionality of some double code in lpc.c.
              */
             for (m = 0; m < order; m++) {
                float tmp;
