@@ -1268,8 +1268,7 @@ static void apply_tns(float coef[1024], TemporalNoiseShaping * tns, IndividualCh
     const int mmm = FFMIN(ics->tns_max_bands,  ics->max_sfb);
     int w, filt, m, i, ib;
     int bottom, top, order, start, end, size, inc;
-    float tmp;
-    float lpc[TNS_MAX_ORDER + 1], b[TNS_MAX_ORDER + 1];
+    float lpc[TNS_MAX_ORDER];
 
     for (w = 0; w < ics->num_windows; w++) {
         bottom = ics->num_swb;
@@ -1280,14 +1279,19 @@ static void apply_tns(float coef[1024], TemporalNoiseShaping * tns, IndividualCh
             if (order == 0)
                 continue;
 
-            // tns_decode_coef
-            lpc[0] = 1;
-            for (m = 1; m <= order; m++) {
-                lpc[m] = tns->coef[w][filt][m - 1];
-                for (i = 1; i < m; i++)
-                    b[i] = lpc[i] + lpc[m] * lpc[m-i];
-                for (i = 1; i < m; i++)
-                    lpc[i] = b[i];
+            /* tns_decode_coef
+             * NOTE: This duplicates the functionality of some double code in lpc.c.
+             */
+            for (m = 0; m < order; m++) {
+               float tmp;
+               lpc[m] = tns->coef[w][filt][m];
+               for (i = 0; i < m/2; i++) {
+                   tmp = lpc[i];
+                   lpc[i]     += lpc[m] * lpc[m-1-i];
+                   lpc[m-1-i] += lpc[m] * tmp;
+               }
+               if(m & 1)
+                   lpc[i]     += lpc[m] * lpc[i];
             }
 
             start = ics->swb_offset[FFMIN(bottom, mmm)];
@@ -1307,12 +1311,12 @@ static void apply_tns(float coef[1024], TemporalNoiseShaping * tns, IndividualCh
 #endif /* AAC_LTP */
             for (m = 0; m < size; m++, start += inc)
                 for (i = 1; i <= FFMIN(m, order); i++)
-                    coef[start] -= coef[start - i*inc] * lpc[i];
+                    coef[start] -= coef[start - i*inc] * lpc[i-1];
 #ifdef AAC_LTP
             } else {
                 for (m = 0; m < size; m++, start += inc)
                     for (i = 1; i <= FFMIN(m, order); i++)
-                        coef[start] += coef[start - i*inc] * lpc[i];
+                        coef[start] += coef[start - i*inc] * lpc[i-1];
             }
 #endif /* AAC_LTP */
         }
