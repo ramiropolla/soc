@@ -98,13 +98,13 @@ typedef struct NellyMoserEncodeContext {
     DSPContext      dsp;
     MDCTContext     mdct_ctx;
     float pows[NELLY_FILL_LEN];
-    DECLARE_ALIGNED_16(float,mdct_tmp[NELLY_BUF_LEN*2]);
-    DECLARE_ALIGNED_16(float,mdct_out[NELLY_BUF_LEN*2]);
+    DECLARE_ALIGNED_16(float,mdct_tmp[NELLY_SAMPLES]);
+    DECLARE_ALIGNED_16(float,mdct_out[NELLY_SAMPLES]);
 
     LPFilterContext lp;
 } NellyMoserEncodeContext;
 
-static DECLARE_ALIGNED_16(float,sine_window[2*NELLY_BUF_LEN]);
+static DECLARE_ALIGNED_16(float,sine_window[NELLY_SAMPLES]);
 static float pow_table[MAX_POW_CACHED];
 
 void apply_mdct(NellyMoserEncodeContext *s, float *in, float *coefs)
