@@ -90,7 +90,7 @@ static inline int put_bits2_count(PutBitContext2 * pb) {
 
 typedef struct NellyMoserEncodeContext {
     AVCodecContext* avctx;
-    DECLARE_ALIGNED_16(float,float_buf[2*NELLY_SAMPLES]); // NELLY_SAMPLES
+    DECLARE_ALIGNED_16(float,float_buf[3*NELLY_BUF_LEN]);
 
     float buf[1024*64]; //FIXME (use any better solution)
     int bufsize;
