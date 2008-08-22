@@ -98,7 +98,6 @@ typedef struct NellyMoserEncodeContext {
     DSPContext      dsp;
     MDCTContext     mdct_ctx;
     float pows[NELLY_FILL_LEN];
-    DECLARE_ALIGNED_16(float,mdct_tmp[NELLY_SAMPLES]);
     DECLARE_ALIGNED_16(float,mdct_out[NELLY_SAMPLES]);
 
     LPFilterContext lp;
@@ -114,7 +113,7 @@ void apply_mdct(NellyMoserEncodeContext *s, float *in, float *coefs)
     memcpy(&in_buff[0], &in[0], NELLY_SAMPLES*sizeof(float));
     s->dsp.vector_fmul(in_buff,sine_window,NELLY_SAMPLES);
     memset(coefs, 0, NELLY_BUF_LEN*sizeof(float));
-    ff_mdct_calc(&s->mdct_ctx, coefs, in_buff, s->mdct_tmp);
+    ff_mdct_calc(&s->mdct_ctx, coefs, in_buff);
 }
 
 
@@ -232,7 +231,7 @@ static void encode_block(NellyMoserEncodeContext *s,
             }
         }
         tmp = ( log(FFMAX(64.0, stmp/(ff_nelly_band_sizes_table[i]<<1))) - log(64.0)) *
-            M_LOG2E * 1024.0;
+            1024.0 / M_LN2;
 
         if(i){
             tmp -= val;
