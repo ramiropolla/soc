@@ -947,7 +947,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                 memset(bit_alloc_stages, 3, AC3_MAX_CHANNELS);
         }
     }
-    if (cpl_in_use) {
+    if (cpl_in_use && s->exp_strategy[blk][CPL_CH] != EXP_REUSE) {
         s->num_exp_groups[CPL_CH] = (s->end_freq[CPL_CH] - s->start_freq[CPL_CH]) /
                                     (3 << (s->exp_strategy[blk][CPL_CH] - 1));
     }
