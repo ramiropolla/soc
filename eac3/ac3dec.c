@@ -822,9 +822,9 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                     s->cpl_band_struct[bnd] = get_bits1(gbc);
                 }
             } else if (!blk) {
-                for (bnd = 0; bnd < s->num_cpl_subbands - 1; bnd++) {
-                    s->cpl_band_struct[bnd] = ff_eac3_default_cpl_band_struct[bnd+cpl_begin_freq+1];
-                }
+                memcpy(s->cpl_band_struct,
+                       &ff_eac3_default_cpl_band_struct[cpl_begin_freq],
+                       sizeof(int)*(s->num_cpl_subbands-1));
             }
             s->cpl_band_struct[s->num_cpl_subbands-1] = 0;
 
