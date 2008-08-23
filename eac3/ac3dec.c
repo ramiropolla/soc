@@ -975,7 +975,8 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     }
 
     /* signal-to-noise ratio offsets and fast gains (signal-to-mask ratios) */
-    if (s->snr_offset_strategy && (!s->eac3 || !blk) && get_bits1(gbc)) {
+    if(!s->eac3 || !blk){
+        if(s->snr_offset_strategy && get_bits1(gbc)) {
         int snr = 0;
         int csnr;
         csnr = (get_bits(gbc, 6) - 15) << 4;
@@ -996,6 +997,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                 /* run last 2 bit allocation stages if fast gain changes */
                 if(blk && prev != s->fast_gain[ch])
                     bit_alloc_stages[ch] = FFMAX(bit_alloc_stages[ch], 2);
+                }
             }
         }
     } else if (!s->eac3 && !blk) {
