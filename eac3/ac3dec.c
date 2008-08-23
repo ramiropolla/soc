@@ -990,15 +990,15 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             }
             s->snr_offset[ch] = snr;
 
-            /* fast gain (normal AC-3 only) */
-            if (!s->eac3) {
-                int prev = s->fast_gain[ch];
-                s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
-                /* run last 2 bit allocation stages if fast gain changes */
-                if(blk && prev != s->fast_gain[ch])
-                    bit_alloc_stages[ch] = FFMAX(bit_alloc_stages[ch], 2);
+                /* fast gain (normal AC-3 only) */
+                if (!s->eac3) {
+                    int prev = s->fast_gain[ch];
+            s->fast_gain[ch] = ff_ac3_fast_gain_tab[get_bits(gbc, 3)];
+                    /* run last 2 bit allocation stages if fast gain changes */
+                    if(blk && prev != s->fast_gain[ch])
+                        bit_alloc_stages[ch] = FFMAX(bit_alloc_stages[ch], 2);
+                    }
                 }
-            }
     } else if (!s->eac3 && !blk) {
         av_log(s->avctx, AV_LOG_ERROR, "new snr offsets must be present in block 0\n");
         return -1;
