@@ -999,10 +999,10 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                     bit_alloc_stages[ch] = FFMAX(bit_alloc_stages[ch], 2);
                 }
             }
-        }
     } else if (!s->eac3 && !blk) {
         av_log(s->avctx, AV_LOG_ERROR, "new snr offsets must be present in block 0\n");
         return -1;
+    }
     }
 
     /* fast gain (E-AC-3 only) */
