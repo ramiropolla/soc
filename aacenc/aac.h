@@ -30,21 +30,6 @@
 #ifndef FFMPEG_AAC_H
 #define FFMPEG_AAC_H
 
-/**
- * AAC SSR (Scalable Sample Rate) is currently not working, and therefore
- * not compiled in. SSR files play without crashing but produce audible
- * artifacts that seem to be related to EIGHT_SHORT_SEQUENCE windows.
- */
-//#define AAC_SSR
-
-/**
- * AAC LTP (Long Term Prediction) is currently not working, and therefore
- * not compiled in. Playing LTP files with LTP support compiled in results
- * in crashes due to SSE alignment issues. Also, there are major audible
- * artifacts.
- */
-//#define AAC_LTP
-
 #include "avcodec.h"
 #include "dsputil.h"
 #include "mpeg4audio.h"
@@ -154,19 +139,6 @@ enum CouplingPoint {
 #define SCALE_MAX_DIFF   60    ///< maximum scalefactor difference allowed by standard
 #define SCALE_DIFF_ZERO  60    ///< codebook index corresponding to zero scalefactor indices difference
 
-#ifdef AAC_LTP
-/**
- * Long Term Prediction
- */
-#define MAX_LTP_LONG_SFB 40
-typedef struct {
-    int present;
-    int lag;
-    float coef;
-    int used[MAX_LTP_LONG_SFB];
-} LongTermPrediction;
-#endif /* AAC_LTP */
-
 /**
  * Individual Channel Stream
  */
@@ -176,10 +148,6 @@ typedef struct {
     uint8_t use_kb_window[2];   ///< If set, use Kaiser-Bessel window, otherwise use a sinus window.
     int num_window_groups;
     uint8_t group_len[8];
-#ifdef AAC_LTP
-    LongTermPrediction ltp;
-    LongTermPrediction ltp2;
-#endif /* AAC_LTP */
     const uint16_t *swb_offset; ///< table of offsets to the lowest spectral coefficient of a scalefactor band, sfb, for a particular window
     const uint8_t *swb_sizes;   ///< table of scalefactor band sizes for a particular window
     int num_swb;                ///< number of scalefactor window bands
@@ -222,28 +190,6 @@ typedef struct {
     int amp[4];
 } Pulse;
 
-#ifdef AAC_SSR
-/**
- * parameters for the SSR Inverse Polyphase Quadrature Filter
- */
-typedef struct {
-    float q[4][4];
-    float t0[4][12];
-    float t1[4][12];
-} ssr_context;
-
-/**
- * per-element gain control for SSR
- */
-typedef struct {
-    int max_band;
-    int adjust_num[4][8];
-    int alev[4][8][8];
-    int aloc[4][8][8];
-    float buf[4][24];
-} ScalableSamplingRate;
-#endif /* AAC_SSR */
-
 /**
  * coupling parameters
  */
@@ -266,20 +212,14 @@ typedef struct {
     TemporalNoiseShaping tns;
     Pulse pulse;
     enum BandType band_type[128];             ///< band types
-    int band_type_run_end[128];               ///< band type run end points
-    float sf[128];                            ///< scalefactors
+    int band_type_run_end[120];               ///< band type run end points
+    float sf[120];                            ///< scalefactors
     int sf_idx[128];                          ///< scalefactor indices (used by encoder)
     uint8_t zeroes[128];                      ///< band is not coded (used by encoder)
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< coefficients for IMDCT
     DECLARE_ALIGNED_16(float, saved[1024]);   ///< overlap
     DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
     DECLARE_ALIGNED_16(int,   icoefs[1024]);  ///< integer coefficients for encoding
-#ifdef AAC_LTP
-    int16_t *ltp_state;
-#endif /* AAC_LTP */
-#ifdef AAC_SSR
-    ScalableSamplingRate *ssr;
-#endif /* AAC_SSR */
 } SingleChannelElement;
 
 /**
@@ -321,8 +261,7 @@ typedef struct {
      * @defgroup temporary aligned temporary buffers (We do not want to have these on the stack.)
      * @{
      */
-    DECLARE_ALIGNED_16(float, buf_mdct[2048]);
-    DECLARE_ALIGNED_16(float, revers[1024]);
+    DECLARE_ALIGNED_16(float, buf_mdct[1024]);
     /** @} */
 
     /**
@@ -331,13 +270,7 @@ typedef struct {
      */
     MDCTContext mdct;
     MDCTContext mdct_small;
-#ifdef AAC_LTP
-    MDCTContext mdct_ltp;
-#endif /* AAC_LTP */
     DSPContext dsp;
-#ifdef AAC_SSR
-    ssr_context ssrctx;
-#endif /* AAC_SSR */
     int random_state;
     /** @} */
 
