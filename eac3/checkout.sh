@@ -1,7 +1,7 @@
 FILES="eac3dec.c ac3dec.c"
 
 echo "checking out ffmpeg svn"
-for i in $FILES Makefile ac3enc.c ac3dec.h avcodec.h utils.c; do
+for i in $FILES Makefile ac3dec.h ac3dec_data.c; do
     rm -f ffmpeg/libavcodec/$i
 done
 svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg -r 14945

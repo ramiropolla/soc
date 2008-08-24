@@ -154,7 +154,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
                         b = 32768 >> log_gain;
                     else
                         b = ff_eac3_gaq_remap_2_4_b[hebap-8][log_gain-1];
-                    mant += (ff_eac3_gaq_remap_2_4_a[hebap-8][log_gain-1] * (mant>>8) + (b>>8)) >> 7;
+                    mant += (ff_eac3_gaq_remap_2_4_a[hebap-8][log_gain-1] * (mant>>8) + b) >> 7;
                 } else {
                     /* small mantissa, no GAQ, or Gk=1 */
                     mant <<= 24 - bits;
