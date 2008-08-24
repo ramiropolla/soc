@@ -28,6 +28,7 @@
  *              TODOs:
  * psy model selection with some option
  * add sane pulse detection
+ * add temporal noise shaping
  ***********************************/
 
 #include "avcodec.h"
@@ -638,47 +639,6 @@ static void encode_pulses(AACEncContext *s, Pulse *pulse)
 }
 
 /**
- * Encode temporal noise shaping data.
- */
-static void encode_tns_data(AACEncContext *s, SingleChannelElement *sce)
-{
-    int i, w;
-    TemporalNoiseShaping *tns = &sce->tns;
-
-    put_bits(&s->pb, 1, tns->present);
-    if(!tns->present) return;
-    if(sce->ics.window_sequence[0] == EIGHT_SHORT_SEQUENCE){
-        for(w = 0; w < sce->ics.num_windows; w++){
-            put_bits(&s->pb, 1, tns->n_filt[w]);
-            if(!tns->n_filt[w]) continue;
-            put_bits(&s->pb, 1, tns->coef_res[w] - 3);
-            put_bits(&s->pb, 4, tns->length[w][0]);
-            put_bits(&s->pb, 3, tns->order[w][0]);
-            if(tns->order[w][0]){
-                put_bits(&s->pb, 1, tns->direction[w][0]);
-                put_bits(&s->pb, 1, tns->coef_compress[w][0]);
-                for(i = 0; i < tns->order[w][0]; i++)
-                     put_bits(&s->pb, tns->coef_len[w][0], tns->coef[w][0][i]);
-            }
-        }
-    }else{
-        put_bits(&s->pb, 1, tns->n_filt[0]);
-        if(!tns->n_filt[0]) return;
-        put_bits(&s->pb, 1, tns->coef_res[0] - 3);
-        for(w = 0; w < tns->n_filt[0]; w++){
-            put_bits(&s->pb, 6, tns->length[0][w]);
-            put_bits(&s->pb, 5, tns->order[0][w]);
-            if(tns->order[0][w]){
-                put_bits(&s->pb, 1, tns->direction[0][w]);
-                put_bits(&s->pb, 1, tns->coef_compress[0][w]);
-                for(i = 0; i < tns->order[0][w]; i++)
-                     put_bits(&s->pb, tns->coef_len[0][w], tns->coef[0][w][i]);
-            }
-        }
-    }
-}
-
-/**
  * Encode spectral coefficients processed by psychoacoustic model.
  */
 static void encode_spectral_coeffs(AACEncContext *s, SingleChannelElement *sce)
@@ -730,7 +690,7 @@ static int encode_individual_channel(AVCodecContext *avctx, AACEncContext *s, Si
     encode_band_info(s, sce);
     encode_scale_factors(avctx, s, sce, global_gain);
     encode_pulses(s, &sce->pulse);
-    encode_tns_data(s, sce);
+    put_bits(&s->pb, 1, 0); //tns
     put_bits(&s->pb, 1, 0); //ssr
     encode_spectral_coeffs(s, sce);
     return 0;
