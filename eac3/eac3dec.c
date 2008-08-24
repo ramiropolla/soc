@@ -104,7 +104,7 @@ void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
         for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
             if (s->bap[ch][bin] > 7 && s->bap[ch][bin] < end_bap) {
                 if (gc++ == 2) {
-                    int group_gain = get_bits(gbc, 5);
+                    int group_gain = FFMIN(get_bits(gbc, 5), 26);
                     gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][0];
                     gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][1];
                     gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][2];
