@@ -1027,16 +1027,16 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     /* coupling leak information */
     if (cpl_in_use) {
         if (s->first_cpl_leak || get_bits1(gbc)) {
-            int prev_fl = s->bit_alloc_params.cpl_fast_leak;
-            int prev_sl = s->bit_alloc_params.cpl_slow_leak;
-            s->bit_alloc_params.cpl_fast_leak = get_bits(gbc, 3);
-            s->bit_alloc_params.cpl_slow_leak = get_bits(gbc, 3);
+            int fl = get_bits(gbc, 3);
+            int sl = get_bits(gbc, 3);
             /* run last 2 bit allocation stages for coupling channel if
                coupling leak changes */
-            if(blk && (prev_fl != s->bit_alloc_params.cpl_fast_leak ||
-                    prev_sl != s->bit_alloc_params.cpl_slow_leak)) {
+            if(blk && (fl != s->bit_alloc_params.cpl_fast_leak ||
+                    sl != s->bit_alloc_params.cpl_slow_leak)) {
             bit_alloc_stages[CPL_CH] = FFMAX(bit_alloc_stages[CPL_CH], 2);
             }
+            s->bit_alloc_params.cpl_fast_leak = fl;
+            s->bit_alloc_params.cpl_slow_leak = sl;
         } else if (!s->eac3 && !blk) {
             av_log(s->avctx, AV_LOG_ERROR, "new coupling leak info must be present in block 0\n");
             return -1;
