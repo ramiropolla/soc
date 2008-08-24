@@ -616,12 +616,6 @@ static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, Single
     for(wg = 0; wg < sce->ics.num_window_groups; wg++){
         for(i = 0; i < sce->ics.max_sfb; i++){
             if(!sce->zeroes[w*16 + i]){
-                /* if we have encountered scale=256 it means empty band
-                 * which was decided to be coded by encoder, so assign it
-                 * last scalefactor value for compression efficiency
-                 */
-                if(sce->sf_idx[w*16 + i] == 256)
-                    sce->sf_idx[w*16 + i] = off;
                 diff = sce->sf_idx[w*16 + i] - off + SCALE_DIFF_ZERO;
                 if(diff < 0 || diff > 120) av_log(avctx, AV_LOG_ERROR, "Scalefactor difference is too big to be coded\n");
                 off = sce->sf_idx[w*16 + i];
@@ -682,18 +676,31 @@ static void encode_spectral_coeffs(AACEncContext *s, SingleChannelElement *sce)
 static int encode_individual_channel(AVCodecContext *avctx, AACEncContext *s, SingleChannelElement *sce, int common_window)
 {
     int g, w, wg;
-    int global_gain = 0;
+    int global_gain, last = 256;
 
     //determine global gain as standard recommends - the first scalefactor value
+    //and assign an appropriate scalefactor index to empty bands
     w = 0;
     for(wg = 0; wg < sce->ics.num_window_groups; wg++){
-        for(g = 0; g < sce->ics.max_sfb; g++){
-            if(!sce->zeroes[w + g]){
-                global_gain = sce->sf_idx[w + g];
-                break;
-            }
+        for(g = sce->ics.max_sfb - 1; g >= 0; g--){
+            if(sce->sf_idx[w + g] == 256)
+                sce->sf_idx[w + g] = last;
+            else
+                last = sce->sf_idx[w + g];
         }
-        if(global_gain) break;
+        w += sce->ics.group_len[wg]*16;
+    }
+    //make sure global gain won't be 256
+    last &= 0xFF;
+    global_gain = last;
+    //assign scalefactor index to tail bands in case encoder decides to code them
+    for(wg = 0; wg < sce->ics.num_window_groups; wg++){
+        for(g = 0; g < sce->ics.max_sfb; g++){
+            if(sce->sf_idx[w + g] == 256)
+                sce->sf_idx[w + g] = last;
+            else
+                last = sce->sf_idx[w + g];
+        }
         w += sce->ics.group_len[wg]*16;
     }
 
