@@ -445,7 +445,6 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
 {
     BandCodingPath path[64];
     int band_bits[64][12];
-    int maxval;
     int w, swb, cb, start, start2, size;
     int i, j;
     const int max_sfb = sce->ics.max_sfb;
@@ -456,7 +455,7 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
 
     start = win*128;
     for(swb = 0; swb < max_sfb; swb++){
-        maxval = 0;
+        int maxval = 0;
         start2 = start;
         size = sce->ics.swb_sizes[swb];
         if(sce->zeroes[win*16 + swb])
