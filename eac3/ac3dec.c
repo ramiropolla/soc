@@ -314,7 +314,6 @@ static int parse_frame_header(AC3DecodeContext *s)
         s->first_cpl_leak        = 0;
         s->dba_syntax            = 1;
         s->skip_syntax           = 1;
-        memset(s->cpl_strategy_exists, 0, sizeof(s->cpl_strategy_exists));
         memset(s->channel_uses_aht, 0, sizeof(s->channel_uses_aht));
         return ac3_parse_header(s);
     } else {
@@ -771,7 +770,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     /* TODO: spectral extension coordinates */
 
     /* coupling strategy */
-    if (s->cpl_strategy_exists[blk] || (!s->eac3 && get_bits1(gbc))) {
+    if (s->eac3 ? s->cpl_strategy_exists[blk] : get_bits1(gbc)) {
         memset(bit_alloc_stages, 3, AC3_MAX_CHANNELS);
         if (!s->eac3)
             s->cpl_in_use[blk] = get_bits1(gbc);
