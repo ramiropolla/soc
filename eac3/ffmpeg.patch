@@ -1,7 +1,16 @@
 Index: libavcodec/ac3dec.h
 ===================================================================
---- libavcodec/ac3dec.h	(revision 14912)
+--- libavcodec/ac3dec.h	(revision 14945)
 +++ libavcodec/ac3dec.h	(working copy)
+@@ -82,7 +82,7 @@
+     int phase_flags[18];                    ///< phase flags                            (phsflg)
+     int num_cpl_subbands;                   ///< number of coupling sub bands           (ncplsubnd)
+     int num_cpl_bands;                      ///< number of coupling bands               (ncplbnd)
+-    int cpl_band_struct[18];                ///< coupling band structure                (cplbndstrc)
++    uint8_t cpl_band_struct[18];            ///< coupling band structure                (cplbndstrc)
+     int firstchincpl;                       ///< first channel in coupling
+     int first_cpl_coords[AC3_MAX_CHANNELS]; ///< first coupling coordinates states      (firstcplcos)
+     int cpl_coords[AC3_MAX_CHANNELS][18];   ///< coupling coordinates                   (cplco)
 @@ -168,4 +168,16 @@
  ///@}
  } AC3DecodeContext;
@@ -21,7 +30,7 @@ Index: libavcodec/ac3dec.h
  #endif /* FFMPEG_AC3DEC_H */
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 14912)
+--- libavcodec/Makefile	(revision 14945)
 +++ libavcodec/Makefile	(working copy)
 @@ -27,7 +27,7 @@
  
