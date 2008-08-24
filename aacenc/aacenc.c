@@ -458,9 +458,9 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
         int maxval = 0;
         start2 = start;
         size = sce->ics.swb_sizes[swb];
-        if(sce->zeroes[win*16 + swb])
+        if(sce->zeroes[win*16 + swb]){
             maxval = 0;
-        else{
+        }else{
             for(w = 0; w < group_len; w++){
                 for(i = start2; i < start2 + size; i++){
                     maxval = FFMAX(maxval, FFABS(sce->icoefs[i]));
@@ -470,9 +470,9 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
         }
         sbits = calculate_band_sign_bits(s, sce, group_len, start, size);
         for(cb = 0; cb < 12; cb++){
-            if(aac_cb_info[cb].maxval < maxval)
+            if(aac_cb_info[cb].maxval < maxval){
                 band_bits[swb][cb] = INT_MAX;
-            else{
+            }else{
                 band_bits[swb][cb] = calculate_band_bits(s, sce, group_len, start, size, cb);
                 if(IS_CODEBOOK_UNSIGNED(cb-1)){
                     band_bits[swb][cb] += sbits;
@@ -558,13 +558,14 @@ static void encode_band_coeffs(AACEncContext *s, SingleChannelElement *sce,
                 if(sce->icoefs[i+j])
                     put_bits(&s->pb, 1, sce->icoefs[i+j] < 0);
             //output escape values
-            for(j = 0; j < 2; j++)
+            for(j = 0; j < 2; j++){
                 if(coef_abs[j] > 15){
                     int len = av_log2(coef_abs[j]);
 
                     put_bits(&s->pb, len - 4 + 1, (1 << (len - 4 + 1)) - 2);
                     put_bits(&s->pb, len, coef_abs[j] & ((1 << len) - 1));
                 }
+            }
         }
     }else if(IS_CODEBOOK_UNSIGNED(cb)){
         for(i = start; i < start + size; i += dim){
