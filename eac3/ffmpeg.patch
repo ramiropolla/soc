@@ -1,6 +1,6 @@
 Index: libavcodec/ac3dec.h
 ===================================================================
---- libavcodec/ac3dec.h	(revision 14945)
+--- libavcodec/ac3dec.h	(revision 14954)
 +++ libavcodec/ac3dec.h	(working copy)
 @@ -82,7 +82,7 @@
      int phase_flags[18];                    ///< phase flags                            (phsflg)
@@ -25,12 +25,12 @@ Index: libavcodec/ac3dec.h
 + * Decode mantissas in a single channel for the entire frame.
 + * This is used when AHT mode is enabled.
 + */
-+void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
++void ff_eac3_decode_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
 +
  #endif /* FFMPEG_AC3DEC_H */
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 14945)
+--- libavcodec/Makefile	(revision 14954)
 +++ libavcodec/Makefile	(working copy)
 @@ -27,7 +27,7 @@
  
@@ -43,7 +43,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o lpc.o
 Index: libavcodec/ac3dec_data.c
 ===================================================================
---- libavcodec/ac3dec_data.c	(revision 14945)
+--- libavcodec/ac3dec_data.c	(revision 14954)
 +++ libavcodec/ac3dec_data.c	(working copy)
 @@ -87,18 +87,19 @@
  /**

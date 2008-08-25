@@ -79,7 +79,7 @@ static void idct6(int pre_mant[6])
     pre_mant[5] = even0 - odd0;
 }
 
-void ff_eac3_get_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
+void ff_eac3_decode_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
 {
     int bin, blk, gs;
     int end_bap, gaq_mode;
