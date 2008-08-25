@@ -635,7 +635,7 @@ static void mxf_write_mpeg_video_desc(AVFormatContext *s, const MXFDescriptorWri
 
     mxf_write_local_tag(pb, 8, 0x320E);
     put_be32(pb, st->codec->height * st->sample_aspect_ratio.den);
-    put_be32(pb, st->codec->width * st->sample_aspect_ratio.num);
+    put_be32(pb, st->codec->width  * st->sample_aspect_ratio.num);
 
     // tmp write, will modified later
     mxf_write_local_tag(pb, 16, 0x3201);
