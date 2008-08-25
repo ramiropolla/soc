@@ -4,7 +4,7 @@ echo "checking out ffmpeg svn"
 for i in $FILES Makefile ac3dec.h ac3dec_data.c; do
     rm -f ffmpeg/libavcodec/$i
 done
-svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg -r 14954
+svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg -r 14960
 echo "patching ffmpeg"
 cd ffmpeg
 patch -p0 <../ffmpeg.patch
