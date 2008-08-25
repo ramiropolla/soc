@@ -763,14 +763,17 @@ int av_cold ff_aac_psy_init(AACPsyContext *ctx, AVCodecContext *avctx,
     if(ctx->flags & PSY_MODEL_NO_LOWPASS || PSY_MODEL_MODE(ctx->flags) == PSY_MODE_QUALITY){
         ctx->flags |= PSY_MODEL_NO_LOWPASS;
     }else{
-        int cutoff;
-        cutoff = avctx->bit_rate / elements / 8;
-        if(ff_lowpass_filter_init_coeffs(&ctx->lp_coeffs, avctx->sample_rate/2, cutoff) < 0){
+        float cutoff = (float)avctx->bit_rate / elements / 8 / avctx->sample_rate;
+        ctx->lp_coeffs = ff_lowpass_filter_init_coeffs(4, cutoff);
+        if(!ctx->lp_coeffs){
             ctx->flags |= PSY_MODEL_NO_LOWPASS;
         }else{
-            ctx->lp_state = av_mallocz(sizeof(LPFilterState) * elements * 2);
+            ctx->lp_state = av_malloc(sizeof(struct FFLPFilterState*) * elements * 2);
+            for(i = 0; i < elements*2; i++)
+                ctx->lp_state[i] = ff_lowpass_filter_init_state(4);
         }
     }
+    ctx->elements = elements;
     if(ctx->model->init)
         return ctx->model->init(ctx, elements);
     return 0;
@@ -789,7 +792,13 @@ void ff_aac_psy_analyze(AACPsyContext *ctx, int tag, int type, ChannelElement *c
 
 void av_cold ff_aac_psy_end(AACPsyContext *ctx)
 {
-    av_freep(&ctx->lp_state);
+    if(!(ctx->flags & PSY_MODEL_NO_LOWPASS)){
+        int i;
+        ff_lowpass_filter_free_coeffs(ctx->lp_coeffs);
+        for(i = 0; i < ctx->elements; i++)
+            ff_lowpass_filter_free_state(ctx->lp_state[i]);
+        av_freep(&ctx->lp_state);
+    }
     if(ctx->model->end)
         return ctx->model->end(ctx);
 }
@@ -801,28 +810,24 @@ void ff_aac_psy_preprocess(AACPsyContext *ctx, int16_t *audio, int16_t *dest, in
     int i, ch;
     float t[2];
 
-    if(chans == 1){
-        for(ch = 0; ch < chans; ch++){
+    for(ch = 0; ch < chans; ch++){
+        if(!(ctx->flags & PSY_MODEL_NO_LOWPASS)){
+            ff_lowpass_filter(ctx->lp_coeffs, ctx->lp_state[tag*2 + ch], 1024,
+                              audio + ch, chstride,
+                              dest + ch,  chstride);
+        }else{
             for(i = 0; i < 1024; i++){
                 dest[i * chstride + ch] = audio[i * chstride + ch];
             }
         }
-    }else{
+    }
+    if(chans == 2 && !(ctx->flags & PSY_MODEL_NO_ST_ATT)){
         for(i = 0; i < 1024; i++){
-            if(ctx->flags & PSY_MODEL_NO_ST_ATT){
-                for(ch = 0; ch < 2; ch++)
-                    t[ch] = audio[i * chstride + ch];
-            }else{
-                t[0] = audio[i * chstride + 0] * (0.5 + ctx->stereo_att) + audio[i * chstride + 1] * (0.5 - ctx->stereo_att);
-                t[1] = audio[i * chstride + 0] * (0.5 - ctx->stereo_att) + audio[i * chstride + 1] * (0.5 + ctx->stereo_att);
-            }
-            if(!(ctx->flags & PSY_MODEL_NO_LOWPASS)){
-                LPFilterState *is = (LPFilterState*)ctx->lp_state + tag*2;
-                for(ch = 0; ch < 2; ch++)
-                    t[ch] = ff_lowpass_filter(&ctx->lp_coeffs, is + ch, t[ch]);
-            }
-            for(ch = 0; ch < 2; ch++)
-                dest[i * chstride + ch] = av_clip_int16(t[ch]);
+            t[0] = dest[0] * (0.5 + ctx->stereo_att) + dest[1] * (0.5 - ctx->stereo_att);
+            t[1] = dest[0] * (0.5 - ctx->stereo_att) + dest[1] * (0.5 + ctx->stereo_att);
+            dest[0] = t[0];
+            dest[1] = t[1];
+            dest += chstride;
         }
     }
 }

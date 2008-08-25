@@ -29,61 +29,53 @@
 
 #include "avcodec.h"
 
-/** filter order */
-#define LOWPASS_FILTER_ORDER 4
-
-/**
- * IIR filter global parameters
- */
-typedef struct LPFilterCoeffs{
-    float gain;
-    float c[LOWPASS_FILTER_ORDER];
-}LPFilterCoeffs;
-
-/**
- * IIR filter state
- */
-typedef struct LPFilterState{
-    float x[LOWPASS_FILTER_ORDER + 1];
-    float y[LOWPASS_FILTER_ORDER + 1];
-}LPFilterState;
+struct FFLPFilterCoeffs;
+struct FFLPFilterState;
 
 /**
  * Initialize filter coefficients.
  *
- * @param coeffs filter coefficients
- * @param freq   input frequency (sample rate/2)
- * @param cutoff cutoff frequency
+ * @param order        filter order
+ * @param cutoff_ratio cutoff to input frequency ratio
  *
- * @return zero if filter creation succeeded, a negative value if filter could not be created
+ * @return pointer to filter coefficients structure or NULL if filter cannot be created
  */
-int ff_lowpass_filter_init_coeffs(LPFilterCoeffs *coeffs, int freq, int cutoff);
+struct FFLPFilterCoeffs* ff_lowpass_filter_init_coeffs(int order, float cutoff_ratio);
 
 /**
- * Filter input value.
+ * Create new filter state.
  *
- * @param coeffs filter coefficients
- * @param s      filter state
- * @param in     input value
+ * @param order filter order
  *
- * @return filtered value
+ * @return pointer to new filter state or NULL if state creation fails
  */
-static av_always_inline float ff_lowpass_filter(LPFilterCoeffs *coeffs, LPFilterState *s, float in)
-{
-    int i;
-    for(i = 0; i < LOWPASS_FILTER_ORDER; i++){
-        s->x[i] = s->x[i+1];
-        s->y[i] = s->y[i+1];
-    }
-    s->x[LOWPASS_FILTER_ORDER] = in * coeffs->gain;
-    //FIXME: made only for 4th order filter
-    s->y[LOWPASS_FILTER_ORDER] = (s->x[0] + s->x[4])*1
-                               + (s->x[1] + s->x[3])*4
-                               +  s->x[2]           *6
-                               + coeffs->c[0]*s->y[0] + coeffs->c[1]*s->y[1]
-                               + coeffs->c[2]*s->y[2] + coeffs->c[3]*s->y[3];
-    return s->y[LOWPASS_FILTER_ORDER];
-}
+struct FFLPFilterState* ff_lowpass_filter_init_state(int order);
+
+/**
+ * Free filter coefficients.
+ *
+ * @param coeffs pointer allocated with ff_lowpass_filter_init_coeffs()
+ */
+void ff_lowpass_filter_free_coeffs(struct FFLPFilterCoeffs *coeffs);
+
+/**
+ * Free filter state.
+ *
+ * @param state pointer allocated with ff_lowpass_filter_init_state()
+ */
+void ff_lowpass_filter_free_state(struct FFLPFilterState *state);
+
+/**
+ * Perform lowpass filtering on input samples.
+ *
+ * @param coeffs pointer to filter coefficients
+ * @param state  pointer to filter state
+ * @param size   input length
+ * @param src    source samples
+ * @param sstep  source stride
+ * @param dst    filtered samples (destination may be the same as input)
+ * @param dstep  destination stride
+ */
+void ff_lowpass_filter(const struct FFLPFilterCoeffs *coeffs, struct FFLPFilterState *state, int size, int16_t *src, int sstep, int16_t *dst, int dstep);
 
 #endif /* FFMPEG_LOWPASS_H */
-

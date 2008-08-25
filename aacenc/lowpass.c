@@ -25,49 +25,146 @@
  */
 
 #include "lowpass.h"
+#include <complex.h>
+#include <math.h>
 
 /**
- * filter data for 4th order IIR lowpass Butterworth filter
- *
- * data format:
- * normalized cutoff frequency | inverse filter gain | coefficients
+ * IIR filter global parameters
  */
-static const float lp_filter_data[][LOWPASS_FILTER_ORDER+2] = {
-    { 0.5000000000, 9.398085e-01, -0.0176648009,  0.0000000000, -0.4860288221,  0.0000000000 },
-    { 0.4535147392, 6.816645e-01, -0.4646665999, -2.2127207402, -3.9912017501, -3.2380429984 },
-    { 0.4166666667, 4.998150e-01, -0.2498216698, -1.3392807613, -2.7693097862, -2.6386277439 },
-    { 0.3628117914, 3.103469e-01, -0.0965076902, -0.5977763360, -1.4972580903, -1.7740085241 },
-    { 0.3333333333, 2.346995e-01, -0.0557639007, -0.3623690447, -1.0304538354, -1.3066051440 },
-    { 0.2916666667, 1.528432e-01, -0.0261686639, -0.1473794606, -0.6204721225, -0.6514716536 },
-    { 0.2267573696, 6.917529e-02, -0.0202414073,  0.0780167640, -0.5277442247,  0.3631641670 },
-    { 0.2187500000, 6.178391e-02, -0.0223681543,  0.1069446609, -0.5615167033,  0.4883976841 },
-    { 0.2083333333, 5.298685e-02, -0.0261686639,  0.1473794606, -0.6204721225,  0.6514716536 },
-    { 0.1587301587, 2.229030e-02, -0.0647354087,  0.4172275190, -1.1412129810,  1.4320761385 },
-    { 0.1458333333, 1.693903e-02, -0.0823177861,  0.5192354923, -1.3444768251,  1.6365345642 },
-    { 0.1133786848, 7.374053e-03, -0.1481421788,  0.8650973862, -1.9894244796,  2.1544844308 },
-    { 0.1041666667, 5.541768e-03, -0.1742301048,  0.9921936565, -2.2090801108,  2.3024482658 },
-};
+typedef struct FFLPFilterCoeffs{
+    int   order;
+    float gain;
+    int   *cx;
+    float *cy;
+}FFLPFilterCoeffs;
 
-int ff_lowpass_filter_init_coeffs(LPFilterCoeffs *coeffs, int freq, int cutoff)
+/**
+ * IIR filter state
+ */
+typedef struct FFLPFilterState{
+    float *x;
+}FFLPFilterState;
+
+struct FFLPFilterCoeffs* ff_lowpass_filter_init_coeffs(int order, float cutoff_ratio)
 {
     int i, j, size;
-    float cutoff_ratio;
+    FFLPFilterCoeffs *c;
+    double wa;
+    complex *p, *zp;
 
-    //since I'm too lazy to calculate coefficients, I take more or less matching ones from the table
-    //TODO: generic version
-    size = sizeof(lp_filter_data) / sizeof(lp_filter_data[0]);
-    cutoff_ratio = (float)cutoff / freq;
-    if(cutoff_ratio > lp_filter_data[0][0])
-        return -1;
-    for(i = 0; i < size; i++){
-        if(cutoff_ratio >= lp_filter_data[i][0])
-            break;
+    if(order <= 1 || (order & 1) || cutoff_ratio >= 1.0)
+        return NULL;
+
+    c = av_malloc(sizeof(FFLPFilterCoeffs));
+    c->cx = av_mallocz(sizeof(c->cx[0]) * (order + 1));
+    c->cy = av_malloc (sizeof(c->cy[0]) * order);
+    c->order = order;
+
+    p  = av_malloc(sizeof(p[0])  * (order + 1));
+    zp = av_malloc(sizeof(zp[0]) * (order + 1));
+
+    wa = 2 * tan(M_PI * cutoff_ratio / 2.0);
+
+    for(i = 0; i <= order; i++){
+        complex t;
+        double th = (i + order/2 + 0.5) * M_PI / order;
+
+        t = (cos(th) + I*sin(th)) * wa;
+        zp[i] = (2.0 + t) / (2.0 - t);
     }
-    if(i == size)
-        i = size - 1;
-    coeffs->gain     = lp_filter_data[i][1];
-    for(j = 0; j < 4; j++)
-        coeffs->c[j] = lp_filter_data[i][j+2];
-    return 0;
+
+    c->cx[0] = 1;
+    for(i = 0; i <= order; i++)
+        for(j = i; j >= 1; j--)
+            c->cx[j] += c->cx[j - 1];
+
+    p[0] = 1.0;
+    for(i = 1; i <= order; i++)
+        p[i] = 0.0;
+    for(i = 0; i < order; i++){
+        for(j = order; j >= 1; j--)
+            p[j] = -zp[i]*p[j] + p[j - 1];
+        p[0] *= -zp[i];
+    }
+    c->gain = creal(p[order]);
+    for(i = 0; i < order; i++){
+        complex t = -p[i] / p[order];
+        c->gain += creal(p[i]);
+        c->cy[i] = creal(t);
+    }
+    c->gain /= 1 << order;
+
+    av_free(p);
+    av_free(zp);
+
+    return c;
+}
+
+struct FFLPFilterState* ff_lowpass_filter_init_state(int order)
+{
+    FFLPFilterState *s = av_mallocz(sizeof(FFLPFilterState));
+    s->x = av_mallocz(sizeof(s->x[0]) * order);
+    return s;
+}
+
+#define FILTER(i0, i1, i2, i3)                    \
+    in =   *src * c->gain                         \
+         + c->cy[0]*s->x[i0] + c->cy[1]*s->x[i1]  \
+         + c->cy[2]*s->x[i2] + c->cy[3]*s->x[i3]; \
+    res =  (s->x[i0] + in      )*1                \
+         + (s->x[i1] + s->x[i3])*4                \
+         +  s->x[i2]            *6;               \
+    *dst = av_clip_int16(lrintf(res));            \
+    s->x[i0] = in;                                \
+    src += sstep;                                 \
+    dst += dstep;                                 \
+
+void ff_lowpass_filter(const struct FFLPFilterCoeffs *c, struct FFLPFilterState *s, int size, int16_t *src, int sstep, int16_t *dst, int dstep)
+{
+    int i;
+
+    if(c->order == 4){
+        for(i = 0; i < size; i += 4){
+            float in, res;
+
+            FILTER(0, 1, 2, 3);
+            FILTER(1, 2, 3, 0);
+            FILTER(2, 3, 0, 1);
+            FILTER(3, 0, 1, 2);
+        }
+    }else{
+        for(i = 0; i < size; i++){
+            int j;
+            float in, res;
+            in = *src * c->gain;
+            for(j = 0; j < c->order; j++)
+                in += c->cy[j] * s->x[j];
+            res = s->x[0] + in + s->x[c->order/2] * c->cx[c->order/2];
+            for(j = 1; j < (c->order / 2); j++)
+                res += (s->x[j] + s->x[c->order - j]) * c->cx[j];
+            for(j = 0; j < c->order - 1; j++)
+                s->x[j] = s->x[j + 1];
+            *dst = av_clip_int16(lrintf(res));
+            s->x[c->order - 1] = in;
+            src += sstep;
+            dst += sstep;
+        }
+    }
+}
+
+void ff_lowpass_filter_free_state(struct FFLPFilterState *state)
+{
+    if(state)
+        av_free(state->x);
+    av_free(state);
+}
+
+void ff_lowpass_filter_free_coeffs(struct FFLPFilterCoeffs *coeffs)
+{
+    if(coeffs){
+        av_free(coeffs->cx);
+        av_free(coeffs->cy);
+    }
+    av_free(coeffs);
 }
 

@@ -62,9 +62,10 @@ typedef struct AACPsyContext {
     const struct AACPsyModel *model;  ///< pointer to the psychoacoustic model implementation
     void* model_priv_data;            ///< psychoacoustic model implementation private data
 
+    int   elements;                   ///< number of channel elements to be handled by model
     float stereo_att;                 ///< stereo attenuation factor
-    LPFilterCoeffs lp_coeffs;         ///< lowpass filter coefficients
-    LPFilterState *lp_state;          ///< lowpass filter state
+    struct FFLPFilterCoeffs* lp_coeffs; ///< lowpass filter coefficients
+    struct FFLPFilterState** lp_state;  ///< lowpass filter state
 }AACPsyContext;
 
 typedef struct AACPsyModel {
