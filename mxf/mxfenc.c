@@ -250,7 +250,7 @@ static int mxf_write_essence_container_refs(AVFormatContext *s, int write)
     ByteIOContext *pb = s->pb;
     AVStream *st;
     int i, count = 0, j = 0;
-    int essence_container_ul_sign[32] = { 0 };
+    int essence_container_ul_sign[1024] = { 0 };
     const MXFCodecUL *codec_ul;
 
     for (codec_ul = ff_mxf_essence_container_uls; codec_ul->id; codec_ul++) {
