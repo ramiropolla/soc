@@ -247,7 +247,6 @@ static const MXFDataDefinitionUL *mxf_get_data_definition_ul(enum CodecType type
 
 static int mxf_write_essence_container_refs(AVFormatContext *s, int write)
 {
-    MXFContext *mxf = s->priv_data;
     ByteIOContext *pb = s->pb;
     AVStream *st;
     int i, count = 0, j = 0;
