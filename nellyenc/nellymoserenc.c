@@ -37,56 +37,13 @@
 #include "nellymoser.h"
 #include "avcodec.h"
 #include "dsputil.h"
-#include "lowpass.h"
+#include "lowpass2.h"
+
+#define BITSTREAM_WRITER_LE
+#include "bitstream.h"
 
 #define MAX_POW_CACHED (1<<11)
 #define LOWPASS 1
-
-/*
- * FIXME: Bitstream from vorbis_enc.c (move to seperate file?)
- */
-typedef struct {
-    int total;
-    int total_pos;
-    int pos;
-    uint8_t * buf_ptr;
-} PutBitContext2;
-
-static inline void init_put_bits2(PutBitContext2 * pb, uint8_t * buf, int buffer_len) {
-    pb->total = buffer_len * 8;
-    pb->total_pos = 0;
-    pb->pos = 0;
-    pb->buf_ptr = buf;
-}
-
-static void put_bits2(PutBitContext2 * pb, int bits, uint64_t val) {
-    if ((pb->total_pos += bits) >= pb->total) return;
-    if (!bits) return;
-    if (pb->pos) {
-        if (pb->pos > bits) {
-            *pb->buf_ptr |= val << (8 - pb->pos);
-            pb->pos -= bits;
-            bits = 0;
-        } else {
-            *pb->buf_ptr++ |= (val << (8 - pb->pos)) & 0xFF;
-            val >>= pb->pos;
-            bits -= pb->pos;
-            pb->pos = 0;
-        }
-    }
-    for (; bits >= 8; bits -= 8) {
-        *pb->buf_ptr++ = val & 0xFF;
-        val >>= 8;
-    }
-    if (bits) {
-        *pb->buf_ptr = val;
-        pb->pos = 8 - bits;
-    }
-}
-
-static inline int put_bits2_count(PutBitContext2 * pb) {
-    return pb->total_pos;
-}
 
 typedef struct NellyMoserEncodeContext {
     AVCodecContext* avctx;
@@ -198,7 +155,7 @@ static av_cold int encode_end(AVCodecContext * avctx) {
 
 static void encode_block(NellyMoserEncodeContext *s,
         unsigned char *buf, int buf_size, float *samples){
-    PutBitContext2 pb;
+    PutBitContext pb;
     int bits[NELLY_BUF_LEN];
     int i, j, k, l, b;
     int bk;
@@ -218,7 +175,7 @@ static void encode_block(NellyMoserEncodeContext *s,
                 s->float_buf[i]);
     }
 
-    init_put_bits2(&pb, buf, buf_size*8);
+    init_put_bits(&pb, buf, buf_size*8);
 
     band_start = 0;
     band_end = ff_nelly_band_sizes_table[0];
@@ -236,12 +193,12 @@ static void encode_block(NellyMoserEncodeContext *s,
         if(i){
             tmp -= val;
             find_best_value(tmp, ff_nelly_delta_table, 32, bk);
-            put_bits2(&pb, 5, bk);
+            put_bits(&pb, 5, bk);
             val += ff_nelly_delta_table[bk];
         }else{
             //base exponent
             find_best_value(tmp, ff_nelly_init_table, 64, bk);
-            put_bits2(&pb, 6, bk);
+            put_bits(&pb, 6, bk);
             val = ff_nelly_init_table[bk];
         }
 
@@ -271,18 +228,18 @@ static void encode_block(NellyMoserEncodeContext *s,
                 find_best_value(tmp,
                         (ff_nelly_dequantization_table + (1<<bits[j])-1),
                         (1<<bits[j]), bk);
-                put_bits2(&pb, bits[j], bk);
+                put_bits(&pb, bits[j], bk);
             }
         }
         av_log(s->avctx, AV_LOG_DEBUG, "count=%i (%i)\n",
-                put_bits2_count(&pb),
+                put_bits_count(&pb),
                 NELLY_HEADER_BITS + NELLY_DETAIL_BITS
                 );
         if(!i)
-            put_bits2(&pb, NELLY_HEADER_BITS + NELLY_DETAIL_BITS - put_bits2_count(&pb) , 0);
+            put_bits(&pb, NELLY_HEADER_BITS + NELLY_DETAIL_BITS - put_bits_count(&pb) , 0);
 
         av_log(s->avctx, AV_LOG_DEBUG, "count=%i (%i)\n",
-                put_bits2_count(&pb),
+                put_bits_count(&pb),
                 NELLY_HEADER_BITS + NELLY_DETAIL_BITS
                 );
     }

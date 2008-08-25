@@ -22,7 +22,7 @@
  */
 
 #include "avcodec.h"
-#include "lowpass.h"
+#include "lowpass2.h"
 #include <complex.h>
 
 void ff_lowpass_init(LPFilterContext *s, float sample_rate, float fpass, float fstop, float apass, float astop){

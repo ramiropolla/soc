@@ -1,11 +1,11 @@
 #!/bin/sh
-FILES="nellymoserenc.c lowpass.c lowpass.h"
+FILES="nellymoserenc.c lowpass2.c lowpass2.h"
 
 echo "checking out ffmpeg svn"
 for i in $FILES Makefile allcodecs.c; do
     rm -f ffmpeg/libavcodec/$i
 done
-svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg -r 14909
+svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg -r 14965
 echo "patching ffmpeg"
 cd ffmpeg
 patch -p0 <../ffmpeg.patch
