@@ -260,13 +260,13 @@ static int encode_tag(AVCodecContext *avctx,
     if(data){
         n = avctx->frame_size;
 #if LOWPASS
-    ff_lowpass_filter(&s->lp, samples, s->buf+s->bufsize, n);
+        ff_lowpass_filter(&s->lp, samples, s->buf+s->bufsize, n);
 #else
-    for(k=0; k<n; k++){
-        s->buf[k+s->bufsize]=samples[k];
-    }
+        for(k=0; k<n; k++){
+            s->buf[k+s->bufsize]=samples[k];
+        }
 #endif
-    s->bufsize+=n;
+        s->bufsize+=n;
     }else{
         memset(s->buf+s->bufsize, 0, sizeof(s->buf[0])*(3*NELLY_BUF_LEN-s->bufsize));
         s->bufsize=3*NELLY_BUF_LEN;
