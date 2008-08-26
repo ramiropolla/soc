@@ -48,6 +48,7 @@
 typedef struct NellyMoserEncodeContext {
     AVCodecContext* avctx;
     DECLARE_ALIGNED_16(float,float_buf[3*NELLY_BUF_LEN]);
+    int last_frame;
 
     float buf[1024*64]; //FIXME (use any better solution)
     int bufsize;
@@ -120,6 +121,7 @@ static av_cold int encode_init(AVCodecContext * avctx) {
         pow_table[i] = -pow(2, -i/2048.0 - 3.0);
 
     s->bufsize = 0;
+    s->last_frame = 0;
     return 0;
 }
 
@@ -250,9 +252,13 @@ static int encode_tag(AVCodecContext *avctx,
         unsigned char *buf, int buf_size, void *data){
     NellyMoserEncodeContext *s = avctx->priv_data;
     int16_t *samples = data;
-    int k, i;
-    int n = data ? avctx->frame_size : 0;
+    int k, i, n;
 
+    if(s->last_frame)
+        return 0;
+
+    if(data){
+        n = avctx->frame_size;
 #if LOWPASS
     ff_lowpass_filter(&s->lp, samples, s->buf+s->bufsize, n);
 #else
@@ -261,6 +267,11 @@ static int encode_tag(AVCodecContext *avctx,
     }
 #endif
     s->bufsize+=n;
+    }else{
+        memset(s->buf+s->bufsize, 0, sizeof(s->buf[0])*(3*NELLY_BUF_LEN-s->bufsize));
+        s->bufsize=3*NELLY_BUF_LEN;
+        s->last_frame = 1;
+    }
 
     /* FIXME:
      *  find better method for it...
@@ -286,5 +297,6 @@ AVCodec nellymoser_encoder = {
     .init = encode_init,
     .encode = encode_tag,
     .close = encode_end,
+    .capabilities = CODEC_CAP_SMALL_LAST_FRAME | CODEC_CAP_DELAY,
     .long_name = NULL_IF_CONFIG_SMALL("Nellymoser Asao Codec"),
 };
