@@ -47,10 +47,9 @@
 
 typedef struct NellyMoserEncodeContext {
     AVCodecContext* avctx;
-    DECLARE_ALIGNED_16(float,float_buf[3*NELLY_BUF_LEN]);
     int last_frame;
 
-    float buf[1024*64]; //FIXME (use any better solution)
+    DECLARE_ALIGNED_16(float,buf[2*NELLY_SAMPLES]);
     int bufsize;
 
     DSPContext      dsp;
@@ -166,16 +165,8 @@ static void encode_block(NellyMoserEncodeContext *s,
     float tmp, stmp;
     int band_start, band_end;
 
-    for(i=0; i<NELLY_BUF_LEN*3; i++){
-        s->float_buf[i] = samples[i];
-    }
-    apply_mdct(s, s->float_buf, s->mdct_out);
-    apply_mdct(s, s->float_buf+NELLY_BUF_LEN, s->mdct_out+NELLY_BUF_LEN);
-
-    for(i=0; i<NELLY_SAMPLES; i++){
-        av_log(s->avctx, AV_LOG_DEBUG, "%3i: %f (%f)\n", i, s->mdct_out[i],
-                s->float_buf[i]);
-    }
+    apply_mdct(s, samples, s->mdct_out);
+    apply_mdct(s, samples+NELLY_BUF_LEN, s->mdct_out+NELLY_BUF_LEN);
 
     init_put_bits(&pb, buf, buf_size*8);
 
@@ -252,7 +243,7 @@ static int encode_tag(AVCodecContext *avctx,
         unsigned char *buf, int buf_size, void *data){
     NellyMoserEncodeContext *s = avctx->priv_data;
     int16_t *samples = data;
-    int k, i, n;
+    int n;
 
     if(s->last_frame)
         return 0;
@@ -262,8 +253,11 @@ static int encode_tag(AVCodecContext *avctx,
 #if LOWPASS
         ff_lowpass_filter(&s->lp, samples, s->buf+s->bufsize, n);
 #else
-        for(k=0; k<n; k++){
-            s->buf[k+s->bufsize]=samples[k];
+        {
+        int i;
+        for(i=0; i<n; i++){
+            s->buf[i+s->bufsize]=samples[i];
+        }
         }
 #endif
         s->bufsize+=n;
@@ -273,19 +267,13 @@ static int encode_tag(AVCodecContext *avctx,
         s->last_frame = 1;
     }
 
-    /* FIXME:
-     *  find better method for it...
-     */
-    for(k=0; (s->bufsize>=3*NELLY_BUF_LEN) && ((k+1)*NELLY_BLOCK_LEN<buf_size); k++){
-        encode_block(s, buf+NELLY_BLOCK_LEN*k, buf_size, s->buf);
-
-        //memmove(s->buf, s->buf+NELLY_SAMPLES, s->bufsize-NELLY_SAMPLES);
-        for(i=NELLY_SAMPLES; i<s->bufsize; i++){
-            s->buf[i-NELLY_SAMPLES] = s->buf[i];
-        }
+    if(s->bufsize>=3*NELLY_BUF_LEN){
+        encode_block(s, buf, buf_size, s->buf);
+        memmove(s->buf, s->buf+NELLY_SAMPLES, sizeof(s->buf[0])*(s->bufsize-NELLY_SAMPLES));
         s->bufsize-=NELLY_SAMPLES;
+        return NELLY_BLOCK_LEN;
     }
-    return NELLY_BLOCK_LEN*k;
+    return 0;
 }
 
 
