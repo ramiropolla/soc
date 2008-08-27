@@ -51,20 +51,20 @@
 typedef struct NellyMoserEncodeContext {
     AVCodecContext *avctx;
     int last_frame;
-    int bufsize;
-    int bits[NELLY_BUF_LEN];
-    float pows[NELLY_FILL_LEN];
+    int bufsize;                    ///< number of sample in buf
+    int bits[NELLY_BUF_LEN];        ///< number of bits used to encode coeff
+    float pows[NELLY_FILL_LEN];     ///< exponent used to code coeff
     DSPContext dsp;
     MDCTContext mdct_ctx;
 #ifdef LOWPASS
     LPFilterContext lp;
 #endif
      DECLARE_ALIGNED_16(float, mdct_out[NELLY_SAMPLES]);
-     DECLARE_ALIGNED_16(float, buf[2 * NELLY_SAMPLES]);
+     DECLARE_ALIGNED_16(float, buf[2 * NELLY_SAMPLES]);     ///< sample buffer
 } NellyMoserEncodeContext;
 
 static DECLARE_ALIGNED_16(float, sine_window[NELLY_SAMPLES]);
-static float pow_table[MAX_POW_CACHED];
+static float pow_table[MAX_POW_CACHED];     ///< -pow(2, -i / 2048.0 - 3.0);
 
 void apply_mdct(NellyMoserEncodeContext *s, float *in, float *coefs)
 {
@@ -144,7 +144,7 @@ static av_cold int encode_end(AVCodecContext *avctx)
     return 0;
 }
 
-/*
+/**
  * Searching index in table with size table_size, where
  * |val-table[best_idx]| is minimal.
  * It assumes that table elements are in increasing order and uses binary search.
@@ -166,8 +166,15 @@ static av_cold int encode_end(AVCodecContext *avctx)
         best_idx = last; \
 }
 
+/**
+ * Encodes NELLY_SAMPLES samples. It assumes, that samples contains 3 * NELLY_BUF_LEN values
+ *  @param s               encoder context
+ *  @param output          output buffer
+ *  @param output_size     size of output buffer
+ *  @param samples         input samples
+ */
 static void encode_block(NellyMoserEncodeContext *s,
-                         unsigned char *buf, int buf_size, float *samples)
+                         unsigned char *output, int output_size, float *samples)
 {
     PutBitContext pb;
     int i, band, block, best_idx, power_idx = 0;
@@ -177,7 +184,7 @@ static void encode_block(NellyMoserEncodeContext *s,
     apply_mdct(s, samples, s->mdct_out);
     apply_mdct(s, samples + NELLY_BUF_LEN, s->mdct_out + NELLY_BUF_LEN);
 
-    init_put_bits(&pb, buf, buf_size * 8);
+    init_put_bits(&pb, output, output_size * 8);
 
     band_start = 0;
     band_end = ff_nelly_band_sizes_table[0];
