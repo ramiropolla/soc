@@ -158,7 +158,7 @@ static void encode_block(NellyMoserEncodeContext *s,
         unsigned char *buf, int buf_size, float *samples){
     PutBitContext pb;
     int bits[NELLY_BUF_LEN];
-    int i, j, k, l, b;
+    int i, j, b;
     int bk;
     int val=0;
     float pval;
@@ -174,9 +174,9 @@ static void encode_block(NellyMoserEncodeContext *s,
     band_end = ff_nelly_band_sizes_table[0];
     for(i=0; i<NELLY_BANDS; i++){
         stmp = 0;
-        for(l=band_start; l<band_end; l++){
+        for(j=band_start; j<band_end; j++){
             for(b=0; b<2; b++){
-                tmp = s->mdct_out[l+b*NELLY_BUF_LEN];
+                tmp = s->mdct_out[j+b*NELLY_BUF_LEN];
                 stmp += tmp*tmp;
             }
         }
@@ -200,10 +200,10 @@ static void encode_block(NellyMoserEncodeContext *s,
         }else{
             pval = -pow(2, -val/2048.0 - 3.0);
         }
-        for (k = band_start; k < band_end; k++) {
-            s->mdct_out[k] *= pval;
-            s->mdct_out[k+NELLY_BUF_LEN] *= pval;
-            s->pows[k] = val;
+        for (j = band_start; j < band_end; j++) {
+            s->mdct_out[j] *= pval;
+            s->mdct_out[j+NELLY_BUF_LEN] *= pval;
+            s->pows[j] = val;
         }
         band_start = band_end;
         if(i!=NELLY_BANDS-1)
