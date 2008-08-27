@@ -48,17 +48,14 @@
 typedef struct NellyMoserEncodeContext {
     AVCodecContext* avctx;
     int last_frame;
-    int bits[NELLY_BUF_LEN];
-
-    DECLARE_ALIGNED_16(float,buf[2*NELLY_SAMPLES]);
     int bufsize;
-
+    int bits[NELLY_BUF_LEN];
+    float pows[NELLY_FILL_LEN];
     DSPContext      dsp;
     MDCTContext     mdct_ctx;
-    float pows[NELLY_FILL_LEN];
-    DECLARE_ALIGNED_16(float,mdct_out[NELLY_SAMPLES]);
-
     LPFilterContext lp;
+    DECLARE_ALIGNED_16(float,mdct_out[NELLY_SAMPLES]);
+    DECLARE_ALIGNED_16(float,buf[2*NELLY_SAMPLES]);
 } NellyMoserEncodeContext;
 
 static DECLARE_ALIGNED_16(float,sine_window[NELLY_SAMPLES]);
