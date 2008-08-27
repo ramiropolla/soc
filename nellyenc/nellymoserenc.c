@@ -227,8 +227,8 @@ static void encode_block(NellyMoserEncodeContext *s,
             if (s->bits[i] > 0) {
                 coeff = s->mdct_out[block * NELLY_BUF_LEN + i];
                 find_best_value(coeff,
-                                ff_nelly_dequantization_table + (1 << s->bits[i]) - 1,
-                                1 << s->bits[i], best_idx);
+                                (ff_nelly_dequantization_table + (1 << s->bits[i]) - 1),
+                                (1 << s->bits[i]), best_idx);
                 put_bits(&pb, s->bits[i], best_idx);
             }
         }
