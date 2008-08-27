@@ -37,13 +37,16 @@
 #include "nellymoser.h"
 #include "avcodec.h"
 #include "dsputil.h"
-#include "lowpass2.h"
 
 #define BITSTREAM_WRITER_LE
 #include "bitstream.h"
 
 #define MAX_POW_CACHED (1<<11)
-#define LOWPASS 1
+#define LOWPASS
+
+#ifdef LOWPASS
+#include "lowpass2.h"
+#endif
 
 typedef struct NellyMoserEncodeContext {
     AVCodecContext* avctx;
@@ -53,7 +56,9 @@ typedef struct NellyMoserEncodeContext {
     float pows[NELLY_FILL_LEN];
     DSPContext      dsp;
     MDCTContext     mdct_ctx;
+#ifdef LOWPASS
     LPFilterContext lp;
+#endif
     DECLARE_ALIGNED_16(float,mdct_out[NELLY_SAMPLES]);
     DECLARE_ALIGNED_16(float,buf[2*NELLY_SAMPLES]);
 } NellyMoserEncodeContext;
@@ -83,16 +88,24 @@ static av_cold int encode_init(AVCodecContext * avctx) {
 
     switch(avctx->sample_rate){
         case 8000:
+#ifdef LOWPASS
             ff_lowpass_init(&s->lp, 8000, 2000, 3800, 1, 60);
+#endif
             break;
         case 11025:
+#ifdef LOWPASS
             ff_lowpass_init(&s->lp, 11025, 3000, 5000, 1, 60);
+#endif
             break;
         case 22050:
+#ifdef LOWPASS
             ff_lowpass_init(&s->lp, 22025, 6000, 10000, 1, 60);
+#endif
             break;
         case 44100:
+#ifdef LOWPASS
             ff_lowpass_init(&s->lp, 44100, 12000, 20000, 1, 60);
+#endif
             break;
         default:
             av_log(avctx, AV_LOG_ERROR,
@@ -126,7 +139,9 @@ static av_cold int encode_end(AVCodecContext * avctx) {
     NellyMoserEncodeContext *s = avctx->priv_data;
 
     ff_mdct_end(&s->mdct_ctx);
+#ifdef LOWPASS
     ff_lowpass_end(&s->lp);
+#endif
     return 0;
 }
 
@@ -233,7 +248,7 @@ static int encode_tag(AVCodecContext *avctx,
         return 0;
 
     if(data){
-#if LOWPASS
+#ifdef LOWPASS
         ff_lowpass_filter(&s->lp, samples, s->buf+s->bufsize, avctx->frame_size);
 #else
         {
