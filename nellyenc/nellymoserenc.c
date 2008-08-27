@@ -243,24 +243,22 @@ static int encode_tag(AVCodecContext *avctx,
         unsigned char *buf, int buf_size, void *data){
     NellyMoserEncodeContext *s = avctx->priv_data;
     int16_t *samples = data;
-    int n;
 
     if(s->last_frame)
         return 0;
 
     if(data){
-        n = avctx->frame_size;
 #if LOWPASS
-        ff_lowpass_filter(&s->lp, samples, s->buf+s->bufsize, n);
+        ff_lowpass_filter(&s->lp, samples, s->buf+s->bufsize, avctx->frame_size);
 #else
         {
         int i;
-        for(i=0; i<n; i++){
+        for(i=0; i<avctx->frame_size; i++){
             s->buf[i+s->bufsize]=samples[i];
         }
         }
 #endif
-        s->bufsize+=n;
+        s->bufsize+=avctx->frame_size;
     }else{
         memset(s->buf+s->bufsize, 0, sizeof(s->buf[0])*(3*NELLY_BUF_LEN-s->bufsize));
         s->bufsize=3*NELLY_BUF_LEN;
