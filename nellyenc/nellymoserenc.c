@@ -49,13 +49,13 @@
 #endif
 
 typedef struct NellyMoserEncodeContext {
-    AVCodecContext *avctx;
-    int last_frame;
-    int bufsize;                    ///< number of sample in buf
-    int bits[NELLY_BUF_LEN];        ///< number of bits used to encode coeff
-    float pows[NELLY_FILL_LEN];     ///< exponent used to code coeff
-    DSPContext dsp;
-    MDCTContext mdct_ctx;
+    AVCodecContext  *avctx;
+    int             last_frame;
+    int             bufsize;              ///< number of sample in buf
+    int             bits[NELLY_BUF_LEN];  ///< number of bits used to encode coeff
+    float           pows[NELLY_FILL_LEN]; ///< exponent used to code coeff
+    DSPContext      dsp;
+    MDCTContext     mdct_ctx;
 #ifdef LOWPASS
     LPFilterContext lp;
 #endif
