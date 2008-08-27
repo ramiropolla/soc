@@ -158,11 +158,8 @@ static void encode_block(NellyMoserEncodeContext *s,
         unsigned char *buf, int buf_size, float *samples){
     PutBitContext pb;
     int bits[NELLY_BUF_LEN];
-    int i, j, b;
-    int bk;
-    int val=0;
-    float pval;
-    float tmp, stmp;
+    int i, band, block, best_idx, power_idx=0;
+    float power_val, power_candidate, coeff, coeff_sum;
     int band_start, band_end;
 
     apply_mdct(s, samples, s->mdct_out);
@@ -172,63 +169,63 @@ static void encode_block(NellyMoserEncodeContext *s,
 
     band_start = 0;
     band_end = ff_nelly_band_sizes_table[0];
-    for(i=0; i<NELLY_BANDS; i++){
-        stmp = 0;
-        for(j=band_start; j<band_end; j++){
-            for(b=0; b<2; b++){
-                tmp = s->mdct_out[j+b*NELLY_BUF_LEN];
-                stmp += tmp*tmp;
+    for(band=0; band<NELLY_BANDS; band++){
+        coeff_sum= 0;
+        for(i=band_start; i<band_end; i++){
+            for(block=0; block<2; block++){
+                coeff = s->mdct_out[i+block*NELLY_BUF_LEN];
+                coeff_sum += coeff*coeff;
             }
         }
-        tmp = ( log(FFMAX(64.0, stmp/(ff_nelly_band_sizes_table[i]<<1))) - log(64.0)) *
+        power_candidate = ( log(FFMAX(64.0, coeff_sum/(ff_nelly_band_sizes_table[band]<<1))) - log(64.0)) *
             1024.0 / M_LN2;
 
-        if(i){
-            tmp -= val;
-            find_best_value(tmp, ff_nelly_delta_table, 32, bk);
-            put_bits(&pb, 5, bk);
-            val += ff_nelly_delta_table[bk];
+        if(band){
+            power_candidate -= power_idx;
+            find_best_value(power_candidate, ff_nelly_delta_table, 32, best_idx);
+            put_bits(&pb, 5, best_idx);
+            power_idx += ff_nelly_delta_table[best_idx];
         }else{
             //base exponent
-            find_best_value(tmp, ff_nelly_init_table, 64, bk);
-            put_bits(&pb, 6, bk);
-            val = ff_nelly_init_table[bk];
+            find_best_value(power_candidate, ff_nelly_init_table, 64, best_idx);
+            put_bits(&pb, 6, best_idx);
+            power_idx = ff_nelly_init_table[best_idx];
         }
 
-        if(val >= 0){
-            pval = pow_table[val&0x7FF] / (1<<(val>>11)) ;
+        if(power_idx >= 0){
+            power_val = pow_table[power_idx&0x7FF] / (1<<(power_idx>>11)) ;
         }else{
-            pval = -pow(2, -val/2048.0 - 3.0);
+            power_val = -pow(2, -power_idx/2048.0 - 3.0);
         }
-        for (j = band_start; j < band_end; j++) {
-            s->mdct_out[j] *= pval;
-            s->mdct_out[j+NELLY_BUF_LEN] *= pval;
-            s->pows[j] = val;
+        for (i = band_start; i < band_end; i++) {
+            s->mdct_out[i] *= power_val;
+            s->mdct_out[i+NELLY_BUF_LEN] *= power_val;
+            s->pows[i] = power_idx;
         }
         band_start = band_end;
-        if(i!=NELLY_BANDS-1)
-            band_end += ff_nelly_band_sizes_table[i+1];
+        if(band!=NELLY_BANDS-1)
+            band_end += ff_nelly_band_sizes_table[band+1];
     }
 
     ff_nelly_get_sample_bits(s->pows, bits);
 
-    for (i = 0; i < 2; i++) { //2
+    for (block = 0; block < 2; block++) {
 
-        for (j = 0; j < NELLY_FILL_LEN; j++) {
-            if (bits[j] > 0) {
-                tmp = s->mdct_out[i*NELLY_BUF_LEN + j];
+        for (i = 0; i < NELLY_FILL_LEN; i++) {
+            if (bits[i] > 0) {
+                coeff = s->mdct_out[block*NELLY_BUF_LEN + i];
 
-                find_best_value(tmp,
-                        (ff_nelly_dequantization_table + (1<<bits[j])-1),
-                        (1<<bits[j]), bk);
-                put_bits(&pb, bits[j], bk);
+                find_best_value(coeff,
+                        (ff_nelly_dequantization_table + (1<<bits[i])-1),
+                        (1<<bits[i]), best_idx);
+                put_bits(&pb, bits[i], best_idx);
             }
         }
         av_log(s->avctx, AV_LOG_DEBUG, "count=%i (%i)\n",
                 put_bits_count(&pb),
                 NELLY_HEADER_BITS + NELLY_DETAIL_BITS
                 );
-        if(!i)
+        if(!block)
             put_bits(&pb, NELLY_HEADER_BITS + NELLY_DETAIL_BITS - put_bits_count(&pb) , 0);
 
         av_log(s->avctx, AV_LOG_DEBUG, "count=%i (%i)\n",
@@ -240,7 +237,7 @@ static void encode_block(NellyMoserEncodeContext *s,
 }
 
 static int encode_tag(AVCodecContext *avctx,
-        unsigned char *buf, int buf_size, void *data){
+        uint8_t *frame, int buf_size, void *data){
     NellyMoserEncodeContext *s = avctx->priv_data;
     int16_t *samples = data;
 
@@ -266,7 +263,7 @@ static int encode_tag(AVCodecContext *avctx,
     }
 
     if(s->bufsize>=3*NELLY_BUF_LEN){
-        encode_block(s, buf, buf_size, s->buf);
+        encode_block(s, frame, buf_size, s->buf);
         memmove(s->buf, s->buf+NELLY_SAMPLES, sizeof(s->buf[0])*(s->bufsize-NELLY_SAMPLES));
         s->bufsize-=NELLY_SAMPLES;
         return NELLY_BLOCK_LEN;
