@@ -48,6 +48,7 @@
 typedef struct NellyMoserEncodeContext {
     AVCodecContext* avctx;
     int last_frame;
+    int bits[NELLY_BUF_LEN];
 
     DECLARE_ALIGNED_16(float,buf[2*NELLY_SAMPLES]);
     int bufsize;
@@ -157,7 +158,6 @@ static av_cold int encode_end(AVCodecContext * avctx) {
 static void encode_block(NellyMoserEncodeContext *s,
         unsigned char *buf, int buf_size, float *samples){
     PutBitContext pb;
-    int bits[NELLY_BUF_LEN];
     int i, band, block, best_idx, power_idx=0;
     float power_val, power_candidate, coeff, coeff_sum;
     int band_start, band_end;
@@ -207,18 +207,18 @@ static void encode_block(NellyMoserEncodeContext *s,
             band_end += ff_nelly_band_sizes_table[band+1];
     }
 
-    ff_nelly_get_sample_bits(s->pows, bits);
+    ff_nelly_get_sample_bits(s->pows, s->bits);
 
     for (block = 0; block < 2; block++) {
 
         for (i = 0; i < NELLY_FILL_LEN; i++) {
-            if (bits[i] > 0) {
+            if (s->bits[i] > 0) {
                 coeff = s->mdct_out[block*NELLY_BUF_LEN + i];
 
                 find_best_value(coeff,
-                        (ff_nelly_dequantization_table + (1<<bits[i])-1),
-                        (1<<bits[i]), best_idx);
-                put_bits(&pb, bits[i], best_idx);
+                        (ff_nelly_dequantization_table + (1<<s->bits[i])-1),
+                        (1<<s->bits[i]), best_idx);
+                put_bits(&pb, s->bits[i], best_idx);
             }
         }
         av_log(s->avctx, AV_LOG_DEBUG, "count=%i (%i)\n",
