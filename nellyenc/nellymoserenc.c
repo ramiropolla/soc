@@ -245,7 +245,7 @@ static void encode_block(NellyMoserEncodeContext *s,
 
 }
 
-static int encode_tag(AVCodecContext *avctx, uint8_t *frame, int buf_size, void *data)
+static int encode_frame(AVCodecContext *avctx, uint8_t *frame, int buf_size, void *data)
 {
     NellyMoserEncodeContext *s = avctx->priv_data;
     int16_t *samples = data;
@@ -286,7 +286,7 @@ AVCodec nellymoser_encoder = {
     .id = CODEC_ID_NELLYMOSER,
     .priv_data_size = sizeof(NellyMoserEncodeContext),
     .init = encode_init,
-    .encode = encode_tag,
+    .encode = encode_frame,
     .close = encode_end,
     .capabilities = CODEC_CAP_SMALL_LAST_FRAME | CODEC_CAP_DELAY,
     .long_name = NULL_IF_CONFIG_SMALL("Nellymoser Asao Codec"),
