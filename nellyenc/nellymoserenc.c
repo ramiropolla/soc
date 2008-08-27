@@ -221,17 +221,8 @@ static void encode_block(NellyMoserEncodeContext *s,
                 put_bits(&pb, s->bits[i], best_idx);
             }
         }
-        av_log(s->avctx, AV_LOG_DEBUG, "count=%i (%i)\n",
-                put_bits_count(&pb),
-                NELLY_HEADER_BITS + NELLY_DETAIL_BITS
-                );
         if(!block)
             put_bits(&pb, NELLY_HEADER_BITS + NELLY_DETAIL_BITS - put_bits_count(&pb) , 0);
-
-        av_log(s->avctx, AV_LOG_DEBUG, "count=%i (%i)\n",
-                put_bits_count(&pb),
-                NELLY_HEADER_BITS + NELLY_DETAIL_BITS
-                );
     }
 
 }
