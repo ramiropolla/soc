@@ -281,15 +281,11 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
             }
             /* skip mixing configuration information */
             if (get_bits1(gbc)) {
-                if (s->num_blocks == 1) {
-                    skip_bits(gbc, 5);
-                } else {
                     for (blk = 0; blk < s->num_blocks; blk++) {
-                        if (get_bits1(gbc)) {
+                        if (s->num_blocks == 1 || get_bits1(gbc)) {
                             skip_bits(gbc, 5);
                         }
                     }
-                }
             }
         }
     }
