@@ -466,6 +466,16 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
         }
     }
 
+    /* spectral extension attenuation data */
+    if (parse_spx_atten_data) {
+        av_log_missing_feature(s->avctx, "Spectral extension", 1);
+        for (ch = 1; ch <= s->fbw_channels; ch++) {
+            if (get_bits1(gbc)) { // channel has spx attenuation
+                skip_bits(gbc, 5); // skip spx attenuation code
+            }
+        }
+    }
+
     /* block start information */
     if (s->num_blocks > 1 && get_bits1(gbc)) {
         /* reference: Section E2.3.2.27
