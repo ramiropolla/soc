@@ -465,7 +465,6 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
 {
     int start;
     int ch, w, g, i;
-    int prev_scale;
     Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
     float pe_target;
     int bits_avail;
