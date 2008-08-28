@@ -89,7 +89,7 @@ static inline float get_approximate_quant_error(float *c, int size, int scale_id
  */
 static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans)
 {
-    int i, w, w2, wg, g, ch;
+    int i, w, w2, g, ch;
     int start, sum, maxsfb, cmaxsfb;
 
     for(ch = 0; ch < chans; ch++){
@@ -123,19 +123,17 @@ static void psy_create_output(AACPsyContext *apc, ChannelElement *cpe, int chans
         ics->max_sfb = maxsfb;
 
         //adjust zero bands for window groups
-        w = 0;
-        for(wg = 0; wg < ics->num_window_groups; wg++){
+        for(w = 0; w < ics->num_windows; w += ics->group_len[w]){
             for(g = 0; g < ics->max_sfb; g++){
                 i = 1;
-                for(w2 = 0; w2 < ics->group_len[wg]*16; w2 += 16){
-                    if(!cpe->ch[ch].zeroes[w + w2 + g]){
+                for(w2 = w; w2 < w + ics->group_len[w]; w2++){
+                    if(!cpe->ch[ch].zeroes[w2*16 + g]){
                         i = 0;
                         break;
                     }
                 }
-                cpe->ch[ch].zeroes[w + g] = i;
+                cpe->ch[ch].zeroes[w*16 + g] = i;
             }
-            w += ics->group_len[wg] * 16;
         }
     }
 
@@ -390,18 +388,16 @@ static void psy_3gpp_window(AACPsyContext *apc, int16_t *audio, int16_t *la,
             ics->num_window_groups = 1;
             ics->group_len[0] = 1;
         }else{
+            int lastgrp = 0;
             ics->num_windows = 8;
             ics->swb_sizes = apc->bands128;
             ics->num_swb = apc->num_bands128;
             ics->num_window_groups = 0;
-            ics->group_len[0] = 1;
+            memset(ics->group_len, 0, sizeof(ics->group_len));
             for(i = 0; i < 8; i++){
-                if((grouping[ch] >> i) & 1){
-                    ics->group_len[ics->num_window_groups - 1]++;
-                }else{
-                    ics->num_window_groups++;
-                    ics->group_len[ics->num_window_groups - 1] = 1;
-                }
+                if(!((grouping[ch] >> i) & 1))
+                    lastgrp = i;
+                ics->group_len[lastgrp]++;
             }
         }
     }
@@ -468,7 +464,7 @@ static inline int determine_scalefactor(Psy3gppBand *band)
 static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelElement *cpe)
 {
     int start;
-    int ch, w, wg, g, i;
+    int ch, w, g, i;
     int prev_scale;
     Psy3gppContext *pctx = (Psy3gppContext*) apc->model_priv_data;
     float pe_target;
@@ -691,19 +687,17 @@ static void psy_3gpp_process(AACPsyContext *apc, int tag, int type, ChannelEleme
             }
 
         //adjust scalefactors for window groups
-        w = 0;
-        for(wg = 0; wg < ics->num_window_groups; wg++){
+        for(w = 0; w < ics->num_windows; w += ics->group_len[w]){
             int min_scale = 256;
 
             for(g = 0; g < ics->num_swb; g++){
-                for(i = w; i < w + ics->group_len[wg]*16; i += 16){
-                    if(cpe->ch[ch].zeroes[i + g]) continue;
-                    min_scale = FFMIN(min_scale, cpe->ch[ch].sf_idx[i + g]);
+                for(i = w; i < w + ics->group_len[w]; i++){
+                    if(cpe->ch[ch].zeroes[i*16 + g]) continue;
+                    min_scale = FFMIN(min_scale, cpe->ch[ch].sf_idx[i*16 + g]);
                 }
-                for(i = w; i < w + ics->group_len[wg]*16; i += 16)
-                    cpe->ch[ch].sf_idx[i + g] = min_scale;
+                for(i = w; i < w + ics->group_len[w]; i++)
+                    cpe->ch[ch].sf_idx[i*16 + g] = min_scale;
             }
-            w += ics->group_len[wg] * 16;
         }
     }
 
