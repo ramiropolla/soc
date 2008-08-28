@@ -336,7 +336,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
 
     if (s->num_blocks == 6) {
         ac3_exponent_strategy = get_bits1(gbc);
-        parse_aht_info = get_bits1(gbc);
+        parse_aht_info        = get_bits1(gbc);
     } else {
         /* less than 6 blocks, so use AC-3-style exponent strategy syntax, and
            do not use AHT */
