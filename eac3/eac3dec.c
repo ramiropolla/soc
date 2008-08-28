@@ -464,7 +464,7 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
 
     /* spectral extension attenuation data */
     if (parse_spx_atten_data) {
-        av_log_missing_feature(s->avctx, "Spectral extension", 1);
+        av_log_missing_feature(s->avctx, "Spectral extension attenuation", 1);
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             if (get_bits1(gbc)) { // channel has spx attenuation
                 skip_bits(gbc, 5); // skip spx attenuation code
