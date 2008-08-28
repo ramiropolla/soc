@@ -104,14 +104,14 @@ void ff_eac3_decode_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
         for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
             if (s->bap[ch][bin] > 7 && s->bap[ch][bin] < end_bap) {
                 if (gc++ == 2) {
-                    int group_gain = get_bits(gbc, 5);
-                    if (group_gain > 26) {
-                        av_log(s->avctx, AV_LOG_WARNING, "GAQ gain value out-of-range\n");
-                        group_gain = 26;
+                    int group_code = get_bits(gbc, 5);
+                    if (group_code > 26) {
+                        av_log(s->avctx, AV_LOG_WARNING, "GAQ gain group code out-of-range\n");
+                        group_code = 26;
                     }
-                    gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][0];
-                    gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][1];
-                    gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_gain][2];
+                    gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_code][0];
+                    gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_code][1];
+                    gaq_gain[gs++] = ff_ac3_ungroup_3_in_5_bits_tab[group_code][2];
                     gc = 0;
                 }
             }
