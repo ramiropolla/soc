@@ -2,23 +2,24 @@ diff --git a/libavcodec/Makefile b/libavcodec/Makefile
 index d4f6d1c..0ed9057 100644
 --- a/libavcodec/Makefile
 +++ b/libavcodec/Makefile
-@@ -29,6 +29,7 @@ HEADERS = avcodec.h opt.h
+@@ -25,6 +25,7 @@
  
  OBJS-$(CONFIG_ENCODERS)                += faandct.o jfdctfst.o jfdctint.o
  
 +OBJS-$(CONFIG_AAC_ENCODER)             += aacenc.o aacpsy.o aactab.o lowpass.o mdct.o fft.o mpeg4audio.o
+ OBJS-$(CONFIG_AAC_DECODER)             += aac.o aactab.o mdct.o fft.o
  OBJS-$(CONFIG_AASC_DECODER)            += aasc.o
- OBJS-$(CONFIG_AC3_DECODER)             += ac3dec.o ac3tab.o ac3.o mdct.o fft.o
- OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
+ OBJS-$(CONFIG_AC3_DECODER)             += ac3dec.o ac3tab.o ac3dec_data.o ac3.o mdct.o fft.o
 diff --git a/libavcodec/allcodecs.c b/libavcodec/allcodecs.c
 index 33a4242..6871496 100644
 --- a/libavcodec/allcodecs.c
 +++ b/libavcodec/allcodecs.c
-@@ -178,6 +178,7 @@ void avcodec_register_all(void)
+@@ -181,7 +181,7 @@
      REGISTER_ENCDEC  (ZMBV, zmbv);
  
      /* audio codecs */
-+    REGISTER_ENCODER (AAC, aac);
+-    REGISTER_DECODER (AAC, aac);
++    REGISTER_ENCDEC  (AAC, aac);
      REGISTER_ENCDEC  (AC3, ac3);
-     REGISTER_DECODER (ALAC, alac);
+     REGISTER_ENCDEC  (ALAC, alac);
      REGISTER_DECODER (APE, ape);
