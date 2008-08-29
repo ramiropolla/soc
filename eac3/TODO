@@ -8,7 +8,9 @@ Features:
       had a sample, but it was just a bug in the decoder.
 
 * Spectral Extension
-    - We do not currently have any samples which use spectral extension.
+    - We have one sample which uses spectral extension. I have implemented
+      parsing of the spx data, but not the actual band replication. This
+      allows for decoding, but results in a low cutoff frequency.
 
 * Transient Pre-Noise Cross-Fading
     - We do have a sample which contains pre-noise data.
