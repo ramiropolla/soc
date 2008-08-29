@@ -353,7 +353,6 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
 
     s->dither_flag_syntax = get_bits1(gbc);
     if (!s->dither_flag_syntax) {
-        s->dither_all = 1;
         for (ch = 1; ch <= s->fbw_channels; ch++)
             s->dither_flag[ch] = 1;
     }
