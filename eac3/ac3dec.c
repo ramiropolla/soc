@@ -852,18 +852,9 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
 
         for (ch = 1; ch <= fbw_channels; ch++) {
             if (s->channel_in_cpl[ch]) {
-                int new_cpl_coords = 0;
-
-                /* determine if coupling coordinates are new or reused */
-                if (s->eac3 && s->first_cpl_coords[ch]) {
-                    new_cpl_coords = 1;
-                    s->first_cpl_coords[ch] = 0;
-                } else {
-                    new_cpl_coords = get_bits1(gbc);
-                }
-
-                if (new_cpl_coords) {
+                if ((s->eac3 && s->first_cpl_coords[ch]) || get_bits1(gbc)) {
                     int master_cpl_coord, cpl_coord_exp, cpl_coord_mant;
+                    s->first_cpl_coords[ch] = 0;
                     cpl_coords_exist = 1;
                     master_cpl_coord = 3 * get_bits(gbc, 2);
                     for (bnd = 0; bnd < s->num_cpl_bands; bnd++) {
