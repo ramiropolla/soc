@@ -34,8 +34,6 @@
 #include "mxf.h"
 #include <wchar.h>
 
-typedef wchar_t MXFUTF16String;
-
 typedef struct {
     int local_tag;
     UID uid;
@@ -327,14 +325,17 @@ static void mxf_write_preface(AVFormatContext *s)
     put_be64(pb, 0);
 }
 
-static void mxf_write_utf16string(ByteIOContext *pb, const MXFUTF16String *value)
+
+static void mxf_write_utf16string(ByteIOContext *pb, const char *value)
 {
-    int i, size = wcslen(value) + 1;
+    // only support ASCII type of value[i]
+    int i, size = strlen(value);
     for (i = 0; i < size; i++)
     {
-        put_byte(pb, (value[i] >> 8) & 0xff);
-        put_byte(pb, value[i] & 0xff);
+        put_byte(pb, 0);
+        put_byte(pb, value[i]);
     }
+    put_be16(pb, 0);
 }
 
 static void mxf_write_identification(AVFormatContext *s)
@@ -344,14 +345,14 @@ static void mxf_write_identification(AVFormatContext *s)
 
     mxf_write_metadata_key(pb, 0x013000);
     PRINT_KEY(s, "identification key", pb->buf_ptr - 16);
-    company_name_len = (wcslen(L"FFmpeg") + 1) * 2;
-    product_name_len = (wcslen(L"OP1a Muxer") + 1) * 2;
+    company_name_len = sizeof("FFmpeg") * 2;
+    product_name_len = sizeof("OP1a Muxer") * 2;
 
     length = 80 + company_name_len + product_name_len;
     if (!(s->streams[0]->codec->flags & CODEC_FLAG_BITEXACT))
-        version_string_len = (wcslen(WCS_LIBAVFORMAT_IDENT) + 1) * 2;
+        version_string_len = sizeof(AV_STRINGIFY(LIBAVFORMAT_VERSION)) * 2;
     else
-        version_string_len = (wcslen(L"0.0.0") + 1) * 2;
+        version_string_len = sizeof("0.0.0") * 2;
 
     length += 4 + version_string_len;
     klv_encode_ber_length(pb, length);
@@ -365,16 +366,16 @@ static void mxf_write_identification(AVFormatContext *s)
     mxf_write_uuid(pb, Identification, 1);
 
     mxf_write_local_tag(pb, company_name_len, 0x3C01);
-    mxf_write_utf16string(pb, L"FFmpeg");
+    mxf_write_utf16string(pb, "FFmpeg");
 
     mxf_write_local_tag(pb, product_name_len, 0x3C02);
-    mxf_write_utf16string(pb, L"OP1a Muxer");
+    mxf_write_utf16string(pb, "OP1a Muxer");
 
     mxf_write_local_tag(pb, version_string_len, 0x3C04);
     if (!(s->streams[0]->codec->flags & CODEC_FLAG_BITEXACT))
-        mxf_write_utf16string(pb, WCS_LIBAVFORMAT_IDENT);
+        mxf_write_utf16string(pb, AV_STRINGIFY(LIBAVFORMAT_VERSION));
     else
-        mxf_write_utf16string(pb, L"0.0.0");
+        mxf_write_utf16string(pb, "0.0.0");
 
     // write product uid
     mxf_write_local_tag(pb, 16, 0x3C05);
