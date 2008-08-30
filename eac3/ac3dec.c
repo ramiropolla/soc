@@ -1018,7 +1018,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             /* run last 2 bit allocation stages for coupling channel if
                coupling leak changes */
             if(blk && (fl != s->bit_alloc_params.cpl_fast_leak ||
-                    sl != s->bit_alloc_params.cpl_slow_leak)) {
+                       sl != s->bit_alloc_params.cpl_slow_leak)) {
             bit_alloc_stages[CPL_CH] = FFMAX(bit_alloc_stages[CPL_CH], 2);
             }
             s->bit_alloc_params.cpl_fast_leak = fl;
