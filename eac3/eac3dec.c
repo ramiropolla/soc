@@ -102,7 +102,7 @@ void ff_eac3_decode_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
         /* read 1.67-bit GAQ gain codes (3 codes in 5 bits) */
         int gc = 2;
         for (bin = s->start_freq[ch]; bin < s->end_freq[ch]; bin++) {
-            if (s->bap[ch][bin] > 7 && s->bap[ch][bin] < end_bap) {
+            if (s->bap[ch][bin] > 7 && s->bap[ch][bin] < 17) {
                 if (gc++ == 2) {
                     int group_code = get_bits(gbc, 5);
                     if (group_code > 26) {
