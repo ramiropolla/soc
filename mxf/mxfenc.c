@@ -324,6 +324,19 @@ static void mxf_write_preface(AVFormatContext *s)
     put_be64(pb, 0);
 }
 
+
+static void mxf_write_utf16string(ByteIOContext *pb, const char *value)
+{
+    // only support ASCII type of value[i]
+    int i, size = strlen(value);
+    for (i = 0; i < size; i++)
+    {
+        put_byte(pb, 0);
+        put_byte(pb, value[i]);
+    }
+    put_be16(pb, 0);
+}
+
 static void mxf_write_identification(AVFormatContext *s)
 {
     ByteIOContext *pb = s->pb;
@@ -331,14 +344,16 @@ static void mxf_write_identification(AVFormatContext *s)
 
     mxf_write_metadata_key(pb, 0x013000);
     PRINT_KEY(s, "identification key", pb->buf_ptr - 16);
-    company_name_len = sizeof("FFmpeg");
-    product_name_len = sizeof("OP1a Muxer");
+    company_name_len = sizeof("FFmpeg") * 2;
+    product_name_len = sizeof("OP1a Muxer") * 2;
 
     length = 80 + company_name_len + product_name_len;
-    if (!(s->streams[0]->codec->flags & CODEC_FLAG_BITEXACT)) {
-        version_string_len = sizeof(LIBAVFORMAT_IDENT);
+    if (!(s->streams[0]->codec->flags & CODEC_FLAG_BITEXACT))
+        version_string_len = sizeof(AV_STRINGIFY(LIBAVFORMAT_VERSION)) * 2;
+    else
+        version_string_len = sizeof("0.0.0") * 2;
+
         length += 4 + version_string_len;
-    }
     klv_encode_ber_length(pb, length);
 
     // write uid
@@ -350,15 +365,16 @@ static void mxf_write_identification(AVFormatContext *s)
     mxf_write_uuid(pb, Identification, 1);
 
     mxf_write_local_tag(pb, company_name_len, 0x3C01);
-    put_buffer(pb, "FFmpeg", company_name_len);
+    mxf_write_utf16string(pb, "FFmpeg");
 
     mxf_write_local_tag(pb, product_name_len, 0x3C02);
-    put_buffer(pb, "OP1a Muxer", product_name_len);
+    mxf_write_utf16string(pb, "OP1a Muxer");
 
-    if (!(s->streams[0]->codec->flags & CODEC_FLAG_BITEXACT)) {
         mxf_write_local_tag(pb, version_string_len, 0x3C04);
-        put_buffer(pb, LIBAVFORMAT_IDENT, version_string_len);
-    }
+    if (!(s->streams[0]->codec->flags & CODEC_FLAG_BITEXACT))
+        mxf_write_utf16string(pb, AV_STRINGIFY(LIBAVFORMAT_VERSION));
+    else
+        mxf_write_utf16string(pb, "0.0.0");
 
     // write product uid
     mxf_write_local_tag(pb, 16, 0x3C05);
