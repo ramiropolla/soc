@@ -131,7 +131,7 @@ void ff_eac3_decode_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch)
             /* Vector Quantization */
             int v = get_bits(gbc, bits);
             for (blk = 0; blk < 6; blk++) {
-                s->pre_mantissa[ch][bin][blk] = ff_eac3_vq_hebap[hebap][v][blk] << 8;
+                s->pre_mantissa[ch][bin][blk] = ff_eac3_mantissa_vq[hebap][v][blk] << 8;
             }
         } else {
             /* Gain Adaptive Quantization */
@@ -399,9 +399,8 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
         }
     } else {
         /* LUT-based exponent strategy syntax */
-        int frmchexpstr;
         for (ch = !((s->channel_mode > 1) && num_cpl_blocks); ch <= s->fbw_channels; ch++) {
-            frmchexpstr = get_bits(gbc, 5);
+            int frmchexpstr = get_bits(gbc, 5);
             for (blk = 0; blk < 6; blk++) {
                 s->exp_strategy[blk][ch] = ff_eac3_frm_expstr[frmchexpstr][blk];
             }
@@ -416,28 +415,26 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     /* original exponent strategies if this stream was converted from AC-3 */
     if (s->frame_type == EAC3_FRAME_TYPE_INDEPENDENT &&
             (s->num_blocks == 6 || get_bits1(gbc))) {
-        for (ch = 1; ch <= s->fbw_channels; ch++) {
-            skip_bits(gbc, 5); // skip converter channel exponent strategy
-        }
+        skip_bits(gbc, 5 * s->fbw_channels); // skip converter channel exponent strategy
     }
 
     /* determine which channels use AHT */
     if (parse_aht_info) {
-        /* AHT is only available when there are 6 blocks in the frame.
-           The coupling channel can only use AHT when coupling is in use for
-           all blocks.
-           reference: Section E3.3.2 Bit Stream Helper Variables */
+        /* For AHT to be used, all non-zero blocks must reuse exponents from
+           the first block.  Furthermore, for AHT to be used in the coupling
+           channel, all blocks must use coupling and use the same coupling
+           strategy. */
         s->channel_uses_aht[CPL_CH]=0;
         for (ch = (num_cpl_blocks != 6); ch <= s->channels; ch++) {
-            int nchregs = 0;
-            for (blk = 0; blk < 6; blk++) {
-                if (ch)
-                    nchregs += (s->exp_strategy[blk][ch] != EXP_REUSE);
-                else
-                    nchregs += s->cpl_strategy_exists[blk] ||
-                               (s->exp_strategy[blk][CPL_CH] != EXP_REUSE);
+            int use_aht = 1;
+            for (blk = 1; blk < 6; blk++) {
+                if ((s->exp_strategy[blk][ch] != EXP_REUSE) ||
+                        (!ch && s->cpl_strategy_exists[blk])) {
+                    use_aht = 0;
+                    break;
+                }
             }
-            s->channel_uses_aht[ch] = (nchregs == 1) && get_bits1(gbc);
+            s->channel_uses_aht[ch] = use_aht && get_bits1(gbc);
         }
     } else {
         memset(s->channel_uses_aht, 0, sizeof(s->channel_uses_aht));
