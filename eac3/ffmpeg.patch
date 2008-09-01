@@ -9,7 +9,7 @@ Index: libavcodec/ac3dec.h
 +///@defgroup spx spectral extension
 +    int spx_in_use[MAX_BLOCKS];             ///< spectral extension in use              (spxinu)
 +    int channel_in_spx[AC3_MAX_CHANNELS];   ///< channel in spectral extension          (chinspx)
-+    int spx_begin_band;                     ///< spx beginning frequency band           (spxbegf)
++    int spx_start_subband;                  ///< spx beginning frequency band           (spxbegf)
 +    int spx_start_freq;                     ///< spx start frequency bin
 +    int num_spx_bands;                      ///< number of spectral extension bands     (nspxbnds)
 +    uint8_t spx_band_struct[17];            ///< spectral extension band structure      (spxbndstrc)
