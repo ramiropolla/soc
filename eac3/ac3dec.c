@@ -795,8 +795,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
     if (s->eac3 && (!blk || get_bits1(gbc))) {
         s->spx_in_use[blk] = get_bits1(gbc);
         if (s->spx_in_use[blk]) {
-            static const uint8_t spx_begf_remap_tab[8] = { 2, 3, 4, 5,  6,  7,  9, 11 };
-            static const uint8_t spx_endf_remap_tab[8] = { 5, 6, 7, 8, 11, 13, 15, 17 };
+            int begf, endf;
             int spx_end_subband;
 
             /* determine which channels use spx */
@@ -808,8 +807,10 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             }
 
             skip_bits(gbc, 2); // skip spx start copy freq
-            s->spx_start_subband = spx_begf_remap_tab[get_bits(gbc, 3)];
-            spx_end_subband      = spx_endf_remap_tab[get_bits(gbc, 3)];
+            begf = get_bits(gbc, 3);
+            endf = get_bits(gbc, 3);
+            s->spx_start_subband = begf < 6 ? begf+2 : 2*begf-3;
+            spx_end_subband      = endf < 4 ? endf+5 : 2*endf+3;
             s->spx_start_freq    = s->spx_start_subband * 12 + 25;
 
             decode_band_structure(gbc, blk, s->eac3, s->spx_start_subband,
