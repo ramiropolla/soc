@@ -711,6 +711,43 @@ static void ac3_upmix_delay(AC3DecodeContext *s)
 }
 
 /**
+ * Decode band structure.
+ * Common function used for spectral extension and coupling. Will also be
+ * usable for enhanced coupling in the future.
+ */
+static void decode_band_structure(GetBitContext *gbc, int blk, int eac3,
+                                  int start_subband, int end_subband,
+                                  const uint8_t *default_band_struct,
+                                  uint8_t *band_struct, int *num_subbands,
+                                  int *num_bands)
+{
+    int bnd, n_subbands, n_bands;
+
+    n_subbands = n_bands = end_subband - start_subband;
+
+    if (!eac3 || get_bits1(gbc)) {
+        for (bnd = 0; bnd < n_subbands - 1; bnd++) {
+            band_struct[bnd] = get_bits1(gbc);
+        }
+    } else if (!blk) {
+        memcpy(band_struct,
+               &default_band_struct[start_subband+1],
+               n_subbands-1);
+    }
+    band_struct[n_subbands-1] = 0;
+
+    /* calculate number of bands based on band structure */
+    for (bnd = 0; bnd < n_subbands-1; bnd++) {
+        n_bands -= band_struct[bnd];
+    }
+
+    if (num_subbands)
+        *num_subbands = n_subbands;
+    if (num_bands)
+        *num_bands = n_bands;
+}
+
+/**
  * Decode a single audio block from the AC-3 bitstream.
  */
 static int decode_audio_block(AC3DecodeContext *s, int blk)
@@ -760,7 +797,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         if (s->spx_in_use[blk]) {
             static const uint8_t spx_begf_remap_tab[8] = { 2, 3, 4, 5,  6,  7,  9, 11 };
             static const uint8_t spx_endf_remap_tab[8] = { 5, 6, 7, 8, 11, 13, 15, 17 };
-            int spx_end_band, num_spx_subbands;
+            int spx_end_band;
 
             /* determine which channels use spx */
             if (s->channel_mode == AC3_CHMODE_MONO) {
@@ -773,25 +810,11 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             skip_bits(gbc, 2); // skip spx start copy freq
             s->spx_begin_band = spx_begf_remap_tab[get_bits(gbc, 3)];
             spx_end_band      = spx_endf_remap_tab[get_bits(gbc, 3)];
-            num_spx_subbands  = s->num_spx_bands = spx_end_band - s->spx_begin_band;
             s->spx_start_freq = s->spx_begin_band * 12 + 25;
 
-            /* spectral extension band structure */
-            if (get_bits1(gbc)) {
-                for (bnd = 0; bnd < num_spx_subbands - 1; bnd++) {
-                    s->spx_band_struct[bnd] = get_bits1(gbc);
-                }
-            } else if (!blk) {
-                memcpy(s->spx_band_struct,
-                       &ff_eac3_default_spx_band_struct[s->spx_begin_band+1],
-                       num_spx_subbands-1);
-            }
-            s->spx_band_struct[num_spx_subbands-1] = 0;
-
-            /* calculate number of spx bands based on band structure */
-            for (bnd = 0; bnd < num_spx_subbands-1; bnd++) {
-                s->num_spx_bands -= s->spx_band_struct[bnd];
-            }
+            decode_band_structure(gbc, blk, s->eac3, s->spx_begin_band,
+                                  spx_end_band, ff_eac3_default_spx_band_struct,
+                                  s->spx_band_struct, NULL, &s->num_spx_bands);
         } else {
             for (ch = 1; ch <= fbw_channels; ch++) {
                 s->channel_in_spx[ch] = 0;
@@ -867,26 +890,13 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                 av_log(s->avctx, AV_LOG_ERROR, "cplendf = %d < cplbegf = %d\n", cpl_end_freq, cpl_begin_freq);
                 return -1;
             }
-            s->num_cpl_bands = s->num_cpl_subbands = cpl_end_freq - cpl_begin_freq;
             s->start_freq[CPL_CH] = cpl_begin_freq * 12 + 37;
             s->end_freq  [CPL_CH] = cpl_end_freq   * 12 + 37;
 
-            /* coupling band structure */
-            if (!s->eac3 || get_bits1(gbc)) {
-                for (bnd = 0; bnd < s->num_cpl_subbands - 1; bnd++) {
-                    s->cpl_band_struct[bnd] = get_bits1(gbc);
-                }
-            } else if (!blk) {
-                memcpy(s->cpl_band_struct,
-                       &ff_eac3_default_cpl_band_struct[cpl_begin_freq+1],
-                       s->num_cpl_subbands-1);
-            }
-            s->cpl_band_struct[s->num_cpl_subbands-1] = 0;
-
-            /* calculate number of coupling bands based on band structure */
-            for (bnd = 0; bnd < s->num_cpl_subbands-1; bnd++) {
-                s->num_cpl_bands -= s->cpl_band_struct[bnd];
-            }
+            decode_band_structure(gbc, blk, s->eac3, cpl_begin_freq,
+                                  cpl_end_freq, ff_eac3_default_cpl_band_struct,
+                                  s->cpl_band_struct, &s->num_cpl_subbands,
+                                  &s->num_cpl_bands);
         } else {
             /* coupling not in use */
             for (ch = 1; ch <= fbw_channels; ch++) {
