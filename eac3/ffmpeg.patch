@@ -1,0 +1,50 @@
+Index: libavcodec/ac3dec.h
+===================================================================
+--- libavcodec/ac3dec.h	(revision 15141)
++++ libavcodec/ac3dec.h	(working copy)
+@@ -88,6 +88,16 @@
+     int cpl_coords[AC3_MAX_CHANNELS][18];   ///< coupling coordinates                   (cplco)
+ ///@}
+ 
++///@defgroup spx spectral extension
++    int spx_in_use[MAX_BLOCKS];             ///< spectral extension in use              (spxinu)
++    int channel_in_spx[AC3_MAX_CHANNELS];   ///< channel in spectral extension          (chinspx)
++    int spx_begin_band;                     ///< spx beginning frequency band           (spxbegf)
++    int spx_start_freq;                     ///< spx start frequency bin
++    int num_spx_bands;                      ///< number of spectral extension bands     (nspxbnds)
++    uint8_t spx_band_struct[17];            ///< spectral extension band structure      (spxbndstrc)
++    int first_spx_coords[AC3_MAX_CHANNELS]; ///< first spx coordinates states           (firstspxcos)
++///@}
++
+ ///@defgroup aht adaptive hybrid transform
+     int channel_uses_aht[AC3_MAX_CHANNELS];                         ///< channel AHT in use (chahtinu)
+     int pre_mantissa[AC3_MAX_CHANNELS][AC3_MAX_COEFS][MAX_BLOCKS];  ///< pre-IDCT mantissas
+Index: libavcodec/ac3dec_data.c
+===================================================================
+--- libavcodec/ac3dec_data.c	(revision 15141)
++++ libavcodec/ac3dec_data.c	(working copy)
+@@ -1128,6 +1128,12 @@
+ { 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1 };
+ 
+ /**
++ * Table E2.15 Default Spectral Extension Banding Structure
++ */
++const uint8_t ff_eac3_default_spx_band_struct[17] =
++{ 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 };
++
++/**
+  * Table of bin locations for rematrixing bands
+  * reference: Section 7.5.2 Rematrixing : Frequency Band Definitions
+  */
+Index: libavcodec/ac3dec_data.h
+===================================================================
+--- libavcodec/ac3dec_data.h	(revision 15141)
++++ libavcodec/ac3dec_data.h	(working copy)
+@@ -34,6 +34,7 @@
+ extern const int16_t (*ff_eac3_mantissa_vq[8])[6];
+ extern const uint8_t ff_eac3_frm_expstr[32][6];
+ extern const uint8_t ff_eac3_default_cpl_band_struct[18];
++extern const uint8_t ff_eac3_default_spx_band_struct[17];
+ 
+ extern const uint8_t ff_ac3_rematrix_band_tab[5];
+ 
