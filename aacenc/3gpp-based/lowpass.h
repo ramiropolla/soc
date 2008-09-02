@@ -24,8 +24,8 @@
  * lowpass filter interface
  */
 
-#ifndef FFMPEG_LOWPASS_H
-#define FFMPEG_LOWPASS_H
+#ifndef AVCODEC_LOWPASS_H
+#define AVCODEC_LOWPASS_H
 
 #include "avcodec.h"
 
@@ -78,4 +78,4 @@ void ff_lowpass_filter_free_state(struct FFLPFilterState *state);
  */
 void ff_lowpass_filter(const struct FFLPFilterCoeffs *coeffs, struct FFLPFilterState *state, int size, int16_t *src, int sstep, int16_t *dst, int dstep);
 
-#endif /* FFMPEG_LOWPASS_H */
+#endif /* AVCODEC_LOWPASS_H */

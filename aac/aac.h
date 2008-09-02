@@ -27,8 +27,8 @@
  * @author Maxim Gavrilov ( maxim.gavrilov gmail com )
  */
 
-#ifndef FFMPEG_AAC_H
-#define FFMPEG_AAC_H
+#ifndef AVCODEC_AAC_H
+#define AVCODEC_AAC_H
 
 /**
  * AAC SSR (Scalable Sample Rate) is currently not working, and therefore
@@ -339,4 +339,4 @@ typedef struct {
 
 } AACContext;
 
-#endif /* FFMPEG_AAC_H */
+#endif /* AVCODEC_AAC_H */

@@ -23,8 +23,8 @@
  * MPEG PES packetizer API header
  */
 
-#ifndef FFMPEG_MPEGPES_H
-#define FFMPEG_MPEGPES_H
+#ifndef AVFORMAT_MPEGPES_H
+#define AVFORMAT_MPEGPES_H
 
 #include "avformat.h"
 #include "libavutil/fifo.h"
@@ -136,4 +136,4 @@ int ff_pes_write_buf(AVFormatContext *ctx, int stream_index, uint8_t *buf,
  */
 int ff_pes_remove_decoded_packets(AVFormatContext *ctx, int64_t scr);
 
-#endif /* FFMPEG_MPEGPES_H */
+#endif /* AVFORMAT_MPEGPES_H */
