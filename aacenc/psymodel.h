@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef FFMPEG_PSYMODEL_H
-#define FFMPEG_PSYMODEL_H
+#ifndef AVCODEC_PSYMODEL_H
+#define AVCODEC_PSYMODEL_H
 
 #include "avcodec.h"
 
@@ -155,4 +155,4 @@ void ff_psy_preprocess(struct FFPsyPreprocessContext *ctx,
  */
 av_cold void ff_psy_preprocess_end(struct FFPsyPreprocessContext *ctx);
 
-#endif /* FFMPEG_PSYMODEL_H */
+#endif /* AVCODEC_PSYMODEL_H */
