@@ -26,7 +26,7 @@
 
 /***********************************
  *              TODOs:
- * psy model selection with some option
+ * speedup quantizer selection
  * add sane pulse detection
  * add temporal noise shaping
  ***********************************/
@@ -36,9 +36,10 @@
 #include "dsputil.h"
 #include "mpeg4audio.h"
 
-#include "aacpsy.h"
 #include "aac.h"
 #include "aactab.h"
+
+#include "psymodel.h"
 
 static const uint8_t swb_size_1024_96[] = {
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8,
@@ -192,7 +193,9 @@ typedef struct {
     int samplerate_index;                        ///< MPEG-4 samplerate index
 
     ChannelElement *cpe;                         ///< channel elements
-    AACPsyContext psy;                           ///< psychoacoustic model context
+    FFPsyContext psy;
+    struct FFPsyPreprocessContext* psypp;
+    int cur_channel;
     int last_frame;
 } AACEncContext;
 
@@ -220,6 +223,8 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
 {
     AACEncContext *s = avctx->priv_data;
     int i;
+    const uint8_t *sizes[2];
+    int lengths[2];
 
     avctx->frame_size = 1024;
 
@@ -247,15 +252,22 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
 
     s->samples = av_malloc(2 * 1024 * avctx->channels * sizeof(s->samples[0]));
     s->cpe = av_mallocz(sizeof(ChannelElement) * aac_chan_configs[avctx->channels-1][0]);
-    if(ff_aac_psy_init(&s->psy, avctx, AAC_PSY_3GPP,
-                       aac_chan_configs[avctx->channels-1][0], 0,
-                       swb_size_1024[i], ff_aac_num_swb_1024[i], swb_size_128[i], ff_aac_num_swb_128[i]) < 0){
-        av_log(avctx, AV_LOG_ERROR, "Cannot initialize selected model.\n");
-        return -1;
-    }
     avctx->extradata = av_malloc(2);
     avctx->extradata_size = 2;
     put_audio_specific_config(avctx);
+
+    sizes[0] = swb_size_1024[i];
+    sizes[1] = swb_size_128[i];
+    lengths[0] = ff_aac_num_swb_1024[i];
+    lengths[1] = ff_aac_num_swb_128[i];
+    ff_psy_init(&s->psy, avctx, 2, sizes, lengths);
+    s->psypp = ff_psy_preprocess_init(avctx);
+
+#ifndef CONFIG_HARDCODED_TABLES
+    for (i = 0; i < 316; i++)
+        ff_aac_pow2sf_tab[i] = pow(2, (i - 200)/4.);
+#endif /* CONFIG_HARDCODED_TABLES */
+
     return 0;
 }
 
@@ -348,6 +360,65 @@ static void encode_ms_info(PutBitContext *pb, ChannelElement *cpe)
                 put_bits(pb, 1, cpe->ms_mask[w*16 + i]);
         }
     }
+}
+
+/**
+ * Quantize one coefficient.
+ * @return absolute value of the quantized coefficient
+ * @see 3GPP TS26.403 5.6.2 "Scalefactor determination"
+ */
+static av_always_inline int quant(float coef, const float Q)
+{
+    return av_clip((int)(pow(fabsf(coef) * Q, 0.75) + 0.4054), 0, 8191);
+}
+
+static inline float get_approximate_quant_error(const float *q, const int *c, int size, int scale_idx)
+{
+    int i;
+    float coef, unquant, sum = 0.0f;
+    const float IQ = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
+    for(i = 0; i < size; i++){
+        coef = fabsf(q[i]);
+        unquant = (c[i] * cbrt(c[i])) * IQ;
+        sum += (coef - unquant) * (coef - unquant);
+    }
+    return sum * 1.0;
+}
+
+/**
+ * Convert coefficients to integers.
+ * @fixme make it RD-optimal
+ * @return sum of coefficient absolute values
+ */
+static inline int quantize_band(const float *in, int *out, int size, int scale_idx)
+{
+    int i, sign, sum = 0;
+    const float Q = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
+    for(i = 0; i < size; i++){
+        sign = in[i] > 0.0;
+        out[i] = quant(in[i], Q);
+        sum += out[i];
+        if(sign) out[i] = -out[i];
+    }
+    return sum;
+}
+
+static inline int get_approximate_bits(const int *in, int size)
+{
+    int i, bits = 0;
+    for(i = 0; i < size; i += 2){
+        int j, idx = 0;
+        for(j = 0; j < 2; j++){
+            int t = FFABS(in[i+j]);
+            if(t)
+                bits++;
+            if(t > 16)
+                bits += av_log2(t)*2 + 4 - 1;
+            idx = idx*17 + FFMIN(t, 16);
+        }
+        bits += ff_aac_spectral_bits[ESC_BT-1][idx];
+    }
+    return bits;
 }
 
 /**
@@ -525,6 +596,178 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
 }
 
 /**
+ * Produce integer coefficients from scalefactors provided by the model.
+ */
+static void quantize_coeffs(AACEncContext *apc, ChannelElement *cpe, int chans)
+{
+    int i, w, w2, g, ch;
+    int start, sum, maxsfb, cmaxsfb;
+
+    for(ch = 0; ch < chans; ch++){
+        IndividualChannelStream *ics = &cpe->ch[ch].ics;
+        start = 0;
+        maxsfb = 0;
+        cpe->ch[ch].pulse.num_pulse = 0;
+        for(w = 0; w < ics->num_windows*16; w += 16){
+            for(g = 0; g < ics->num_swb; g++){
+                sum = 0;
+                //apply M/S
+                if(!ch && cpe->ms_mask[w + g]){
+                    for(i = 0; i < ics->swb_sizes[g]; i++){
+                        cpe->ch[0].coeffs[start+i] = (cpe->ch[0].coeffs[start+i] + cpe->ch[1].coeffs[start+i]) / 2.0;
+                        cpe->ch[1].coeffs[start+i] =  cpe->ch[0].coeffs[start+i] - cpe->ch[1].coeffs[start+i];
+                    }
+                }
+                if(!cpe->ch[ch].zeroes[w + g])
+                    sum = quantize_band(cpe->ch[ch].coeffs + start,
+                                        cpe->ch[ch].icoefs + start,
+                                        ics->swb_sizes[g],
+                                        cpe->ch[ch].sf_idx[w + g]);
+                else
+                    memset(cpe->ch[ch].icoefs + start, 0, ics->swb_sizes[g] * sizeof(cpe->ch[0].icoefs[0]));
+                cpe->ch[ch].zeroes[w + g] = !sum;
+                start += ics->swb_sizes[g];
+            }
+            for(cmaxsfb = ics->num_swb; cmaxsfb > 0 && cpe->ch[ch].zeroes[w+cmaxsfb-1]; cmaxsfb--);
+            maxsfb = FFMAX(maxsfb, cmaxsfb);
+        }
+        ics->max_sfb = maxsfb;
+
+        //adjust zero bands for window groups
+        for(w = 0; w < ics->num_windows; w += ics->group_len[w]){
+            for(g = 0; g < ics->max_sfb; g++){
+                i = 1;
+                for(w2 = w; w2 < w + ics->group_len[w]; w2++){
+                    if(!cpe->ch[ch].zeroes[w2*16 + g]){
+                        i = 0;
+                        break;
+                    }
+                }
+                cpe->ch[ch].zeroes[w*16 + g] = i;
+            }
+        }
+    }
+
+    if(chans > 1 && cpe->common_window){
+        IndividualChannelStream *ics0 = &cpe->ch[0].ics;
+        IndividualChannelStream *ics1 = &cpe->ch[1].ics;
+        int msc = 0;
+        ics0->max_sfb = FFMAX(ics0->max_sfb, ics1->max_sfb);
+        ics1->max_sfb = ics0->max_sfb;
+        for(w = 0; w < ics0->num_windows*16; w += 16)
+            for(i = 0; i < ics0->max_sfb; i++)
+                if(cpe->ms_mask[w+i]) msc++;
+        if(msc == 0 || ics0->max_sfb == 0) cpe->ms_mode = 0;
+        else cpe->ms_mode = msc < ics0->max_sfb ? 1 : 2;
+    }
+}
+
+typedef struct TrellisPath {
+    float cost;
+    int prev;
+} TrellisPath;
+
+static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
+{
+    int q, w, g, start = 0;
+    int i;
+    int qcoeffs[128];
+    int idx;
+    TrellisPath paths[256*128];
+    int bandaddr[128];
+    const float lambda = 5e-7f;
+    int minq = 0;
+    float mincost;
+    int stack[128], sptr = 0;
+
+    for(i = 0; i < 256; i++){
+        paths[i].cost = 0.0f;
+        paths[i].prev = -1;
+    }
+    for(i = 256; i < 256*128; i++){
+        paths[i].cost = INFINITY;
+        paths[i].prev = -2;
+    }
+    idx = 256;
+    for(w = 0; w < sce->ics.num_windows*16; w += 16){
+        for(g = 0; g < sce->ics.num_swb; g++){
+            const float *coefs = sce->coeffs + start;
+            float qmin, qmax, invthr;
+            int minscale, maxscale;
+            FFPsyBand *band = &s->psy.psy_bands[s->cur_channel*PSY_MAX_BANDS+w+g];
+
+            bandaddr[idx >> 8] = w+g;
+            if(band->energy <= band->threshold){
+                sce->zeroes[w+g] = 1;
+                for(q = 0; q < 256; q++){
+                    for(i = FFMAX(q - SCALE_MAX_DIFF, 0); i < FFMIN(q + SCALE_MAX_DIFF, 256); i++){
+                        float cost;
+                        if(isinf(paths[idx - 256 + i].cost))
+                            continue;
+                        cost = paths[idx - 256 + i].cost + ff_aac_scalefactor_bits[q - i + SCALE_DIFF_ZERO];
+                        if(cost < paths[idx + q].cost){
+                            paths[idx + q].cost = cost;
+                            paths[idx + q].prev = idx - 256 + i;
+                        }
+                    }
+                }
+                start += sce->ics.swb_sizes[g];
+                idx += 256;
+                continue;
+            }
+            sce->zeroes[w+g] = 0;
+            qmin = qmax = fabsf(coefs[0]);
+            if(qmin == 0.0f) qmin = INT_MAX;
+            for(i = 1; i < sce->ics.swb_sizes[g]; i++){
+                float t = fabsf(coefs[i]);
+                if(t > 0.0f) qmin = fminf(qmin, t);
+                qmax = fmaxf(qmax, t);
+            }
+            //minimum scalefactor index is when mininum nonzero coefficient after quantizing is not clipped
+            minscale = av_clip_uint8(log2(qmin)*4 - 69 + SCALE_ONE_POS - SCALE_DIV_512);
+            //maximum scalefactor index is when maximum coefficient after quantizing is still not zero
+            maxscale = av_clip_uint8(log2(qmax)*4 +  6 + SCALE_ONE_POS - SCALE_DIV_512);
+            invthr = (band->threshold == 0.0f) ? INFINITY : 1.0 / band->threshold;
+            for(q = minscale; q < maxscale; q++){
+                float dist;
+                int bits, sum;
+                sum = quantize_band(coefs, qcoeffs, sce->ics.swb_sizes[g], q);
+                dist = get_approximate_quant_error(coefs, qcoeffs, sce->ics.swb_sizes[g], q);
+                bits = get_approximate_bits(qcoeffs, sce->ics.swb_sizes[g]);
+                for(i = FFMAX(q - SCALE_MAX_DIFF, 0); i < FFMIN(q + SCALE_MAX_DIFF, 256); i++){
+                    float cost;
+                    if(isinf(paths[idx - 256 + i].cost))
+                        continue;
+                    cost = paths[idx - 256 + i].cost + dist * invthr * lambda + bits
+                           + ff_aac_scalefactor_bits[q - i + SCALE_DIFF_ZERO];
+                    if(cost < paths[idx + q].cost){
+                        paths[idx + q].cost = cost;
+                        paths[idx + q].prev = idx - 256 + i;
+                    }
+                }
+            }
+            start += sce->ics.swb_sizes[g];
+            idx += 256;
+        }
+    }
+    idx -= 256;
+    mincost = paths[idx].cost;
+    for(i = 1; i < 256; i++){
+        if(paths[idx + i].cost < mincost){
+            mincost = paths[idx + i].cost;
+            minq = idx + i;
+        }
+    }
+    while(minq >= 0){
+        stack[sptr++] = minq;
+        minq = paths[minq].prev;
+    }
+    for(i = sptr - 2; i >= 0; i--){
+        sce->sf_idx[bandaddr[stack[i]>>8]] = stack[i]&0xFF;
+    }
+}
+
+/**
  * Encode the coefficients of one scalefactor band with selected codebook.
  */
 static void encode_band_coeffs(AACEncContext *s, SingleChannelElement *sce,
@@ -600,9 +843,9 @@ static void encode_band_info(AACEncContext *s, SingleChannelElement *sce)
 /**
  * Encode scalefactors.
  */
-static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, SingleChannelElement *sce, int global_gain)
+static void encode_scale_factors(AVCodecContext *avctx, AACEncContext *s, SingleChannelElement *sce)
 {
-    int off = global_gain, diff;
+    int off = sce->sf_idx[0], diff;
     int i, w;
 
     for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w]){
@@ -664,36 +907,10 @@ static void encode_spectral_coeffs(AACEncContext *s, SingleChannelElement *sce)
  */
 static int encode_individual_channel(AVCodecContext *avctx, AACEncContext *s, SingleChannelElement *sce, int common_window)
 {
-    int g, w;
-    int global_gain, last = 256;
-
-    //determine global gain as standard recommends - the first scalefactor value
-    //and assign an appropriate scalefactor index to empty bands
-    for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w]){
-        for(g = sce->ics.max_sfb - 1; g >= 0; g--){
-            if(sce->sf_idx[w*16 + g] == 256)
-                sce->sf_idx[w*16 + g] = last;
-            else
-                last = sce->sf_idx[w*16 + g];
-        }
-    }
-    //make sure global gain won't be 256
-    last &= 0xFF;
-    global_gain = last;
-    //assign scalefactor index to tail bands in case encoder decides to code them
-    for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w]){
-        for(g = 0; g < sce->ics.max_sfb; g++){
-            if(sce->sf_idx[w*16 + g] == 256)
-                sce->sf_idx[w*16 + g] = last;
-            else
-                last = sce->sf_idx[w*16 + g];
-        }
-    }
-
-    put_bits(&s->pb, 8, global_gain);
+    put_bits(&s->pb, 8, sce->sf_idx[0]);
     if(!common_window) put_ics_info(s, &sce->ics);
     encode_band_info(s, sce);
-    encode_scale_factors(avctx, s, sce, global_gain);
+    encode_scale_factors(avctx, s, sce);
     encode_pulses(s, &sce->pulse);
     put_bits(&s->pb, 1, 0); //tns
     put_bits(&s->pb, 1, 0); //ssr
@@ -734,7 +951,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
     if(s->last_frame)
         return 0;
     if(data){
-        if((s->psy.flags & PSY_MODEL_NO_PREPROC) == PSY_MODEL_NO_PREPROC){
+        if(!s->psypp){
             memcpy(s->samples + 1024 * avctx->channels, data, 1024 * avctx->channels * sizeof(s->samples[0]));
         }else{
             start_ch = 0;
@@ -742,7 +959,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
             for(i = 0; i < chan_map[0]; i++){
                 tag = chan_map[i+1];
                 chans = tag == TYPE_CPE ? 2 : 1;
-                ff_aac_psy_preprocess(&s->psy, (uint16_t*)data + start_ch, samples2 + start_ch, i, tag);
+                ff_psy_preprocess(s->psypp, (uint16_t*)data + start_ch, samples2 + start_ch, start_ch + i, chans);
                 start_ch += chans;
             }
         }
@@ -759,17 +976,44 @@ static int aac_encode_frame(AVCodecContext *avctx,
     start_ch = 0;
     memset(chan_el_counter, 0, sizeof(chan_el_counter));
     for(i = 0; i < chan_map[0]; i++){
+        FFPsyWindowInfo wi[2];
         tag = chan_map[i+1];
         chans = tag == TYPE_CPE ? 2 : 1;
         cpe = &s->cpe[i];
         samples2 = samples + start_ch;
         la = samples2 + 1024 * avctx->channels + start_ch;
         if(!data) la = NULL;
-        ff_aac_psy_suggest_window(&s->psy, samples2, la, i, tag, cpe);
         for(j = 0; j < chans; j++){
+            IndividualChannelStream *ics = &cpe->ch[j].ics;
+            int k;
+            wi[j] = ff_psy_suggest_window(&s->psy, samples2, la, start_ch + j, ics->window_sequence[0]);
+            ics->window_sequence[1] = ics->window_sequence[0];
+            ics->window_sequence[0] = wi[j].window_type[0];
+            ics->use_kb_window[1]   = ics->use_kb_window[0];
+            ics->use_kb_window[0]   = wi[j].window_shape;
+            ics->num_windows        = wi[j].num_windows;
+            ics->swb_sizes          = s->psy.bands    [ics->num_windows == 8];
+            ics->num_swb            = s->psy.num_bands[ics->num_windows == 8];
+            for(k = 0; k < ics->num_windows; k++)
+                ics->group_len[k] = wi[j].grouping[k];
+
             apply_window_and_mdct(avctx, s, &cpe->ch[j], samples2, j);
+            search_for_quantizers(s, &cpe->ch[j]);
         }
-        ff_aac_psy_analyze(&s->psy, i, tag, cpe);
+        cpe->common_window = 0;
+        if(chans > 1
+            && wi[0].window_type[0] == wi[1].window_type[0]
+            && wi[0].window_shape   == wi[1].window_shape){
+
+            cpe->common_window = 1;
+            for(j = 0; j < wi[0].num_windows; j++){
+                if(wi[0].grouping[j] != wi[1].grouping[j]){
+                    cpe->common_window = 0;
+                    break;
+                }
+            }
+        }
+        quantize_coeffs(s, cpe, chans);
         put_bits(&s->pb, 3, tag);
         put_bits(&s->pb, 4, chan_el_counter[tag]++);
         if(chans == 2){
@@ -780,6 +1024,8 @@ static int aac_encode_frame(AVCodecContext *avctx,
             }
         }
         for(j = 0; j < chans; j++){
+            s->cur_channel = start_ch + j;
+            ff_psy_set_band_info(&s->psy, s->cur_channel, cpe->ch[j].coeffs, &wi[j]);
             encode_individual_channel(avctx, s, &cpe->ch[j], cpe->common_window);
         }
         start_ch += chans;
@@ -801,7 +1047,8 @@ static av_cold int aac_encode_end(AVCodecContext *avctx)
 
     ff_mdct_end(&s->mdct1024);
     ff_mdct_end(&s->mdct128);
-    ff_aac_psy_end(&s->psy);
+    ff_psy_end(&s->psy);
+    ff_psy_preprocess_end(s->psypp);
     av_freep(&s->samples);
     av_freep(&s->cpe);
     return 0;
