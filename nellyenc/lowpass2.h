@@ -21,8 +21,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef AVCODEC_LOWPASS_H
-#define AVCODEC_LOWPASS_H
+#ifndef AVCODEC_LOWPASS2_H
+#define AVCODEC_LOWPASS2_H
 
 typedef struct LPFilterContext {
     float *filterCoeffs[2];
@@ -46,4 +46,4 @@ void ff_lowpass_end(LPFilterContext *s);
 
 void ff_lowpass_filter(LPFilterContext *s, int16_t *in, float *out, int n);
 
-#endif /* AVCODEC_LOWPASS_H */
+#endif /* AVCODEC_LOWPASS2_H */
