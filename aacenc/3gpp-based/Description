@@ -1,0 +1,4 @@
+This is a copy of my AAC encoder with encoder-based psychoacoustic model.
+It works fast but its quality and bitstream could be better.
+
+This code is kept for historic and sentimental reasons.
