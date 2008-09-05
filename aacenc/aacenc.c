@@ -683,126 +683,126 @@ static void search_for_quantizers(AACEncContext *s, ChannelElement *cpe, int cha
 
     for(ch = 0; ch < channels; ch++){
         SingleChannelElement *sce = &cpe->ch[ch];
-    for(i = 0; i < 256; i++){
-        paths[i].cost = 0.0f;
-        paths[i].prev = -1;
-        paths[i].min_val = i;
-        paths[i].max_val = i;
-    }
-    for(i = 256; i < 256*121; i++){
-        paths[i].cost = INFINITY;
-        paths[i].prev = -2;
-        paths[i].min_val = INT_MAX;
-        paths[i].max_val = 0;
-    }
-    idx = 256;
-    for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w]){
-        start = w*128;
-        for(g = 0; g < sce->ics.num_swb; g++){
-            const float *coefs = sce->coeffs + start;
-            float qmin, qmax;
-            int nz = 0;
+        for(i = 0; i < 256; i++){
+            paths[i].cost = 0.0f;
+            paths[i].prev = -1;
+            paths[i].min_val = i;
+            paths[i].max_val = i;
+        }
+        for(i = 256; i < 256*121; i++){
+            paths[i].cost = INFINITY;
+            paths[i].prev = -2;
+            paths[i].min_val = INT_MAX;
+            paths[i].max_val = 0;
+        }
+        idx = 256;
+        for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w]){
+            start = w*128;
+            for(g = 0; g < sce->ics.num_swb; g++){
+                const float *coefs = sce->coeffs + start;
+                float qmin, qmax;
+                int nz = 0;
 
-            bandaddr[idx >> 8] = w*16+g;
-            qmin = INT_MAX;
-            qmax = 0.0f;
-            for(w2 = 0; w2 < sce->ics.group_len[w]; w2++){
-                FFPsyBand *band = &s->psy.psy_bands[s->cur_channel*PSY_MAX_BANDS+(w+w2)*16+g];
-                if(band->energy <= band->threshold || band->threshold == 0.0f){
-                    sce->zeroes[(w+w2)*16+g] = 1;
-                    continue;
-                }
-                sce->zeroes[(w+w2)*16+g] = 0;
-                nz = 1;
-                for(i = 0; i < sce->ics.swb_sizes[g]; i++){
-                    float t = fabsf(coefs[w2*128+i]);
-                    if(t > 0.0f) qmin = fminf(qmin, t);
-                    qmax = fmaxf(qmax, t);
-                }
-            }
-            if(nz){
-                int minscale, maxscale;
-                //minimum scalefactor index is when mininum nonzero coefficient after quantizing is not clipped
-                minscale = av_clip_uint8(log2(qmin)*4 - 69 + SCALE_ONE_POS - SCALE_DIV_512);
-                //maximum scalefactor index is when maximum coefficient after quantizing is still not zero
-                maxscale = av_clip_uint8(log2(qmax)*4 +  6 + SCALE_ONE_POS - SCALE_DIV_512);
-                for(q = minscale; q < maxscale; q++){
-                    float dist = 0.0f;
-                    int bits = 0, sum = 0;
-                    for(w2 = 0; w2 < sce->ics.group_len[w]; w2++){
-                        FFPsyBand *band = &s->psy.psy_bands[s->cur_channel*PSY_MAX_BANDS+(w+w2)*16+g];
-                        if(sce->zeroes[(w+w2)*16+g])
-                            continue;
-                        sum  += quantize_band(coefs + w2*128, qcoeffs, sce->ics.swb_sizes[g], q);
-                        dist += get_approximate_quant_error(coefs + w2*128, qcoeffs, sce->ics.swb_sizes[g], q) / band->threshold;
-                        bits += get_approximate_bits(qcoeffs, sce->ics.swb_sizes[g]);
-                    }
-                    for(i = FFMAX(q - SCALE_MAX_DIFF, 0); i < FFMIN(q + SCALE_MAX_DIFF, 256); i++){
-                        float cost;
-                        int minv, maxv;
-                        if(isinf(paths[idx - 256 + i].cost))
-                            continue;
-                        cost = paths[idx - 256 + i].cost + dist * lambda + bits
-                               + ff_aac_scalefactor_bits[q - i + SCALE_DIFF_ZERO];
-                        minv = FFMIN(paths[idx - 256 + i].min_val, q);
-                        maxv = FFMAX(paths[idx - 256 + i].max_val, q);
-                        if(cost < paths[idx + q].cost && maxv-minv < SCALE_MAX_DIFF){
-                            paths[idx + q].cost = cost;
-                            paths[idx + q].prev = idx - 256 + i;
-                            paths[idx + q].min_val = minv;
-                            paths[idx + q].max_val = maxv;
-                        }
-                    }
-                }
-            }else{
-                for(q = 0; q < 256; q++){
-                    if(!isinf(paths[idx - 256 + q].cost)){
-                        paths[idx + q].cost = paths[idx - 256 + q].cost + 1;
-                        paths[idx + q].prev = idx - 256 + q;
-                        paths[idx + q].min_val = FFMIN(paths[idx - 256 + q].min_val, q);
-                        paths[idx + q].max_val = FFMAX(paths[idx - 256 + q].max_val, q);
+                bandaddr[idx >> 8] = w*16+g;
+                qmin = INT_MAX;
+                qmax = 0.0f;
+                for(w2 = 0; w2 < sce->ics.group_len[w]; w2++){
+                    FFPsyBand *band = &s->psy.psy_bands[s->cur_channel*PSY_MAX_BANDS+(w+w2)*16+g];
+                    if(band->energy <= band->threshold || band->threshold == 0.0f){
+                        sce->zeroes[(w+w2)*16+g] = 1;
                         continue;
                     }
-                    for(i = FFMAX(q - SCALE_MAX_DIFF, 0); i < FFMIN(q + SCALE_MAX_DIFF, 256); i++){
-                        float cost;
-                        int minv, maxv;
-                        if(isinf(paths[idx - 256 + i].cost))
+                    sce->zeroes[(w+w2)*16+g] = 0;
+                    nz = 1;
+                    for(i = 0; i < sce->ics.swb_sizes[g]; i++){
+                        float t = fabsf(coefs[w2*128+i]);
+                        if(t > 0.0f) qmin = fminf(qmin, t);
+                        qmax = fmaxf(qmax, t);
+                    }
+                }
+                if(nz){
+                    int minscale, maxscale;
+                    //minimum scalefactor index is when mininum nonzero coefficient after quantizing is not clipped
+                    minscale = av_clip_uint8(log2(qmin)*4 - 69 + SCALE_ONE_POS - SCALE_DIV_512);
+                    //maximum scalefactor index is when maximum coefficient after quantizing is still not zero
+                    maxscale = av_clip_uint8(log2(qmax)*4 +  6 + SCALE_ONE_POS - SCALE_DIV_512);
+                    for(q = minscale; q < maxscale; q++){
+                        float dist = 0.0f;
+                        int bits = 0, sum = 0;
+                        for(w2 = 0; w2 < sce->ics.group_len[w]; w2++){
+                            FFPsyBand *band = &s->psy.psy_bands[s->cur_channel*PSY_MAX_BANDS+(w+w2)*16+g];
+                            if(sce->zeroes[(w+w2)*16+g])
+                                continue;
+                            sum  += quantize_band(coefs + w2*128, qcoeffs, sce->ics.swb_sizes[g], q);
+                            dist += get_approximate_quant_error(coefs + w2*128, qcoeffs, sce->ics.swb_sizes[g], q) / band->threshold;
+                            bits += get_approximate_bits(qcoeffs, sce->ics.swb_sizes[g]);
+                        }
+                        for(i = FFMAX(q - SCALE_MAX_DIFF, 0); i < FFMIN(q + SCALE_MAX_DIFF, 256); i++){
+                            float cost;
+                            int minv, maxv;
+                            if(isinf(paths[idx - 256 + i].cost))
+                                continue;
+                            cost = paths[idx - 256 + i].cost + dist * lambda + bits
+                                   + ff_aac_scalefactor_bits[q - i + SCALE_DIFF_ZERO];
+                            minv = FFMIN(paths[idx - 256 + i].min_val, q);
+                            maxv = FFMAX(paths[idx - 256 + i].max_val, q);
+                            if(cost < paths[idx + q].cost && maxv-minv < SCALE_MAX_DIFF){
+                                paths[idx + q].cost = cost;
+                                paths[idx + q].prev = idx - 256 + i;
+                                paths[idx + q].min_val = minv;
+                                paths[idx + q].max_val = maxv;
+                            }
+                        }
+                    }
+                }else{
+                    for(q = 0; q < 256; q++){
+                        if(!isinf(paths[idx - 256 + q].cost)){
+                            paths[idx + q].cost = paths[idx - 256 + q].cost + 1;
+                            paths[idx + q].prev = idx - 256 + q;
+                            paths[idx + q].min_val = FFMIN(paths[idx - 256 + q].min_val, q);
+                            paths[idx + q].max_val = FFMAX(paths[idx - 256 + q].max_val, q);
                             continue;
-                        cost = paths[idx - 256 + i].cost + ff_aac_scalefactor_bits[q - i + SCALE_DIFF_ZERO];
-                        minv = FFMIN(paths[idx - 256 + i].min_val, q);
-                        maxv = FFMAX(paths[idx - 256 + i].max_val, q);
-                        if(cost < paths[idx + q].cost && maxv-minv < SCALE_MAX_DIFF){
-                            paths[idx + q].cost = cost;
-                            paths[idx + q].prev = idx - 256 + i;
-                            paths[idx + q].min_val = minv;
-                            paths[idx + q].max_val = maxv;
+                        }
+                        for(i = FFMAX(q - SCALE_MAX_DIFF, 0); i < FFMIN(q + SCALE_MAX_DIFF, 256); i++){
+                            float cost;
+                            int minv, maxv;
+                            if(isinf(paths[idx - 256 + i].cost))
+                                continue;
+                            cost = paths[idx - 256 + i].cost + ff_aac_scalefactor_bits[q - i + SCALE_DIFF_ZERO];
+                            minv = FFMIN(paths[idx - 256 + i].min_val, q);
+                            maxv = FFMAX(paths[idx - 256 + i].max_val, q);
+                            if(cost < paths[idx + q].cost && maxv-minv < SCALE_MAX_DIFF){
+                                paths[idx + q].cost = cost;
+                                paths[idx + q].prev = idx - 256 + i;
+                                paths[idx + q].min_val = minv;
+                                paths[idx + q].max_val = maxv;
+                            }
                         }
                     }
                 }
+                sce->zeroes[w*16+g] = !nz;
+                start += sce->ics.swb_sizes[g];
+                idx += 256;
             }
-            sce->zeroes[w*16+g] = !nz;
-            start += sce->ics.swb_sizes[g];
-            idx += 256;
         }
-    }
-    idx -= 256;
-    mincost = paths[idx].cost;
-    minq = idx;
-    for(i = 1; i < 256; i++){
-        if(paths[idx + i].cost < mincost){
-            mincost = paths[idx + i].cost;
-            minq = idx + i;
+        idx -= 256;
+        mincost = paths[idx].cost;
+        minq = idx;
+        for(i = 1; i < 256; i++){
+            if(paths[idx + i].cost < mincost){
+                mincost = paths[idx + i].cost;
+                minq = idx + i;
+            }
         }
-    }
-    while(minq >= 256){
-        sce->sf_idx[bandaddr[minq>>8]] = minq & 0xFF;
-        minq = paths[minq].prev;
-    }
-    //set the same quantizers inside window groups
-    for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w])
-        for(g = 0;  g < sce->ics.num_swb; g++)
-            for(w2 = 1; w2 < sce->ics.group_len[w]; w2++)
-                sce->sf_idx[(w+w2)*16+g] = sce->sf_idx[w*16+g];
+        while(minq >= 256){
+            sce->sf_idx[bandaddr[minq>>8]] = minq & 0xFF;
+            minq = paths[minq].prev;
+        }
+        //set the same quantizers inside window groups
+        for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w])
+            for(g = 0;  g < sce->ics.num_swb; g++)
+                for(w2 = 1; w2 < sce->ics.group_len[w]; w2++)
+                    sce->sf_idx[(w+w2)*16+g] = sce->sf_idx[w*16+g];
     }
 }
 
