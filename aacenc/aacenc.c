@@ -762,6 +762,11 @@ static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
         sce->sf_idx[bandaddr[minq>>8]] = minq & 0xFF;
         minq = paths[minq].prev;
     }
+    //set the same quantizers inside window groups
+    for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w])
+        for(g = 0;  g < sce->ics.num_swb; g++)
+            for(w2 = 1; w2 < sce->ics.group_len[w]; w2++)
+                sce->sf_idx[(w+w2)*16+g] = sce->sf_idx[w*16+g];
 }
 
 /**
