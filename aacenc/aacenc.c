@@ -669,9 +669,9 @@ typedef struct TrellisPath {
     int max_val;
 } TrellisPath;
 
-static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
+static void search_for_quantizers(AACEncContext *s, ChannelElement *cpe, int channels)
 {
-    int q, w, w2, g, start = 0;
+    int q, ch, w, w2, g, start = 0;
     int i;
     int qcoeffs[128];
     int idx;
@@ -681,6 +681,8 @@ static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
     int minq;
     float mincost;
 
+    for(ch = 0; ch < channels; ch++){
+        SingleChannelElement *sce = &cpe->ch[ch];
     for(i = 0; i < 256; i++){
         paths[i].cost = 0.0f;
         paths[i].prev = -1;
@@ -801,6 +803,7 @@ static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
         for(g = 0;  g < sce->ics.num_swb; g++)
             for(w2 = 1; w2 < sce->ics.group_len[w]; w2++)
                 sce->sf_idx[(w+w2)*16+g] = sce->sf_idx[w*16+g];
+    }
 }
 
 /**
@@ -1034,7 +1037,6 @@ static int aac_encode_frame(AVCodecContext *avctx,
                 ics->group_len[k] = wi[j].grouping[k];
 
             apply_window_and_mdct(avctx, s, &cpe->ch[j], samples2, j);
-            search_for_quantizers(s, &cpe->ch[j]);
         }
         cpe->common_window = 0;
         if(chans > 1
@@ -1049,6 +1051,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
                 }
             }
         }
+        search_for_quantizers(s, cpe, chans);
         quantize_coeffs(s, cpe, chans);
         put_bits(&s->pb, 3, tag);
         put_bits(&s->pb, 4, chan_el_counter[tag]++);
