@@ -382,7 +382,7 @@ static inline float get_approximate_quant_error(const float *q, const int *c, in
         unquant = (c[i] * cbrt(c[i])) * IQ;
         sum += (coef - unquant) * (coef - unquant);
     }
-    return sum * 1.0;
+    return sum;
 }
 
 /**
