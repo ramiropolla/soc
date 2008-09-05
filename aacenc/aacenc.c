@@ -673,8 +673,8 @@ static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
     int i;
     int qcoeffs[128];
     int idx;
-    TrellisPath paths[256*128];
-    int bandaddr[128];
+    TrellisPath paths[256*121];
+    int bandaddr[121];
     const float lambda = 5e-7f;
     int minq = 0;
     float mincost;
@@ -684,7 +684,7 @@ static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
         paths[i].cost = 0.0f;
         paths[i].prev = -1;
     }
-    for(i = 256; i < 256*128; i++){
+    for(i = 256; i < 256*121; i++){
         paths[i].cost = INFINITY;
         paths[i].prev = -2;
     }
