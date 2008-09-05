@@ -678,7 +678,6 @@ static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
     const float lambda = 5e-7f;
     int minq;
     float mincost;
-    int stack[128], sptr = 0;
 
     for(i = 0; i < 256; i++){
         paths[i].cost = 0.0f;
@@ -759,12 +758,9 @@ static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
             minq = idx + i;
         }
     }
-    while(minq >= 0){
-        stack[sptr++] = minq;
+    while(minq >= 256){
+        sce->sf_idx[bandaddr[minq>>8]] = minq & 0xFF;
         minq = paths[minq].prev;
-    }
-    for(i = sptr - 2; i >= 0; i--){
-        sce->sf_idx[bandaddr[stack[i]>>8]] = stack[i]&0xFF;
     }
 }
 
