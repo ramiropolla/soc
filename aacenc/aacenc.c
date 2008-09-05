@@ -676,7 +676,7 @@ static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
     TrellisPath paths[256*121];
     int bandaddr[121];
     const float lambda = 5e-7f;
-    int minq = 0;
+    int minq;
     float mincost;
     int stack[128], sptr = 0;
 
@@ -752,6 +752,7 @@ static void search_for_quantizers(AACEncContext *s, SingleChannelElement *sce)
     }
     idx -= 256;
     mincost = paths[idx].cost;
+    minq = idx;
     for(i = 1; i < 256; i++){
         if(paths[idx + i].cost < mincost){
             mincost = paths[idx + i].cost;
