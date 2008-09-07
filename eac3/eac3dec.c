@@ -77,9 +77,6 @@ void ff_eac3_apply_spectral_extension(AC3DecodeContext *s)
             insertindex += copy_sizes[bnd];
         }
 
-        /* Calculate blending factors based on center points of SPX bands
-           and the offset decoded from the bitstream for each channel. */
-
         /* Calculate RMS energy for each SPX band. */
 
         /* Apply a notch filter at transitions between normal and extension

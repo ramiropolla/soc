@@ -810,9 +810,12 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             /* determine which channels use spx */
             if (s->channel_mode == AC3_CHMODE_MONO) {
                 s->channel_in_spx[1] = 1;
+                s->spx_coords_exist[1] = 0;
             } else {
-                for (ch = 1; ch <= fbw_channels; ch++)
+                for (ch = 1; ch <= fbw_channels; ch++) {
                     s->channel_in_spx[ch] = get_bits1(gbc);
+                    s->spx_coords_exist[ch] = 0;
+                }
             }
 
             s->spx_copy_start_freq = get_bits(gbc, 2) * 12 + 25;
@@ -822,6 +825,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             spx_end_subband      = endf < 4 ? endf+5 : 2*endf+3;
             s->num_spx_subbands  = spx_end_subband - s->spx_start_subband;
             s->spx_start_freq    = s->spx_start_subband * 12 + 25;
+            s->spx_end_freq      = spx_end_subband      * 12 + 25;
 
             decode_band_structure(gbc, blk, s->eac3, s->spx_start_subband,
                                   spx_end_subband, ff_eac3_default_spx_band_struct,
@@ -842,13 +846,26 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
         for (ch = 1; ch <= fbw_channels; ch++) {
             if (s->channel_in_spx[ch]) {
                 if (s->first_spx_coords[ch] || get_bits1(gbc)) {
+                    int bin, spx_blend;
                     s->first_spx_coords[ch] = 0;
-                    skip_bits(gbc, 5); // skip spx blend
+                    s->spx_coords_exist[ch] = 1;
+                    spx_blend = get_bits(gbc, 5) << 18;
                     skip_bits(gbc, 2); // skip master spx coord
+                    bin = s->spx_start_freq;
                     for (bnd = 0; bnd < s->num_spx_bands; bnd++) {
+                        /* calculate blending factors */
+                        int bandsize = s->spx_band_sizes[bnd];
+                        int nratio = (((bin + (bandsize >> 1)) << 23) / s->spx_end_freq) - spx_blend;
+                        nratio = av_clip(nratio, 0, INT24_MAX);
+                        s->spx_noise_blend [ch][bnd] = ff_sqrt(            nratio) * M_SQRT_INT24_MAX;
+                        s->spx_signal_blend[ch][bnd] = ff_sqrt(INT24_MAX - nratio) * M_SQRT_INT24_MAX;
+                        bin += bandsize;
+
                         skip_bits(gbc, 4); // skip spx coord exponent
                         skip_bits(gbc, 2); // skip spx coord mantissa
                     }
+                } else {
+                    s->spx_coords_exist[ch] = 0;
                 }
             } else {
                 s->first_spx_coords[ch] = 1;
