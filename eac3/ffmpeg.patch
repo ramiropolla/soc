@@ -16,7 +16,7 @@ Index: libavcodec/ac3dec.h
  typedef struct {
      AVCodecContext *avctx;                  ///< parent context
      GetBitContext gbc;                      ///< bitstream reader
-@@ -79,15 +85,33 @@
+@@ -79,15 +85,34 @@
      int cpl_strategy_exists[MAX_BLOCKS];    ///< coupling strategy exists               (cplstre)
      int channel_in_cpl[AC3_MAX_CHANNELS];   ///< channel in coupling                    (chincpl)
      int phase_flags_in_use;                 ///< phase flags in use                     (phsflginu)
@@ -35,6 +35,7 @@ Index: libavcodec/ac3dec.h
 +///@defgroup spx spectral extension
 +    int spx_in_use[MAX_BLOCKS];             ///< spectral extension in use              (spxinu)
 +    int channel_in_spx[AC3_MAX_CHANNELS];   ///< channel in spectral extension          (chinspx)
++    int spx_atten_code[AC3_MAX_CHANNELS];   ///< spx attenuation code                   (spxattencod)
 +    int spx_coords_exist[AC3_MAX_CHANNELS]; ///< indicates if a channel has spx coords  (spxcoe)
 +    int spx_start_subband;                  ///< spx beginning frequency band           (spxbegf)
 +    int spx_start_freq;                     ///< spx start frequency bin
@@ -53,7 +54,7 @@ Index: libavcodec/ac3dec.h
  ///@defgroup aht adaptive hybrid transform
      int channel_uses_aht[AC3_MAX_CHANNELS];                         ///< channel AHT in use (chahtinu)
      int pre_mantissa[AC3_MAX_CHANNELS][AC3_MAX_COEFS][MAX_BLOCKS];  ///< pre-IDCT mantissas
-@@ -179,4 +203,6 @@
+@@ -179,4 +204,6 @@
   */
  void ff_eac3_decode_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
  

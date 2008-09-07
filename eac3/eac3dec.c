@@ -522,12 +522,11 @@ int ff_eac3_parse_header(AC3DecodeContext *s)
     }
 
     /* spectral extension attenuation data */
-    if (parse_spx_atten_data) {
         for (ch = 1; ch <= s->fbw_channels; ch++) {
-            if (get_bits1(gbc)) { // channel has spx attenuation
-                skip_bits(gbc, 5); // skip spx attenuation code
-            }
-        }
+        if (parse_spx_atten_data && get_bits1(gbc))
+            s->spx_atten_code[ch] = get_bits(gbc, 5);
+        else
+            s->spx_atten_code[ch] = -1;
     }
 
     /* block start information */
