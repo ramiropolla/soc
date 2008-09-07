@@ -41,12 +41,11 @@ void ff_eac3_apply_spectral_extension(AC3DecodeContext *s)
 {
     int bin, bnd, ch;
     int copyindex, insertindex;
-    int wrapflag[17], num_copy_sections, copy_sizes[17];
+    int wrapflag[17]={0,}, num_copy_sections, copy_sizes[17];
 
     /* Set copy index mapping table. Set wrap flags to apply a notch filter at
        wrap points later on. */
     copyindex = s->spx_copy_start_freq;
-    memset(wrapflag, 0, sizeof(wrapflag));
     num_copy_sections = 0;
     for (bnd = 0; bnd < s->num_spx_bands; bnd++) {
         int bandsize = s->spx_band_sizes[bnd];
