@@ -41,6 +41,7 @@ void ff_eac3_apply_spectral_extension(AC3DecodeContext *s)
 {
     int bin, bnd, ch, i;
     int wrapflag[SPX_MAX_BANDS]={0,}, num_copy_sections, copy_sizes[SPX_MAX_BANDS];
+    int rms_energy[SPX_MAX_BANDS];
 
     /* Set copy index mapping table. Set wrap flags to apply a notch filter at
        wrap points later on. */
@@ -77,6 +78,16 @@ void ff_eac3_apply_spectral_extension(AC3DecodeContext *s)
         }
 
         /* Calculate RMS energy for each SPX band. */
+        bin = s->spx_start_freq;
+        for (bnd = 0; bnd < s->num_spx_bands; bnd++) {
+            int bandsize = s->spx_band_sizes[bnd];
+            int64_t accum = 0;
+            for (i = 0; i < bandsize; i++) {
+                int64_t coeff = s->fixed_coeffs[ch][bin++];
+                accum += coeff * coeff;
+            }
+            rms_energy[bnd] = ff_sqrt((accum >> 15) / bandsize) * M_SQRT_POW2_15;
+        }
 
         /* Apply a notch filter at transitions between normal and extension
            bands and at all wrap points. */
