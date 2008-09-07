@@ -1,45 +1,37 @@
-Index: libavutil/Makefile
-===================================================================
---- libavutil/Makefile	(revision 15141)
-+++ libavutil/Makefile	(working copy)
-@@ -23,6 +23,7 @@
-        string.o \
-        tree.o \
-        utils.o \
-+       znrng.o \
- 
- HEADERS = adler32.h \
-           avstring.h \
-@@ -41,7 +42,7 @@
-           rational.h \
-           sha1.h
- 
--TESTS = $(addsuffix -test$(EXESUF), adler32 aes crc des lls md5 pca random sha1 softfloat tree)
-+TESTS = $(addsuffix -test$(EXESUF), adler32 aes crc des lls md5 pca random sha1 softfloat tree znrng)
- 
- include $(SUBDIR)../subdir.mak
- 
 Index: libavcodec/ac3dec.h
 ===================================================================
 --- libavcodec/ac3dec.h	(revision 15141)
 +++ libavcodec/ac3dec.h	(working copy)
-@@ -88,6 +88,16 @@
+@@ -88,6 +88,22 @@
      int cpl_coords[AC3_MAX_CHANNELS][18];   ///< coupling coordinates                   (cplco)
  ///@}
  
 +///@defgroup spx spectral extension
 +    int spx_in_use[MAX_BLOCKS];             ///< spectral extension in use              (spxinu)
 +    int channel_in_spx[AC3_MAX_CHANNELS];   ///< channel in spectral extension          (chinspx)
++    int spx_coords_exist[AC3_MAX_CHANNELS]; ///< indicates if a channel has spx coords  (spxcoe)
 +    int spx_start_subband;                  ///< spx beginning frequency band           (spxbegf)
 +    int spx_start_freq;                     ///< spx start frequency bin
++    int spx_copy_start_freq;                ///< spx starting frequency for copying     (copystartmant)
++    int num_spx_subbands;                   ///< number of spectral extension subbands
 +    int num_spx_bands;                      ///< number of spectral extension bands     (nspxbnds)
 +    uint8_t spx_band_struct[17];            ///< spectral extension band structure      (spxbndstrc)
++    int spx_band_sizes[17];                 ///< number of bins in each band            (spxbndsztab)
 +    int first_spx_coords[AC3_MAX_CHANNELS]; ///< first spx coordinates states           (firstspxcos)
++    int spx_blend[AC3_MAX_CHANNELS];        ///< spectral extension blend               (spxblnd)
++    int spx_coords[AC3_MAX_CHANNELS][17];   ///< spectral extension coordinates         (spxco)
 +///@}
 +
  ///@defgroup aht adaptive hybrid transform
      int channel_uses_aht[AC3_MAX_CHANNELS];                         ///< channel AHT in use (chahtinu)
      int pre_mantissa[AC3_MAX_CHANNELS][AC3_MAX_COEFS][MAX_BLOCKS];  ///< pre-IDCT mantissas
+@@ -179,4 +195,6 @@
+  */
+ void ff_eac3_decode_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
+ 
++void ff_eac3_apply_spectral_extension(AC3DecodeContext *s);
++
+ #endif /* AVCODEC_AC3DEC_H */
 Index: libavcodec/ac3dec_data.c
 ===================================================================
 --- libavcodec/ac3dec_data.c	(revision 15141)
@@ -68,4 +60,25 @@ Index: libavcodec/ac3dec_data.h
 +extern const uint8_t ff_eac3_default_spx_band_struct[17];
  
  extern const uint8_t ff_ac3_rematrix_band_tab[5];
+ 
+Index: libavutil/Makefile
+===================================================================
+--- libavutil/Makefile	(revision 15141)
++++ libavutil/Makefile	(working copy)
+@@ -23,6 +23,7 @@
+        string.o \
+        tree.o \
+        utils.o \
++       znrng.o \
+ 
+ HEADERS = adler32.h \
+           avstring.h \
+@@ -41,7 +42,7 @@
+           rational.h \
+           sha1.h
+ 
+-TESTS = $(addsuffix -test$(EXESUF), adler32 aes crc des lls md5 pca random sha1 softfloat tree)
++TESTS = $(addsuffix -test$(EXESUF), adler32 aes crc des lls md5 pca random sha1 softfloat tree znrng)
+ 
+ include $(SUBDIR)../subdir.mak
  

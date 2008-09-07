@@ -36,6 +36,56 @@ typedef enum {
 
 #define EAC3_SR_CODE_REDUCED  3
 
+
+void ff_eac3_apply_spectral_extension(AC3DecodeContext *s)
+{
+    int bin, bnd, ch;
+    int copyindex, insertindex;
+    int wrapflag[17], copy_index_tab[256];
+
+    /* Set copy index mapping table. Set wrap flags to apply a notch filter at
+       wrap points later on. */
+    copyindex = s->spx_copy_start_freq;
+    insertindex = s->spx_start_freq;
+    memset(wrapflag, 0, sizeof(wrapflag));
+    for (bnd = 0; bnd < s->num_spx_bands; bnd++) {
+        int bandsize = s->spx_band_sizes[bnd];
+        if ((copyindex + bandsize) > s->spx_start_freq) {
+            copyindex = s->spx_copy_start_freq;
+            wrapflag[bnd] = 1;
+        }
+        for (bin = 0; bin < bandsize; bin++) {
+            if (copyindex == s->spx_start_freq)
+                copyindex = s->spx_copy_start_freq;
+            copy_index_tab[insertindex++] = copyindex++;
+        }
+    }
+
+    for (ch = 1; ch <= s->fbw_channels; ch++) {
+        if (!s->channel_in_spx[ch])
+            continue;
+
+        /* Copy coeffs from normal bands to extension bands */
+        /* note: maybe try using wrap intervals instead so memcpy can be used */
+        for (bin = s->spx_start_freq; bin < s->spx_start_freq+s->num_spx_subbands*12; bin++) {
+            s->fixed_coeffs[ch][bin] = s->fixed_coeffs[ch][copy_index_tab[bin]];
+        }
+
+        /* Calculate blending factors based on center points of SPX bands
+           and the offset decoded from the bitstream for each channel. */
+
+        /* Calculate RMS energy for each SPX band. */
+
+        /* Apply a notch filter at transitions between normal and extension
+           bands and at all wrap points. */
+
+        /* Apply coefficient and noise scaling based on previously calculated
+           RMS energy and blending factors for each band. */
+
+        /* Scale coefficients using spectral extension coordinates */
+    }
+}
+
 /** lrint(M_SQRT2*cos(2*M_PI/12)*(1<<23)) */
 #define COEFF_0 10273905LL
 
