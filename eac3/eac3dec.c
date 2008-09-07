@@ -39,42 +39,41 @@ typedef enum {
 
 void ff_eac3_apply_spectral_extension(AC3DecodeContext *s)
 {
-    int bin, bnd, ch;
-    int copyindex, insertindex;
+    int bin, bnd, ch, i;
     int wrapflag[17]={0,}, num_copy_sections, copy_sizes[17];
 
     /* Set copy index mapping table. Set wrap flags to apply a notch filter at
        wrap points later on. */
-    copyindex = s->spx_copy_start_freq;
+    bin = s->spx_copy_start_freq;
     num_copy_sections = 0;
     for (bnd = 0; bnd < s->num_spx_bands; bnd++) {
         int bandsize = s->spx_band_sizes[bnd];
-        if ((copyindex + bandsize) > s->spx_start_freq) {
-            copy_sizes[num_copy_sections++] = copyindex - s->spx_copy_start_freq;
-            copyindex = s->spx_copy_start_freq;
+        if ((bin + bandsize) > s->spx_start_freq) {
+            copy_sizes[num_copy_sections++] = bin - s->spx_copy_start_freq;
+            bin = s->spx_copy_start_freq;
             wrapflag[bnd] = 1;
         }
-        for (bin = 0; bin < bandsize; bin++) {
-            if (copyindex == s->spx_start_freq) {
-                copy_sizes[num_copy_sections++] = copyindex - s->spx_copy_start_freq;
-                copyindex = s->spx_copy_start_freq;
+        for (i = 0; i < bandsize; i++) {
+            if (bin == s->spx_start_freq) {
+                copy_sizes[num_copy_sections++] = bin - s->spx_copy_start_freq;
+                bin = s->spx_copy_start_freq;
             }
-            copyindex++;
+            bin++;
         }
     }
-    copy_sizes[num_copy_sections++] = copyindex - s->spx_copy_start_freq;
+    copy_sizes[num_copy_sections++] = bin - s->spx_copy_start_freq;
 
     for (ch = 1; ch <= s->fbw_channels; ch++) {
         if (!s->channel_in_spx[ch])
             continue;
 
         /* Copy coeffs from normal bands to extension bands */
-        insertindex = s->spx_start_freq;
+        bin = s->spx_start_freq;
         for (bnd = 0; bnd < num_copy_sections; bnd++) {
-            memcpy(&s->fixed_coeffs[ch][insertindex],
+            memcpy(&s->fixed_coeffs[ch][bin],
                    &s->fixed_coeffs[ch][s->spx_copy_start_freq],
                    copy_sizes[bnd]*sizeof(int));
-            insertindex += copy_sizes[bnd];
+            bin += copy_sizes[bnd];
         }
 
         /* Calculate RMS energy for each SPX band. */
