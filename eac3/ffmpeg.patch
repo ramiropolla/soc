@@ -2,9 +2,12 @@ Index: libavcodec/ac3dec.h
 ===================================================================
 --- libavcodec/ac3dec.h	(revision 15141)
 +++ libavcodec/ac3dec.h	(working copy)
-@@ -43,6 +43,10 @@
+@@ -42,7 +42,13 @@
+ #define AC3_MAX_COEFS   256
  #define AC3_BLOCK_SIZE  256
  #define MAX_BLOCKS        6
++#define CPL_MAX_BANDS    18
++#define SPX_MAX_BANDS    17
  
 +#define INT24_MIN -8388608
 +#define INT24_MAX  8388607
@@ -13,8 +16,20 @@ Index: libavcodec/ac3dec.h
  typedef struct {
      AVCodecContext *avctx;                  ///< parent context
      GetBitContext gbc;                      ///< bitstream reader
-@@ -88,6 +92,24 @@
-     int cpl_coords[AC3_MAX_CHANNELS][18];   ///< coupling coordinates                   (cplco)
+@@ -79,15 +85,33 @@
+     int cpl_strategy_exists[MAX_BLOCKS];    ///< coupling strategy exists               (cplstre)
+     int channel_in_cpl[AC3_MAX_CHANNELS];   ///< channel in coupling                    (chincpl)
+     int phase_flags_in_use;                 ///< phase flags in use                     (phsflginu)
+-    int phase_flags[18];                    ///< phase flags                            (phsflg)
++    int phase_flags[CPL_MAX_BANDS];         ///< phase flags                            (phsflg)
+     int num_cpl_subbands;                   ///< number of coupling sub bands           (ncplsubnd)
+     int num_cpl_bands;                      ///< number of coupling bands               (ncplbnd)
+-    uint8_t cpl_band_struct[18];            ///< coupling band structure                (cplbndstrc)
++    uint8_t cpl_band_struct[CPL_MAX_BANDS]; ///< coupling band structure                (cplbndstrc)
+     int firstchincpl;                       ///< first channel in coupling
+     int first_cpl_coords[AC3_MAX_CHANNELS]; ///< first coupling coordinates states      (firstcplcos)
+-    int cpl_coords[AC3_MAX_CHANNELS][18];   ///< coupling coordinates                   (cplco)
++    int cpl_coords[AC3_MAX_CHANNELS][CPL_MAX_BANDS];    ///< coupling coordinates       (cplco)
  ///@}
  
 +///@defgroup spx spectral extension
@@ -27,18 +42,18 @@ Index: libavcodec/ac3dec.h
 +    int spx_copy_start_freq;                ///< spx starting frequency for copying     (copystartmant)
 +    int num_spx_subbands;                   ///< number of spectral extension subbands
 +    int num_spx_bands;                      ///< number of spectral extension bands     (nspxbnds)
-+    uint8_t spx_band_struct[17];            ///< spectral extension band structure      (spxbndstrc)
-+    int spx_band_sizes[17];                 ///< number of bins in each band            (spxbndsztab)
++    uint8_t spx_band_struct[SPX_MAX_BANDS]; ///< spectral extension band structure      (spxbndstrc)
++    int spx_band_sizes[SPX_MAX_BANDS];      ///< number of bins in each band            (spxbndsztab)
 +    int first_spx_coords[AC3_MAX_CHANNELS]; ///< first spx coordinates states           (firstspxcos)
-+    int spx_noise_blend[AC3_MAX_CHANNELS][17];  ///< spx noise blending factor          (nblendfact)
-+    int spx_signal_blend[AC3_MAX_CHANNELS][17]; ///< spx signal blending factor         (sblendfact)
-+    int spx_coords[AC3_MAX_CHANNELS][17];   ///< spectral extension coordinates         (spxco)
++    int spx_noise_blend[AC3_MAX_CHANNELS][SPX_MAX_BANDS];   ///< spx noise blending factor  (nblendfact)
++    int spx_signal_blend[AC3_MAX_CHANNELS][SPX_MAX_BANDS];  ///< spx signal blending factor (sblendfact)
++    int spx_coords[AC3_MAX_CHANNELS][SPX_MAX_BANDS];    ///< spectral extension coordinates (spxco)
 +///@}
 +
  ///@defgroup aht adaptive hybrid transform
      int channel_uses_aht[AC3_MAX_CHANNELS];                         ///< channel AHT in use (chahtinu)
      int pre_mantissa[AC3_MAX_CHANNELS][AC3_MAX_COEFS][MAX_BLOCKS];  ///< pre-IDCT mantissas
-@@ -179,4 +201,6 @@
+@@ -179,4 +203,6 @@
   */
  void ff_eac3_decode_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
  

@@ -40,7 +40,7 @@ typedef enum {
 void ff_eac3_apply_spectral_extension(AC3DecodeContext *s)
 {
     int bin, bnd, ch, i;
-    int wrapflag[17]={0,}, num_copy_sections, copy_sizes[17];
+    int wrapflag[SPX_MAX_BANDS]={0,}, num_copy_sections, copy_sizes[SPX_MAX_BANDS];
 
     /* Set copy index mapping table. Set wrap flags to apply a notch filter at
        wrap points later on. */
