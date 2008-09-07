@@ -11,7 +11,7 @@ Index: libavcodec/ac3dec.h
  
 +#define INT24_MIN -8388608
 +#define INT24_MAX  8388607
-+#define M_SQRT_INT24_MAX 2896
++#define M_SQRT_POW2_15 181
 +
  typedef struct {
      AVCodecContext *avctx;                  ///< parent context

@@ -857,8 +857,8 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                         int bandsize = s->spx_band_sizes[bnd];
                         int nratio = (((bin + (bandsize >> 1)) << 23) / s->spx_end_freq) - spx_blend;
                         nratio = av_clip(nratio, 0, INT24_MAX);
-                        s->spx_noise_blend [ch][bnd] = ff_sqrt(            nratio) * M_SQRT_INT24_MAX;
-                        s->spx_signal_blend[ch][bnd] = ff_sqrt(INT24_MAX - nratio) * M_SQRT_INT24_MAX;
+                        s->spx_noise_blend [ch][bnd] = ff_sqrt((            nratio) << 8) * M_SQRT_POW2_15;
+                        s->spx_signal_blend[ch][bnd] = ff_sqrt((INT24_MAX - nratio) << 8) * M_SQRT_POW2_15;
                         bin += bandsize;
 
                         skip_bits(gbc, 4); // skip spx coord exponent
