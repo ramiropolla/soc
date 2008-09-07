@@ -2,20 +2,20 @@ Index: libavutil/Makefile
 ===================================================================
 --- libavutil/Makefile	(revision 15141)
 +++ libavutil/Makefile	(working copy)
-@@ -8,6 +8,7 @@
-        crc.o \
-        des.o \
-        fifo.o \
-+       grng.o \
-        intfloat_readwrite.o \
-        lfg.o \
-        lls.o \
+@@ -23,6 +23,7 @@
+        string.o \
+        tree.o \
+        utils.o \
++       znrng.o \
+ 
+ HEADERS = adler32.h \
+           avstring.h \
 @@ -41,7 +42,7 @@
            rational.h \
            sha1.h
  
 -TESTS = $(addsuffix -test$(EXESUF), adler32 aes crc des lls md5 pca random sha1 softfloat tree)
-+TESTS = $(addsuffix -test$(EXESUF), adler32 aes crc des grng lls md5 pca random sha1 softfloat tree)
++TESTS = $(addsuffix -test$(EXESUF), adler32 aes crc des lls md5 pca random sha1 softfloat tree znrng)
  
  include $(SUBDIR)../subdir.mak
  

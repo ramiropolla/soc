@@ -1,5 +1,5 @@
 LAVC_FILES="eac3dec.c ac3dec.c"
-LAVU_FILES="grng.c grng.h"
+LAVU_FILES="znrng.c znrng.h"
 
 echo "checking out ffmpeg svn"
 for i in $LAVC_FILES ac3dec.h ac3dec_data.c ac3dec_data.h; do
@@ -17,7 +17,7 @@ for i in $LAVC_FILES; do
     rm -f libavcodec/$i
     ln -s ../../$i libavcodec/$i
 done
-echo "copying the GRNG files to ffmpeg/libavutil"
+echo "copying the ZNRNG files to ffmpeg/libavutil"
 for i in $LAVU_FILES; do
     rm -f libavutil/$i
     ln -s ../../$i libavutil/$i
