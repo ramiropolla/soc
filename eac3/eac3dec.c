@@ -41,34 +41,41 @@ void ff_eac3_apply_spectral_extension(AC3DecodeContext *s)
 {
     int bin, bnd, ch;
     int copyindex, insertindex;
-    int wrapflag[17], copy_index_tab[256];
+    int wrapflag[17], num_copy_sections, copy_sizes[17];
 
     /* Set copy index mapping table. Set wrap flags to apply a notch filter at
        wrap points later on. */
     copyindex = s->spx_copy_start_freq;
-    insertindex = s->spx_start_freq;
     memset(wrapflag, 0, sizeof(wrapflag));
+    num_copy_sections = 0;
     for (bnd = 0; bnd < s->num_spx_bands; bnd++) {
         int bandsize = s->spx_band_sizes[bnd];
         if ((copyindex + bandsize) > s->spx_start_freq) {
+            copy_sizes[num_copy_sections++] = copyindex - s->spx_copy_start_freq;
             copyindex = s->spx_copy_start_freq;
             wrapflag[bnd] = 1;
         }
         for (bin = 0; bin < bandsize; bin++) {
-            if (copyindex == s->spx_start_freq)
+            if (copyindex == s->spx_start_freq) {
+                copy_sizes[num_copy_sections++] = copyindex - s->spx_copy_start_freq;
                 copyindex = s->spx_copy_start_freq;
-            copy_index_tab[insertindex++] = copyindex++;
+            }
+            copyindex++;
         }
     }
+    copy_sizes[num_copy_sections++] = copyindex - s->spx_copy_start_freq;
 
     for (ch = 1; ch <= s->fbw_channels; ch++) {
         if (!s->channel_in_spx[ch])
             continue;
 
         /* Copy coeffs from normal bands to extension bands */
-        /* note: maybe try using wrap intervals instead so memcpy can be used */
-        for (bin = s->spx_start_freq; bin < s->spx_start_freq+s->num_spx_subbands*12; bin++) {
-            s->fixed_coeffs[ch][bin] = s->fixed_coeffs[ch][copy_index_tab[bin]];
+        insertindex = s->spx_start_freq;
+        for (bnd = 0; bnd < num_copy_sections; bnd++) {
+            memcpy(&s->fixed_coeffs[ch][insertindex],
+                   &s->fixed_coeffs[ch][s->spx_copy_start_freq],
+                   copy_sizes[bnd]*sizeof(int));
+            insertindex += copy_sizes[bnd];
         }
 
         /* Calculate blending factors based on center points of SPX bands
