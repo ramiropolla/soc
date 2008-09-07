@@ -744,11 +744,9 @@ static void decode_band_structure(GetBitContext *gbc, int blk, int eac3,
             n_bands--;
             bnd_sz[bnd] += 12;
         } else {
-            //av_log(NULL, AV_LOG_INFO, "bnd_sz[%d]=%d\n", bnd, bnd_sz[bnd]);
             bnd_sz[++bnd] = 12;
         }
     }
-    //av_log(NULL, AV_LOG_INFO, "n_bands=%d\n", n_bands);
 
     if (num_subbands)
         *num_subbands = n_subbands;
