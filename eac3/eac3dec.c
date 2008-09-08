@@ -91,6 +91,29 @@ void ff_eac3_apply_spectral_extension(AC3DecodeContext *s)
 
         /* Apply a notch filter at transitions between normal and extension
            bands and at all wrap points. */
+        if (s->spx_atten_code[ch] >= 0) {
+            const int32_t *atten_tab = ff_eac3_spx_atten_tab[s->spx_atten_code[ch]];
+            /* apply notch filter at baseband / extension region border */
+            bin = s->spx_start_freq - 2;
+            for (i = 0; i < 5; i++) {
+                s->fixed_coeffs[ch][bin] = ((int64_t)atten_tab[2-abs(i-2)] *
+                        (int64_t)s->fixed_coeffs[ch][bin]) >> 23;
+                bin++;
+            }
+            /* apply notch at all other wrap points */
+            bin += s->spx_band_sizes[0];
+            for (bnd = 1; bnd < s->num_spx_bands; bnd++) {
+                if (wrapflag[bnd]) {
+                    bin -= 5;
+                    for (i = 0; i < 5; i++) {
+                        s->fixed_coeffs[ch][bin] = (atten_tab[2-abs(i-2)] *
+                                (int64_t)s->fixed_coeffs[ch][bin]) >> 23;
+                        bin++;
+                    }
+                }
+                bin += s->spx_band_sizes[bnd];
+            }
+        }
 
         /* Apply coefficient and noise scaling based on previously calculated
            RMS energy and blending factors for each band. */
