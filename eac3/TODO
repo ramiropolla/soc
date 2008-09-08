@@ -8,9 +8,8 @@ Features:
       had a sample, but it was just a bug in the decoder.
 
 * Spectral Extension
-    - We have one sample which uses spectral extension. I have implemented
-      parsing of the spx data, but not the actual band replication. This
-      allows for decoding, but results in a low cutoff frequency.
+    - We have one sample which uses spectral extension. The decoder currently
+      works for this sample.
 
 * Transient Pre-Noise Cross-Fading
     - We do have a sample which contains pre-noise data.
@@ -35,5 +34,5 @@ Cosmetic:
 * Add more useful comments and remove bad comments
 * Add specification references
 
-NOTE: Untested code for spectral extension and enhanced coupling can be
+NOTE: Untested code for enhanced coupling can be
 found in GSoC SVN revisions before r3012.
