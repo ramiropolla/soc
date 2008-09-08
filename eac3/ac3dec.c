@@ -865,7 +865,7 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                         s->spx_signal_blend[ch][bnd] = ff_sqrt((INT24_MAX - nratio) << 8) * M_SQRT_POW2_15;
                         bin += bandsize;
 
-                        /* decode coupling coordinates */
+                        /* decode spx coordinates */
                         spx_coord_exp  = get_bits(gbc, 4);
                         spx_coord_mant = get_bits(gbc, 2);
                         if (spx_coord_exp == 15)
