@@ -23,9 +23,6 @@
 
 #include "avfilter.h"
 
-/* default to 25 fps */
-static const AVRational default_rate = (AVRational) {25,1};
-
 typedef struct {
     uint64_t timebase;
     uint64_t pts;
@@ -36,6 +33,7 @@ typedef struct {
 
 static int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
+    AVRational default_rate = (AVRational) {25, 1};
     FPSContext *fps = ctx->priv;
     AVRational rate;
 
