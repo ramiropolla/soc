@@ -848,12 +848,15 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
             if (s->channel_in_spx[ch]) {
                 if (s->first_spx_coords[ch] || get_bits1(gbc)) {
                     int bin, spx_blend;
+                    int master_spx_coord;
                     s->first_spx_coords[ch] = 0;
                     s->spx_coords_exist[ch] = 1;
                     spx_blend = get_bits(gbc, 5) << 18;
-                    skip_bits(gbc, 2); // skip master spx coord
+                    master_spx_coord = get_bits(gbc, 2) * 3;
                     bin = s->spx_start_freq;
                     for (bnd = 0; bnd < s->num_spx_bands; bnd++) {
+                        int spx_coord_exp, spx_coord_mant;
+
                         /* calculate blending factors */
                         int bandsize = s->spx_band_sizes[bnd];
                         int nratio = (((bin + (bandsize >> 1)) << 23) / s->spx_end_freq) - spx_blend;
@@ -862,8 +865,14 @@ static int decode_audio_block(AC3DecodeContext *s, int blk)
                         s->spx_signal_blend[ch][bnd] = ff_sqrt((INT24_MAX - nratio) << 8) * M_SQRT_POW2_15;
                         bin += bandsize;
 
-                        skip_bits(gbc, 4); // skip spx coord exponent
-                        skip_bits(gbc, 2); // skip spx coord mantissa
+                        /* decode coupling coordinates */
+                        spx_coord_exp  = get_bits(gbc, 4);
+                        spx_coord_mant = get_bits(gbc, 2);
+                        if (spx_coord_exp == 15)
+                            s->spx_coords[ch][bnd] = spx_coord_mant << 26;
+                        else
+                            s->spx_coords[ch][bnd] = (spx_coord_mant + 4) << 25;
+                        s->spx_coords[ch][bnd] >>= (spx_coord_exp + master_spx_coord);
                     }
                 } else {
                     s->spx_coords_exist[ch] = 0;
