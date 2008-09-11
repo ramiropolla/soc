@@ -197,7 +197,6 @@ static av_cold int ac3_decode_init(AVCodecContext *avctx)
     ff_kbd_window_init(s->window, 5.0, 256);
     dsputil_init(&s->dsp, avctx);
     av_lfg_init(&s->dith_state, 0);
-    av_znrng_init(&s->spx_noise_state, 0xDEADBEEF);
 
     /* set bias values for float to int16 conversion */
     if(s->dsp.float_to_int16_interleave == ff_float_to_int16_interleave_c) {

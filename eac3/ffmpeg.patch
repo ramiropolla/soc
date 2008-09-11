@@ -2,15 +2,7 @@ Index: libavcodec/ac3dec.h
 ===================================================================
 --- libavcodec/ac3dec.h	(revision 15141)
 +++ libavcodec/ac3dec.h	(working copy)
-@@ -28,6 +28,7 @@
- #define AVCODEC_AC3DEC_H
- 
- #include "libavutil/lfg.h"
-+#include "libavutil/znrng.h"
- #include "ac3.h"
- #include "bitstream.h"
- #include "dsputil.h"
-@@ -42,7 +43,13 @@
+@@ -42,7 +42,13 @@
  #define AC3_MAX_COEFS   256
  #define AC3_BLOCK_SIZE  256
  #define MAX_BLOCKS        6
@@ -24,7 +16,7 @@ Index: libavcodec/ac3dec.h
  typedef struct {
      AVCodecContext *avctx;                  ///< parent context
      GetBitContext gbc;                      ///< bitstream reader
-@@ -79,15 +86,35 @@
+@@ -79,15 +85,34 @@
      int cpl_strategy_exists[MAX_BLOCKS];    ///< coupling strategy exists               (cplstre)
      int channel_in_cpl[AC3_MAX_CHANNELS];   ///< channel in coupling                    (chincpl)
      int phase_flags_in_use;                 ///< phase flags in use                     (phsflginu)
@@ -57,13 +49,12 @@ Index: libavcodec/ac3dec.h
 +    int spx_noise_blend[AC3_MAX_CHANNELS][SPX_MAX_BANDS];   ///< spx noise blending factor  (nblendfact)
 +    int spx_signal_blend[AC3_MAX_CHANNELS][SPX_MAX_BANDS];  ///< spx signal blending factor (sblendfact)
 +    int spx_coords[AC3_MAX_CHANNELS][SPX_MAX_BANDS];    ///< spectral extension coordinates (spxco)
-+    AVRandomState spx_noise_state;          ///< random context for noise generation
 +///@}
 +
  ///@defgroup aht adaptive hybrid transform
      int channel_uses_aht[AC3_MAX_CHANNELS];                         ///< channel AHT in use (chahtinu)
      int pre_mantissa[AC3_MAX_CHANNELS][AC3_MAX_COEFS][MAX_BLOCKS];  ///< pre-IDCT mantissas
-@@ -179,4 +206,6 @@
+@@ -179,4 +204,6 @@
   */
  void ff_eac3_decode_transform_coeffs_aht_ch(AC3DecodeContext *s, int ch);
  
@@ -138,25 +129,4 @@ Index: libavcodec/ac3dec_data.h
 +extern const int32_t ff_eac3_spx_atten_tab[32][3];
  
  extern const uint8_t ff_ac3_rematrix_band_tab[5];
- 
-Index: libavutil/Makefile
-===================================================================
---- libavutil/Makefile	(revision 15141)
-+++ libavutil/Makefile	(working copy)
-@@ -23,6 +23,7 @@
-        string.o \
-        tree.o \
-        utils.o \
-+       znrng.o \
- 
- HEADERS = adler32.h \
-           avstring.h \
-@@ -41,7 +42,7 @@
-           rational.h \
-           sha1.h
- 
--TESTS = $(addsuffix -test$(EXESUF), adler32 aes crc des lls md5 pca random sha1 softfloat tree)
-+TESTS = $(addsuffix -test$(EXESUF), adler32 aes crc des lls md5 pca random sha1 softfloat tree znrng)
- 
- include $(SUBDIR)../subdir.mak
  

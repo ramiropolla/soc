@@ -120,11 +120,13 @@ void ff_eac3_apply_spectral_extension(AC3DecodeContext *s)
            each band. */
         bin = s->spx_start_freq;
         for (bnd = 0; bnd < s->num_spx_bands; bnd++) {
-            int64_t nscale = (s->spx_noise_blend [ch][bnd] * rms_energy[bnd]) >> 23;
-            int64_t sscale = s->spx_signal_blend[ch][bnd];
-            int64_t spxco  = s->spx_coords[ch][bnd];
+            int64_t nscale, sscale, spxco;
+            nscale = (s->spx_noise_blend [ch][bnd] * rms_energy[bnd]) >> 23;
+            nscale = (nscale * 14529495) >> 23;
+            sscale = s->spx_signal_blend[ch][bnd];
+            spxco  = s->spx_coords[ch][bnd];
             for (i = 0; i < s->spx_band_sizes[bnd]; i++) {
-                int64_t noise  = (nscale * (av_znrng_get(&s->spx_noise_state) >> 4)) >> 23;
+                int64_t noise  = (nscale * (((int)av_lfg_get(&s->dith_state))>>8)) >> 23;
                 int64_t signal = (sscale * s->fixed_coeffs[ch][bin]) >> 23;
                 s->fixed_coeffs[ch][bin++] = ((noise + signal) * spxco) >> 23;
             }
