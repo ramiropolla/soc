@@ -120,29 +120,6 @@ static const uint8_t *swb_size_128[] = {
     swb_size_128_16, swb_size_128_16, swb_size_128_8
 };
 
-/** spectral coefficients codebook information */
-static const struct {
-    int16_t maxval;         ///< maximum possible value
-     int8_t range;          ///< value used in vector calculation
-} aac_cb_info[] = {
-    {    0, -1 }, // zero codebook
-    {    1,  3 },
-    {    1,  3 },
-    {    2,  3 },
-    {    2,  3 },
-    {    4,  9 },
-    {    4,  9 },
-    {    7,  8 },
-    {    7,  8 },
-    {   12, 13 },
-    {   12, 13 },
-    { 8191, 17 },
-    {   -1, -1 }, // reserved
-    {   -1, -1 }, // perceptual noise substitution
-    {   -1, -1 }, // intensity out-of-phase
-    {   -1, -1 }, // intensity in-phase
-};
-
 /** bits needed to code codebook run value for long windows */
 static const uint8_t run_value_bits_long[64] = {
      5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,
