@@ -270,6 +270,7 @@ static void psy_3gpp_analyze(FFPsyContext *ctx, int channel, const float *coefs,
     for(w = 0; w < wi->num_windows*16; w += 16){
         for(g = 0; g < num_bands; g++){
             Psy3gppBand *band = &pch->band[w+g];
+            band->energy = 0.0f;
             for(i = 0; i < band_sizes[g]; i++)
                 band->energy += coefs[start+i] * coefs[start+i];
             band->energy *= 1.0f / (512*512);
