@@ -287,7 +287,7 @@ static void psy_3gpp_analyze(FFPsyContext *ctx, int channel, const float *coefs,
             band[g].thr = FFMAX(band[g].thr, band[g-1].thr * coeffs->spread_low[g-1]);
         }
         for(g = num_bands - 2; g >= 0; g--){
-            band[g].thr = FFMAX(band[g].thr, band[g+1].thr * coeffs->spread_hi [g+1]);
+            band[g].thr = FFMAX(band[g].thr, band[g+1].thr * coeffs->spread_hi [g]);
         }
         for(g = 0; g < num_bands; g++){
             band[g].thr_quiet = FFMAX(band[g].thr, coeffs->ath[g]);
