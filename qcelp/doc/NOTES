@@ -14,17 +14,17 @@ function of the selected rate (1, 1/2, 1/4, 1/8).
 
 
 Parameter codes transmitted for each rate packet (Page 25)
-------------------------------------------------
+----------------------------------------------------------
 
-LSPi     |  Line Spectral Pair frequency i.
-LSPVi    |  Line Spectral Pair frequencies grouped into five R2 vectors.
-PLAGi    |  Pitch Lag for the ith pitch subframe.
-PFRACi   |  Fractional Pitch Lag for the ith pitch subframe.
-PGAINi   |  Pitch Gain for the ith pitch subframe.
-CBINDEXi |  Codebook Index for the ith codebook subframe.
-CBGAINi  |  Unsigned Codebook Gain for the ith codebook subframe.
-CBSEED   |  Random Seed for Rate 1/8 packets.
-CBSIGNi  |  Sign of the Codebook Gain for the ith codebook subframe.
+LSPi     |  line spectral pair frequency i
+LSPVi    |  line spectral pair frequencies grouped into five R2 vectors
+PLAGi    |  pitch lag for the ith pitch subframe
+PFRACi   |  fractional pitch Lag for the ith pitch subframe
+PGAINi   |  pitch gain for the ith pitch subframe
+CBINDEXi |  codebook index for the ith codebook subframe
+CBGAINi  |  unsigned codebook gain for the ith codebook subframe
+CBSEED   |  random seed for rate 1/8 packets
+CBSIGNi  |  sign of the codebook gain for the ith codebook subframe
 
 
 Bits for each rate packet (Page 26)
@@ -52,4 +52,4 @@ OCTET 0   RATE      TOTAL CODEC data frame size (in octets)
   4       1         35
   5       reserved  8 (SHOULD be treated as a reserved value)
  14       Erasure   1 (SHOULD NOT be transmitted by sender)
- other    n/a       reserved
+ other    N/A       reserved

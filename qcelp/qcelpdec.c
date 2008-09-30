@@ -38,7 +38,7 @@ typedef struct
 {
     GetBitContext     gb;
     qcelp_packet_rate rate;
-    uint8_t           data[76];       /*!< Data from a _parsed_ frame */
+    uint8_t           data[76];       /*!< data from a _parsed_ frame */
     uint8_t           erasure_count;
     uint8_t           ifq_count;
     float             prev_lspf[10];
@@ -64,7 +64,7 @@ static int qcelp_decode_init(AVCodecContext *avctx)
 
     if(avctx->channels != 1)
         av_log(avctx, AV_LOG_WARNING,
-               "QCELP doesn't allow %d channels. Trying mono.\n",
+               "QCELP does not allow %d channels. Trying mono.\n",
                avctx->channels);
 
     avctx->sample_rate = 8000;
@@ -75,7 +75,7 @@ static int qcelp_decode_init(AVCodecContext *avctx)
 
 /**
  * Decodes the 10 quantized LSP frequencies from the LSPV/LSP
- * transsmision codes of any frame rate.
+ * transmission codes of any framerate.
  *
  * TIA/EIA/IS-733 2.4.3.2.6.2-2
  */
@@ -130,7 +130,7 @@ static void qcelp_decode_lspf(const QCELPContext *q, float *lspf, int *is_ifq)
 
 /**
  * Converts codebook transmission codes to GAIN and INDEX
- * (and cbseed for rate 1/4)
+ * (and cbseed for rate 1/4).
  *
  * TIA/EIA/IS-733 2.4.6.2
  */
@@ -160,7 +160,7 @@ static void qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed,
                 /*
                  * TIA/EIA/IS-733 Spec has errors on the predictor determination
                  * formula at equation 2.4.6.1-4 -- The predictor there needs 6
-                 * to be subtracted from it to give RI compliants results. The
+                 * to be subtracted from it to give RI-compliant results. The
                  * problem is it ignores the fact that codebook subframes 4, 8,
                  * 12 and 16 on a FULL_RATE frame use a different quantizer
                  * table.
@@ -207,7 +207,7 @@ static void qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed,
             q->last_codebook_gain=gain[4];
 
             /*
-             * 5->8 Interpolation to 'Provide smoothing of the energy
+             * 5->8 interpolation to 'Provide smoothing of the energy
              * of the unvoiced excitation' TIA/EIA/IS-733 2.4.6.2
              */
 
@@ -256,14 +256,14 @@ static void qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed,
 
 /**
  * Computes the scaled codebook vector Cdn From INDEX and GAIN
- * For all rates.
+ * for all rates.
  *
- * @param rate Rate of the current frame/packet
- * @param gain Array holding the 4 pitch subframe gain values
- * @param index Array holding the 4 pitch subfrane index values
- * @param cbseed Seed needed for scaled codebook vector generation on rates
+ * @param rate rate of the current frame/packet
+ * @param gain array holding the 4 pitch subframe gain values
+ * @param index array holding the 4 pitch subframe index values
+ * @param cbseed seed needed for scaled codebook vector generation on rates
  * other than RATE_FULL or RATE_HALF
- * @param cnd_vector Array where to put the generated scaled codebook vector
+ * @param cnd_vector array for the generated scaled codebook vector
  */
 static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
            const int *index, uint16_t cbseed, float *cdn_vector)
@@ -274,17 +274,17 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
 
 
    /*
-    * Spec has some missing info here.
+    * The specification misses some information here.
     *
-    * TIA/EIA/IS-733 Spec has an omission on the codebook index determination
+    * TIA/EIA/IS-733 has an omission on the codebook index determination
     * formula for RATE_FULL and RATE_HALF frames at section 2.4.8.1.1. It says
-    * you have to subtract the decoded index parameter to the given scaled
+    * you have to subtract the decoded index parameter from the given scaled
     * codebook vector index 'n' to get the desired circular codebook index, but
-    * it does not mention that you have to clamp 'n' to [0-9] in order to get RI
-    * compliant results.
+    * it does not mention that you have to clamp 'n' to [0-9] in order to get
+    * RI-compliant results.
     *
-    * The reason for this mistake seems to be the fact they forget to tell you
-    * have to do these calculations per codebook subframe and adjust given
+    * The reason for this mistake seems to be the fact they forget to mention
+    * you have to do these calculations per codebook subframe and adjust given
     * equation values accordingly.
     */
 
@@ -327,7 +327,7 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
                     cdn_vector[i]+=qcelp_rnd_fir_coefs[j]*rnd[i-j];
                 }
 
-                // Final scaling
+                // final scaling
 
                 cdn_vector[i]*=gain[i/20];
             }
@@ -347,11 +347,11 @@ static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
 }
 
 /**
- * Computes energy of the subframeno-ith subvector. This values are
+ * Computes energy of the subframeno-ith subvector. These values are
  * used to generate the scalefactors for the gain control stages.
  *
- * @param vector Vector from where to measure the subframe's energy
- * @param subframeno Size 40 subframe number that should be measured
+ * @param vector vector from which to measure the subframe's energy
+ * @param subframeno size 40 subframe number that should be measured
  *
  * TIA/EIA/IS-733 2.4.8.3-2/3
  */
@@ -371,7 +371,7 @@ static float qcelp_compute_subframe_energy(const float *vector, int subframeno)
 /**
  * Computes scalefactors needed to gain-control 'in' and 'out' vectors.
  *
- * @param scalefactors array to place the resulting four scalecators
+ * @param scalefactors array to place the resulting four scalefactors
  */
 static void qcelp_get_gain_scalefactors(const float *in, const float *out,
             float *scalefactors)
@@ -387,10 +387,10 @@ static void qcelp_get_gain_scalefactors(const float *in, const float *out,
  * Generic gain control stage to implement TIA/EIA/IS-733 2.4.8.6-6 and
  * FIXME_MISSINGSPECSECTION.
  *
- * @param do_iirf Were to or not to apply harcoded coef infinite impulse
- * response filter
- * @param in Vector to control gain off
- * @param out Gain controled output vector
+ * @param do_iirf whether or not to apply hardcoded coefficient infinite
+ * impulse response filter
+ * @param in vector to control gain off
+ * @param out gain-controlled output vector
  */
 static void qcelp_apply_gain_ctrl(int do_iirf, const float *in, float *out)
 {
@@ -441,7 +441,7 @@ static int qcelp_do_pitchfilter(QCELPContext *q, int step, float *pv)
             plag =q->data+QCELP_PLAG0_POS;
             pfrac=q->data+QCELP_PFRAC0_POS;
 
-            // Compute Gain & Lag for the whole frame
+            // Compute gain & lag for the whole frame
 
             for(i=0; i<4; i++)
             {
@@ -461,9 +461,9 @@ static int qcelp_do_pitchfilter(QCELPContext *q, int step, float *pv)
             }
 
             /*
-             * Apply filter
+             * Apply filter.
              *
-             * TIA/EIA/IS-733 2.4.5.2-2/3 equations aren't clear enough but
+             * TIA/EIA/IS-733 2.4.5.2-2/3 equations are not clear enough but
              * we know this filter has to be applied in pitch-subframe steps.
              */
 
@@ -518,15 +518,15 @@ static int qcelp_do_pitchfilter(QCELPContext *q, int step, float *pv)
 }
 
 /**
- * Computes interpolated lsp frequencies for a given rate & pitch subframe
+ * Computes interpolated LSP frequencies for a given rate & pitch subframe.
  *
  * TIA/EIA/IS-733 2.4.3.3.4
  *
- * @param rate Frame rate
- * @param prev_lspf Previous frame LSP freqs vector
- * @param curr_lspf Current frame LSP freqs vector
- * @param interpolated_lspf Float vector to put the resulting LSP freqs
- * @param frame_num Frame number in decoded stream
+ * @param rate framerate
+ * @param prev_lspf LSP frequencies vector of the previous frame
+ * @param curr_lspf LSP frequencies vector of the  current frame
+ * @param interpolated_lspf float vector for the resulting LSP frequencies
+ * @param frame_num frame number in decoded stream
  */
 void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
      float *curr_lspf, float *interpolated_lspf, int sample_num, int frame_num)
@@ -586,12 +586,12 @@ void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
 
 /**
  * Linear convolution of two vectors, with max resultant
- * vector dim = 12 -- just what we need. Result gets stored
- * in v1 so it must have enough room to hold d1+d2-1.
+ * vector dim = 12 -- just what we need. The result gets stored
+ * in v1 so it must have enough room to hold d1 + d2 - 1.
  *
- * WIP this is a heavily suboptimal implementation
+ * WIP This is a heavily suboptimal implementation.
  *
- * @param d1 real dimension of v1 prior convolution
+ * @param d1 real dimension of v1 prior to convolution
  * @param d2 dimension of v2
  */
 static void qcelp_convolve(float *v1, const float *v2, int d1, int d2)
@@ -612,7 +612,7 @@ static void qcelp_convolve(float *v1, const float *v2, int d1, int d2)
 }
 
 /**
- * Computes the Pa and Qa coeficients needed at LSP to LPC conversion.
+ * Computes the Pa and Qa coefficients needed for LSP to LPC conversion.
  *
  * TIA/EIA/IS-733 2.4.3.3.5-1/2
  */
@@ -626,7 +626,7 @@ static void qcelp_lsp2poly(float *lspf, float *pa, float *qa)
     v2[0]=1;
     v2[2]=1;
 
-    // Compute Pa coefs
+    // Compute Pa coefficients
 
     v1[0]=1.0;
     v1[1]=1.0;
@@ -640,7 +640,7 @@ static void qcelp_lsp2poly(float *lspf, float *pa, float *qa)
     for(i=0;i<5;i++)
         pa[i]=v1[i+1];
 
-    // Compute Qa coefs
+    // Compute Qa coefficients
 
     v1[0]= 1.0;
     v1[1]=-1.0;
@@ -657,7 +657,7 @@ static void qcelp_lsp2poly(float *lspf, float *pa, float *qa)
 }
 
 /**
- * Reconstructs LPC coeficients from the line spectral pairs frequencies
+ * Reconstructs LPC coefficients from the line spectral pairs frequencies.
  *
  * TIA/EIA/IS-733 2.4.3.3.5
  */
@@ -675,7 +675,7 @@ static void qcelp_lsp2lpc(float *lspf, float *lpc)
 }
 
 /**
- * Formant sythesis filter
+ * Formant synthesis filter
  *
  * TIA/EIA/IS-733 2.4.3.1 (NOOOOT)
  */
@@ -685,7 +685,7 @@ static void qcelp_do_formant(float *in, float *out, float *lpc_coefs,
     float tmp[50];
     int i,j;
 
-    // Copy over previous ten samples generated
+    // Copy over previous ten generated samples
 
     memcpy(tmp, memory, 10*sizeof(float));
     memcpy(tmp+10, in, 40*sizeof(float));
@@ -737,7 +737,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
     init_get_bits(&q->gb, buf, buf_size*8);
 
     /*
-     * Figure out framerate by its size, set up a few utility vars
+     * Figure out framerate by its size, set up a few utility variables
      * and point 'order' to the rate's reference _slice_ inside the
      * big REFERENCE_FRAME array.
      */
@@ -773,9 +773,9 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
             order = QCELP_REFERENCE_FRAME + QCELP_8THRPKT_REFERENCE_POS;
 
             /*
-             * We assume its IFQ unless we find at least one '0'
+             * We assume it is IFQ unless we find at least one '0'
              * in the first 16 bits, this check is performed as part of
-             * the reordering loop that follows
+             * the reordering loop that follows.
              */
 
             is_ifq = 1;
@@ -805,7 +805,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
            (claimed_rate ==  4 && q->rate != RATE_FULL   ))
         {
            av_log(avctx, AV_LOG_WARNING,
-                  "Claimed rate and buffer size missmatch\n");
+                  "Claimed rate and buffer size mismatch\n");
         }
     }
 
@@ -867,14 +867,14 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
         /*
          * Pitch pre-filter
          *
-         * Making this runtime selectable might be a good speed-wise compromise
-         * bearing a small degradation of perceived output quality.
+         * Making this runtime-selectable might be a good speed-wise compromise
+         * at the cost of a small degradation in perceived output quality.
          */
 
         if((is_ifq = qcelp_do_pitchfilter(q, 2, ppf_vector)))
         {
             av_log(avctx, AV_LOG_WARNING,
-                   "Error can't pitch-prefilter ppf_vector[%d]\n", is_ifq);
+                   "Error: Cannot pitch-prefilter ppf_vector[%d]\n", is_ifq);
             is_ifq=1;
         }
     }
@@ -912,7 +912,7 @@ static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
 
     }
 
-    // Copy current lspf freqs over to prev_lspf
+    // Copy current lspf frequencies over to prev_lspf
 
     memcpy(q->prev_lspf, qtzd_lspf, sizeof(q->prev_lspf));
 

@@ -28,20 +28,20 @@ function missing()
 {
     echo ""
     echo "You need patch and rsync somewhere in your PATH for this script"
-    echo "to work properly"
+    echo "to work properly."
     echo ""
 }
 
 function usage()
 {
     echo ""
-    echo "Simple source preparation script for ffmpeg's qcelp decoder."
+    echo "Simple source preparation script for FFmpeg's QCELP decoder."
     echo ""
     echo "Usage:"
     echo ""
     echo "$0 PATH_TO_FFMPEG_REPO"
     echo ""
-    echo "PATH_TO_FFMPEG_REPO should point to the dir containing ffmpeg's trunk"
+    echo "PATH_TO_FFMPEG_REPO should point to the dir containing FFmpeg trunk"
     echo ""
 }
 
@@ -85,7 +85,7 @@ cd ..
 
 echo "Finished"
 echo ""
-echo "Patched source is in trunk dir. happy hacking"
+echo "Patched source is in trunk dir. Happy hacking"
 
 exit 0
 echo "

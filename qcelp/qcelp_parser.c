@@ -32,7 +32,7 @@
 /**
  * Finds the end of the current frame in the bitstream.
  *
- * @return the position of the first byte of the next frame, or -1
+ * @return the position of the first byte of the next frame or -1
  */
 
 static int qcelp_find_frame_end(ParseContext *pc, const uint8_t *buf,

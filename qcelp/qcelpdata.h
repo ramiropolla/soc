@@ -43,15 +43,15 @@ static const float    qcelp_hammsinc_table[]={-0.006822, 0.041249,-0.143459,
 
 typedef struct
 {
-    uint8_t index;  /*!< Index into the reference frame */
-    uint8_t bitpos; /*!< Bit position in the value's byte */
+    uint8_t index;  /*!< index into the reference frame */
+    uint8_t bitpos; /*!< bit position in the value's byte */
 } QCELPBitmap;
 
 
 /**
  * WARNING
  *
- * YOU WONT SEE ANY mention of a REFERENCE nor an UNIVERSAL frame
+ * YOU WILL NOT SEE ANY mention of a REFERENCE nor an UNIVERSAL frame
  * in the specs, this is just some internal way of handling the
  * reordering needed to unify the decoding process _inside_ this
  * code, nothing more.
@@ -155,7 +155,7 @@ typedef struct
 {68,0},{67,0},{66,0},{76,3}
 
 /**
- * Position of the bitmapping data for each pkt type in
+ * position of the bitmapping data for each pkt type in
  * the big REFERENCE FRAME array
  */
 
@@ -170,7 +170,7 @@ static const QCELPBitmap QCELP_REFERENCE_FRAME[]={QCELP_RATE_FULL_BITMAP,
                                                   QCELP_RATE_8THR_BITMAP};
 
 /**
- * Position of the transmission codes inside the universal frame.
+ * position of the transmission codes inside the universal frame
  */
 
 #define QCELP_CBSIGN0_POS 0
@@ -180,9 +180,9 @@ static const QCELPBitmap QCELP_REFERENCE_FRAME[]={QCELP_RATE_FULL_BITMAP,
 #define QCELP_PFRAC0_POS  52
 #define QCELP_PGAIN0_POS  56
 #define QCELP_LSPV0_POS   60
-#define QCELP_RSRVD_POS   65    /*!< On all but rate 1/2 packets */
-#define QCELP_LSP0_POS    66    /*!< Only in rate 1/8 packets    */
-#define QCELP_CBSEED_POS  76    /*!< Only in rate 1/8 packets    */
+#define QCELP_RSRVD_POS   65    /*!< on all but rate 1/2 packets */
+#define QCELP_LSP0_POS    66    /*!< only in rate 1/8 packets    */
+#define QCELP_CBSEED_POS  76    /*!< only in rate 1/8 packets    */
 
 typedef struct
 {
@@ -191,7 +191,7 @@ typedef struct
 } qcelp_vector;
 
 /**
- * LSP Vector quantization tables in x*10000 form.
+ * LSP Vector quantization tables in x*10000 form
  *
  * TIA/EIA/IS-733 tables 2.4.3.2.6.3-1 through 2.4.3.2.6.3-5
  */
@@ -319,7 +319,7 @@ static const qcelp_vector qcelp_lspvq5[]={
 { 539,1564},{1142, 533},{ 984, 391},{2130,1089}};
 
 /**
- * Table for computing Ga (Decoded linear codebook gain magnitude).
+ * table for computing Ga (decoded linear codebook gain magnitude)
  *
  * TIA/EIA/IS-733 2.4.6.2.1-3
  */
@@ -387,4 +387,4 @@ static const double qcelp_rnd_fir_coefs[]=
   3.749518e-2,-9.918777e-2, 3.501983e-2,-9.251384e-2,
   3.041388e-2,-8.210701e-2, 2.434368e-2,-6.905826e-2,
   1.735384e-2,-1.344519e-1
-}; /*!< Start reading from [1] */
+}; /*!< Start reading from [1]. */
