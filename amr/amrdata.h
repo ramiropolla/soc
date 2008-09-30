@@ -19,6 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#ifndef AVCODEC_AMRDATA_H
+#define AVCODEC_AMRDATA_H
 
 /**
  * @file amrdata.h
@@ -1177,3 +1179,5 @@ static const uint16_t pitch_gain_quant[N_PITCH_QUANTS] = {
 };
 
 /**************************** end of tables *****************************/
+
+#endif /* AVCODEC_AMRDATA_H */

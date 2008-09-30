@@ -19,14 +19,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#ifndef AVCODEC_J2K_H
+#define AVCODEC_J2K_H
+
 /**
  * JPEG2000 tables
  * @file j2k.h
  * @author Kamil Nowosad
  */
-
-#ifndef J2K_H
-#define J2K_H
 
 #include "mqc.h"
 #include "dwt.h"
@@ -217,4 +217,4 @@ int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantSt
 void ff_j2k_reinit(J2kComponent *comp, J2kCodingStyle *codsty);
 void ff_j2k_cleanup(J2kComponent *comp, J2kCodingStyle *codsty);
 
-#endif /* J2K_H */
+#endif /* AVCODEC_J2K_H */

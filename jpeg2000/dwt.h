@@ -19,14 +19,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#ifndef AVCODEC_DWT_H
+#define AVCODEC_DWT_H
+
 /**
  * Discrete wavelet transform
  * @file dwt.h
  * @author Kamil Nowosad
  */
-
-#ifndef DWT_H
-#define DWT_H
 
 #include "avcodec.h"
 
@@ -60,4 +60,4 @@ int ff_dwt_decode(DWTContext *s, int *t);
 
 void ff_dwt_destroy(DWTContext *s);
 
-#endif /* DWT_H */
+#endif /* AVCODEC_DWT_H */

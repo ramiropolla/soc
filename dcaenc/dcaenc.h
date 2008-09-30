@@ -19,6 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#ifndef AVCODEC_DCAENC_H
+#define AVCODEC_DCAENC_H
+
 /* This is a scaled version of the response of the reference decoder to
    this vector of subband samples: ( 1.0 0.0 0.0 ... 0.0 )
    */
@@ -537,3 +540,5 @@ static const int32_t UnQMF[512] = {
 5,
 7
 };
+
+#endif /* AVCODEC_DCAENC_H */

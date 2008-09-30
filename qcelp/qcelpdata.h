@@ -19,6 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#ifndef AVCODEC_QCELPDATA_H
+#define AVCODEC_QCELPDATA_H
+
 /**
  * @file qcelpdata.h
  * QCELP decoder
@@ -388,3 +391,5 @@ static const double qcelp_rnd_fir_coefs[]=
   3.041388e-2,-8.210701e-2, 2.434368e-2,-6.905826e-2,
   1.735384e-2,-1.344519e-1
 }; /*!< Start reading from [1]. */
+
+#endif /* AVCODEC_QCELPDATA_H */

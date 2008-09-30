@@ -19,14 +19,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#ifndef AVCODEC_MQC_H
+#define AVCODEC_MQC_H
+
 /**
  * MQ-coder
  * @file mqc.h
  * @author Kamil Nowosad
  */
-
-#ifndef MQC_H
-#define MQC_H
 
 #include "avcodec.h"
 
@@ -72,4 +72,4 @@ int ff_mqc_decode(MqcState *mqc, uint8_t *cxstate);
 /** initialize the contexts */
 void ff_mqc_init_contexts(MqcState *mqc);
 
-#endif /* MQC_H */
+#endif /* AVCODEC_MQC_H */

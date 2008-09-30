@@ -25,8 +25,8 @@
  * VC-1 tables.
  */
 
-#ifndef VC1DATA_H
-#define VC1DATA_H
+#ifndef AVCODEC_VC1DATA_H
+#define AVCODEC_VC1DATA_H
 
 /* bfraction is fractional, we scale to the GCD 3*5*7*8 = 840 */
 const int16_t vc1_bfraction_lut[23] = {
@@ -573,4 +573,4 @@ static const int32_t vc1_dqscale[63] = {
     0x14E6, 0x147B, 0x1414, 0x13B1, 0x1352, 0x12F7, 0x129E, 0x1249,
     0x11F7, 0x11A8, 0x115B, 0x1111, 0x10C9, 0x1084, 0x1000
 };
-#endif /* VC1DATA_H */
+#endif /* AVCODEC_VC1DATA_H */
