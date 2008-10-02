@@ -1,8 +1,10 @@
---- ffplay.c.old	2008-06-19 20:58:45.000000000 +0200
-+++ ffplay.c	2008-06-19 21:02:50.000000000 +0200
-@@ -27,6 +27,12 @@
- #include "libavdevice/avdevice.h"
+Index: ffplay.c
+===================================================================
+--- ffplay.c	(revision 15000)
++++ ffplay.c	(working copy)
+@@ -28,6 +28,12 @@
  #include "libswscale/swscale.h"
+ #include "libavcodec/audioconvert.h"
  
 +#if ENABLE_AVFILTER
 +# include "libavfilter/avfilter.h"
@@ -13,7 +15,7 @@
  #include "cmdutils.h"
  
  #include <SDL.h>
-@@ -65,7 +71,9 @@
+@@ -66,7 +72,9 @@
  /* NOTE: the size must be big enough to compensate the hardware audio buffersize size */
  #define SAMPLE_ARRAY_SIZE (2*65536)
  
@@ -23,9 +25,11 @@
  
  typedef struct PacketQueue {
      AVPacketList *first_pkt, *last_pkt;
-@@ -85,6 +93,10 @@
+@@ -84,7 +92,12 @@
+     double pts;                                  ///<presentation time stamp for this picture
+     SDL_Overlay *bmp;
      int width, height; /* source height & width */
-     enum PixelFormat pix_fmt;
++    enum PixelFormat pix_fmt;
      int allocated;
 +
 +#if ENABLE_AVFILTER
@@ -34,7 +38,7 @@
  } VideoPicture;
  
  typedef struct SubPicture {
-@@ -167,6 +179,10 @@
+@@ -171,6 +184,10 @@
      //    QETimer *video_timer;
      char filename[1024];
      int width, height, xleft, ytop;
@@ -45,7 +49,7 @@
  } VideoState;
  
  static void show_help(void);
-@@ -206,6 +222,9 @@
+@@ -210,6 +227,9 @@
  static int error_resilience = FF_ER_CAREFUL;
  static int error_concealment = 3;
  static int decoder_reorder_pts= 0;
@@ -55,32 +59,33 @@
  
  /* current context */
  static int is_full_screen;
-@@ -652,14 +671,22 @@
+@@ -656,6 +676,13 @@
  
      vp = &is->pictq[is->pictq_rindex];
      if (vp->bmp) {
 +#if ENABLE_AVFILTER
-+        if (vp->picref->pixel_aspect.num == 0)
-+            aspect_ratio = 0;
-+        else
-+            aspect_ratio = av_q2d(vp->picref->pixel_aspect);
++         if (vp->picref->pixel_aspect.num == 0)
++             aspect_ratio = 0;
++         else
++             aspect_ratio = av_q2d(vp->picref->pixel_aspect);
 +#else
++
          /* XXX: use variable in the frame */
-         if (is->video_st->codec->sample_aspect_ratio.num == 0)
-             aspect_ratio = 0;
+         if (is->video_st->sample_aspect_ratio.num)
+             aspect_ratio = av_q2d(is->video_st->sample_aspect_ratio);
+@@ -663,9 +690,10 @@
+             aspect_ratio = av_q2d(is->video_st->codec->sample_aspect_ratio);
          else
--            aspect_ratio = av_q2d(is->video_st->codec->sample_aspect_ratio)
--                * vp->width / vp->height;
-+            aspect_ratio = av_q2d(is->video_st->codec->sample_aspect_ratio);
+             aspect_ratio = 0;
 +#endif
          if (aspect_ratio <= 0.0)
-             aspect_ratio = (float)vp->width / (float)vp->height;
-+        else
-+            aspect_ratio *= (float)vp->width / (float)vp->height;
+             aspect_ratio = 1.0;
+-        aspect_ratio *= (float)is->video_st->codec->width / is->video_st->codec->height;
++        aspect_ratio *= (float)vp->width / (float)vp->height;
          /* if an active format is indicated, then it overrides the
             mpeg format */
  #if 0
-@@ -862,9 +889,15 @@
+@@ -868,9 +896,15 @@
      } else if(!is_full_screen && screen_width){
          w = screen_width;
          h = screen_height;
@@ -96,7 +101,7 @@
      } else {
          w = 640;
          h = 480;
-@@ -1170,9 +1203,19 @@
+@@ -1175,6 +1209,20 @@
      if (vp->bmp)
          SDL_FreeYUVOverlay(vp->bmp);
  
@@ -109,14 +114,29 @@
 +    vp->height  = is->out_video_filter->inputs[0]->h;
 +    vp->pix_fmt = is->out_video_filter->inputs[0]->format;
 +#else
-     vp->width   = is->video_st->codec->width;
-     vp->height  = is->video_st->codec->height;
-     vp->pix_fmt = is->video_st->codec->pix_fmt;
++    vp->width   = is->video_st->codec->width;
++    vp->height  = is->video_st->codec->height;
++    vp->pix_fmt = is->video_st->codec->pix_fmt;
 +#endif
- 
++
  #if 0
      /* XXX: use generic function */
-@@ -1210,8 +1253,11 @@
+     /* XXX: disable overlay if no hardware acceleration or if RGB format */
+@@ -1192,12 +1240,9 @@
+         break;
+     }
+ #endif
+-    vp->bmp = SDL_CreateYUVOverlay(is->video_st->codec->width,
+-                                   is->video_st->codec->height,
++    vp->bmp = SDL_CreateYUVOverlay(vp->width, vp->height,
+                                    SDL_YV12_OVERLAY,
+                                    screen);
+-    vp->width = is->video_st->codec->width;
+-    vp->height = is->video_st->codec->height;
+ 
+     SDL_LockMutex(is->pictq_mutex);
+     vp->allocated = 1;
+@@ -1214,8 +1259,11 @@
      VideoPicture *vp;
      int dst_pix_fmt;
      AVPicture pict;
@@ -129,7 +149,7 @@
      /* wait until we have space to put a new picture */
      SDL_LockMutex(is->pictq_mutex);
      while (is->pictq_size >= VIDEO_PICTURE_QUEUE_SIZE &&
-@@ -1227,8 +1273,13 @@
+@@ -1231,8 +1279,13 @@
  
      /* alloc or resize hardware picture buffer */
      if (!vp->bmp ||
@@ -143,7 +163,7 @@
          SDL_Event event;
  
          vp->allocated = 0;
-@@ -1252,6 +1303,12 @@
+@@ -1256,6 +1309,12 @@
  
      /* if the frame is not skipped, then display it */
      if (vp->bmp) {
@@ -156,7 +176,7 @@
          /* get a pointer on the bitmap */
          SDL_LockYUVOverlay (vp->bmp);
  
-@@ -1263,6 +1320,19 @@
+@@ -1267,17 +1326,29 @@
          pict.linesize[0] = vp->bmp->pitches[0];
          pict.linesize[1] = vp->bmp->pitches[2];
          pict.linesize[2] = vp->bmp->pitches[1];
@@ -174,20 +194,65 @@
 +                        vp->pix_fmt, vp->width, vp->height);
 +#else
          img_convert_ctx = sws_getCachedContext(img_convert_ctx,
-             vp->width, vp->height, vp->pix_fmt, vp->width, vp->height,
+-            is->video_st->codec->width, is->video_st->codec->height,
+-            is->video_st->codec->pix_fmt,
+-            is->video_st->codec->width, is->video_st->codec->height,
++            vp->width, vp->height, vp->pix_fmt, vp->width, vp->height,
              dst_pix_fmt, sws_flags, NULL, NULL, NULL);
-@@ -1272,6 +1342,7 @@
+         if (img_convert_ctx == NULL) {
+             fprintf(stderr, "Cannot initialize the conversion context\n");
+             exit(1);
          }
          sws_scale(img_convert_ctx, src_frame->data, src_frame->linesize,
-                   0, vp->height, pict.data, pict.linesize);
+-                  0, is->video_st->codec->height, pict.data, pict.linesize);
++                  0, vp->height, pict.data, pict.linesize);
 +#endif
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1381,6 +1452,138 @@
-     return 0;
+@@ -1332,54 +1403,253 @@
+     return queue_picture(is, src_frame, pts);
  }
  
++static int get_video_frame(VideoState *is, AVFrame *frame, uint64_t *pts)
++{
++    AVPacket pkt1, *pkt = &pkt1;
++    int len1, got_picture;
++
++    if (packet_queue_get(&is->videoq, pkt, 1) < 0)
++        return -1;
++
++    if(pkt->data == flush_pkt.data){
++        avcodec_flush_buffers(is->video_st->codec);
++        return 0;
++    }
++
++    /* NOTE: ipts is the PTS of the _first_ picture beginning in
++       this packet, if any */
++    is->video_st->codec->reordered_opaque= pkt->pts;
++    len1 = avcodec_decode_video(is->video_st->codec,
++                                frame, &got_picture,
++                                pkt->data, pkt->size);
++
++    if(   (decoder_reorder_pts || pkt->dts == AV_NOPTS_VALUE)
++          && frame->reordered_opaque != AV_NOPTS_VALUE)
++        *pts= frame->reordered_opaque;
++    else if(pkt->dts != AV_NOPTS_VALUE)
++        *pts= pkt->dts;
++    else
++        *pts= 0;
++
++//            if (len1 < 0)
++//                break;
++        /* put pts into units of 1/AV_TIME_BASE */
++    *pts = AV_TIME_BASE * (*pts) * is->video_st->time_base.num /
++        is->video_st->time_base.den;
++    av_free_packet(pkt);
++    if(got_picture)
++        return 1;
++    return 0;
++}
++
 +#if ENABLE_AVFILTER
 +typedef struct {
 +    VideoState *is;
@@ -215,7 +280,7 @@
 +{
 +    FilterPriv *priv = link->src->priv;
 +    AVFilterPicRef *picref;
-+    uint64_t pts;
++    uint64_t pts = 0;
 +
 +    if(get_video_frame(priv->is, priv->frame, &pts) < 0)
 +        return -1;
@@ -323,9 +388,12 @@
  static int video_thread(void *arg)
  {
      VideoState *is = arg;
-@@ -1389,10 +1592,55 @@
+-    AVPacket pkt1, *pkt = &pkt1;
+-    int len1, got_picture;
+     AVFrame *frame= avcodec_alloc_frame();
++    uint64_t pts_int;
      double pts;
-     int ret;
++    int ret;
  
 +
 +#if ENABLE_AVFILTER
@@ -369,17 +437,55 @@
 +#endif
 +
      for(;;) {
-         while (is->paused && !is->videoq.abort_request)
+-        while (is->paused && !is->videoq.abort_request) {
++        while (is->paused && !is->videoq.abort_request)
              SDL_Delay(10);
+-        }
+-        if (packet_queue_get(&is->videoq, pkt, 1) < 0)
+-            break;
 +#if ENABLE_AVFILTER
 +        ret = get_filtered_video_frame(filt_out, frame, &pts_int);
 +#else
-         ret = get_video_frame(is, frame, &pts_int);
++        ret = get_video_frame(is, frame, &pts_int);
 +#endif
  
-         if (ret < 0) goto the_end;
+-        if(pkt->data == flush_pkt.data){
+-            avcodec_flush_buffers(is->video_st->codec);
++        if (ret < 0) goto the_end;
++
++        if (!ret)
+             continue;
+-        }
  
-@@ -1409,6 +1657,9 @@
+-        /* NOTE: ipts is the PTS of the _first_ picture beginning in
+-           this packet, if any */
+-        is->video_st->codec->reordered_opaque= pkt->pts;
+-        len1 = avcodec_decode_video(is->video_st->codec,
+-                                    frame, &got_picture,
+-                                    pkt->data, pkt->size);
++        pts  = pts_int;
++        pts /= AV_TIME_BASE;
++        if(output_picture2(is, frame, pts) < 0)
++            goto the_end;
+ 
+-        if(   (decoder_reorder_pts || pkt->dts == AV_NOPTS_VALUE)
+-           && frame->reordered_opaque != AV_NOPTS_VALUE)
+-            pts= frame->reordered_opaque;
+-        else if(pkt->dts != AV_NOPTS_VALUE)
+-            pts= pkt->dts;
+-        else
+-            pts= 0;
+-        pts *= av_q2d(is->video_st->time_base);
+-
+-//            if (len1 < 0)
+-//                break;
+-        if (got_picture) {
+-            if (output_picture2(is, frame, pts) < 0)
+-                goto the_end;
+-        }
+-        av_free_packet(pkt);
+         if (step)
+             if (cur_stream)
                  stream_pause(cur_stream);
      }
   the_end:
@@ -389,7 +495,7 @@
      av_free(frame);
      return 0;
  }
-@@ -2148,6 +2399,12 @@
+@@ -2156,6 +2426,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -402,9 +508,9 @@
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2484,6 +2741,9 @@
+@@ -2493,6 +2769,9 @@
      { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
-     { "sync", HAS_ARG | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
+     { "sync", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
 +#if ENABLE_AVFILTER
 +    { "vfilters", OPT_STRING | HAS_ARG, {(void*)&vfilters}, "video filters", "filter list" },
