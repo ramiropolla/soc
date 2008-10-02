@@ -2,15 +2,10 @@ This is the libavfilter SoC project!
 
 Here is what to do to try it out:
 
-1) download current ffmpeg SVN
-2) put the directory containing this README in an unrelated directory and copy
-   all the files to the libavfilter/ directory of current SVN, overwriting
-   allcodecs.c and Makefile.
-3) apply the patches under libavfilter/diffs to the main ffmpeg source tree
-   in sequential order
-4) run configure with --enable-avfilter
-5) make
-6) run it!
+1) execute the checkout.sh script
+2) change directory to ffmpeg and run configure with --enable-avfilter
+3) make
+4) run it!
 
 WRITING FILTERS:
 
