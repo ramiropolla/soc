@@ -1,6 +1,7 @@
 /*
  * DCA encoder
  * Copyright (C) 2008 Alexander E. Patrakov
+ * FFmpeg port by Benjamin Larsson
  *
  * This file is part of FFmpeg.
  *
@@ -18,9 +19,6 @@
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
-
-/* FFmpeg port by Benjamin Larsson */
-
 
 #include "avcodec.h"
 #include "bitstream.h"
