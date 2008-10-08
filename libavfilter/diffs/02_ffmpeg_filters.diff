@@ -1,8 +1,8 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 15000)
+--- ffmpeg.c	(revision 15585)
 +++ ffmpeg.c	(working copy)
-@@ -41,6 +41,12 @@
+@@ -41,6 +41,13 @@
  #include "libavutil/avstring.h"
  #include "libavformat/os_support.h"
  
@@ -10,12 +10,13 @@ Index: ffmpeg.c
 +# include "libavfilter/avfilter.h"
 +# include "libavfilter/avfiltergraph.h"
 +# include "libavfilter/graphparser.h"
++# include "libavfilter/vsrc_buffer.h"
 +#endif
 +
  #ifdef HAVE_SYS_RESOURCE_H
  #include <sys/types.h>
  #include <sys/resource.h>
-@@ -140,6 +146,9 @@
+@@ -144,6 +151,9 @@
  static int loop_input = 0;
  static int loop_output = AVFMT_NOOUTPUTLOOP;
  static int qp_hist = 0;
@@ -25,7 +26,7 @@ Index: ffmpeg.c
  
  static int intra_only = 0;
  static int audio_sample_rate = 44100;
-@@ -280,6 +289,13 @@
+@@ -281,6 +291,13 @@
                                  is not defined */
      int64_t       pts;       /* current pts */
      int is_start;            /* is 1 at the start and after a discontinuity */
@@ -39,106 +40,11 @@ Index: ffmpeg.c
  } AVInputStream;
  
  typedef struct AVInputFile {
-@@ -295,6 +311,266 @@
+@@ -296,6 +313,174 @@
  static struct termios oldtty;
  #endif
  
 +#if ENABLE_AVFILTER
-+typedef struct {
-+    AVInputStream *ist;
-+} FilterInPriv;
-+
-+static int input_init(AVFilterContext *ctx, const char *args, void *opaque)
-+{
-+    FilterInPriv *priv = ctx->priv;
-+
-+    if(!opaque) return -1;
-+
-+    priv->ist = opaque;
-+    priv->ist->filter_frame = avcodec_alloc_frame();
-+
-+    return 0;
-+}
-+
-+static void input_uninit(AVFilterContext *ctx)
-+{
-+    FilterInPriv *priv = ctx->priv;
-+    av_free(priv->ist->filter_frame);
-+}
-+
-+static int poll_frame(AVFilterLink *link)
-+{
-+    FilterInPriv *priv = link->src->priv;
-+    return !!(priv->ist->has_filter_frame);
-+}
-+
-+static int input_request_frame(AVFilterLink *link)
-+{
-+    FilterInPriv *priv = link->src->priv;
-+    AVFilterPicRef *picref;
-+
-+    /* This picture will be needed unmodified later for decoding the next
-+     * frame */
-+    picref = avfilter_get_video_buffer(link, AV_PERM_WRITE | AV_PERM_PRESERVE |
-+                                             AV_PERM_REUSE2);
-+
-+    memcpy(picref->data,     priv->ist->filter_frame->data,
-+           sizeof(priv->ist->filter_frame->data));
-+
-+    memcpy(picref->linesize, priv->ist->filter_frame->linesize,
-+           sizeof(priv->ist->filter_frame->linesize));
-+
-+    picref->pts = priv->ist->pts;
-+    picref->pixel_aspect = priv->ist->st->codec->sample_aspect_ratio;
-+    avfilter_start_frame(link, avfilter_ref_pic(picref, ~0));
-+    avfilter_draw_slice(link, 0, picref->h);
-+    avfilter_end_frame(link);
-+    avfilter_unref_pic(picref);
-+
-+    priv->ist->has_filter_frame = 0;
-+
-+    return 0;
-+}
-+
-+static int input_query_formats(AVFilterContext *ctx)
-+{
-+    FilterInPriv *priv = ctx->priv;
-+    avfilter_set_common_formats(ctx,
-+           avfilter_make_format_list(1, priv->ist->st->codec->pix_fmt));
-+    return 0;
-+}
-+
-+static int input_config_props(AVFilterLink *link)
-+{
-+    FilterInPriv *priv  = link->src->priv;
-+    AVCodecContext *c = priv->ist->st->codec;
-+
-+    link->w = c->width;
-+    link->h = c->height;
-+
-+    return 0;
-+}
-+
-+static AVFilter input_filter =
-+{
-+    .name      = "ffmpeg_input",
-+
-+    .priv_size = sizeof(FilterInPriv),
-+
-+    .init      = input_init,
-+    .uninit    = input_uninit,
-+
-+    .query_formats = input_query_formats,
-+
-+    .inputs    = (AVFilterPad[]) {{ .name = NULL }},
-+    .outputs   = (AVFilterPad[]) {{ .name = "default",
-+                                    .type = CODEC_TYPE_VIDEO,
-+                                    .request_frame = input_request_frame,
-+                                    .poll_frame = poll_frame,
-+                                    .config_props  = input_config_props, },
-+                                  { .name = NULL }},
-+};
-+
 +typedef struct {
 +    int pix_fmt;
 +} FilterOutPriv;
@@ -212,15 +118,18 @@ Index: ffmpeg.c
 +    AVFilterGraph *filt_graph_all = av_mallocz(sizeof(AVFilterGraph));
 +    AVCodecContext *codec = ost->st->codec;
 +    AVCodecContext *icodec = ist->st->codec;
++    char args[255];
 +
 +    avfilter_register_all();
 +
-+    if(!(ist->input_video_filter = avfilter_open(&input_filter, "src")))
++    if(!(ist->input_video_filter = avfilter_open(avfilter_get_by_name("buffer"), "src")))
 +        return -1;
 +    if(!(ist->out_video_filter = avfilter_open(&output_filter, "out")))
 +        return -1;
 +
-+    if(avfilter_init_filter(ist->input_video_filter, NULL, ist))
++    snprintf(args, 255, "%d:%d:%d", ist->st->codec->width,
++             ist->st->codec->height, ist->st->codec->pix_fmt);
++    if(avfilter_init_filter(ist->input_video_filter, args, NULL))
 +        return -1;
 +    if(avfilter_init_filter(ist->out_video_filter, NULL, &codec->pix_fmt))
 +        return -1;
@@ -306,7 +215,7 @@ Index: ffmpeg.c
  static void term_exit(void)
  {
  #ifdef HAVE_TERMIOS_H
-@@ -872,6 +1148,9 @@
+@@ -865,6 +1050,9 @@
      if (nb_frames <= 0)
          return;
  
@@ -316,7 +225,7 @@ Index: ffmpeg.c
      if (ost->video_crop) {
          if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
              av_log(NULL, AV_LOG_ERROR, "error cropping picture\n");
-@@ -881,6 +1160,7 @@
+@@ -876,6 +1064,7 @@
      } else {
          formatted_picture = in_picture;
      }
@@ -324,7 +233,7 @@ Index: ffmpeg.c
  
      final_picture = formatted_picture;
      padding_src = formatted_picture;
-@@ -896,12 +1176,14 @@
+@@ -893,12 +1082,14 @@
          }
      }
  
@@ -339,7 +248,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1172,6 +1454,7 @@
+@@ -1169,6 +1360,7 @@
      static short *samples= NULL;
      AVSubtitle subtitle, *subtitle_to_free;
      int got_subtitle;
@@ -347,28 +256,27 @@ Index: ffmpeg.c
  
      if(ist->next_pts == AV_NOPTS_VALUE)
          ist->next_pts= ist->pts;
-@@ -1289,6 +1572,17 @@
+@@ -1286,6 +1478,15 @@
                                      &buffer_to_free);
          }
  
 +#if ENABLE_AVFILTER
 +        if (ist->st->codec->codec_type == CODEC_TYPE_VIDEO) {
 +            // add it to be filtered
-+            memcpy(ist->filter_frame->data,  picture.data,
-+                   sizeof(picture.data));
-+            memcpy(ist->filter_frame->linesize, picture.linesize,
-+                   sizeof(picture.linesize));
-+            ist->has_filter_frame = 1;
++            av_vsrc_buffer_add_frame(ist->input_video_filter, &picture,
++                                     ist->pts,
++                                     ist->st->codec->sample_aspect_ratio);
 +        }
 +#endif
 +
          // preprocess audio (volume)
          if (ist->st->codec->codec_type == CODEC_TYPE_AUDIO) {
              if (audio_volume != 256) {
-@@ -1326,9 +1620,16 @@
-             }
+@@ -1309,10 +1510,16 @@
+ 
+             ist->frame++;
          }
- #endif
+-
 +        loop = ist->st->codec->codec_type != CODEC_TYPE_VIDEO ||
 +            avfilter_poll_frame(ist->out_video_filter->inputs[0]);
          /* if output time reached then transcode raw format,
@@ -382,7 +290,7 @@ Index: ffmpeg.c
              for(i=0;i<nb_ostreams;i++) {
                  int frame_size;
  
-@@ -1351,6 +1652,9 @@
+@@ -1335,6 +1542,9 @@
                              do_audio_out(os, ost, ist, data_buf, data_size);
                              break;
                          case CODEC_TYPE_VIDEO:
@@ -392,7 +300,7 @@ Index: ffmpeg.c
                              do_video_out(os, ost, ist, &picture, &frame_size);
                              if (vstats_filename && frame_size)
                                  do_video_stats(os, ost, frame_size);
-@@ -1408,7 +1712,15 @@
+@@ -1392,7 +1602,15 @@
                          av_free_packet(&opkt);
                      }
                  }
@@ -408,7 +316,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1826,10 +2138,21 @@
+@@ -1810,10 +2028,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          av_exit(1);
                      }
@@ -430,7 +338,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3846,6 +4169,9 @@
+@@ -3777,6 +4006,9 @@
  #ifdef CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif

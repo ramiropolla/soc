@@ -30,6 +30,7 @@ OBJS-$(CONFIG_TRANSPOSE_FILTER)  += vf_transpose.o
 OBJS-$(CONFIG_VFLIP_FILTER)      += vf_vflip.o
 
 OBJS-$(CONFIG_MOVIE_FILTER)      += vsrc_movie.o
+OBJS-$(CONFIG_BUFFER_FILTER)     += vsrc_buffer.o
 
 HEADERS = avfilter.h
 
