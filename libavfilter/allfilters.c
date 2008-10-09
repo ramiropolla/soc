@@ -51,6 +51,6 @@ void avfilter_register_all(void)
     REGISTER_FILTER(TRANSPOSE,transpose,vf);
     REGISTER_FILTER(VFLIP,vflip,vf);
 
-    REGISTER_FILTER(MOVIE,movie,vsrc);
     REGISTER_FILTER(BUFFER,buffer,vsrc);
+    REGISTER_FILTER(MOVIE,movie,vsrc);
 }
