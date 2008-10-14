@@ -366,7 +366,7 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
         const float *vec = ff_aac_codebook_vectors[cb-1];
         for(j = 0; j < ff_aac_spectral_sizes[cb-1]; j++, vec += dim){
             float rd = 0.0f;
-            int curbits = ff_aac_spectral_bits[cb-1][minidx];
+            int curbits = ff_aac_spectral_bits[cb-1][j];
             if(IS_CODEBOOK_UNSIGNED(cb)){
                 for(k = 0; k < dim; k++){
                     float t = fabsf(in[i+k]);
@@ -435,7 +435,7 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
         const float *vec = ff_aac_codebook_vectors[cb-1];
         for(j = 0; j < ff_aac_spectral_sizes[cb-1]; j++, vec += dim){
             float rd = 0.0f;
-            int curbits = ff_aac_spectral_bits[cb-1][minidx];
+            int curbits = ff_aac_spectral_bits[cb-1][j];
             if(IS_CODEBOOK_UNSIGNED(cb)){
                 for(k = 0; k < dim; k++){
                     float t = fabsf(in[i+k]);
