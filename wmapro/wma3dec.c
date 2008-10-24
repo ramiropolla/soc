@@ -444,11 +444,20 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
     if(get_bits(gb,1)){
         s->update_samples_per_frame = get_bits1(gb);
 
+        /** usually true for the first frame */
         if(s->update_samples_per_frame){
-            get_bits(gb,av_log2(s->samples_per_frame * 2));
+            av_log(s->avctx,AV_LOG_INFO,"blocksize: %i\n",get_bits(gb,av_log2(s->samples_per_frame * 2)));
         }
-     }
+
+        /** sometimes true for the last frame */
+        if(get_bits(gb,1)){
+            av_log(s->avctx,AV_LOG_INFO,"end blocksize: %i\n",get_bits(gb,av_log2(s->samples_per_frame * 2)));
+        }
+
+    }
+
     /** skip the rest of the frame data */
+    av_log(s->avctx,AV_LOG_INFO,"skipping %i bits\n",len - (get_bits_count(gb) - gb_start_count) - 1);
     skip_bits_long(gb,len - (get_bits_count(gb) - gb_start_count) - 1);
 
     /** decode trailer bit */
