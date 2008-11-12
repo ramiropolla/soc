@@ -1,33 +1,33 @@
 Index: Changelog
 ===================================================================
---- Changelog
-+++ Changelog
-@@ -121,6 +121,7 @@
- - BFI demuxer
- - MAXIS EA XA (.xa) demuxer / decoder
- - BFI video decoder
+--- Changelog	(revision 15802)
++++ Changelog	(working copy)
+@@ -140,6 +140,7 @@
+ - liba52 wrapper removed
+ - Speex decoding via libspeex
+ - Electronic Arts TGQ decoder
 +- RealVideo 3 and 4 decoder
  
  version 0.4.9-pre1:
  
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile
-+++ libavcodec/Makefile
-@@ -166,6 +166,8 @@
+--- libavcodec/Makefile	(revision 15802)
++++ libavcodec/Makefile	(working copy)
+@@ -174,6 +174,8 @@
  OBJS-$(CONFIG_RV10_ENCODER)            += rv10.o mpegvideo_enc.o motion_est.o ratecontrol.o h263.o mpeg12data.o mpegvideo.o error_resilience.o
  OBJS-$(CONFIG_RV20_DECODER)            += rv10.o h263.o mpeg12data.o mpegvideo.o error_resilience.o
  OBJS-$(CONFIG_RV20_ENCODER)            += rv10.o mpegvideo_enc.o motion_est.o ratecontrol.o h263.o mpeg12data.o mpegvideo.o error_resilience.o
-+OBJS-$(CONFIG_RV30_DECODER)            += rv30.o rv34.o h264pred.o rv30dsp.o
++OBJS-$(CONFIG_RV30_DECODER)            += rv30.o rv34.o h264pred.o
 +OBJS-$(CONFIG_RV40_DECODER)            += rv40.o rv34.o h264pred.o
  OBJS-$(CONFIG_SGI_DECODER)             += sgidec.o
  OBJS-$(CONFIG_SGI_ENCODER)             += sgienc.o rle.o
- OBJS-$(CONFIG_SHORTEN_DECODER)         += shorten.o golomb.o
+ OBJS-$(CONFIG_SHORTEN_DECODER)         += shorten.o
 Index: libavcodec/dsputil.c
 ===================================================================
---- libavcodec/dsputil.c
-+++ libavcodec/dsputil.c
-@@ -2737,6 +2737,8 @@
+--- libavcodec/dsputil.c	(revision 15802)
++++ libavcodec/dsputil.c	(working copy)
+@@ -2743,6 +2743,8 @@
  /* H264 specific */
  void ff_h264dspenc_init(DSPContext* c, AVCodecContext *avctx);
  
@@ -36,7 +36,7 @@ Index: libavcodec/dsputil.c
  static void wmv2_mspel8_v_lowpass(uint8_t *dst, uint8_t *src, int dstStride, int srcStride, int w){
      uint8_t *cm = ff_cropTbl + MAX_NEG_CROP;
      int i;
-@@ -4342,6 +4344,9 @@
+@@ -4411,6 +4413,9 @@
  #if defined(CONFIG_H264_ENCODER)
      ff_h264dspenc_init(c,avctx);
  #endif
@@ -48,9 +48,9 @@ Index: libavcodec/dsputil.c
      c->put_mspel_pixels_tab[1]= put_mspel8_mc10_c;
 Index: libavcodec/dsputil.h
 ===================================================================
---- libavcodec/dsputil.h
-+++ libavcodec/dsputil.h
-@@ -451,6 +451,10 @@
+--- libavcodec/dsputil.h	(revision 15802)
++++ libavcodec/dsputil.h	(working copy)
+@@ -467,6 +467,10 @@
      void (*x8_setup_spatial_compensation)(uint8_t *src, uint8_t *dst, int linesize,
             int * range, int * sum,  int edges);
  
@@ -58,14 +58,14 @@ Index: libavcodec/dsputil.h
 +    qpel_mc_func put_rv30_tpel_pixels_tab[4][16];
 +    qpel_mc_func avg_rv30_tpel_pixels_tab[4][16];
 +
- } DSPContext;
- 
- void dsputil_static_init(void);
+     /* ape functions */
+     /**
+      * Add contents of the second vector to the first one.
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c
-+++ libavcodec/allcodecs.c
-@@ -138,6 +138,8 @@
+--- libavcodec/allcodecs.c	(revision 15802)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -142,6 +142,8 @@
      REGISTER_DECODER (RPZA, rpza);
      REGISTER_ENCDEC  (RV10, rv10);
      REGISTER_ENCDEC  (RV20, rv20);
@@ -76,14 +76,16 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (SMC, smc);
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi
-+++ doc/general.texi
-@@ -186,6 +186,8 @@
- @item H.264                  @tab     @tab  X
+--- doc/general.texi	(revision 15802)
++++ doc/general.texi	(working copy)
+@@ -288,6 +288,10 @@
+     @tab fourccs: QPEG, Q1.0, Q1.1
  @item RealVideo 1.0          @tab  X  @tab  X
  @item RealVideo 2.0          @tab  X  @tab  X
-+@item RealVideo 3.0          @tab     @tab  X @tab not completely working
-+@item RealVideo 4.0          @tab     @tab  X @tab not completely working
- @item MJPEG                  @tab  X  @tab  X
- @item lossless MJPEG         @tab  X  @tab  X
- @item JPEG-LS                @tab  X  @tab  X @tab fourcc: MJLS, lossless and near-lossless is supported
++@item RealVideo 3.0          @tab     @tab  X
++    @tab not completely working
++@item RealVideo 4.0          @tab     @tab  X
++    @tab not completely working
+ @item Renderware TXD         @tab     @tab  X
+     @tab Texture dictionaries used by the Renderware Engine.
+ @item RTjpeg                 @tab     @tab  X
