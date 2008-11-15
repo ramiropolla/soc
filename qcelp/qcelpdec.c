@@ -58,18 +58,6 @@ static void qcelp_update_filter_mem(float *pitchf_mem, const float *last)
 
 static int qcelp_decode_init(AVCodecContext *avctx)
 {
-    if(avctx->sample_rate != 8000)
-        av_log(avctx, AV_LOG_WARNING,
-               "Unsupported samplerate %d, resampling.", avctx->sample_rate);
-
-    if(avctx->channels != 1)
-        av_log(avctx, AV_LOG_WARNING,
-               "QCELP does not allow %d channels. Trying mono.\n",
-               avctx->channels);
-
-    avctx->sample_rate = 8000;
-    avctx->channels = 1;
-
     return 0;
 }
 

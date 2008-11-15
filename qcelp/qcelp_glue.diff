@@ -42,11 +42,14 @@ Index: libavformat/mov.c
 ===================================================================
 --- libavformat/mov.c	(revision 15802)
 +++ libavformat/mov.c	(working copy)
-@@ -987,6 +987,7 @@
+@@ -987,6 +987,10 @@
  #endif
      /* no ifdef since parameters are always those */
      case CODEC_ID_QCELP:
 +        st->need_parsing = AVSTREAM_PARSE_FULL;
++        st->codec->frame_size= 160;
++        st->codec->channels= 1; /* really needed */
++        break;
      case CODEC_ID_AMR_NB:
      case CODEC_ID_AMR_WB:
          st->codec->frame_size= sc->samples_per_frame;
