@@ -1,52 +1,52 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 13648)
+--- libavcodec/Makefile	(revision 15802)
 +++ libavcodec/Makefile	(working copy)
-@@ -147,6 +147,7 @@
+@@ -155,6 +155,7 @@
  OBJS-$(CONFIG_PNG_ENCODER)             += png.o pngenc.o
  OBJS-$(CONFIG_PPM_ENCODER)             += pnmenc.o pnm.o
  OBJS-$(CONFIG_PTX_DECODER)             += ptx.o
 +OBJS-$(CONFIG_QCELP_DECODER)           += qcelpdec.o
- OBJS-$(CONFIG_QDM2_DECODER)            += qdm2.o mdct.o fft.o mpegaudiodec.o mpegaudiodecheader.o mpegaudio.o mpegaudiodata.o
+ OBJS-$(CONFIG_QDM2_DECODER)            += qdm2.o mpegaudiodec.o mpegaudiodecheader.o mpegaudio.o mpegaudiodata.o
  OBJS-$(CONFIG_QDRAW_DECODER)           += qdrw.o
  OBJS-$(CONFIG_QPEG_DECODER)            += qpeg.o
-@@ -350,6 +351,7 @@
+@@ -362,6 +363,7 @@
  OBJS-$(CONFIG_MPEGAUDIO_PARSER)        += mpegaudio_parser.o mpegaudiodecheader.o mpegaudiodata.o
  OBJS-$(CONFIG_MPEGVIDEO_PARSER)        += mpegvideo_parser.o mpeg12.o mpeg12data.o mpegvideo.o error_resilience.o
  OBJS-$(CONFIG_PNM_PARSER)              += pnm_parser.o pnm.o
 +OBJS-$(CONFIG_QCELP_PARSER)            += qcelp_parser.o
  OBJS-$(CONFIG_VC1_PARSER)              += vc1_parser.o
+ OBJS-$(CONFIG_VP3_PARSER)              += vp3_parser.o
  
- OBJS-$(CONFIG_DUMP_EXTRADATA_BSF)      += dump_extradata_bsf.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 13648)
+--- libavcodec/allcodecs.c	(revision 15802)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -196,6 +196,7 @@
+@@ -203,6 +203,7 @@
      REGISTER_DECODER (MPC7, mpc7);
      REGISTER_DECODER (MPC8, mpc8);
-     REGISTER_DECODER (NELLYMOSER, nellymoser);
+     REGISTER_ENCDEC  (NELLYMOSER, nellymoser);
 +    REGISTER_DECODER (QCELP, qcelp);
      REGISTER_DECODER (QDM2, qdm2);
      REGISTER_DECODER (RA_144, ra_144);
      REGISTER_DECODER (RA_288, ra_288);
-@@ -309,6 +310,7 @@
+@@ -318,6 +319,7 @@
      REGISTER_PARSER  (MPEGAUDIO, mpegaudio);
      REGISTER_PARSER  (MPEGVIDEO, mpegvideo);
      REGISTER_PARSER  (PNM, pnm);
 +    REGISTER_PARSER  (QCELP, qcelp);
      REGISTER_PARSER  (VC1, vc1);
+     REGISTER_PARSER  (VP3, vp3);
  
-     /* bitstream filters */
 Index: libavformat/mov.c
 ===================================================================
---- libavformat/mov.c	(revision 13648)
+--- libavformat/mov.c	(revision 15802)
 +++ libavformat/mov.c	(working copy)
-@@ -945,6 +945,7 @@
-         st->codec->channels= 1; /* really needed */
-         break;
+@@ -987,6 +987,7 @@
+ #endif
+     /* no ifdef since parameters are always those */
      case CODEC_ID_QCELP:
 +        st->need_parsing = AVSTREAM_PARSE_FULL;
      case CODEC_ID_AMR_NB:
+     case CODEC_ID_AMR_WB:
          st->codec->frame_size= sc->samples_per_frame;
-         st->codec->sample_rate= 8000;
