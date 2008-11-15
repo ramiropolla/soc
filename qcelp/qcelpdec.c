@@ -123,7 +123,7 @@ static void qcelp_decode_lspf(const QCELPContext *q, float *lspf, int *is_ifq)
  * TIA/EIA/IS-733 2.4.6.2
  */
 static void qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed,
-            float *gain, int *index, int *is_ifq)
+                                float *gain, int *index, int *is_ifq)
 {
     int                 i, gs[16], g0[16], g1[16], predictor;
     const uint8_t       *cbgain, *cbsign, *cindex, *data;
@@ -254,7 +254,8 @@ static void qcelp_decode_params(AVCodecContext *avctx, uint16_t *cbseed,
  * @param cnd_vector array for the generated scaled codebook vector
  */
 static int qcelp_compute_svector(qcelp_packet_rate rate, const float *gain,
-           const int *index, uint16_t cbseed, float *cdn_vector)
+                                 const int *index, uint16_t cbseed,
+                                 float *cdn_vector)
 {
     int      i,j;
     uint16_t new_cbseed;
@@ -362,7 +363,7 @@ static float qcelp_compute_subframe_energy(const float *vector, int subframeno)
  * @param scalefactors array to place the resulting four scalefactors
  */
 static void qcelp_get_gain_scalefactors(const float *in, const float *out,
-            float *scalefactors)
+                                        float *scalefactors)
 {
     int i;
 
@@ -517,7 +518,8 @@ static int qcelp_do_pitchfilter(QCELPContext *q, int step, float *pv)
  * @param frame_num frame number in decoded stream
  */
 void qcelp_do_interpolate_lspf(qcelp_packet_rate rate, float *prev_lspf,
-     float *curr_lspf, float *interpolated_lspf, int sample_num, int frame_num)
+                               float *curr_lspf, float *interpolated_lspf,
+                               int sample_num, int frame_num)
 {
     int   i;
     float curr_weight, prev_weight;
@@ -590,7 +592,7 @@ static void qcelp_convolve(float *v1, const float *v2, int d1, int d2)
     memcpy(copy, v1, sizeof(copy));
     dim=d1+d2-1;
 
-    for(i=0;i<dim;i++)
+    for(i=0; i<dim; i++)
     {
         v1[i]=0.0;
         for(j=0;j<=i;j++)
@@ -668,7 +670,7 @@ static void qcelp_lsp2lpc(float *lspf, float *lpc)
  * TIA/EIA/IS-733 2.4.3.1 (NOOOOT)
  */
 static void qcelp_do_formant(float *in, float *out, float *lpc_coefs,
-            float *memory)
+                             float *memory)
 {
     float tmp[50];
     int i,j;
@@ -710,7 +712,7 @@ static float qcelp_detilt(float z)
 }
 
 static int qcelp_decode_frame(AVCodecContext *avctx, void *data,
-           int *data_size, uint8_t *buf, int buf_size)
+                              int *data_size, uint8_t *buf, int buf_size)
 {
     QCELPContext *q    = avctx->priv_data;
     const QCELPBitmap *order = NULL;
