@@ -30,16 +30,16 @@
 
 typedef enum
 {
-    RATE_FULL   = 0,
-    RATE_HALF   = 1,
-    RATE_QUARTER= 2,
-    RATE_OCTAVE = 3,
-    I_F_Q,          /*!< insufficient frame quality */
+    RATE_UNKNOWN = -2,
+    I_F_Q,             /*!< insufficient frame quality */
     BLANK,
-    RATE_UNKNOWN
+    RATE_OCTAVE,
+    RATE_QUARTER,
+    RATE_HALF,
+    RATE_FULL
 } qcelp_packet_rate;
 
-static const uint16_t qcelp_bits_per_rate[]={266,124,54,20};
+static const uint16_t qcelp_bits_per_rate[]={0, 20, 54, 124, 266};
 static const float    qcelp_hammsinc_table[]={-0.006822, 0.041249,-0.143459,
                                                0.588863, 0.588863,-0.143459,
                                                0.041249,-0.006822};
