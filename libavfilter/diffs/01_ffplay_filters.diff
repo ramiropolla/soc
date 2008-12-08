@@ -211,13 +211,12 @@ Index: ffplay.c
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1334,54 +1405,256 @@
+@@ -1334,54 +1405,261 @@
      return queue_picture(is, src_frame, pts);
  }
  
-+static int get_video_frame(VideoState *is, AVFrame *frame, uint64_t *pts)
++static int get_video_frame(VideoState *is, AVFrame *frame, uint64_t *pts, AVPacket *pkt)
 +{
-+    AVPacket pkt1, *pkt = &pkt1;
 +    int len1, got_picture;
 +
 +    if (packet_queue_get(&is->videoq, pkt, 1) < 0)
@@ -249,9 +248,6 @@ Index: ffplay.c
 +    *pts = AV_TIME_BASE * (*pts) * is->video_st->time_base.num /
 +        is->video_st->time_base.den;
 +
-+    /* rawvideo decoder uses the packet data to set the data in the output AVFrame */
-+    if (is->video_st->codec->codec->id != CODEC_ID_RAWVIDEO)
-+      av_free_packet(pkt);
 +    if(got_picture)
 +        return 1;
 +    return 0;
@@ -285,8 +281,9 @@ Index: ffplay.c
 +    FilterPriv *priv = link->src->priv;
 +    AVFilterPicRef *picref;
 +    uint64_t pts = 0;
++    AVPacket pkt;
 +
-+    if(get_video_frame(priv->is, priv->frame, &pts) < 0)
++    if(get_video_frame(priv->is, priv->frame, &pts, &pkt) < 0)
 +        return -1;
 +
 +    /* FIXME: until I figure out how to hook everything up to the codec
@@ -294,6 +291,7 @@ Index: ffplay.c
 +    picref = avfilter_get_video_buffer(link, AV_PERM_WRITE);
 +    av_picture_copy((AVPicture *)&picref->data, (AVPicture *)priv->frame,
 +                    picref->pic->format, picref->w, picref->h);
++    av_free_packet(&pkt);
 +
 +    picref->pts = pts;
 +    picref->pixel_aspect = priv->is->video_st->codec->sample_aspect_ratio;
@@ -442,6 +440,9 @@ Index: ffplay.c
 +
      for(;;) {
 -        while (is->paused && !is->videoq.abort_request) {
++#if !ENABLE_AVFILTER
++        AVPacket pkt;
++#endif
 +        while (is->paused && !is->videoq.abort_request)
              SDL_Delay(10);
 -        }
@@ -450,7 +451,7 @@ Index: ffplay.c
 +#if ENABLE_AVFILTER
 +        ret = get_filtered_video_frame(filt_out, frame, &pts_int);
 +#else
-+        ret = get_video_frame(is, frame, &pts_int);
++        ret = get_video_frame(is, frame, &pts_int, &pkt);
 +#endif
  
 -        if(pkt->data == flush_pkt.data){
@@ -469,7 +470,11 @@ Index: ffplay.c
 -                                    pkt->data, pkt->size);
 +        pts  = pts_int;
 +        pts /= AV_TIME_BASE;
-+        if(output_picture2(is, frame, pts) < 0)
++        ret = output_picture2(is, frame, pts);
++#if !ENABLE_AVFILTER
++        av_free_packet(&pkt);
++#endif
++        if (ret < 0)
 +            goto the_end;
  
 -        if(   (decoder_reorder_pts || pkt->dts == AV_NOPTS_VALUE)
@@ -499,7 +504,7 @@ Index: ffplay.c
      av_free(frame);
      return 0;
  }
-@@ -2161,6 +2434,12 @@
+@@ -2161,6 +2439,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -512,7 +517,7 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2498,6 +2777,9 @@
+@@ -2498,6 +2782,9 @@
      { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
      { "sync", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
@@ -522,7 +527,7 @@ Index: ffplay.c
      { "default", OPT_FUNC2 | HAS_ARG | OPT_AUDIO | OPT_VIDEO | OPT_EXPERT, {(void*)opt_default}, "generic catch all option", "" },
      { NULL, },
  };
-@@ -2546,7 +2828,9 @@
+@@ -2546,7 +2833,9 @@
          avctx_opts[i]= avcodec_alloc_context2(i);
      }
      avformat_opts = av_alloc_format_context();
