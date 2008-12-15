@@ -145,42 +145,42 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size,
 
     switch(mode) {
         case MODE_DTX:
-            order = order_MODE_DTX;
+            order             = order_MODE_DTX;
             p->cur_frame_type = RX_SID_FIRST; // get SID type bit
         break;
         case NO_DATA:
             p->cur_frame_type = RX_NO_DATA;
         break;
         case MODE_475:
-            order = order_MODE_475;
+            order             = order_MODE_475;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_515:
-            order = order_MODE_515;
+            order             = order_MODE_515;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_59:
-            order = order_MODE_59;
+            order             = order_MODE_59;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_67:
-            order = order_MODE_67;
+            order             = order_MODE_67;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_74:
-            order = order_MODE_74;
+            order             = order_MODE_74;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_795:
-            order = order_MODE_795;
+            order             = order_MODE_795;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_102:
-            order = order_MODE_102;
+            order             = order_MODE_102;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         case MODE_122:
-            order = order_MODE_122;
+            order             = order_MODE_122;
             p->cur_frame_type = RX_SPEECH_GOOD;
         break;
         default:
@@ -610,13 +610,13 @@ static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index,
     // subframe 1 or 3
     if(p->cur_subframe & 1) {
         if(pitch_index < 197) {
-            *pitch_lag_int = (( (pitch_index + 2)*10923 )>>15) + 19;
+            *pitch_lag_int  = (( (pitch_index + 2)*10923 )>>15) + 19;
             *pitch_lag_frac = pitch_index - *pitch_lag_int*3 + 58;
             // For the sake of deciphering where this comes from, the above code probably means:
             // *pitch_lag_int  = (pitch_index + 2)/3 + 19;
             // *pitch_lag_frac = (pitch_index + 2)%3 + 56;
         }else {
-            *pitch_lag_int = pitch_index - 112;
+            *pitch_lag_int  = pitch_index - 112;
             *pitch_lag_frac = 0;
         }
     // subframe 2 or 4
@@ -628,14 +628,14 @@ static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index,
             tmp_lag= clip(p->prev_pitch_lag_int, p->search_range_max-4, p->search_range_min+5);
 
             if(pitch_index < 4) {
-                *pitch_lag_int = pitch_index + tmp_lag - 5;
+                *pitch_lag_int  = pitch_index + tmp_lag - 5;
                 *pitch_lag_frac = 0;
             }else {
                 if(pitch_index < 12) {
-                    *pitch_lag_int = ( ((pitch_index - 5)*10923)>>15 ) + tmp_lag - 1;
+                    *pitch_lag_int  = ( ((pitch_index - 5)*10923)>>15 ) + tmp_lag - 1;
                     *pitch_lag_frac = pitch_index - *pitch_lag_int*3 - 9;
                 }else {
-                    *pitch_lag_int = pitch_index + tmp_lag - 11;
+                    *pitch_lag_int  = pitch_index + tmp_lag - 11;
                     *pitch_lag_frac = 0;
                 }
             }
@@ -681,10 +681,10 @@ static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index,
     // subframe 1 or 3
     if(p->cur_subframe & 1) {
         if(pitch_index < 463){
-            *pitch_lag_int = (pitch_index + 5)/6 + 17;
+            *pitch_lag_int  = (pitch_index + 5) / 6 + 17;
             *pitch_lag_frac = pitch_index - *pitch_lag_int*6 + 105;
         }else {
-            *pitch_lag_int = pitch_index - 368;
+            *pitch_lag_int  = pitch_index - 368;
             *pitch_lag_frac = 0;
         }
     // subframe 2 or 4
@@ -699,7 +699,7 @@ static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index,
         }
         // calculate the pitch lag
         temp = (pitch_index + 5)/6 - 1;
-        *pitch_lag_int = temp + p->search_range_min;
+        *pitch_lag_int  = temp + p->search_range_min;
         *pitch_lag_frac = (pitch_index - 3) - temp*6;
     }
 }
@@ -1195,39 +1195,39 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data,
     if(p->prev_frame_homing) {
         switch(p->cur_frame_mode) {
             case MODE_475:
-                homing_frame = dhf_MODE_475;
+                homing_frame      = dhf_MODE_475;
                 homing_frame_size = 7;
             break;
             case MODE_515:
-                homing_frame = dhf_MODE_515;
+                homing_frame      = dhf_MODE_515;
                 homing_frame_size = 7;
             break;
             case MODE_59:
-                homing_frame = dhf_MODE_59;
+                homing_frame      = dhf_MODE_59;
                 homing_frame_size = 7;
             break;
             case MODE_67:
-                homing_frame = dhf_MODE_67;
+                homing_frame      = dhf_MODE_67;
                 homing_frame_size = 7;
             break;
             case MODE_74:
-                homing_frame = dhf_MODE_74;
+                homing_frame      = dhf_MODE_74;
                 homing_frame_size = 7;
             break;
             case MODE_795:
-                homing_frame = dhf_MODE_795;
+                homing_frame      = dhf_MODE_795;
                 homing_frame_size = 8;
             break;
             case MODE_102:
-                homing_frame = dhf_MODE_102;
+                homing_frame      = dhf_MODE_102;
                 homing_frame_size = 12;
             break;
             case MODE_122:
-                homing_frame = dhf_MODE_122;
+                homing_frame      = dhf_MODE_122;
                 homing_frame_size = 18;
             break;
             default:
-                homing_frame = NULL;
+                homing_frame      = NULL;
                 homing_frame_size = 0;
             break;
         }
@@ -1248,39 +1248,39 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data,
     if(!p->prev_frame_homing) {
         switch(p->cur_frame_mode) {
             case MODE_475:
-                homing_frame = dhf_MODE_475;
+                homing_frame      = dhf_MODE_475;
                 homing_frame_size = PRMS_MODE_475;
             break;
             case MODE_515:
-                homing_frame = dhf_MODE_515;
+                homing_frame      = dhf_MODE_515;
                 homing_frame_size = PRMS_MODE_515;
             break;
             case MODE_59:
-                homing_frame = dhf_MODE_59;
+                homing_frame      = dhf_MODE_59;
                 homing_frame_size = PRMS_MODE_59;
             break;
             case MODE_67:
-                homing_frame = dhf_MODE_67;
+                homing_frame      = dhf_MODE_67;
                 homing_frame_size = PRMS_MODE_67;
             break;
             case MODE_74:
-                homing_frame = dhf_MODE_74;
+                homing_frame      = dhf_MODE_74;
                 homing_frame_size = PRMS_MODE_74;
             break;
             case MODE_795:
-                homing_frame = dhf_MODE_795;
+                homing_frame      = dhf_MODE_795;
                 homing_frame_size = PRMS_MODE_795;
             break;
             case MODE_102:
-                homing_frame = dhf_MODE_102;
+                homing_frame      = dhf_MODE_102;
                 homing_frame_size = PRMS_MODE_102;
             break;
             case MODE_122:
-                homing_frame = dhf_MODE_122;
+                homing_frame      = dhf_MODE_122;
                 homing_frame_size = PRMS_MODE_122;
             break;
             default:
-                homing_frame = NULL;
+                homing_frame      = NULL;
                 homing_frame_size = 0;
             break;
         }
@@ -1294,8 +1294,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data,
         decode_reset(avctx);
     }
     p->prev_frame_homing = !p->cur_frame_homing;
-    p->prev_frame_type   = p->cur_frame_type;
-    p->prev_frame_mode   = p->cur_frame_mode;
+    p->prev_frame_type   =  p->cur_frame_type;
+    p->prev_frame_mode   =  p->cur_frame_mode;
 
     /* To make it easy the stream can only be 16 bits mono, so let's convert it to that */
     for (i=0 ; i<buf_size; i++)
