@@ -22,3 +22,31 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (APE, ape);
      REGISTER_DECODER (ATRAC3, atrac3);
      REGISTER_DECODER (COOK, cook);
+Index: doc/general.texi
+===================================================================
+--- doc/general.texi	(revision 16142)
++++ doc/general.texi	(working copy)
+@@ -344,8 +344,8 @@
+ @item AAC                    @tab  E  @tab  X
+     @tab encoding supported through external library libfaac
+ @item AC-3                   @tab IX  @tab IX
+-@item AMR-NB                 @tab  E  @tab  E
+-    @tab supported through external library libamrnb
++@item AMR-NB                 @tab  X  @tab  E
++    @tab encoding supported through external library libamrnb
+ @item AMR-WB                 @tab  E  @tab  E
+     @tab supported through external library libamrwb
+ @item AMV IMA ADPCM          @tab     @tab  X
+Index: Changelog
+===================================================================
+--- Changelog	(revision 16142)
++++ Changelog	(working copy)
+@@ -142,6 +142,8 @@
+ - Electronic Arts TGQ decoder
+ - RV40 decoder
+ - QCELP / PureVoice decoder
++- AMR-NB decoder
++	
+ 
+ version 0.4.9-pre1:
+ 
