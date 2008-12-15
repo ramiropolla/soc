@@ -76,8 +76,8 @@ typedef struct AMRContext {
 } AMRContext;
 
 
-static int amrnb_decode_init(AVCodecContext *avctx) {
-
+static int amrnb_decode_init(AVCodecContext *avctx)
+{
     AMRContext *p = avctx->priv_data;
 
     // variables needed for cos table generation
@@ -126,8 +126,9 @@ static int amrnb_decode_init(AVCodecContext *avctx) {
  * @return Returns the frame mode
  */
 
-enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, enum Mode *speech_mode) {
-
+enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size,
+                           enum Mode *speech_mode)
+{
     AMRContext *p = avctx->priv_data;
     enum Mode mode;
     int i;
@@ -214,7 +215,8 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size, en
  * @param min_dist          minimum required separation of lsfs
  */
 
-static void reorder_lsf(int *lsf, int min_dist) {
+static void reorder_lsf(int *lsf, int min_dist)
+{
     int i;
     int lsf_min = min_dist;
 
@@ -234,7 +236,8 @@ static void reorder_lsf(int *lsf, int min_dist) {
  * @param lsp               a vector of lsps
  */
 
-static void lsf2lsp(int *lsf, int *lsp) {
+static void lsf2lsp(int *lsf, int *lsp)
+{
     int i;
     int index, offset;
 
@@ -252,8 +255,8 @@ static void lsf2lsp(int *lsf, int *lsp) {
  * @param avctx             pointer to the AVCodecContext for AMR
  */
 
-static void decode_lsf2lsp_3(AVCodecContext *avctx) {
-
+static void decode_lsf2lsp_3(AVCodecContext *avctx)
+{
     AMRContext *p = avctx->priv_data;
 
     int lsf1_r[LP_FILTER_ORDER]; // vector of residual lsfs
@@ -337,8 +340,8 @@ static void decode_lsf2lsp_3(AVCodecContext *avctx) {
  * @param avctx             pointer to the AVCodecContext for AMR
  */
 
-static void decode_lsf2lsp_5(AVCodecContext *avctx) {
-
+static void decode_lsf2lsp_5(AVCodecContext *avctx)
+{
     AMRContext *p = avctx->priv_data;
 
     int lsf1_r[LP_FILTER_ORDER], lsf2_r[LP_FILTER_ORDER]; // vectors of residual lsfs
@@ -421,7 +424,8 @@ static void decode_lsf2lsp_5(AVCodecContext *avctx) {
  * @return void
  */
 
-static void lsp2poly(int *lsp, int *f) {
+static void lsp2poly(int *lsp, int *f)
+{
     int i, j;
 
     f[0] = 1<<24;
@@ -458,7 +462,8 @@ static void lsp2poly(int *lsp, int *f) {
  * @return void
  */
 
-static void lsp2lpc(int *lsp, int *lpc_coeffs) {
+static void lsp2lpc(int *lsp, int *lpc_coeffs)
+{
     int f1[6], f2[6];
     int temp, i;
 
@@ -501,7 +506,8 @@ static void lsp2lpc(int *lsp, int *lpc_coeffs) {
  * @return void
  */
 
-static void lpc_interp_13(AVCodecContext *avctx, int **lpc_coeffs) {
+static void lpc_interp_13(AVCodecContext *avctx, int **lpc_coeffs)
+{
     AMRContext *p = avctx->priv_data;
     int lsp[LP_FILTER_ORDER];
     int i;
@@ -539,7 +545,8 @@ static void lpc_interp_13(AVCodecContext *avctx, int **lpc_coeffs) {
  * @return void
  */
 
-static void lpc_interp_123(AVCodecContext *avctx, int **lpc_coeffs) {
+static void lpc_interp_123(AVCodecContext *avctx, int **lpc_coeffs)
+{
     AMRContext *p = avctx->priv_data;
     int lsp[LP_FILTER_ORDER];
     int i;
@@ -590,7 +597,9 @@ static void lpc_interp_123(AVCodecContext *avctx, int **lpc_coeffs) {
  * @return void
  */
 
-static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac) {
+static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index,
+                               int *pitch_lag_int, int *pitch_lag_frac)
+{
     AMRContext *p = avctx->priv_data;
     int tmp_lag;
 
@@ -659,7 +668,9 @@ static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index, int *pitc
  * @return void
  */
 
-static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitch_lag_int, int *pitch_lag_frac) {
+static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index,
+                               int *pitch_lag_int, int *pitch_lag_frac)
+{
     AMRContext *p = avctx->priv_data;
     int temp;
 
@@ -707,7 +718,8 @@ static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index, int *pitc
  * @return void
  */
 
-static void decode_pitch_vector(AVCodecContext *avctx, int *excitation) {
+static void decode_pitch_vector(AVCodecContext *avctx, int *excitation)
+{
     AMRContext *p = avctx->priv_data;
     int i, j, temp;
     int *excitation_temp;
@@ -744,7 +756,9 @@ static void decode_pitch_vector(AVCodecContext *avctx, int *excitation) {
  * @return void
  */
 
-static void reconstruct_fixed_code(int *fixed_code, int *pulse_position, int sign, int nr_pulses) {
+static void reconstruct_fixed_code(int *fixed_code, int *pulse_position,
+                                   int sign, int nr_pulses)
+{
     int i;
 
     // reset the code
@@ -765,7 +779,8 @@ static void reconstruct_fixed_code(int *fixed_code, int *pulse_position, int sig
  * @return void
  */
 
-static void fixed2position(int16_t *fixed_index, int *position_index) {
+static void fixed2position(int16_t *fixed_index, int *position_index)
+{
     int MSBs, LSBs, MSBs0_24, divMSB;
 
     // indices from track 1 (7+3 bits)
@@ -820,7 +835,9 @@ static void fixed2position(int16_t *fixed_index, int *position_index) {
  * @return void
  */
 
-static void decode_2_pulses_9bits(AVCodecContext *avctx, int sign, int fixed_index, int *fixed_code) {
+static void decode_2_pulses_9bits(AVCodecContext *avctx, int sign,
+                                  int fixed_index, int *fixed_code)
+{
     AMRContext *p = avctx->priv_data;
     int pulse_position[2];
     int pulse_subset;
@@ -848,7 +865,8 @@ static void decode_2_pulses_9bits(AVCodecContext *avctx, int sign, int fixed_ind
  * @return void
  */
 
-static void decode_2_pulses_11bits(int sign, int fixed_index, int *fixed_code) {
+static void decode_2_pulses_11bits(int sign, int fixed_index, int *fixed_code)
+{
     int pulse_position[2];
     int pulse_subset;
 
@@ -881,7 +899,8 @@ static void decode_2_pulses_11bits(int sign, int fixed_index, int *fixed_code) {
  * @return void
  */
 
-static void decode_3_pulses_14bits(int sign, int fixed_index, int *fixed_code) {
+static void decode_3_pulses_14bits(int sign, int fixed_index, int *fixed_code)
+{
     int pulse_position[3];
     int pulse_subset;
 
@@ -912,7 +931,8 @@ static void decode_3_pulses_14bits(int sign, int fixed_index, int *fixed_code) {
  * @return void
  */
 
-static void decode_4_pulses_17bits(int sign, int fixed_index, int *fixed_code) {
+static void decode_4_pulses_17bits(int sign, int fixed_index, int *fixed_code)
+{
     int pulse_position[4];
     int pulse_subset;
 
@@ -942,7 +962,8 @@ static void decode_4_pulses_17bits(int sign, int fixed_index, int *fixed_code) {
  * @return void
  */
 
-static void decode_8_pulses_31bits(int16_t *fixed_index, int *fixed_code) {
+static void decode_8_pulses_31bits(int16_t *fixed_index, int *fixed_code)
+{
     int position_index[8];
     int i, pos1, pos2, sign;
 
@@ -977,7 +998,8 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, int *fixed_code) {
  * @return void
  */
 
-static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code) {
+static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code)
+{
     int i, pos1, pos2, sign;
 
     // reset the code
@@ -1010,7 +1032,8 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code) {
  * @return a-b : the result of the comparison
  */
 
-int qsort_compare(const int *a, const int *b) {
+int qsort_compare(const int *a, const int *b)
+{
     return (int)(*a - *b);
 }
 
@@ -1022,7 +1045,8 @@ int qsort_compare(const int *a, const int *b) {
  * @return Returns the median value
  */
 
-static int median(int *values, int n) {
+static int median(int *values, int n)
+{
     int temp[9]; // largest n used for median calculation is 9
 
     memcpy(values, temp, n*sizeof(int));
@@ -1042,7 +1066,8 @@ static int median(int *values, int n) {
  * @return Returns the pitch gain
  */
 
-static int find_pitch_gain(AMRDecoderState *state_ptr) {
+static int find_pitch_gain(AMRDecoderState *state_ptr)
+{
     int temp_median;
 
     // find the median of the previous five pitch gains
@@ -1064,7 +1089,8 @@ static int find_pitch_gain(AMRDecoderState *state_ptr) {
  * @return Returns the pitch gain
  */
 
-static int decode_pitch_gain(enum Mode mode, int index) {
+static int decode_pitch_gain(enum Mode mode, int index)
+{
     int gain;
 
     if(mode == MODE_122) {
@@ -1086,8 +1112,9 @@ static int decode_pitch_gain(enum Mode mode, int index) {
  * @param pitch_gain            pointer to the pitch gain
  */
 
-static void pitch_gain_update(AMRDecoderState *state_ptr, int bad_frame_indicator,
-        int *pitch_gain) {
+static void pitch_gain_update(AMRDecoderState *state_ptr,
+                              int bad_frame_indicator, int *pitch_gain)
+{
     if(bad_frame_indicator == 0) {
         if(state_ptr->prev_frame_bad != 0) {
             // if the previous frame was bad, limit the current pitch gain to
@@ -1121,7 +1148,8 @@ static void pitch_gain_update(AMRDecoderState *state_ptr, int bad_frame_indicato
  * @param avctx             pointer to the AVCodecContext for AMR
  */
 
-void decode_reset(AVCodecContext *avctx) {
+void decode_reset(AVCodecContext *avctx)
+{
     AMRContext *p = avctx->priv_data;
 
     p->prev_frame_homing = 1;
@@ -1131,9 +1159,9 @@ void decode_reset(AVCodecContext *avctx) {
 }
 
 
-static int amrnb_decode_frame(AVCodecContext *avctx,
-        void *data, int *data_size, uint8_t *buf, int buf_size) {
-
+static int amrnb_decode_frame(AVCodecContext *avctx, void *data,
+                              int *data_size, uint8_t *buf, int buf_size)
+{
     AMRContext *p = avctx->priv_data;        // pointer to private data
     int16_t *outbuffer = data;               // pointer to the output data buffer
     int i;                                   // counter
@@ -1281,8 +1309,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 }
 
 
-static int amrnb_decode_close(AVCodecContext *avctx) {
-
+static int amrnb_decode_close(AVCodecContext *avctx)
+{
     AMRContext *p = avctx->priv_data;
 
     /* Free allocated memory */
@@ -1295,8 +1323,7 @@ static int amrnb_decode_close(AVCodecContext *avctx) {
 }
 
 
-AVCodec amrnb_decoder =
-{
+AVCodec amrnb_decoder = {
     .name = "amrnb",
     .type = CODEC_TYPE_AUDIO,
     .id = CODEC_ID_AMR_NB,
