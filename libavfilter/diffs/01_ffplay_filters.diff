@@ -1,6 +1,6 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 15585)
+--- ffplay.c	(revision 16172)
 +++ ffplay.c	(working copy)
 @@ -29,6 +29,12 @@
  #include "libavcodec/audioconvert.h"
