@@ -1,5 +1,5 @@
 echo "checking out ffmpeg svn"
-svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg -r 12510
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r 12510
 echo "Done, now just do a regular configure and make to build."
 echo "patching ffmpeg"
 cd ffmpeg

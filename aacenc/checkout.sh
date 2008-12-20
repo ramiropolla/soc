@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo "Checking out FFmpeg SVN trunk code..."
-svn co svn://svn.mplayerhq.hu/ffmpeg/trunk ffmpeg && \
+svn co svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg && \
 cd ffmpeg
 
 echo "Patching build system"
@@ -17,7 +17,7 @@ cp ../../lowpass.c .
 cp ../../lowpass.h .
 
 cd ../..
-svn co svn://svn.mplayerhq.hu/soc/aac
+svn co svn://svn.ffmpeg.org/soc/aac
 cp aac/aactab.h ffmpeg/libavcodec/.
 cp aac/aactab.c ffmpeg/libavcodec/
 

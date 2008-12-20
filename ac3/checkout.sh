@@ -1,5 +1,5 @@
 echo "checking out ffmpeg svn"
-svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk/ ffmpeg
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg
 echo "copying the ac3 decoder files to ffmpeg/libavcodec"
 cp ac3_decoder.c ffmpeg/libavcodec/
 cp ac3_decoder.h ffmpeg/libavcodec/

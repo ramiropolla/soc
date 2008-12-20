@@ -1,6 +1,6 @@
 #!/bin/sh
 echo "checking out ffmpeg svn"
-svn checkout svn://svn.mplayerhq.hu/ffmpeg/trunk ffmpeg
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg
 echo "patching ffmpeg"
 cd ffmpeg
 patch -p0 < ../ffmpeg.patch

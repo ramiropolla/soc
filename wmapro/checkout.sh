@@ -1,5 +1,5 @@
 #!/bin/sh
-svn co svn://svn.mplayerhq.hu/ffmpeg/trunk ffmpeg
+svn co svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg
 cd ffmpeg/libavcodec
 ln -s ../../wma3dec.c wma3dec.c
 cd ../
