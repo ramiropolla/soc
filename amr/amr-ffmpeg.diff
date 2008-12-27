@@ -26,7 +26,7 @@ Index: doc/general.texi
 ===================================================================
 --- doc/general.texi	(revision 16142)
 +++ doc/general.texi	(working copy)
-@@ -344,8 +344,8 @@
+@@ -346,8 +344,8 @@
  @item AAC                    @tab  E  @tab  X
      @tab encoding supported through external library libfaac
  @item AC-3                   @tab IX  @tab IX
@@ -43,10 +43,10 @@ Index: Changelog
 +++ Changelog	(working copy)
 @@ -142,6 +142,8 @@
  - Electronic Arts TGQ decoder
- - RV40 decoder
+ - RV30 and RV40 decoder
  - QCELP / PureVoice decoder
 +- AMR-NB decoder
-+	
++
  
  version 0.4.9-pre1:
  
