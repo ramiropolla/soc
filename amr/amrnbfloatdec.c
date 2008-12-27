@@ -86,7 +86,8 @@ typedef struct AMRContext {
 } AMRContext;
 
 
-static void reset_state(AMRContext *p) {
+static void reset_state(AMRContext *p)
+{
     int i;
 
     // initialise values for the lsp vector from the 4th subframe of the
@@ -121,7 +122,8 @@ static void reset_state(AMRContext *p) {
     }
 }
 
-static int amrnb_decode_init(AVCodecContext *avctx) {
+static int amrnb_decode_init(AVCodecContext *avctx)
+{
     AMRContext *p = avctx->priv_data;
 
     dsputil_init(&p->dsp, avctx);
@@ -155,7 +157,9 @@ static int amrnb_decode_init(AVCodecContext *avctx) {
  * @return Returns the frame mode
  */
 
-enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size, enum Mode *speech_mode) {
+enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size,
+                           enum Mode *speech_mode)
+{
     enum Mode mode;
     int i;
     const AMROrder *order;
@@ -246,7 +250,8 @@ enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size, enum Mode 
  * @return void
  */
 
-static void lsf2lsp(float *lsf, float *lsp) {
+static void lsf2lsp(float *lsf, float *lsp)
+{
     int i;
 
     for(i=0; i<LP_FILTER_ORDER; i++) {
@@ -262,7 +267,8 @@ static void lsf2lsp(float *lsf, float *lsp) {
  * @return void
  */
 
-static void lsf2lsp_5(AMRContext *p) {
+static void lsf2lsp_5(AMRContext *p)
+{
     float lsf_r[2][LP_FILTER_ORDER]; // residual LSF vectors
     float lsf_q[2][LP_FILTER_ORDER]; // quantified LSF vectors
     float sign;
@@ -324,7 +330,8 @@ static void lsf2lsp_5(AMRContext *p) {
  * @return void
  */
 
-static void lsf2lsp_3(AMRContext *p) {
+static void lsf2lsp_3(AMRContext *p)
+{
     float lsf_r[LP_FILTER_ORDER]; // residual LSF vector
     float lsf_q[LP_FILTER_ORDER]; // quantified LSF vector
     const float (*lsf_3_1_tmp)[3], (*lsf_3_3_tmp)[4]; // temp ptrs for switching tables depending on mode
@@ -383,7 +390,8 @@ static void lsf2lsp_3(AMRContext *p) {
  * @return void
  */
 
-static void interp_lsp_13(AMRContext *p) {
+static void interp_lsp_13(AMRContext *p)
+{
     int i;
 
     for(i=0; i<LP_FILTER_ORDER; i++) {
@@ -400,7 +408,8 @@ static void interp_lsp_13(AMRContext *p) {
  * @return void
  */
 
-static void interp_lsp_123(AMRContext *p) {
+static void interp_lsp_123(AMRContext *p)
+{
     int i;
 
     for(i=0; i<LP_FILTER_ORDER; i++) {
@@ -419,7 +428,8 @@ static void interp_lsp_123(AMRContext *p) {
  * @return void
  */
 
-static void lsp2poly(float *lsp, float *f) {
+static void lsp2poly(float *lsp, float *f)
+{
     int i, j;
 
     f[-1] = 0.0;
@@ -443,7 +453,8 @@ static void lsp2poly(float *lsp, float *f) {
  * @return void
  */
 
-static void lsp2lpc(float *lsp, float *lpc_coeffs) {
+static void lsp2lpc(float *lsp, float *lpc_coeffs)
+{
     float f1[7], f2[7];
     int i;
 
@@ -481,7 +492,8 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs) {
  * @return void
  */
 
-static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe) {
+static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe)
+{
     // subframe 1 or 3
     if(!(subframe & 1)) {
         if(pitch_index < 197) {
@@ -533,7 +545,8 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe) {
  * @return void
  */
 
-static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe) {
+static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe)
+{
     // subframe 1 or 3
     if(!(subframe & 1)) {
         if(pitch_index < 463){
@@ -566,7 +579,10 @@ static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe) {
  * @return void
  */
 
-static void interp_pitch_vector(float *prev_excitation, int lag_int, int lag_frac, enum Mode mode, float *pitch_vector) {
+static void interp_pitch_vector(float *prev_excitation, int lag_int,
+                                int lag_frac, enum Mode mode,
+                                float *pitch_vector)
+{
     int n, i;
     const float *b60_idx1, *b60_idx2;
     float *exc_idx;
@@ -613,7 +629,9 @@ static void interp_pitch_vector(float *prev_excitation, int lag_int, int lag_fra
  * @return void
  */
 
-static void reconstruct_fixed_vector(int *pulse_position, int sign, int nr_pulses, float *fixed_vector) {
+static void reconstruct_fixed_vector(int *pulse_position, int sign,
+                                     int nr_pulses, float *fixed_vector)
+{
     int i;
 
     // reset the code
@@ -635,7 +653,9 @@ static void reconstruct_fixed_vector(int *pulse_position, int sign, int nr_pulse
  * @return void
  */
 
-static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe, float *fixed_vector) {
+static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe,
+                                  float *fixed_vector)
+{
     int pulse_position[2];
     int pulse_subset;
 
@@ -661,7 +681,9 @@ static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe, float
  * @return void
  */
 
-static void decode_2_pulses_11bits(int fixed_index, int sign, float *fixed_vector) {
+static void decode_2_pulses_11bits(int fixed_index, int sign,
+                                   float *fixed_vector)
+{
     int pulse_position[2];
     int pulse_subset;
 
@@ -690,7 +712,9 @@ static void decode_2_pulses_11bits(int fixed_index, int sign, float *fixed_vecto
  * @return void
  */
 
-static void decode_3_pulses_14bits(int fixed_index, int sign, float *fixed_vector) {
+static void decode_3_pulses_14bits(int fixed_index, int sign,
+                                   float *fixed_vector)
+{
     int pulse_position[3];
     int pulse_subset;
 
@@ -720,7 +744,9 @@ static void decode_3_pulses_14bits(int fixed_index, int sign, float *fixed_vecto
  * @return void
  */
 
-static void decode_4_pulses_17bits(int fixed_index, int sign, float *fixed_vector) {
+static void decode_4_pulses_17bits(int fixed_index, int sign,
+                                   float *fixed_vector)
+{
     int pulse_position[4];
     int pulse_subset;
 
@@ -749,7 +775,8 @@ static void decode_4_pulses_17bits(int fixed_index, int sign, float *fixed_vecto
  * @return void
  */
 
-static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector) {
+static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector)
+{
     int pulse_position[8];
     int i, pos1, pos2, sign, temp;
 
@@ -805,7 +832,8 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector) {
  * @return void
  */
 
-static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_vector) {
+static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_vector)
+{
     int i, pos1, pos2, sign;
 
     // reset the code
@@ -841,7 +869,9 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_vector) {
  * @return Returns the predicted fixed gain
  */
 
-static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error, enum Mode mode) {
+static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
+                                   enum Mode mode)
+{
     int i;
     float energy_pred = 0.0, energy_fixed_mean = 0.0;
 
@@ -874,7 +904,8 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error, 
  * @return a-b : the result of the comparison
  */
 
-int qsort_compare(const float *a, const float *b) {
+int qsort_compare(const float *a, const float *b)
+{
     float diff = *a - *b;
     if(diff > 0.0f)
         return 1;
@@ -891,7 +922,8 @@ int qsort_compare(const float *a, const float *b) {
  * @return Returns the median value
  */
 
-static float medianf(float *values, int n) {
+static float medianf(float *values, int n)
+{
     float temp[9]; // largest n used for median calculation is 9
 
     memcpy(temp, values, n * sizeof(float));
@@ -913,7 +945,8 @@ static float medianf(float *values, int n) {
  * @param ir_filter     pointer to the impulse response filter
  */
 
-static void convolve_circ(float *fixed_vector, const float *ir_filter) {
+static void convolve_circ(float *fixed_vector, const float *ir_filter)
+{
     int i, j, k;
     int npulses = 0, pulse_positions[AMR_SUBFRAME_SIZE];
     float fixed_vector_temp[AMR_SUBFRAME_SIZE];
@@ -955,7 +988,9 @@ static void convolve_circ(float *fixed_vector, const float *ir_filter) {
  * @param overflow      16-bit overflow flag
  */
 
-static int synthesis(AMRContext *p, float *excitation, float *lpc, float *samples, uint8_t overflow) {
+static int synthesis(AMRContext *p, float *excitation, float *lpc,
+                     float *samples, uint8_t overflow)
+{
     int i, j, overflow_temp = 0;
 
     // if an overflow has been detected, the pitch vector is scaled down by a
@@ -1019,7 +1054,8 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc, float *sample
  * @param p             pointer to the AMRContext
  */
 
-static void update_state(AMRContext *p) {
+static void update_state(AMRContext *p)
+{
     // update the previous frame's fourth subframe LSP vector
     memcpy(p->prev_lsp_sub4, p->lsp[3], LP_FILTER_ORDER * sizeof(float));
 
@@ -1052,8 +1088,9 @@ static void update_state(AMRContext *p) {
 /*** end of update functions ***/
 
 
-static int amrnb_decode_frame(AVCodecContext *avctx,
-        void *data, int *data_size, uint8_t *buf, int buf_size) {
+static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
+                              uint8_t *buf, int buf_size)
+{
 
     AMRContext *p = avctx->priv_data;        // pointer to private data
     int16_t *buf_out = data;                 // pointer to the output data buffer
@@ -1310,7 +1347,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx,
 }
 
 
-static int amrnb_decode_close(AVCodecContext *avctx) {
+static int amrnb_decode_close(AVCodecContext *avctx)
+{
     AMRContext *p = avctx->priv_data;
 
     /* Return 0 if everything is ok, -1 if not */
@@ -1318,8 +1356,7 @@ static int amrnb_decode_close(AVCodecContext *avctx) {
 }
 
 
-AVCodec amrnb_decoder =
-{
+AVCodec amrnb_decoder = {
     .name = "amrnb",
     .type = CODEC_TYPE_AUDIO,
     .id = CODEC_ID_AMR_NB,
