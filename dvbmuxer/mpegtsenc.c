@@ -164,7 +164,9 @@ static int mpegts_write_section1(MpegTSSection *s, int tid, int id,
 /* we retransmit the SI info at this rate */
 #define SDT_RETRANS_TIME 500
 #define PAT_RETRANS_TIME 100
-#define MAX_DELTA_PCR 9000 /**< 0.1s according to ISO 13818-1 */
+
+#define PCR_TIME_BASE 27000000LL
+#define MAX_DELTA_PCR (PCR_TIME_BASE / 25) /**< 40ms for DVB */
 
 typedef struct MpegTSWriteStream {
     StreamInfo pes;
@@ -520,7 +522,7 @@ static void mpegts_write_pes(AVFormatContext *s, AVStream *st,
 
         write_pcr = !ts->cur_pcr;
         if (ts_st->pid == ts_st->service->pcr_pid) {
-            pcr = ts->cur_pcr + (TS_PACKET_SIZE+4+7)*8*90000LL / ts->mux_rate;
+            pcr = ts->cur_pcr + (TS_PACKET_SIZE+4+7)*8*PCR_TIME_BASE / ts->mux_rate;
             if (pcr - ts->last_pcr > MAX_DELTA_PCR)
                 write_pcr = 1;
         }
@@ -538,16 +540,19 @@ static void mpegts_write_pes(AVFormatContext *s, AVStream *st,
         *q++ = 0x10 | ts_st->cc | (write_pcr ? 0x20 : 0);
         ts_st->cc = (ts_st->cc + 1) & 0xf;
         if (write_pcr) {
+            uint64_t pcr_base, pcr_ext;
             /* add header and pcr bytes to pcr according to specs */
-            pcr = ts->cur_pcr + (4+7)*8*90000LL / ts->mux_rate;
+            pcr = ts->cur_pcr + (4+7)*8*PCR_TIME_BASE / ts->mux_rate;
+            pcr_base = pcr / 300;
+            pcr_ext  = pcr % 300;
             *q++ = 7; /* AFC length */
             *q++ = 0x10; /* flags: PCR present */
-            *q++ = pcr >> 25;
-            *q++ = pcr >> 17;
-            *q++ = pcr >> 9;
-            *q++ = pcr >> 1;
-            *q++ = (pcr & 1) << 7;
-            *q++ = 0;
+            *q++ = pcr_base >> 25;
+            *q++ = pcr_base >> 17;
+            *q++ = pcr_base >> 9;
+            *q++ = pcr_base >> 1;
+            *q++ = (pcr_base & 1) << 7 | ((pcr_ext >> 8) & 1);
+            *q++ = pcr_ext;
             ts->last_pcr = pcr;
         }
         /* header size */
