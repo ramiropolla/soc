@@ -1,0 +1,30 @@
+Index: libavcodec/dsputil.h
+===================================================================
+--- libavcodec/dsputil.h	(revision 16409)
++++ libavcodec/dsputil.h	(working copy)
+@@ -731,7 +731,8 @@
+ extern float ff_sine_512 [ 512];
+ extern float ff_sine_1024[1024];
+ extern float ff_sine_2048[2048];
+-extern float *ff_sine_windows[5];
++extern float ff_sine_4096[4096];
++extern float *ff_sine_windows[6];
+ 
+ int ff_mdct_init(MDCTContext *s, int nbits, int inverse);
+ void ff_imdct_calc_c(MDCTContext *s, FFTSample *output, const FFTSample *input);
+Index: libavcodec/mdct.c
+===================================================================
+--- libavcodec/mdct.c	(revision 16409)
++++ libavcodec/mdct.c	(working copy)
+@@ -53,8 +53,9 @@
+ DECLARE_ALIGNED(16, float, ff_sine_512 [ 512]);
+ DECLARE_ALIGNED(16, float, ff_sine_1024[1024]);
+ DECLARE_ALIGNED(16, float, ff_sine_2048[2048]);
+-float *ff_sine_windows[5] = {
+-    ff_sine_128, ff_sine_256, ff_sine_512, ff_sine_1024, ff_sine_2048,
++DECLARE_ALIGNED(16, float, ff_sine_4096[4096]);
++float *ff_sine_windows[6] = {
++    ff_sine_128, ff_sine_256, ff_sine_512, ff_sine_1024, ff_sine_2048, ff_sine_4096
+ };
+ 
+ // Generate a sine window.
