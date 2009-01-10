@@ -646,7 +646,7 @@ static int output_packet(AVFormatContext *ctx, int flush){
     StreamInfo *stream;
     int es_size;
     int best_i= -1;
-    int64_t pcr= s->last_pcr;
+    int64_t pcr= s->last_pcr/300;
 
     if ((es_size = ff_pes_output_packet(ctx, DEFAULT_PES_PAYLOAD_SIZE,
                                         &pcr, &best_i, flush, flush_packet)) <= 0)
@@ -661,7 +661,7 @@ static int output_packet(AVFormatContext *ctx, int flush){
     if(es_size)
         stream->premux_packet->unwritten_size -= es_size;
 
-    if(ff_pes_remove_decoded_packets(ctx, s->last_pcr) < 0)
+    if(ff_pes_remove_decoded_packets(ctx, s->last_pcr/300) < 0)
         return -1;
 
     return 1;
