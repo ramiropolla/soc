@@ -25,6 +25,9 @@
 #include "libavcodec/bytestream.h"
 #include "mpegpes.h"
 
+#define PCR_TIME_BASE 27000000LL
+#define MAX_DELTA_PCR (PCR_TIME_BASE / 25) /**< 40ms for DVB */
+
 /* write DVB SI sections */
 
 /*********************************************/
@@ -106,7 +109,7 @@ static void mpegts_write_section(MpegTSSection *s, uint8_t *buf, int len)
 
         buf_ptr += len1;
         len -= len1;
-        ts->cur_pcr += TS_PACKET_SIZE*8*90000LL/ts->mux_rate;
+        ts->cur_pcr += TS_PACKET_SIZE*8*PCR_TIME_BASE/ts->mux_rate;
     }
 }
 
@@ -164,9 +167,6 @@ static int mpegts_write_section1(MpegTSSection *s, int tid, int id,
 /* we retransmit the SI info at this rate */
 #define SDT_RETRANS_TIME 500
 #define PAT_RETRANS_TIME 100
-
-#define PCR_TIME_BASE 27000000LL
-#define MAX_DELTA_PCR (PCR_TIME_BASE / 25) /**< 40ms for DVB */
 
 typedef struct MpegTSWriteStream {
     StreamInfo pes;
@@ -516,7 +516,6 @@ static void mpegts_write_pes(AVFormatContext *s, AVStream *st,
     int afc_len, stuffing_len;
 
     is_start = 1;
-    ts->cur_pcr = pcr;
     while (payload_size > 0) {
         retransmit_si_info(s);
 
@@ -587,7 +586,7 @@ static void mpegts_write_pes(AVFormatContext *s, AVStream *st,
         payload += len;
         payload_size -= len;
         put_buffer(s->pb, buf, TS_PACKET_SIZE);
-        ts->cur_pcr += TS_PACKET_SIZE*8*90000LL/ts->mux_rate;
+        ts->cur_pcr += TS_PACKET_SIZE*8*PCR_TIME_BASE/ts->mux_rate;
     }
     put_flush_packet(s->pb);
 }
