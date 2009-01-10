@@ -37,9 +37,34 @@ typedef struct MpegTSSection {
     void *opaque;
 } MpegTSSection;
 
+typedef struct MpegTSService {
+    MpegTSSection pmt; /* MPEG2 pmt table context */
+    int sid;           /* service ID */
+    char *name;
+    char *provider_name;
+    int pcr_pid;
+} MpegTSService;
+
+typedef struct MpegTSWrite {
+    MpegTSSection pat; /* MPEG2 pat table */
+    MpegTSSection sdt; /* MPEG2 sdt table context */
+    MpegTSService **services;
+    int sdt_packet_count;
+    int sdt_packet_freq;
+    int pat_packet_count;
+    int pat_packet_freq;
+    int nb_services;
+    int onid;
+    int tsid;
+    int64_t last_pcr; ///< last program clock reference */
+    int64_t cur_pcr;  ///< last program clock reference */
+    int mux_rate;
+} MpegTSWrite;
+
 /* NOTE: 4 bytes must be left at the end for the crc32 */
 static void mpegts_write_section(MpegTSSection *s, uint8_t *buf, int len)
 {
+    MpegTSWrite *ts = ((AVFormatContext*)s->opaque)->priv_data;
     unsigned int crc;
     unsigned char packet[TS_PACKET_SIZE];
     const unsigned char *buf_ptr;
@@ -81,6 +106,7 @@ static void mpegts_write_section(MpegTSSection *s, uint8_t *buf, int len)
 
         buf_ptr += len1;
         len -= len1;
+        ts->cur_pcr += TS_PACKET_SIZE*8*90000LL/ts->mux_rate;
     }
 }
 
@@ -150,30 +176,6 @@ typedef struct MpegTSWriteStream {
     int64_t payload_dts;
     uint8_t payload[DEFAULT_PES_PAYLOAD_SIZE];
 } MpegTSWriteStream;
-
-typedef struct MpegTSService {
-    MpegTSSection pmt; /* MPEG2 pmt table context */
-    int sid;           /* service ID */
-    char *name;
-    char *provider_name;
-    int pcr_pid;
-} MpegTSService;
-
-typedef struct MpegTSWrite {
-    MpegTSSection pat; /* MPEG2 pat table */
-    MpegTSSection sdt; /* MPEG2 sdt table context */
-    MpegTSService **services;
-    int sdt_packet_count;
-    int sdt_packet_freq;
-    int pat_packet_count;
-    int pat_packet_freq;
-    int nb_services;
-    int onid;
-    int tsid;
-    int64_t last_pcr; ///< last program clock reference */
-    int64_t cur_pcr;  ///< last program clock reference */
-    int mux_rate;
-} MpegTSWrite;
 
 static void mpegts_write_pat(AVFormatContext *s)
 {
@@ -580,7 +582,7 @@ static void mpegts_write_pes(AVFormatContext *s, AVStream *st,
         payload += len;
         payload_size -= len;
         put_buffer(s->pb, buf, TS_PACKET_SIZE);
-        ts->cur_pcr += (TS_PACKET_SIZE+write_pcr)*8*90000LL / ts->mux_rate;
+        ts->cur_pcr += TS_PACKET_SIZE*8*90000LL/ts->mux_rate;
     }
     put_flush_packet(s->pb);
 }
