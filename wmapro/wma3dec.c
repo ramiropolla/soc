@@ -138,7 +138,6 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     int i;
 
     s->avctx = avctx;
-
     dsputil_init(&s->dsp, avctx);
 
     /* FIXME is this really the right thing todo for 24 bit? */
@@ -640,7 +639,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s, GetBitContext* gb)
                 }else{
                     chgroup->no_rotation = 1;
                     chgroup->transform = 1;
-                    chgroup->decorrelation_matrix[0] = 0.70703125;
+                    chgroup->decorrelation_matrix[0] = 0.70703125;  //FIXME cos(pi/4)
                     chgroup->decorrelation_matrix[1] = -0.70703125;
                     chgroup->decorrelation_matrix[2] = 0.70703125;
                     chgroup->decorrelation_matrix[3] = 0.70703125;
@@ -708,7 +707,6 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s, GetBitContext* gb)
     }
     return 1;
 }
-
 
 
 static unsigned int wma_get_large_val(WMA3DecodeContext* s)
@@ -933,9 +931,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
                         return 0;
                     }else
                         s->channel[c].scale_factors[i] += (val ^ level_mask) - val;
-
                 }
-
             }
 
             s->channel[c].reuse_sf = 1;
@@ -971,7 +967,7 @@ static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, wma_channel_grou
                     float v1 = tmp1[y];
                     float v2 = tmp2[y];
                     int n = chgroup->rotation_offset[offset + x];
-                    float cosv = sin(n*M_PI / 64.0);
+                    float cosv = sin(n*M_PI / 64.0);                //FIXME use one table for this
                     float sinv = -cos(n*M_PI / 64.0);
 
                     chgroup->decorrelation_matrix[y + x * chgroup->nb_channels] = (v1 * cosv) + (v2 * sinv);
