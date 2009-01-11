@@ -1095,7 +1095,7 @@ static void wma_window(WMA3DecodeContext *s){
 //    float* rs = &s->channel[c].out[s->samples_per_frame/2 + s->channel[c].subframe_offset[i]];
 //    printf("Dstart %i %i end %i win %i prev %i\n",s->frame_num+1, start - rs,end -rs,winlen,prev_block_len);
 
-#if 1
+        //FIXME untagle the windowing so dsp functions can be used
         window = s->windows[av_log2(winlen)-BLOCK_MIN_BITS];
         for(x=0;x<len;x++){
             float ts = *start;
@@ -1107,23 +1107,9 @@ static void wma_window(WMA3DecodeContext *s){
             ++start;
             --end;
         }
-#else
-        wma_window2();
-#endif
-
         s->channel[c].prev_block_len = block_len;
     }
 }
-
-
-/**
- * Apply MDCT window and add into output.
- *
- * We ensure that when the windows overlap their squared sum
- * is always 1 (MDCT reconstruction rule).
- */
-
-
 
 
 
