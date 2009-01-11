@@ -6,5 +6,5 @@ ln -s ../../wma3data.h wma3data.h
 ln -s ../../wma3.h wma3.h
 cd ../
 patch -p0 <../wmapro_ffmpeg.patch
-patch -p0 <../mdct.diff
+patch -p0 <../audioframesize.patch
 
