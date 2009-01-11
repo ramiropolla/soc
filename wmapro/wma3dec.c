@@ -26,10 +26,7 @@
 #undef NDEBUG
 #include <assert.h>
 
-static av_cold int wma3_decode_end(AVCodecContext *avctx);
-
 unsigned int bitstreamcounter;
-
 
 /**
  *@brief helper function to print the most important members of the context
@@ -89,6 +86,44 @@ static int get_samples_per_frame(int sample_rate, unsigned int decode_flags) {
 
     return samples_per_frame;
 }
+
+
+/**
+ *@brief Uninitialize the decoder and free all ressources.
+ *@param avctx codec context
+ *@return 0 on success, < 0 otherwise
+ */
+static av_cold int wma3_decode_end(AVCodecContext *avctx)
+{
+    WMA3DecodeContext *s = avctx->priv_data;
+    int i;
+
+    av_free(s->prev_frame);
+    av_free(s->num_sfb);
+    av_free(s->sfb_offsets);
+    av_free(s->subwoofer_cutoffs);
+    av_free(s->sf_offsets);
+
+    if(s->default_decorrelation_matrix){
+        for(i=1;i<=s->nb_channels;i++)
+            av_free(s->default_decorrelation_matrix[i]);
+        av_free(s->default_decorrelation_matrix);
+    }
+
+    free_vlc(&s->exp_vlc);
+    free_vlc(&s->coef_vlc[0]);
+    free_vlc(&s->coef_vlc[1]);
+    free_vlc(&s->huff_0_vlc);
+    free_vlc(&s->huff_1_vlc);
+    free_vlc(&s->huff_2_vlc);
+    free_vlc(&s->rlc_vlc);
+
+    for(i=0 ; i<BLOCK_NB_SIZES ; i++)
+        ff_mdct_end(&s->mdct_ctx[i]);
+
+    return 0;
+}
+
 
 /**
  *@brief Initialize the decoder.
@@ -1593,41 +1628,6 @@ static int wma3_decode_packet(AVCodecContext *avctx,
     return avctx->block_align;
 }
 
-/**
- *@brief Uninitialize the decoder and free all ressources.
- *@param avctx codec context
- *@return 0 on success, < 0 otherwise
- */
-static av_cold int wma3_decode_end(AVCodecContext *avctx)
-{
-    WMA3DecodeContext *s = avctx->priv_data;
-    int i;
-
-    av_free(s->prev_frame);
-    av_free(s->num_sfb);
-    av_free(s->sfb_offsets);
-    av_free(s->subwoofer_cutoffs);
-    av_free(s->sf_offsets);
-
-    if(s->default_decorrelation_matrix){
-        for(i=1;i<=s->nb_channels;i++)
-            av_free(s->default_decorrelation_matrix[i]);
-        av_free(s->default_decorrelation_matrix);
-    }
-
-    free_vlc(&s->exp_vlc);
-    free_vlc(&s->coef_vlc[0]);
-    free_vlc(&s->coef_vlc[1]);
-    free_vlc(&s->huff_0_vlc);
-    free_vlc(&s->huff_1_vlc);
-    free_vlc(&s->huff_2_vlc);
-    free_vlc(&s->rlc_vlc);
-
-    for(i=0 ; i<BLOCK_NB_SIZES ; i++)
-        ff_mdct_end(&s->mdct_ctx[i]);
-
-    return 0;
-}
 
 /**
  *@brief WMA9 decoder
