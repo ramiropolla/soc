@@ -54,7 +54,7 @@ typedef struct {
     uint8_t  cur_subframe;
     uint8_t grouped; //< true if the channel is contained in a channel group
 
-    float coeffs[4096]; //< MAX_COEF
+    DECLARE_ALIGNED_16(float, coeffs[4096]); //< MAX_COEF
 
     int   scale_factors[MAX_BANDS];     //< initial scale factor values
     int   resampled_scale_factors[MAX_BANDS]; //< resampled scale factors from the previous block
