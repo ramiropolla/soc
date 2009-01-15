@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef WMA3_H
-#define WMA3_H 1
+#ifndef AVCODEC_WMA3_H
+#define AVCODEC_WMA3_H 1
 
 #include "wma3data.h"
 #include "dsputil.h"
