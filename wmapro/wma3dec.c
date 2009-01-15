@@ -778,8 +778,8 @@ static int decode_coeffs(WMA3DecodeContext *s,GetBitContext* gb,int c)
     int rl_mode = 0;
     int cur_coeff = 0;
     int last_write = 0;
-    const short* run;
-    const short* level;
+    const uint8_t* run;
+    const uint8_t* level;
 
     av_log(s->avctx,AV_LOG_DEBUG,"decode  coefs for channel %i\n",c);
 
