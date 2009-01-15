@@ -161,5 +161,5 @@ typedef struct WMA3DecodeContext {
     uint8_t*         prev_frame;               //< prev frame data
 } WMA3DecodeContext;
 
-#endif
+#endif /* AVCODEC_WMA3_H */
 
