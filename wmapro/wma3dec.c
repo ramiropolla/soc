@@ -26,6 +26,10 @@
 #undef NDEBUG
 #include <assert.h>
 
+#define VLCBITS            9
+#define SCALEVLCBITS       8
+
+
 unsigned int bitstreamcounter;
 
 /**

@@ -30,9 +30,6 @@
 #define MAX_SUBFRAMES     32          //< max number of subframes per channel
 #define MAX_BANDS         29          //< max number of scale factor bands
 
-#define VLCBITS            9
-#define SCALEVLCBITS       8
-
 /* size of blocks defines taken from wma.h*/
 #define BLOCK_MIN_BITS     7
 #define BLOCK_MAX_BITS    12
