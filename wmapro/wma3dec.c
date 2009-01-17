@@ -55,7 +55,8 @@ static void dump_context(WMA3DecodeContext *s)
  *@param decode_flags codec compression features
  *@return number of output samples per frame
  */
-static int get_samples_per_frame(int sample_rate, unsigned int decode_flags) {
+static int get_samples_per_frame(int sample_rate, unsigned int decode_flags)
+{
 
     int samples_per_frame;
     int tmp;
@@ -402,7 +403,8 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
  *@param gb current get bit context
  *@return 0 on success < 0 in case of an error
  */
-static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
+static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb)
+{
     int c;
     int missing_samples = s->nb_channels * s->samples_per_frame;
 
@@ -567,7 +569,8 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb){
 }
 
 
-static int wma_decode_channel_transform(WMA3DecodeContext* s, GetBitContext* gb){
+static int wma_decode_channel_transform(WMA3DecodeContext* s, GetBitContext* gb)
+{
     int i;
     for(i=0;i< s->nb_channels;i++){
         memset(s->chgroup[i].decorrelation_matrix,0,4*s->nb_channels * s->nb_channels);
@@ -725,7 +728,8 @@ static unsigned int wma_get_large_val(WMA3DecodeContext* s)
 }
 
 
-static inline void wma_get_vec4(WMA3DecodeContext *s,int* vals,int* masks){
+static inline void wma_get_vec4(WMA3DecodeContext *s,int* vals,int* masks)
+{
         unsigned int idx;
         int i = 0;
         // read 4 values
@@ -946,7 +950,8 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
     return 1;
 }
 
-static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, wma_channel_group* chgroup){
+static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, wma_channel_group* chgroup)
+{
     int i;
     int offset = 0;
     memset(chgroup->decorrelation_matrix, 0, chgroup->nb_channels * 4 * chgroup->nb_channels);
@@ -1061,7 +1066,8 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
 }
 
 
-static void wma_window(WMA3DecodeContext *s){
+static void wma_window(WMA3DecodeContext *s)
+{
     int i;
     for(i=0;i<s->channels_for_cur_subframe;i++){
         int c = s->channel_indices_for_cur_subframe[i];
@@ -1109,7 +1115,8 @@ static void wma_window(WMA3DecodeContext *s){
 
 
 
-static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb){
+static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
+{
     int offset = s->samples_per_frame;
     int subframe_len = s->samples_per_frame;
     int i;
@@ -1339,7 +1346,8 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb){
  *@return 0 if the trailer bit indicates that this is the last frame,
  *        1 if there are more frames
  */
-static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
+static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb)
+{
     unsigned int gb_start_count = get_bits_count(gb);
     int more_frames = 0;
     int len = 0;
@@ -1471,7 +1479,8 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb){
  *@param s codec context
  *@return remaining size in bits
  */
-static int remaining_bits(WMA3DecodeContext *s){
+static int remaining_bits(WMA3DecodeContext *s)
+{
     return s->buf_bit_size - get_bits_count(&s->gb);
 }
 
@@ -1480,7 +1489,8 @@ static int remaining_bits(WMA3DecodeContext *s){
  *@param s codec context
  *@param len length of the partial frame
  */
-static void save_bits(WMA3DecodeContext *s,int len){
+static void save_bits(WMA3DecodeContext *s,int len)
+{
     int buflen = (s->prev_frame_bit_size + len + 8) / 8;
     int bit_offset = s->prev_frame_bit_size % 8;
     int pos = (s->prev_frame_bit_size - bit_offset) / 8;
