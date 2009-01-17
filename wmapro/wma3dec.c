@@ -590,7 +590,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s, GetBitContext* gb)
         }
 
         for(s->nb_chgroups = 0; remaining_channels && s->nb_chgroups < s->channels_for_cur_subframe;s->nb_chgroups++){
-            wma_channel_group* chgroup = &s->chgroup[s->nb_chgroups];
+            WMA3ChannelGroup* chgroup = &s->chgroup[s->nb_chgroups];
             chgroup->nb_channels = 0;
             chgroup->no_rotation = 0;
             chgroup->transform = 0;
@@ -939,7 +939,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
     return 1;
 }
 
-static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, wma_channel_group* chgroup)
+static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, WMA3ChannelGroup* chgroup)
 {
     int i;
     int offset = 0;

@@ -78,7 +78,7 @@ typedef struct {
     char positive[MAX_CHANNELS * MAX_CHANNELS]; //< fixme for what are these numbers used?
     float decorrelation_matrix[MAX_CHANNELS*MAX_CHANNELS];
     char use_channel[MAX_CHANNELS];
-} wma_channel_group;
+} WMA3ChannelGroup;
 
 /**
  *@brief main decoder context
@@ -148,8 +148,8 @@ typedef struct WMA3DecodeContext {
     int              quant_step;
     int              esc_len;
 
-    int              nb_chgroups;              //< number of channel groups
-    wma_channel_group chgroup[MAX_CHANNELS];   //< channel group information
+    uint8_t          nb_chgroups;              //< number of channel groups
+    WMA3ChannelGroup chgroup[MAX_CHANNELS];    //< channel group information
 
     WMA3ChannelCtx   channel[MAX_CHANNELS];    //< per channel data
 } WMA3DecodeContext;
