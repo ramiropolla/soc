@@ -239,9 +239,9 @@ static const uint8_t ff_wma3_coef1_huffbits[FF_WMA3_COEF1_SIZE] = {
 };
 
 
-#define FF_WMA3_HUFF_0_SIZE 127
-#define FF_WMA3_HUFF_0_MAXBITS 14
-static const uint32_t ff_wma3_huff_0_codes[FF_WMA3_HUFF_0_SIZE] = {
+#define FF_WMA3_HUFF_VEC4_SIZE 127
+#define FF_WMA3_HUFF_VEC4_MAXBITS 14
+static const uint32_t ff_wma3_vec4_huffcodes[FF_WMA3_HUFF_VEC4_SIZE] = {
     0x0019, 0x0027, 0x00F2, 0x03BA, 0x0930, 0x1267, 0x0031, 0x0030,
     0x0097, 0x0221, 0x058B, 0x0124, 0x00EB, 0x01D4, 0x03D8, 0x0584,
     0x0364, 0x045F, 0x0F66, 0x0931, 0x24CD, 0x002F, 0x0039, 0x00E8,
@@ -260,7 +260,7 @@ static const uint32_t ff_wma3_huff_0_codes[FF_WMA3_HUFF_0_SIZE] = {
     0x03C4, 0x08B8, 0x078B, 0x0755, 0x0581, 0x0F67, 0x0000,
 };
 
-static const uint8_t ff_wma3_huff_0_bits[FF_WMA3_HUFF_0_SIZE] = {
+static const uint8_t ff_wma3_vec4_huffbits[FF_WMA3_HUFF_VEC4_SIZE] = {
      5,  6,  8, 10, 12, 13,  6,  6,
      8, 10, 11,  9,  8,  9, 10, 11,
     10, 11, 12, 12, 14,  6,  6,  8,
@@ -280,9 +280,9 @@ static const uint8_t ff_wma3_huff_0_bits[FF_WMA3_HUFF_0_SIZE] = {
 };
 
 
-#define FF_WMA3_HUFF_1_SIZE 137
-#define FF_WMA3_HUFF_1_MAXBITS 12
-static const uint32_t ff_wma3_huff_1_codes[FF_WMA3_HUFF_1_SIZE] = {
+#define FF_WMA3_HUFF_VEC2_SIZE 137
+#define FF_WMA3_HUFF_VEC2_MAXBITS 12
+static const uint32_t ff_wma3_vec2_huffcodes[FF_WMA3_HUFF_VEC2_SIZE] = {
     0x055, 0x01C, 0x01A, 0x02B, 0x028, 0x067, 0x08B, 0x039,
     0x170, 0x10D, 0x2A5, 0x047, 0x464, 0x697, 0x523, 0x8CB,
     0x01B, 0x00E, 0x000, 0x010, 0x012, 0x036, 0x048, 0x04C,
@@ -303,7 +303,7 @@ static const uint32_t ff_wma3_huff_1_codes[FF_WMA3_HUFF_1_SIZE] = {
     0x001,
 };
 
-static const uint8_t ff_wma3_huff_1_bits[FF_WMA3_HUFF_1_SIZE] = {
+static const uint8_t ff_wma3_vec2_huffbits[FF_WMA3_HUFF_VEC2_SIZE] = {
      7,  6,  6,  6,  7,  7,  8,  9,
      9, 10, 10, 11, 11, 11, 12, 12,
      6,  4,  5,  5,  6,  6,  7,  8,
@@ -325,9 +325,9 @@ static const uint8_t ff_wma3_huff_1_bits[FF_WMA3_HUFF_1_SIZE] = {
 };
 
 
-#define FF_WMA3_HUFF_2_SIZE 101
-#define FF_WMA3_HUFF_2_MAXBITS 11
-static const uint32_t ff_wma3_huff_2_codes[FF_WMA3_HUFF_2_SIZE] = {
+#define FF_WMA3_HUFF_VEC1_SIZE 101
+#define FF_WMA3_HUFF_VEC1_MAXBITS 11
+static const uint32_t ff_wma3_vec1_huffcodes[FF_WMA3_HUFF_VEC1_SIZE] = {
     0x01A, 0x003, 0x017, 0x010, 0x00C, 0x009, 0x005, 0x000,
     0x00D, 0x00A, 0x009, 0x00C, 0x00F, 0x002, 0x004, 0x007,
     0x00B, 0x00F, 0x01C, 0x006, 0x010, 0x015, 0x01C, 0x022,
@@ -343,7 +343,7 @@ static const uint32_t ff_wma3_huff_2_codes[FF_WMA3_HUFF_2_SIZE] = {
     0x297, 0x355, 0x372, 0x373, 0x016,
 };
 
-static const uint8_t ff_wma3_huff_2_bits[FF_WMA3_HUFF_2_SIZE] = {
+static const uint8_t ff_wma3_vec1_huffbits[FF_WMA3_HUFF_VEC1_SIZE] = {
      7,  6,  5,  5,  5,  5,  5,  5,
      4,  4,  4,  4,  4,  5,  5,  5,
      5,  5,  5,  6,  6,  6,  6,  6,

@@ -116,9 +116,9 @@ typedef struct WMA3DecodeContext {
     int*              rgiBarkIndex;
 
     VLC              exp_vlc;
-    VLC              huff_0_vlc;
-    VLC              huff_1_vlc;
-    VLC              huff_2_vlc;
+    VLC              vec4_vlc;
+    VLC              vec2_vlc;
+    VLC              vec1_vlc;
     VLC              coef_vlc[2];
     VLC              rlc_vlc;
     int              coef_max[2];

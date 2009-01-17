@@ -112,9 +112,9 @@ static av_cold int wma3_decode_end(AVCodecContext *avctx)
     free_vlc(&s->exp_vlc);
     free_vlc(&s->coef_vlc[0]);
     free_vlc(&s->coef_vlc[1]);
-    free_vlc(&s->huff_0_vlc);
-    free_vlc(&s->huff_1_vlc);
-    free_vlc(&s->huff_2_vlc);
+    free_vlc(&s->vec4_vlc);
+    free_vlc(&s->vec2_vlc);
+    free_vlc(&s->vec1_vlc);
     free_vlc(&s->rlc_vlc);
 
     for(i=0 ; i<BLOCK_NB_SIZES ; i++)
@@ -228,17 +228,17 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
     s->coef_max[1] = ((21+VLCBITS-1)/VLCBITS);
 
-    init_vlc(&s->huff_0_vlc, VLCBITS, FF_WMA3_HUFF_0_SIZE,
-                 ff_wma3_huff_0_bits, 1, 1,
-                 ff_wma3_huff_0_codes, 4, 4, 0);
+    init_vlc(&s->vec4_vlc, VLCBITS, FF_WMA3_HUFF_VEC4_SIZE,
+                 ff_wma3_vec4_huffbits, 1, 1,
+                 ff_wma3_vec4_huffcodes, 4, 4, 0);
 
-    init_vlc(&s->huff_1_vlc, VLCBITS, FF_WMA3_HUFF_1_SIZE,
-                 ff_wma3_huff_1_bits, 1, 1,
-                 ff_wma3_huff_1_codes, 4, 4, 0);
+    init_vlc(&s->vec2_vlc, VLCBITS, FF_WMA3_HUFF_VEC2_SIZE,
+                 ff_wma3_vec2_huffbits, 1, 1,
+                 ff_wma3_vec2_huffcodes, 4, 4, 0);
 
-    init_vlc(&s->huff_2_vlc, VLCBITS, FF_WMA3_HUFF_2_SIZE,
-                 ff_wma3_huff_2_bits, 1, 1,
-                 ff_wma3_huff_2_codes, 4, 4, 0);
+    init_vlc(&s->vec1_vlc, VLCBITS, FF_WMA3_HUFF_VEC1_SIZE,
+                 ff_wma3_vec1_huffbits, 1, 1,
+                 ff_wma3_vec1_huffcodes, 4, 4, 0);
 
     init_vlc(&s->rlc_vlc, VLCBITS, FF_WMA3_HUFF_RLC_SIZE,
                  ff_wma3_huff_rlc_bits, 1, 1,
@@ -725,18 +725,18 @@ static inline void wma_get_vec4(WMA3DecodeContext *s,int* vals,int* masks)
         unsigned int idx;
         int i = 0;
         // read 4 values
-        idx = get_vlc2(s->getbit, s->huff_0_vlc.table, VLCBITS, ((FF_WMA3_HUFF_0_MAXBITS+VLCBITS-1)/VLCBITS));
+        idx = get_vlc2(s->getbit, s->vec4_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
 
 
         if ( idx == 126 )
         {
           while(i < 4){
-              idx = get_vlc2(s->getbit, s->huff_1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_1_MAXBITS+VLCBITS-1)/VLCBITS));
+              idx = get_vlc2(s->getbit, s->vec2_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC2_MAXBITS+VLCBITS-1)/VLCBITS));
               if ( idx == 136 ){
-                   vals[i] = get_vlc2(s->getbit, s->huff_2_vlc.table, VLCBITS, ((FF_WMA3_HUFF_2_MAXBITS+VLCBITS-1)/VLCBITS));
+                   vals[i] = get_vlc2(s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
                    if(vals[i] == 100)
                        vals[i] += wma_get_large_val(s);
-                   vals[i+1] = get_vlc2(s->getbit, s->huff_2_vlc.table, VLCBITS, ((FF_WMA3_HUFF_2_MAXBITS+VLCBITS-1)/VLCBITS));
+                   vals[i+1] = get_vlc2(s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
                    if(vals[i+1] == 100)
                        vals[i+1] += wma_get_large_val(s);
               }else{
