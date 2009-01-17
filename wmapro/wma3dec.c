@@ -221,17 +221,17 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
                  ff_wma3_scale_rl_huffcodes, 4, 4, 0);
 
 
-    init_vlc(&s->coef_vlc[0], VLCBITS, FF_WMA3_COEF0_SIZE,
+    init_vlc(&s->coef_vlc[1], VLCBITS, FF_WMA3_HUFF_COEF0_SIZE,
                  ff_wma3_coef0_huffbits, 1, 1,
                  ff_wma3_coef0_huffcodes, 4, 4, 0);
 
-    s->coef_max[0] = ((22+VLCBITS-1)/VLCBITS);
+    s->coef_max[1] = ((FF_WMA3_HUFF_COEF0_MAXBITS+VLCBITS-1)/VLCBITS);
 
-    init_vlc(&s->coef_vlc[1], VLCBITS, FF_WMA3_COEF1_SIZE,
+    init_vlc(&s->coef_vlc[0], VLCBITS, FF_WMA3_HUFF_COEF1_SIZE,
                  ff_wma3_coef1_huffbits, 1, 1,
                  ff_wma3_coef1_huffcodes, 4, 4, 0);
 
-    s->coef_max[1] = ((21+VLCBITS-1)/VLCBITS);
+    s->coef_max[0] = ((FF_WMA3_HUFF_COEF1_MAXBITS+VLCBITS-1)/VLCBITS);
 
     init_vlc(&s->vec4_vlc, VLCBITS, FF_WMA3_HUFF_VEC4_SIZE,
                  ff_wma3_vec4_huffbits, 1, 1,
@@ -782,8 +782,8 @@ static int decode_coeffs(WMA3DecodeContext *s,GetBitContext* gb,int c)
     s->getbit = gb;
     s->esc_len = av_log2(s->subframe_len -1) +1;
     vlctable = get_bits(s->getbit, 1);
-    vlc = &s->coef_vlc[!vlctable];
-    vlcmax = s->coef_max[!vlctable];
+    vlc = &s->coef_vlc[vlctable];
+    vlcmax = s->coef_max[vlctable];
 
     if(!vlctable){
         run =  ff_wma3_run_1;
