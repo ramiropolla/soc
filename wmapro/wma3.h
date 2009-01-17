@@ -21,7 +21,7 @@
  */
 
 #ifndef AVCODEC_WMA3_H
-#define AVCODEC_WMA3_H 1
+#define AVCODEC_WMA3_H
 
 #include "wma3data.h"
 #include "dsputil.h"
