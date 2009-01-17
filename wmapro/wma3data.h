@@ -73,9 +73,9 @@ static const uint8_t ff_wma3_scale_huffbits[FF_WMA3_HUFF_SCALE_SIZE] = {
 };
 
 
-#define FF_WMA3_HUFF_RLC_SIZE 120
-#define FF_WMA3_HUFF_RLC_MAXBITS 21
-static const uint32_t ff_wma3_huff_rlc_codes[FF_WMA3_HUFF_RLC_SIZE] = {
+#define FF_WMA3_HUFF_SCALE_RL_SIZE 120
+#define FF_WMA3_HUFF_SCALE_RL_MAXBITS 21
+static const uint32_t ff_wma3_scale_rl_huffcodes[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
     0x00010C, 0x000001, 0x10FE2A, 0x000003, 0x000003, 0x000001, 0x000013,
     0x000020, 0x000029, 0x000014, 0x000016, 0x000045, 0x000049, 0x00002F,
     0x000042, 0x00008E, 0x00008F, 0x000129, 0x000009, 0x00000D, 0x0004AC,
@@ -96,7 +96,7 @@ static const uint32_t ff_wma3_huff_rlc_codes[FF_WMA3_HUFF_RLC_SIZE] = {
     0x0002B1,
 };
 
-static const uint8_t ff_wma3_huff_rlc_bits[FF_WMA3_HUFF_RLC_SIZE] = {
+static const uint8_t ff_wma3_scale_rl_huffbits[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
      9,  2, 21,  2,  4,  5,  5,
      6,  6,  7,  7,  7,  7,  6,
      7,  8,  8,  9, 10, 10, 11,

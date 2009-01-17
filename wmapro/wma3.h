@@ -119,7 +119,7 @@ typedef struct WMA3DecodeContext {
     VLC              vec2_vlc;
     VLC              vec1_vlc;
     VLC              coef_vlc[2];
-    VLC              rlc_vlc;
+    VLC              sf_rl_vlc;
     int              coef_max[2];
 
     int              parsed_all_subframes;
