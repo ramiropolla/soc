@@ -48,7 +48,6 @@ static void dump_context(WMA3DecodeContext *s)
     PRINT("lossless",s->lossless);
 }
 
-
 /**
  *@brief Get the samples per frame for this stream.
  *@param sample_rate output sample_rate
@@ -88,7 +87,6 @@ static int get_samples_per_frame(int sample_rate, unsigned int decode_flags)
     return samples_per_frame;
 }
 
-
 /**
  *@brief Uninitialize the decoder and free all ressources.
  *@param avctx codec context
@@ -124,7 +122,6 @@ static av_cold int wma3_decode_end(AVCodecContext *avctx)
 
     return 0;
 }
-
 
 /**
  *@brief Initialize the decoder.
@@ -379,8 +376,6 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
-
-
 /**
  *@brief Decode how the data in the frame is split into subframes
  *       every WMA frame contains the encoded data for a fixed number of
@@ -568,7 +563,6 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb)
     return 0;
 }
 
-
 static int wma_decode_channel_transform(WMA3DecodeContext* s, GetBitContext* gb)
 {
     int i;
@@ -711,7 +705,6 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s, GetBitContext* gb)
     return 1;
 }
 
-
 static unsigned int wma_get_large_val(WMA3DecodeContext* s)
 {
     int n_bits = 8;
@@ -726,7 +719,6 @@ static unsigned int wma_get_large_val(WMA3DecodeContext* s)
     }
     return get_bits_long(s->getbit,n_bits);
 }
-
 
 static inline void wma_get_vec4(WMA3DecodeContext *s,int* vals,int* masks)
 {
@@ -771,7 +763,6 @@ static inline void wma_get_vec4(WMA3DecodeContext *s,int* vals,int* masks)
         if(vals[3])
             masks[3] = get_bits(s->getbit,1);
 }
-
 
 static int decode_coeffs(WMA3DecodeContext *s,GetBitContext* gb,int c)
 {
@@ -859,8 +850,6 @@ static int decode_coeffs(WMA3DecodeContext *s,GetBitContext* gb,int c)
 
     return 0;
 }
-
-
 
 static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
 {
@@ -985,7 +974,6 @@ static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, wma_channel_grou
 
 }
 
-
 static void wma_inverse_channel_transform(WMA3DecodeContext *s)
 {
     int i;
@@ -1065,7 +1053,6 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
     }
 }
 
-
 static void wma_window(WMA3DecodeContext *s)
 {
     int i;
@@ -1112,8 +1099,6 @@ static void wma_window(WMA3DecodeContext *s)
         s->channel[c].prev_block_len = block_len;
     }
 }
-
-
 
 static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
 {
@@ -1473,7 +1458,6 @@ static int wma_decode_frame(WMA3DecodeContext *s,GetBitContext* gb)
     return more_frames;
 }
 
-
 /**
  *@brief Calculate remaining input buffer length.
  *@param s codec context
@@ -1619,7 +1603,6 @@ static int wma3_decode_packet(AVCodecContext *avctx,
 
     return avctx->block_align;
 }
-
 
 /**
  *@brief WMA9 decoder
