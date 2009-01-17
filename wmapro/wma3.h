@@ -67,7 +67,7 @@ typedef struct {
     int scale_factor_block_len; //< block len of the frame for which the scale factors were transmitted
     DECLARE_ALIGNED_16(float, out[8192]);
 
-} wma_channel;
+} WMA3ChannelCtx;
 
 typedef struct {
     int nb_channels;
@@ -151,7 +151,7 @@ typedef struct WMA3DecodeContext {
     int              nb_chgroups;              //< number of channel groups
     wma_channel_group chgroup[MAX_CHANNELS];   //< channel group information
 
-    wma_channel      channel[MAX_CHANNELS];    //< per channel data
+    WMA3ChannelCtx   channel[MAX_CHANNELS];    //< per channel data
 } WMA3DecodeContext;
 
 #endif /* AVCODEC_WMA3_H */

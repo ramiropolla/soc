@@ -516,7 +516,7 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s, GetBitContext* gb)
                 return -1;
             }
             for(c=0; c<s->nb_channels;c++){
-                wma_channel* chan = &s->channel[c];
+                WMA3ChannelCtx* chan = &s->channel[c];
                 if(chan->num_subframes > 32){
                     av_log(s->avctx, AV_LOG_ERROR,
                             "broken frame: num subframes %i\n",
@@ -769,7 +769,7 @@ static int decode_coeffs(WMA3DecodeContext *s,GetBitContext* gb,int c)
     int vlctable;
     VLC* vlc;
     int vlcmax;
-    wma_channel* ci = &s->channel[c];
+    WMA3ChannelCtx* ci = &s->channel[c];
     int rl_mode = 0;
     int cur_coeff = 0;
     int last_write = 0;
