@@ -740,18 +740,18 @@ static inline void wma_get_vec4(WMA3DecodeContext *s,int* vals,int* masks)
                    if(vals[i+1] == 100)
                        vals[i+1] += wma_get_large_val(s);
               }else{
-                  vals[i] = (ff_wma3_sym2vec2[idx] >> 4) & 0xF;
-                  vals[i+1] = ff_wma3_sym2vec2[idx] & 0xF;
+                  vals[i] = (ff_wma3_symbol_to_vec2[idx] >> 4) & 0xF;
+                  vals[i+1] = ff_wma3_symbol_to_vec2[idx] & 0xF;
               }
               i += 2;
           }
         }
         else
         {
-          vals[0] = (unsigned char)(ff_wma3_sym2vec4[idx] >> 8) >> 4;
-          vals[1] = (ff_wma3_sym2vec4[idx] >> 8) & 0xF;
-          vals[2] = (ff_wma3_sym2vec4[idx] >> 4) & 0xF;
-          vals[3] = ff_wma3_sym2vec4[idx] & 0xF;
+          vals[0] = (unsigned char)(ff_wma3_symbol_to_vec4[idx] >> 8) >> 4;
+          vals[1] = (ff_wma3_symbol_to_vec4[idx] >> 8) & 0xF;
+          vals[2] = (ff_wma3_symbol_to_vec4[idx] >> 4) & 0xF;
+          vals[3] = ff_wma3_symbol_to_vec4[idx] & 0xF;
         }
 
         if(vals[0])
