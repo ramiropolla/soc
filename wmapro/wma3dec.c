@@ -815,8 +815,8 @@ static int decode_coeffs(WMA3DecodeContext *s,GetBitContext* gb,int c)
                         cur_coeff += get_bits(s->getbit,2) + 1;
                 }
             }else{
-                cur_coeff += run[idx - 2];
-                val = level[idx - 2];
+                cur_coeff += run[idx];
+                val = level[idx];
             }
             mask = get_bits(s->getbit,1) - 1;
             ci->coeffs[cur_coeff] = (val^mask) - mask;
@@ -913,8 +913,8 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
                     }else if(idx == 1){
                         break;
                     }else{
-                        skip = ff_wma3_scale_rl_run[idx-2];
-                        level_mask = ff_wma3_scale_rl_level[idx-2];
+                        skip = ff_wma3_scale_rl_run[idx];
+                        level_mask = ff_wma3_scale_rl_level[idx];
                         val = get_bits(gb,1)-1;
                     }
 
