@@ -37,7 +37,6 @@ static void dump_context(WMA3DecodeContext *s)
 #define PRINT(a,b) av_log(s->avctx,AV_LOG_ERROR," %s = %d\n", a, b);
 #define PRINT_HEX(a,b) av_log(s->avctx,AV_LOG_ERROR," %s = %x\n", a, b);
 
-    PRINT_HEX("ed channelmask",s->dwChannelMask);
     PRINT("ed sample bit depth",s->sample_bit_depth);
     PRINT_HEX("ed decode flags",s->decode_flags);
     PRINT("samples per frame",s->samples_per_frame);
@@ -133,6 +132,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     WMA3DecodeContext *s = avctx->priv_data;
     uint8_t *edata_ptr = avctx->extradata;
     int* sfb_offsets;
+    unsigned int channel_mask;
     int i;
 
     s->avctx = avctx;
@@ -142,7 +142,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     s->sample_bit_depth = 16; //avctx->bits_per_sample;
     if (avctx->extradata_size >= 18) {
         s->decode_flags     = AV_RL16(edata_ptr+14);
-        s->dwChannelMask    = AV_RL32(edata_ptr+2);
+        channel_mask    = AV_RL32(edata_ptr+2);
 //        s->sample_bit_depth = AV_RL16(edata_ptr);
 
         /** dump the extradata */
@@ -195,10 +195,10 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     /** extract lfe channel position */
     s->lfe_channel = -1;
 
-    if(s->dwChannelMask & 8){
+    if(channel_mask & 8){
         unsigned int mask = 1;
         for(i=0;i<32;i++){
-            if(s->dwChannelMask & mask)
+            if(channel_mask & mask)
                 ++s->lfe_channel;
             if(mask & 8)
                 break;

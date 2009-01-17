@@ -143,7 +143,6 @@ typedef struct WMA3DecodeContext {
 
     /** extradata */
     unsigned int     decode_flags;             //< used compression features
-    unsigned int     dwChannelMask;
     uint8_t          sample_bit_depth;         //< bits per sample
 
     /** general frame info */
