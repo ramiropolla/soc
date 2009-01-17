@@ -26,18 +26,18 @@
 #include "wma3data.h"
 #include "dsputil.h"
 
-#define MAX_CHANNELS 8               //< max number of handled channels
-#define MAX_SUBFRAMES 32             //< max number of subframes per channel
-#define MAX_BANDS     29             //< max number of scale factor bands
-#define VLCBITS 9
+#define MAX_CHANNELS       8          //< max number of handled channels
+#define MAX_SUBFRAMES     32          //< max number of subframes per channel
+#define MAX_BANDS         29          //< max number of scale factor bands
 
-#define SCALEVLCBITS 8
+#define VLCBITS            9
+#define SCALEVLCBITS       8
 
 /* size of blocks defines taken from wma.h*/
-#define BLOCK_MIN_BITS 7
-#define BLOCK_MAX_BITS 12
-#define BLOCK_MAX_SIZE (1 << BLOCK_MAX_BITS)
-#define BLOCK_NB_SIZES (BLOCK_MAX_BITS - BLOCK_MIN_BITS + 1)
+#define BLOCK_MIN_BITS     7
+#define BLOCK_MAX_BITS    12
+#define BLOCK_MAX_SIZE    (1 << BLOCK_MAX_BITS)
+#define BLOCK_NB_SIZES    (BLOCK_MAX_BITS - BLOCK_MIN_BITS + 1)
 
 /**
  *@brief decoder context for a single channel
