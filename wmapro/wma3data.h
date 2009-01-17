@@ -20,10 +20,17 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+/**
+ * @file wma3data.h
+ * @brief tables for wmapro decoding
+ */
+
 #ifndef AVCODEC_WMA3DATA_H
 #define AVCODEC_WMA3DATA_H
 
-/* Bark frequencies */
+/**
+ * @brief frequencies to divide the frequency spectrum into scale factor bands
+ */
 static const uint16_t ff_wma3_critical_freq[] = {
      100,   200,    300,    400,    510,    630,    770,
      920,  1080,   1270,   1480,   1720,   2000,   2320,
@@ -32,6 +39,10 @@ static const uint16_t ff_wma3_critical_freq[] = {
 };
 
 
+/**
+ * @name huffman tables for dpcm coded scale factors
+ * @{
+ */
 #define FF_WMA3_HUFF_SCALE_SIZE 121
 #define FF_WMA3_HUFF_SCALE_MAXBITS 19
 static const uint32_t ff_wma3_scale_huffcodes[FF_WMA3_HUFF_SCALE_SIZE] = {
@@ -71,8 +82,13 @@ static const uint8_t ff_wma3_scale_huffbits[FF_WMA3_HUFF_SCALE_SIZE] = {
     19, 19, 19, 19, 19, 19, 19, 19,
     19,
 };
+/** @} */
 
 
+/**
+ * @name huffman, run and level tables for run length coded scale factors
+ * @{
+ */
 #define FF_WMA3_HUFF_SCALE_RL_SIZE 120
 #define FF_WMA3_HUFF_SCALE_RL_MAXBITS 21
 static const uint32_t ff_wma3_scale_rl_huffcodes[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
@@ -137,8 +153,13 @@ static const uint8_t ff_wma3_scale_rl_level[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
      5,  5,  5,  5,  5,  5,  5,  5,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,
      7,  7,  8,  8,  9,  9,
 };
+/** @} */
 
 
+/**
+ * @name huffman, run and level codes for run length coded coefficients
+ * @{
+ */
 #define FF_WMA3_HUFF_COEF0_SIZE 272
 #define FF_WMA3_HUFF_COEF0_MAXBITS 21
 static const uint32_t ff_wma3_coef0_huffcodes[FF_WMA3_HUFF_COEF0_SIZE] = {
@@ -385,8 +406,13 @@ static const uint8_t ff_wma3_coef1_level[FF_WMA3_HUFF_COEF1_SIZE] = {
     37, 38, 38, 39, 39, 40, 40, 41, 41, 42, 42, 43, 43, 44, 44, 45, 45, 46,
     46, 47, 47, 48, 48, 49, 49, 50, 51, 52,
 };
+/** @} */
 
 
+/**
+ * @name huffman and vector lookup tables for vector coded coefficients
+ * @{
+ */
 #define FF_WMA3_HUFF_VEC4_SIZE 127
 #define FF_WMA3_HUFF_VEC4_MAXBITS 14
 static const uint32_t ff_wma3_vec4_huffcodes[FF_WMA3_HUFF_VEC4_SIZE] = {
@@ -538,8 +564,12 @@ static const uint8_t ff_wma3_symbol_to_vec2[] = {
     240,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
 };
+/** @} */
 
 
+/**
+ * @brief decorrelation matrix for multichannel streams
+ **/
 static const float ff_wma3_default_decorrelation_matrices[] = {
     1.000000,  0.707031, -0.707031,  0.707031,  0.707031,  0.578125,  0.707031,
     0.410156,  0.578125, -0.707031,  0.410156,  0.578125,  0.000000, -0.816406,
