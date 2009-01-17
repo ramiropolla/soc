@@ -37,48 +37,46 @@
 #define BLOCK_NB_SIZES    (BLOCK_MAX_BITS - BLOCK_MIN_BITS + 1)
 
 /**
- *@brief decoder context for a single channel
+ * @brief decoder context for a single channel
  */
 typedef struct {
-    int prev_block_len;
-    uint8_t transmit_coefs;
-    uint8_t num_subframes;                //< number of subframes for the current channel
-    uint16_t subframe_len[MAX_SUBFRAMES]; //< subframe len in samples
-    uint16_t subframe_offset[MAX_SUBFRAMES];
-    uint16_t channel_len;                 //< channel len in samples
-    uint16_t decoded_samples;                   //< number of samples that have been processed already
-    uint8_t  cur_subframe;
-    uint8_t grouped; //< true if the channel is contained in a channel group
-
-    DECLARE_ALIGNED_16(float, coeffs[BLOCK_MAX_SIZE]); //< MAX_COEF
-
-    int   scale_factors[MAX_BANDS];     //< initial scale factor values
-    int   resampled_scale_factors[MAX_BANDS]; //< resampled scale factors from the previous block
-                                              //< can be used in case no new scale factors are transmitted
-
-    int reuse_sf; //< reuse scale factors from a previous subframe
-    int transmit_sf;
-    int scale_factor_step;
-    int quant_step_modifier;
-    int max_scale_factor;
-    int scale_factor_block_len; //< block len of the frame for which the scale factors were transmitted
-    DECLARE_ALIGNED_16(float, out[2*BLOCK_MAX_SIZE]);
-
+    int      prev_block_len;                   //< length of the previous block
+    uint8_t  transmit_coefs;                   //< transmit coefficients
+    uint8_t  num_subframes;                    //< number of subframes
+    uint16_t subframe_len[MAX_SUBFRAMES];      //< subframe len in samples
+    uint16_t subframe_offset[MAX_SUBFRAMES];   //< subframe position
+    uint8_t  cur_subframe;                     //< subframe index
+    uint16_t channel_len;                      //< channel len in samples
+    uint16_t decoded_samples;                  //< already processed samples
+    uint8_t  grouped;                          //< channel is part of a group
+    int      quant_step_modifier;
+    int      transmit_sf;                      //< transmit scale factors
+    int      reuse_sf;                         //< share sfs between subframes
+    int      scale_factor_step;                //< scaling step
+    int      max_scale_factor;                 //< maximum scale factor
+    int      scale_factors[MAX_BANDS];           //< scale factor values
+    int      resampled_scale_factors[MAX_BANDS]; //< scale factors from a previous block
+    int      scale_factor_block_len;             //< sf reference block len
+    DECLARE_ALIGNED_16(float, coeffs[BLOCK_MAX_SIZE]); //< decode buffer
+    DECLARE_ALIGNED_16(float, out[2*BLOCK_MAX_SIZE]);  //< output buffer
 } WMA3ChannelCtx;
 
+/**
+ * @brief channel group for channel transformations
+ */
 typedef struct {
-    int nb_channels;
-    int no_rotation; //< controls the type of the transform
-    int transform; //< also controls the type of the transform
-    char transform_band[MAX_BANDS]; //< controls if the transform is enabled for a certain band
-    char rotation_offset[MAX_CHANNELS * MAX_CHANNELS];
-    char positive[MAX_CHANNELS * MAX_CHANNELS]; //< fixme for what are these numbers used?
+    int   nb_channels;
+    int   no_rotation; //< controls the type of the transform
+    int   transform; //< also controls the type of the transform
+    char  transform_band[MAX_BANDS]; //< controls if the transform is enabled for a certain band
+    char  rotation_offset[MAX_CHANNELS * MAX_CHANNELS];
+    char  positive[MAX_CHANNELS * MAX_CHANNELS]; //< fixme for what are these numbers used?
     float decorrelation_matrix[MAX_CHANNELS*MAX_CHANNELS];
-    char use_channel[MAX_CHANNELS];
+    char  use_channel[MAX_CHANNELS];
 } WMA3ChannelGroup;
 
 /**
- *@brief main decoder context
+ * @brief main decoder context
  */
 typedef struct WMA3DecodeContext {
     /** generic decoder variables */
