@@ -328,13 +328,23 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     s->subwoofer_cutoff = s->subwoofer_cutoffs[0];
 
 
-    //FIXME
-    /** init stuff for the postprocxform */
+    /** set up decorrelation matrices */
     s->def_decorrelation_mat = av_mallocz(sizeof(int) * (s->nb_channels + 1));
+    if(!s->def_decorrelation_mat){
+        av_log(avctx, AV_LOG_ERROR, "failed to allocate decorrelation matrix\n");
+        wma3_decode_end(avctx);
+        return -1;
+    }
+
     s->def_decorrelation_mat[0] = 0;
     for(i=1;i<=s->nb_channels;i++){
         const float* tab = ff_wma3_default_decorrelation_matrices;
         s->def_decorrelation_mat[i] = av_mallocz(sizeof(float) * i);
+        if(!s->def_decorrelation_mat[i]){
+            av_log(avctx, AV_LOG_ERROR, "failed to setup decorrelation mat\n");
+            wma3_decode_end(avctx);
+            return -1;
+        }
         switch(i){
             case 1:
                 s->def_decorrelation_mat[i][0] = &tab[0];
