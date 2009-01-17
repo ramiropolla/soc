@@ -914,8 +914,8 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
                     }else if(idx == 1){
                         break;
                     }else{
-                        skip = ff_wma3_run_mask[idx-2];
-                        level_mask = ff_wma3_level_mask[idx-2];
+                        skip = ff_wma3_scale_rl_run[idx-2];
+                        level_mask = ff_wma3_scale_rl_level[idx-2];
                         val = get_bits(gb,1)-1;
                     }
 
