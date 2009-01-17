@@ -84,79 +84,74 @@ typedef struct {
  *@brief main decoder context
  */
 typedef struct WMA3DecodeContext {
-    int16_t*   samples;            //< current samplebuffer pointer
-    int16_t*   samples_end;        //< maximum samplebuffer pointer
-    int        skip_frame;         //< do not output the current frame
-    DSPContext dsp;
-
-    int        num_possible_block_sizes; //< number of possible block sizes
-    int*       num_sfb;            //< number of scale factor bands for every block size
-    int*       sfb_offsets;        //< scale factor band offsets
-    int*       sf_offsets;         //< matrix to find the correct scale factor
-    int*       subwoofer_cutoffs;  //< subwoofer cutoff values for every block
-    int        subwoofer_cutoff;   //< current subwoofer cutoff value
-    int        subframe_len;       //< current subframe length
-    int        nb_chgroups;        //< number of channel groups for the current subframe
-    wma_channel_group chgroup[MAX_CHANNELS]; //< channel group information
-
-    int lfe_channel;
-    int negative_quantstep;
-    int quant_step;
-    int channels_for_cur_subframe;
-    int channel_indices_for_cur_subframe[MAX_CHANNELS];
-    const float*** default_decorrelation_matrix;
-    int esc_len;
-
-    GetBitContext*    getbit;
-    MDCTContext mdct_ctx[BLOCK_NB_SIZES];
-    float *windows[BLOCK_NB_SIZES];
-
-    int              cValidBarkBand;
-    int*              rgiBarkIndex;
-
-    VLC              sf_vlc;
-    VLC              vec4_vlc;
-    VLC              vec2_vlc;
-    VLC              vec1_vlc;
-    VLC              coef_vlc[2];
-    VLC              sf_rl_vlc;
-    int              coef_max[2];
-
-    int              parsed_all_subframes;
+    /** generic decoder variables */
     AVCodecContext*  avctx;                    //< codec context for av_log
-    GetBitContext    gb;                       //< getbitcontext for the packet
-    int              buf_bit_size;             //< buffer size in bits
+    DSPContext       dsp;
+    MDCTContext      mdct_ctx[BLOCK_NB_SIZES]; //< mdct context per block size
+    float*           windows[BLOCK_NB_SIZES];  //< window per block size
+    VLC              sf_vlc;                   //< scale factor dpcm vlc
+    VLC              sf_rl_vlc;                //< scale factor run length vlc
+    VLC              vec4_vlc;                 //< 4 coefs per symbol
+    VLC              vec2_vlc;                 //< 2 coefs per symbol
+    VLC              vec1_vlc;                 //< 1 coef per symbol
+    VLC              coef_vlc[2];              //< coef run length vlc codes
+    int              coef_max[2];              //< max length of vlc codes
 
-    /** packet info */
+    /** frame size dependant frame information (set during init) */
+    uint8_t          lossless;                 //< lossless mode
+    unsigned int     decode_flags;             //< used compression features
+    uint8_t          len_prefix;               //< frame is prefixed with its len
+    uint8_t          dynamic_range_compression;//< frame contains drc data
+    uint8_t          sample_bit_depth;         //< bits per sample
+    uint16_t         samples_per_frame;        //< number of outputed samples
+    uint16_t         log2_frame_size;          //< frame size
+    int8_t           nb_channels;              //< number of channels
+    int8_t           lfe_channel;              //< lfe channel index
+    const float***   default_decorrelation_matrix;
+    uint8_t          allow_subframes;          //< frames may contain subframes
+    uint8_t          max_num_subframes;        //< maximum number of subframes
+    int8_t           num_possible_block_sizes; //< nb of supported block sizes
+    uint16_t         min_samples_per_subframe; //< minimum samples per subframe
+    int*             num_sfb;                  //< scale factor bands per block size
+    int*             sfb_offsets;              //< scale factor band offsets
+    int*             sf_offsets;               //< scale factor resample matrix
+    int*             subwoofer_cutoffs;        //< subwoofer cutoff values
+
+    /** packet decode state */
     uint8_t          packet_sequence_number;   //< current packet number
+    int              prev_frame_bit_size;      //< saved number of bits
+    uint8_t*         prev_frame;               //< prev frame data
     uint8_t          bit5;                     //< padding bit? (CBR files)
     uint8_t          bit6;
     uint8_t          packet_loss;              //< set in case of bitstream error
+    uint8_t          negative_quantstep;       //< packet loss due to negative quant step
 
-    /** stream info */
-    uint16_t         samples_per_frame;        //< number of outputed samples
-    uint16_t         log2_frame_size;          //< frame size
-    uint8_t          lossless;                 //< lossless mode
-    uint8_t          no_tiling;                //< frames are split in subframes
-    int8_t           nb_channels;              //< number of channels
-    wma_channel      channel[MAX_CHANNELS];    //< per channel data
-
-    /** extradata */
-    unsigned int     decode_flags;             //< used compression features
-    uint8_t          sample_bit_depth;         //< bits per sample
-
-    /** general frame info */
+    /** frame decode state */
     unsigned int     frame_num;                //< current frame number
-    uint8_t          len_prefix;               //< frame is prefixed with its len
-    uint8_t          allow_subframes;          //< frames may contain subframes
-    uint8_t          max_num_subframes;        //< maximum number of subframes
-    uint16_t         min_samples_per_subframe; //< minimum samples per subframe
-    uint8_t          dynamic_range_compression;//< frame contains drc data
+    GetBitContext*   getbit;
+    GetBitContext    gb;                       //< getbitcontext for the packet
+    int              buf_bit_size;             //< buffer size in bits
+    int16_t*         samples;                  //< current samplebuffer pointer
+    int16_t*         samples_end;              //< maximum samplebuffer pointer
     uint8_t          drc_gain;                 //< gain for the drc tool
+    uint8_t          no_tiling;                //< frames contain subframes
+    int              skip_frame;               //< skip output step
+    int              parsed_all_subframes;     //< all subframes decoded?
 
-    /** buffered frame data */
-    int              prev_frame_bit_size;      //< saved number of bits
-    uint8_t*         prev_frame;               //< prev frame data
+    /** subframe/block decode state */
+    int              subframe_len;             //< current subframe length
+    int              channels_for_cur_subframe;
+    int              channel_indices_for_cur_subframe[MAX_CHANNELS];
+    int              subwoofer_cutoff;         //< subwoofer cutoff value
+    int              cValidBarkBand;
+    int*             rgiBarkIndex;
+    int              quant_step;
+    int              esc_len;
+
+    int              nb_chgroups;              //< number of channel groups
+    wma_channel_group chgroup[MAX_CHANNELS];   //< channel group information
+
+    wma_channel      channel[MAX_CHANNELS];    //< per channel data
 } WMA3DecodeContext;
 
 #endif /* AVCODEC_WMA3_H */
