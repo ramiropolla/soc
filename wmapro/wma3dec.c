@@ -96,7 +96,7 @@ static av_cold int wma3_decode_end(AVCodecContext *avctx)
     WMA3DecodeContext *s = avctx->priv_data;
     int i;
 
-    av_free(s->prev_frame);
+    av_free(s->prev_packet_data);
     av_free(s->num_sfb);
     av_free(s->sfb_offsets);
     av_free(s->subwoofer_cutoffs);
@@ -1475,16 +1475,16 @@ static int remaining_bits(WMA3DecodeContext *s)
  */
 static void save_bits(WMA3DecodeContext *s,int len)
 {
-    int buflen = (s->prev_frame_bit_size + len + 8) / 8;
-    int bit_offset = s->prev_frame_bit_size % 8;
-    int pos = (s->prev_frame_bit_size - bit_offset) / 8;
-    s->prev_frame_bit_size += len;
+    int buflen = (s->prev_packet_bit_size + len + 8) / 8;
+    int bit_offset = s->prev_packet_bit_size % 8;
+    int pos = (s->prev_packet_bit_size - bit_offset) / 8;
+    s->prev_packet_bit_size += len;
 
     if(len <= 0)
          return;
 
     /** increase length if needed */
-    s->prev_frame = av_realloc(s->prev_frame,buflen +
+    s->prev_packet_data = av_realloc(s->prev_packet_data,buflen +
                                FF_INPUT_BUFFER_PADDING_SIZE);
 
     /** byte align prev_frame buffer */
@@ -1492,20 +1492,20 @@ static void save_bits(WMA3DecodeContext *s,int len)
         int missing = 8 - bit_offset;
         if(len < missing)
             missing = len;
-        s->prev_frame[pos++] |=
+        s->prev_packet_data[pos++] |=
             get_bits(&s->gb, missing) << (8 - bit_offset - missing);
         len -= missing;
     }
 
     /** copy full bytes */
     while(len > 7){
-        s->prev_frame[pos++] = get_bits(&s->gb,8);
+        s->prev_packet_data[pos++] = get_bits(&s->gb,8);
         len -= 8;
     }
 
     /** copy remaining bits */
     if(len > 0)
-        s->prev_frame[pos++] = get_bits(&s->gb,len) << (8 - len);
+        s->prev_packet_data[pos++] = get_bits(&s->gb,len) << (8 - len);
 }
 
 /**
@@ -1559,21 +1559,22 @@ static int wma3_decode_packet(AVCodecContext *avctx,
             previous packet to create a full frame */
         save_bits(s,num_bits_prev_frame);
         av_log(avctx, AV_LOG_DEBUG, "accumulated %x bits of frame data\n",
-                      s->prev_frame_bit_size);
+                      s->prev_packet_bit_size);
 
         /** decode the cross packet frame if it is valid */
         if(!s->packet_loss){
             GetBitContext gb_prev;
-            init_get_bits(&gb_prev, s->prev_frame, s->prev_frame_bit_size);
+            init_get_bits(&gb_prev, s->prev_packet_data,
+                              s->prev_packet_bit_size);
             wma_decode_frame(s,&gb_prev);
         }
-    }else if(s->prev_frame_bit_size){
+    }else if(s->prev_packet_bit_size){
         av_log(avctx, AV_LOG_ERROR, "ignoring %x previously saved bits\n",
-                      s->prev_frame_bit_size);
+                      s->prev_packet_bit_size);
     }
 
     /** reset prev frame buffer */
-    s->prev_frame_bit_size = 0;
+    s->prev_packet_bit_size = 0;
     s->packet_loss = 0;
     /** decode the rest of the packet */
     while(more_frames && remaining_bits(s) > s->log2_frame_size){
