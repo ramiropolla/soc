@@ -32,9 +32,9 @@ static const uint16_t ff_wma3_critical_freq[] = {
 };
 
 
-#define FF_WMA3_SCALE_SIZE 121
-#define FF_WMA3_SCALE_MAXBITS 19
-static const uint32_t ff_wma3_scale_huffcodes[FF_WMA3_SCALE_SIZE] = {
+#define FF_WMA3_HUFF_SCALE_SIZE 121
+#define FF_WMA3_HUFF_SCALE_MAXBITS 19
+static const uint32_t ff_wma3_scale_huffcodes[FF_WMA3_HUFF_SCALE_SIZE] = {
     0x0E639, 0x0E6C2, 0x0E6C1, 0x0E6C0, 0x0E63F, 0x0E63E, 0x0E63D, 0x0E63C,
     0x0E63B, 0x0E63A, 0x0E638, 0x0E637, 0x0E636, 0x0E635, 0x0E634, 0x0E632,
     0x0E633, 0x0E620, 0x0737B, 0x0E610, 0x0E611, 0x0E612, 0x0E613, 0x0E614,
@@ -53,7 +53,7 @@ static const uint32_t ff_wma3_scale_huffcodes[FF_WMA3_SCALE_SIZE] = {
     0x0E6F5,
 };
 
-static const uint8_t ff_wma3_scale_huffbits[FF_WMA3_SCALE_SIZE] = {
+static const uint8_t ff_wma3_scale_huffbits[FF_WMA3_HUFF_SCALE_SIZE] = {
     19, 19, 19, 19, 19, 19, 19, 19,
     19, 19, 19, 19, 19, 19, 19, 19,
     19, 19, 18, 19, 19, 19, 19, 19,

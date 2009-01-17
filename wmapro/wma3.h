@@ -31,8 +31,7 @@
 #define MAX_BANDS     29             //< max number of scale factor bands
 #define VLCBITS 9
 
-#define EXPVLCBITS 8
-#define EXPMAX ((19+EXPVLCBITS-1)/EXPVLCBITS)
+#define SCALEVLCBITS 8
 
 /* size of blocks defines taken from wma.h*/
 #define BLOCK_MIN_BITS 7
@@ -115,7 +114,7 @@ typedef struct WMA3DecodeContext {
     int              cValidBarkBand;
     int*              rgiBarkIndex;
 
-    VLC              exp_vlc;
+    VLC              sf_vlc;
     VLC              vec4_vlc;
     VLC              vec2_vlc;
     VLC              vec1_vlc;

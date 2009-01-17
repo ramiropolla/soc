@@ -109,7 +109,7 @@ static av_cold int wma3_decode_end(AVCodecContext *avctx)
         av_free(s->default_decorrelation_matrix);
     }
 
-    free_vlc(&s->exp_vlc);
+    free_vlc(&s->sf_vlc);
     free_vlc(&s->coef_vlc[0]);
     free_vlc(&s->coef_vlc[1]);
     free_vlc(&s->vec4_vlc);
@@ -212,7 +212,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
         return -1;
     }
 
-    init_vlc(&s->exp_vlc, EXPVLCBITS, FF_WMA3_SCALE_SIZE,
+    init_vlc(&s->sf_vlc, SCALEVLCBITS, FF_WMA3_HUFF_SCALE_SIZE,
                  ff_wma3_scale_huffbits, 1, 1,
                  ff_wma3_scale_huffcodes, 4, 4, 0);
 
@@ -886,7 +886,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
                 int i;
                 s->channel[c].scale_factor_step = get_bits(gb,2) + 1;
                 for(i=0;i<s->cValidBarkBand;i++){
-                    int val = get_vlc2(gb, s->exp_vlc.table, EXPVLCBITS, EXPMAX); //dpcm coded
+                    int val = get_vlc2(gb, s->sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS)); //dpcm coded
                     if(!i)
                         s->channel[c].scale_factors[i] = 45 / s->channel[c].scale_factor_step + val - 60;
                     else
