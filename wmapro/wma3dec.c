@@ -742,16 +742,16 @@ static inline void wma_get_vec4(WMA3DecodeContext *s,int* vals,int* masks)
         idx = get_vlc2(s->getbit, s->vec4_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
 
 
-        if ( idx == 126 )
+        if ( idx == FF_WMA3_HUFF_VEC4_SIZE - 1 )
         {
           while(i < 4){
               idx = get_vlc2(s->getbit, s->vec2_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC2_MAXBITS+VLCBITS-1)/VLCBITS));
-              if ( idx == 136 ){
+              if ( idx == FF_WMA3_HUFF_VEC2_SIZE - 1 ){
                    vals[i] = get_vlc2(s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
-                   if(vals[i] == 100)
+                   if(vals[i] == FF_WMA3_HUFF_VEC1_SIZE - 1)
                        vals[i] += wma_get_large_val(s);
                    vals[i+1] = get_vlc2(s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
-                   if(vals[i+1] == 100)
+                   if(vals[i+1] == FF_WMA3_HUFF_VEC1_SIZE - 1)
                        vals[i+1] += wma_get_large_val(s);
               }else{
                   vals[i] = (ff_wma3_symbol_to_vec2[idx] >> 4) & 0xF;
