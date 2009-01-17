@@ -785,12 +785,12 @@ static int decode_coeffs(WMA3DecodeContext *s,GetBitContext* gb,int c)
     vlc = &s->coef_vlc[vlctable];
     vlcmax = s->coef_max[vlctable];
 
-    if(!vlctable){
-        run =  ff_wma3_run_1;
-        level =  ff_wma3_level_1;
+    if(vlctable){
+        run =  ff_wma3_coeff1_run;
+        level =  ff_wma3_coeff1_level;
     }else{
-        run =  ff_wma3_run_0;
-        level =  ff_wma3_level_0;
+        run =  ff_wma3_coeff0_run;
+        level =  ff_wma3_coeff0_level;
     }
 
     while(cur_coeff < s->subframe_len){
