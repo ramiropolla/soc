@@ -50,7 +50,7 @@ typedef struct {
     uint8_t  cur_subframe;
     uint8_t grouped; //< true if the channel is contained in a channel group
 
-    DECLARE_ALIGNED_16(float, coeffs[4096]); //< MAX_COEF
+    DECLARE_ALIGNED_16(float, coeffs[BLOCK_MAX_SIZE]); //< MAX_COEF
 
     int   scale_factors[MAX_BANDS];     //< initial scale factor values
     int   resampled_scale_factors[MAX_BANDS]; //< resampled scale factors from the previous block
@@ -62,7 +62,7 @@ typedef struct {
     int quant_step_modifier;
     int max_scale_factor;
     int scale_factor_block_len; //< block len of the frame for which the scale factors were transmitted
-    DECLARE_ALIGNED_16(float, out[8192]);
+    DECLARE_ALIGNED_16(float, out[2*BLOCK_MAX_SIZE]);
 
 } WMA3ChannelCtx;
 
