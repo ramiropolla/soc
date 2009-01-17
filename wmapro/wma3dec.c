@@ -102,10 +102,10 @@ static av_cold int wma3_decode_end(AVCodecContext *avctx)
     av_free(s->subwoofer_cutoffs);
     av_free(s->sf_offsets);
 
-    if(s->default_decorrelation_matrix){
+    if(s->def_decorrelation_mat){
         for(i=1;i<=s->nb_channels;i++)
-            av_free(s->default_decorrelation_matrix[i]);
-        av_free(s->default_decorrelation_matrix);
+            av_free(s->def_decorrelation_mat[i]);
+        av_free(s->def_decorrelation_mat);
     }
 
     free_vlc(&s->sf_vlc);
@@ -330,44 +330,44 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
     //FIXME
     /** init stuff for the postprocxform */
-    s->default_decorrelation_matrix = av_mallocz(sizeof(int) * (s->nb_channels + 1));
-    s->default_decorrelation_matrix[0] = 0;
+    s->def_decorrelation_mat = av_mallocz(sizeof(int) * (s->nb_channels + 1));
+    s->def_decorrelation_mat[0] = 0;
     for(i=1;i<=s->nb_channels;i++){
         const float* tab = ff_wma3_default_decorrelation_matrices;
-        s->default_decorrelation_matrix[i] = av_mallocz(sizeof(float) * i);
+        s->def_decorrelation_mat[i] = av_mallocz(sizeof(float) * i);
         switch(i){
             case 1:
-                s->default_decorrelation_matrix[i][0] = &tab[0];
+                s->def_decorrelation_mat[i][0] = &tab[0];
                 break;
             case 2:
-                s->default_decorrelation_matrix[i][0] = &tab[1];
-                s->default_decorrelation_matrix[i][1] = &tab[3];
+                s->def_decorrelation_mat[i][0] = &tab[1];
+                s->def_decorrelation_mat[i][1] = &tab[3];
                 break;
             case 3:
-                s->default_decorrelation_matrix[i][0] = &tab[5];
-                s->default_decorrelation_matrix[i][1] = &tab[8];
-                s->default_decorrelation_matrix[i][2] = &tab[11];
+                s->def_decorrelation_mat[i][0] = &tab[5];
+                s->def_decorrelation_mat[i][1] = &tab[8];
+                s->def_decorrelation_mat[i][2] = &tab[11];
                 break;
             case 4:
-                s->default_decorrelation_matrix[i][0] = &tab[14];
-                s->default_decorrelation_matrix[i][1] = &tab[18];
-                s->default_decorrelation_matrix[i][2] = &tab[22];
-                s->default_decorrelation_matrix[i][3] = &tab[26];
+                s->def_decorrelation_mat[i][0] = &tab[14];
+                s->def_decorrelation_mat[i][1] = &tab[18];
+                s->def_decorrelation_mat[i][2] = &tab[22];
+                s->def_decorrelation_mat[i][3] = &tab[26];
                 break;
             case 5:
-                s->default_decorrelation_matrix[i][0] = &tab[30];
-                s->default_decorrelation_matrix[i][1] = &tab[35];
-                s->default_decorrelation_matrix[i][2] = &tab[40];
-                s->default_decorrelation_matrix[i][3] = &tab[45];
-                s->default_decorrelation_matrix[i][4] = &tab[50];
+                s->def_decorrelation_mat[i][0] = &tab[30];
+                s->def_decorrelation_mat[i][1] = &tab[35];
+                s->def_decorrelation_mat[i][2] = &tab[40];
+                s->def_decorrelation_mat[i][3] = &tab[45];
+                s->def_decorrelation_mat[i][4] = &tab[50];
                 break;
             case 6:
-                s->default_decorrelation_matrix[i][0] = &tab[55];
-                s->default_decorrelation_matrix[i][1] = &tab[61];
-                s->default_decorrelation_matrix[i][2] = &tab[67];
-                s->default_decorrelation_matrix[i][3] = &tab[73];
-                s->default_decorrelation_matrix[i][4] = &tab[79];
-                s->default_decorrelation_matrix[i][5] = &tab[85];
+                s->def_decorrelation_mat[i][0] = &tab[55];
+                s->def_decorrelation_mat[i][1] = &tab[61];
+                s->def_decorrelation_mat[i][2] = &tab[67];
+                s->def_decorrelation_mat[i][3] = &tab[73];
+                s->def_decorrelation_mat[i][4] = &tab[79];
+                s->def_decorrelation_mat[i][5] = &tab[85];
                 break;
         }
     }
@@ -653,7 +653,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s, GetBitContext* gb)
                         for(x = 0; x < chgroup->nb_channels ; x++){
                             int y;
                             for(y=0;y< chgroup->nb_channels ;y++){
-                                chgroup->decorrelation_matrix[y + x * chgroup->nb_channels] = s->default_decorrelation_matrix[chgroup->nb_channels][x][y];
+                                chgroup->decorrelation_matrix[y + x * chgroup->nb_channels] = s->def_decorrelation_mat[chgroup->nb_channels][x][y];
                         }
                         }
                     }

@@ -107,7 +107,7 @@ typedef struct WMA3DecodeContext {
     uint16_t         log2_frame_size;          //< frame size
     int8_t           nb_channels;              //< number of channels
     int8_t           lfe_channel;              //< lfe channel index
-    const float***   default_decorrelation_matrix;
+    const float***   def_decorrelation_mat;    //< default decorrelation matrix
     uint8_t          allow_subframes;          //< frames may contain subframes
     uint8_t          max_num_subframes;        //< maximum number of subframes
     int8_t           num_possible_block_sizes; //< nb of supported block sizes
