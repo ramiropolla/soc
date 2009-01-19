@@ -13,7 +13,7 @@
  *
  * Thanks Makoto Matsumoto and Takuji Nishimura for the Mersenne Twister.
  *
- * Copyright (c) 2006 Kartikey Mahendra BHATT (bhattkm at gmail dot com).
+ * Copyright (c) 2006 Kartikey Mahendra BHATT (bhattkm at gmail dot com)
  * Something is wrong up on cloud # 9!
  *
  * This file is part of FFmpeg.
