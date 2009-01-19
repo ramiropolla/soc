@@ -27,7 +27,7 @@
  * by Bartlomiej Wolowiec
  *
  * Generic codec information: libavcodec/nellymoserdec.c
- * Log search algorithm idea: http://samples.mplayerhq.hu/A-codecs/Nelly_Moser/ASAO/ASAO.zip
+ * Log search algorithm idea: http://samples.ffmpeg.org/A-codecs/Nelly_Moser/ASAO/ASAO.zip
  * (Copyright Joseph Artsimovich and UAB "DKD")
  *
  * for more information about nellymoser format, visit:
