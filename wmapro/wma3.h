@@ -30,7 +30,7 @@
 #define MAX_SUBFRAMES     32          //< max number of subframes per channel
 #define MAX_BANDS         29          //< max number of scale factor bands
 
-/* size of block defines taken from wma.h*/
+/* size of block defines taken from wma.h */
 #define BLOCK_MIN_BITS     7
 #define BLOCK_MAX_BITS    12
 #define BLOCK_MAX_SIZE    (1 << BLOCK_MAX_BITS)
@@ -43,10 +43,10 @@ typedef struct {
     int      prev_block_len;                   //< length of the previous block
     uint8_t  transmit_coefs;                   //< transmit coefficients
     uint8_t  num_subframes;                    //< number of subframes
-    uint16_t subframe_len[MAX_SUBFRAMES];      //< subframe len in samples
+    uint16_t subframe_len[MAX_SUBFRAMES];      //< subframe length in samples
     uint16_t subframe_offset[MAX_SUBFRAMES];   //< subframe position
     uint8_t  cur_subframe;                     //< subframe index
-    uint16_t channel_len;                      //< channel len in samples
+    uint16_t channel_len;                      //< channel length in samples
     uint16_t decoded_samples;                  //< already processed samples
     uint8_t  grouped;                          //< channel is part of a group
     int      quant_step_modifier;
@@ -56,7 +56,7 @@ typedef struct {
     int      max_scale_factor;                 //< maximum scale factor
     int      scale_factors[MAX_BANDS];           //< scale factor values
     int      resampled_scale_factors[MAX_BANDS]; //< scale factors from a previous block
-    int      scale_factor_block_len;             //< sf reference block len
+    int      scale_factor_block_len;             //< sf reference block length
     DECLARE_ALIGNED_16(float, coeffs[BLOCK_MAX_SIZE]); //< decode buffer
     DECLARE_ALIGNED_16(float, out[2*BLOCK_MAX_SIZE]);  //< output buffer
 } WMA3ChannelCtx;
@@ -66,11 +66,11 @@ typedef struct {
  */
 typedef struct {
     int   nb_channels;
-    int   no_rotation; //< controls the type of the transform
-    int   transform; //< also controls the type of the transform
+    int   no_rotation;               //< controls the type of the transform
+    int   transform;                 //< also controls the type of the transform
     char  transform_band[MAX_BANDS]; //< controls if the transform is enabled for a certain band
     char  rotation_offset[MAX_CHANNELS * MAX_CHANNELS];
-    char  positive[MAX_CHANNELS * MAX_CHANNELS]; //< fixme for what are these numbers used?
+    char  positive[MAX_CHANNELS * MAX_CHANNELS]; //< FIXME: What are these numbers used for?
     float decorrelation_matrix[MAX_CHANNELS*MAX_CHANNELS];
     char  use_channel[MAX_CHANNELS];
 } WMA3ChannelGroup;
@@ -82,23 +82,23 @@ typedef struct WMA3DecodeContext {
     /** generic decoder variables */
     AVCodecContext*  avctx;                    //< codec context for av_log
     DSPContext       dsp;
-    MDCTContext      mdct_ctx[BLOCK_NB_SIZES]; //< mdct context per block size
+    MDCTContext      mdct_ctx[BLOCK_NB_SIZES]; //< MDCT context per block size
     float*           windows[BLOCK_NB_SIZES];  //< window per block size
-    VLC              sf_vlc;                   //< scale factor dpcm vlc
+    VLC              sf_vlc;                   //< scale factor DPCM vlc
     VLC              sf_rl_vlc;                //< scale factor run length vlc
-    VLC              vec4_vlc;                 //< 4 coefs per symbol
-    VLC              vec2_vlc;                 //< 2 coefs per symbol
-    VLC              vec1_vlc;                 //< 1 coef per symbol
-    VLC              coef_vlc[2];              //< coef run length vlc codes
+    VLC              vec4_vlc;                 //< 4 coefficients per symbol
+    VLC              vec2_vlc;                 //< 2 coefficients per symbol
+    VLC              vec1_vlc;                 //< 1 coefficient per symbol
+    VLC              coef_vlc[2];              //< coefficient run length vlc codes
     int              coef_max[2];              //< max length of vlc codes
 
-    /** frame size dependant frame information (set during init) */
+    /** frame size dependent frame information (set during initialization) */
     uint8_t          lossless;                 //< lossless mode
     unsigned int     decode_flags;             //< used compression features
-    uint8_t          len_prefix;               //< frame is prefixed with its len
-    uint8_t          dynamic_range_compression;//< frame contains drc data
+    uint8_t          len_prefix;               //< frame is prefixed with its length
+    uint8_t          dynamic_range_compression;//< frame contains DRC data
     uint8_t          sample_bit_depth;         //< bits per sample
-    uint16_t         samples_per_frame;        //< number of outputed samples
+    uint16_t         samples_per_frame;        //< number of samples to output
     uint16_t         log2_frame_size;          //< frame size
     int8_t           nb_channels;              //< number of channels
     int8_t           lfe_channel;              //< lfe channel index
@@ -128,7 +128,7 @@ typedef struct WMA3DecodeContext {
     int              buf_bit_size;             //< buffer size in bits
     int16_t*         samples;                  //< current samplebuffer pointer
     int16_t*         samples_end;              //< maximum samplebuffer pointer
-    uint8_t          drc_gain;                 //< gain for the drc tool
+    uint8_t          drc_gain;                 //< gain for the DRC tool
     uint8_t          no_tiling;                //< frames contain subframes
     int              skip_frame;               //< skip output step
     int              parsed_all_subframes;     //< all subframes decoded?
