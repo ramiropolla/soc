@@ -53,7 +53,7 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
             sep ++;
         }
 
-        if(fmt >= PIX_FMT_NB) {
+        if(fmt == PIX_FMT_NONE) {
             av_log(ctx, AV_LOG_ERROR, "unknown pixel format\n");
             continue;
         }
