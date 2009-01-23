@@ -860,7 +860,7 @@ static int mpeg_mux_end(AVFormatContext *ctx)
     return 0;
 }
 
-#ifdef CONFIG_MPEG1SYSTEM_MUXER
+#if CONFIG_MPEG1SYSTEM_MUXER
 AVOutputFormat mpeg1system_muxer = {
     "mpeg",
     NULL_IF_CONFIG_SMALL("MPEG-1 System format"),
@@ -874,7 +874,8 @@ AVOutputFormat mpeg1system_muxer = {
     mpeg_mux_end,
 };
 #endif
-#ifdef CONFIG_MPEG1VCD_MUXER
+
+#if CONFIG_MPEG1VCD_MUXER
 AVOutputFormat mpeg1vcd_muxer = {
     "vcd",
     NULL_IF_CONFIG_SMALL("MPEG-1 System format (VCD)"),
@@ -888,7 +889,8 @@ AVOutputFormat mpeg1vcd_muxer = {
     mpeg_mux_end,
 };
 #endif
-#ifdef CONFIG_MPEG2VOB_MUXER
+
+#if CONFIG_MPEG2VOB_MUXER
 AVOutputFormat mpeg2vob_muxer = {
     "vob",
     NULL_IF_CONFIG_SMALL("MPEG-2 PS format (VOB)"),
@@ -904,7 +906,7 @@ AVOutputFormat mpeg2vob_muxer = {
 #endif
 
 /* Same as mpeg2vob_mux except that the pack size is 2324 */
-#ifdef CONFIG_MPEG2SVCD_MUXER
+#if CONFIG_MPEG2SVCD_MUXER
 AVOutputFormat mpeg2svcd_muxer = {
     "svcd",
     NULL_IF_CONFIG_SMALL("MPEG-2 PS format (VOB)"),
@@ -920,7 +922,7 @@ AVOutputFormat mpeg2svcd_muxer = {
 #endif
 
 /*  Same as mpeg2vob_mux except the 'is_dvd' flag is set to produce NAV pkts */
-#ifdef CONFIG_MPEG2DVD_MUXER
+#if CONFIG_MPEG2DVD_MUXER
 AVOutputFormat mpeg2dvd_muxer = {
     "dvd",
     NULL_IF_CONFIG_SMALL("MPEG-2 PS format (DVD VOB)"),
