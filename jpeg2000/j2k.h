@@ -136,7 +136,7 @@ typedef struct {
 } J2kCblk; ///< code block
 
 typedef struct {
-    uint16_t xi0, xi1, yi0, yi1; ///< indices of codeblocks ([xi0, xi1))
+    uint16_t xi0, xi1, yi0, yi1; ///< codeblock indexes ([xi0, xi1))
     J2kTgtNode *zerobits;
     J2kTgtNode *cblkincl;
 } J2kPrec; ///< precinct
