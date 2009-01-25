@@ -122,7 +122,7 @@ static void reset_state(AMRContext *p)
     }
 }
 
-static int amrnb_decode_init(AVCodecContext *avctx)
+static av_cold int amrnb_decode_init(AVCodecContext *avctx)
 {
     AMRContext *p = avctx->priv_data;
 

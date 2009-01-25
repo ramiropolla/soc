@@ -1286,7 +1286,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data,
 }
 
 
-static int amrnb_decode_close(AVCodecContext *avctx)
+static av_cold int amrnb_decode_close(AVCodecContext *avctx)
 {
     AMRContext *p = avctx->priv_data;
 
