@@ -246,8 +246,6 @@ enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size,
  *
  * @param lsf               input lsf vector
  * @param lsp               output lsp vector
- *
- * @return void
  */
 
 static void lsf2lsp(float *lsf, float *lsp)
@@ -263,8 +261,6 @@ static void lsf2lsp(float *lsf, float *lsp)
  * Decode a set of 5 split-matrix quantised lsf indices into an lsp vector
  *
  * @param p                 pointer to the AMRContext
- *
- * @return void
  */
 
 static void lsf2lsp_5(AMRContext *p)
@@ -326,8 +322,6 @@ static void lsf2lsp_5(AMRContext *p)
  * Decode a set of 3 split-matrix quantised lsf indices into an lsp vector
  *
  * @param p                 pointer to the AMRContext
- *
- * @return void
  */
 
 static void lsf2lsp_3(AMRContext *p)
@@ -386,8 +380,6 @@ static void lsf2lsp_3(AMRContext *p)
  * Interpolate lsp vectors for subframes 1 and 3
  *
  * @param p                 pointer to the AMRContext
- *
- * @return void
  */
 
 static void interp_lsp_13(AMRContext *p)
@@ -404,8 +396,6 @@ static void interp_lsp_13(AMRContext *p)
  * Interpolate lsp vectors for subframes 1, 2 and 3
  *
  * @param p                 pointer to the AMRContext
- *
- * @return void
  */
 
 static void interp_lsp_123(AMRContext *p)
@@ -424,8 +414,6 @@ static void interp_lsp_123(AMRContext *p)
  *
  * @param lsp               input lsp vector
  * @param f                 pointer to the polynomial F1(z) or F2(z)
- *
- * @return void
  */
 
 static void lsp2poly(float *lsp, float *f)
@@ -449,8 +437,6 @@ static void lsp2poly(float *lsp, float *f)
  *
  * @param lsp                 input lsp vector
  * @param lpc                 output lpc coefficients
- *
- * @return void
  */
 
 static void lsp2lpc(float *lsp, float *lpc_coeffs)
@@ -488,8 +474,6 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
  * @param p                   pointer to the AMRContext
  * @param pitch_index         parsed adaptive codebook (pitch) index
  * @param subframe            current subframe
- *
- * @return void
  */
 
 static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe)
@@ -541,8 +525,6 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe)
  * @param p                   pointer to the AMRContext
  * @param pitch_index         parsed adaptive codebook (pitch) index
  * @param subframe            current subframe
- *
- * @return void
  */
 
 static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe)
@@ -575,8 +557,6 @@ static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe)
  * @param lag_frac            fractional part of pitch lag
  * @param mode                current frame mode
  * @param pitch_vector        pointer to the pitch vector
- *
- * @return void
  */
 
 static void interp_pitch_vector(float *prev_excitation, int lag_int,
@@ -625,8 +605,6 @@ static void interp_pitch_vector(float *prev_excitation, int lag_int,
  * @param sign                 signs of the pulses
  * @param nr_pulses            number of pulses
  * @param fixed_vector         algebraic codebook vector
- *
- * @return void
  */
 
 static void reconstruct_fixed_vector(int *pulse_position, int sign,
@@ -649,8 +627,6 @@ static void reconstruct_fixed_vector(int *pulse_position, int sign,
  * @param sign                 signs of the two pulses
  * @param subframe             current subframe
  * @param fixed_vector         pointer to the algebraic codebook vector
- *
- * @return void
  */
 
 static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe,
@@ -677,8 +653,6 @@ static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe,
  * @param fixed_index          positions of the two pulses
  * @param sign                 signs of the two pulses
  * @param fixed_vector         pointer to the algebraic codebook vector
- *
- * @return void
  */
 
 static void decode_2_pulses_11bits(int fixed_index, int sign,
@@ -708,8 +682,6 @@ static void decode_2_pulses_11bits(int fixed_index, int sign,
  * @param fixed_index          positions of the three pulses
  * @param sign                 signs of the three pulses
  * @param fixed_vector         pointer to the algebraic codebook vector
- *
- * @return void
  */
 
 static void decode_3_pulses_14bits(int fixed_index, int sign,
@@ -740,8 +712,6 @@ static void decode_3_pulses_14bits(int fixed_index, int sign,
  * @param fixed_index          positions of the four pulses
  * @param sign                 signs of the four pulses
  * @param fixed_vector         pointer to the algebraic codebook vector
- *
- * @return void
  */
 
 static void decode_4_pulses_17bits(int fixed_index, int sign,
@@ -771,8 +741,6 @@ static void decode_4_pulses_17bits(int fixed_index, int sign,
  *
  * @param fixed_index          positions of the eight pulses
  * @param fixed_vector         pointer to the algebraic codebook vector
- *
- * @return void
  */
 
 static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector)
@@ -828,8 +796,6 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector)
  *
  * @param fixed_index          positions of the ten pulses
  * @param fixed_vector         pointer to the algebraic codebook vector
- *
- * @return void
  */
 
 static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_vector)
