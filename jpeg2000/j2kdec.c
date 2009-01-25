@@ -924,7 +924,7 @@ static int decode_frame(AVCodecContext *avctx,
     return s->buf - s->buf_start;
 }
 
-static int j2kdec_init(AVCodecContext *avctx)
+static av_cold int j2kdec_init(AVCodecContext *avctx)
 {
     J2kDecoderContext *s = avctx->priv_data;
 

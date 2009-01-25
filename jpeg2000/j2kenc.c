@@ -960,7 +960,7 @@ static int encode_frame(AVCodecContext *avctx,
     return s->buf - s->buf_start;
 }
 
-static int j2kenc_init(AVCodecContext *avctx)
+static av_cold int j2kenc_init(AVCodecContext *avctx)
 {
     int i, ret;
     J2kEncoderContext *s = avctx->priv_data;
