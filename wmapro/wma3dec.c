@@ -613,7 +613,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s, GetBitContext* gb)
 
             if(remaining_channels > 2){
                 for(i=0;i<s->channels_for_cur_subframe;i++){
-                    int channel_idx = s->channel_indices_for_cur_subframe[i];
+                    int channel_idx = s->channel_indexes_for_cur_subframe[i];
                     if(!s->channel[channel_idx].grouped && get_bits(gb,1)){
                         ++chgroup->nb_channels;
                         s->channel[channel_idx].grouped = 1;
@@ -870,7 +870,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
 {
     int i;
     for(i=0;i<s->channels_for_cur_subframe;i++){
-        int c = s->channel_indices_for_cur_subframe[i];
+        int c = s->channel_indexes_for_cur_subframe[i];
 
         /** resample scale factors for the new block size */
         if(s->channel[c].reuse_sf){
@@ -1033,7 +1033,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                 wma_calc_decorrelation_matrix(s,&s->chgroup[i]);
 
             for(x=0;x<s->channels_for_cur_subframe;x++){
-                int chan = s->channel_indices_for_cur_subframe[x];
+                int chan = s->channel_indexes_for_cur_subframe[x];
                 if(s->chgroup[i].use_channel[chan] == 1){    // assign ptrs
                     ch_data[cnt] = s->channel[chan].coeffs;
                     ++cnt;
@@ -1072,7 +1072,7 @@ static void wma_window(WMA3DecodeContext *s)
 {
     int i;
     for(i=0;i<s->channels_for_cur_subframe;i++){
-        int c = s->channel_indices_for_cur_subframe[i];
+        int c = s->channel_indexes_for_cur_subframe[i];
         int j = s->channel[c].cur_subframe;
         int x;
         // FIXME: use dsp.vector_fmul_window
@@ -1150,7 +1150,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
         if(offset == s->channel[i].decoded_samples && subframe_len == s->channel[i].subframe_len[s->channel[i].cur_subframe]){
              total_samples -= s->channel[i].subframe_len[s->channel[i].cur_subframe];
              s->channel[i].decoded_samples += s->channel[i].subframe_len[s->channel[i].cur_subframe];
-             s->channel_indices_for_cur_subframe[s->channels_for_cur_subframe] = i;
+             s->channel_indexes_for_cur_subframe[s->channels_for_cur_subframe] = i;
              ++s->channels_for_cur_subframe;
         }
     }
@@ -1164,7 +1164,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
 
     /** configure the decoder for the current subframe */
     for(i=0;i<s->channels_for_cur_subframe;i++){
-        int c = s->channel_indices_for_cur_subframe[i];
+        int c = s->channel_indexes_for_cur_subframe[i];
 
         if(s->channel[c].num_subframes <= 1){
           s->cValidBarkBand = s->num_sfb[0];
@@ -1214,7 +1214,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
 
 
     for(i=0;i<s->channels_for_cur_subframe;i++){
-        int c = s->channel_indices_for_cur_subframe[i];
+        int c = s->channel_indexes_for_cur_subframe[i];
         if((s->channel[c].transmit_coefs = get_bits(gb,1)))
             transmit_coeffs = 1;
     }
@@ -1255,11 +1255,11 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
         /** decode quantization step modifiers for every channel */
 
         if(s->channels_for_cur_subframe == 1)
-            s->channel[s->channel_indices_for_cur_subframe[0]].quant_step_modifier = 0;
+            s->channel[s->channel_indexes_for_cur_subframe[0]].quant_step_modifier = 0;
         else{
             int modifier_len = get_bits(gb,3);
             for(i=0;i<s->channels_for_cur_subframe;i++){
-                int c = s->channel_indices_for_cur_subframe[i];
+                int c = s->channel_indexes_for_cur_subframe[i];
                 s->channel[c].quant_step_modifier = 0;
                 if(get_bits(gb,1)){
                     if(modifier_len)
@@ -1281,7 +1281,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
 
     /** parse coefficients */
     for(i=0;i<s->channels_for_cur_subframe;i++){
-        int c = s->channel_indices_for_cur_subframe[i];
+        int c = s->channel_indexes_for_cur_subframe[i];
         if(s->channel[c].transmit_coefs)
                 decode_coeffs(s,gb,c);
     }
@@ -1291,7 +1291,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
     if(transmit_coeffs){
         wma_inverse_channel_transform(s);
         for(i=0;i<s->channels_for_cur_subframe;i++){
-            int c = s->channel_indices_for_cur_subframe[i];
+            int c = s->channel_indexes_for_cur_subframe[i];
             int b;
             float* dst;
             if(c == s->lfe_channel)
@@ -1328,7 +1328,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
 
     /** handled one subframe */
     for(i=0;i<s->channels_for_cur_subframe;i++){
-        int c = s->channel_indices_for_cur_subframe[i];
+        int c = s->channel_indexes_for_cur_subframe[i];
         if(s->channel[c].cur_subframe >= s->channel[c].num_subframes){
             av_log(s->avctx,AV_LOG_ERROR,"broken subframe\n");
             return 0;

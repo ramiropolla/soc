@@ -136,7 +136,7 @@ typedef struct WMA3DecodeContext {
     /** subframe/block decode state */
     int              subframe_len;             //< current subframe length
     int              channels_for_cur_subframe;
-    int              channel_indices_for_cur_subframe[MAX_CHANNELS];
+    int              channel_indexes_for_cur_subframe[MAX_CHANNELS];
     int              subwoofer_cutoff;         //< subwoofer cutoff value
     int              cValidBarkBand;
     int*             rgiBarkIndex;
