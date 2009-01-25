@@ -108,7 +108,8 @@ int16_t cos_table[65]; // cosine table used to convert lsfs to lsps
 
 #define TRACKS_MODE_102  4 // number of tracks for MODE_102
 
-// FIXME - not quite sure how i'm going to implement this yet and some other variables may be moved around later
+/* FIXME - not quite sure how i'm going to implement this yet
+ *         and some other variables may be moved around later */
 typedef struct AMRDecoderState {
     // Bad frame
     int state;
@@ -244,7 +245,7 @@ static const AMROrder order_MODE_DTX[35] = {
 // encoder homing frame pattern
 #define EHF_MASK 0x0008
 
-// Homing frames for the decoder
+// homing frames for the decoder
 static const int16_t dhf_MODE_475[PRMS_MODE_475] = {
   0x00F8,0x009D,0x001C,0x0066,0x0000,0x0003,0x0028,0x000F,0x0038,0x0001,
   0x000F,0x0031,0x0002,0x0008,0x000F,0x0026,0x0003
@@ -376,7 +377,7 @@ static const uint16_t pred_fac[10] = {
     11651, 10588,  9767,  8593,  6484
 };
 
-// vector quantised lsf tables
+// vector quantized lsf tables
 static const int16_t lsf_3_MODE_515[128][4] = {
 {  419,  163,  -30, -262}, { -455, -789,-1430, -721}, { 1006,  664,  269,   25}, {  619,  260,  183,   96},
 { -968,-1358, -388,  135}, { -693,  835,  456,  154}, { 1105,  703,  569,  363}, { 1625, 1326,  985,  748},
@@ -1157,7 +1158,7 @@ static const uint16_t pitch_gain_attenuation[7] = {
     6553
 };
 
-// quantisation table for the adaptive codebook gain (MODE_795, MODE_122)
+// quantization table for the adaptive codebook gain (MODE_795, MODE_122)
 #define N_PITCH_QUANTS 16
 static const uint16_t pitch_gain_quant[N_PITCH_QUANTS] = {
    0,

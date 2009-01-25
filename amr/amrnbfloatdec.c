@@ -41,7 +41,7 @@ typedef struct AMRContext {
 
     GetBitContext                        gb;
 
-    int16_t         amr_prms[PRMS_MODE_122]; ///< decoded amr parameters (lsf coefficients, codebook indices, etc)
+    int16_t         amr_prms[PRMS_MODE_122]; ///< decoded AMR parameters (lsf coefficients, codebook indexes, etc)
     int                 bad_frame_indicator; ///< bad frame ? 1 : 0
     int                      cur_frame_mode; ///< current frame mode
     int                      cur_frame_type; ///< current frame type
@@ -52,7 +52,7 @@ typedef struct AMRContext {
 
     float          lsp_avg[LP_FILTER_ORDER]; ///< vector of averaged lsp coefficients
 
-    float           lpc[4][LP_FILTER_ORDER]; ///< vectors of lpc coefficients for 4 subframes
+    float           lpc[4][LP_FILTER_ORDER]; ///< lpc coefficient vectors for 4 subframes
 
     int                    search_range_min; ///< minimum pitch lag search range
     int                    search_range_max; ///< maximum pitch lag search range
@@ -90,9 +90,9 @@ static void reset_state(AMRContext *p)
 {
     int i;
 
-    // initialise values for the lsp vector from the 4th subframe of the
-    // previous subframe values
-    // taken from Decoder_amr_reset using val/(float)(1<<15)
+    // Initialize values for the lsp vector from the 4th subframe of the
+    // previous subframe values.
+    // Taken from Decoder_amr_reset using val/(float)(1<<15).
     p->prev_lsp_sub4[0] = 0.91552734375;
     p->prev_lsp_sub4[1] = 0.79345703125;
     p->prev_lsp_sub4[2] = 0.640869140625;
@@ -104,8 +104,8 @@ static void reset_state(AMRContext *p)
     p->prev_lsp_sub4[8] = -0.640869140625;
     p->prev_lsp_sub4[9] = -0.79345703125;
 
-    // initialise mean lsp values
-    // taken from Decoder_amr_reset using val/(float)(1<<15)
+    // Initialize mean lsp values.
+    // Taken from Decoder_amr_reset using val/(float)(1<<15).
     p->lsp_avg[0] = 0.042236328125;
     p->lsp_avg[1] = 0.063385009765625;
     p->lsp_avg[2] = 0.1043701171875;
@@ -148,13 +148,13 @@ static int amrnb_decode_init(AVCodecContext *avctx)
 
 
 /**
- * Decode the bitstream into the AMR parameters and discover the frame mode
+ * Decode the bitstream into the AMR parameters and discover the frame mode.
  *
  * @param buf               pointer to the input buffer
  * @param buf_size          size of the input buffer
  * @param speech_mode       pointer to the speech mode
  *
- * @return Returns the frame mode
+ * @return the frame mode
  */
 
 enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size,
@@ -167,7 +167,7 @@ enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size,
     // reset amr_prms
     memset(p->amr_prms, 0, PRMS_MODE_122 * sizeof(int16_t));
 
-    // initialise get_bits
+    // initialize get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
     skip_bits(&p->gb, 1);
     // set the mode
@@ -242,7 +242,7 @@ enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size,
 /*** LPC coefficient decoding functions ***/
 
 /**
- * Convert an lsf vector into an lsp vector
+ * Convert an lsf vector into an lsp vector.
  *
  * @param lsf               input lsf vector
  * @param lsp               output lsp vector
@@ -258,7 +258,7 @@ static void lsf2lsp(float *lsf, float *lsp)
 }
 
 /**
- * Decode a set of 5 split-matrix quantised lsf indices into an lsp vector
+ * Decode a set of 5 split-matrix quantized lsf indexes into an lsp vector.
  *
  * @param p                 pointer to the AMRContext
  */
@@ -319,7 +319,7 @@ static void lsf2lsp_5(AMRContext *p)
 }
 
 /**
- * Decode a set of 3 split-matrix quantised lsf indices into an lsp vector
+ * Decode a set of 3 split-matrix quantized lsf indexes into an lsp vector.
  *
  * @param p                 pointer to the AMRContext
  */
@@ -351,8 +351,8 @@ static void lsf2lsp_3(AMRContext *p)
     lsf_r[2] = lsf_3_1_tmp[ idx ][2];
 
     idx = p->amr_prms[1];
-    // MODE_475, MODE_515 only use every other entry as their indices are stored
-    // using 1 less bit (8-bits vs 9-bits)
+    // MODE_475, MODE_515 only use every other entry as their indexes
+    // are stored using 1 less bit (8 bits vs 9 bits)
     if((p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515)) {
         idx <<= 1;
     }
@@ -377,7 +377,7 @@ static void lsf2lsp_3(AMRContext *p)
 }
 
 /**
- * Interpolate lsp vectors for subframes 1 and 3
+ * Interpolate lsp vectors for subframes 1 and 3.
  *
  * @param p                 pointer to the AMRContext
  */
@@ -393,7 +393,7 @@ static void interp_lsp_13(AMRContext *p)
 }
 
 /**
- * Interpolate lsp vectors for subframes 1, 2 and 3
+ * Interpolate lsp vectors for subframes 1, 2 and 3.
  *
  * @param p                 pointer to the AMRContext
  */
@@ -410,7 +410,7 @@ static void interp_lsp_123(AMRContext *p)
 }
 
 /**
- * Find the polynomial F1(z) or F2(z) from the lsp vectors
+ * Find the polynomial F1(z) or F2(z) from the lsp vectors.
  *
  * @param lsp               input lsp vector
  * @param f                 pointer to the polynomial F1(z) or F2(z)
@@ -433,7 +433,7 @@ static void lsp2poly(float *lsp, float *f)
 }
 
 /**
- * Convert an lsp vector to lpc coefficients
+ * Convert an lsp vector to lpc coefficients.
  *
  * @param lsp                 input lsp vector
  * @param lpc                 output lpc coefficients
@@ -457,8 +457,8 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
     // A(z) = ( F1'(z) + F2'(z) )/2
     // note f1 and f2 are actually f1' and f2'
     for(i=0; i<5; i++) {
-        lpc_coeffs[i]   = 0.5*(f1[i+2] + f2[i+2]); // lpc 0..4 uses indices to f, 2..6
-        lpc_coeffs[i+5] = 0.5*(f1[6-i] - f2[6-i]); // lpc 5..9 uses indices to f, 6..2
+        lpc_coeffs[i]   = 0.5*(f1[i+2] + f2[i+2]); // lpc 0..4 uses indexes to f, 2..6
+        lpc_coeffs[i+5] = 0.5*(f1[6-i] - f2[6-i]); // lpc 5..9 uses indexes to f, 6..2
     }
 }
 
@@ -468,8 +468,8 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
 /*** pitch vector decoding functions ***/
 
 /**
- * Decode the adaptive codebook index to the integer and fractional parts of the
- * pitch lag for one subframe at 1/3 resolution
+ * Decode the adaptive codebook index to the integer and fractional parts
+ * of the pitch lag for one subframe at 1/3 resolution.
  *
  * @param p                   pointer to the AMRContext
  * @param pitch_index         parsed adaptive codebook (pitch) index
@@ -492,7 +492,7 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe)
     }else {
         if( (p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515) ||
             (p->cur_frame_mode == MODE_59)  || (p->cur_frame_mode == MODE_67) ) {
-            // decoding with 4 bit resolution
+            // decoding with 4-bit resolution
             int t1_temp = FFMAX(FFMIN(p->prev_pitch_lag_int, p->search_range_max-4), p->search_range_min+5);
 
             if(pitch_index < 4) {
@@ -519,8 +519,8 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe)
 }
 
 /**
- * Decode the adaptive codebook index to the integer and fractional parts of the
- * pitch lag for one subframe at 1/6 resolution
+ * Decode the adaptive codebook index to the integer and fractional parts
+ * of the pitch lag for one subframe at 1/6 resolution.
  *
  * @param p                   pointer to the AMRContext
  * @param pitch_index         parsed adaptive codebook (pitch) index
@@ -550,7 +550,7 @@ static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe)
 
 /**
  * Calculate the pitch vector by interpolating the past excitation at the pitch
- * pitch lag using a b60 hamming windowed sinc function
+ * pitch lag using a b60 hamming windowed sinc function.
  *
  * @param prev_excitation     pointer to the element after the previous excitations
  * @param lag_int             integer part of pitch lag
@@ -599,7 +599,7 @@ static void interp_pitch_vector(float *prev_excitation, int lag_int,
 /*** algebraic code book (fixed) vector decoding functions ***/
 
 /**
- * Reconstruct the algebraic codebook vector
+ * Reconstruct the algebraic codebook vector.
  *
  * @param pulse_position       vector of pulse positions
  * @param sign                 signs of the pulses
@@ -620,8 +620,8 @@ static void reconstruct_fixed_vector(int *pulse_position, int sign,
 }
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_475 and MODE_515
+ * Decode the algebraic codebook index to pulse positions and signs and
+ * construct the algebraic codebook vector for MODE_475 and MODE_515.
  *
  * @param fixed_index          positions of the two pulses
  * @param sign                 signs of the two pulses
@@ -647,8 +647,8 @@ static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe,
 }
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_59
+ * Decode the algebraic codebook index to pulse positions and signs and
+ * construct the algebraic codebook vector for MODE_59.
  *
  * @param fixed_index          positions of the two pulses
  * @param sign                 signs of the two pulses
@@ -676,8 +676,8 @@ static void decode_2_pulses_11bits(int fixed_index, int sign,
 }
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_67
+ * Decode the algebraic codebook index to pulse positions and signs and
+ * construct the algebraic codebook vector for MODE_67.
  *
  * @param fixed_index          positions of the three pulses
  * @param sign                 signs of the three pulses
@@ -706,8 +706,8 @@ static void decode_3_pulses_14bits(int fixed_index, int sign,
 }
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_74 and MODE_795
+ * Decode the algebraic codebook index to pulse positions and signs and
+ * construct the algebraic codebook vector for MODE_74 and MODE_795.
  *
  * @param fixed_index          positions of the four pulses
  * @param sign                 signs of the four pulses
@@ -736,8 +736,8 @@ static void decode_4_pulses_17bits(int fixed_index, int sign,
 }
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_102
+ * Decode the algebraic codebook index to pulse positions and signs and
+ * construct the algebraic codebook vector for MODE_102.
  *
  * @param fixed_index          positions of the eight pulses
  * @param fixed_vector         pointer to the algebraic codebook vector
@@ -791,8 +791,8 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector)
 }
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_122
+ * Decode the algebraic codebook index to pulse positions and signs and
+ * construct the algebraic codebook vector for MODE_122.
  *
  * @param fixed_index          positions of the ten pulses
  * @param fixed_vector         pointer to the algebraic codebook vector
@@ -827,12 +827,12 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_vector)
 /*** gain decoding functions ***/
 
 /**
- * Predict the fixed gain
+ * Predict the fixed gain.
  *
  * @param fixed_vector         pointer to the algebraic codebook vector
  * @param prev_pred_error      pointer to the quantified prediction errors from the previous four subframes
  *
- * @return Returns the predicted fixed gain
+ * @return the predicted fixed gain
  */
 
 static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
@@ -863,10 +863,10 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
 /*** pre-processing functions ***/
 
 /**
- * Comparison function for use with qsort
+ * Comparison function for use with qsort.
  *
- * @param a             First value for comparison
- * @param b             Second value for comparison
+ * @param a             first value for comparison
+ * @param b             second value for comparison
  * @return a-b : the result of the comparison
  */
 
@@ -881,11 +881,11 @@ int qsort_compare(const float *a, const float *b)
 }
 
 /**
- * Find the median of some float values
+ * Find the median of some float values.
  *
  * @param values        pointer to the values of which to find the median
  * @param n             number of values
- * @return Returns the median value
+ * @return the median value
  */
 
 static float medianf(float *values, int n)
@@ -905,7 +905,7 @@ static float medianf(float *values, int n)
 
 /**
  * Circularly convolve the fixed vector with a phase dispersion impulse response
- * filter
+ * filter.
  *
  * @param fixed_vector  pointer to the fixed vector
  * @param ir_filter     pointer to the impulse response filter
@@ -945,7 +945,7 @@ static void convolve_circ(float *fixed_vector, const float *ir_filter)
 /*** synthesis functions ***/
 
 /**
- * Conduct 10th order linear predictive coding synthesis
+ * Conduct 10th order linear predictive coding synthesis.
  *
  * @param p             pointer to the AMRContext
  * @param excitation    pointer to the excitation vector
@@ -980,7 +980,7 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
         float eta, temp1 = 0.0, temp2 = 0.0;
 
         for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
-            // emphasise pitch vector contribution
+            // emphasize pitch vector contribution
             excitation_temp[i] = excitation[i] + pitch_factor*p->pitch_vector[i];
             // find gain scale
             temp1 +=      excitation[i]*excitation[i];
@@ -999,7 +999,7 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
         for(j=0; j<LP_FILTER_ORDER; j++) {
             samples[i] -= lpc[j]*samples[i-j-1];
         }
-        // Detect overflow
+        // detect overflow
         if(fabsf(samples[i])>1.0) {
             overflow_temp = 1;
             samples[i] = av_clipf(samples[i], -1.0, 1.0);
@@ -1015,7 +1015,7 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
 /*** update functions ***/
 
 /**
- * Update buffers and history at the end of decoding a subframe
+ * Update buffers and history at the end of decoding a subframe.
  *
  * @param p             pointer to the AMRContext
  */
@@ -1066,20 +1066,20 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     int gains_index_MODE_475 = 0;            // MODE_475 gains index coded every other subframe
     enum Mode speech_mode = MODE_475;        // ???
 
-    // decode the bitstream to amr parameters
+    // decode the bitstream to AMR parameters
     p->cur_frame_mode = decode_bitstream(p, buf, buf_size, &speech_mode);
 
 /*** LPC coefficient decoding ***/
 
     if(p->cur_frame_mode == MODE_122) {
-        // decode split-matrix quantised lsf vector indices to lsp vectors
+        // decode split-matrix quantized lsf vector indexes to lsp vectors
         lsf2lsp_5(p);
         // interpolate LSP vectors at subframes 1 and 3
         interp_lsp_13(p);
         // advance index into amr_prms
         index += 5;
     }else {
-        // decode split-matrix quantised lsf vector indices to an lsp vector
+        // decode split-matrix quantized lsf vector indexes to an lsp vector
         lsf2lsp_3(p);
         // interpolate LSP vectors at subframes 1, 2 and 3
         interp_lsp_123(p);
@@ -1305,10 +1305,10 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
     }
 
-    /* Report how many samples we got */
+    /* report how many samples we got */
     *data_size = AMR_BLOCK_SIZE * sizeof(int16_t);
 
-    /* Return the amount of bytes consumed if everything was ok */
+    /* return the amount of bytes consumed if everything was OK */
     return (mode_bits[p->cur_frame_mode] + 15)>>3; // +7 for rounding and +8 for TOC
 }
 
@@ -1317,7 +1317,7 @@ static int amrnb_decode_close(AVCodecContext *avctx)
 {
     AMRContext *p = avctx->priv_data;
 
-    /* Return 0 if everything is ok, -1 if not */
+    /* return 0 if everything is OK, -1 if not */
     return 0;
 }
 

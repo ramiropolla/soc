@@ -41,18 +41,18 @@ typedef struct AMRContext {
     GetBitContext                        gb;
     int16_t                  *sample_buffer;
 
-    int16_t                       *amr_prms; ///< pointer to the decoded amr parameters (lsf coefficients, codebook indices, etc)
+    int16_t                       *amr_prms; ///< pointer to the decoded AMR parameters (lsf coefficients, codebook indexes, etc)
     int                 bad_frame_indicator; ///< bad frame ? 1 : 0
 
     int                   prev_frame_homing; ///< previous frame was a homing frame ? 1 : 0
     enum RXFrameType        prev_frame_type; ///< frame type of previous frame
     enum Mode               prev_frame_mode; ///< mode of previous frame
 
-    int                        *prev_lsf_dq; ///< previous dequantised lsfs
-    int                    *prev_residual_q; ///< previous quantised residual
+    int                        *prev_lsf_dq; ///< previous dequantized lsfs
+    int                    *prev_residual_q; ///< previous quantized residual
 
-    int             lsp1_q[LP_FILTER_ORDER]; ///< vector of quantised lsps
-    int             lsp2_q[LP_FILTER_ORDER]; ///< vector of quantised lsps
+    int             lsp1_q[LP_FILTER_ORDER]; ///< vector of quantized lsps
+    int             lsp2_q[LP_FILTER_ORDER]; ///< vector of quantized lsps
 
     int                    cur_frame_homing; ///< current frame homing ? 1 : 0
     enum RXFrameType         cur_frame_type; ///< current frame type
@@ -96,7 +96,7 @@ static int amrnb_decode_init(AVCodecContext *avctx)
 
     // allocate and zero the sample buffer
     p->sample_buffer = av_mallocz(sizeof(int16_t)*AMR_BLOCK_SIZE);
-    // allocate and zero the amr parameters
+    // allocate and zero the AMR parameters
     p->amr_prms = av_mallocz(sizeof(int16_t)*PRMS_MODE_122);
     // allocate and zero the decoder state
     p->state = av_mallocz(sizeof(AMRDecoderState));
@@ -117,13 +117,13 @@ static int amrnb_decode_init(AVCodecContext *avctx)
 
 
 /**
- * Decode the bitstream into the AMR parameters and discover the frame mode
+ * Decode the bitstream into the AMR parameters and discover the frame mode.
  *
  * @param buf               pointer to the input buffer
  * @param buf_size          size of the input buffer
  * @param speech_mode       pointer to the speech mode
  *
- * @return Returns the frame mode
+ * @return the frame mode
  */
 
 enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size,
@@ -134,7 +134,7 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size,
     int i;
     const AMROrder *order;
 
-    // initialise get_bits
+    // initialize get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
     skip_bits1(&p->gb);
     // set the mode
@@ -207,8 +207,8 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size,
 
 
 /**
- * DESCRIPTION FROM REF SOURCE:
- * Make sure that the LSFs are properly ordered and to keep a certain minimum
+ * DESCRIPTION FROM REFERENCE SOURCE:
+ * Make sure that the LSFs are properly ordered and keep a certain minimum
  * distance between adjacent LSFs.
  *
  * @param lsf               a vector of lsfs (range: 0<=val<=0.5)
@@ -230,7 +230,7 @@ static void reorder_lsf(int *lsf, int min_dist)
 
 
 /**
- * Convert a vector of lsfs into the corresponding, cosine domain lsps
+ * Convert a vector of lsfs into the corresponding cosine domain lsps.
  *
  * @param lsf               a vector of lsfs
  * @param lsp               a vector of lsps
@@ -250,7 +250,7 @@ static void lsf2lsp(int *lsf, int *lsp)
 
 
 /**
- * Convert a set of 3 lsf quantisation indices into lsp parameters
+ * Convert a set of 3 lsf quantization indexes into lsp parameters.
  *
  * @param avctx             pointer to the AVCodecContext for AMR
  */
@@ -260,12 +260,13 @@ static void decode_lsf2lsp_3(AVCodecContext *avctx)
     AMRContext *p = avctx->priv_data;
 
     int lsf1_r[LP_FILTER_ORDER]; // vector of residual lsfs
-    int lsf1_q[LP_FILTER_ORDER]; // vector of quantised lsfs
+    int lsf1_q[LP_FILTER_ORDER]; // vector of quantized lsfs
     const int16_t (*lsf_3_temp1)[3], (*lsf_3_temp3)[4]; // temp ptrs for switching tables depending on mode
     int index_temp; // temp lsf index
     int i; // counter
 
-    // if the current frame is bad estimate the past quantised residual based on the past lsf shifted slightly towards the mean
+    /* if the current frame is bad, estimate the past quantized residual
+     * based on the past lsf shifted slightly towards the mean */
     if(p->bad_frame_indicator) {
         for(i=0; i<LP_FILTER_ORDER; i++) {
             lsf1_q[i] = ( (p->prev_lsf_dq[i]*ALPHA)>>15 ) + ( (lsf_3_mean[i]*ONE_ALPHA)>>15 );
@@ -292,13 +293,14 @@ static void decode_lsf2lsp_3(AVCodecContext *avctx)
             lsf_3_temp3 = lsf_3_3;
         }
 
-        // decode lsf residuals from lsf tables using the indices from the bitstream
+        // decode lsf residuals from lsf tables using the bitstream indexes
         lsf1_r[0] = lsf_3_temp1[ p->amr_prms[0] ][0];
         lsf1_r[1] = lsf_3_temp1[ p->amr_prms[0] ][1];
         lsf1_r[2] = lsf_3_temp1[ p->amr_prms[0] ][2];
 
         index_temp = p->amr_prms[1];
-        // MODE_475, MODE_515 only use every second entry - NOTE : not quite sure what they mean and the spec doesn't mention this
+        /* MODE_475, MODE_515 only use every second entry
+         * NOTE: unsure what they mean and the spec doesn't mention this */
         if((p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515)) {
             index_temp = index_temp << 1;
         }
@@ -325,7 +327,7 @@ static void decode_lsf2lsp_3(AVCodecContext *avctx)
         }
     }
 
-    /* verification that LSFs has minimum distance of LSF_GAP Hz */
+    /* verification that LSFs have minimum distance of LSF_GAP Hz */
     reorder_lsf(lsf1_q, LSF_GAP);
     memcpy(p->prev_lsf_dq, lsf1_q, LP_FILTER_ORDER<<2);
 
@@ -335,7 +337,7 @@ static void decode_lsf2lsp_3(AVCodecContext *avctx)
 
 
 /**
- * Convert a set of 5 lsf quantisation indices into lsp parameters
+ * Convert a set of 5 lsf quantization indexes into lsp parameters.
  *
  * @param avctx             pointer to the AVCodecContext for AMR
  */
@@ -345,11 +347,12 @@ static void decode_lsf2lsp_5(AVCodecContext *avctx)
     AMRContext *p = avctx->priv_data;
 
     int lsf1_r[LP_FILTER_ORDER], lsf2_r[LP_FILTER_ORDER]; // vectors of residual lsfs
-    int lsf1_q[LP_FILTER_ORDER], lsf2_q[LP_FILTER_ORDER]; // vectors of quantised lsfs
+    int lsf1_q[LP_FILTER_ORDER], lsf2_q[LP_FILTER_ORDER]; // vectors of quantized lsfs
     int temp;
     int i, sign; // counter and sign of 3rd lsf table
 
-    // if the current frame is bad estimate the past quantised residual based on the past lsf shifted slightly towards the mean
+    /* if the current frame is bad, estimate the past quantized residual
+     * based on the past lsf shifted slightly towards the mean */
     if(p->bad_frame_indicator) {
         for(i=0; i<LP_FILTER_ORDER; i++) {
             lsf1_q[i] = ( (p->prev_lsf_dq[i]*ALPHA_122)>>15 ) + ( (lsf_5_mean[i]*ONE_ALPHA_122)>>15 );
@@ -359,7 +362,7 @@ static void decode_lsf2lsp_5(AVCodecContext *avctx)
             p->prev_residual_q[i] = lsf2_q[i] - lsf_5_mean[i] - ( (p->prev_residual_q[i]*LSP_PRED_FAC_MODE_122)>>15 );
         }
     }else {
-        /* decode prediction residuals from 5 received indices */
+        /* decode prediction residuals from 5 received indexes */
         lsf1_r[0] = lsf_5_1[ p->amr_prms[0] ][0];
         lsf1_r[1] = lsf_5_1[ p->amr_prms[0] ][1];
         lsf2_r[0] = lsf_5_1[ p->amr_prms[0] ][2];
@@ -436,7 +439,8 @@ static void lsp2poly(int *lsp, int *f)
         f[1] -= lsp[2*i-2]<<10;
     }
 }
-/* FIXME - check rounding sensitivity of F1(z) and F2(z) as the code below is faster but rounds differently
+/* FIXME - check rounding sensitivity of F1(z) and F2(z)
+ * as the code below is faster but rounds differently
 static void lsp2poly(int *lsp, int *f) {
     int i, j;
     f[0] = 1<<24;
@@ -452,7 +456,7 @@ static void lsp2poly(int *lsp, int *f) {
 
 
 /**
- * Convert a vector of lsps to lpc coefficients for a 10th order filter
+ * Convert a vector of lsps to lpc coefficients for a 10th order filter.
  *
  * @param lsp                 vector of lsps
  * @param lpc_coeffs          pointer to a subframe of lpc coefficients
@@ -494,7 +498,7 @@ static void lsp2lpc(int *lsp, int *lpc_coeffs)
 
 
 /**
- * Interpolate lsps for subframes 1 and 3 and convert them to lpc coefficients
+ * Interpolate lsps for subframes 1 and 3 and convert them to lpc coefficients.
  *
  * @param avctx                 pointer to AVCodecContext
  * @param lpc_coeffs            array of lpc coefficients for the four subframes
@@ -531,7 +535,7 @@ static void lpc_interp_13(AVCodecContext *avctx, int **lpc_coeffs)
 
 
 /**
- * Interpolate lsps for subframes 1, 2 and 3 and convert them to lpc coefficients
+ * Interpolate lsps for subframes 1, 2 and 3 and convert them to lpc coefficients.
  *
  * @param avctx                 pointer to AVCodecContext
  * @param lpc_coeffs            array of lpc coefficients for the four subframes
@@ -573,10 +577,10 @@ static void lpc_interp_123(AVCodecContext *avctx, int **lpc_coeffs)
 
 
 /**
- * Decode the adaptive codebook index to the integer and fractional pitch lags for one subframe
- * at 1/3 resolution
+ * Decode the adaptive codebook index to the integer and fractional
+ * pitch lags for one subframe at 1/3 resolution.
  *
- * Description from ref source:
+ * Description from reference source:
  *    The fractional lag in 1st and 3rd subframes is encoded with 8 bits
  *    while that in 2nd and 4th subframes is relatively encoded with 4, 5
  *    and 6 bits depending on the mode.
@@ -593,16 +597,17 @@ static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index,
     AMRContext *p = avctx->priv_data;
     int tmp_lag;
 
-    // FIXME - find out where these constants come from and add appropriate comments
-    // such that people reading the code can understand why these particular values
-    // are used
+    // FIXME: find out where these constants come from and add appropriate
+    // comments such that people reading the code can understand why these
+    // particular values are used
 
     // subframe 1 or 3
     if(p->cur_subframe & 1) {
         if(pitch_index < 197) {
             *pitch_lag_int  = (( (pitch_index + 2)*10923 )>>15) + 19;
             *pitch_lag_frac = pitch_index - *pitch_lag_int*3 + 58;
-            // For the sake of deciphering where this comes from, the above code probably means:
+            // For the sake of deciphering where this comes from,
+            // the above code probably means:
             // *pitch_lag_int  = (pitch_index + 2)/3 + 19;
             // *pitch_lag_frac = (pitch_index + 2)%3 + 56;
         }else {
@@ -639,16 +644,16 @@ static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index,
 
 
 /**
- * Decode the adaptive codebook index to the integer and fractional pitch lag for one subframe
- * at 1/6 resolution
+ * Decode the adaptive codebook index to the integer and fractional
+ * pitch lag for one subframe at 1/6 resolution.
  *
- * Description from ref source:
+ * Description from reference source:
  *    The fractional lag in 1st and 3rd subframes is encoded with 9 bits
  *    while that in 2nd and 4th subframes is relatively encoded with 6 bits.
  *    Note that in relative encoding only 61 values are used. If the
  *    decoder receives 61, 62, or 63 as the relative pitch index, it means
  *    that a transmission error occurred. In this case, the pitch lag from
- *    previous subframe (actually from previous frame) is used.
+ *    the previous subframe (actually from the previous frame) is used.
  *
  * @param avctx              pointer to AVCodecContext
  * @param pitch_index        received adaptive codebook (pitch) index
@@ -662,9 +667,9 @@ static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index,
     AMRContext *p = avctx->priv_data;
     int temp;
 
-    // FIXME - find out where these constants come from and add appropriate comments
-    // such that people reading the code can understand why these particular values
-    // are used
+    // FIXME - find out where these constants come from and add appropriate
+    // comments such that people reading the code can understand why these
+    // particular values are used.
 
     // subframe 1 or 3
     if(p->cur_subframe & 1) {
@@ -694,11 +699,12 @@ static void decode_pitch_lag_6(AVCodecContext *avctx, int pitch_index,
 
 
 /**
- * Find the adaptive codebook (pitch) vector from interpolating the past excitation at the
- * decoded pitch lag with corresponding resolution of 1/3 or 1/6
+ * Find the adaptive codebook (pitch) vector from interpolating the past
+ * excitation at the decoded pitch lag with corresponding resolution
+ * of 1/3 or 1/6.
  *
  * See the specification for details of the underlying mathematics and the used
- * FIR filter
+ * FIR filter.
  *
  * @param avctx              pointer to AVCodecContext
  * @param excitation         pointer to the excitation buffer
@@ -732,7 +738,7 @@ static void decode_pitch_vector(AVCodecContext *avctx, int *excitation)
 
 
 /**
- * Reconstruct the algebraic codebook vector
+ * Reconstruct the algebraic codebook vector.
  *
  * @param fixed_code           algebraic codebook vector
  * @param pulse_position       vector of pulse positions
@@ -755,7 +761,7 @@ static void reconstruct_fixed_code(int *fixed_code, int *pulse_position,
 
 
 /**
- * Decode the algebraic codebook index to pulse position indices for MODE_102
+ * Decode the algebraic codebook index to pulse position indexes for MODE_102.
  *
  * @param fixed_index          positions of the eight pulses (encoded)
  * @param position_index       position index of the eight pulses
@@ -765,7 +771,7 @@ static void fixed2position(int16_t *fixed_index, int *position_index)
 {
     int MSBs, LSBs, MSBs0_24, divMSB;
 
-    // indices from track 1 (7+3 bits)
+    // indexes from track 1 (7+3 bits)
     MSBs= FFMIN(fixed_index[0] >> 3, 124);
     // LSBs = fixed_index[0]%8;
     LSBs = fixed_index[0] & 0x7;
@@ -777,7 +783,7 @@ static void fixed2position(int16_t *fixed_index, int *position_index)
     position_index[4] = (( (MSBs - 25*divMSB)/5 )<<1) + ((LSBs & 0x2)>>1);
     position_index[1] = (divMSB<<1) + (LSBs>>2);
 
-    // indices from track 2 (7+3 bits)
+    // indexes from track 2 (7+3 bits)
     MSBs= FFMIN(fixed_index[1] >> 3, 124);
     // LSBs = fixed_index[1]%8;
     LSBs = fixed_index[1] & 0x7;
@@ -789,7 +795,7 @@ static void fixed2position(int16_t *fixed_index, int *position_index)
     position_index[6] = (( (MSBs - 25*divMSB)/5 )<<1) + ((LSBs & 0x2)>>1);
     position_index[5] = (divMSB<<1) + (LSBs>>2);
 
-    // indices from track 3 (5+2 bits)
+    // indexes from track 3 (5+2 bits)
     MSBs = fixed_index[2] >> 2;
     // LSBs = fixed_index[2]%4;
     LSBs = fixed_index[2] & 0x3;
@@ -806,8 +812,8 @@ static void fixed2position(int16_t *fixed_index, int *position_index)
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_475 and MODE_515
+ * Decode the algebraic codebook index to pulse positions and signs and
+ * construct the algebraic codebook vector for MODE_475 and MODE_515.
  *
  * @param avctx                pointer to AVCodecContext
  * @param sign                 signs of the two pulses
@@ -835,8 +841,8 @@ static void decode_2_pulses_9bits(AVCodecContext *avctx, int sign,
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_59
+ * Decode the algebraic codebook index to pulse positions and signs
+ * and construct the algebraic codebook vector for MODE_59.
  *
  * @param sign                 signs of the two pulses
  * @param fixed_index          positions of the two pulses
@@ -867,8 +873,8 @@ static void decode_2_pulses_11bits(int sign, int fixed_index, int *fixed_code)
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_67
+ * Decode the algebraic codebook index to pulse positions and signs
+ * and construct the algebraic codebook vector for MODE_67.
  *
  * @param sign                 signs of the three pulses
  * @param fixed_index          positions of the three pulses
@@ -897,8 +903,8 @@ static void decode_3_pulses_14bits(int sign, int fixed_index, int *fixed_code)
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_74 and MODE_795
+ * Decode the algebraic codebook index to pulse positions and signs and
+ * construct the algebraic codebook vector for MODE_74 and MODE_795.
  *
  * @param sign                 signs of the four pulses
  * @param fixed_index          positions of the four pulses
@@ -927,8 +933,8 @@ static void decode_4_pulses_17bits(int sign, int fixed_index, int *fixed_code)
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_102
+ * Decode the algebraic codebook index to pulse positions and signs
+ * and construct the algebraic codebook vector for MODE_102.
  *
  * @param fixed_index          positions of the eight pulses
  * @param fixed_code           pointer to the algebraic codebook vector
@@ -961,8 +967,8 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, int *fixed_code)
 
 
 /**
- * Decode the algebraic codebook index to pulse positions and signs and construct
- * the algebraic codebook vector for MODE_122
+ * Decode the algebraic codebook index to pulse positions and signs
+ * and construct the algebraic codebook vector for MODE_122.
  *
  * @param fixed_index          positions of the ten pulses
  * @param fixed_code           pointer to the algebraic codebook vector
@@ -979,7 +985,7 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code)
         // find the position of the ith pulse
         pos1 = dgray[fixed_index[i  ] & 7]*5 + i;
         // find the sign of the ith pulse
-        sign = (fixed_index[i] & 8) ? -4096 : 4096; // +/-1 : 4096 is used here in the ref source
+        sign = (fixed_index[i] & 8) ? -4096 : 4096; // +/-1 : 4096 is used here in the reference source
         // find the position of the i+5th pulse
         pos2 = dgray[fixed_index[i+5] & 7]*5 + i;
         // assign the ith pulse (+/-1) to its appropriate position
@@ -995,10 +1001,10 @@ static void decode_10_pulses_35bits(int16_t *fixed_index, int *fixed_code)
 // general functions FIXME - useful enough to put into libavutil?
 
 /**
- * Comparison function for use with qsort
+ * Comparison function for use with qsort.
  *
- * @param a             First value for comparison
- * @param b             Second value for comparison
+ * @param a             first value for comparison
+ * @param b             second value for comparison
  * @return a-b : the result of the comparison
  */
 
@@ -1008,11 +1014,11 @@ int qsort_compare(const int *a, const int *b)
 }
 
 /**
- * Find the median of some values
+ * Find the median of some values.
  *
  * @param values        pointer to the values of which to find the median
  * @param n             number of values
- * @return Returns the median value
+ * @return the median value
  */
 
 static int median(int *values, int n)
@@ -1030,10 +1036,10 @@ static int median(int *values, int n)
 // gain functions
 
 /**
- * Calculate the pitch gain from previous values
+ * Calculate the pitch gain from previous values.
  *
  * @param state_ptr             pointer to the current state
- * @return Returns the pitch gain
+ * @return the pitch gain
  */
 
 static int find_pitch_gain(AMRDecoderState *state_ptr)
@@ -1052,11 +1058,11 @@ static int find_pitch_gain(AMRDecoderState *state_ptr)
 
 
 /**
- * Decode the pitch gain using the received index
+ * Decode the pitch gain using the received index.
  *
  * @param mode              current mode
- * @param index             quantisation index
- * @return Returns the pitch gain
+ * @param index             quantization index
+ * @return the pitch gain
  */
 
 static int decode_pitch_gain(enum Mode mode, int index)
@@ -1075,7 +1081,7 @@ static int decode_pitch_gain(enum Mode mode, int index)
 
 
 /**
- * Update the pitch gain and limit pitch_gain if the previous frame was bad
+ * Update the pitch gain and limit pitch_gain if the previous frame was bad.
  *
  * @param state_ptr             pointer to the current state
  * @param bad_frame_indicator   bad frame indicator
@@ -1113,7 +1119,7 @@ static void pitch_gain_update(AMRDecoderState *state_ptr,
 
 
 /**
- * Reset the AMR frame parameters
+ * Reset the AMR frame parameters.
  *
  * @param avctx             pointer to the AVCodecContext for AMR
  */
@@ -1139,7 +1145,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data,
     const int16_t *homing_frame;             // pointer to the homing frame
     int homing_frame_size;                   // homing frame size
 
-    // decode the bitstream to amr parameters
+    // decode the bitstream to AMR parameters
     p->cur_frame_mode = decode_bitstream(avctx, buf, buf_size, &speech_mode);
 
     // guess the mode from the previous frame if no data or bad data
@@ -1267,14 +1273,15 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data,
     p->prev_frame_type   =  p->cur_frame_type;
     p->prev_frame_mode   =  p->cur_frame_mode;
 
-    /* To make it easy the stream can only be 16 bits mono, so let's convert it to that */
+    /* To make it easy the stream can only be 16 bits mono,
+     * so let's convert it to that */
     for (i=0 ; i<buf_size; i++)
         outbuffer[i] = (int16_t)p->sample_buffer[i];
 
     /* Report how many samples we got */
     *data_size = buf_size;
 
-    /* Return the amount of bytes consumed if everything was ok */
+    /* Return the amount of bytes consumed if everything was OK */
     return *data_size*sizeof(int16_t);
 }
 
@@ -1288,7 +1295,7 @@ static int amrnb_decode_close(AVCodecContext *avctx)
     av_free(p->amr_prms);
     av_free(p->state);
 
-    /* Return 0 if everything is ok, -1 if not */
+    /* Return 0 if everything is OK, -1 if not */
     return 0;
 }
 

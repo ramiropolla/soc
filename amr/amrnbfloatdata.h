@@ -98,9 +98,9 @@ typedef struct AMROrder {
 
 /**************************** tables *****************************/
 
-// The following order* tables are used to reorder the bitstream into the bit allocation
-// format as in the specification. The bits are grouped into three classes of importance.
-// See the specification, for more information.
+// The following order* tables are used to reorder the bitstream into the bit
+// allocation format as in the specification. The bits are grouped into three
+// classes of importance. See the specification for more information.
 
 static const AMROrder order_MODE_475[95] = {
 { 0, 7}, { 0, 6}, { 0, 5}, { 0, 4}, { 0, 3}, { 0, 2}, { 0, 1}, { 0, 0},
@@ -1814,7 +1814,7 @@ static const uint8_t gray_decode[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
 
 #define MIN_ENERGY -14.0
 
-// scalar quantised pitch gain table for 7.95 and 12.2 kbps modes
+// scalar quantized pitch gain table for 7.95 and 12.2 kbps modes
 static const float qua_gain_pit[16] = {
 0.0             , 0.20001220703125, 0.400146484375  , 0.5             ,
 0.5999755859375 , 0.70001220703125, 0.75            , 0.79998779296875,
@@ -1822,10 +1822,11 @@ static const float qua_gain_pit[16] = {
 1.04998779296875, 1.0999755859375 , 1.1500244140625 , 1.20001220703125,
 };
 
-// scalar quantised fixed gain table for 7.95 and 12.2 kbps modes
-// note: this table was generated from the integer qua_gain_code tables in the
-// ref source that store Q10 qua_ener = 20*log10(g_fac). The table below stores
-// g_fac as a float from printf("%10.6f,\n", powf(10.0, qua_ener/(20.0*(1<<10))))
+// scalar quantized fixed gain table for 7.95 and 12.2 kbps modes
+// NOTE: This table was generated from the integer qua_gain_code tables
+// in the reference source that store Q10 qua_ener = 20*log10(g_fac).
+// The table below stores g_fac as a float from
+// printf("%10.6f,\n", powf(10.0, qua_ener/(20.0*(1<<10)))).
 static const float qua_gain_code[32] = {
  0.077640,  0.100586,  0.130857,  0.170410,  0.204592,  0.235358,  0.270507,  0.311044,
  0.357898,  0.411116,  0.473151,  0.543935,  0.625519,  0.719258,  0.827138,  0.951199,
@@ -1841,7 +1842,7 @@ static const float energy_mean[8] = { 33.0, 33.0, 33.0, 28.75, 30.0, 36.0, 33.0,
 static const float energy_pred_fac[4] = { 0.68, 0.58, 0.34, 0.19 };
 
 // gain table for 4.75 kbps mode
-// first index has even/odd indices for subframes 0,2/1,3
+// first index has even/odd indexes for subframes 0,2/1,3
 // second index is {pitch_gain, fixed_gain_factor}
 static const float gains_MODE_475[512][2] = {
 {0.049561, 0.031250}, {0.033081, 0.034180}, {0.175354, 0.277100}, {0.138306, 0.830566},
