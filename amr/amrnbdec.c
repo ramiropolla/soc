@@ -1308,4 +1308,5 @@ AVCodec amrnb_decoder = {
     .init = amrnb_decode_init,
     .close = amrnb_decode_close,
     .decode = amrnb_decode_frame,
+    .long_name = NULL_IF_CONFIG_SMALL("Adaptive Multi-Rate NarrowBand"),
 };
