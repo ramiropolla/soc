@@ -261,7 +261,7 @@ Index: ffmpeg.c
          }
  
 +#if ENABLE_AVFILTER
-+        if (ist->st->codec->codec_type == CODEC_TYPE_VIDEO) {
++        if (ist->st->codec->codec_type == CODEC_TYPE_VIDEO && ist->input_video_filter) {
 +            // add it to be filtered
 +            av_vsrc_buffer_add_frame(ist->input_video_filter, &picture,
 +                                     ist->pts,
@@ -278,13 +278,13 @@ Index: ffmpeg.c
          }
 -
 +        loop = ist->st->codec->codec_type != CODEC_TYPE_VIDEO ||
-+            avfilter_poll_frame(ist->out_video_filter->inputs[0]);
++            !ist->out_video_filter || avfilter_poll_frame(ist->out_video_filter->inputs[0]);
          /* if output time reached then transcode raw format,
             encode packets and output them */
          if (start_time == 0 || ist->pts >= start_time)
 +#if ENABLE_AVFILTER
 +        while(loop) {
-+            if (ist->st->codec->codec_type == CODEC_TYPE_VIDEO)
++            if (ist->st->codec->codec_type == CODEC_TYPE_VIDEO && ist->out_video_filter)
 +                get_filtered_video_pic(ist->out_video_filter, &ist->picref, &picture, &ist->pts);
 +#endif
              for(i=0;i<nb_ostreams;i++) {
@@ -305,7 +305,7 @@ Index: ffmpeg.c
                      }
                  }
 +                loop =  (ist->st->codec->codec_type == CODEC_TYPE_VIDEO) &&
-+                        avfilter_poll_frame(ist->out_video_filter->inputs[0]);
++                        ist->out_video_filter && avfilter_poll_frame(ist->out_video_filter->inputs[0]);
              }
 +
 +#if ENABLE_AVFILTER
