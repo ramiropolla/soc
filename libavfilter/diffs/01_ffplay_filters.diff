@@ -211,7 +211,7 @@ Index: ffplay.c
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1335,54 +1406,264 @@
+@@ -1335,54 +1406,266 @@
      return queue_picture(is, src_frame, pts);
  }
  
@@ -435,6 +435,8 @@ Index: ffplay.c
 +    }
 +    avfilter_graph_add_filter(graph, filt_src);
 +    avfilter_graph_add_filter(graph, filt_out);
++
++    if(avfilter_graph_check_validity(graph, NULL))           goto the_end;
 +    if(avfilter_graph_config_formats(graph))                 goto the_end;
 +    if(avfilter_config_links(filt_out))                      goto the_end;
 +
@@ -507,7 +509,7 @@ Index: ffplay.c
      av_free(frame);
      return 0;
  }
-@@ -2168,6 +2449,12 @@
+@@ -2168,6 +2451,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -520,7 +522,7 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2505,6 +2792,9 @@
+@@ -2505,6 +2794,9 @@
      { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
      { "sync", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
@@ -530,7 +532,7 @@ Index: ffplay.c
      { "default", OPT_FUNC2 | HAS_ARG | OPT_AUDIO | OPT_VIDEO | OPT_EXPERT, {(void*)opt_default}, "generic catch all option", "" },
      { NULL, },
  };
-@@ -2553,7 +2843,9 @@
+@@ -2553,7 +2845,9 @@
          avctx_opts[i]= avcodec_alloc_context2(i);
      }
      avformat_opts = av_alloc_format_context();
