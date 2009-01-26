@@ -232,7 +232,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     ff_psy_init(&s->psy, avctx, 2, sizes, lengths);
     s->psypp = ff_psy_preprocess_init(avctx);
 
-#ifndef CONFIG_HARDCODED_TABLES
+#if !CONFIG_HARDCODED_TABLES
     for (i = 0; i < 316; i++)
         ff_aac_pow2sf_tab[i] = pow(2, (i - 200)/4.);
 #endif /* CONFIG_HARDCODED_TABLES */
