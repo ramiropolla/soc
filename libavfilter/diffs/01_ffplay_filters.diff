@@ -1,12 +1,12 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 16562)
+--- ffplay.c	(revision 16809)
 +++ ffplay.c	(working copy)
 @@ -29,6 +29,12 @@
  #include "libavcodec/audioconvert.h"
  #include "libavcodec/opt.h"
  
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +# include "libavfilter/avfilter.h"
 +# include "libavfilter/avfiltergraph.h"
 +# include "libavfilter/graphparser.h"
@@ -19,7 +19,7 @@ Index: ffplay.c
  /* NOTE: the size must be big enough to compensate the hardware audio buffersize size */
  #define SAMPLE_ARRAY_SIZE (2*65536)
  
-+#if !ENABLE_AVFILTER
++#if !CONFIG_AVFILTER
  static int sws_flags = SWS_BICUBIC;
 +#endif
  
@@ -32,7 +32,7 @@ Index: ffplay.c
 +    enum PixelFormat pix_fmt;
      int allocated;
 +
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +    AVFilterPicRef *picref;
 +#endif
  } VideoPicture;
@@ -43,7 +43,7 @@ Index: ffplay.c
      char filename[1024];
      int width, height, xleft, ytop;
 +
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +    AVFilterContext *out_video_filter;          ///<the last filter in the video chain
 +#endif
  } VideoState;
@@ -53,7 +53,7 @@ Index: ffplay.c
  static int error_recognition = FF_ER_CAREFUL;
  static int error_concealment = 3;
  static int decoder_reorder_pts= 0;
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +static char *vfilters = NULL;
 +#endif
  
@@ -63,7 +63,7 @@ Index: ffplay.c
  
      vp = &is->pictq[is->pictq_rindex];
      if (vp->bmp) {
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +         if (vp->picref->pixel_aspect.num == 0)
 +             aspect_ratio = 0;
 +         else
@@ -89,7 +89,7 @@ Index: ffplay.c
      } else if(!is_full_screen && screen_width){
          w = screen_width;
          h = screen_height;
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +    }else if (is->out_video_filter && is->out_video_filter->inputs[0]){
 +        w = is->out_video_filter->inputs[0]->w;
 +        h = is->out_video_filter->inputs[0]->h;
@@ -105,7 +105,7 @@ Index: ffplay.c
      if (vp->bmp)
          SDL_FreeYUVOverlay(vp->bmp);
  
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +    if (vp->picref)
 +        avfilter_unref_pic(vp->picref);
 +    vp->picref = NULL;
@@ -140,7 +140,7 @@ Index: ffplay.c
      VideoPicture *vp;
      int dst_pix_fmt;
      AVPicture pict;
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +    AVPicture pict_src;
 +#else
      static struct SwsContext *img_convert_ctx;
@@ -153,7 +153,7 @@ Index: ffplay.c
  
      /* alloc or resize hardware picture buffer */
      if (!vp->bmp ||
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +        vp->width  != is->out_video_filter->inputs[0]->w ||
 +        vp->height != is->out_video_filter->inputs[0]->h) {
 +#else
@@ -167,7 +167,7 @@ Index: ffplay.c
  
      /* if the frame is not skipped, then display it */
      if (vp->bmp) {
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +        if(vp->picref)
 +            avfilter_unref_pic(vp->picref);
 +        vp->picref = src_frame->opaque;
@@ -181,7 +181,7 @@ Index: ffplay.c
          pict.linesize[1] = vp->bmp->pitches[2];
          pict.linesize[2] = vp->bmp->pitches[1];
 +
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +        pict_src.data[0] = src_frame->data[0];
 +        pict_src.data[1] = src_frame->data[1];
 +        pict_src.data[2] = src_frame->data[2];
@@ -253,7 +253,7 @@ Index: ffplay.c
 +    return 0;
 +}
 +
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +typedef struct {
 +    VideoState *is;
 +    AVFrame *frame;
@@ -388,7 +388,7 @@ Index: ffplay.c
 +                                  { .name = NULL }},
 +    .outputs   = (AVFilterPad[]) {{ .name = NULL }},
 +};
-+#endif  /* ENABLE_AVFILTER */
++#endif  /* CONFIG_AVFILTER */
 +
  static int video_thread(void *arg)
  {
@@ -401,7 +401,7 @@ Index: ffplay.c
 +    int ret;
  
 +
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +    AVFilterContext *filt_src = NULL, *filt_out = NULL;
 +    AVFilterGraph *graph = av_mallocz(sizeof(AVFilterGraph));
 +
@@ -443,7 +443,7 @@ Index: ffplay.c
 +
      for(;;) {
 -        while (is->paused && !is->videoq.abort_request) {
-+#if !ENABLE_AVFILTER
++#if !CONFIG_AVFILTER
 +        AVPacket pkt;
 +#endif
 +        while (is->paused && !is->videoq.abort_request)
@@ -451,7 +451,7 @@ Index: ffplay.c
 -        }
 -        if (packet_queue_get(&is->videoq, pkt, 1) < 0)
 -            break;
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +        ret = get_filtered_video_frame(filt_out, frame, &pts_int);
 +#else
 +        ret = get_video_frame(is, frame, &pts_int, &pkt);
@@ -474,7 +474,7 @@ Index: ffplay.c
 +        pts  = pts_int;
 +        pts /= AV_TIME_BASE;
 +        ret = output_picture2(is, frame, pts);
-+#if !ENABLE_AVFILTER
++#if !CONFIG_AVFILTER
 +        av_free_packet(&pkt);
 +#endif
 +        if (ret < 0)
@@ -501,17 +501,17 @@ Index: ffplay.c
                  stream_pause(cur_stream);
      }
   the_end:
-+ #if ENABLE_AVFILTER
++ #if CONFIG_AVFILTER
 +    avfilter_destroy_graph(graph);
 + #endif
      av_free(frame);
      return 0;
  }
-@@ -2170,6 +2451,12 @@
+@@ -2168,6 +2449,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +        if (vp->picref) {
 +            avfilter_unref_pic(vp->picref);
 +            vp->picref = NULL;
@@ -520,21 +520,21 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2507,6 +2794,9 @@
+@@ -2505,6 +2792,9 @@
      { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
      { "sync", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +    { "vfilters", OPT_STRING | HAS_ARG, {(void*)&vfilters}, "video filters", "filter list" },
 +#endif
      { "default", OPT_FUNC2 | HAS_ARG | OPT_AUDIO | OPT_VIDEO | OPT_EXPERT, {(void*)opt_default}, "generic catch all option", "" },
      { NULL, },
  };
-@@ -2555,7 +2845,9 @@
+@@ -2553,7 +2843,9 @@
          avctx_opts[i]= avcodec_alloc_context2(i);
      }
      avformat_opts = av_alloc_format_context();
-+#if !ENABLE_AVFILTER
++#if !CONFIG_AVFILTER
      sws_opts = sws_getContext(16,16,0, 16,16,0, sws_flags, NULL,NULL,NULL);
 +#endif
  

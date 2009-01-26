@@ -1,26 +1,26 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 16562)
+--- ffmpeg.c	(revision 16809)
 +++ ffmpeg.c	(working copy)
 @@ -41,6 +41,13 @@
  #include "libavutil/avstring.h"
  #include "libavformat/os_support.h"
  
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +# include "libavfilter/avfilter.h"
 +# include "libavfilter/avfiltergraph.h"
 +# include "libavfilter/graphparser.h"
 +# include "libavfilter/vsrc_buffer.h"
 +#endif
 +
- #ifdef HAVE_SYS_RESOURCE_H
+ #if HAVE_SYS_RESOURCE_H
  #include <sys/types.h>
  #include <sys/resource.h>
 @@ -148,6 +155,9 @@
  static int loop_input = 0;
  static int loop_output = AVFMT_NOOUTPUTLOOP;
  static int qp_hist = 0;
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +static char *vfilters = NULL;
 +#endif
  
@@ -30,7 +30,7 @@ Index: ffmpeg.c
                                  is not defined */
      int64_t       pts;       /* current pts */
      int is_start;            /* is 1 at the start and after a discontinuity */
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +    AVFilterContext *out_video_filter;
 +    AVFilterContext *input_video_filter;
 +    AVFrame *filter_frame;
@@ -44,7 +44,7 @@ Index: ffmpeg.c
  static struct termios oldtty;
  #endif
  
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +typedef struct {
 +    int pix_fmt;
 +} FilterOutPriv;
@@ -210,16 +210,16 @@ Index: ffmpeg.c
 +
 +    return 0;
 +}
-+#endif /* ENABLE_AVFILTER */
++#endif /* CONFIG_AVFILTER */
 +
  static void term_exit(void)
  {
- #ifdef HAVE_TERMIOS_H
+ #if HAVE_TERMIOS_H
 @@ -886,6 +1071,9 @@
      if (nb_frames <= 0)
          return;
  
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +    formatted_picture = in_picture;
 +#else
      if (ost->video_crop) {
@@ -237,7 +237,7 @@ Index: ffmpeg.c
          }
      }
  
-+#if !ENABLE_AVFILTER
++#if !CONFIG_AVFILTER
      if (ost->video_resample) {
          padding_src = NULL;
          final_picture = &ost->pict_tmp;
@@ -260,7 +260,7 @@ Index: ffmpeg.c
                                      &buffer_to_free);
          }
  
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +        if (ist->st->codec->codec_type == CODEC_TYPE_VIDEO && ist->input_video_filter) {
 +            // add it to be filtered
 +            av_vsrc_buffer_add_frame(ist->input_video_filter, &picture,
@@ -282,7 +282,7 @@ Index: ffmpeg.c
          /* if output time reached then transcode raw format,
             encode packets and output them */
          if (start_time == 0 || ist->pts >= start_time)
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +        while(loop) {
 +            if (ist->st->codec->codec_type == CODEC_TYPE_VIDEO && ist->out_video_filter)
 +                get_filtered_video_pic(ist->out_video_filter, &ist->picref, &picture, &ist->pts);
@@ -294,7 +294,7 @@ Index: ffmpeg.c
                              do_audio_out(os, ost, ist, data_buf, data_size);
                              break;
                          case CODEC_TYPE_VIDEO:
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +                            ost->st->codec->sample_aspect_ratio = ist->picref->pixel_aspect;
 +#endif
                              do_video_out(os, ost, ist, &picture, &frame_size);
@@ -308,7 +308,7 @@ Index: ffmpeg.c
 +                        ist->out_video_filter && avfilter_poll_frame(ist->out_video_filter->inputs[0]);
              }
 +
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +            if(ist->picref)
 +                avfilter_unref_pic(ist->picref);
 +        }
@@ -316,11 +316,11 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1840,10 +2058,21 @@
+@@ -1842,10 +2060,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          av_exit(1);
                      }
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +                    ost->resample_height = icodec->height;
 +#else
                      ost->resample_height = icodec->height - (frame_topBand + frame_bottomBand);
@@ -329,7 +329,7 @@ Index: ffmpeg.c
                  ost->encoding_needed = 1;
                  ist->decoding_needed = 1;
 +
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +                if (configure_filters(ist, ost)) {
 +                    fprintf(stderr, "Error opening filters!\n");
 +                    exit(1);
@@ -338,11 +338,11 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3831,6 +4060,9 @@
- #ifdef CONFIG_VHOOK
+@@ -3835,6 +4064,9 @@
+ #if CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
-+#if ENABLE_AVFILTER
++#if CONFIG_AVFILTER
 +    { "vfilters", OPT_STRING | HAS_ARG, {(void*)&vfilters}, "video filters", "filter list" },
 +#endif
      { "intra_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_intra_matrix}, "specify intra matrix coeffs", "matrix" },
