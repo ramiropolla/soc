@@ -46,7 +46,6 @@
 #define MAX_ELEM_ID 16
 
 #define TNS_MAX_ORDER 20
-#define PNS_MEAN_ENERGY 3719550720.0f // sqrt(3.0) * 1<<31
 
 enum AudioObjectType {
     AOT_NULL,
@@ -133,6 +132,20 @@ enum CouplingPoint {
     AFTER_IMDCT = 3,
 };
 
+/**
+ * Predictor State
+ */
+typedef struct {
+    float cor0;
+    float cor1;
+    float var0;
+    float var1;
+    float r0;
+    float r1;
+} PredictorState;
+
+#define MAX_PREDICTORS 672
+
 #define SCALE_DIV_512    36    ///< scalefactor difference that corresponds to scale difference in 512 times
 #define SCALE_ONE_POS   140    ///< scalefactor index that corresponds to scale=1.0
 #define SCALE_MAX_POS   255    ///< scalefactor index maximum value
@@ -153,6 +166,10 @@ typedef struct {
     int num_swb;                ///< number of scalefactor window bands
     int num_windows;
     int tns_max_bands;
+    int predictor_present;
+    int predictor_initialized;
+    int predictor_reset_group;
+    uint8_t prediction_used[41];
 } IndividualChannelStream;
 
 /**
@@ -198,8 +215,8 @@ typedef struct {
     int num_coupled;       ///< number of target elements
     enum RawDataBlockType type[8];   ///< Type of channel element to be coupled - SCE or CPE.
     int id_select[8];      ///< element id
-    int ch_select[8];      /**< [0] shared list of gains; [1] list of gains for left channel;
-                            *   [2] list of gains for right channel; [3] lists of gains for both channels
+    int ch_select[8];      /**< [0] shared list of gains; [1] list of gains for right channel;
+                            *   [2] list of gains for left channel; [3] lists of gains for both channels
                             */
     float gain[16][120];
 } ChannelCoupling;
@@ -220,6 +237,7 @@ typedef struct {
     DECLARE_ALIGNED_16(float, saved[1024]);   ///< overlap
     DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
     DECLARE_ALIGNED_16(int,   icoefs[1024]);  ///< integer coefficients for encoding
+    PredictorState predictor_state[MAX_PREDICTORS];
 } SingleChannelElement;
 
 /**
@@ -284,6 +302,7 @@ typedef struct {
     int sf_offset;                                    ///< offset into pow2sf_tab as appropriate for dsp.float_to_int16
     /** @} */
 
+    DECLARE_ALIGNED(16, float, temp[128]);
 } AACContext;
 
 #endif /* AVCODEC_AAC_H */
