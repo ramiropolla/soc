@@ -1074,43 +1074,22 @@ static void wma_window(WMA3DecodeContext *s)
     for(i=0;i<s->channels_for_cur_subframe;i++){
         int c = s->channel_indexes_for_cur_subframe[i];
         int j = s->channel[c].cur_subframe;
-        int x;
-        // FIXME: use dsp.vector_fmul_window
         float* start;
-        float* end;
         float* window;
         int prev_block_len = s->channel[c].prev_block_len;
         int block_len = s->channel[c].subframe_len[j];
-        int len;
-        int winlen;
+        int winlen = prev_block_len;
         start = &s->channel[c].out[s->samples_per_frame/2 + s->channel[c].subframe_offset[j] - prev_block_len /2 ];
-        end = &s->channel[c].out[s->samples_per_frame/2 + s->channel[c].subframe_offset[j] + block_len /2 - 1];
 
         if(block_len <= prev_block_len){
             start += (prev_block_len - block_len)/2;
-            len = block_len/2;
             winlen = block_len;
-        }else{
-            end -= (block_len - prev_block_len)/2;
-            len = prev_block_len /2;
-            winlen = prev_block_len;
         }
 
-//    float* rs = &s->channel[c].out[s->samples_per_frame/2 + s->channel[c].subframe_offset[i]];
-//    printf("Dstart %i %i end %i win %i prev %i\n",s->frame_num+1, start - rs,end -rs,winlen,prev_block_len);
-
-        // FIXME: untangle the windowing so DSP functions can be used
         window = s->windows[av_log2(winlen)-BLOCK_MIN_BITS];
-        for(x=0;x<len;x++){
-            float ts = *start;
-            float te = *end;
-            float sin_v = window[x];
-            float cos_v = window[winlen - x -1];
-            *start = cos_v * ts - sin_v * te;
-            *end = cos_v * te   + sin_v * ts;
-            ++start;
-            --end;
-        }
+
+        s->dsp.vector_fmul_window(start, start, start + winlen/2, window, 0, winlen/2);
+
         s->channel[c].prev_block_len = block_len;
     }
 }
