@@ -1301,6 +1301,13 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
             for(b=0;b<subframe_len;b++)
                 dst[b] /= subframe_len / 2;     // FIXME: try to remove this scaling
         }
+    }else{
+        for(i=0;i<s->channels_for_cur_subframe;i++){
+            int c = s->channel_indexes_for_cur_subframe[i];
+            float* dst;
+            dst = &s->channel[c].out[s->samples_per_frame/2  + s->channel[c].subframe_offset[s->channel[c].cur_subframe]];
+            memset(dst,0,subframe_len * sizeof(float));
+        }
     }
 
     wma_window(s);
