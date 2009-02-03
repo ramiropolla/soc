@@ -1110,7 +1110,6 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
     */
     for(i=0;i<s->nb_channels;i++){
         s->channel[i].grouped = 0;
-        memset(s->channel[i].coeffs,0,sizeof(s->channel[0].coeffs));
         if(offset > s->channel[i].decoded_samples){
             offset = s->channel[i].decoded_samples;
             subframe_len = s->channel[i].subframe_len[s->channel[i].cur_subframe];
@@ -1155,6 +1154,8 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
           s->rgiBarkIndex = &s->sfb_offsets[MAX_BANDS * frame_offset];
           s->subwoofer_cutoff = s->subwoofer_cutoffs[frame_offset];
         }
+        s->channel[c].coeffs = &s->channel[c].out[s->samples_per_frame/2  + offset];
+        memset(s->channel[c].coeffs,0,sizeof(float) * subframe_len);
 
         /** init some things if this is the first subframe */
         if(!s->channel[c].cur_subframe){
@@ -1297,9 +1298,9 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
             }
 
             dst = &s->channel[c].out[s->samples_per_frame/2  + s->channel[c].subframe_offset[s->channel[c].cur_subframe]];
-            ff_imdct_half(&s->mdct_ctx[av_log2(subframe_len)-BLOCK_MIN_BITS], dst, s->channel[c].coeffs); // DCTIV with reverse
+            ff_imdct_half(&s->mdct_ctx[av_log2(subframe_len)-BLOCK_MIN_BITS], s->tmp, s->channel[c].coeffs); // DCTIV with reverse
             for(b=0;b<subframe_len;b++)
-                dst[b] /= subframe_len / 2;     // FIXME: try to remove this scaling
+                dst[b] = s->tmp[b] / (subframe_len / 2);     // FIXME: try to remove this scaling
         }
     }else{
         for(i=0;i<s->channels_for_cur_subframe;i++){

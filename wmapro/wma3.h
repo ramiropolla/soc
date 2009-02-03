@@ -57,7 +57,7 @@ typedef struct {
     int      scale_factors[MAX_BANDS];           //< scale factor values
     int      resampled_scale_factors[MAX_BANDS]; //< scale factors from a previous block
     int      scale_factor_block_len;             //< sf reference block length
-    DECLARE_ALIGNED_16(float, coeffs[BLOCK_MAX_SIZE]); //< decode buffer
+    float*   coeffs;                             //< pointer to the decode buffer
     DECLARE_ALIGNED_16(float, out[2*BLOCK_MAX_SIZE]);  //< output buffer
 } WMA3ChannelCtx;
 
@@ -83,6 +83,7 @@ typedef struct WMA3DecodeContext {
     AVCodecContext*  avctx;                    //< codec context for av_log
     DSPContext       dsp;
     MDCTContext      mdct_ctx[BLOCK_NB_SIZES]; //< MDCT context per block size
+    DECLARE_ALIGNED_16(float, tmp[BLOCK_MAX_SIZE]); //< imdct working buffer
     float*           windows[BLOCK_NB_SIZES];  //< window per block size
     VLC              sf_vlc;                   //< scale factor DPCM vlc
     VLC              sf_rl_vlc;                //< scale factor run length vlc
