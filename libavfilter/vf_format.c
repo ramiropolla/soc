@@ -30,7 +30,7 @@ typedef struct
     uint8_t formats[PIX_FMT_NB];
 } FormatContext;
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     FormatContext *format = ctx->priv;
     const char *cur, *sep;

@@ -28,7 +28,7 @@ typedef struct {
     int vshift;     ///< chroma subsampling shift
 } SliceContext;
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     SliceContext *slice = ctx->priv;
 

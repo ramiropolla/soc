@@ -38,7 +38,7 @@ typedef struct
     int sliceY;                 ///< top of current output slice
 } ScaleContext;
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     ScaleContext *scale = ctx->priv;
 
@@ -59,7 +59,7 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
     return 0;
 }
 
-static void uninit(AVFilterContext *ctx)
+static av_cold void uninit(AVFilterContext *ctx)
 {
     ScaleContext *scale = ctx->priv;
     if(scale->sws)

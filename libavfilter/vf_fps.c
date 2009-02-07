@@ -31,7 +31,7 @@ typedef struct {
     int has_frame;
 } FPSContext;
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     AVRational default_rate = (AVRational) {25, 1};
     FPSContext *fps = ctx->priv;
@@ -48,7 +48,7 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
     return 0;
 }
 
-static void uninit(AVFilterContext *ctx)
+static av_cold void uninit(AVFilterContext *ctx)
 {
     FPSContext *fps = ctx->priv;
     if(fps->pic) avfilter_unref_pic(fps->pic);

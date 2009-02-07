@@ -141,7 +141,7 @@ int movie_init(AVFilterContext *ctx)
     return 0;
 }
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     MovieContext *mv = ctx->priv;
 
@@ -253,7 +253,7 @@ static int request_frame(AVFilterLink *link)
     return 0;
 }
 
-static void uninit(AVFilterContext *ctx)
+static av_cold void uninit(AVFilterContext *ctx)
 {
     MovieContext *mv = ctx->priv;
 

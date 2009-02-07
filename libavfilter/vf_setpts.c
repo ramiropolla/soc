@@ -67,7 +67,7 @@ typedef struct {
     double const_values[POV_NULL+1];
 } SetPTSContext;
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     SetPTSContext *setpts = ctx->priv;
     const char *error;
@@ -109,7 +109,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     avfilter_start_frame(link->dst->outputs[0], ref2);
 }
 
-static void uninit(AVFilterContext *ctx)
+static av_cold void uninit(AVFilterContext *ctx)
 {
     SetPTSContext *setpts = ctx->priv;
     ff_eval_free(setpts->expr);

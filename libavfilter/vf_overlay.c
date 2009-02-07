@@ -34,7 +34,7 @@ typedef struct {
     int hsub, vsub;             //< chroma subsampling
 } OverlayContext;
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     OverlayContext *over = ctx->priv;
 
@@ -46,7 +46,7 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
     return 0;
 }
 
-static void uninit(AVFilterContext *ctx)
+static av_cold void uninit(AVFilterContext *ctx)
 {
     OverlayContext *over = ctx->priv;
     int i, j;

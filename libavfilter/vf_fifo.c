@@ -33,7 +33,7 @@ typedef struct
     BufPic *last;   ///< last buffered picture
 } BufferContext;
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     BufferContext *buf = ctx->priv;
     buf->last = &buf->root;
@@ -41,7 +41,7 @@ static int init(AVFilterContext *ctx, const char *args, void *opaque)
     return 0;
 }
 
-static void uninit(AVFilterContext *ctx)
+static av_cold void uninit(AVFilterContext *ctx)
 {
     BufferContext *buf = ctx->priv;
     BufPic *pic, *tmp;

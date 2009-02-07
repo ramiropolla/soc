@@ -32,7 +32,7 @@ typedef struct
     int hsub, vsub;         //< chroma subsampling
 } CropContext;
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     CropContext *crop = ctx->priv;
 

@@ -79,7 +79,7 @@ static box_color get_color(char *color)
     return tmp;
 }
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     BoxContext *context= ctx->priv;
     char tmp[1024];

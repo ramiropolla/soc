@@ -41,7 +41,7 @@ typedef struct
     int backcolor[3];
 } RotContext;
 
-static int init(AVFilterContext *ctx, const char *args, void *opaque)
+static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     RotContext *rot = ctx->priv;
 
