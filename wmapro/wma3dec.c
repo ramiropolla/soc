@@ -797,7 +797,6 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
 
     av_log(s->avctx,AV_LOG_DEBUG,"decode coefficients for channel %i\n",c);
 
-    s->esc_len = av_log2(s->subframe_len -1) +1;
     vlctable = get_bits(s->getbit, 1);
     vlc = &s->coef_vlc[vlctable];
     vlcmax = s->coef_max[vlctable];
@@ -1175,6 +1174,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     }
 
     s->subframe_len = subframe_len;
+    s->esc_len = av_log2(s->subframe_len - 1) + 1;
 
     /** skip extended header if any */
     if(get_bits(s->getbit,1)){
