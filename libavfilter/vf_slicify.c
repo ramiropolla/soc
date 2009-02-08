@@ -83,6 +83,8 @@ AVFilter avfilter_vf_slicify =
 
     .init      = init,
 
+    .priv_size = sizeof(SliceContext),
+
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
