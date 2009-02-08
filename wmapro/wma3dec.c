@@ -334,7 +334,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
             cutoff = block_size;
         s->subwoofer_cutoffs[i] = cutoff;
     }
-    s->subwoofer_cutoff = s->subwoofer_cutoffs[0];
+    s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[0];
 
 
     /** set up decorrelation matrixes */
@@ -703,18 +703,18 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s, GetBitContext* gb)
             if(chgroup->nb_channels <= 1 ||  ((chgroup->no_rotation != 1 || chgroup->transform == 2) && chgroup->no_rotation)){
                 // done
                 int i;
-                for(i=0;i<s->cValidBarkBand;i++)
+                for(i=0;i<s->num_bands;i++)
                     chgroup->transform_band[i] = 1;
             }else{
                 if(get_bits(gb,1) == 0){
                     int i;
                     // transform works on individual scale factor bands
-                    for(i=0;i< s->cValidBarkBand;i++){
+                    for(i=0;i< s->num_bands;i++){
                         chgroup->transform_band[i] = get_bits(gb,1);
                     }
                 }else{
                     int i;
-                    for(i=0;i<s->cValidBarkBand;i++)
+                    for(i=0;i<s->num_bands;i++)
                         chgroup->transform_band[i] = 1;
                 }
             }
@@ -880,7 +880,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
         /** resample scale factors for the new block size */
         if(s->channel[c].reuse_sf){
             int b;
-            for(b=0;b< s->cValidBarkBand;b++){
+            for(b=0;b< s->num_bands;b++){
                 int idx0 = av_log2(s->samples_per_frame/s->subframe_len);
                 int idx1 = av_log2(s->samples_per_frame/s->channel[c].scale_factor_block_len);
                 int bidx = s->sf_offsets[s->num_possible_block_sizes * MAX_BANDS  * idx0
@@ -888,7 +888,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
                 s->channel[c].resampled_scale_factors[b] = s->channel[c].scale_factors[bidx];
             }
             s->channel[c].max_scale_factor = s->channel[c].resampled_scale_factors[0];
-            for(b=1;b<s->cValidBarkBand;b++){
+            for(b=1;b<s->num_bands;b++){
                 if(s->channel[c].resampled_scale_factors[b] > s->channel[c].max_scale_factor)
                     s->channel[c].max_scale_factor = s->channel[c].resampled_scale_factors[b];
             }
@@ -905,7 +905,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
             if(!s->channel[c].reuse_sf){
                 int i;
                 s->channel[c].scale_factor_step = get_bits(gb,2) + 1;
-                for(i=0;i<s->cValidBarkBand;i++){
+                for(i=0;i<s->num_bands;i++){
                     int val = get_vlc2(gb, s->sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS)); // DPCM-coded
                     if(!i)
                         s->channel[c].scale_factors[i] = 45 / s->channel[c].scale_factor_step + val - 60;
@@ -915,9 +915,9 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
             }else{     // rl-coded
                 int i;
                 memcpy(s->channel[c].scale_factors,s->channel[c].resampled_scale_factors,
-                       4 * s->cValidBarkBand);
+                       4 * s->num_bands);
 
-                for(i=0;i<s->cValidBarkBand;i++){
+                for(i=0;i<s->num_bands;i++){
                     int idx;
                     short skip;
                     short level_mask;
@@ -939,7 +939,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
                     }
 
                     i += skip;
-                    if(i >= s->cValidBarkBand){
+                    if(i >= s->num_bands){
                         av_log(s->avctx,AV_LOG_ERROR,"invalid scale factor coding\n");
                         return 0;
                     }else
@@ -949,7 +949,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s,GetBitContext* gb)
 
             s->channel[c].reuse_sf = 1;
             s->channel[c].max_scale_factor = s->channel[c].scale_factors[0];
-            for(b=1;b<s->cValidBarkBand;b++){
+            for(b=1;b<s->num_bands;b++){
                 if(s->channel[c].max_scale_factor < s->channel[c].scale_factors[b])
                     s->channel[c].max_scale_factor = s->channel[c].scale_factors[b];
             }
@@ -1010,17 +1010,17 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
             (s->chgroup[i].no_rotation == 1) &&
             (s->chgroup[i].transform == 1)){
             int b;
-            for(b = 0; b < s->cValidBarkBand;b++){
+            for(b = 0; b < s->num_bands;b++){
                 int y;
                 if(s->chgroup[i].transform_band[b] == 1){ // M/S stereo
-                    for(y=s->rgiBarkIndex[b];y<FFMIN(s->rgiBarkIndex[b+1], s->subframe_len);y++){
+                    for(y=s->cur_sfb_offsets[b];y<FFMIN(s->cur_sfb_offsets[b+1], s->subframe_len);y++){
                         float v1 = s->channel[0].coeffs[y];
                         float v2 = s->channel[1].coeffs[y];
                         s->channel[0].coeffs[y] = v1 - v2;
                         s->channel[1].coeffs[y] = v1 + v2;
                     }
                 }else{
-                    for(y=s->rgiBarkIndex[b];y<FFMIN(s->rgiBarkIndex[b+1], s->subframe_len);y++){
+                    for(y=s->cur_sfb_offsets[b];y<FFMIN(s->cur_sfb_offsets[b+1], s->subframe_len);y++){
                         s->channel[0].coeffs[y] *= 362;
                         s->channel[0].coeffs[y] /= 256;
                         s->channel[1].coeffs[y] *= 362;
@@ -1045,11 +1045,11 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                 }
             }
 
-            for(b = 0; b < s->cValidBarkBand;b++){
+            for(b = 0; b < s->num_bands;b++){
                 int y;
                 if(s->chgroup[i].transform_band[b] == 1){
                     // multiply values with decorrelation_matrix
-                    for(y=s->rgiBarkIndex[b];y<FFMIN(s->rgiBarkIndex[b+1], s->subframe_len);y++){
+                    for(y=s->cur_sfb_offsets[b];y<FFMIN(s->cur_sfb_offsets[b+1], s->subframe_len);y++){
                         float* matrix = s->chgroup[i].decorrelation_matrix;
                         int m;
 
@@ -1066,7 +1066,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                     }
                 }else{      /** skip band */
                     for(y=0;y<s->chgroup[i].nb_channels;y++)
-                        ch_data[y] += s->rgiBarkIndex[b+1] -  s->rgiBarkIndex[b];
+                        ch_data[y] += s->cur_sfb_offsets[b+1] -  s->cur_sfb_offsets[b];
                 }
             }
         }
@@ -1150,14 +1150,14 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
         int c = s->channel_indexes_for_cur_subframe[i];
 
         if(s->channel[c].num_subframes <= 1){
-          s->cValidBarkBand = s->num_sfb[0];
-          s->rgiBarkIndex = s->sfb_offsets;
-          s->subwoofer_cutoff = s->subwoofer_cutoffs[0];
+          s->num_bands = s->num_sfb[0];
+          s->cur_sfb_offsets = s->sfb_offsets;
+          s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[0];
         }else{
           int frame_offset = av_log2(s->samples_per_frame/s->channel[c].subframe_len[s->channel[c].cur_subframe]);
-          s->cValidBarkBand = s->num_sfb[frame_offset];
-          s->rgiBarkIndex = &s->sfb_offsets[MAX_BANDS * frame_offset];
-          s->subwoofer_cutoff = s->subwoofer_cutoffs[frame_offset];
+          s->num_bands = s->num_sfb[frame_offset];
+          s->cur_sfb_offsets = &s->sfb_offsets[MAX_BANDS * frame_offset];
+          s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[frame_offset];
         }
         s->channel[c].coeffs = &s->channel[c].out[s->samples_per_frame/2  + offset];
         memset(s->channel[c].coeffs,0,sizeof(float) * subframe_len);
@@ -1280,12 +1280,12 @@ static int wma_decode_subframe(WMA3DecodeContext *s,GetBitContext* gb)
             int b;
             float* dst;
             if(c == s->lfe_channel)
-                memset(&s->channel[c].coeffs[s->subwoofer_cutoff],0,4 * (subframe_len - s->subwoofer_cutoff));
+                memset(&s->channel[c].coeffs[s->cur_subwoofer_cutoff],0,4 * (subframe_len - s->cur_subwoofer_cutoff));
 
             /** inverse quantization */
-            for(b=0;b<s->cValidBarkBand;b++){
-                int start = s->rgiBarkIndex[b];
-                int end = s->rgiBarkIndex[b+1];
+            for(b=0;b<s->num_bands;b++){
+                int start = s->cur_sfb_offsets[b];
+                int end = s->cur_sfb_offsets[b+1];
                 int min;
                 float quant;
                 if(end > s->subframe_len)
