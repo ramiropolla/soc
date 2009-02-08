@@ -133,8 +133,24 @@ static void draw_slice(AVFilterLink *link, int y, int h)
 {
     ScaleContext *scale = link->dst->priv;
     int outH;
+    int vsub, hsub;
+    uint8_t *data[4];
 
-    outH = sws_scale(scale->sws, link->cur_pic->data, link->cur_pic->linesize,
+    avcodec_get_chroma_sub_sample(link->format, &hsub, &vsub);
+
+    data[0] = link->cur_pic->data[0] + y * link->cur_pic->linesize[0];
+    data[3] = link->cur_pic->data[3] + y * link->cur_pic->linesize[3];
+
+    if (link->cur_pic->data[2]) {
+        data[1] = link->cur_pic->data[1] + (y>>vsub)*link->cur_pic->linesize[1];
+        data[2] = link->cur_pic->data[2] + (y>>vsub)*link->cur_pic->linesize[2];
+    } else {
+        // Probably a paletted format
+        data[1] = link->cur_pic->data[1];
+        data[2] = link->cur_pic->data[2];
+    }
+
+    outH = sws_scale(scale->sws, data, link->cur_pic->linesize,
               y, h, link->dst->outputs[0]->outpic->data,
               link->dst->outputs[0]->outpic->linesize);
     avfilter_draw_slice(link->dst->outputs[0], scale->sliceY, outH);
