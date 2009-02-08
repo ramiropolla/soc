@@ -21,7 +21,7 @@
  */
 
 /**
- * @file wma3.h
+ * @file  libavcodec/wma3.h
  * @brief wmapro specific structs and defines
  */
 

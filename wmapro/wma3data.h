@@ -21,7 +21,7 @@
  */
 
 /**
- * @file wma3data.h
+ * @file  libavcodec/wma3data.h
  * @brief tables for wmapro decoding
  */
 
