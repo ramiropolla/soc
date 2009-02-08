@@ -334,8 +334,6 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
             cutoff = block_size;
         s->subwoofer_cutoffs[i] = cutoff;
     }
-    s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[0];
-
 
     /** set up decorrelation matrixes */
     s->def_decorrelation_mat = av_mallocz(sizeof(int) * (s->nb_channels + 1));
