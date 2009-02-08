@@ -52,7 +52,7 @@ static void dump_context(WMA3DecodeContext *s)
     PRINT("log2 frame size",s->log2_frame_size);
     PRINT("max num subframes",s->max_num_subframes);
     PRINT("len prefix",s->len_prefix);
-    PRINT("nb channels",s->num_channels);
+    PRINT("num channels",s->num_channels);
     PRINT("lossless",s->lossless);
 }
 
@@ -587,7 +587,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
     }
 
     if(s->num_channels == 1 ){
-        s->nb_chgroups = 0;
+        s->num_chgroups = 0;
         s->chgroup[0].num_channels = 1;
         s->chgroup[0].no_rotation = 1;
         s->chgroup[0].transform = 2;
@@ -605,8 +605,8 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
             return 0;
         }
 
-        for(s->nb_chgroups = 0; remaining_channels && s->nb_chgroups < s->channels_for_cur_subframe;s->nb_chgroups++){
-            WMA3ChannelGroup* chgroup = &s->chgroup[s->nb_chgroups];
+        for(s->num_chgroups = 0; remaining_channels && s->num_chgroups < s->channels_for_cur_subframe;s->num_chgroups++){
+            WMA3ChannelGroup* chgroup = &s->chgroup[s->num_chgroups];
             chgroup->num_channels = 0;
             chgroup->no_rotation = 0;
             chgroup->transform = 0;
@@ -996,7 +996,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
 {
     int i;
 
-    for(i=0;i<s->nb_chgroups;i++){
+    for(i=0;i<s->num_chgroups;i++){
 
         if(s->chgroup[i].num_channels == 1)
             continue;

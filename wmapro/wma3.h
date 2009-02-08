@@ -149,7 +149,7 @@ typedef struct WMA3DecodeContext {
     int              quant_step;
     int              esc_len;
 
-    uint8_t          nb_chgroups;                   //< number of channel groups
+    uint8_t          num_chgroups;                  //< number of channel groups
     WMA3ChannelGroup chgroup[MAX_CHANNELS];         //< channel group information
 
     WMA3ChannelCtx   channel[MAX_CHANNELS];         //< per channel data
