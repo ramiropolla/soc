@@ -55,14 +55,14 @@ typedef struct {
     uint16_t channel_len;                             //< channel length in samples
     uint16_t decoded_samples;                         //< already processed samples
     uint8_t  grouped;                                 //< channel is part of a group
-    int      quant_step_modifier;
+    int      quant_step_modifier;                     //< deviation from the main quantization step
     int      transmit_sf;                             //< transmit scale factors
-    int      reuse_sf;                                //< share sfs between subframes
+    int      reuse_sf;                                //< share scale factors between subframes
     int      scale_factor_step;                       //< scaling step
     int      max_scale_factor;                        //< maximum scale factor
     int      scale_factors[MAX_BANDS];                //< scale factor values
     int      resampled_scale_factors[MAX_BANDS];      //< scale factors from a previous block
-    int      scale_factor_block_len;                  //< sf reference block length
+    int      scale_factor_block_len;                  //< scale factor reference block length
     float*   coeffs;                                  //< pointer to the decode buffer
     DECLARE_ALIGNED_16(float, out[2*BLOCK_MAX_SIZE]); //< output buffer
 } WMA3ChannelCtx;
@@ -87,11 +87,11 @@ typedef struct {
 typedef struct WMA3DecodeContext {
     /** generic decoder variables */
     AVCodecContext*  avctx;                         //< codec context for av_log
-    DSPContext       dsp;
+    DSPContext       dsp;                           //< accelerated dsp functions
     MDCTContext      mdct_ctx[BLOCK_NB_SIZES];      //< MDCT context per block size
-    DECLARE_ALIGNED_16(float, tmp[BLOCK_MAX_SIZE]); //< imdct working buffer
+    DECLARE_ALIGNED_16(float, tmp[BLOCK_MAX_SIZE]); //< imdct output buffer
     float*           windows[BLOCK_NB_SIZES];       //< window per block size
-    VLC              sf_vlc;                        //< scale factor DPCM vlc
+    VLC              sf_vlc;                        //< scale factor dpcm vlc
     VLC              sf_rl_vlc;                     //< scale factor run length vlc
     VLC              vec4_vlc;                      //< 4 coefficients per symbol
     VLC              vec2_vlc;                      //< 2 coefficients per symbol
@@ -124,13 +124,13 @@ typedef struct WMA3DecodeContext {
     int              prev_packet_bit_size;          //< saved number of bits
     uint8_t*         prev_packet_data;              //< prev frame data
     uint8_t          bit5;                          //< padding bit? (CBR files)
-    uint8_t          bit6;
+    uint8_t          bit6;                          //< unknown
     uint8_t          packet_loss;                   //< set in case of bitstream error
     uint8_t          negative_quantstep;            //< packet loss due to negative quant step
 
     /** frame decode state */
     unsigned int     frame_num;                     //< current frame number
-    GetBitContext*   getbit;
+    GetBitContext*   getbit;                        //< bitstream reader context
     int              buf_bit_size;                  //< buffer size in bits
     int16_t*         samples;                       //< current samplebuffer pointer
     int16_t*         samples_end;                   //< maximum samplebuffer pointer
@@ -141,13 +141,13 @@ typedef struct WMA3DecodeContext {
 
     /** subframe/block decode state */
     int              subframe_len;                  //< current subframe length
-    int              channels_for_cur_subframe;
+    int              channels_for_cur_subframe;     //< number of channels that contain the subframe
     int              channel_indexes_for_cur_subframe[MAX_CHANNELS];
     int              cur_subwoofer_cutoff;          //< subwoofer cutoff value
     int              num_bands;                     //< number of scale factor bands
     int*             cur_sfb_offsets;               //< sfb offsets for the current block
-    int              quant_step;
-    int              esc_len;
+    int              quant_step;                    //< quantization step
+    int              esc_len;                       //< length of escaped coefficients
 
     uint8_t          num_chgroups;                  //< number of channel groups
     WMA3ChannelGroup chgroup[MAX_CHANNELS];         //< channel group information
