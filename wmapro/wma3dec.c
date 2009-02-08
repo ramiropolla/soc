@@ -20,6 +20,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+/**
+ * @file wma3dec.c
+ * @brief wmapro decoder implementation
+ */
+
 #include "avcodec.h"
 #include "bitstream.h"
 #include "wma3.h"

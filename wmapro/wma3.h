@@ -20,6 +20,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+/**
+ * @file wma3.h
+ * @brief wmapro specific structs and defines
+ */
+
 #ifndef AVCODEC_WMA3_H
 #define AVCODEC_WMA3_H
 
