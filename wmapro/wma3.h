@@ -71,7 +71,7 @@ typedef struct {
  * @brief channel group for channel transformations
  */
 typedef struct {
-    int   nb_channels;
+    int   num_channels;
     int   no_rotation;                                     //< controls the type of the transform
     int   transform;                                       //< also controls the type of the transform
     char  transform_band[MAX_BANDS];                       //< controls if the transform is enabled for a certain band
@@ -107,7 +107,7 @@ typedef struct WMA3DecodeContext {
     uint8_t          sample_bit_depth;              //< bits per sample
     uint16_t         samples_per_frame;             //< number of samples to output
     uint16_t         log2_frame_size;               //< frame size
-    int8_t           nb_channels;                   //< number of channels
+    int8_t           num_channels;                  //< number of channels
     int8_t           lfe_channel;                   //< lfe channel index
     const float***   def_decorrelation_mat;         //< default decorrelation matrix
     uint8_t          allow_subframes;               //< frames may contain subframes
