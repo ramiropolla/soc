@@ -34,7 +34,6 @@
 #include "avcodec.h"
 #include "bitstream.h"
 #include "libavutil/common.h"
-#include "dsputil.h"
 #include "amrnbfloatdata.h"
 
 typedef struct AMRContext {
@@ -77,11 +76,7 @@ typedef struct AMRContext {
     uint8_t           ir_filter_strength[2]; ///< impulse response filter strength; 0 - strong, 1 - medium, 2 - none
     const float                  *ir_filter; ///< pointer to impulse response filter data
 
-    DSPContext                          dsp;
-    float                          add_bias;
-    float                          mul_bias;
-    DECLARE_ALIGNED_16(float,    samples_in[LP_FILTER_ORDER + AMR_SUBFRAME_SIZE]); ///< floating point samples
-    DECLARE_ALIGNED_16(int16_t, samples_out[                  AMR_SUBFRAME_SIZE]); ///< 16-bit signed int samples
+    float samples_in[LP_FILTER_ORDER + AMR_SUBFRAME_SIZE]; ///< floating point samples
 
 } AMRContext;
 
@@ -126,16 +121,7 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
 {
     AMRContext *p = avctx->priv_data;
 
-    dsputil_init(&p->dsp, avctx);
-
-    // set bias values for float to 16-bit int conversion
-    if(p->dsp.float_to_int16 == ff_float_to_int16_c) {
-        p->add_bias = 385.0;
-        p->mul_bias = 1.0;
-    }else {
-        p->add_bias = 0.0;
-        p->mul_bias = 32767.0;
-    }
+    avctx->sample_fmt = SAMPLE_FMT_FLT;
 
     // p->excitation always points to the same position in p->excitation_buf
     p->excitation = &p->excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1];
@@ -1060,7 +1046,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 {
 
     AMRContext *p = avctx->priv_data;        // pointer to private data
-    int16_t *buf_out = data;                 // pointer to the output data buffer
+    float *buf_out = data;                   // pointer to the output data buffer
     int i, subframe;                         // counters
     int index = 0;                           // index counter (different modes
                                              // advance through amr_prms differently)
@@ -1297,17 +1283,12 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         // update buffers and history
         update_state(p);
 
-        // convert float samples to 16-bit integer
-        for(i=LP_FILTER_ORDER; i<LP_FILTER_ORDER+AMR_SUBFRAME_SIZE; i++) {
-            p->samples_in[i] = p->samples_in[i] * p->mul_bias + p->add_bias;
-        }
-        p->dsp.float_to_int16(p->samples_out, &p->samples_in[LP_FILTER_ORDER], AMR_SUBFRAME_SIZE);
-        memcpy(&buf_out[subframe*AMR_SUBFRAME_SIZE], p->samples_out, AMR_SUBFRAME_SIZE*sizeof(int16_t));
-
+        memcpy(&buf_out[subframe*AMR_SUBFRAME_SIZE], &p->samples_in[LP_FILTER_ORDER],
+               AMR_SUBFRAME_SIZE*sizeof(float));
     }
 
     /* report how many samples we got */
-    *data_size = AMR_BLOCK_SIZE * sizeof(int16_t);
+    *data_size = AMR_BLOCK_SIZE * sizeof(float);
 
     /* return the amount of bytes consumed if everything was OK */
     return (mode_bits[p->cur_frame_mode] + 15)>>3; // +7 for rounding and +8 for TOC
