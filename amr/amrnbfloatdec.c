@@ -145,7 +145,7 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
  * @return the frame mode
  */
 
-enum Mode decode_bitstream(AMRContext *p, uint8_t *buf, int buf_size,
+enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
                            enum Mode *speech_mode)
 {
     enum Mode mode;
@@ -1009,7 +1009,7 @@ static void update_state(AMRContext *p)
 
 
 static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
-                              uint8_t *buf, int buf_size)
+                              const uint8_t *buf, int buf_size)
 {
 
     AMRContext *p = avctx->priv_data;        // pointer to private data
