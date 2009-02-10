@@ -1,20 +1,20 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 11162)
+--- libavcodec/Makefile	(revision 17136)
 +++ libavcodec/Makefile	(working copy)
-@@ -37,6 +36,7 @@
+@@ -39,6 +39,7 @@
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o lpc.o
-+OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbfloatdec.o
++OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbfloatdec.o qcelp_lsp.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
  OBJS-$(CONFIG_APE_DECODER)             += apedec.o
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 11162)
+--- libavcodec/allcodecs.c	(revision 17136)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -177,6 +173,7 @@
+@@ -182,6 +182,7 @@
      REGISTER_DECODER (AAC, aac);
      REGISTER_ENCDEC  (AC3, ac3);
      REGISTER_ENCDEC  (ALAC, alac);
@@ -24,9 +24,9 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (COOK, cook);
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 16142)
+--- doc/general.texi	(revision 17136)
 +++ doc/general.texi	(working copy)
-@@ -346,8 +344,8 @@
+@@ -356,8 +356,8 @@
  @item AAC                    @tab  E  @tab  X
      @tab encoding supported through external library libfaac
  @item AC-3                   @tab IX  @tab IX
@@ -39,14 +39,100 @@ Index: doc/general.texi
  @item AMV IMA ADPCM          @tab     @tab  X
 Index: Changelog
 ===================================================================
---- Changelog	(revision 16142)
+--- Changelog	(revision 17136)
 +++ Changelog	(working copy)
-@@ -142,6 +142,8 @@
- - Electronic Arts TGQ decoder
- - RV30 and RV40 decoder
- - QCELP / PureVoice decoder
+@@ -149,6 +149,7 @@
+ - Electronic Arts TQI decoder
+ - OpenJPEG based JPEG 2000 decoder
+ - NC (NC4600) cameras file demuxer
 +- AMR-NB decoder
-+
  
  version 0.4.9-pre1:
  
+Index: libavcodec/qcelp_lsp.c
+===================================================================
+--- libavcodec/qcelp_lsp.c	(revision 17136)
++++ libavcodec/qcelp_lsp.c	(working copy)
+@@ -48,16 +48,16 @@
+  *
+  * TIA/EIA/IS-733 2.4.3.3.5-1/2
+  */
+-static void lsp2polyf(const float *lspf, double *f, int lp_half_order)
++static void lsp2polyf(const double *lspf, double *f, int lp_half_order)
+ {
+     int i, j;
+ 
+     f[0] = 1.0;
+-    f[1] = -2 * cos(M_PI * lspf[0]);
++    f[1] = -2 * lspf[0];
+     lspf -= 2;
+     for(i=2; i<=lp_half_order; i++)
+     {
+-        double val = -2 * cos(M_PI * lspf[2*i]);
++        double val = -2 * lspf[2*i];
+         f[i] = val * f[i-1] + 2*f[i-2];
+         for(j=i-1; j>1; j--)
+             f[j] += f[j-1] * val + f[j-2];
+@@ -66,22 +66,15 @@
+ }
+ 
+ /**
+- * Reconstructs LPC coefficients from the line spectral pair frequencies
+- * and performs bandwidth expansion.
++ * Reconstructs LPC coefficients from the line spectral pair frequencies.
+  *
+  * @param lspf line spectral pair frequencies
+  * @param lpc linear predictive coding coefficients
+- *
+- * @note: bandwith_expansion_coeff could be precalculated into a table
+- *        but it seems to be slower on x86
+- *
+- * TIA/EIA/IS-733 2.4.3.3.5
+  */
+-void ff_qcelp_lspf2lpc(const float *lspf, float *lpc)
++void ff_celp_lspf2lpc(const double *lspf, float *lpc)
+ {
+     double pa[6], qa[6];
+     int   i;
+-    double bandwith_expansion_coeff = -QCELP_BANDWITH_EXPANSION_COEFF * 0.5;
+ 
+     lsp2polyf(lspf,     pa, 5);
+     lsp2polyf(lspf + 1, qa, 5);
+@@ -91,10 +84,35 @@
+         double paf = pa[i+1] + pa[i];
+         double qaf = qa[i+1] - qa[i];
+ 
+-        lpc[i  ] = paf + qaf;
+-        lpc[9-i] = paf - qaf;
++        lpc[i  ] = 0.5 * (paf+qaf);
++        lpc[9-i] = 0.5 * (paf-qaf);
+     }
++}
++
++/**
++ * Reconstructs LPC coefficients from the line spectral pair frequencies
++ * and performs bandwidth expansion.
++ *
++ * @param lspf line spectral pair frequencies
++ * @param lpc linear predictive coding coefficients
++ *
++ * @note: bandwith_expansion_coeff could be precalculated into a table
++ *        but it seems to be slower on x86
++ *
++ * TIA/EIA/IS-733 2.4.3.3.5
++ */
++void ff_qcelp_lspf2lpc(const float *lspf, float *lpc)
++{
++    double lsf[10];
++    double bandwith_expansion_coeff = -QCELP_BANDWITH_EXPANSION_COEFF;
++    int   i;
++
+     for (i=0; i<10; i++)
++        lsf[i] = cos(M_PI * lspf[i]);
++
++    ff_celp_lspf2lpc(lsf, lpc);
++
++    for (i=0; i<10; i++)
+     {
+         lpc[i] *= bandwith_expansion_coeff;
+         bandwith_expansion_coeff *= QCELP_BANDWITH_EXPANSION_COEFF;

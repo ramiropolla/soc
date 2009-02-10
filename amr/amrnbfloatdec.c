@@ -36,6 +36,8 @@
 #include "libavutil/common.h"
 #include "amrnbfloatdata.h"
 
+void ff_celp_lspf2lpc(const double *lspf, float *lpc);
+
 typedef struct AMRContext {
 
     GetBitContext                        gb;
@@ -396,29 +398,6 @@ static void interp_lsp_123(AMRContext *p)
 }
 
 /**
- * Find the polynomial F1(z) or F2(z) from the lsp vectors.
- *
- * @param lsp               input lsp vector
- * @param f                 pointer to the polynomial F1(z) or F2(z)
- */
-
-static void lsp2poly(float *lsp, float *f)
-{
-    int i, j;
-
-    f[-1] = 0.0;
-    f[ 0] = 1.0;
-
-    for(i=0; i<5; i++) {
-        float b = -2.0 * lsp[2*i];
-        f[i+1] = b*f[i] + 2.0*f[i-1];
-        for(j=i; j>0; j--) {
-            f[j] += b*f[j-1] + f[j-2];
-        }
-    }
-}
-
-/**
  * Convert an lsp vector to lpc coefficients.
  *
  * @param lsp                 input lsp vector
@@ -427,25 +406,13 @@ static void lsp2poly(float *lsp, float *f)
 
 static void lsp2lpc(float *lsp, float *lpc_coeffs)
 {
-    float f1[7], f2[7];
+    double lsp_double[LP_FILTER_ORDER];
     int i;
 
-    // find F1(z) and F2(z) from the lsps
-    lsp2poly(&lsp[0], &f1[1]);
-    lsp2poly(&lsp[1], &f2[1]);
+    for(i=0; i<LP_FILTER_ORDER; i++)
+        lsp_double[i] = lsp[i];
 
-    // multiply F1(z) by 1+z^{-1} and F2(z) by 1-z^{-1} to obtain F1'(z) and F2'(z)
-    for(i=6; i>1; i--) {
-        f1[i] += f1[i-1];
-        f2[i] -= f2[i-1];
-    }
-
-    // A(z) = ( F1'(z) + F2'(z) )/2
-    // note f1 and f2 are actually f1' and f2'
-    for(i=0; i<5; i++) {
-        lpc_coeffs[i]   = 0.5*(f1[i+2] + f2[i+2]); // lpc 0..4 uses indexes to f, 2..6
-        lpc_coeffs[i+5] = 0.5*(f1[6-i] - f2[6-i]); // lpc 5..9 uses indexes to f, 6..2
-    }
+    ff_celp_lspf2lpc(lsp_double, lpc_coeffs);
 }
 
 /*** end of LPC coefficient decoding functions ***/
