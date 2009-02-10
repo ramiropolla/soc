@@ -1262,22 +1262,12 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 }
 
 
-static int amrnb_decode_close(AVCodecContext *avctx)
-{
-    AMRContext *p = avctx->priv_data;
-
-    /* return 0 if everything is OK, -1 if not */
-    return 0;
-}
-
-
 AVCodec amrnb_decoder = {
     .name = "amrnb",
     .type = CODEC_TYPE_AUDIO,
     .id = CODEC_ID_AMR_NB,
     .priv_data_size = sizeof(AMRContext),
     .init = amrnb_decode_init,
-    .close = amrnb_decode_close,
     .decode = amrnb_decode_frame,
     .long_name = NULL_IF_CONFIG_SMALL("Adaptive Multi-Rate NarrowBand"),
 };
