@@ -87,32 +87,10 @@ static void reset_state(AMRContext *p)
 {
     int i;
 
-    // Initialize values for the lsp vector from the 4th subframe of the
-    // previous subframe values.
-    // Taken from Decoder_amr_reset using val/(float)(1<<15).
-    p->prev_lsp_sub4[0] = 0.91552734375;
-    p->prev_lsp_sub4[1] = 0.79345703125;
-    p->prev_lsp_sub4[2] = 0.640869140625;
-    p->prev_lsp_sub4[3] = 0.457763671875;
-    p->prev_lsp_sub4[4] = 0.244140625;
-    p->prev_lsp_sub4[5] = 0.0;
-    p->prev_lsp_sub4[6] = -0.244140625;
-    p->prev_lsp_sub4[7] = -0.457763671875;
-    p->prev_lsp_sub4[8] = -0.640869140625;
-    p->prev_lsp_sub4[9] = -0.79345703125;
-
-    // Initialize mean lsp values.
-    // Taken from Decoder_amr_reset using val/(float)(1<<15).
-    p->lsp_avg[0] = 0.042236328125;
-    p->lsp_avg[1] = 0.063385009765625;
-    p->lsp_avg[2] = 0.1043701171875;
-    p->lsp_avg[3] = 0.1558837890625;
-    p->lsp_avg[4] = 0.20574951171875;
-    p->lsp_avg[5] = 0.24786376953125;
-    p->lsp_avg[6] = 0.300994873046875;
-    p->lsp_avg[7] = 0.3385009765625;
-    p->lsp_avg[8] = 0.38800048828125;
-    p->lsp_avg[9] = 0.418121337890625;
+    for(i=0; i<LP_FILTER_ORDER; i++) {
+      p->prev_lsp_sub4[i] = lsp_sub4_init[i] * 1000 / (float)(1 << 15);
+      p->lsp_avg[i]       = lsp_avg_init[i]         / (float)(1 << 15);
+    }
 
     for(i=0; i<4; i++) {
         p->prediction_error[i] = MIN_ENERGY;

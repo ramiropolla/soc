@@ -288,6 +288,23 @@ static const AMROrder order_MODE_DTX[35] = {
 };
 
 
+/**
+ * Initialize values for the lsp vector from the 4th subframe of the
+ * previous subframe values.
+ *
+ * @note: Taken from Decoder_amr_reset in Q15 using val/1000
+ */
+ static const int8_t lsp_sub4_init[LP_FILTER_ORDER] = { 30, 26, 21, 15, 8, 0, -8, -15, -21, -26 };
+
+/**
+ * Initialize mean lsp values.
+ *
+ * @note: Taken from Decoder_amr_reset in Q15
+ */
+ static const int16_t lsp_avg_init[LP_FILTER_ORDER] = {
+    1384, 2077, 3420, 5108, 6742, 8122, 9863, 11092, 12714, 13701
+};
+
 // LSF tables
 
 static const float lsf_3_1[256][3] = {
