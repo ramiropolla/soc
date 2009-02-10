@@ -50,19 +50,6 @@ enum Mode {
     N_MODES     // number of modes
 };
 
-// number of bits for each mode
-static const uint8_t mode_bits[N_MODES] = {
-    95,  // MODE_475
-    103, // MODE_515
-    118, // MODE_59
-    134, // MODE_67
-    148, // MODE_74
-    159, // MODE_795
-    204, // MODE_102
-    244, // MODE_122
-    35   // MODE_DTX
-};
-
 // declaration of received frame types
 enum RXFrameType {
     RX_SPEECH_GOOD = 0,
@@ -285,6 +272,19 @@ static const AMROrder order_MODE_DTX[35] = {
 { 2, 3}, { 2, 2}, { 2, 1}, { 2, 0}, { 3, 8}, { 3, 7}, { 3, 6}, { 3, 5},
 { 3, 4}, { 3, 3}, { 3, 2}, { 3, 1}, { 3, 0}, { 4, 5}, { 4, 4}, { 4, 3},
 { 4, 2}, { 4, 1}, { 4, 0}
+};
+
+// number of bits for each mode
+static const uint8_t mode_bits[N_MODES] = {
+    FF_ARRAY_ELEMS(order_MODE_475),
+    FF_ARRAY_ELEMS(order_MODE_515),
+    FF_ARRAY_ELEMS(order_MODE_59),
+    FF_ARRAY_ELEMS(order_MODE_67),
+    FF_ARRAY_ELEMS(order_MODE_74),
+    FF_ARRAY_ELEMS(order_MODE_795),
+    FF_ARRAY_ELEMS(order_MODE_102),
+    FF_ARRAY_ELEMS(order_MODE_122),
+    FF_ARRAY_ELEMS(order_MODE_DTX)
 };
 
 
