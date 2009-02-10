@@ -824,9 +824,9 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
  * @return a-b : the result of the comparison
  */
 
-int qsort_compare(const float *a, const float *b)
+int qsort_compare(const void *a, const void *b)
 {
-    float diff = *a - *b;
+    float diff = *(const float *)a - *(const float *)b;
     if(diff > 0.0f)
         return 1;
     if(diff < 0.0f)
