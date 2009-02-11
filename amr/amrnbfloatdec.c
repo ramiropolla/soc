@@ -82,6 +82,16 @@ typedef struct AMRContext {
 
 } AMRContext;
 
+static void weighted_vector_sumf(float *out, const float *in_a,
+                                 const float *in_b, float weight_coeff_a,
+                                 float weight_coeff_b, int length)
+{
+    int i;
+
+    for(i=0; i<length; i++)
+        out[i] = weight_coeff_a * in_a[i]
+               + weight_coeff_b * in_b[i];
+}
 
 static void reset_state(AMRContext *p)
 {
@@ -282,6 +292,10 @@ static void lsf2lsp_5(AMRContext *p)
 
     lsf2lsp_for_mode122(p, p->lsp[1], prev_lsf, lsf_quantizer, 0, p->amr_prms[2] & 1, 0);
     lsf2lsp_for_mode122(p, p->lsp[3], prev_lsf, lsf_quantizer, 2, p->amr_prms[2] & 1, 1);
+
+    // interpolate LSP vectors at subframes 1 and 3
+    weighted_vector_sumf(p->lsp[0], p->prev_lsp_sub4, p->lsp[1], 0.5, 0.5, LP_FILTER_ORDER);
+    weighted_vector_sumf(p->lsp[2], p->lsp[1]       , p->lsp[3], 0.5, 0.5, LP_FILTER_ORDER);
 }
 
 /**
@@ -341,40 +355,12 @@ static void lsf2lsp_3(AMRContext *p)
 
     // convert LSF vector to LSP vector
     lsf2lsp(lsf_q, p->lsp[3]);
+
+    // interpolate LSP vectors at subframes 1, 2 and 3
+    for(i=0; i<3; i++)
+        weighted_vector_sumf(p->lsp[i], p->prev_lsp_sub4, p->lsp[3], 0.25*(3-i), 0.25*(i+1), LP_FILTER_ORDER);
 }
 
-/**
- * Interpolate lsp vectors for subframes 1 and 3.
- *
- * @param p                 pointer to the AMRContext
- */
-
-static void interp_lsp_13(AMRContext *p)
-{
-    int i;
-
-    for(i=0; i<LP_FILTER_ORDER; i++) {
-        p->lsp[0][i] = 0.5*(p->prev_lsp_sub4[i] + p->lsp[1][i]);
-        p->lsp[2][i] = 0.5*(       p->lsp[1][i] + p->lsp[3][i]);
-    }
-}
-
-/**
- * Interpolate lsp vectors for subframes 1, 2 and 3.
- *
- * @param p                 pointer to the AMRContext
- */
-
-static void interp_lsp_123(AMRContext *p)
-{
-    int i;
-
-    for(i=0; i<LP_FILTER_ORDER; i++) {
-        p->lsp[0][i] = 0.75*p->prev_lsp_sub4[i] + 0.25*p->lsp[3][i];
-        p->lsp[1][i] = 0.5*(p->prev_lsp_sub4[i] +      p->lsp[3][i]);
-        p->lsp[2][i] = 0.25*p->prev_lsp_sub4[i] + 0.75*p->lsp[3][i];
-    }
-}
 
 /**
  * Convert an lsp vector to lpc coefficients.
@@ -1007,15 +993,11 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     if(p->cur_frame_mode == MODE_122) {
         // decode split-matrix quantized lsf vector indexes to lsp vectors
         lsf2lsp_5(p);
-        // interpolate LSP vectors at subframes 1 and 3
-        interp_lsp_13(p);
         // advance index into amr_prms
         index += 5;
     }else {
         // decode split-matrix quantized lsf vector indexes to an lsp vector
         lsf2lsp_3(p);
-        // interpolate LSP vectors at subframes 1, 2 and 3
-        interp_lsp_123(p);
         // advance index into amr_prms
         index += 3;
     }
@@ -1026,10 +1008,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     }
 
     // update averaged lsp vector (used for fixed gain smoothing)
-    for(i=0; i<LP_FILTER_ORDER; i++) {
-        // calculate averaged lsp vector
-        p->lsp_avg[i] = 0.84*p->lsp_avg[i] + 0.16*p->prev_lsp_sub4[i];
-    }
+    weighted_vector_sumf(p->lsp_avg, p->lsp_avg, p->prev_lsp_sub4, 0.84, 0.16, LP_FILTER_ORDER);
 
 /*** end of LPC coefficient decoding ***/
 
