@@ -226,13 +226,48 @@ static void lsf2lsp(float *lsf, float *lsp)
 /**
  * Decode a set of 5 split-matrix quantized lsf indexes into an lsp vector.
  *
+ * @param p the context
+ * @param lsp output LSP vector
+ * @param prev_lsf previous LSF vector
+ * @param lsf_quantizer pointers to LSF dictionary tables
+ * @param quantizer_offset offset in tables
+ * @param sign for the 3 dictionary table
+ * @param update_prev_lsf_r update the prev_lsf_r in the context if true
+ */
+static void lsf2lsp_for_mode122(AMRContext *p, float lsp[LP_FILTER_ORDER],
+                                const float prev_lsf[LP_FILTER_ORDER],
+                                const float *lsf_quantizer[5], const int quantizer_offset,
+                                const int sign, const int update_prev_lsf_r)
+{
+    float lsf[LP_FILTER_ORDER];
+    int i;
+
+    for(i=0; i<LP_FILTER_ORDER>>1; i++)
+        memcpy(&lsf[2*i], &lsf_quantizer[i][quantizer_offset], 2*sizeof(float));
+
+    if(sign) {
+        lsf[4] *= -1;
+        lsf[5] *= -1;
+    }
+
+    if(update_prev_lsf_r)
+        memcpy(p->prev_lsf_r, lsf, LP_FILTER_ORDER*sizeof(float));
+
+    for(i=0; i<LP_FILTER_ORDER; i++)
+        lsf[i] += prev_lsf[i];
+
+    lsf2lsp(lsf, lsp);
+}
+
+/**
+ * Decode a set of 5 split-matrix quantized lsf indexes into 2 lsp vectors.
+ *
  * @param p                 pointer to the AMRContext
  */
 
 static void lsf2lsp_5(AMRContext *p)
 {
-    float lsf_r[2][LP_FILTER_ORDER]; // residual LSF vectors
-    float lsf_q[2][LP_FILTER_ORDER]; // quantified LSF vectors
+    float prev_lsf[LP_FILTER_ORDER]; // previous quantized LSF vectors
     const float *lsf_quantizer[5];
     int i;
 
@@ -242,31 +277,11 @@ static void lsf2lsp_5(AMRContext *p)
     lsf_quantizer[3] = lsf_5_4[p->amr_prms[3]];
     lsf_quantizer[4] = lsf_5_5[p->amr_prms[4]];
 
-    for(i=0; i<5; i++) {
-        memcpy(&lsf_r[0][2*i], &lsf_quantizer[i][0], 2*sizeof(float));
-        memcpy(&lsf_r[1][2*i], &lsf_quantizer[i][2], 2*sizeof(float));
-    }
+    for(i=0; i<LP_FILTER_ORDER;i++)
+        prev_lsf[i] = p->prev_lsf_r[i]*PRED_FAC_MODE_122 + lsf_5_mean[i];
 
-    // the 1st bit of p->amr_prms[2] is the sign bit
-    if (p->amr_prms[2] & 1) {
-        lsf_r[0][4] *= -1;
-        lsf_r[0][5] *= -1;
-        lsf_r[1][4] *= -1;
-        lsf_r[1][5] *= -1;
-    }
-
-    // calculate mean-removed LSF vectors and add mean
-    for(i=0; i<LP_FILTER_ORDER; i++) {
-        float temp = p->prev_lsf_r[i]*PRED_FAC_MODE_122 + lsf_5_mean[i];
-        lsf_q[0][i] = lsf_r[0][i] + temp;
-        lsf_q[1][i] = lsf_r[1][i] + temp;
-    }
-    // update residual LSF vector from previous subframe
-    memcpy(p->prev_lsf_r, lsf_r[1], LP_FILTER_ORDER*sizeof(float));
-
-    // convert LSF vectors to LSP vectors
-    lsf2lsp(lsf_q[0], p->lsp[1]);
-    lsf2lsp(lsf_q[1], p->lsp[3]);
+    lsf2lsp_for_mode122(p, p->lsp[1], prev_lsf, lsf_quantizer, 0, p->amr_prms[2] & 1, 0);
+    lsf2lsp_for_mode122(p, p->lsp[3], prev_lsf, lsf_quantizer, 2, p->amr_prms[2] & 1, 1);
 }
 
 /**
