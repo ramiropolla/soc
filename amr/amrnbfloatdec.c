@@ -233,42 +233,27 @@ static void lsf2lsp_5(AMRContext *p)
 {
     float lsf_r[2][LP_FILTER_ORDER]; // residual LSF vectors
     float lsf_q[2][LP_FILTER_ORDER]; // quantified LSF vectors
-    float sign;
-    int i, idx;
+    const float *lsf_quantizer[5];
+    int i;
 
-    // decode split-matrix quantized residual LSF vectors
+    lsf_quantizer[0] = lsf_5_1[p->amr_prms[0]];
+    lsf_quantizer[1] = lsf_5_2[p->amr_prms[1]];
+    lsf_quantizer[2] = lsf_5_3[p->amr_prms[2] >> 1];
+    lsf_quantizer[3] = lsf_5_4[p->amr_prms[3]];
+    lsf_quantizer[4] = lsf_5_5[p->amr_prms[4]];
 
-    idx = p->amr_prms[0];
-    lsf_r[0][0] = lsf_5_1[ idx ][0];
-    lsf_r[0][1] = lsf_5_1[ idx ][1];
-    lsf_r[1][0] = lsf_5_1[ idx ][2];
-    lsf_r[1][1] = lsf_5_1[ idx ][3];
+    for(i=0; i<5; i++) {
+        memcpy(&lsf_r[0][2*i], &lsf_quantizer[i][0], 2*sizeof(float));
+        memcpy(&lsf_r[1][2*i], &lsf_quantizer[i][2], 2*sizeof(float));
+    }
 
-    idx = p->amr_prms[1];
-    lsf_r[0][2] = lsf_5_2[ idx ][0];
-    lsf_r[0][3] = lsf_5_2[ idx ][1];
-    lsf_r[1][2] = lsf_5_2[ idx ][2];
-    lsf_r[1][3] = lsf_5_2[ idx ][3];
-
-    // lsb of p->amr_prms[2] is the sign bit
-    sign = (p->amr_prms[2] & 1) ? -1.0 : 1.0;
-    idx = p->amr_prms[2]>>1;
-    lsf_r[0][4] = lsf_5_3[ idx ][0]*sign;
-    lsf_r[0][5] = lsf_5_3[ idx ][1]*sign;
-    lsf_r[1][4] = lsf_5_3[ idx ][2]*sign;
-    lsf_r[1][5] = lsf_5_3[ idx ][3]*sign;
-
-    idx = p->amr_prms[3];
-    lsf_r[0][6] = lsf_5_4[ idx ][0];
-    lsf_r[0][7] = lsf_5_4[ idx ][1];
-    lsf_r[1][6] = lsf_5_4[ idx ][2];
-    lsf_r[1][7] = lsf_5_4[ idx ][3];
-
-    idx = p->amr_prms[4];
-    lsf_r[0][8] = lsf_5_5[ idx ][0];
-    lsf_r[0][9] = lsf_5_5[ idx ][1];
-    lsf_r[1][8] = lsf_5_5[ idx ][2];
-    lsf_r[1][9] = lsf_5_5[ idx ][3];
+    // the 1st bit of p->amr_prms[2] is the sign bit
+    if (p->amr_prms[2] & 1) {
+        lsf_r[0][4] *= -1;
+        lsf_r[0][5] *= -1;
+        lsf_r[1][4] *= -1;
+        lsf_r[1][5] *= -1;
+    }
 
     // calculate mean-removed LSF vectors and add mean
     for(i=0; i<LP_FILTER_ORDER; i++) {
