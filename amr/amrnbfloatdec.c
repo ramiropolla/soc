@@ -326,6 +326,7 @@ static void lsf2lsp_3(AMRContext *p)
     lsf_r[4] = lsf_3_2[ idx ][1];
     lsf_r[5] = lsf_3_2[ idx ][2];
 
+    idx = p->amr_prms[2] << 2;
     lsf_r[6] = lsf_3_3_tmp[ idx ][0];
     lsf_r[7] = lsf_3_3_tmp[ idx ][1];
     lsf_r[8] = lsf_3_3_tmp[ idx ][2];
