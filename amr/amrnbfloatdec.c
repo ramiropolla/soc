@@ -484,7 +484,6 @@ static void interp_pitch_vector(float *prev_excitation, int lag_int,
         for(i=0; i<10; i++) {
             pitch_vector[n] += b60_idx2[6*i] * exc_idx[ i];
         }
-        exc_idx++;
     }
 }
 
