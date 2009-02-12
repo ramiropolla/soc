@@ -308,43 +308,17 @@ static void lsf2lsp_3(AMRContext *p)
 {
     float lsf_r[LP_FILTER_ORDER]; // residual LSF vector
     float lsf_q[LP_FILTER_ORDER]; // quantified LSF vector
-    const float (*lsf_3_1_tmp)[3], (*lsf_3_3_tmp)[4]; // temp ptrs for switching tables depending on mode
-    int idx, i;
+    const float *lsf_quantizer;
+    int i;
 
-    // assign lsf tables according to mode
-    if((p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515)) {
-        lsf_3_1_tmp = lsf_3_1;
-        lsf_3_3_tmp = lsf_3_3_MODE_515;
-    }else if(p->cur_frame_mode == MODE_795) {
-        lsf_3_1_tmp = lsf_3_1_MODE_795;
-        lsf_3_3_tmp = lsf_3_3;
-    }else {
-        lsf_3_1_tmp = lsf_3_1;
-        lsf_3_3_tmp = lsf_3_3;
-    }
+    lsf_quantizer = (p->cur_frame_mode == MODE_795 ? lsf_3_1_MODE_795 : lsf_3_1)[p->amr_prms[0]];
+    memcpy(lsf_r, lsf_quantizer, 3*sizeof(float));
 
-    // decode split-matrix quantized residual LSF vector
+    lsf_quantizer = lsf_3_2[p->amr_prms[1] << (p->cur_frame_mode <= MODE_515)];
+    memcpy(lsf_r + 3, lsf_quantizer, 3*sizeof(float));
 
-    idx = p->amr_prms[0];
-    lsf_r[0] = lsf_3_1_tmp[ idx ][0];
-    lsf_r[1] = lsf_3_1_tmp[ idx ][1];
-    lsf_r[2] = lsf_3_1_tmp[ idx ][2];
-
-    idx = p->amr_prms[1];
-    // MODE_475, MODE_515 only use every other entry as their indexes
-    // are stored using 1 less bit (8 bits vs 9 bits)
-    if((p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515)) {
-        idx <<= 1;
-    }
-    lsf_r[3] = lsf_3_2[ idx ][0];
-    lsf_r[4] = lsf_3_2[ idx ][1];
-    lsf_r[5] = lsf_3_2[ idx ][2];
-
-    idx = p->amr_prms[2];
-    lsf_r[6] = lsf_3_3_tmp[ idx ][0];
-    lsf_r[7] = lsf_3_3_tmp[ idx ][1];
-    lsf_r[8] = lsf_3_3_tmp[ idx ][2];
-    lsf_r[9] = lsf_3_3_tmp[ idx ][3];
+    lsf_quantizer = (p->cur_frame_mode <= MODE_515 ? lsf_3_3_MODE_515 : lsf_3_3)[p->amr_prms[2]];
+    memcpy(lsf_r + 6, lsf_quantizer, 4*sizeof(float));
 
     // calculate mean-removed LSF vector and add mean
     for(i=0; i<LP_FILTER_ORDER; i++) {
