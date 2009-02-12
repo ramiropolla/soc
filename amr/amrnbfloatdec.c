@@ -522,7 +522,7 @@ static void reconstruct_fixed_vector(int *pulse_position, int sign,
  * @param fixed_vector         pointer to the algebraic codebook vector
  */
 
-static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe,
+static void decode_2_pulses_9bits(const int fixed_index, const int sign, int subframe,
                                   float *fixed_vector)
 {
     int pulse_position[2];
@@ -548,7 +548,7 @@ static void decode_2_pulses_9bits(int fixed_index, int sign, int subframe,
  * @param fixed_vector         pointer to the algebraic codebook vector
  */
 
-static void decode_2_pulses_11bits(int fixed_index, int sign,
+static void decode_2_pulses_11bits(const int fixed_index, const int sign,
                                    float *fixed_vector)
 {
     int pulse_position[2];
@@ -577,7 +577,7 @@ static void decode_2_pulses_11bits(int fixed_index, int sign,
  * @param fixed_vector         pointer to the algebraic codebook vector
  */
 
-static void decode_3_pulses_14bits(int fixed_index, int sign,
+static void decode_3_pulses_14bits(const int fixed_index, const int sign,
                                    float *fixed_vector)
 {
     int pulse_position[3];
@@ -607,7 +607,7 @@ static void decode_3_pulses_14bits(int fixed_index, int sign,
  * @param fixed_vector         pointer to the algebraic codebook vector
  */
 
-static void decode_4_pulses_17bits(int fixed_index, int sign,
+static void decode_4_pulses_17bits(const int fixed_index, const int sign,
                                    float *fixed_vector)
 {
     int pulse_position[4];
@@ -636,7 +636,7 @@ static void decode_4_pulses_17bits(int fixed_index, int sign,
  * @param fixed_vector         pointer to the algebraic codebook vector
  */
 
-static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector)
+static void decode_8_pulses_31bits(const int16_t *fixed_index, float *fixed_vector)
 {
     int pulse_position[8];
     int i, pos1, pos2, sign, temp;
@@ -691,7 +691,7 @@ static void decode_8_pulses_31bits(int16_t *fixed_index, float *fixed_vector)
  * @param fixed_vector         pointer to the algebraic codebook vector
  */
 
-static void decode_10_pulses_35bits(int16_t *fixed_index, float *fixed_vector)
+static void decode_10_pulses_35bits(const int16_t *fixed_index, float *fixed_vector)
 {
     int i, pos1, pos2, sign;
 
