@@ -469,7 +469,7 @@ static void interp_pitch_vector(float *prev_excitation, int lag_int,
 
     if(lag_frac < 0) {
         lag_frac += 6;
-        lag_int--;
+        lag_int++;
     }
 
     b60_idx1 = &b60[    lag_frac];
