@@ -215,7 +215,8 @@ enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
 }
 
 
-/*** LPC coefficient decoding functions ***/
+/// @defgroup amr_lpc_decoding pitch LPC coefficient decoding functions
+/// @{
 
 /**
  * Convert an lsf vector into an lsp vector.
@@ -354,10 +355,11 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
     ff_celp_lspf2lpc(lsp_double, lpc_coeffs);
 }
 
-/*** end of LPC coefficient decoding functions ***/
+/// @}
 
 
-/*** pitch vector decoding functions ***/
+/// @defgroup amr_pitch_vector_decoding pitch vector decoding functions
+/// @{
 
 /**
  * Decode the adaptive codebook index to the integer and fractional parts
@@ -486,10 +488,11 @@ static void interp_pitch_vector(float *prev_excitation, int lag_int,
     }
 }
 
-/*** end of pitch vector decoding functions ***/
+/// @}
 
 
-/*** algebraic code book (fixed) vector decoding functions ***/
+/// @defgroup amr_algebraic_code_book algebraic code book (fixed) vector decoding functions
+/// @{
 
 /**
  * Reconstruct the algebraic codebook vector.
@@ -714,10 +717,11 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index, float *fixed_vec
     }
 }
 
-/*** end of algebraic code book (fixed) vector decoding functions ***/
+/// @}
 
 
-/*** gain decoding functions ***/
+/// @defgroup amr_gain_decoding gain decoding functions
+/// @{
 
 /**
  * Predict the fixed gain.
@@ -750,10 +754,11 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
     return powf(10.0, 0.05*(energy_pred + energy_mean[mode] - energy_fixed_mean));
 }
 
-/*** end of gain decoding functions ***/
+/// @}
 
 
-/*** pre-processing functions ***/
+/// @defgroup amr_pre_processing pre-processing functions
+/// @{
 
 /**
  * Comparison function for use with qsort.
@@ -832,10 +837,11 @@ static void convolve_circ(float *fixed_vector, const float *ir_filter)
     }
 }
 
-/*** end of pre-processing functions ***/
+/// @}
 
 
-/*** synthesis functions ***/
+/// @defgroup amr_synthesis synthesis functions
+/// @{
 
 /**
  * Conduct 10th order linear predictive coding synthesis.
@@ -902,10 +908,11 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
     return overflow_temp;
 }
 
-/*** end of synthesis functions ***/
+/// @}
 
 
-/*** update functions ***/
+/// @defgroup amr_update update functions
+/// @{
 
 /**
  * Update buffers and history at the end of decoding a subframe.
@@ -944,7 +951,8 @@ static void update_state(AMRContext *p)
         LP_FILTER_ORDER*sizeof(float));
 }
 
-/*** end of update functions ***/
+/// @}
+
 
 
 static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
