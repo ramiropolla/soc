@@ -477,6 +477,7 @@ static void interp_pitch_vector(float *prev_excitation, int lag_int,
     exc_idx = &prev_excitation[-lag_int];
 
     for(n=0; n<AMR_SUBFRAME_SIZE; n++) {
+        pitch_vector[n] = 0.0;
         for(i=0; i<10; i++) {
             pitch_vector[n] += b60_idx1[6*i] * exc_idx[-i];
         }
