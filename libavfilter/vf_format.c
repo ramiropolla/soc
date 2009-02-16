@@ -35,19 +35,20 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
     FormatContext *format = ctx->priv;
     const char *cur, *sep;
     char name[32];
-    int fmt;
+    int fmt, len;
 
     /* parse the list of formats */
     for(cur = args; cur; cur = sep) {
         if(!(sep = strchr(cur, ':')))
             fmt = avcodec_get_pix_fmt(cur);
         else {
-            if(sep-cur > 32) {
+            len = sep - cur;
+            if(len > 32) {
                 av_log(ctx, AV_LOG_ERROR, "format name too long\n");
                 return -1;
             }
-            memcpy(name, cur, sep-cur);
-            name[sep-cur] = 0;
+            memcpy(name, cur, len);
+            name[len] = 0;
             fmt = avcodec_get_pix_fmt(name);
             sep ++;
         }
