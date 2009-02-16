@@ -30,11 +30,13 @@ typedef struct
     uint8_t formats[PIX_FMT_NB];
 } FormatContext;
 
+#define FMT_NAME_MAXSIZE 32
+
 static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     FormatContext *format = ctx->priv;
     const char *cur, *sep;
-    char name[32];
+    char name[FMT_NAME_MAXSIZE];
     int fmt, len;
 
     /* parse the list of formats */
@@ -43,7 +45,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
             len = strlen(cur);
         else
             len = sep - cur;
-        if(len >= 32) {
+        if(len >= FMT_NAME_MAXSIZE) {
             av_log(ctx, AV_LOG_ERROR, "Format name too long\n");
             return -1;
         }
