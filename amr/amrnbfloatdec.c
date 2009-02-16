@@ -1090,7 +1090,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             }
             p->pitch_gain[4] =     gains_MODE_475[gains_index_MODE_475 + (subframe&1)][0];
             p->fixed_gain_factor = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][1];
-            index++;
         }
 
         // ^g_c = g_c' * ^gamma_gc
