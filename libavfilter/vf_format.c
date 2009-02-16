@@ -43,7 +43,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
             fmt = avcodec_get_pix_fmt(cur);
         else {
             len = sep - cur;
-            if(len > 32) {
+            if(len >= 32) {
                 av_log(ctx, AV_LOG_ERROR, "format name too long\n");
                 return -1;
             }
