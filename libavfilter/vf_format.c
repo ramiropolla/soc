@@ -44,8 +44,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
         else {
             if(sep-cur > 32) {
                 av_log(ctx, AV_LOG_ERROR, "format name too long\n");
-                sep ++;
-                continue;
+                return -1;
             }
             memcpy(name, cur, sep-cur);
             name[sep-cur] = 0;
@@ -55,7 +54,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 
         if(fmt == PIX_FMT_NONE) {
             av_log(ctx, AV_LOG_ERROR, "unknown pixel format\n");
-            continue;
+            return -1;
         }
 
         format->formats[fmt] = 1;
