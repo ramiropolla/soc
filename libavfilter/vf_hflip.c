@@ -27,6 +27,17 @@ typedef struct
     int vsub;   /**< chroma subsampling along height */
 } FlipContext;
 
+static int query_formats(AVFilterContext *ctx)
+{
+    avfilter_set_common_formats(ctx,
+        avfilter_make_format_list(10,
+                PIX_FMT_YUV444P,  PIX_FMT_YUV422P,  PIX_FMT_YUV420P,
+                PIX_FMT_YUV411P,  PIX_FMT_YUV410P,
+                PIX_FMT_YUVJ444P, PIX_FMT_YUVJ422P, PIX_FMT_YUVJ420P,
+                PIX_FMT_YUV440P,  PIX_FMT_YUVJ440P));
+    return 0;
+}
+
 static int config_props(AVFilterLink *link)
 {
     FlipContext *flip = link->dst->priv;
@@ -77,6 +88,7 @@ AVFilter avfilter_vf_hflip =
 {
     .name      = "hflip",
     .priv_size = sizeof(FlipContext),
+    .query_formats = query_formats,
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
