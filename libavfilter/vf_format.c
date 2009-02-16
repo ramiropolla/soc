@@ -53,7 +53,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
         fmt = avcodec_get_pix_fmt(name);
 
         if(fmt == PIX_FMT_NONE) {
-            av_log(ctx, AV_LOG_ERROR, "Unknown pixel format\n");
+            av_log(ctx, AV_LOG_ERROR, "Unknown pixel format: %s\n", name);
             return -1;
         }
 
