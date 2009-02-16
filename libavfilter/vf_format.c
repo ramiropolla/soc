@@ -38,10 +38,10 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
     int fmt, len;
 
     /* parse the list of formats */
-    for(cur = args; cur; cur = sep) {
+    for(cur = args; cur; cur = sep ? sep+1 : NULL) {
         if(!(sep = strchr(cur, ':')))
-            fmt = avcodec_get_pix_fmt(cur);
-        else {
+            len = strlen(cur);
+        else
             len = sep - cur;
             if(len >= 32) {
                 av_log(ctx, AV_LOG_ERROR, "format name too long\n");
@@ -50,8 +50,6 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
             memcpy(name, cur, len);
             name[len] = 0;
             fmt = avcodec_get_pix_fmt(name);
-            sep ++;
-        }
 
         if(fmt == PIX_FMT_NONE) {
             av_log(ctx, AV_LOG_ERROR, "unknown pixel format\n");
