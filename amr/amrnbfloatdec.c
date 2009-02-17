@@ -969,6 +969,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
     // decode the bitstream to AMR parameters
     p->cur_frame_mode = decode_bitstream(p, buf, buf_size, &speech_mode);
+    if(p->cur_frame_mode == MODE_DTX)
+        ff_log_missing_feature(avctx, "dtx mode", 1);
 
 /*** LPC coefficient decoding ***/
 
