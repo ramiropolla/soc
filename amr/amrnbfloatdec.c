@@ -34,6 +34,7 @@
 #include "avcodec.h"
 #include "bitstream.h"
 #include "libavutil/common.h"
+#include "libavcodec/internal.h"
 #include "amrnbfloatdata.h"
 
 void ff_celp_lspf2lpc(const double *lspf, float *lpc);
