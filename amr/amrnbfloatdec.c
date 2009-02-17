@@ -529,8 +529,7 @@ static void reconstruct_fixed_vector(int *pulse_position, int sign,
 static void decode_8_pulses_31bits(const int16_t *fixed_index, float *fixed_vector)
 {
     int pulse_position[8];
-    int i, pos1, pos2, temp;
-    float sign;
+    int i, temp;
 
     // decode pulse positions
     // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
@@ -562,9 +561,9 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index, float *fixed_vect
 
     // reconstruct the fixed code
     for(i=0; i<TRACKS_MODE_102; i++) {
-        pos1 = (pulse_position[i]   << 2) + i;
-        pos2 = (pulse_position[i+4] << 2) + i;
-        sign = fixed_index[i] ? -1.0 : 1.0;
+        const int pos1   = (pulse_position[i]   << 2) + i;
+        const int pos2   = (pulse_position[i+4] << 2) + i;
+        const float sign = fixed_index[i] ? -1.0 : 1.0;
         fixed_vector[pos1]  = sign;
         fixed_vector[pos2] += pos2 < pos1 ? -sign : sign;
     }
@@ -582,15 +581,14 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index, float *fixed_vect
 
 static void decode_10_pulses_35bits(const int16_t *fixed_index, float *fixed_vector)
 {
-    int i, pos1, pos2;
-    float sign;
+    int i;
 
     memset(fixed_vector, 0, AMR_SUBFRAME_SIZE*sizeof(float));
 
     for(i=0; i<TRACKS; i++) {
-        pos1 = gray_decode[fixed_index[i  ] & 7]*TRACKS + i;
-        sign = (fixed_index[i] & 8) ? -1.0 : 1.0;
-        pos2 = gray_decode[fixed_index[i+5] & 7]*TRACKS + i;
+        const int pos1   = gray_decode[fixed_index[i  ] & 7]*TRACKS + i;
+        const int pos2   = gray_decode[fixed_index[i+5] & 7]*TRACKS + i;
+        const float sign = (fixed_index[i] & 8) ? -1.0 : 1.0;
         fixed_vector[pos1] = sign;
         if(pos2 < pos1) sign = -sign;
         fixed_vector[pos2] += sign;
