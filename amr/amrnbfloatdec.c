@@ -1037,8 +1037,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
                 decode_8_pulses_31bits(amr_subframe->pulses, p->fixed_vector);
             break;
             case MODE_122:
-                // decode pitch gain
-                p->pitch_gain[4] = qua_gain_pit[amr_subframe->p_gain];
                 decode_10_pulses_35bits(amr_subframe->pulses, p->fixed_vector);
             break;
             default:
@@ -1053,9 +1051,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         p->fixed_gain[4] = fixed_gain_prediction(p->fixed_vector, p->prediction_error, p->cur_frame_mode);
 
         // decode pitch gain and fixed gain correction factor
-        if(p->cur_frame_mode == MODE_122) {
-            p->fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
-        }else if(p->cur_frame_mode == MODE_795) {
+        if(p->cur_frame_mode == MODE_122 || p->cur_frame_mode == MODE_795) {
             p->pitch_gain[4] =     qua_gain_pit[amr_subframe->p_gain];
             p->fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
         }else if(p->cur_frame_mode == MODE_67 || p->cur_frame_mode == MODE_74 ||
