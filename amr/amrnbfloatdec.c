@@ -608,16 +608,16 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index, float *fixed_vec
  * Decode the algebraic codebook index to pulse positions and signs,
  * then construct the algebraic codebook vector.
  *
- *                           nb of pulses | sign index | bits encoding pulses
- * For MODE_475 or MODE_515,            2 |      bit 7 | 1-3, 4-7
- *                  MODE_59,            2 |      bit 1 | 2-4, 5-6, 7-9
- *                  MODE_67,            3 |            | 1-3, 4,   5-7, 8,  9-11
- *      MODE_74 or MODE_795,            4 |            | 1-3, 4-6, 7-9, 10, 11-13
+ *                           nb of pulses | bits encoding pulses
+ * For MODE_475 or MODE_515,            2 | 1-3, 4-6, 7
+ *                  MODE_59,            2 | 1,   2-4, 5-6, 7-9
+ *                  MODE_67,            3 | 1-3, 4,   5-7, 8,  9-11
+ *      MODE_74 or MODE_795,            4 | 1-3, 4-6, 7-9, 10, 11-13
  *
  * @param fixed_vector pointer to the algebraic codebook vector
  * @param pulses       algebraic codebook indexes
  * @param mode         mode of the current frame
- * @param subframe     current subframe
+ * @param subframe     current subframe number
  */
 static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
                                 const enum Mode mode, const int subframe)
