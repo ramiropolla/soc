@@ -561,15 +561,11 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index, float *fixed_vect
 
     // reconstruct the fixed code
     for(i=0; i<TRACKS_MODE_102; i++) {
-        pos1 = (pulse_position[i]   << 2) + i; // ith pulse position
-        pos2 = (pulse_position[i+4] << 2) + i; // i+4th pulse position
-        sign = fixed_index[i] ? -1.0 : 1.0; // sign of ith pulse
-        // assign the ith pulse (+/-1) to its appropriate position
-        fixed_vector[pos1] = sign;
-        // sign of i+4th pulse is relative to sign of ith pulse
-        if(pos2 < pos1) sign = -sign;
-        // assign the i+4th pulse (+/-1) to its appropriate position
-        fixed_vector[pos2] += sign;
+        pos1 = (pulse_position[i]   << 2) + i;
+        pos2 = (pulse_position[i+4] << 2) + i;
+        sign = fixed_index[i] ? -1.0 : 1.0;
+        fixed_vector[pos1]  = sign;
+        fixed_vector[pos2] += pos2 < pos1 ? -sign : sign;
     }
 }
 
