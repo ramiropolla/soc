@@ -663,7 +663,7 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
             pulse_subset = (fixed_index >> 7) & 1;
             // third pulse position is coded in bits 9-11
             pulse_position[2] = ((fixed_index >> 8) & 7)*5 + (pulse_subset<<1) + 2;
-        }else if(mode <= MODE_795) {
+        }else { // mode <= MODE_795
             pulse_nb = 4;
             // first pulse position is Gray coded in bits 1-3
             pulse_position[0] = gray_decode[ fixed_index        & 7]*5;
