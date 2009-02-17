@@ -529,7 +529,8 @@ static void reconstruct_fixed_vector(int *pulse_position, int sign,
 static void decode_8_pulses_31bits(const int16_t *fixed_index, float *fixed_vector)
 {
     int pulse_position[8];
-    int i, pos1, pos2, sign, temp;
+    int i, pos1, pos2, temp;
+    float sign;
 
     // decode pulse positions
     // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
@@ -581,7 +582,8 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index, float *fixed_vect
 
 static void decode_10_pulses_35bits(const int16_t *fixed_index, float *fixed_vector)
 {
-    int i, pos1, pos2, sign;
+    int i, pos1, pos2;
+    float sign;
 
     memset(fixed_vector, 0, AMR_SUBFRAME_SIZE*sizeof(float));
 
