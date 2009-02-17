@@ -589,9 +589,8 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index, float *fixed_vec
         const int pos1   = gray_decode[fixed_index[i  ] & 7]*TRACKS + i;
         const int pos2   = gray_decode[fixed_index[i+5] & 7]*TRACKS + i;
         const float sign = (fixed_index[i] & 8) ? -1.0 : 1.0;
-        fixed_vector[pos1] = sign;
-        if(pos2 < pos1) sign = -sign;
-        fixed_vector[pos2] += sign;
+        fixed_vector[pos1]  = sign;
+        fixed_vector[pos2] += pos2 < pos1 ? -sign : sign;
     }
 }
 
