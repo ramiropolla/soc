@@ -630,7 +630,7 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
         decode_8_pulses_31bits(pulses, fixed_vector);
     }else {
         int pulse_position[4], pulse_subset, pulse_nb;
-        const int fixed_index = pulses[0], sign = pulses[1];
+        const int fixed_index = pulses[0];
 
         if(mode <= MODE_515) {
             pulse_nb = 2;
@@ -658,7 +658,7 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
             pulse_subset = (fixed_index >> 9) & 1;
             pulse_position[3] = gray_decode[(fixed_index >> 10) & 7]*5 + pulse_subset + 3;
         }
-        reconstruct_fixed_vector(pulse_position, sign, pulse_nb, fixed_vector);
+        reconstruct_fixed_vector(pulse_position, pulses[1], pulse_nb, fixed_vector);
     }
 }
 
