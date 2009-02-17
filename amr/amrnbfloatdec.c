@@ -573,6 +573,8 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index, float *fixed_vect
  * Decode the algebraic codebook index to pulse positions and signs and
  * construct the algebraic codebook vector for MODE_122.
  *
+ * @note: The positions and signs are explicitly coded in MODE_122.
+ *
  * @param fixed_index          positions of the ten pulses
  * @param fixed_vector         pointer to the algebraic codebook vector
  */
@@ -581,21 +583,14 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index, float *fixed_vec
 {
     int i, pos1, pos2, sign;
 
-    // reset the code
     memset(fixed_vector, 0, AMR_SUBFRAME_SIZE*sizeof(float));
 
-    // the positions and signs are explicitly coded in MODE_122
-
-    // reconstruct the fixed code
     for(i=0; i<TRACKS; i++) {
-        pos1 = gray_decode[fixed_index[i  ] & 7]*TRACKS + i; // ith pulse position
-        sign = (fixed_index[i] & 8) ? -1.0 : 1.0; // sign of ith pulse
-        pos2 = gray_decode[fixed_index[i+5] & 7]*TRACKS + i; // i+5th pulse position
-        // assign the ith pulse (+/-1) to its appropriate position
+        pos1 = gray_decode[fixed_index[i  ] & 7]*TRACKS + i;
+        sign = (fixed_index[i] & 8) ? -1.0 : 1.0;
+        pos2 = gray_decode[fixed_index[i+5] & 7]*TRACKS + i;
         fixed_vector[pos1] = sign;
-        // sign of i+5th pulse is relative to sign of ith pulse
         if(pos2 < pos1) sign = -sign;
-        // assign the i+5th pulse (+/-1) to its appropriate position
         fixed_vector[pos2] += sign;
     }
 }
