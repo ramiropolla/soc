@@ -42,7 +42,7 @@ typedef struct AMRContext {
 
     GetBitContext                        gb;
 
-    int16_t         amr_prms[PRMS_MODE_122]; ///< decoded AMR parameters (lsf coefficients, codebook indexes, etc)
+    AMRNBFrame                        frame; ///< decoded AMR parameters (lsf coefficients, codebook indexes, etc)
     int                 bad_frame_indicator; ///< bad frame ? 1 : 0
     int                      cur_frame_mode; ///< current frame mode
     int                      cur_frame_type; ///< current frame type
@@ -140,9 +140,6 @@ enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
     int i;
     const AMROrder *order;
 
-    // reset amr_prms
-    memset(p->amr_prms, 0, PRMS_MODE_122 * sizeof(int16_t));
-
     // initialize get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
     skip_bits(&p->gb, 1);
@@ -199,8 +196,11 @@ enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
 
     // reorder the bitstream to match the bit allocation in the specification
     if((p->cur_frame_type != RX_NO_DATA) && (p->cur_frame_type != RX_SPEECH_BAD)) {
+        uint16_t *data = (uint16_t *)&p->frame;
+
+        memset(&p->frame, 0, sizeof(AMRNBFrame));
         for(i=0; i<mode_bits[mode]; i++) {
-            p->amr_prms[ order[i].array_element ] += get_bits1(&p->gb) * (1<< order[i].bit_mask);
+            data[order[i].array_element] += get_bits1(&p->gb) * (1<< order[i].bit_mask);
         }
     }
 
@@ -278,21 +278,22 @@ static void lsf2lsp_for_mode122(AMRContext *p, float lsp[LP_FILTER_ORDER],
 
 static void lsf2lsp_5(AMRContext *p)
 {
+    const uint16_t *lsf_param = p->frame.lsf;
     float prev_lsf[LP_FILTER_ORDER]; // previous quantized LSF vectors
     const float *lsf_quantizer[5];
     int i;
 
-    lsf_quantizer[0] = lsf_5_1[p->amr_prms[0]];
-    lsf_quantizer[1] = lsf_5_2[p->amr_prms[1]];
-    lsf_quantizer[2] = lsf_5_3[p->amr_prms[2] >> 1];
-    lsf_quantizer[3] = lsf_5_4[p->amr_prms[3]];
-    lsf_quantizer[4] = lsf_5_5[p->amr_prms[4]];
+    lsf_quantizer[0] = lsf_5_1[lsf_param[0]];
+    lsf_quantizer[1] = lsf_5_2[lsf_param[1]];
+    lsf_quantizer[2] = lsf_5_3[lsf_param[2] >> 1];
+    lsf_quantizer[3] = lsf_5_4[lsf_param[3]];
+    lsf_quantizer[4] = lsf_5_5[lsf_param[4]];
 
     for(i=0; i<LP_FILTER_ORDER;i++)
         prev_lsf[i] = p->prev_lsf_r[i]*PRED_FAC_MODE_122 + lsf_5_mean[i];
 
-    lsf2lsp_for_mode122(p, p->lsp[1], prev_lsf, lsf_quantizer, 0, p->amr_prms[2] & 1, 0);
-    lsf2lsp_for_mode122(p, p->lsp[3], prev_lsf, lsf_quantizer, 2, p->amr_prms[2] & 1, 1);
+    lsf2lsp_for_mode122(p, p->lsp[1], prev_lsf, lsf_quantizer, 0, lsf_param[2] & 1, 0);
+    lsf2lsp_for_mode122(p, p->lsp[3], prev_lsf, lsf_quantizer, 2, lsf_param[2] & 1, 1);
 
     // interpolate LSP vectors at subframes 1 and 3
     weighted_vector_sumf(p->lsp[0], p->prev_lsp_sub4, p->lsp[1], 0.5, 0.5, LP_FILTER_ORDER);
@@ -307,18 +308,19 @@ static void lsf2lsp_5(AMRContext *p)
 
 static void lsf2lsp_3(AMRContext *p)
 {
+    const uint16_t *lsf_param = p->frame.lsf;
     float lsf_r[LP_FILTER_ORDER]; // residual LSF vector
     float lsf_q[LP_FILTER_ORDER]; // quantified LSF vector
     const float *lsf_quantizer;
     int i;
 
-    lsf_quantizer = (p->cur_frame_mode == MODE_795 ? lsf_3_1_MODE_795 : lsf_3_1)[p->amr_prms[0]];
+    lsf_quantizer = (p->cur_frame_mode == MODE_795 ? lsf_3_1_MODE_795 : lsf_3_1)[lsf_param[0]];
     memcpy(lsf_r, lsf_quantizer, 3*sizeof(float));
 
-    lsf_quantizer = lsf_3_2[p->amr_prms[1] << (p->cur_frame_mode <= MODE_515)];
+    lsf_quantizer = lsf_3_2[lsf_param[1] << (p->cur_frame_mode <= MODE_515)];
     memcpy(lsf_r + 3, lsf_quantizer, 3*sizeof(float));
 
-    lsf_quantizer = (p->cur_frame_mode <= MODE_515 ? lsf_3_3_MODE_515 : lsf_3_3)[p->amr_prms[2]];
+    lsf_quantizer = (p->cur_frame_mode <= MODE_515 ? lsf_3_3_MODE_515 : lsf_3_3)[lsf_param[2]];
     memcpy(lsf_r + 6, lsf_quantizer, 4*sizeof(float));
 
     // calculate mean-removed LSF vector and add mean
@@ -962,8 +964,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     AMRContext *p = avctx->priv_data;        // pointer to private data
     float *buf_out = data;                   // pointer to the output data buffer
     int i, subframe;                         // counters
-    int index = 0;                           // index counter (different modes
-                                             // advance through amr_prms differently)
     int gains_index_MODE_475 = 0;            // MODE_475 gains index coded every other subframe
     enum Mode speech_mode = MODE_475;        // ???
 
@@ -975,13 +975,9 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     if(p->cur_frame_mode == MODE_122) {
         // decode split-matrix quantized lsf vector indexes to lsp vectors
         lsf2lsp_5(p);
-        // advance index into amr_prms
-        index += 5;
     }else {
         // decode split-matrix quantized lsf vector indexes to an lsp vector
         lsf2lsp_3(p);
-        // advance index into amr_prms
-        index += 3;
     }
 
     // convert LSP vectors to LPC coefficient vectors
@@ -995,7 +991,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 /*** end of LPC coefficient decoding ***/
 
     for(subframe = 0; subframe < 4; subframe++) {
-
+        const AMRNBSubframe *amr_subframe = &p->frame.subframe[subframe];
 /*** adaptive code book (pitch) vector decoding ***/
 
         // find the search range
@@ -1009,11 +1005,10 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         // decode integer and fractional parts of pitch lag from parsed pitch
         // index
         if(p->cur_frame_mode == MODE_122) {
-            decode_pitch_lag_6(p, p->amr_prms[index], subframe);
+            decode_pitch_lag_6(p, amr_subframe->p_lag, subframe);
         }else {
-            decode_pitch_lag_3(p, p->amr_prms[index], subframe);
+            decode_pitch_lag_3(p, amr_subframe->p_lag, subframe);
         }
-        index++;
 
         // interpolate the past excitation at the pitch lag to obtain the pitch
         // vector
@@ -1026,32 +1021,25 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         switch(p->cur_frame_mode) {
             case MODE_475:
             case MODE_515:
-                decode_2_pulses_9bits(p->amr_prms[index], p->amr_prms[index+1], subframe, p->fixed_vector);
-                index += 2;
+                decode_2_pulses_9bits(amr_subframe->pulses[0], amr_subframe->pulses[1], subframe, p->fixed_vector);
             break;
             case MODE_59:
-                decode_2_pulses_11bits(p->amr_prms[index], p->amr_prms[index+1], p->fixed_vector);
-                index += 2;
+                decode_2_pulses_11bits(amr_subframe->pulses[0], amr_subframe->pulses[1], p->fixed_vector);
             break;
             case MODE_67:
-                decode_3_pulses_14bits(p->amr_prms[index], p->amr_prms[index+1], p->fixed_vector);
-                index += 2;
+                decode_3_pulses_14bits(amr_subframe->pulses[0], amr_subframe->pulses[1], p->fixed_vector);
             break;
             case MODE_74:
             case MODE_795:
-                decode_4_pulses_17bits(p->amr_prms[index], p->amr_prms[index+1], p->fixed_vector);
-                index += 2;
+                decode_4_pulses_17bits(amr_subframe->pulses[0], amr_subframe->pulses[1], p->fixed_vector);
             break;
             case MODE_102:
-                decode_8_pulses_31bits(&p->amr_prms[index], p->fixed_vector);
-                index += 7;
+                decode_8_pulses_31bits(amr_subframe->pulses, p->fixed_vector);
             break;
             case MODE_122:
                 // decode pitch gain
-                p->pitch_gain[4] = qua_gain_pit[p->amr_prms[index]];
-                index++;
-                decode_10_pulses_35bits(&p->amr_prms[index], p->fixed_vector);
-                index += 10;
+                p->pitch_gain[4] = qua_gain_pit[amr_subframe->p_gain];
+                decode_10_pulses_35bits(amr_subframe->pulses, p->fixed_vector);
             break;
             default:
             break;
@@ -1066,27 +1054,21 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         // decode pitch gain and fixed gain correction factor
         if(p->cur_frame_mode == MODE_122) {
-            p->fixed_gain_factor = qua_gain_code[p->amr_prms[index]];
-            index++;
+            p->fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
         }else if(p->cur_frame_mode == MODE_795) {
-            p->pitch_gain[4] =     qua_gain_pit[p->amr_prms[index]];
-            index++;
-            p->fixed_gain_factor = qua_gain_code[p->amr_prms[index]];
-            index++;
+            p->pitch_gain[4] =     qua_gain_pit[amr_subframe->p_gain];
+            p->fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
         }else if(p->cur_frame_mode == MODE_67 || p->cur_frame_mode == MODE_74 ||
                  p->cur_frame_mode == MODE_102) {
-            p->pitch_gain[4] =     gains_high[p->amr_prms[index]][0];
-            p->fixed_gain_factor = gains_high[p->amr_prms[index]][1];
-            index++;
+            p->pitch_gain[4] =     gains_high[amr_subframe->p_gain][0];
+            p->fixed_gain_factor = gains_high[amr_subframe->p_gain][1];
         }else if(p->cur_frame_mode == MODE_515 || p->cur_frame_mode == MODE_59) {
-            p->pitch_gain[4] =     gains_low[p->amr_prms[index]][0];
-            p->fixed_gain_factor = gains_low[p->amr_prms[index]][1];
-            index++;
+            p->pitch_gain[4] =     gains_low[amr_subframe->p_gain][0];
+            p->fixed_gain_factor = gains_low[amr_subframe->p_gain][1];
         }else {
             // gain index is only coded in subframes 0,2
             if(!(subframe&1)) {
-                gains_index_MODE_475 = p->amr_prms[index]<<1;
-                index++;
+                gains_index_MODE_475 = amr_subframe->p_gain<<1;
             }
             p->pitch_gain[4] =     gains_MODE_475[gains_index_MODE_475 + (subframe&1)][0];
             p->fixed_gain_factor = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][1];
