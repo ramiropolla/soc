@@ -622,6 +622,8 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index, float *fixed_vec
 static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
                                 const enum Mode mode, const int subframe)
 {
+    assert(MODE_475 <= mode && mode <= MODE_122);
+
     if (mode == MODE_122) {
         decode_10_pulses_35bits(pulses, fixed_vector);
     }else if(mode == MODE_102) {
@@ -673,8 +675,6 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
             pulse_subset = (fixed_index >> 9) & 1;
             // third pulse position is Gray coded in bits 11-13
             pulse_position[3] = gray_decode[(fixed_index >> 10) & 7]*5 + pulse_subset + 3;
-        }else {
-            assert(NULL);
         }
 
         // reconstruct the fixed code
