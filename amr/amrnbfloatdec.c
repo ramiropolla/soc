@@ -634,22 +634,22 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
 
         if(mode <= MODE_515) {
             pulse_nb = 2;
-            pulse_subset = (fixed_index & 0x40)>>6;
-            pulse_position[0] = ( fixed_index       & 7)*5 + track_position[ (pulse_subset<<3) + (subframe<<1) ];
-            pulse_position[1] = ((fixed_index >> 3) & 7)*5 + track_position[ (pulse_subset<<3) + (subframe<<1) + 1 ];
+            pulse_subset =      ((fixed_index >> 3) & 8) + (subframe << 1);
+            pulse_position[0] = ( fixed_index       & 7)*5 + track_position[pulse_subset];
+            pulse_position[1] = ((fixed_index >> 3) & 7)*5 + track_position[pulse_subset + 1];
         }else if(mode == MODE_59) {
             pulse_nb = 2;
-            pulse_subset = fixed_index & 1;
-            pulse_position[0] = ((fixed_index >> 1) & 7)*5 + (pulse_subset<<1) + 1;
+            pulse_subset = ((fixed_index & 1) << 1) + 1;
+            pulse_position[0] = ((fixed_index >> 1) & 7)*5 + pulse_subset;
             pulse_subset = (fixed_index >> 4) & 3;
             pulse_position[1] = ((fixed_index >> 6) & 7)*5 + pulse_subset + (pulse_subset == 3 ? 1 : 0);
         }else if(mode == MODE_67) {
             pulse_nb = 3;
             pulse_position[0] = ( fixed_index       & 7)*5;
-            pulse_subset = (fixed_index >> 3) & 1;
-            pulse_position[1] = ((fixed_index >> 4) & 7)*5 + (pulse_subset<<1) + 1;
-            pulse_subset = (fixed_index >> 7) & 1;
-            pulse_position[2] = ((fixed_index >> 8) & 7)*5 + (pulse_subset<<1) + 2;
+            pulse_subset = (fixed_index >> 2) & 2;
+            pulse_position[1] = ((fixed_index >> 4) & 7)*5 + pulse_subset + 1;
+            pulse_subset = (fixed_index >> 6) & 2;
+            pulse_position[2] = ((fixed_index >> 8) & 7)*5 + pulse_subset + 2;
         }else { // mode <= MODE_795
             pulse_nb = 4;
             pulse_position[0] = gray_decode[ fixed_index        & 7]*5;
