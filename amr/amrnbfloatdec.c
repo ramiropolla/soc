@@ -634,50 +634,30 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
 
         if(mode <= MODE_515) {
             pulse_nb = 2;
-            // pulse subset is the msb (bit 7) of the 7-bits used to code the 2 pulses
             pulse_subset = (fixed_index & 0x40)>>6;
-            // first pulse position is coded in bits 1-3
             pulse_position[0] = ( fixed_index       & 7)*5 + track_position[ (pulse_subset<<3) + (subframe<<1) ];
-            // second pulse position is coded in bits 4-6
             pulse_position[1] = ((fixed_index >> 3) & 7)*5 + track_position[ (pulse_subset<<3) + (subframe<<1) + 1 ];
         }else if(mode == MODE_59) {
             pulse_nb = 2;
-            // pulse subset for the first pulse is the lsb (bit 1) of the 9-bits used
-            // to code the 2 pulses
             pulse_subset = fixed_index & 1;
-            // first pulse position is coded in bits 2-4
             pulse_position[0] = ((fixed_index >> 1) & 7)*5 + (pulse_subset<<1) + 1;
-            // pulse subset for the second pulse is coded in bits 5-6
             pulse_subset = (fixed_index >> 4) & 3;
-            // second pulse position is coded in bits 7-9
             pulse_position[1] = ((fixed_index >> 6) & 7)*5 + pulse_subset + (pulse_subset == 3 ? 1 : 0);
         }else if(mode == MODE_67) {
             pulse_nb = 3;
-            // first pulse position is coded in bits 1-3
             pulse_position[0] = ( fixed_index       & 7)*5;
-            // pulse subset for the second pulse is coded in bit 4
             pulse_subset = (fixed_index >> 3) & 1;
-            // second pulse position is coded in bits 5-7
             pulse_position[1] = ((fixed_index >> 4) & 7)*5 + (pulse_subset<<1) + 1;
-            // pulse subset for the second pulse is coded in bit 8
             pulse_subset = (fixed_index >> 7) & 1;
-            // third pulse position is coded in bits 9-11
             pulse_position[2] = ((fixed_index >> 8) & 7)*5 + (pulse_subset<<1) + 2;
         }else { // mode <= MODE_795
             pulse_nb = 4;
-            // first pulse position is Gray coded in bits 1-3
             pulse_position[0] = gray_decode[ fixed_index        & 7]*5;
-            // second pulse position is Gray coded in bits 4-6
             pulse_position[1] = gray_decode[(fixed_index >> 3)  & 7]*5 + 1;
-            // third pulse position is Gray coded in bits 7-9
             pulse_position[2] = gray_decode[(fixed_index >> 6)  & 7]*5 + 2;
-            // pulse subset for the fourth pulse is coded in bit 10
             pulse_subset = (fixed_index >> 9) & 1;
-            // third pulse position is Gray coded in bits 11-13
             pulse_position[3] = gray_decode[(fixed_index >> 10) & 7]*5 + pulse_subset + 3;
         }
-
-        // reconstruct the fixed code
         reconstruct_fixed_vector(pulse_position, sign, pulse_nb, fixed_vector);
     }
 }
