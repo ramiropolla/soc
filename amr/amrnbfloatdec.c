@@ -35,6 +35,7 @@
 #include "bitstream.h"
 #include "libavutil/common.h"
 #include "internal.h"
+#include "celp_math.h"
 #include "amrnbfloatdata.h"
 
 void ff_celp_lspf2lpc(const double *lspf, float *lpc);
@@ -671,7 +672,7 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
                                    enum Mode mode)
 {
     int i;
-    float energy_pred = 0.0, energy_fixed_mean = 0.0;
+    float energy_pred = 0.0, energy_fixed_mean;
 
     // Calculate the predicted energy
     for(i=0; i<4; i++) {
@@ -679,9 +680,7 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
     }
 
     // Calculate the mean fixed vector energy
-    for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
-        energy_fixed_mean += fixed_vector[i]*fixed_vector[i];
-    }
+    energy_fixed_mean = ff_dot_productf(fixed_vector, fixed_vector, AMR_SUBFRAME_SIZE);
     energy_fixed_mean = 10.0*log10f(energy_fixed_mean/(float)AMR_SUBFRAME_SIZE);
 
     // predicted fixed gain =
