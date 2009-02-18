@@ -620,36 +620,32 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
     }else if(mode == MODE_102) {
         decode_8_pulses_31bits(pulses, fixed_vector);
     }else {
-        int pulse_position[4], pulse_subset, pulse_nb;
+        int pulse_position[4], pulse_subset;
         const int fixed_index = pulses[0];
 
         if(mode <= MODE_515) {
-            pulse_nb = 2;
             pulse_subset =      ((fixed_index >> 3) & 8) + (subframe << 1);
             pulse_position[0] = ( fixed_index       & 7)*5 + track_position[pulse_subset];
             pulse_position[1] = ((fixed_index >> 3) & 7)*5 + track_position[pulse_subset + 1];
         }else if(mode == MODE_59) {
-            pulse_nb = 2;
             pulse_subset = ((fixed_index & 1) << 1) + 1;
             pulse_position[0] = ((fixed_index >> 1) & 7)*5 + pulse_subset;
             pulse_subset = (fixed_index >> 4) & 3;
             pulse_position[1] = ((fixed_index >> 6) & 7)*5 + pulse_subset + (pulse_subset == 3 ? 1 : 0);
         }else if(mode == MODE_67) {
-            pulse_nb = 3;
             pulse_position[0] = ( fixed_index       & 7)*5;
             pulse_subset = (fixed_index >> 2) & 2;
             pulse_position[1] = ((fixed_index >> 4) & 7)*5 + pulse_subset + 1;
             pulse_subset = (fixed_index >> 6) & 2;
             pulse_position[2] = ((fixed_index >> 8) & 7)*5 + pulse_subset + 2;
         }else { // mode <= MODE_795
-            pulse_nb = 4;
             pulse_position[0] = gray_decode[ fixed_index        & 7]*5;
             pulse_position[1] = gray_decode[(fixed_index >> 3)  & 7]*5 + 1;
             pulse_position[2] = gray_decode[(fixed_index >> 6)  & 7]*5 + 2;
             pulse_subset = (fixed_index >> 9) & 1;
             pulse_position[3] = gray_decode[(fixed_index >> 10) & 7]*5 + pulse_subset + 3;
         }
-        reconstruct_fixed_vector(pulse_position, pulses[1], pulse_nb, fixed_vector);
+        reconstruct_fixed_vector(pulse_position, pulses[1], pulses_nb_per_mode[mode], fixed_vector);
     }
 }
 
