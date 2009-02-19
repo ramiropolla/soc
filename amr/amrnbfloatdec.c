@@ -77,7 +77,7 @@ typedef struct AMRContext {
     float                              beta; ///< beta = pitch_gain, bounded by [0.0,1.0] for 12.2 kbps or [0.0,0.8] for other modes
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
 
-    uint8_t           ir_filter_strength[2]; ///< impulse response filter strength; 0 - strong, 1 - medium, 2 - none
+    uint8_t         prev_ir_filter_strength; ///< previous impulse response filter strength; 0 - strong, 1 - medium, 2 - none
     const float                  *ir_filter; ///< pointer to impulse response filter data
 
     float samples_in[LP_FILTER_ORDER + AMR_SUBFRAME_SIZE]; ///< floating point samples
@@ -778,30 +778,32 @@ static void convolve_circ(float *fixed_vector, const float *ir_filter)
  */
 void do_phase_dispersion(AMRContext *p)
 {
+    float ir_filter_strength;
+
     // anti-sparseness processing
     if(p->pitch_gain[4] < 0.6) {
         // strong filtering
-        p->ir_filter_strength[1] = 0;
+        ir_filter_strength = 0;
     }else if(p->pitch_gain[4] < 0.9) {
         // medium filtering
-        p->ir_filter_strength[1] = 1;
+        ir_filter_strength = 1;
     }else {
         // no filtering
-        p->ir_filter_strength[1] = 2;
+        ir_filter_strength = 2;
     }
 
     // detect 'onset'
     if(p->fixed_gain[4] > 2.0*p->fixed_gain[3]) {
-        p->ir_filter_strength[1] = FFMIN(p->ir_filter_strength[1] + 1, 2);
-    }else if(p->ir_filter_strength[1] == 0 && medianf(p->pitch_gain, 5) >= 0.6 &&
-                p->ir_filter_strength[1] > p->ir_filter_strength[0] + 1) {
-        p->ir_filter_strength[1] = p->ir_filter_strength[0] + 1;
+        ir_filter_strength = FFMIN(ir_filter_strength + 1, 2);
+    }else if(ir_filter_strength == 0 && medianf(p->pitch_gain, 5) >= 0.6 &&
+                ir_filter_strength > p->prev_ir_filter_strength + 1) {
+        ir_filter_strength = p->prev_ir_filter_strength + 1;
     }
 
     if(p->cur_frame_mode != MODE_74 && p->cur_frame_mode != MODE_102 &&
-            p->cur_frame_mode != MODE_122 && p->ir_filter_strength[1] < 2) {
+            p->cur_frame_mode != MODE_122 && ir_filter_strength < 2) {
         // assign the correct impulse response
-        if(p->ir_filter_strength[1] == 1) {
+        if(ir_filter_strength == 1) {
             p->ir_filter = ir_filter_medium;
         }else {
             if(p->cur_frame_mode != MODE_795) {
