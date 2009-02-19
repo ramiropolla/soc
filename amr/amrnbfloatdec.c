@@ -95,6 +95,35 @@ static void weighted_vector_sumf(float *out, const float *in_a,
                + weight_coeff_b * in_b[i];
 }
 
+/**
+ * @note this function should be moved to acelp_vectors.[ch]
+ *       and used in qcelpdec.c
+ *
+ * Apply adaptive gain control by gain scaling.
+ *
+ * @param v_out output vector
+ * @param v_in gain-controlled vector
+ * @param v_ref vector to control gain of
+ * @param length vectors length
+ *
+ * FIXME: If v_ref is a zero vector, it energy is zero
+ *        and the behavior of the gain control is
+ *        undefined in the specs.
+ *
+ * TIA/EIA/IS-733 2.4.8.3-2/3/4/5, 2.4.8.6
+ */
+void ff_apply_gain_ctrl(float *v_out, const float *v_ref, const float *v_in, const int length)
+{
+    int   i;
+    float scalefactor = ff_dot_productf(v_in, v_in, length);
+    if(scalefactor)
+        scalefactor = sqrt(ff_dot_productf(v_ref, v_ref, length) / scalefactor);
+    else
+        ff_log_missing_feature(NULL, "Zero energy for gain control", 1);
+    for(i=0; i<length; i++)
+        v_out[i] = scalefactor * v_in[i];
+}
+
 static void reset_state(AMRContext *p)
 {
     int i;
@@ -806,21 +835,14 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
     if(p->pitch_gain[4] > 0.5 && !overflow) {
         float excitation_temp[AMR_SUBFRAME_SIZE];
         float pitch_factor = (p->cur_frame_mode == MODE_122 ? 0.25 : 0.5)*p->beta*p->pitch_gain[4];
-        float eta, temp1 = 0.0, temp2 = 0.0;
 
         for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
             // emphasize pitch vector contribution
             excitation_temp[i] = excitation[i] + pitch_factor*p->pitch_vector[i];
-            // find gain scale
-            temp1 +=      excitation[i]*excitation[i];
-            temp2 += excitation_temp[i]*excitation_temp[i];
         }
 
         // adaptive gain control by gain scaling
-        eta = sqrt(temp1/temp2);
-        for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
-            excitation[i] = eta*excitation_temp[i];
-        }
+        ff_apply_gain_ctrl(excitation, excitation, excitation_temp, AMR_SUBFRAME_SIZE);
     }
 
     for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
