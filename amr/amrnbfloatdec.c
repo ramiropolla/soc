@@ -181,8 +181,6 @@ enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
                            enum Mode *speech_mode)
 {
     enum Mode mode;
-    int i;
-    const AMROrder *order;
 
     // initialize get_bits
     init_get_bits(&p->gb, buf, buf_size*8);
@@ -193,66 +191,28 @@ enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
     p->bad_frame_indicator = !get_bits1(&p->gb);
     skip_bits(&p->gb, 2);
 
-    switch(mode) {
-        case MODE_DTX:
-            order = order_MODE_DTX;
-            p->cur_frame_type = RX_SID_FIRST; // get SID type bit
-        break;
-        case NO_DATA:
-            p->cur_frame_type = RX_NO_DATA;
-        break;
-        case MODE_475:
-            order = order_MODE_475;
-            p->cur_frame_type = RX_SPEECH_GOOD;
-        break;
-        case MODE_515:
-            order = order_MODE_515;
-            p->cur_frame_type = RX_SPEECH_GOOD;
-        break;
-        case MODE_59:
-            order = order_MODE_59;
-            p->cur_frame_type = RX_SPEECH_GOOD;
-        break;
-        case MODE_67:
-            order = order_MODE_67;
-            p->cur_frame_type = RX_SPEECH_GOOD;
-        break;
-        case MODE_74:
-            order = order_MODE_74;
-            p->cur_frame_type = RX_SPEECH_GOOD;
-        break;
-        case MODE_795:
-            order = order_MODE_795;
-            p->cur_frame_type = RX_SPEECH_GOOD;
-        break;
-        case MODE_102:
-            order = order_MODE_102;
-            p->cur_frame_type = RX_SPEECH_GOOD;
-        break;
-        case MODE_122:
-            order = order_MODE_122;
-            p->cur_frame_type = RX_SPEECH_GOOD;
-        break;
-        default:
-            p->cur_frame_type = RX_SPEECH_BAD;
-        break;
-    }
-
-    // reorder the bitstream to match the bit allocation in the specification
-    if((p->cur_frame_type != RX_NO_DATA) && (p->cur_frame_type != RX_SPEECH_BAD)) {
+    if(MODE_475 <= mode && mode <= MODE_DTX) {
         uint16_t *data = (uint16_t *)&p->frame;
+        const AMROrder *order = amr_unpacking_bitmaps_per_mode[mode];
+        int i;
 
         memset(&p->frame, 0, sizeof(AMRNBFrame));
         for(i=0; i<mode_bits[mode]; i++) {
             data[order[i].array_element] += get_bits1(&p->gb) * (1<< order[i].bit_mask);
         }
-    }
 
     if(mode == MODE_DTX) {
+        p->cur_frame_type = RX_SID_FIRST; // get SID type bit
         skip_bits(&p->gb, 4); // skip to the next byte
         if(get_bits1(&p->gb)) // use the update if there is one
             p->cur_frame_type = RX_SID_UPDATE;
         *speech_mode = get_bits(&p->gb, 3); // speech mode indicator
+        }else
+            p->cur_frame_type = RX_SPEECH_GOOD;
+    }else if(mode == NO_DATA) {
+        p->cur_frame_type = RX_NO_DATA;
+    }else {
+        p->cur_frame_type = RX_SPEECH_BAD;
     }
 
     return mode;

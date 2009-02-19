@@ -493,6 +493,22 @@ static const AMROrder order_MODE_DTX[35] = {
 { 4, 2}, { 4, 1}, { 4, 0}
 };
 
+/**
+ * position of the bitmapping data for each packet type in
+ * the AMRNBFrame
+ */
+static const AMROrder * const amr_unpacking_bitmaps_per_mode[9] = {
+    order_MODE_475,
+    order_MODE_515,
+    order_MODE_59,
+    order_MODE_67,
+    order_MODE_74,
+    order_MODE_795,
+    order_MODE_102,
+    order_MODE_122,
+    order_MODE_DTX,
+};
+
 // number of bits for each mode
 static const uint8_t mode_bits[N_MODES] = {
     FF_ARRAY_ELEMS(order_MODE_475),
