@@ -78,6 +78,7 @@ typedef struct AMRContext {
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
 
     uint8_t         prev_ir_filter_strength; ///< previous impulse response filter strength; 0 - strong, 1 - medium, 2 - none
+    uint8_t                 ir_filter_onset; ///< flag for impulse response filter strength
 
     float samples_in[LP_FILTER_ORDER + AMR_SUBFRAME_SIZE]; ///< floating point samples
 
@@ -692,47 +693,6 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
 /// @{
 
 /**
- * Comparison function for use with qsort.
- *
- * @param a             first value for comparison
- * @param b             second value for comparison
- * @return a-b : the result of the comparison
- */
-
-int qsort_compare(const void *a, const void *b)
-{
-    float diff = *(const float *)a - *(const float *)b;
-    if(diff > 0.0f)
-        return 1;
-    if(diff < 0.0f)
-        return -1;
-    return 0;
-}
-
-/**
- * Find the median of some float values.
- *
- * @param values        pointer to the values of which to find the median
- * @param n             number of values
- * @return the median value
- */
-
-static float medianf(float *values, int n)
-{
-    float temp[9]; // largest n used for median calculation is 9
-
-    memcpy(temp, values, n * sizeof(float));
-
-    qsort(temp, n, sizeof(float), qsort_compare);
-
-    if(n&1) {
-        return                     temp[ n>>1 ];
-    }else {
-        return (temp[ (n>>1)-1 ] + temp[ n>>1 ])/2.0;
-    }
-}
-
-/**
  * Circularly convolve the fixed vector with a phase dispersion impulse response
  * filter.
  *
@@ -793,11 +753,27 @@ void do_phase_dispersion(AMRContext *p)
 
     // detect 'onset'
     if(p->fixed_gain[4] > 2.0*p->fixed_gain[3]) {
-        ir_filter_strength = FFMIN(ir_filter_strength + 1, 2);
-    }else if(ir_filter_strength == 0 && medianf(p->pitch_gain, 5) >= 0.6 &&
-                ir_filter_strength > p->prev_ir_filter_strength + 1) {
-        ir_filter_strength = p->prev_ir_filter_strength + 1;
+        p->ir_filter_onset = 2;
+    }else if(p->ir_filter_onset) {
+        p->ir_filter_onset--;
     }
+
+    if(!p->ir_filter_onset) {
+        int i, count = 0;
+
+        for(i=0; i<5; i++)
+            if(p->pitch_gain[i] < 0.6)
+                count++;
+        if(count > 2)
+            ir_filter_strength = 0;
+
+        if(ir_filter_strength > p->prev_ir_filter_strength + 1)
+            ir_filter_strength--;
+    } else if(ir_filter_strength < 2) {
+        ir_filter_strength++;
+    }
+
+    //FIXME: disable filtering for very low level of fixed_gain
 
     if(p->cur_frame_mode != MODE_74 && p->cur_frame_mode != MODE_102 &&
             p->cur_frame_mode != MODE_122 && ir_filter_strength < 2) {
