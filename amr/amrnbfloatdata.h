@@ -485,7 +485,7 @@ AMR_PULSES(3, 9, 0), AMR_PULSES(3, 9, 1), AMR_PULSES(3, 9, 2),
 AMR_PLAG(1, 0), AMR_PLAG(3, 0)
 };
 
-//FIXME: This order needs to be map into AMRNBFrame.
+//FIXME: This order array needs to be mapped to AMRNBFrame.
 static const AMROrder order_MODE_DTX[35] = {
 { 0, 2}, { 0, 1}, { 0, 0}, { 1, 7}, { 1, 6}, { 1, 5}, { 1, 4}, { 1, 3},
 { 1, 2}, { 1, 1}, { 1, 0}, { 2, 8}, { 2, 7}, { 2, 6}, { 2, 5}, { 2, 4},
