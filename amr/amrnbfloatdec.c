@@ -201,12 +201,12 @@ enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
             data[order[i].array_element] += get_bits1(&p->gb) * (1<< order[i].bit_mask);
         }
 
-    if(mode == MODE_DTX) {
-        p->cur_frame_type = RX_SID_FIRST; // get SID type bit
-        skip_bits(&p->gb, 4); // skip to the next byte
-        if(get_bits1(&p->gb)) // use the update if there is one
-            p->cur_frame_type = RX_SID_UPDATE;
-        *speech_mode = get_bits(&p->gb, 3); // speech mode indicator
+        if(mode == MODE_DTX) {
+            p->cur_frame_type = RX_SID_FIRST; // get SID type bit
+            skip_bits(&p->gb, 4); // skip to the next byte
+            if(get_bits1(&p->gb)) // use the update if there is one
+                p->cur_frame_type = RX_SID_UPDATE;
+            *speech_mode = get_bits(&p->gb, 3); // speech mode indicator
         }else
             p->cur_frame_type = RX_SPEECH_GOOD;
     }else if(mode == NO_DATA) {
