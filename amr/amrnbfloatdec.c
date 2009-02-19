@@ -778,42 +778,42 @@ static void convolve_circ(float *fixed_vector, const float *ir_filter)
  */
 void do_phase_dispersion(AMRContext *p)
 {
-        // anti-sparseness processing
-        if(p->pitch_gain[4] < 0.6) {
-            // strong filtering
-            p->ir_filter_strength[1] = 0;
-        }else if(p->pitch_gain[4] < 0.9) {
-            // medium filtering
-            p->ir_filter_strength[1] = 1;
+    // anti-sparseness processing
+    if(p->pitch_gain[4] < 0.6) {
+        // strong filtering
+        p->ir_filter_strength[1] = 0;
+    }else if(p->pitch_gain[4] < 0.9) {
+        // medium filtering
+        p->ir_filter_strength[1] = 1;
+    }else {
+        // no filtering
+        p->ir_filter_strength[1] = 2;
+    }
+
+    // detect 'onset'
+    if(p->fixed_gain[4] > 2.0*p->fixed_gain[3]) {
+        p->ir_filter_strength[1] = FFMIN(p->ir_filter_strength[1] + 1, 2);
+    }else if(p->ir_filter_strength[1] == 0 && medianf(p->pitch_gain, 5) >= 0.6 &&
+                p->ir_filter_strength[1] > p->ir_filter_strength[0] + 1) {
+        p->ir_filter_strength[1] = p->ir_filter_strength[0] + 1;
+    }
+
+    if(p->cur_frame_mode != MODE_74 && p->cur_frame_mode != MODE_102 &&
+            p->cur_frame_mode != MODE_122 && p->ir_filter_strength[1] < 2) {
+        // assign the correct impulse response
+        if(p->ir_filter_strength[1] == 1) {
+            p->ir_filter = ir_filter_medium;
         }else {
-            // no filtering
-            p->ir_filter_strength[1] = 2;
-        }
-
-        // detect 'onset'
-        if(p->fixed_gain[4] > 2.0*p->fixed_gain[3]) {
-            p->ir_filter_strength[1] = FFMIN(p->ir_filter_strength[1] + 1, 2);
-        }else if(p->ir_filter_strength[1] == 0 && medianf(p->pitch_gain, 5) >= 0.6 &&
-                    p->ir_filter_strength[1] > p->ir_filter_strength[0] + 1) {
-            p->ir_filter_strength[1] = p->ir_filter_strength[0] + 1;
-        }
-
-        if(p->cur_frame_mode != MODE_74 && p->cur_frame_mode != MODE_102 &&
-                p->cur_frame_mode != MODE_122 && p->ir_filter_strength[1] < 2) {
-            // assign the correct impulse response
-            if(p->ir_filter_strength[1] == 1) {
-                p->ir_filter = ir_filter_medium;
+            if(p->cur_frame_mode != MODE_795) {
+                p->ir_filter = ir_filter_strong;
             }else {
-                if(p->cur_frame_mode != MODE_795) {
-                    p->ir_filter = ir_filter_strong;
-                }else {
-                    p->ir_filter = ir_filter_strong_MODE_795;
-                }
+                p->ir_filter = ir_filter_strong_MODE_795;
             }
-
-            // circularly convolve the fixed vector with the impulse response
-            convolve_circ(p->fixed_vector, p->ir_filter);
         }
+
+        // circularly convolve the fixed vector with the impulse response
+        convolve_circ(p->fixed_vector, p->ir_filter);
+    }
 }
 
 /// @defgroup amr_synthesis synthesis functions
