@@ -814,6 +814,9 @@ void do_phase_dispersion(AMRContext *p)
         // circularly convolve the fixed vector with the impulse response
         convolve_circ(p->fixed_vector, p->ir_filter);
     }
+
+    // update ir filter strength history
+    p->prev_ir_filter_strength = ir_filter_strength;
 }
 
 /// @defgroup amr_synthesis synthesis functions
@@ -911,9 +914,6 @@ static void update_state(AMRContext *p)
     // update gain history
     memmove(&p->pitch_gain[0], &p->pitch_gain[1], 4*sizeof(float));
     memmove(&p->fixed_gain[0], &p->fixed_gain[1], 4*sizeof(float));
-
-    // update ir filter strength history
-    p->ir_filter_strength[0] = p->ir_filter_strength[1];
 
     // update speech sample history
     memmove(&p->samples_in[0], &p->samples_in[AMR_SUBFRAME_SIZE],
