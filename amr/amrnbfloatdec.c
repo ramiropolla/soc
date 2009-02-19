@@ -775,8 +775,7 @@ void do_phase_dispersion(AMRContext *p)
 
     //FIXME: disable filtering for very low level of fixed_gain
 
-    if(p->cur_frame_mode != MODE_74 && p->cur_frame_mode != MODE_102 &&
-            p->cur_frame_mode != MODE_122 && ir_filter_strength < 2) {
+    if(p->cur_frame_mode != MODE_74 && p->cur_frame_mode < MODE_102 && ir_filter_strength < 2) {
         const float *ir_filter;
         // assign the correct impulse response
         if(ir_filter_strength == 1) {
