@@ -98,9 +98,8 @@ typedef struct AMRContext {
  *
  * @note It is safe to pass the same buffer for out and in_a or in_b.
  */
- void ff_weighted_vector_sumf(float *out, const float *in_a,
-                                 const float *in_b, float weight_coeff_a,
-                                 float weight_coeff_b, int length)
+ void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
+                              float weight_coeff_a, float weight_coeff_b, int length)
 {
     int i;
 
