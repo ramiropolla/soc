@@ -737,7 +737,7 @@ static void convolve_circ(float *fixed_vector, const float *ir_filter)
  */
 void do_phase_dispersion(AMRContext *p)
 {
-    float ir_filter_strength;
+    int ir_filter_strength;
 
     // anti-sparseness processing
     if(p->pitch_gain[4] < 0.6) {
