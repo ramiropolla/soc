@@ -2320,7 +2320,8 @@ static const float ir_filter_medium[AMR_SUBFRAME_SIZE] = {
 -0.093384,  0.088409, -0.060364,  0.016998,  0.023804, -0.041779,  0.025696,  0.019989,
 };
 
-
+static const float *ir_filters_lookup[2]          = { ir_filter_strong,          ir_filter_medium };
+static const float *ir_filters_lookup_MODE_795[2] = { ir_filter_strong_MODE_795, ir_filter_medium };
 
 
 /**************************** end of tables *****************************/
