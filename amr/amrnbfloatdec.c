@@ -84,7 +84,21 @@ typedef struct AMRContext {
 
 } AMRContext;
 
-static void weighted_vector_sumf(float *out, const float *in_a,
+/**
+ * @note this function should be moved to acelp_vectors.[ch]
+ *       and used in qcelpdec.c
+ *
+ * weighted sum of two vectors with rounding.
+ * @param out [out] result of addition
+ * @param in_a first vector
+ * @param in_b second vector
+ * @param weight_coeff_a first vector weight coefficient
+ * @param weight_coeff_a second vector weight coefficient
+ * @param length vectors length
+ *
+ * @note It is safe to pass the same buffer for out and in_a or in_b.
+ */
+ void ff_weighted_vector_sumf(float *out, const float *in_a,
                                  const float *in_b, float weight_coeff_a,
                                  float weight_coeff_b, int length)
 {
@@ -327,8 +341,8 @@ static void lsf2lsp_5(AMRContext *p)
     lsf2lsp_for_mode122(p, p->lsp[3], prev_lsf, lsf_quantizer, 2, lsf_param[2] & 1, 1);
 
     // interpolate LSP vectors at subframes 1 and 3
-    weighted_vector_sumf(p->lsp[0], p->prev_lsp_sub4, p->lsp[1], 0.5, 0.5, LP_FILTER_ORDER);
-    weighted_vector_sumf(p->lsp[2], p->lsp[1]       , p->lsp[3], 0.5, 0.5, LP_FILTER_ORDER);
+    ff_weighted_vector_sumf(p->lsp[0], p->prev_lsp_sub4, p->lsp[1], 0.5, 0.5, LP_FILTER_ORDER);
+    ff_weighted_vector_sumf(p->lsp[2], p->lsp[1]       , p->lsp[3], 0.5, 0.5, LP_FILTER_ORDER);
 }
 
 /**
@@ -366,7 +380,7 @@ static void lsf2lsp_3(AMRContext *p)
 
     // interpolate LSP vectors at subframes 1, 2 and 3
     for(i=0; i<3; i++)
-        weighted_vector_sumf(p->lsp[i], p->prev_lsp_sub4, p->lsp[3], 0.25*(3-i), 0.25*(i+1), LP_FILTER_ORDER);
+        ff_weighted_vector_sumf(p->lsp[i], p->prev_lsp_sub4, p->lsp[3], 0.25*(3-i), 0.25*(i+1), LP_FILTER_ORDER);
 }
 
 
@@ -939,7 +953,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     }
 
     // update averaged lsp vector (used for fixed gain smoothing)
-    weighted_vector_sumf(p->lsp_avg, p->lsp_avg, p->prev_lsp_sub4, 0.84, 0.16, LP_FILTER_ORDER);
+    ff_weighted_vector_sumf(p->lsp_avg, p->lsp_avg, p->prev_lsp_sub4, 0.84, 0.16, LP_FILTER_ORDER);
 
 /*** end of LPC coefficient decoding ***/
 
