@@ -776,20 +776,10 @@ void do_phase_dispersion(AMRContext *p)
     //FIXME: disable filtering for very low level of fixed_gain
 
     if(p->cur_frame_mode != MODE_74 && p->cur_frame_mode < MODE_102 && ir_filter_strength < 2) {
-        const float *ir_filter;
-        // assign the correct impulse response
-        if(ir_filter_strength == 1) {
-            ir_filter = ir_filter_medium;
-        }else {
-            if(p->cur_frame_mode != MODE_795) {
-                ir_filter = ir_filter_strong;
-            }else {
-                ir_filter = ir_filter_strong_MODE_795;
-            }
-        }
-
+        const float **filters = p->cur_frame_mode == MODE_795 ? ir_filters_lookup_MODE_795
+                                                              : ir_filters_lookup;
         // circularly convolve the fixed vector with the impulse response
-        convolve_circ(p->fixed_vector, ir_filter);
+        convolve_circ(p->fixed_vector, filters[ir_filter_strength]);
     }
 
     // update ir filter strength history
