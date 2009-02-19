@@ -78,7 +78,6 @@ typedef struct AMRContext {
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
 
     uint8_t         prev_ir_filter_strength; ///< previous impulse response filter strength; 0 - strong, 1 - medium, 2 - none
-    const float                  *ir_filter; ///< pointer to impulse response filter data
 
     float samples_in[LP_FILTER_ORDER + AMR_SUBFRAME_SIZE]; ///< floating point samples
 
@@ -802,19 +801,20 @@ void do_phase_dispersion(AMRContext *p)
 
     if(p->cur_frame_mode != MODE_74 && p->cur_frame_mode != MODE_102 &&
             p->cur_frame_mode != MODE_122 && ir_filter_strength < 2) {
+        const float *ir_filter;
         // assign the correct impulse response
         if(ir_filter_strength == 1) {
-            p->ir_filter = ir_filter_medium;
+            ir_filter = ir_filter_medium;
         }else {
             if(p->cur_frame_mode != MODE_795) {
-                p->ir_filter = ir_filter_strong;
+                ir_filter = ir_filter_strong;
             }else {
-                p->ir_filter = ir_filter_strong_MODE_795;
+                ir_filter = ir_filter_strong_MODE_795;
             }
         }
 
         // circularly convolve the fixed vector with the impulse response
-        convolve_circ(p->fixed_vector, p->ir_filter);
+        convolve_circ(p->fixed_vector, ir_filter);
     }
 
     // update ir filter strength history
