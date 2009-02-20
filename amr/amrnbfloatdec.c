@@ -319,20 +319,20 @@ static void lsf2lsp_3(AMRContext *p)
     int i;
 
     lsf_quantizer = (p->cur_frame_mode == MODE_795 ? lsf_3_1_MODE_795 : lsf_3_1)[lsf_param[0]];
-    memcpy(lsf_r, lsf_quantizer, 3*sizeof(float));
+    memcpy(lsf_r, lsf_quantizer, 3*sizeof(*lsf_r));
 
     lsf_quantizer = lsf_3_2[lsf_param[1] << (p->cur_frame_mode <= MODE_515)];
-    memcpy(lsf_r + 3, lsf_quantizer, 3*sizeof(float));
+    memcpy(lsf_r + 3, lsf_quantizer, 3*sizeof(*lsf_r));
 
     lsf_quantizer = (p->cur_frame_mode <= MODE_515 ? lsf_3_3_MODE_515 : lsf_3_3)[lsf_param[2]];
-    memcpy(lsf_r + 6, lsf_quantizer, 4*sizeof(float));
+    memcpy(lsf_r + 6, lsf_quantizer, 4*sizeof(*lsf_r));
 
     // calculate mean-removed LSF vector and add mean
     for(i=0; i<LP_FILTER_ORDER; i++) {
         lsf_q[i] = lsf_r[i] + p->prev_lsf_r[i]*pred_fac[i] + lsf_3_mean[i];
     }
     // update residual LSF vector from previous subframe
-    memcpy(p->prev_lsf_r, lsf_r, LP_FILTER_ORDER*sizeof(float));
+    memcpy(p->prev_lsf_r, lsf_r, LP_FILTER_ORDER*sizeof(*lsf_r));
 
     // convert LSF vector to LSP vector
     lsf2lsp(lsf_q, p->lsp[3]);
