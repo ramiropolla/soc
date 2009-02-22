@@ -369,9 +369,12 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
  * of the pitch lag for one subframe at 1/6 resolution for MODE_122,
  * 1/3 for other modes.
  *
- * @param lag_int             pointer to the AMRContext
+ * @param lag_int             integer part of pitch lag of the current subframe
+ * @param lag_frac            fractional part of pitch lag of the current subframe
  * @param pitch_index         parsed adaptive codebook (pitch) index
- * @param subframe            current subframe
+ * @param prev_lag_int        integer part of pitch lag for the previous subrame
+ * @param subframe            current subframe number
+ * @param mode                mode of the current frame
  */
 
 static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const int prev_lag_int,
@@ -398,12 +401,10 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const
     // subframe 2 or 4
     }else {
         if(mode == MODE_122) {
-            // calculate the pitch lag
             *lag_int  = (pitch_index + 5) / 6 - 1;
             *lag_frac = pitch_index - *lag_int * 6 - 3;
             *lag_int += av_clip(prev_lag_int - 5, PITCH_LAG_MIN_MODE_122, PITCH_LAG_MAX - 9);
         }else if(mode <= MODE_67) {
-            // find the search range
             int search_range_min = av_clip(prev_lag_int - 5, PITCH_LAG_MIN, PITCH_LAG_MAX - 9);
 
             // decoding with 4-bit resolution
