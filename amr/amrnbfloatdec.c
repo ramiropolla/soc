@@ -36,6 +36,7 @@
 #include "libavutil/common.h"
 #include "internal.h"
 #include "celp_math.h"
+#include "celp_filters.h"
 #include "amrnbfloatdata.h"
 
 void ff_celp_lspf2lpc(const double *lspf, float *lpc);
@@ -690,42 +691,6 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
 /// @defgroup amr_pre_processing pre-processing functions
 /// @{
 
-/**
- * Circularly convolve the fixed vector with a phase dispersion impulse response
- * filter.
- *
- * @param fixed_vector  pointer to the fixed vector
- * @param ir_filter     pointer to the impulse response filter
- */
-
-static void convolve_circ(float *fixed_vector, const float *ir_filter)
-{
-    int i, j, k;
-    int npulses = 0, pulse_positions[AMR_SUBFRAME_SIZE];
-    float fixed_vector_temp[AMR_SUBFRAME_SIZE];
-
-    memcpy(fixed_vector_temp, fixed_vector, AMR_SUBFRAME_SIZE*sizeof(float));
-    memset(fixed_vector, 0, AMR_SUBFRAME_SIZE*sizeof(float));
-
-    // Find non-zero pulses (most are zero)
-    for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
-        if(fixed_vector_temp[i]) {
-            pulse_positions[npulses] = i;
-            npulses++;
-        }
-    }
-
-    for(i=0; i<npulses; i++) {
-        k = 0;
-        for(j=pulse_positions[i]; j<AMR_SUBFRAME_SIZE; j++) {
-            fixed_vector[j] += fixed_vector_temp[pulse_positions[i]]*ir_filter[k++];
-        }
-        for(j=0; j<pulse_positions[i]; j++) {
-            fixed_vector[j] += fixed_vector_temp[pulse_positions[i]]*ir_filter[k++];
-        }
-    }
-}
-
 /// @}
 
 /**
@@ -777,7 +742,12 @@ void do_phase_dispersion(AMRContext *p)
         const float **filters = p->cur_frame_mode == MODE_795 ? ir_filters_lookup_MODE_795
                                                               : ir_filters_lookup;
         // circularly convolve the fixed vector with the impulse response
-        convolve_circ(p->fixed_vector, filters[ir_filter_strength]);
+        // FIXME: extra memcpy (ff_celp_convolve_circf needs in and out not to overlap)
+        float fixed_vector_temp[AMR_SUBFRAME_SIZE];
+
+        memcpy(fixed_vector_temp, p->fixed_vector, sizeof(fixed_vector_temp));
+        ff_celp_convolve_circf(p->fixed_vector, fixed_vector_temp,
+                               filters[ir_filter_strength], AMR_SUBFRAME_SIZE);
     }
 
     // update ir filter strength history

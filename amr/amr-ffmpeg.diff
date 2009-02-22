@@ -136,3 +136,67 @@ Index: libavcodec/qcelp_lsp.c
      {
          lpc[i] *= bandwith_expansion_coeff;
          bandwith_expansion_coeff *= QCELP_BANDWITH_EXPANSION_COEFF;
+Index: libavcodec/celp_filters.c
+===================================================================
+--- libavcodec/celp_filters.c	(revision 17468)
++++ libavcodec/celp_filters.c	(working copy)
+@@ -85,6 +85,31 @@
+     return 0;
+ }
+ 
++void ff_celp_convolve_circf(
++        float* fc_out,
++        const float* fc_in,
++        const float* filter,
++        int len)
++{
++    int i, k;
++
++    memset(fc_out, 0, len * sizeof(float));
++
++    /* Since there are few pulses over an entire subframe (i.e. almost
++       all fc_in[i] are zero) it is faster to loop over fc_in first. */
++    for(i=0; i<len; i++)
++    {
++        if(fc_in[i])
++        {
++            for(k=0; k<i; k++)
++                fc_out[k] += fc_in[i] * filter[len + k - i];
++
++            for(k=i; k<len; k++)
++                fc_out[k] += fc_in[i] * filter[      k - i];
++        }
++    }
++}
++
+ void ff_celp_lp_synthesis_filterf(
+         float *out,
+         const float* filter_coeffs,
+Index: libavcodec/celp_filters.h
+===================================================================
+--- libavcodec/celp_filters.h	(revision 17468)
++++ libavcodec/celp_filters.h	(working copy)
+@@ -70,6 +70,23 @@
+         int rounder);
+ 
+ /**
++ * Circularly convolve fixed vector with a phase dispersion impulse
++ *        response filter (D.6.2 of G.729 and 6.1.5 of AMR).
++ * @param fc_out vector with filter applied
++ * @param fc_in source vector
++ * @param filter phase filter coefficients
++ *
++ *  fc_out[n] = sum(i,0,len-1){ fc_in[i] * filter[(len + n - i)%len] }
++ *
++ * \note fc_in and fc_out should not overlap!
++ */
++void ff_celp_convolve_circf(
++        float* fc_out,
++        const float* fc_in,
++        const float* filter,
++        int len);
++
++/**
+  * LP synthesis filter.
+  * @param out [out] pointer to output buffer
+  *        - the array out[-filter_length, -1] must
