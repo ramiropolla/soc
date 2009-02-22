@@ -57,8 +57,6 @@ typedef struct AMRContext {
 
     float           lpc[4][LP_FILTER_ORDER]; ///< lpc coefficient vectors for 4 subframes
 
-    int                    search_range_min; ///< minimum pitch lag search range
-    int                    search_range_max; ///< maximum pitch lag search range
     int                       pitch_lag_int; ///< integer part of pitch lag from current subframe
     int                      pitch_lag_frac; ///< fractional part of pitch lag from current subframe
     int                  prev_pitch_lag_int; ///< integer part of pitch lag from previous subframe
@@ -374,9 +372,12 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
  * @param p                   pointer to the AMRContext
  * @param pitch_index         parsed adaptive codebook (pitch) index
  * @param subframe            current subframe
+ * @param search_range_min    minimum pitch lag search range
+ * @param search_range_max    maximum pitch lag search range
  */
 
-static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe)
+static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe,
+                               const int search_range_min, const int search_range_max)
 {
     // subframe 1 or 3
     if(!(subframe & 1)) {
@@ -393,7 +394,7 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe)
         if( (p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515) ||
             (p->cur_frame_mode == MODE_59)  || (p->cur_frame_mode == MODE_67) ) {
             // decoding with 4-bit resolution
-            int t1_temp = FFMAX(FFMIN(p->prev_pitch_lag_int, p->search_range_max-4), p->search_range_min+5);
+            int t1_temp = FFMAX(FFMIN(p->prev_pitch_lag_int, search_range_max-4), search_range_min+5);
 
             if(pitch_index < 4) {
                 // integer only precision for [t1_temp-5, t1_temp-2]
@@ -413,7 +414,7 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe)
             // decoding with 5 or 6 bit resolution, 1/3 fractional precision
             // 10923>>15 is approximately 1/3
             int temp = ( ((pitch_index + 2)*10923)>>15 ) - 1;
-            p->pitch_lag_int = temp + p->search_range_min;
+            p->pitch_lag_int = temp + search_range_min;
             p->pitch_lag_frac = pitch_index - temp*3 - 2;
         }
     }
@@ -426,9 +427,11 @@ static void decode_pitch_lag_3(AMRContext *p, int pitch_index, int subframe)
  * @param p                   pointer to the AMRContext
  * @param pitch_index         parsed adaptive codebook (pitch) index
  * @param subframe            current subframe
+ * @param search_range_min    minimum pitch lag search range
  */
 
-static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe)
+static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe,
+                               const int search_range_min)
 {
     // subframe 1 or 3
     if(!(subframe & 1)) {
@@ -444,7 +447,7 @@ static void decode_pitch_lag_6(AMRContext *p, int pitch_index, int subframe)
         int temp;
         // calculate the pitch lag
         temp = (pitch_index + 5)/6 - 1;
-        p->pitch_lag_int = temp + p->search_range_min;
+        p->pitch_lag_int = temp + search_range_min;
         p->pitch_lag_frac = pitch_index - temp*6 - 3;
     }
 }
@@ -496,19 +499,19 @@ static void interp_pitch_vector(float *pitch_vector, int lag_int,
 static void decode_pitch_vector(AMRContext *p, const AMRNBSubframe *amr_subframe, const int subframe)
 {
     // find the search range
-    p->search_range_min = FFMAX(p->prev_pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
-    p->search_range_max = p->search_range_min + 9;
-    if(p->search_range_max > PITCH_LAG_MAX) {
-        p->search_range_max = PITCH_LAG_MAX;
-        p->search_range_min = p->search_range_max - 9;
+    int search_range_min = FFMAX(p->prev_pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
+    int search_range_max = search_range_min + 9;
+    if(search_range_max > PITCH_LAG_MAX) {
+        search_range_max = PITCH_LAG_MAX;
+        search_range_min = search_range_max - 9;
     }
 
     // decode integer and fractional parts of pitch lag from parsed pitch
     // index
     if(p->cur_frame_mode == MODE_122) {
-        decode_pitch_lag_6(p, amr_subframe->p_lag, subframe);
+        decode_pitch_lag_6(p, amr_subframe->p_lag, subframe, search_range_min);
     }else {
-        decode_pitch_lag_3(p, amr_subframe->p_lag, subframe);
+        decode_pitch_lag_3(p, amr_subframe->p_lag, subframe, search_range_min, search_range_max);
     }
 
     // interpolate the past excitation at the pitch lag to obtain the pitch
