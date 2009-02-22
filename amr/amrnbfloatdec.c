@@ -429,7 +429,7 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const
             if(mode == MODE_795) {
                 *lag_int += av_clip(prev_lag_int - 10, PITCH_LAG_MIN, PITCH_LAG_MAX - 19);
             }else {
-            *lag_int += av_clip(prev_lag_int - 5, PITCH_LAG_MIN, PITCH_LAG_MAX - 9);
+                *lag_int += av_clip(prev_lag_int - 5, PITCH_LAG_MIN, PITCH_LAG_MAX - 9);
             }
         }
     }
