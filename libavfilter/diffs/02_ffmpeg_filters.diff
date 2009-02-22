@@ -164,9 +164,9 @@ Index: ffmpeg.c
 +        (frame_padtop + frame_padbottom))) {
 +        char crop_args[255];
 +        AVFilterContext *filt_scale;
-+        snprintf(crop_args, 255, "%d:%d", codec->width -
-+                                             (frame_padleft + frame_padright),
-+                 codec->height - (frame_padtop + frame_padbottom));
++        snprintf(crop_args, 255, "%d:%d",
++                 codec->width  - (frame_padleft + frame_padright),
++                 codec->height - (frame_padtop  + frame_padbottom));
 +        filt_scale = avfilter_open(avfilter_get_by_name("scale"), NULL);
 +        if (!filt_scale)
 +            return -1;
