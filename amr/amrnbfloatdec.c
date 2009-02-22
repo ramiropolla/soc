@@ -58,7 +58,6 @@ typedef struct AMRContext {
     float           lpc[4][LP_FILTER_ORDER]; ///< lpc coefficient vectors for 4 subframes
 
     int                       pitch_lag_int; ///< integer part of pitch lag from current subframe
-    int                      pitch_lag_frac; ///< fractional part of pitch lag from current subframe
 
     float excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1 + AMR_SUBFRAME_SIZE]; ///< excitation buffer
     float                       *excitation; ///< pointer to the current excitation vector in excitation_buf
@@ -479,14 +478,15 @@ static void interp_pitch_vector(float *pitch_vector, int lag_int,
 static void decode_pitch_vector(AMRContext *p, const AMRNBSubframe *amr_subframe, const int subframe)
 {
     int prev_pitch_lag_int = p->pitch_lag_int;
+    int pitch_lag_frac;
     // decode integer and fractional parts of pitch lag from parsed pitch
     // index
-    decode_pitch_lag(&p->pitch_lag_int, &p->pitch_lag_frac, amr_subframe->p_lag,
+    decode_pitch_lag(&p->pitch_lag_int, &pitch_lag_frac, amr_subframe->p_lag,
                      prev_pitch_lag_int, subframe, p->cur_frame_mode);
 
     // interpolate the past excitation at the pitch lag to obtain the pitch
     // vector
-    interp_pitch_vector(p->excitation, p->pitch_lag_int, p->pitch_lag_frac, p->cur_frame_mode);
+    interp_pitch_vector(p->excitation, p->pitch_lag_int, pitch_lag_frac, p->cur_frame_mode);
 }
 /// @}
 
