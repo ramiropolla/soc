@@ -493,6 +493,28 @@ static void interp_pitch_vector(float *pitch_vector, int lag_int,
     }
 }
 
+static void decode_pitch_vector(AMRContext *p, const AMRNBSubframe *amr_subframe, const int subframe)
+{
+        // find the search range
+        p->search_range_min = FFMAX(p->prev_pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
+        p->search_range_max = p->search_range_min + 9;
+        if(p->search_range_max > PITCH_LAG_MAX) {
+            p->search_range_max = PITCH_LAG_MAX;
+            p->search_range_min = p->search_range_max - 9;
+        }
+
+        // decode integer and fractional parts of pitch lag from parsed pitch
+        // index
+        if(p->cur_frame_mode == MODE_122) {
+            decode_pitch_lag_6(p, amr_subframe->p_lag, subframe);
+        }else {
+            decode_pitch_lag_3(p, amr_subframe->p_lag, subframe);
+        }
+
+        // interpolate the past excitation at the pitch lag to obtain the pitch
+        // vector
+        interp_pitch_vector(p->excitation, p->pitch_lag_int, p->pitch_lag_frac, p->cur_frame_mode);
+}
 /// @}
 
 
@@ -929,26 +951,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     for(subframe = 0; subframe < 4; subframe++) {
         const AMRNBSubframe *amr_subframe = &p->frame.subframe[subframe];
 /*** adaptive code book (pitch) vector decoding ***/
-
-        // find the search range
-        p->search_range_min = FFMAX(p->prev_pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
-        p->search_range_max = p->search_range_min + 9;
-        if(p->search_range_max > PITCH_LAG_MAX) {
-            p->search_range_max = PITCH_LAG_MAX;
-            p->search_range_min = p->search_range_max - 9;
-        }
-
-        // decode integer and fractional parts of pitch lag from parsed pitch
-        // index
-        if(p->cur_frame_mode == MODE_122) {
-            decode_pitch_lag_6(p, amr_subframe->p_lag, subframe);
-        }else {
-            decode_pitch_lag_3(p, amr_subframe->p_lag, subframe);
-        }
-
-        // interpolate the past excitation at the pitch lag to obtain the pitch
-        // vector
-        interp_pitch_vector(p->excitation, p->pitch_lag_int, p->pitch_lag_frac, p->cur_frame_mode);
+        decode_pitch_vector(p, amr_subframe, subframe);
 
 /*** end of adaptive code book (pitch) vector decoding ***/
 
