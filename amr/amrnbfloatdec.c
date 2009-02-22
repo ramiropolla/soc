@@ -411,8 +411,7 @@ static void decode_pitch_lag(AMRContext *p, int pitch_index, int subframe)
             temp = (pitch_index + 5)/6 - 1;
             p->pitch_lag_int = temp + search_range_min;
             p->pitch_lag_frac = pitch_index - temp*6 - 3;
-        }else if( (p->cur_frame_mode == MODE_475) || (p->cur_frame_mode == MODE_515) ||
-            (p->cur_frame_mode == MODE_59)  || (p->cur_frame_mode == MODE_67) ) {
+        }else if(p->cur_frame_mode <= MODE_67) {
             // decoding with 4-bit resolution
             int t1_temp = FFMAX(FFMIN(p->prev_pitch_lag_int, search_range_max-4), search_range_min+5);
 
