@@ -403,11 +403,10 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const
     // subframe 2 or 4
     }else {
         if(mode == MODE_122) {
-            int temp;
             // calculate the pitch lag
-            temp = (pitch_index + 5)/6 - 1;
-            *lag_int = temp + search_range_min;
-            *lag_frac = pitch_index - temp*6 - 3;
+            *lag_int  = (pitch_index + 5) / 6 - 1;
+            *lag_frac = pitch_index - *lag_int * 6 - 3;
+            *lag_int += search_range_min;
         }else if(mode <= MODE_67) {
             // decoding with 4-bit resolution
             int t1_temp = FFMAX(FFMIN(prev_lag_int, search_range_max-4), search_range_min+5);
@@ -429,9 +428,9 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const
         }else {
             // decoding with 5 or 6 bit resolution, 1/3 fractional precision
             // 10923>>15 is approximately 1/3
-            int temp = ( ((pitch_index + 2)*10923)>>15 ) - 1;
-            *lag_int = temp + search_range_min;
-            *lag_frac = pitch_index - temp*3 - 2;
+            *lag_int  = ( ((pitch_index + 2)*10923)>>15 ) - 1;
+            *lag_frac = pitch_index - *lag_int * 3 - 2;
+            *lag_int += search_range_min;
         }
     }
 }
