@@ -373,13 +373,18 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
  * @param p                   pointer to the AMRContext
  * @param pitch_index         parsed adaptive codebook (pitch) index
  * @param subframe            current subframe
- * @param search_range_min    minimum pitch lag search range
- * @param search_range_max    maximum pitch lag search range
  */
 
-static void decode_pitch_lag(AMRContext *p, int pitch_index, int subframe,
-                               const int search_range_min, const int search_range_max)
+static void decode_pitch_lag(AMRContext *p, int pitch_index, int subframe)
 {
+    // find the search range
+    int search_range_min = FFMAX(p->prev_pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
+    int search_range_max = search_range_min + 9;
+    if(search_range_max > PITCH_LAG_MAX) {
+        search_range_max = PITCH_LAG_MAX;
+        search_range_min = search_range_max - 9;
+    }
+
     // subframe 1 or 3
     if(!(subframe & 1)) {
         if(p->cur_frame_mode == MODE_122) {
@@ -481,17 +486,9 @@ static void interp_pitch_vector(float *pitch_vector, int lag_int,
 
 static void decode_pitch_vector(AMRContext *p, const AMRNBSubframe *amr_subframe, const int subframe)
 {
-    // find the search range
-    int search_range_min = FFMAX(p->prev_pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
-    int search_range_max = search_range_min + 9;
-    if(search_range_max > PITCH_LAG_MAX) {
-        search_range_max = PITCH_LAG_MAX;
-        search_range_min = search_range_max - 9;
-    }
-
     // decode integer and fractional parts of pitch lag from parsed pitch
     // index
-    decode_pitch_lag(p, amr_subframe->p_lag, subframe, search_range_min, search_range_max);
+    decode_pitch_lag(p, amr_subframe->p_lag, subframe);
 
     // interpolate the past excitation at the pitch lag to obtain the pitch
     // vector
