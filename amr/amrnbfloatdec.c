@@ -370,12 +370,13 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
  * of the pitch lag for one subframe at 1/6 resolution for MODE_122,
  * 1/3 for other modes.
  *
- * @param p                   pointer to the AMRContext
+ * @param lag_int             pointer to the AMRContext
  * @param pitch_index         parsed adaptive codebook (pitch) index
  * @param subframe            current subframe
  */
 
-static void decode_pitch_lag(AMRContext *p, int pitch_index, int subframe)
+static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const int prev_lag_int,
+                            const int subframe, const enum Mode mode)
 {
     // find the search range
     int search_range_min = FFMAX(p->prev_pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
@@ -387,54 +388,54 @@ static void decode_pitch_lag(AMRContext *p, int pitch_index, int subframe)
 
     // subframe 1 or 3
     if(!(subframe & 1)) {
-        if(p->cur_frame_mode == MODE_122) {
+        if(mode == MODE_122) {
             if(pitch_index < 463){
-                p->pitch_lag_int = (pitch_index + 5)/6 + 17;
-                p->pitch_lag_frac = pitch_index - p->pitch_lag_int*6 + 105;
+                *lag_int = (pitch_index + 5)/6 + 17;
+                *lag_frac = pitch_index - *lag_int*6 + 105;
             }else {
-                p->pitch_lag_int = pitch_index - 368;
-                p->pitch_lag_frac = 0;
+                *lag_int = pitch_index - 368;
+                *lag_frac = 0;
             }
         }else if(pitch_index < 197) {
             // 10923>>15 is approximately 1/3
-            p->pitch_lag_int = ( ((pitch_index + 2)*10923)>>15 ) + 19;
-            p->pitch_lag_frac = pitch_index - p->pitch_lag_int*3 + 58;
+            *lag_int = ( ((pitch_index + 2)*10923)>>15 ) + 19;
+            *lag_frac = pitch_index - *lag_int*3 + 58;
         }else {
-            p->pitch_lag_int = pitch_index - 112;
-            p->pitch_lag_frac = 0;
+            *lag_int = pitch_index - 112;
+            *lag_frac = 0;
         }
     // subframe 2 or 4
     }else {
-        if(p->cur_frame_mode == MODE_122) {
+        if(mode == MODE_122) {
             int temp;
             // calculate the pitch lag
             temp = (pitch_index + 5)/6 - 1;
-            p->pitch_lag_int = temp + search_range_min;
-            p->pitch_lag_frac = pitch_index - temp*6 - 3;
-        }else if(p->cur_frame_mode <= MODE_67) {
+            *lag_int = temp + search_range_min;
+            *lag_frac = pitch_index - temp*6 - 3;
+        }else if(mode <= MODE_67) {
             // decoding with 4-bit resolution
-            int t1_temp = FFMAX(FFMIN(p->prev_pitch_lag_int, search_range_max-4), search_range_min+5);
+            int t1_temp = FFMAX(FFMIN(prev_lag_int, search_range_max-4), search_range_min+5);
 
             if(pitch_index < 4) {
                 // integer only precision for [t1_temp-5, t1_temp-2]
-                p->pitch_lag_int = pitch_index + (t1_temp - 5);
-                p->pitch_lag_frac = 0;
+                *lag_int = pitch_index + (t1_temp - 5);
+                *lag_frac = 0;
             }else if(pitch_index < 12) {
                 // 1/3 fractional precision for [t1_temp-1 2/3, t1_temp+2/3]
-                p->pitch_lag_int = ( ((pitch_index - 5)*10923)>>15 ) - 1;
-                p->pitch_lag_frac = pitch_index - p->pitch_lag_int*3 - 9;
-                p->pitch_lag_int += t1_temp;
+                *lag_int = ( ((pitch_index - 5)*10923)>>15 ) - 1;
+                *lag_frac = pitch_index - *lag_int*3 - 9;
+                *lag_int += t1_temp;
             }else {
                 // integer only precision for [t1_temp+1, t1_temp+4]
-                p->pitch_lag_int = pitch_index + t1_temp - 11;
-                p->pitch_lag_frac = 0;
+                *lag_int = pitch_index + t1_temp - 11;
+                *lag_frac = 0;
             }
         }else {
             // decoding with 5 or 6 bit resolution, 1/3 fractional precision
             // 10923>>15 is approximately 1/3
             int temp = ( ((pitch_index + 2)*10923)>>15 ) - 1;
-            p->pitch_lag_int = temp + search_range_min;
-            p->pitch_lag_frac = pitch_index - temp*3 - 2;
+            *lag_int = temp + search_range_min;
+            *lag_frac = pitch_index - temp*3 - 2;
         }
     }
 }
@@ -487,7 +488,8 @@ static void decode_pitch_vector(AMRContext *p, const AMRNBSubframe *amr_subframe
 {
     // decode integer and fractional parts of pitch lag from parsed pitch
     // index
-    decode_pitch_lag(p, amr_subframe->p_lag, subframe);
+    decode_pitch_lag(&p->pitch_lag_int, &p->pitch_lag_frac, amr_subframe->p_lag,
+                     p->prev_pitch_lag_int, subframe, p->cur_frame_mode);
 
     // interpolate the past excitation at the pitch lag to obtain the pitch
     // vector
