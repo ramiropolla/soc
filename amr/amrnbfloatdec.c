@@ -377,11 +377,6 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
 static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const int prev_lag_int,
                             const int subframe, const enum Mode mode)
 {
-    // find the search range
-    int search_range_min = FFMIN(FFMAX(prev_lag_int - 5, mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN),
-                                 PITCH_LAG_MAX - 9);
-    int search_range_max = search_range_min + 9;
-
     // subframe 1 or 3
     if(!(subframe & 1)) {
         if(mode == MODE_122) {
@@ -406,8 +401,12 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const
             // calculate the pitch lag
             *lag_int  = (pitch_index + 5) / 6 - 1;
             *lag_frac = pitch_index - *lag_int * 6 - 3;
-            *lag_int += search_range_min;
+            *lag_int += FFMIN(FFMAX(prev_lag_int - 5, PITCH_LAG_MIN_MODE_122), PITCH_LAG_MAX - 9);
         }else if(mode <= MODE_67) {
+            // find the search range
+            int search_range_min = FFMIN(FFMAX(prev_lag_int - 5, PITCH_LAG_MIN), PITCH_LAG_MAX - 9);
+            int search_range_max = search_range_min + 9;
+
             // decoding with 4-bit resolution
             int t1_temp = FFMAX(FFMIN(prev_lag_int, search_range_max-4), search_range_min+5);
 
@@ -430,7 +429,7 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const
             // 10923>>15 is approximately 1/3
             *lag_int  = ( ((pitch_index + 2)*10923)>>15 ) - 1;
             *lag_frac = pitch_index - *lag_int * 3 - 2;
-            *lag_int += search_range_min;
+            *lag_int += FFMIN(FFMAX(prev_lag_int - 5, PITCH_LAG_MIN), PITCH_LAG_MAX - 9);
         }
     }
 }
