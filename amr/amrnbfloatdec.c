@@ -356,6 +356,9 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
         lsp_double[i] = lsp[i];
 
     ff_celp_lspf2lpc(lsp_double, lpc_coeffs);
+
+    for(i=0; i<LP_FILTER_ORDER; i++)
+        lpc_coeffs[i] = -lpc_coeffs[i];
 }
 
 /// @}
@@ -800,11 +803,9 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
         ff_apply_gain_ctrl(excitation, excitation, excitation_temp, AMR_SUBFRAME_SIZE);
     }
 
+    ff_celp_lp_synthesis_filterf(samples, lpc, excitation, AMR_SUBFRAME_SIZE, LP_FILTER_ORDER);
+
     for(i=0; i<AMR_SUBFRAME_SIZE; i++) {
-        samples[i] = excitation[i];
-        for(j=0; j<LP_FILTER_ORDER; j++) {
-            samples[i] -= lpc[j]*samples[i-j-1];
-        }
         // detect overflow
         if(fabsf(samples[i])>1.0) {
             overflow_temp = 1;
