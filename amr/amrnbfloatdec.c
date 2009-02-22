@@ -379,7 +379,7 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const
                             const int subframe, const enum Mode mode)
 {
     // find the search range
-    int search_range_min = FFMAX(p->prev_pitch_lag_int - 5, p->cur_frame_mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
+    int search_range_min = FFMAX(prev_lag_int - 5, mode == MODE_122 ? PITCH_LAG_MIN_MODE_122 : PITCH_LAG_MIN);
     int search_range_max = search_range_min + 9;
     if(search_range_max > PITCH_LAG_MAX) {
         search_range_max = PITCH_LAG_MAX;
