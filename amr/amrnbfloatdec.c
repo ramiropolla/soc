@@ -691,8 +691,6 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
 /// @defgroup amr_pre_processing pre-processing functions
 /// @{
 
-/// @}
-
 /**
  * adaptive phase dispersion; forming of total excitation
  *
@@ -753,6 +751,8 @@ void do_phase_dispersion(AMRContext *p)
     // update ir filter strength history
     p->prev_ir_filter_strength = ir_filter_strength;
 }
+
+/// @}
 
 /// @defgroup amr_synthesis synthesis functions
 /// @{
