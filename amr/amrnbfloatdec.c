@@ -405,23 +405,20 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const
         }else if(mode <= MODE_67) {
             // find the search range
             int search_range_min = FFMIN(FFMAX(prev_lag_int - 5, PITCH_LAG_MIN), PITCH_LAG_MAX - 9);
-            int search_range_max = search_range_min + 9;
 
             // decoding with 4-bit resolution
-            int t1_temp = FFMAX(FFMIN(prev_lag_int, search_range_max-4), search_range_min+5);
-
             if(pitch_index < 4) {
-                // integer only precision for [t1_temp-5, t1_temp-2]
-                *lag_int = pitch_index + (t1_temp - 5);
+                // integer only precision for [search_range_min, search_range_min+3]
+                *lag_int = pitch_index + search_range_min;
                 *lag_frac = 0;
             }else if(pitch_index < 12) {
-                // 1/3 fractional precision for [t1_temp-1 2/3, t1_temp+2/3]
+                // 1/3 fractional precision for [search_range_min+4 2/3, search_range_min+5 2/3]
                 *lag_int = ( ((pitch_index - 5)*10923)>>15 ) - 1;
                 *lag_frac = pitch_index - *lag_int*3 - 9;
-                *lag_int += t1_temp;
+                *lag_int += search_range_min + 5;
             }else {
-                // integer only precision for [t1_temp+1, t1_temp+4]
-                *lag_int = pitch_index + t1_temp - 11;
+                // integer only precision for [search_range_min+6, search_range_min+9]
+                *lag_int = pitch_index + search_range_min - 6;
                 *lag_frac = 0;
             }
         }else {
