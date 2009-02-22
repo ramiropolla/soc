@@ -940,11 +940,10 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         if(p->cur_frame_mode == MODE_122 || p->cur_frame_mode == MODE_795) {
             p->pitch_gain[4]     = qua_gain_pit [amr_subframe->p_gain];
             p->fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
-        }else if(p->cur_frame_mode == MODE_67 || p->cur_frame_mode == MODE_74 ||
-                 p->cur_frame_mode == MODE_102) {
+        }else if(p->cur_frame_mode <= MODE_67) {
             p->pitch_gain[4]     = gains_high[amr_subframe->p_gain][0];
             p->fixed_gain_factor = gains_high[amr_subframe->p_gain][1];
-        }else if(p->cur_frame_mode == MODE_515 || p->cur_frame_mode == MODE_59) {
+        }else if(p->cur_frame_mode <= MODE_515) {
             p->pitch_gain[4]     = gains_low[amr_subframe->p_gain][0];
             p->fixed_gain_factor = gains_low[amr_subframe->p_gain][1];
         }else {
