@@ -30,7 +30,7 @@
 
 // general definitions
 #define AMR_BLOCK_SIZE    160
-#define AMR_SUBFRAME_SIZE 40
+#define AMR_SUBFRAME_SIZE  40
 
 // definition of modes for decoder
 #define NO_DATA 15
@@ -82,7 +82,7 @@ enum RXFrameType {
 #define PRMS_MODE_795 23
 #define PRMS_MODE_102 39
 #define PRMS_MODE_122 57
-#define PRMS_MODE_DTX 5
+#define PRMS_MODE_DTX  5
 
 // typedef for bit order tables
 typedef struct AMROrder {
@@ -247,119 +247,119 @@ static const AMROrder order_MODE_DTX[35] = {
 
 // homing frames for the decoder
 static const int16_t dhf_MODE_475[PRMS_MODE_475] = {
-  0x00F8,0x009D,0x001C,0x0066,0x0000,0x0003,0x0028,0x000F,0x0038,0x0001,
-  0x000F,0x0031,0x0002,0x0008,0x000F,0x0026,0x0003
+    0x00F8, 0x009D, 0x001C, 0x0066, 0x0000, 0x0003, 0x0028, 0x000F, 0x0038, 0x0001,
+    0x000F, 0x0031, 0x0002, 0x0008, 0x000F, 0x0026, 0x0003
 };
 
 static const int16_t dhf_MODE_515[PRMS_MODE_515] = {
-  0x00F8,0x009D,0x001C,0x0066,0x0000,0x0003,0x0037,0x000F,0x0000,0x0003,
-  0x0005,0x000F,0x0037,0x0003,0x0037,0x000F,0x0023,0x0003,0x001F
+    0x00F8, 0x009D, 0x001C, 0x0066, 0x0000, 0x0003, 0x0037, 0x000F, 0x0000, 0x0003,
+    0x0005, 0x000F, 0x0037, 0x0003, 0x0037, 0x000F, 0x0023, 0x0003, 0x001F
 };
 
 static const int16_t dhf_MODE_59[PRMS_MODE_59] = {
-  0x00F8,0x00E3,0x002F,0x00BD,0x0000,0x0003,0x0037,0x000F,0x0001,0x0003,
-  0x000F,0x0060,0x00F9,0x0003,0x0037,0x000F,0x0000,0x0003,0x0037
+    0x00F8, 0x00E3, 0x002F, 0x00BD, 0x0000, 0x0003, 0x0037, 0x000F, 0x0001, 0x0003,
+    0x000F, 0x0060, 0x00F9, 0x0003, 0x0037, 0x000F, 0x0000, 0x0003, 0x0037
 };
 
 static const int16_t dhf_MODE_67[PRMS_MODE_67] = {
-  0x00F8,0x00E3,0x002F,0x00BD,0x0002,0x0007,0x0000,0x000F,0x0098,0x0007,
-  0x0061,0x0060,0x05C5,0x0007,0x0000,0x000F,0x0318,0x0007,0x0000
+    0x00F8, 0x00E3, 0x002F, 0x00BD, 0x0002, 0x0007, 0x0000, 0x000F, 0x0098, 0x0007,
+    0x0061, 0x0060, 0x05C5, 0x0007, 0x0000, 0x000F, 0x0318, 0x0007, 0x0000
 };
 
 static const int16_t dhf_MODE_74[PRMS_MODE_74] = {
-  0x00F8,0x00E3,0x002F,0x00BD,0x0006,0x000F,0x0000,0x001B,0x0208,0x000F,
-  0x0062,0x0060,0x1BA6,0x000F,0x0000,0x001B,0x0006,0x000F,0x0000
+    0x00F8, 0x00E3, 0x002F, 0x00BD, 0x0006, 0x000F, 0x0000, 0x001B, 0x0208, 0x000F,
+    0x0062, 0x0060, 0x1BA6, 0x000F, 0x0000, 0x001B, 0x0006, 0x000F, 0x0000
 };
 
 static const int16_t dhf_MODE_795[PRMS_MODE_795] = {
-  0x00C2,0x00E3,0x002F,0x00BD,0x0006,0x000F,0x000A,0x0000,0x0039,0x1C08,
-  0x0007,0x000A,0x000B,0x0063,0x11A6,0x000F,0x0001,0x0000,0x0039,0x09A0,
-  0x000F,0x0002,0x0001
+    0x00C2, 0x00E3, 0x002F, 0x00BD, 0x0006, 0x000F, 0x000A, 0x0000, 0x0039, 0x1C08,
+    0x0007, 0x000A, 0x000B, 0x0063, 0x11A6, 0x000F, 0x0001, 0x0000, 0x0039, 0x09A0,
+    0x000F, 0x0002, 0x0001
 };
 
 static const int16_t dhf_MODE_102[PRMS_MODE_102] = {
-  0x00F8,0x00E3,0x002F,0x0045,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
-  0x0000,0x0000,0x001B,0x0000,0x0001,0x0000,0x0001,0x0326,0x00CE,0x007E,
-  0x0051,0x0062,0x0000,0x0000,0x0000,0x0000,0x015A,0x0359,0x0076,0x0000,
-  0x001B,0x0000,0x0000,0x0000,0x0000,0x017C,0x0215,0x0038,0x0030
+    0x00F8, 0x00E3, 0x002F, 0x0045, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x001B, 0x0000, 0x0001, 0x0000, 0x0001, 0x0326, 0x00CE, 0x007E,
+    0x0051, 0x0062, 0x0000, 0x0000, 0x0000, 0x0000, 0x015A, 0x0359, 0x0076, 0x0000,
+    0x001B, 0x0000, 0x0000, 0x0000, 0x0000, 0x017C, 0x0215, 0x0038, 0x0030
 };
 
 static const int16_t dhf_MODE_122[PRMS_MODE_122] = {
-  0x0004,0x002A,0x00DB,0x0096,0x002A,0x0156,0x000B,0x0000,0x0000,0x0000,
-  0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,0x0036,0x000B,
-  0x0000,0x000F,0x000E,0x000C,0x000D,0x0000,0x0001,0x0005,0x0007,0x0001,
-  0x0008,0x0024,0x0000,0x0001,0x0000,0x0005,0x0006,0x0001,0x0002,0x0004,
-  0x0007,0x0004,0x0002,0x0003,0x0036,0x000B,0x0000,0x0002,0x0004,0x0000,
-  0x0003,0x0006,0x0001,0x0007,0x0006,0x0005,0x0000
+    0x0004, 0x002A, 0x00DB, 0x0096, 0x002A, 0x0156, 0x000B, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0036, 0x000B,
+    0x0000, 0x000F, 0x000E, 0x000C, 0x000D, 0x0000, 0x0001, 0x0005, 0x0007, 0x0001,
+    0x0008, 0x0024, 0x0000, 0x0001, 0x0000, 0x0005, 0x0006, 0x0001, 0x0002, 0x0004,
+    0x0007, 0x0004, 0x0002, 0x0003, 0x0036, 0x000B, 0x0000, 0x0002, 0x0004, 0x0000,
+    0x0003, 0x0006, 0x0001, 0x0007, 0x0006, 0x0005, 0x0000
 };
 
 // parameter sizes (# of bits), one table per mode
 static const int16_t bitno_MODE_475[PRMS_MODE_475] = {
-  8, 8, 7,    /* LSP VQ          */
-  8, 7, 2, 8, /* first subframe  */
-  4, 7, 2,    /* second subframe */
-  4, 7, 2, 8, /* third subframe  */
-  4, 7, 2     /* fourth subframe */
+    8, 8, 7,    /* LSP VQ          */
+    8, 7, 2, 8, /* first subframe  */
+    4, 7, 2,    /* second subframe */
+    4, 7, 2, 8, /* third subframe  */
+    4, 7, 2     /* fourth subframe */
 };
 
 static const int16_t bitno_MODE_515[PRMS_MODE_515] = {
-  8, 8, 7,    /* LSP VQ          */
-  8, 7, 2, 6, /* first subframe  */
-  4, 7, 2, 6, /* second subframe */
-  4, 7, 2, 6, /* third subframe  */
-  4, 7, 2, 6  /* fourth subframe */
+    8, 8, 7,    /* LSP VQ          */
+    8, 7, 2, 6, /* first subframe  */
+    4, 7, 2, 6, /* second subframe */
+    4, 7, 2, 6, /* third subframe  */
+    4, 7, 2, 6  /* fourth subframe */
 };
 
 static const int16_t bitno_MODE_59[PRMS_MODE_59] = {
-  8, 9, 9,    /* LSP VQ          */
-  8, 9, 2, 6, /* first subframe  */
-  4, 9, 2, 6, /* second subframe */
-  8, 9, 2, 6, /* third subframe  */
-  4, 9, 2, 6  /* fourth subframe */
+    8, 9, 9,    /* LSP VQ          */
+    8, 9, 2, 6, /* first subframe  */
+    4, 9, 2, 6, /* second subframe */
+    8, 9, 2, 6, /* third subframe  */
+    4, 9, 2, 6  /* fourth subframe */
 };
 
 static const int16_t bitno_MODE_67[PRMS_MODE_67] = {
-  8, 9, 9,       /* LSP VQ          */
-  8, 11, 3, 7,   /* first subframe  */
-  4, 11, 3, 7,   /* second subframe */
-  8, 11, 3, 7,   /* third subframe  */
-  4, 11, 3, 7    /* fourth subframe */
+    8, 9, 9,       /* LSP VQ          */
+    8, 11, 3, 7,   /* first subframe  */
+    4, 11, 3, 7,   /* second subframe */
+    8, 11, 3, 7,   /* third subframe  */
+    4, 11, 3, 7    /* fourth subframe */
 };
 
 static const int16_t bitno_MODE_74[PRMS_MODE_74] = {
-  8, 9, 9,       /* LSP VQ          */
-  8, 13, 4, 7,   /* first subframe  */
-  5, 13, 4, 7,   /* second subframe */
-  8, 13, 4, 7,   /* third subframe  */
-  5, 13, 4, 7    /* fourth subframe */
+    8, 9, 9,       /* LSP VQ          */
+    8, 13, 4, 7,   /* first subframe  */
+    5, 13, 4, 7,   /* second subframe */
+    8, 13, 4, 7,   /* third subframe  */
+    5, 13, 4, 7    /* fourth subframe */
 };
 
 static const int16_t bitno_MODE_795[PRMS_MODE_795] = {
-  9, 9, 9,          /* LSP VQ          */
-  8, 13, 4, 4, 5,   /* first subframe  */
-  6, 13, 4, 4, 5,   /* second subframe */
-  8, 13, 4, 4, 5,   /* third subframe  */
-  6, 13, 4, 4, 5    /* fourth subframe */
+    9, 9, 9,          /* LSP VQ          */
+    8, 13, 4, 4, 5,   /* first subframe  */
+    6, 13, 4, 4, 5,   /* second subframe */
+    8, 13, 4, 4, 5,   /* third subframe  */
+    6, 13, 4, 4, 5    /* fourth subframe */
 };
 
 static const int16_t bitno_MODE_102[PRMS_MODE_102] = {
-  8, 9, 9,                      /* LSP VQ          */
-  8, 1, 1, 1, 1, 10, 10, 7, 7,  /* first subframe  */
-  5, 1, 1, 1, 1, 10, 10, 7, 7,  /* second subframe */
-  8, 1, 1, 1, 1, 10, 10, 7, 7,  /* third subframe  */
-  5, 1, 1, 1, 1, 10, 10, 7, 7   /* fourth subframe */
+    8, 9, 9,                      /* LSP VQ          */
+    8, 1, 1, 1, 1, 10, 10, 7, 7,  /* first subframe  */
+    5, 1, 1, 1, 1, 10, 10, 7, 7,  /* second subframe */
+    8, 1, 1, 1, 1, 10, 10, 7, 7,  /* third subframe  */
+    5, 1, 1, 1, 1, 10, 10, 7, 7   /* fourth subframe */
 };
 
 static const int16_t bitno_MODE_122[PRMS_MODE_122] = {
-  7, 8, 9, 8, 6,                            /* LSP VQ          */
-  9, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 5,    /* first subframe  */
-  6, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 5,    /* second subframe */
-  9, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 5,    /* third subframe  */
-  6, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 5     /* fourth subframe */
+    7, 8, 9, 8, 6,                            /* LSP VQ          */
+    9, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 5,    /* first subframe  */
+    6, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 5,    /* second subframe */
+    9, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 5,    /* third subframe  */
+    6, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 5     /* fourth subframe */
 };
 
 static const int16_t bitno_MODE_DTX[PRMS_MODE_DTX] = {
-  3, 8, 9, 9, 6
+    3, 8, 9, 9, 6
 };
 
 static const uint16_t lsf_3_mean[10] = {
@@ -1161,22 +1161,22 @@ static const uint16_t pitch_gain_attenuation[7] = {
 // quantization table for the adaptive codebook gain (MODE_795, MODE_122)
 #define N_PITCH_QUANTS 16
 static const uint16_t pitch_gain_quant[N_PITCH_QUANTS] = {
-   0,
-   3277,
-   6556,
-   8192,
-   9830,
-   11469,
-   12288,
-   13107,
-   13926,
-   14746,
-   15565,
-   16384,
-   17203,
-   18022,
-   18842,
-   19661
+        0,
+     3277,
+     6556,
+     8192,
+     9830,
+    11469,
+    12288,
+    13107,
+    13926,
+    14746,
+    15565,
+    16384,
+    17203,
+    18022,
+    18842,
+    19661
 };
 
 /**************************** end of tables *****************************/

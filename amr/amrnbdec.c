@@ -191,7 +191,7 @@ enum Mode decode_bitstream(AVCodecContext *avctx, uint8_t *buf, int buf_size,
     // reorder the bitstream to match the bit allocation in the specification
     if((p->cur_frame_type != RX_NO_DATA) && (p->cur_frame_type != RX_SPEECH_BAD)) {
         for(i=0; i<mode_bits[mode]; i++) {
-            p->amr_prms[ order[i].array_element ] += get_bits1(&p->gb) * (1<< order[i].bit_mask);
+            p->amr_prms[ order[i].array_element ] += get_bits1(&p->gb) * (1 << order[i].bit_mask);
         }
     }
 
@@ -242,7 +242,7 @@ static void lsf2lsp(int *lsf, int *lsp)
     int index, offset;
 
     for(i=0; i<LP_FILTER_ORDER; i++) {
-        index = lsf[i] >> 8;      // bits 8 to 15 of lsf[i]
+        index  = lsf[i] >> 8;     // bits 8 to 15 of lsf[i]
         offset = lsf[i] & 0x00ff; // bits 0 to  7 of lsf[i]
         lsp[i] = cos_table[index] + ( (( cos_table[index+1]-cos_table[index] )*offset)>>8 );
     }
@@ -636,7 +636,7 @@ static void decode_pitch_lag_3(AVCodecContext *avctx, int pitch_index,
             }
         }else {
             // decoding with 5 or 6 bit resolution
-            *pitch_lag_int = ( ((pitch_index + 2)*10923 )>>15) - 1 + p->search_range_min;
+            *pitch_lag_int  = ( ((pitch_index + 2)*10923 )>>15) - 1 + p->search_range_min;
             *pitch_lag_frac = pitch_index - (*pitch_lag_int - p->search_range_min)*3 - 2;
         }
     }
@@ -1129,8 +1129,8 @@ void decode_reset(AVCodecContext *avctx)
     AMRContext *p = avctx->priv_data;
 
     p->prev_frame_homing = 1;
-    p->prev_frame_type = RX_SPEECH_GOOD;
-    p->prev_frame_mode = MODE_475;
+    p->prev_frame_type   = RX_SPEECH_GOOD;
+    p->prev_frame_mode   = MODE_475;
     // FIXME reset AMRDecoderState too!
 }
 
@@ -1301,12 +1301,12 @@ static av_cold int amrnb_decode_close(AVCodecContext *avctx)
 
 
 AVCodec amrnb_decoder = {
-    .name = "amrnb",
-    .type = CODEC_TYPE_AUDIO,
-    .id = CODEC_ID_AMR_NB,
+    .name           = "amrnb",
+    .type           = CODEC_TYPE_AUDIO,
+    .id             = CODEC_ID_AMR_NB,
     .priv_data_size = sizeof(AMRContext),
-    .init = amrnb_decode_init,
-    .close = amrnb_decode_close,
-    .decode = amrnb_decode_frame,
-    .long_name = NULL_IF_CONFIG_SMALL("Adaptive Multi-Rate NarrowBand"),
+    .init           = amrnb_decode_init,
+    .close          = amrnb_decode_close,
+    .decode         = amrnb_decode_frame,
+    .long_name      = NULL_IF_CONFIG_SMALL("Adaptive Multi-Rate NarrowBand"),
 };

@@ -36,7 +36,7 @@
 
 // general definitions
 #define AMR_BLOCK_SIZE    160
-#define AMR_SUBFRAME_SIZE 40
+#define AMR_SUBFRAME_SIZE  40
 
 // definition of modes for decoder
 #define NO_DATA 15
@@ -75,7 +75,7 @@ enum RXFrameType {
 #define PRMS_MODE_795 23
 #define PRMS_MODE_102 39
 #define PRMS_MODE_122 57
-#define PRMS_MODE_DTX 5
+#define PRMS_MODE_DTX  5
 
 #define LP_FILTER_ORDER 10 // linear predictive coding filter order
 
@@ -533,14 +533,14 @@ static const uint8_t mode_bits[N_MODES] = {
  *
  * @note: Taken from Decoder_amr_reset in Q15 using val/1000
  */
- static const int8_t lsp_sub4_init[LP_FILTER_ORDER] = { 30, 26, 21, 15, 8, 0, -8, -15, -21, -26 };
+static const int8_t lsp_sub4_init[LP_FILTER_ORDER] = { 30, 26, 21, 15, 8, 0, -8, -15, -21, -26 };
 
 /**
  * Initialize mean lsp values.
  *
  * @note: Taken from Decoder_amr_reset in Q15
  */
- static const int16_t lsp_avg_init[LP_FILTER_ORDER] = {
+static const int16_t lsp_avg_init[LP_FILTER_ORDER] = {
     1384, 2077, 3420, 5108, 6742, 8122, 9863, 11092, 12714, 13701
 };
 
@@ -2032,7 +2032,7 @@ static const float pred_fac[LP_FILTER_ORDER] = {
 };
 
 #define PRED_FAC_MODE_122 0.65
-#define FREQ_LSP_FAC 2.0*M_PI/8000.0
+#define FREQ_LSP_FAC      2.0*M_PI/8000.0
 
 
 // pitch tables

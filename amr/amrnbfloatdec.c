@@ -194,7 +194,7 @@ enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
 
         memset(&p->frame, 0, sizeof(AMRNBFrame));
         for(i=0; i<mode_bits[mode]; i++) {
-            data[order[i].array_element] += get_bits1(&p->gb) * (1<< order[i].bit_mask);
+            data[order[i].array_element] += get_bits1(&p->gb) * (1 << order[i].bit_mask);
         }
 
         if(mode == MODE_DTX) {
@@ -377,24 +377,24 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
  */
 
 static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const int prev_lag_int,
-                            const int subframe, const enum Mode mode)
+                             const int subframe, const enum Mode mode)
 {
     // subframe 1 or 3
     if(!(subframe & 1)) {
         if(mode == MODE_122) {
             if(pitch_index < 463){
-                *lag_int = (pitch_index + 5)/6 + 17;
+                *lag_int  = (pitch_index + 5)/6 + 17;
                 *lag_frac = pitch_index - *lag_int*6 + 105;
             }else {
-                *lag_int = pitch_index - 368;
+                *lag_int  = pitch_index - 368;
                 *lag_frac = 0;
             }
         }else if(pitch_index < 197) {
             // 10923>>15 is approximately 1/3
-            *lag_int = ( ((pitch_index + 2)*10923)>>15 ) + 19;
+            *lag_int  = ( ((pitch_index + 2)*10923)>>15 ) + 19;
             *lag_frac = pitch_index - *lag_int*3 + 58;
         }else {
-            *lag_int = pitch_index - 112;
+            *lag_int  = pitch_index - 112;
             *lag_frac = 0;
         }
     // subframe 2 or 4
@@ -409,16 +409,16 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const
             // decoding with 4-bit resolution
             if(pitch_index < 4) {
                 // integer only precision for [search_range_min, search_range_min+3]
-                *lag_int = pitch_index + search_range_min;
+                *lag_int  = pitch_index + search_range_min;
                 *lag_frac = 0;
             }else if(pitch_index < 12) {
                 // 1/3 fractional precision for [search_range_min+4 2/3, search_range_min+5 2/3]
-                *lag_int = ( ((pitch_index - 5)*10923)>>15 ) - 1;
+                *lag_int  = ( ((pitch_index - 5)*10923)>>15 ) - 1;
                 *lag_frac = pitch_index - *lag_int*3 - 9;
                 *lag_int += search_range_min + 5;
             }else {
                 // integer only precision for [search_range_min+6, search_range_min+9]
-                *lag_int = pitch_index + search_range_min - 6;
+                *lag_int  = pitch_index + search_range_min - 6;
                 *lag_frac = 0;
             }
         }else {
@@ -461,7 +461,7 @@ static void interp_pitch_vector(float *pitch_vector, int lag_int,
 
     b60_idx1 = &b60[    lag_frac];
     b60_idx2 = &b60[6 - lag_frac];
-    exc_idx = &pitch_vector[-lag_int];
+    exc_idx  = &pitch_vector[-lag_int];
 
     for(n=0; n<AMR_SUBFRAME_SIZE; n++) {
         pitch_vector[n] = 0.0;
@@ -620,25 +620,25 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
         const int fixed_index = pulses[0];
 
         if(mode <= MODE_515) {
-            pulse_subset =      ((fixed_index >> 3) & 8) + (subframe << 1);
+            pulse_subset      = ((fixed_index >> 3) & 8) + (subframe << 1);
             pulse_position[0] = ( fixed_index       & 7)*5 + track_position[pulse_subset];
             pulse_position[1] = ((fixed_index >> 3) & 7)*5 + track_position[pulse_subset + 1];
         }else if(mode == MODE_59) {
-            pulse_subset = ((fixed_index & 1) << 1) + 1;
+            pulse_subset      = ((fixed_index & 1) << 1) + 1;
             pulse_position[0] = ((fixed_index >> 1) & 7)*5 + pulse_subset;
-            pulse_subset = (fixed_index >> 4) & 3;
+            pulse_subset      = (fixed_index  >> 4) & 3;
             pulse_position[1] = ((fixed_index >> 6) & 7)*5 + pulse_subset + (pulse_subset == 3 ? 1 : 0);
         }else if(mode == MODE_67) {
             pulse_position[0] = ( fixed_index       & 7)*5;
-            pulse_subset = (fixed_index >> 2) & 2;
+            pulse_subset      = (fixed_index  >> 2) & 2;
             pulse_position[1] = ((fixed_index >> 4) & 7)*5 + pulse_subset + 1;
-            pulse_subset = (fixed_index >> 6) & 2;
+            pulse_subset      = (fixed_index  >> 6) & 2;
             pulse_position[2] = ((fixed_index >> 8) & 7)*5 + pulse_subset + 2;
         }else { // mode <= MODE_795
             pulse_position[0] = gray_decode[ fixed_index        & 7]*5;
             pulse_position[1] = gray_decode[(fixed_index >> 3)  & 7]*5 + 1;
             pulse_position[2] = gray_decode[(fixed_index >> 6)  & 7]*5 + 2;
-            pulse_subset = (fixed_index >> 9) & 1;
+            pulse_subset      = (fixed_index >> 9) & 1;
             pulse_position[3] = gray_decode[(fixed_index >> 10) & 7]*5 + pulse_subset + 3;
         }
         reconstruct_fixed_vector(pulse_position, pulses[1], pulses_nb_per_mode[mode], fixed_vector);
@@ -934,21 +934,21 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         // decode pitch gain and fixed gain correction factor
         if(p->cur_frame_mode == MODE_122 || p->cur_frame_mode == MODE_795) {
-            p->pitch_gain[4] =     qua_gain_pit[amr_subframe->p_gain];
+            p->pitch_gain[4]     = qua_gain_pit [amr_subframe->p_gain];
             p->fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
         }else if(p->cur_frame_mode == MODE_67 || p->cur_frame_mode == MODE_74 ||
                  p->cur_frame_mode == MODE_102) {
-            p->pitch_gain[4] =     gains_high[amr_subframe->p_gain][0];
+            p->pitch_gain[4]     = gains_high[amr_subframe->p_gain][0];
             p->fixed_gain_factor = gains_high[amr_subframe->p_gain][1];
         }else if(p->cur_frame_mode == MODE_515 || p->cur_frame_mode == MODE_59) {
-            p->pitch_gain[4] =     gains_low[amr_subframe->p_gain][0];
+            p->pitch_gain[4]     = gains_low[amr_subframe->p_gain][0];
             p->fixed_gain_factor = gains_low[amr_subframe->p_gain][1];
         }else {
             // gain index is only coded in subframes 0,2
             if(!(subframe&1)) {
                 gains_index_MODE_475 = amr_subframe->p_gain<<1;
             }
-            p->pitch_gain[4] =     gains_MODE_475[gains_index_MODE_475 + (subframe&1)][0];
+            p->pitch_gain[4]     = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][0];
             p->fixed_gain_factor = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][1];
         }
 
@@ -970,7 +970,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         // smooth fixed gain
         if(p->cur_frame_mode < MODE_74 || p->cur_frame_mode == MODE_102) {
-            float diff = 0.0;
+            float diff             = 0.0;
             float smoothing_factor = 0.0;
 
             for(i=0; i<LP_FILTER_ORDER; i++) {
@@ -1027,12 +1027,12 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
 
 AVCodec amrnb_decoder = {
-    .name = "amrnb",
-    .type = CODEC_TYPE_AUDIO,
-    .id = CODEC_ID_AMR_NB,
+    .name           = "amrnb",
+    .type           = CODEC_TYPE_AUDIO,
+    .id             = CODEC_ID_AMR_NB,
     .priv_data_size = sizeof(AMRContext),
-    .init = amrnb_decode_init,
-    .decode = amrnb_decode_frame,
-    .long_name = NULL_IF_CONFIG_SMALL("Adaptive Multi-Rate NarrowBand"),
+    .init           = amrnb_decode_init,
+    .decode         = amrnb_decode_frame,
+    .long_name      = NULL_IF_CONFIG_SMALL("Adaptive Multi-Rate NarrowBand"),
 };
 
