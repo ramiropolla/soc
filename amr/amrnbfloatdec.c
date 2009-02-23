@@ -773,7 +773,7 @@ void do_phase_dispersion(AMRContext *p)
 static int synthesis(AMRContext *p, float *excitation, float *lpc,
                      float *samples, uint8_t overflow)
 {
-    int i, j, overflow_temp = 0;
+    int i, overflow_temp = 0;
 
     // if an overflow has been detected, the pitch vector is scaled down by a
     // factor of 4
