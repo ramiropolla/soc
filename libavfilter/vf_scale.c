@@ -98,11 +98,12 @@ static int config_props(AVFilterLink *link)
     if(h == -1) h = scale->w*link->src->inputs[0]->h/link->src->inputs[0]->w;
 
     /* TODO: make algorithm configurable */
-    scale->sws = sws_getCachedContext(scale->sws, link->src->inputs[0]->w,
-                                link->src->inputs[0]->h,
-                                link->src->inputs[0]->format,
-                                w, h, link->format, SWS_BILINEAR,
-                                NULL, NULL, NULL);
+    scale->sws = sws_getCachedContext(scale->sws,
+                                      link->src->inputs[0]->w,
+                                      link->src->inputs[0]->h,
+                                      link->src->inputs[0]->format,
+                                      w, h, link->format, SWS_BILINEAR,
+                                      NULL, NULL, NULL);
 
     link->w = w;
     link->h = h;
