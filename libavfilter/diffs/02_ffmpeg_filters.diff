@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 17222)
+--- ffmpeg.c	(revision 17547)
 +++ ffmpeg.c	(working copy)
 @@ -41,6 +41,13 @@
  #include "libavutil/avstring.h"
@@ -226,7 +226,7 @@ Index: ffmpeg.c
 +#else
      if (ost->video_crop) {
          if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
-             av_log(NULL, AV_LOG_ERROR, "error cropping picture\n");
+             fprintf(stderr, "error cropping picture\n");
 @@ -897,6 +1087,7 @@
      } else {
          formatted_picture = in_picture;
