@@ -41,6 +41,7 @@ typedef struct
 static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     ScaleContext *scale = ctx->priv;
+    char sws_opts[256];
 
     /* default to no scaling */
     scale->w =
@@ -50,7 +51,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
         return -1;
 
     if(args)
-        sscanf(args, "%d:%d", &scale->w, &scale->h);
+        sscanf(args, "%d:%d:%255s", &scale->w, &scale->h, sws_opts);
 
     /* sanity check parms */
     if(scale->w <  -1 || scale->h <  -1)
