@@ -699,7 +699,7 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
  *
  * @param p the context
  */
-void do_phase_dispersion(AMRContext *p)
+void do_phase_dispersion(AMRContext *p, float *fixed_vector)
 {
     int ir_filter_strength;
 
@@ -746,8 +746,8 @@ void do_phase_dispersion(AMRContext *p)
         // FIXME: extra memcpy (ff_celp_convolve_circf needs in and out not to overlap)
         float fixed_vector_temp[AMR_SUBFRAME_SIZE];
 
-        memcpy(fixed_vector_temp, p->fixed_vector, sizeof(fixed_vector_temp));
-        ff_celp_convolve_circf(p->fixed_vector, fixed_vector_temp,
+        memcpy(fixed_vector_temp, fixed_vector, sizeof(fixed_vector_temp));
+        ff_celp_convolve_circf(fixed_vector, fixed_vector_temp,
                                filters[ir_filter_strength], AMR_SUBFRAME_SIZE);
     }
 
@@ -970,7 +970,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             }
         }
 
-        do_phase_dispersion(p);
+        do_phase_dispersion(p, p->fixed_vector);
 
 /*** end of pre-processing ***/
 
