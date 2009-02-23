@@ -22,6 +22,7 @@
 #include <stdio.h>
 
 #include "avfilter.h"
+#include "libavcodec/opt.h"
 #include "libswscale/swscale.h"
 
 typedef struct
@@ -42,6 +43,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     ScaleContext *scale = ctx->priv;
     char sws_opts[256];
+    char *p;
 
     /* default to no scaling */
     scale->w =
@@ -52,6 +54,22 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 
     if(args)
         sscanf(args, "%d:%d:%255s", &scale->w, &scale->h, sws_opts);
+
+    if ((p = strstr(sws_opts, "sws_flags="))) {
+        char sws_flags[256];
+        int i = 0;
+        p = strchr(sws_opts, '=');
+        p++;
+        while (*p && *p != ':' && i < sizeof(sws_flags) - 1)
+            sws_flags[i++] = *p++;
+        sws_flags[i] = 0;
+
+        if (av_set_string3(scale->sws, "sws_flags", sws_flags, 1, NULL) < 0) {
+            sws_freeContext(scale->sws);
+            scale->sws = NULL;
+            return -1;
+        }
+    }
 
     /* sanity check parms */
     if(scale->w <  -1 || scale->h <  -1)
@@ -98,12 +116,11 @@ static int config_props(AVFilterLink *link)
     if(w == -1) w = scale->h*link->src->inputs[0]->w/link->src->inputs[0]->h;
     if(h == -1) h = scale->w*link->src->inputs[0]->h/link->src->inputs[0]->w;
 
-    /* TODO: make algorithm configurable */
     scale->sws = sws_getCachedContext(scale->sws,
                                       link->src->inputs[0]->w,
                                       link->src->inputs[0]->h,
                                       link->src->inputs[0]->format,
-                                      w, h, link->format, SWS_BILINEAR,
+                                      w, h, link->format, av_get_int(scale->sws, "sws_flags", NULL),
                                       NULL, NULL, NULL);
 
     link->w = w;
