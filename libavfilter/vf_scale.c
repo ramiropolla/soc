@@ -46,6 +46,9 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
     scale->w =
     scale->h = 0;
 
+    if (!(scale->sws = sws_getContext(16,16,0, 16,16,0, SWS_BILINEAR, NULL,NULL,NULL)))
+        return -1;
+
     if(args)
         sscanf(args, "%d:%d", &scale->w, &scale->h);
 
@@ -87,9 +90,6 @@ static int config_props(AVFilterLink *link)
     ScaleContext *scale = link->src->priv;
     int w, h;
 
-    if(scale->sws)
-        sws_freeContext(scale->sws);
-
     w = scale->w;
     h = scale->h;
     if(!w)      w = link->src->inputs[0]->w;
@@ -98,7 +98,7 @@ static int config_props(AVFilterLink *link)
     if(h == -1) h = scale->w*link->src->inputs[0]->h/link->src->inputs[0]->w;
 
     /* TODO: make algorithm configurable */
-    scale->sws = sws_getContext(link->src->inputs[0]->w,
+    scale->sws = sws_getCachedContext(scale->sws, link->src->inputs[0]->w,
                                 link->src->inputs[0]->h,
                                 link->src->inputs[0]->format,
                                 w, h, link->format, SWS_BILINEAR,
