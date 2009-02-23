@@ -699,7 +699,7 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
  *
  * @param p the context
  */
-void do_phase_dispersion(AMRContext *p, float *fixed_vector)
+void apply_ir_filter(AMRContext *p, float *fixed_vector)
 {
     int ir_filter_strength;
 
@@ -970,7 +970,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             }
         }
 
-        do_phase_dispersion(p, p->fixed_vector);
+        apply_ir_filter(p, p->fixed_vector);
 
 /*** end of pre-processing ***/
 
