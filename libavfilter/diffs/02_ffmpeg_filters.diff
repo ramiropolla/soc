@@ -40,7 +40,7 @@ Index: ffmpeg.c
  } AVInputStream;
  
  typedef struct AVInputFile {
-@@ -301,6 +318,176 @@
+@@ -301,6 +318,183 @@
  static struct termios oldtty;
  #endif
  
@@ -164,9 +164,10 @@ Index: ffmpeg.c
 +        (frame_padtop + frame_padbottom))) {
 +        char crop_args[255];
 +        AVFilterContext *filt_scale;
-+        snprintf(crop_args, 255, "%d:%d",
++        snprintf(crop_args, 255, "%d:%d:sws_flags=%d",
 +                 codec->width  - (frame_padleft + frame_padright),
-+                 codec->height - (frame_padtop  + frame_padbottom));
++                 codec->height - (frame_padtop  + frame_padbottom),
++                 (int)av_get_int(sws_opts, "sws_flags", NULL));
 +        filt_scale = avfilter_open(avfilter_get_by_name("scale"), NULL);
 +        if (!filt_scale)
 +            return -1;
@@ -199,6 +200,12 @@ Index: ffmpeg.c
 +            return -1;
 +    }
 +
++    {
++        char scale_sws_opts[128];
++        snprintf(scale_sws_opts, sizeof(scale_sws_opts), "sws_flags=%d", (int)av_get_int(sws_opts, "sws_flags", NULL));
++        filt_graph_all->scale_sws_opts = av_strdup(scale_sws_opts);
++    }
++
 +    /* configure all the filter links */
 +    if(avfilter_graph_check_validity(filt_graph_all, NULL))
 +        return -1;
@@ -217,7 +224,7 @@ Index: ffmpeg.c
  static void term_exit(void)
  {
  #if HAVE_TERMIOS_H
-@@ -886,6 +1073,9 @@
+@@ -886,6 +1080,9 @@
      if (nb_frames <= 0)
          return;
  
@@ -227,7 +234,7 @@ Index: ffmpeg.c
      if (ost->video_crop) {
          if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
              fprintf(stderr, "error cropping picture\n");
-@@ -897,6 +1087,7 @@
+@@ -897,6 +1094,7 @@
      } else {
          formatted_picture = in_picture;
      }
@@ -235,7 +242,7 @@ Index: ffmpeg.c
  
      final_picture = formatted_picture;
      padding_src = formatted_picture;
-@@ -914,12 +1105,14 @@
+@@ -914,12 +1112,14 @@
          }
      }
  
@@ -250,7 +257,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1190,6 +1383,9 @@
+@@ -1190,6 +1390,9 @@
      static short *samples= NULL;
      AVSubtitle subtitle, *subtitle_to_free;
      int got_subtitle;
@@ -260,7 +267,7 @@ Index: ffmpeg.c
  
      if(ist->next_pts == AV_NOPTS_VALUE)
          ist->next_pts= ist->pts;
-@@ -1307,6 +1503,15 @@
+@@ -1307,6 +1510,15 @@
                                      &buffer_to_free);
          }
  
@@ -276,7 +283,7 @@ Index: ffmpeg.c
          // preprocess audio (volume)
          if (ist->st->codec->codec_type == CODEC_TYPE_AUDIO) {
              if (audio_volume != 256) {
-@@ -1328,10 +1533,18 @@
+@@ -1328,10 +1540,18 @@
              if (pts > now)
                  usleep(pts - now);
          }
@@ -296,7 +303,7 @@ Index: ffmpeg.c
              for(i=0;i<nb_ostreams;i++) {
                  int frame_size;
  
-@@ -1354,6 +1567,9 @@
+@@ -1354,6 +1574,9 @@
                              do_audio_out(os, ost, ist, data_buf, data_size);
                              break;
                          case CODEC_TYPE_VIDEO:
@@ -306,7 +313,7 @@ Index: ffmpeg.c
                              do_video_out(os, ost, ist, &picture, &frame_size);
                              if (vstats_filename && frame_size)
                                  do_video_stats(os, ost, frame_size);
-@@ -1411,7 +1627,17 @@
+@@ -1411,7 +1634,17 @@
                          av_free_packet(&opkt);
                      }
                  }
@@ -324,7 +331,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1842,10 +2068,21 @@
+@@ -1842,10 +2075,21 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          av_exit(1);
                      }
@@ -346,7 +353,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3835,6 +4072,9 @@
+@@ -3835,6 +4079,9 @@
  #if CONFIG_VHOOK
      { "vhook", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)add_frame_hooker}, "insert video processing module", "module" },
  #endif
