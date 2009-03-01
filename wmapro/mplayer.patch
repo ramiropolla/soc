@@ -1,0 +1,19 @@
+Index: etc/codecs.conf
+===================================================================
+--- etc/codecs.conf	(revision 28740)
++++ etc/codecs.conf	(working copy)
+@@ -3595,6 +3595,14 @@
+   driver ffmpeg
+   dll "wmav2"
+ 
++audiocodec ffwmapro
++  info "WMA Pro audio (FFmpeg)"
++  status untested
++  format 0x162
++  fourcc "WMA3"
++  driver ffmpeg
++  dll "wmapro"
++
+ audiocodec ffmac3
+   info "Macintosh Audio Compression and Expansion 3:1"
+   status untested
