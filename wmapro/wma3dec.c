@@ -1538,6 +1538,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
     WMA3DecodeContext *s = avctx->priv_data;
     int more_frames=1;
     int num_bits_prev_frame;
+    int packet_sequence_number;
 
     s->samples = data;
     s->samples_end = (int16_t*)((int8_t*)data + *data_size);
@@ -1552,7 +1553,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
 
     /** parse packet header */
     init_get_bits(&gb, buf, s->buf_bit_size);
-    s->packet_sequence_number = get_bits(&gb, 4);
+    packet_sequence_number    = get_bits(&gb, 4);
     s->bit5                   = get_bits1(&gb);
     s->bit6                   = get_bits1(&gb);
 
@@ -1562,11 +1563,12 @@ static int wma3_decode_packet(AVCodecContext *avctx,
                   num_bits_prev_frame);
 
     /** check for packet loss */
-    if (s->packet_sequence_number != (avctx->frame_number&0xF)) {
+    if (((s->packet_sequence_number + 1)&0xF) != packet_sequence_number) {
         s->packet_loss = 1;
         av_log(avctx, AV_LOG_ERROR, "!!Packet loss detected! seq %x vs %x\n",
                       s->packet_sequence_number,avctx->frame_number&0xF);
     }
+    s->packet_sequence_number = packet_sequence_number;
 
     if (num_bits_prev_frame > 0) {
         /** append the previous frame data to the remaining data from the
@@ -1607,12 +1609,14 @@ static int wma3_decode_packet(AVCodecContext *avctx,
             more_frames = 0;
     }
 
-    if(s->packet_loss == 1 && !s->negative_quantstep)
-        assert(0);
-
-    /** save the rest of the data so that it can be decoded
-       with the next packet */
-    save_bits(s,&gb,remaining_bits(s,&gb));
+    if(!s->packet_loss){
+        /** save the rest of the data so that it can be decoded
+            with the next packet */
+        save_bits(s,&gb,remaining_bits(s,&gb));
+    }else{
+        s->prev_packet_bit_size = 0;
+        s->packet_loss = 0;
+    }
 
     *data_size = (int8_t *)s->samples - (int8_t *)data;
 
