@@ -1591,7 +1591,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
     s->prev_packet_bit_size = 0;
     s->packet_loss = 0;
     /** decode the rest of the packet */
-    while(more_frames && remaining_bits(s,&gb) > s->log2_frame_size){
+    while(!s->packet_loss && more_frames && remaining_bits(s,&gb) > s->log2_frame_size){
         int frame_size = show_bits(&gb, s->log2_frame_size);
 
         /** there is enough data for a full frame */
