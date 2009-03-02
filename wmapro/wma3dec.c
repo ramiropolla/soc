@@ -171,6 +171,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
     /** frame info */
     s->skip_frame = 1; /** skip first frame */
+    s->packet_loss = 1;
     s->len_prefix = s->decode_flags & 0x40;
 
     if(!s->len_prefix){
@@ -1563,10 +1564,11 @@ static int wma3_decode_packet(AVCodecContext *avctx,
                   num_bits_prev_frame);
 
     /** check for packet loss */
-    if (((s->packet_sequence_number + 1)&0xF) != packet_sequence_number) {
+    if (!s->packet_loss &&
+        ((s->packet_sequence_number + 1)&0xF) != packet_sequence_number) {
         s->packet_loss = 1;
-        av_log(avctx, AV_LOG_ERROR, "!!Packet loss detected! seq %x vs %x\n",
-                      s->packet_sequence_number,avctx->frame_number&0xF);
+        av_log(avctx, AV_LOG_ERROR, "Packet loss detected! seq %x vs %x\n",
+                      s->packet_sequence_number,packet_sequence_number);
     }
     s->packet_sequence_number = packet_sequence_number;
 
@@ -1613,15 +1615,22 @@ static int wma3_decode_packet(AVCodecContext *avctx,
         /** save the rest of the data so that it can be decoded
             with the next packet */
         save_bits(s,&gb,remaining_bits(s,&gb));
-    }else{
-        s->prev_packet_bit_size = 0;
-        s->packet_loss = 0;
     }
 
     *data_size = (int8_t *)s->samples - (int8_t *)data;
 
     return avctx->block_align;
 }
+
+static void wma3_flush(AVCodecContext *avctx)
+{
+    WMA3DecodeContext *s = avctx->priv_data;
+    int i;
+    for(i=0;i<s->num_channels;i++)
+        memset(s->channel[i].out, 0, sizeof(s->channel[0].out));
+    s->packet_loss = 1;
+}
+
 
 /**
  *@brief WMA9 decoder
@@ -1636,5 +1645,6 @@ AVCodec wmapro_decoder =
     NULL,
     wma3_decode_end,
     wma3_decode_packet,
+    .flush= wma3_flush,
     .long_name = NULL_IF_CONFIG_SMALL("Windows Media Audio 9 Professional"),
 };
