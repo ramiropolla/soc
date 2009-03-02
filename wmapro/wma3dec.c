@@ -172,7 +172,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     /** frame info */
     s->skip_frame = 1; /** skip first frame */
     s->packet_loss = 1;
-    s->len_prefix = s->decode_flags & 0x40;
+    s->len_prefix = (s->decode_flags & 0x40) >> 6;
 
     if(!s->len_prefix){
          av_log(avctx, AV_LOG_ERROR, "file has no length prefix, please report\n");
