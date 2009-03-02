@@ -1587,7 +1587,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
             wma_decode_frame(s,&gb_prev);
         }
     }else if(s->prev_packet_bit_size){
-        av_log(avctx, AV_LOG_ERROR, "ignoring %x previously saved bits\n",
+        av_log(avctx, AV_LOG_DEBUG, "ignoring %x previously saved bits\n",
                       s->prev_packet_bit_size);
     }
 
@@ -1605,7 +1605,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
             more_frames = wma_decode_frame(s,&gb);
 
             if(!more_frames){
-                av_log(avctx, AV_LOG_ERROR, "no more frames\n");
+                av_log(avctx, AV_LOG_DEBUG, "no more frames\n");
             }
         }else
             more_frames = 0;
