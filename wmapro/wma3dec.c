@@ -1552,6 +1552,8 @@ static int wma3_decode_packet(AVCodecContext *avctx,
     if(buf_size < avctx->block_align)
         return 0;
 
+    buf_size = avctx->block_align;
+
     /** parse packet header */
     init_get_bits(&gb, buf, s->buf_bit_size);
     packet_sequence_number    = get_bits(&gb, 4);
