@@ -50,9 +50,9 @@ static box_color colors[] =
 
 typedef struct
 {
-    int x,y,w,h;
+    int x, y, w, h;
     box_color color;
-    int vsub,hsub;   //< chroma subsampling
+    int vsub, hsub;   //< chroma subsampling
 } BoxContext;
 
 static void box_strlwr(char *str)
@@ -126,7 +126,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 
 static void draw_box(AVFilterPicRef *pic, BoxContext* context, box_color color)
 {
-    int x,y;
+    int x, y;
     int channel;
     unsigned char *row[4];
     int xb = context->x;
@@ -152,7 +152,7 @@ static void draw_box(AVFilterPicRef *pic, BoxContext* context, box_color color)
 static void end_frame(AVFilterLink *link)
 {
     BoxContext *context = link->dst->priv;
-    AVFilterLink* output = link->dst->outputs[0];
+    AVFilterLink *output = link->dst->outputs[0];
     AVFilterPicRef *pic = link->cur_pic;
 
     draw_box(pic,context,context->color);
