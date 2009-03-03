@@ -105,7 +105,6 @@ static av_cold int wma3_decode_end(AVCodecContext *avctx)
     WMA3DecodeContext *s = avctx->priv_data;
     int i;
 
-    av_free(s->prev_packet_data);
     av_free(s->num_sfb);
     av_free(s->sfb_offsets);
     av_free(s->subwoofer_cutoffs);
@@ -1494,32 +1493,31 @@ static void save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len)
     int pos = (s->prev_packet_bit_size - bit_offset) / 8;
     s->prev_packet_bit_size += len;
 
-    if(len <= 0)
+    if(len <= 0 || buflen > MAX_FRAMESIZE){
+         av_log(s->avctx, AV_LOG_ERROR, "input buffer to small\n");
+         s->packet_loss = 1;
          return;
-
-    /** increase length if needed */
-    s->prev_packet_data = av_realloc(s->prev_packet_data,buflen +
-                               FF_INPUT_BUFFER_PADDING_SIZE);
+    }
 
     /** byte align prev_frame buffer */
     if(bit_offset){
         int missing = 8 - bit_offset;
         if(len < missing)
             missing = len;
-        s->prev_packet_data[pos++] |=
+        s->frame_data[pos++] |=
             get_bits(gb, missing) << (8 - bit_offset - missing);
         len -= missing;
     }
 
     /** copy full bytes */
     while(len > 7){
-        s->prev_packet_data[pos++] = get_bits(gb,8);
+        s->frame_data[pos++] = get_bits(gb,8);
         len -= 8;
     }
 
     /** copy remaining bits */
     if(len > 0)
-        s->prev_packet_data[pos++] = get_bits(gb,len) << (8 - len);
+        s->frame_data[pos++] = get_bits(gb,len) << (8 - len);
 }
 
 /**
@@ -1584,7 +1582,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
         /** decode the cross packet frame if it is valid */
         if(!s->packet_loss){
             GetBitContext gb_prev;
-            init_get_bits(&gb_prev, s->prev_packet_data,
+            init_get_bits(&gb_prev, s->frame_data,
                               s->prev_packet_bit_size);
             wma_decode_frame(s,&gb_prev);
         }
