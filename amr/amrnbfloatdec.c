@@ -1,4 +1,4 @@
-﻿/*
+/*
  * AMR narrowband decoder (floating point)
  * Copyright (c) 2006-2007 Robert Swain
  *
@@ -714,11 +714,9 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe, const
         fixed_gain_factor = gains_MODE_475[index][1];
     }
 
-    // calculate the predicted fixed gain g_c'
-    p->fixed_gain[4] = fixed_gain_prediction(p->fixed_vector, p->prediction_error, mode);
-
     // ^g_c = g_c' * ^gamma_gc
-    p->fixed_gain[4] *= fixed_gain_factor;
+    p->fixed_gain[4] = fixed_gain_factor
+                     * fixed_gain_prediction(p->fixed_vector, p->prediction_error, mode);
 
     // update quantified prediction error energy history
     p->prediction_error[0] = p->prediction_error[1];
