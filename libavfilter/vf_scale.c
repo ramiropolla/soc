@@ -57,12 +57,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 
     if ((p = strstr(sws_opts, "sws_flags="))) {
         char sws_flags[256];
-        int i = 0;
-        p = strchr(sws_opts, '=');
-        p++;
-        while (*p && *p != ':' && i < sizeof(sws_flags) - 1)
-            sws_flags[i++] = *p++;
-        sws_flags[i] = 0;
+        sscanf(p, "sws_flags=%255[^:]", sws_flags);
 
         if (av_set_string3(scale->sws, "sws_flags", sws_flags, 1, NULL) < 0) {
             sws_freeContext(scale->sws);
