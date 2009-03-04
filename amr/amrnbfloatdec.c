@@ -719,9 +719,7 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe, const
                      * fixed_gain_prediction(p->fixed_vector, p->prediction_error, mode);
 
     // update quantified prediction error energy history
-    p->prediction_error[0] = p->prediction_error[1];
-    p->prediction_error[1] = p->prediction_error[2];
-    p->prediction_error[2] = p->prediction_error[3];
+    memmove(&p->prediction_error[0], &p->prediction_error[1], 3 * sizeof(p->prediction_error[0]));
     p->prediction_error[3] = 20.0*log10f(fixed_gain_factor);
 }
 
