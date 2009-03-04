@@ -68,7 +68,6 @@ typedef struct AMRContext {
 
     float               prediction_error[4]; ///< quantified prediction errors {20log10(^γ_gc)} for previous four subframes
     float                     pitch_gain[5]; ///< quantified pitch gains for the current and previous four subframes
-    float                 fixed_gain_factor; ///< fixed gain correction factor {^γ_gc} for the current frame
     float                     fixed_gain[5]; ///< quantified fixed gains for the current and previous four subframes
 
     float                              beta; ///< beta = pitch_gain, bounded by [0.0,1.0] for 12.2 kbps or [0.0,0.8] for other modes
@@ -696,34 +695,36 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
 
 static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe, const enum Mode mode, const int subframe)
 {
+    float fixed_gain_factor; // fixed gain correction factor {^γ_gc} for the current frame
+
     // decode pitch gain and fixed gain correction factor
     if(mode == MODE_122 || mode == MODE_795) {
         p->pitch_gain[4]     = qua_gain_pit [amr_subframe->p_gain];
-        p->fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
+        fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
     }else if(mode >= MODE_67) {
         p->pitch_gain[4]     = gains_high[amr_subframe->p_gain][0];
-        p->fixed_gain_factor = gains_high[amr_subframe->p_gain][1];
+        fixed_gain_factor = gains_high[amr_subframe->p_gain][1];
     }else if(mode >= MODE_515) {
         p->pitch_gain[4]     = gains_low[amr_subframe->p_gain][0];
-        p->fixed_gain_factor = gains_low[amr_subframe->p_gain][1];
+        fixed_gain_factor = gains_low[amr_subframe->p_gain][1];
     }else {
         // gain index is only coded in subframes 0,2
         const int index = (p->frame.subframe[subframe&2].p_gain << 1) + (subframe&1);
         p->pitch_gain[4]     = gains_MODE_475[index][0];
-        p->fixed_gain_factor = gains_MODE_475[index][1];
+        fixed_gain_factor = gains_MODE_475[index][1];
     }
 
     // calculate the predicted fixed gain g_c'
     p->fixed_gain[4] = fixed_gain_prediction(p->fixed_vector, p->prediction_error, mode);
 
     // ^g_c = g_c' * ^gamma_gc
-    p->fixed_gain[4] *= p->fixed_gain_factor;
+    p->fixed_gain[4] *= fixed_gain_factor;
 
     // update quantified prediction error energy history
     p->prediction_error[0] = p->prediction_error[1];
     p->prediction_error[1] = p->prediction_error[2];
     p->prediction_error[2] = p->prediction_error[3];
-    p->prediction_error[3] = 20.0*log10f(p->fixed_gain_factor);
+    p->prediction_error[3] = 20.0*log10f(fixed_gain_factor);
 }
 
 /// @}
