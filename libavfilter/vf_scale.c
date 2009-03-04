@@ -128,15 +128,17 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     ScaleContext *scale = link->dst->priv;
     AVFilterLink *out = link->dst->outputs[0];
+    int64_t gcd;
 
     out->outpic      = avfilter_get_video_buffer(out, AV_PERM_WRITE);
     out->outpic->pts = picref->pts;
 
     out->outpic->pixel_aspect.num = picref->pixel_aspect.num * out->h * link->w;
     out->outpic->pixel_aspect.den = picref->pixel_aspect.den * out->w * link->h;
-    av_reduce(&out->outpic->pixel_aspect.num, &out->outpic->pixel_aspect.den,
-               out->outpic->pixel_aspect.num,  out->outpic->pixel_aspect.den,
-         FFMAX(out->outpic->pixel_aspect.num,  out->outpic->pixel_aspect.den));
+
+    gcd = av_gcd(out->outpic->pixel_aspect.num, out->outpic->pixel_aspect.den);
+    out->outpic->pixel_aspect.num /= gcd;
+    out->outpic->pixel_aspect.den /= gcd;
 
     avfilter_start_frame(out, avfilter_ref_pic(out->outpic, ~0));
 
