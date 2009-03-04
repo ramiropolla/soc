@@ -696,8 +696,6 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
 
 static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe, const enum Mode mode, const int subframe)
 {
-    static int gains_index_MODE_475;
-
     // decode pitch gain and fixed gain correction factor
     if(mode == MODE_122 || mode == MODE_795) {
         p->pitch_gain[4]     = qua_gain_pit [amr_subframe->p_gain];
@@ -710,9 +708,9 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe, const
         p->fixed_gain_factor = gains_low[amr_subframe->p_gain][1];
     }else {
         // gain index is only coded in subframes 0,2
-        gains_index_MODE_475 = subframe&1 ? gains_index_MODE_475+1 : amr_subframe->p_gain<<1;
-        p->pitch_gain[4]     = gains_MODE_475[gains_index_MODE_475][0];
-        p->fixed_gain_factor = gains_MODE_475[gains_index_MODE_475][1];
+        const int index = (p->frame.subframe[subframe&2].p_gain << 1) + (subframe&1);
+        p->pitch_gain[4]     = gains_MODE_475[index][0];
+        p->fixed_gain_factor = gains_MODE_475[index][1];
     }
 
     // calculate the predicted fixed gain g_c'
