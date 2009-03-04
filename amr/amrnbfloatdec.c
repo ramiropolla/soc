@@ -694,7 +694,7 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
  * @return fixed gain smoothed
  */
 
-static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *lsp_avg
+static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *lsp_avg,
                                const enum Mode mode) {
     float diff             = 0.0;
     int   i;
