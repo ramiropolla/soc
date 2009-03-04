@@ -685,6 +685,51 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
     return powf(10.0, 0.05*(energy_pred + energy_mean[mode] - energy_fixed_mean));
 }
 
+/**
+ * Decode fixed and pitch gains.
+ *
+ * @param p the context
+ * @param amr_subframe unpacked amr subframe
+ * @param mode mode of the current frame
+ * @param subframe current subframe number
+ */
+
+static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe, const enum Mode mode, const int subframe)
+{
+    static int gains_index_MODE_475;
+
+    // decode pitch gain and fixed gain correction factor
+    if(mode == MODE_122 || mode == MODE_795) {
+        p->pitch_gain[4]     = qua_gain_pit [amr_subframe->p_gain];
+        p->fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
+    }else if(mode >= MODE_67) {
+        p->pitch_gain[4]     = gains_high[amr_subframe->p_gain][0];
+        p->fixed_gain_factor = gains_high[amr_subframe->p_gain][1];
+    }else if(mode >= MODE_515) {
+        p->pitch_gain[4]     = gains_low[amr_subframe->p_gain][0];
+        p->fixed_gain_factor = gains_low[amr_subframe->p_gain][1];
+    }else {
+        // gain index is only coded in subframes 0,2
+        if(!(subframe&1)) {
+            gains_index_MODE_475 = amr_subframe->p_gain<<1;
+        }
+        p->pitch_gain[4]     = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][0];
+        p->fixed_gain_factor = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][1];
+    }
+
+    // calculate the predicted fixed gain g_c'
+    p->fixed_gain[4] = fixed_gain_prediction(p->fixed_vector, p->prediction_error, mode);
+
+    // ^g_c = g_c' * ^gamma_gc
+    p->fixed_gain[4] *= p->fixed_gain_factor;
+
+    // update quantified prediction error energy history
+    p->prediction_error[0] = p->prediction_error[1];
+    p->prediction_error[1] = p->prediction_error[2];
+    p->prediction_error[2] = p->prediction_error[3];
+    p->prediction_error[3] = 20.0*log10f(p->fixed_gain_factor);
+}
+
 /// @}
 
 
@@ -835,12 +880,6 @@ static void update_state(AMRContext *p)
     memmove(&p->excitation_buf[0], &p->excitation_buf[AMR_SUBFRAME_SIZE],
         (PITCH_LAG_MAX + LP_FILTER_ORDER + 1)*sizeof(float));
 
-    // update quantified prediction error energy history
-    p->prediction_error[0] = p->prediction_error[1];
-    p->prediction_error[1] = p->prediction_error[2];
-    p->prediction_error[2] = p->prediction_error[3];
-    p->prediction_error[3] = 20.0*log10f(p->fixed_gain_factor);
-
     // update gain history
     memmove(&p->pitch_gain[0], &p->pitch_gain[1], 4*sizeof(float));
     memmove(&p->fixed_gain[0], &p->fixed_gain[1], 4*sizeof(float));
@@ -861,7 +900,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     AMRContext *p = avctx->priv_data;        // pointer to private data
     float *buf_out = data;                   // pointer to the output data buffer
     int i, subframe;                         // counters
-    int gains_index_MODE_475 = 0;            // MODE_475 gains index coded every other subframe
     enum Mode speech_mode = MODE_475;        // ???
 
     // decode the bitstream to AMR parameters
@@ -899,34 +937,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         decode_fixed_vector(p->fixed_vector, amr_subframe->pulses, p->cur_frame_mode, subframe);
 
-/*** gain decoding ***/
-
-        // calculate the predicted fixed gain g_c'
-        p->fixed_gain[4] = fixed_gain_prediction(p->fixed_vector, p->prediction_error, p->cur_frame_mode);
-
-        // decode pitch gain and fixed gain correction factor
-        if(p->cur_frame_mode == MODE_122 || p->cur_frame_mode == MODE_795) {
-            p->pitch_gain[4]     = qua_gain_pit [amr_subframe->p_gain];
-            p->fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
-        }else if(p->cur_frame_mode >= MODE_67) {
-            p->pitch_gain[4]     = gains_high[amr_subframe->p_gain][0];
-            p->fixed_gain_factor = gains_high[amr_subframe->p_gain][1];
-        }else if(p->cur_frame_mode >= MODE_515) {
-            p->pitch_gain[4]     = gains_low[amr_subframe->p_gain][0];
-            p->fixed_gain_factor = gains_low[amr_subframe->p_gain][1];
-        }else {
-            // gain index is only coded in subframes 0,2
-            if(!(subframe&1)) {
-                gains_index_MODE_475 = amr_subframe->p_gain<<1;
-            }
-            p->pitch_gain[4]     = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][0];
-            p->fixed_gain_factor = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][1];
-        }
-
-        // ^g_c = g_c' * ^gamma_gc
-        p->fixed_gain[4] *= p->fixed_gain_factor;
-
-/*** end of gain decoding ***/
+        decode_gains(p, amr_subframe, p->cur_frame_mode, subframe);
 
 /*** pre-processing ***/
 
