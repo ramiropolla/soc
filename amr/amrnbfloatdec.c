@@ -66,7 +66,7 @@ typedef struct AMRContext {
     float   pitch_vector[AMR_SUBFRAME_SIZE]; ///< adaptive code book (pitch) vector
     float   fixed_vector[AMR_SUBFRAME_SIZE]; ///< algebraic code book (fixed) vector
 
-    float               prediction_error[4]; ///< quantified prediction errors {20log10(^γ_gc)} for previous four subframes
+    float               prediction_error[4]; ///< quantified prediction errors {20log10(^gamma_gc)} for previous four subframes
     float                     pitch_gain[5]; ///< quantified pitch gains for the current and previous four subframes
     float                     fixed_gain[5]; ///< quantified fixed gains for the current and previous four subframes
 
@@ -695,7 +695,7 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
 
 static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe, const enum Mode mode, const int subframe)
 {
-    float fixed_gain_factor; // fixed gain correction factor {^γ_gc} for the current frame
+    float fixed_gain_factor; // fixed gain correction factor {^gamma_gc} for the current frame
 
     // decode pitch gain and fixed gain correction factor
     if(mode == MODE_122 || mode == MODE_795) {
