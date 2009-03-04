@@ -696,7 +696,6 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
 
 static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *lsp_avg) {
     float diff             = 0.0;
-    float smoothing_factor = 0.0;
     int   i;
 
     for(i=0; i<LP_FILTER_ORDER; i++) {
@@ -712,11 +711,10 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *ls
     }
 
     if(p->diff_count < 40) {
-        float fixed_gain_mean;
         // calculate the fixed gain smoothing factor (k_m)
-        smoothing_factor = FFMIN(0.25, FFMAX(0.0, diff - 0.4))/0.25;
+        const float smoothing_factor = FFMIN(0.25, FFMAX(0.0, diff - 0.4))/0.25;
         // calculate the mean fixed gain for the current subframe
-        fixed_gain_mean = (p->fixed_gain[0] + p->fixed_gain[1] + p->fixed_gain[2] + p->fixed_gain[3] + p->fixed_gain[4])/5.0;
+        const float fixed_gain_mean = (p->fixed_gain[0] + p->fixed_gain[1] + p->fixed_gain[2] + p->fixed_gain[3] + p->fixed_gain[4])/5.0;
         // calculate the smoothed fixed gain
         p->fixed_gain[4] = smoothing_factor*p->fixed_gain[4] + (1.0 - smoothing_factor)*fixed_gain_mean;
     }
