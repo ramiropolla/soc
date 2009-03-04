@@ -704,13 +704,7 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *ls
     }
 
     // if diff has been >0.65 for 10 frames (40 subframes) no smoothing is applied
-    if(diff > 0.65) {
-        p->diff_count++;
-    }else {
-        p->diff_count = 0;
-    }
-
-    if(p->diff_count < 40) {
+    if((p->diff_count = diff > 0.65 ? p->diff_count+1 : 0) < 40) {
         // calculate the fixed gain smoothing factor (k_m)
         const float smoothing_factor = FFMIN(0.25, FFMAX(0.0, diff - 0.4))/0.25;
         // calculate the mean fixed gain for the current subframe
