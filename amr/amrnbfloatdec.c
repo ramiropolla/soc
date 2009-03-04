@@ -694,7 +694,8 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
  * @return fixed gain smoothed
  */
 
-static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *lsp_avg) {
+static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *lsp_avg
+                               const enum Mode mode) {
     float diff             = 0.0;
     int   i;
 
@@ -704,7 +705,8 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *ls
     }
 
     // if diff has been >0.65 for 10 frames (40 subframes) no smoothing is applied
-    if((p->diff_count = diff > 0.65 ? p->diff_count+1 : 0) < 40) {
+    if((p->diff_count = diff > 0.65 ? p->diff_count+1 : 0) < 40 &&
+       (mode < MODE_74 || mode == MODE_102)) {
         // calculate the fixed gain smoothing factor (k_m)
         const float smoothing_factor = FFMIN(1.0, FFMAX(0.0, 4.0*diff - 1.6));
         // calculate the mean fixed gain for the current subframe
@@ -971,8 +973,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         }
 
         // smooth fixed gain
-        if(p->cur_frame_mode < MODE_74 || p->cur_frame_mode == MODE_102)
-            p->fixed_gain[4] = fixed_gain_smooth(p, p->lsp[subframe], p->lsp_avg);
+        p->fixed_gain[4] = fixed_gain_smooth(p, p->lsp[subframe], p->lsp_avg, p->cur_frame_mode);
 
         apply_ir_filter(p, p->fixed_vector);
 
