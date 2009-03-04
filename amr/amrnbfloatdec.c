@@ -1,4 +1,4 @@
-/*
+﻿/*
  * AMR narrowband decoder (floating point)
  * Copyright (c) 2006-2007 Robert Swain
  *
@@ -710,11 +710,9 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe, const
         p->fixed_gain_factor = gains_low[amr_subframe->p_gain][1];
     }else {
         // gain index is only coded in subframes 0,2
-        if(!(subframe&1)) {
-            gains_index_MODE_475 = amr_subframe->p_gain<<1;
-        }
-        p->pitch_gain[4]     = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][0];
-        p->fixed_gain_factor = gains_MODE_475[gains_index_MODE_475 + (subframe&1)][1];
+        gains_index_MODE_475 = subframe&1 ? gains_index_MODE_475+1 : amr_subframe->p_gain<<1;
+        p->pitch_gain[4]     = gains_MODE_475[gains_index_MODE_475][0];
+        p->fixed_gain_factor = gains_MODE_475[gains_index_MODE_475][1];
     }
 
     // calculate the predicted fixed gain g_c'
