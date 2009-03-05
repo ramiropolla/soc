@@ -2,7 +2,7 @@ include $(SUBDIR)../config.mak
 
 NAME = avfilter
 FFLIBS = avcodec avutil
-FFLIBS-$(CONFIG_SWSCALE)       += swscale
+FFLIBS-$(CONFIG_SCALE_FILTER)  += swscale
 FFLIBS-$(CONFIG_AVFILTER_LAVF) += avformat
 
 OBJS = allfilters.o \
