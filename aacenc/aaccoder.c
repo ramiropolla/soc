@@ -562,6 +562,13 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
     }
 }
 
+static void encode_window_bands_info_fixed(AACEncContext *s, SingleChannelElement *sce,
+                                           int win, int group_len, const float lambda)
+{
+    encode_window_bands_info(s, sce, win, group_len, 1.0f);
+}
+
+
 typedef struct TrellisPath {
     float cost;
     int prev;
