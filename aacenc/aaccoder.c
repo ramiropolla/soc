@@ -632,7 +632,7 @@ static void search_for_quantizers_anmr(AVCodecContext *avctx, AACEncContext *s,
                         int cb;
                         for(cb = 0; cb <= ESC_BT; cb++){
                             dists[cb] += quantize_band_cost(coefs + w2*128, sce->ics.swb_sizes[g],
-                                                            q, cb, s->lambda / band->threshold, INFINITY, NULL);
+                                                            q, cb, lambda / band->threshold, INFINITY, NULL);
                         }
                     }
                     dist = dists[0];
