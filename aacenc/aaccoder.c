@@ -24,6 +24,12 @@
  * AAC coefficients encoder
  */
 
+/***********************************
+ *              TODOs:
+ * speedup quantizer selection
+ * add sane pulse detection
+ ***********************************/
+
 #include "avcodec.h"
 #include "bitstream.h"
 #include "aac.h"

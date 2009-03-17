@@ -26,8 +26,6 @@
 
 /***********************************
  *              TODOs:
- * speedup quantizer selection
- * add sane pulse detection
  * add temporal noise shaping
  ***********************************/
 
