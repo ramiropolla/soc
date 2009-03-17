@@ -36,7 +36,7 @@ typedef struct AACCoefficientsEncoder{
     void (*search_for_quantizers)(AVCodecContext *avctx, struct AACEncContext *s,
                                   SingleChannelElement *sce, const float lambda);
     void (*encode_window_bands_info)(struct AACEncContext *s, SingleChannelElement *sce,
-                                     int win, int group_len);
+                                     int win, int group_len, const float lambda);
     void (*quantize_and_encode_band)(PutBitContext *pb, const float *in, int size,
                                      int scale_idx, int cb, const float lambda);
     void (*search_for_ms)(struct AACEncContext *s, ChannelElement *cpe, const float lambda);

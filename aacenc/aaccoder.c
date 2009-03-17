@@ -467,7 +467,7 @@ typedef struct BandCodingPath {
  * Encode band info for single window group bands.
  */
 static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce,
-                                     int win, int group_len)
+                                     int win, int group_len, const float lambda)
 {
     BandCodingPath path[120][12];
     int w, swb, cb, start, start2, size;
@@ -502,7 +502,7 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
                     FFPsyBand *band = &s->psy.psy_bands[s->cur_channel*PSY_MAX_BANDS+(win+w)*16+swb];
                     rd += quantize_band_cost(sce->coeffs + start + w*128, size,
                                              sce->sf_idx[(win+w)*16+swb], cb,
-                                             s->lambda / band->threshold, INFINITY, NULL);
+                                             lambda / band->threshold, INFINITY, NULL);
                 }
                 if(   run_value_bits[sce->ics.num_windows == 8][path[swb][cb].run]
                    != run_value_bits[sce->ics.num_windows == 8][path[swb][cb].run+1])
