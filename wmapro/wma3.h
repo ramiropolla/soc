@@ -137,7 +137,6 @@ typedef struct WMA3DecodeContext {
     int16_t*         samples;                       //< current samplebuffer pointer
     int16_t*         samples_end;                   //< maximum samplebuffer pointer
     uint8_t          drc_gain;                      //< gain for the DRC tool
-    uint8_t          no_tiling;                     //< frames contain subframes
     int              skip_frame;                    //< skip output step
     int              parsed_all_subframes;          //< all subframes decoded?
 

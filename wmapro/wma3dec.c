@@ -433,8 +433,10 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
         }
     }else{ /** subframe length and number of subframes is not constant */
         int subframe_len_bits = 0;     /** bits needed for the subframe length */
-        int subframe_len_zero_bit = 0; /** how many of the length bits indicate
-                                           if the subframe is zero */
+        int subframe_len_zero_bit = 0; /** first bit indicates if length is zero */
+        int fixed_channel_layout;      /** all channels have the same subframe layout */
+
+        fixed_channel_layout = get_bits1(&s->getbit);
 
         /** calculate subframe len bits */
         if(s->lossless)
@@ -447,63 +449,48 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
 
         /** loop until the frame data is split between the subframes */
         while(missing_samples > 0){
-            int64_t tileinfo = -1;
+            unsigned int channel_mask = 0;
             int min_channel_len = s->samples_per_frame;
-            int num_subframes_per_channel = 0;
-            int num_channels = 0;
+            int read_channel_mask = 1;
+            int channels_for_cur_subframe = 0;
             int subframe_len = s->samples_per_frame / s->max_num_subframes;
 
-            /** find channel with the smallest overall length */
-            for(c=0;c<s->num_channels;c++){
-                if(min_channel_len > s->channel[c].channel_len)
-                    min_channel_len = s->channel[c].channel_len;
-            }
-
-            /** check if this is the start of a new frame */
-            if(missing_samples == s->num_channels * s->samples_per_frame){
-                s->no_tiling = get_bits1(&s->getbit);
-            }
-
-            if(s->no_tiling){
-                num_subframes_per_channel = 1;
-                num_channels = s->num_channels;
+            if(fixed_channel_layout){
+                read_channel_mask = 0;
+                channels_for_cur_subframe = s->num_channels;
+                min_channel_len = s->channel[0].channel_len;
             }else{
-                /** count how many channels have the minimum length */
+                /** find channels with the smallest overall length */
                 for(c=0;c<s->num_channels;c++){
-                    if(min_channel_len == s->channel[c].channel_len){
-                        ++num_channels;
+                    if(s->channel[c].channel_len <= min_channel_len){
+                        if(s->channel[c].channel_len < min_channel_len){
+                            channels_for_cur_subframe = 0;
+                            min_channel_len = s->channel[c].channel_len;
+                        }
+                        ++channels_for_cur_subframe;
                     }
                 }
-                if(num_channels <= 1)
-                    num_subframes_per_channel = 1;
+
+                if(channels_for_cur_subframe == 1 ||
+                  subframe_len * channels_for_cur_subframe == missing_samples)
+                    read_channel_mask = 0;
             }
 
-            /** maximum number of subframes, evenly split */
-            if(subframe_len == missing_samples / num_channels){
-                num_subframes_per_channel = 1;
-            }
-
-            /** if there might be multiple subframes per channel */
-            if(num_subframes_per_channel != 1){
-                int total_num_bits = num_channels;
-                tileinfo = 0;
-                /** For every channel with the minimum length, 1 bit
-                    is transmitted that informs us if the channel
-                    contains a subframe with the next subframe_len. */
-                while(total_num_bits){
-                int num_bits = total_num_bits;
-                if(num_bits > 32)
-                    num_bits = 32;
-                tileinfo |= get_bits_long(&s->getbit,num_bits);
-                total_num_bits -= num_bits;
-                num_bits = total_num_bits;
-                tileinfo <<= (num_bits > 32)? 32 : num_bits;
+            /** For every channel with the minimum length, 1 bit
+                might be transmitted that informs us if the channel
+                contains a subframe with the next subframe_len. */
+            if(read_channel_mask){
+                channel_mask = get_bits(&s->getbit,channels_for_cur_subframe);
+                if(!channel_mask){
+                    av_log(s->avctx, AV_LOG_ERROR,
+                        "broken frame: zero frames for subframe_len\n");
+                    return -1;
                 }
             }
 
             /** if the frames are not evenly split, get the next subframe
                 length from the bitstream */
-            if(subframe_len != missing_samples / num_channels){
+            if(subframe_len * channels_for_cur_subframe != missing_samples){
                 int log2_subframe_len = 0;
                 /* 1 bit indicates if the subframe length is zero */
                 if(subframe_len_zero_bit){
@@ -522,28 +509,23 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
                 }else
                     subframe_len =
                         s->samples_per_frame / (1 << log2_subframe_len);
-            }
 
-            /** sanity check the length */
-            if(subframe_len < s->min_samples_per_subframe
-                || subframe_len > s->samples_per_frame){
-                av_log(s->avctx, AV_LOG_ERROR,
-                        "broken frame: subframe_len %i\n", subframe_len);
-                return -1;
-            }
-            for(c=0; c<s->num_channels;c++){
-                WMA3ChannelCtx* chan = &s->channel[c];
-                if(chan->num_subframes > 32){
+                /** sanity check the length */
+                if(subframe_len < s->min_samples_per_subframe
+                    || subframe_len > s->samples_per_frame){
                     av_log(s->avctx, AV_LOG_ERROR,
-                            "broken frame: num subframes %i\n",
-                            chan->num_subframes);
+                        "broken frame: subframe_len %i\n", subframe_len);
                     return -1;
                 }
+            }
+
+            for(c=0; c<s->num_channels;c++){
+                WMA3ChannelCtx* chan = &s->channel[c];
 
                 /** add subframes to the individual channels */
                 if(min_channel_len == chan->channel_len){
-                    --num_channels;
-                    if(tileinfo & (1<<num_channels)){
+                    --channels_for_cur_subframe;
+                    if(!read_channel_mask || channel_mask & (1<<channels_for_cur_subframe)){
                         if(chan->num_subframes > 31){
                             av_log(s->avctx, AV_LOG_ERROR,
                                     "broken frame: num subframes > 31\n");
