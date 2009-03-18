@@ -453,7 +453,7 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
             int min_channel_len = s->samples_per_frame;
             int read_channel_mask = 1;
             int channels_for_cur_subframe = 0;
-            int subframe_len = s->samples_per_frame / s->max_num_subframes;
+            int subframe_len;
 
             if(fixed_channel_layout){
                 read_channel_mask = 0;
@@ -472,7 +472,7 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
                 }
 
                 if(channels_for_cur_subframe == 1 ||
-                  subframe_len * channels_for_cur_subframe == missing_samples)
+                  s->min_samples_per_subframe * channels_for_cur_subframe == missing_samples)
                     read_channel_mask = 0;
             }
 
@@ -488,9 +488,8 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
                 }
             }
 
-            /** if the frames are not evenly split, get the next subframe
-                length from the bitstream */
-            if(subframe_len * channels_for_cur_subframe != missing_samples){
+            /** if we have the choice get next subframe length from the bitstream */
+            if(s->min_samples_per_subframe * channels_for_cur_subframe != missing_samples){
                 int log2_subframe_len = 0;
                 /* 1 bit indicates if the subframe length is zero */
                 if(subframe_len_zero_bit){
@@ -517,7 +516,8 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
                         "broken frame: subframe_len %i\n", subframe_len);
                     return -1;
                 }
-            }
+            }else
+                subframe_len = s->min_samples_per_subframe;
 
             for(c=0; c<s->num_channels;c++){
                 WMA3ChannelCtx* chan = &s->channel[c];
