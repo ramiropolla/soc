@@ -1,0 +1,242 @@
+\input texinfo @c -*- texinfo -*-
+
+@settitle Video Filters Documentation
+@titlepage
+@sp 7
+@center @titlefont{Video Filters Documentation}
+@sp 3
+@end titlepage
+
+
+@chapter Introduction
+
+Libavfilter is the filtering API of FFmpeg. It is the substitute of the
+now deprecated 'vhooks' and started as a Google Summer of Code project.
+To get libavfilter you must download it into some directory of your choice by:
+@example
+   svn checkout svn://svn.mplayerhq.hu/soc/libavfilter
+@end example
+
+And then read @url{http://svn.mplayerhq.hu/soc/libavfilter/README?view=co}
+to learn how to integrate it into ffmpeg and ffplay.
+
+The former video hook modules allowed a list of filters, that would run in the
+order that they were specified on the ffmpeg command line.
+Each filter had one input and one output.
+
+In libavfilter, it is possible for filters to have multiple inputs and
+multiple outputs.
+To illustrate the sorts of things that are possible, we can
+use a complex filter graph.  For example, the following one:
+
+@example
+input --> split ---> fifo ----------------------> overlay --> output
+            |                                        ^
+            |------> fifo --> crop --> vflip --------|
+@end example
+
+splits the stream into two streams, sends one stream through the crop filter
+and the vflip filter before merging it back with the other stream by
+overlaying it on top. You can use the following command to do this filtering
+
+@example
+./ffmpeg -i in.avi -s 240x320 -vfilters "[in]split [T1], fifo, [T2]overlay='0:240'[out]; [T1]fifo, crop=0:0:-1:240, vflip[T2]" out.avi
+@end example
+
+where input_video.avi has a vertical resolution of 480 pixels, the result
+should be that in output the top half of the video is mirrored onto the bottom
+half.
+
+Video filters are loaded using the @var{-vfilters} option to ffmpeg. The
+filters in the same linear chain are separated by commas. In our example,
+@var{split, fifo, overlay} are in one linear chain, and @var{fifo, crop, vflip}
+are in another.
+The points where the linear chains join are labeled by names enclosed in
+square brackets. In our example, that is @var{[T1]} and @var{[T2]}.
+The magic labels @var{[in]} and @var{[out]} are respectively the points
+where video is input and output.
+After the filter name, you may find the equal sign and a semicolon separated
+parameter list.
+
+There are also the so called @var{source filters} that do not have a video input,
+and we expect in future some @var{sink filters} that will not have video output.
+
+@chapter Available video filters
+
+When you configure your ffmpeg build, you can disable any of the existing video
+filters.
+The configure output will show the video filters included in your build.
+
+These are the currently available video filters:
+
+@section crop
+
+@example
+./ffmpeg -i in.avi -vfilters "crop=0:0:-1:240" out.avi
+@end example
+
+Crop the input video to x:y:width:height.
+The -1 in width or height means that dimension in the input video.
+
+@section drawbox
+
+@example
+./ffmpeg -i in.avi -vfilters "drawbox=10:20:200:60:red" out.avi
+@end example
+
+Draw a box with x:y:width:height dimensions in a chosen color.
+
+@section fifo
+
+@example
+./ffmpeg -i in.avi -vfilters "fifo" out.avi
+@end example
+
+@section format
+
+@example
+./ffmpeg -i in.avi -vfilters "format=yuv420p" out.avi
+@end example
+
+Convert video to one of the specified filters formats (libavfilter will
+try to pick one that is supported as an input to the next filter).
+
+@section fps
+
+@example
+./ffmpeg -i in.avi -vfilters "fps=30000:1001" out.avi
+@end example
+
+Modifies the framerate of the input video to a chosen one.
+
+@section hflip
+
+@example
+./ffmpeg -i in.avi -vfilters "hflip" out.avi
+@end example
+
+Flip the video horizontally.
+
+@section negate
+
+@example
+./ffmpeg -i in.avi -vfilters "negate" out.avi
+@end example
+
+Convert a video to its negative.
+
+@section noformat
+
+@example
+./ffmpeg -i in.avi -vfilters "noformat=yuv420p" out.avi
+@end example
+
+Force libavfilter not to send any of the specified pixel formats to the
+next filter.
+
+@section overlay
+
+Overlay one video on top of another (see the example in the introduction
+section).
+Be aware that frames are taken
+from each input video in timestamp order, hence, if their initial
+timestamps differ, it is a a good idea to pass the two
+inputs through a @var{setpts=PTS-STARTPTS} filter to have them
+begin in the same zero timestamp, as it does the example for
+the @var{movie} filter.
+
+@section rotate
+
+@example
+./ffmpeg -i in.avi -vfilters "rotate=30" out.avi
+@end example
+
+Rotate video by a chosen amount in degrees. By default, 45 degrees.
+
+@section scale
+
+@example
+./ffmpeg -i in.avi -vfilters "scale=200:100:sws_flags=bicubic" out.avi
+@end example
+
+Scale to new width/height and/or convert pixel format.
+The two first parameter are the desired width and height.
+If the third parameter @var{sws_flags} is absent, then @var{bilinear} is assumed.
+
+@section setpts
+
+@example
+# Start counting PTS from zero
+ffmpeg -i input.avi -vfilters setpts=PTS-STARTPTS output.avi
+
+# Fast motion
+ffmpeg -i input.avi -vfilters setpts=0.5*PTS output.avi
+
+# Fixed rate 25 fps
+ffmpeg -i input.avi -vfilters setpts=N*AVTB/25 output.avi
+
+# Fixed rate 25 fps with some jitter
+ffmpeg -i input.avi -vfilters 'setpts=AVTB/25*(N+0.05*sin(N*2*PI/25))' output.avi
+@end example
+
+Modifies the presentation timestamp (PTS) of the input video.
+
+@section slicify
+
+@example
+./ffmpeg -i in.avi -vfilters "slicify=32" out.avi
+@end example
+
+Pass on input video to next video filter as multiple slices.
+The parameter is the slice height (16 if not specified).
+Adding this in the beginning of filter chains should make filtering
+faster due to the better use of the memory cache.
+
+@section split
+
+See the example in the introduction section.
+The input video is passed on to two outputs.
+
+@section transpose
+
+@example
+./ffmpeg -i in.avi -vfilters "transpose" out.avi
+@end example
+
+Transpose (line => column) input video to next video filter.
+
+@section vflip
+
+@example
+./ffmpeg -i in.avi -vfilters "vflip" out.avi
+@end example
+
+Flip the video vertically.
+
+@section buffer
+
+This input filter is used by the client application to feed pictures to
+the filter chain. See ffmpeg.c for an usage example.
+
+@section movie
+
+The parameters of the movie filter are
+@example
+ seekpoint in microseconds : string format : string filename
+@end example
+
+We can overlay a second movie on top of a main one as in this graph:
+
+@example
+ input -----------> deltapts0 --> overlay --> output
+                                    ^
+ movie --> scale--> deltapts1 ------|
+@end example
+
+To do that
+
+@example
+ffmpeg -i in.avi -s 240x320 -vfilters "[in]setpts=PTS-STARTPTS, [T1]overlay=16:16[out]; movie=3200000:avi:in.avi, scale=180:144, setpts=PTS-STARTPTS[T1]" -y out.avi
+@end example
+
+@bye
