@@ -23,19 +23,27 @@
 #include "avcodec.h"
 #include "bitstream.h"
 #include "dcaenc.h"
+#include "dcadata.h"
 
-#define MAX_CHANNELS (2)
+#define MAX_CHANNELS (6)
 #define DCA_SUBBANDS_32 (32)
 #define DCA_MAX_FRAME_SIZE (16383)
-#define FIXED_FRAME_SIZE (7167)
+#define DCA_HEADER_SIZE 13
+
+#define SUBFRAMES 2
+#define SUBSUBFRAMES 2
+#define PCM_SAMPLES (SUBFRAMES*SUBSUBFRAMES*8)
 
 typedef struct {
     PutBitContext pb;
     int32_t history[MAX_CHANNELS][512]; /* This is a circular buffer */
     int start[MAX_CHANNELS];
+    int frame_size;
+    int prim_channels;
+    int sample_rate_code;
 
     int32_t pcm[DCA_SUBBANDS_32];
-    int32_t subband[64][MAX_CHANNELS][DCA_SUBBANDS_32]; /* [sample][channel][subband] */
+    int32_t subband[PCM_SAMPLES][MAX_CHANNELS][DCA_SUBBANDS_32]; /* [sample][channel][subband] */
 } DCAContext;
 
 static int32_t cos_table[128];
@@ -134,21 +142,19 @@ static void put_frame_header(DCAContext *c)
     /* CRC is not present */
     put_bits(&c->pb, 1, 0);
 
-    /* Number of PCM sample blocks: 64
-       (larger values are unusable with 1:1 compression due to high bitrate
-       and frame size limitation) */
-    put_bits(&c->pb, 7, 63);
+    /* Number of PCM sample blocks */
+    put_bits(&c->pb, 7, PCM_SAMPLES-1);
 
     /* Primary frame byte size: 7168 */
-    put_bits(&c->pb, 14, FIXED_FRAME_SIZE);
+    put_bits(&c->pb, 14, c->frame_size-1);
 
     /* Audio channel arrangement: L + R (stereo) */
-    put_bits(&c->pb, 6, 2);
+    put_bits(&c->pb, 6, c->prim_channels==2?2:9); //FIXME
 
-    /* Core audio sampling frequency: 44100 Hz */
-    put_bits(&c->pb, 4, 8);
+    /* Core audio sampling frequency */
+    put_bits(&c->pb, 4, c->sample_rate_code);
 
-    /* Transmission bit rate: 1411.2 kbps */
+    /* Transmission bit rate: 1411.2 kbps */ //FIXME
     put_bits(&c->pb, 5, 0x16);
 
     /* Embedded down mix: disabled */
@@ -206,48 +212,55 @@ static void put_frame_header(DCAContext *c)
 
 static void put_primary_audio_header(DCAContext *c)
 {
-    /* Number of subframes: 2 */
-    put_bits(&c->pb, 4, 1);
+    /* From dca.c */
+    static const int bitlen[11] = { 0, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3 };
+    static const int thr[11] = { 0, 1, 3, 3, 3, 3, 7, 7, 7, 7, 7 };
 
-    /* Number of primary audio channels: 2 */
-    put_bits(&c->pb, 3, 1);
+    int ch, i;
+    /* Number of subframes */
+    put_bits(&c->pb, 4, SUBFRAMES-1);
+
+    /* Number of primary audio channels */
+    put_bits(&c->pb, 3, c->prim_channels-1);
 
     /* Subband activity count: 27 + 27 */
-    put_bits(&c->pb, 5, 25);
-    put_bits(&c->pb, 5, 25);
+    for(ch=0; ch<c->prim_channels; ch++){
+        put_bits(&c->pb, 5, 25);
+    }
 
     /* High frequency VQ start subband: 27, 27 */
-    put_bits(&c->pb, 5, 26);
-    put_bits(&c->pb, 5, 26);
+    for(ch=0; ch<c->prim_channels; ch++){
+        put_bits(&c->pb, 5, 26);
+    }
 
     /* Joint intensity coding index: 0, 0 */
-    put_bits(&c->pb, 3, 0);
-    put_bits(&c->pb, 3, 0);
+    for(ch=0; ch<c->prim_channels; ch++){
+        put_bits(&c->pb, 3, 0);
+    }
 
     /* Transient mode codebook: A4, A4 (arbitrary) */
-    put_bits(&c->pb, 2, 0);
-    put_bits(&c->pb, 2, 0);
+    for(ch=0; ch<c->prim_channels; ch++){
+        put_bits(&c->pb, 2, 0);
+    }
 
     /* Scale factor code book: 7 bit linear, 7-bit sqrt table (for each channel) */
-    put_bits(&c->pb, 3, 6);
-    put_bits(&c->pb, 3, 6);
+    for(ch=0; ch<c->prim_channels; ch++){
+        put_bits(&c->pb, 3, 6);
+    }
 
     /* Bit allocation quantizer select: linear 5-bit */
-    put_bits(&c->pb, 3, 6);
-    put_bits(&c->pb, 3, 6);
+    for(ch=0; ch<c->prim_channels; ch++){
+        put_bits(&c->pb, 3, 6);
+    }
 
     /* Quantization index codebook select: dummy data
        to avoid transmission of scale factor adjustment */
-    put_bits(&c->pb, 1, 1); put_bits(&c->pb, 1, 1);
-    put_bits(&c->pb, 2, 3); put_bits(&c->pb, 2, 3);
-    put_bits(&c->pb, 2, 3); put_bits(&c->pb, 2, 3);
-    put_bits(&c->pb, 2, 3); put_bits(&c->pb, 2, 3);
-    put_bits(&c->pb, 2, 3); put_bits(&c->pb, 2, 3);
-    put_bits(&c->pb, 3, 7); put_bits(&c->pb, 3, 7);
-    put_bits(&c->pb, 3, 7); put_bits(&c->pb, 3, 7);
-    put_bits(&c->pb, 3, 7); put_bits(&c->pb, 3, 7);
-    put_bits(&c->pb, 3, 7); put_bits(&c->pb, 3, 7);
-    put_bits(&c->pb, 3, 7); put_bits(&c->pb, 3, 7);
+
+    for(i=1; i<11; i++){
+        for(ch=0; ch<c->prim_channels; ch++){
+            put_bits(&c->pb, bitlen[i], thr[i]);
+        }
+    }
 
     /* Scale factor adjustment index: not transmitted */
 }
@@ -260,35 +273,36 @@ static uint32_t quantize(int32_t d)
 }
 
 
-static void put_subframe(DCAContext *c, int32_t subband_data[32][2][32])
+static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX_CHANNELS][32])
 {
     int i, sub, ss, ch;
-
-    /* Subsubframes count: 4 */
-    put_bits(&c->pb, 2, 3);
+    /* Subsubframes count */
+    put_bits(&c->pb, 2, SUBSUBFRAMES -1);
 
     /* Partial subsubframe sample count: dummy */
     put_bits(&c->pb, 3, 0);
 
     /* Prediction mode: no ADPCM, in each channel and subband */
-    for (ch = 0; ch < 2; ch++)
+    for (ch = 0; ch < c->prim_channels; ch++)
         for (sub = 0; sub < 27; sub++)
             put_bits(&c->pb, 1, 0);
 
     /* Prediction VQ addres: not transmitted */
     /* Bit allocation index: 19 = "16 bits", for each channel and subband */
-    for (ch = 0; ch < 2; ch++)
+    for (ch = 0; ch < c->prim_channels; ch++)
         for (sub = 0; sub < 27; sub++)
             put_bits(&c->pb, 5, 19);
 
-    /* Transition mode: none for each channel and subband */
-    for (ch = 0; ch < 2; ch++)
-        for (sub = 0; sub < 27; sub++)
-            put_bits(&c->pb, 1, 0); /* according to Huffman codebook A4 */
+    if(SUBSUBFRAMES>1){
+        /* Transition mode: none for each channel and subband */
+        for (ch = 0; ch < c->prim_channels; ch++)
+            for (sub = 0; sub < 27; sub++)
+                put_bits(&c->pb, 1, 0); /* according to Huffman codebook A4 */
+    }
 
     /* Scale factors: the same for each channel and subband,
        encoded according to Table D.1.2 */
-    for (ch = 0; ch < 2; ch++)
+    for (ch = 0; ch < c->prim_channels; ch++)
         for (sub = 0; sub < 27; sub++)
             put_bits(&c->pb, 7, 110);
 
@@ -301,8 +315,8 @@ static void put_subframe(DCAContext *c, int32_t subband_data[32][2][32])
     /* LFE data: none */
     /* Audio data: 4 subsubframes */
 
-    for (ss = 0; ss < 4 ; ss++)
-        for (ch = 0; ch < 2; ch++)
+    for (ss = 0; ss < SUBSUBFRAMES ; ss++)
+        for (ch = 0; ch < c->prim_channels; ch++)
             for (sub = 0; sub < 27; sub++)
                 for (i = 0; i < 8; i++)
                     put_bits(&c->pb, 16, quantize(subband_data[ss * 8 + i][ch][sub]));
@@ -310,16 +324,20 @@ static void put_subframe(DCAContext *c, int32_t subband_data[32][2][32])
     put_bits(&c->pb, 16, 0xffff);
 }
 
-void put_frame(DCAContext *c, int32_t subband_data[64][2][32], uint8_t *frame)
+void put_frame(DCAContext *c, int32_t subband_data[PCM_SAMPLES][MAX_CHANNELS][32], uint8_t *frame)
 {
-    int channel;
-    init_put_bits(&c->pb, frame, DCA_MAX_FRAME_SIZE);
+    int i;
+    init_put_bits(&c->pb, frame + DCA_HEADER_SIZE, DCA_MAX_FRAME_SIZE-DCA_HEADER_SIZE);
 
-    put_frame_header(c);
     put_primary_audio_header(c);
-    for (channel=0 ; channel<2; channel++)
-        put_subframe(c, &subband_data[32 * channel]);
+    for(i=0; i<SUBFRAMES; i++)
+        put_subframe(c, &subband_data[SUBSUBFRAMES * 8 * i]);
 
+    flush_put_bits(&c->pb);
+    c->frame_size = (put_bits_count(&c->pb)>>3) + DCA_HEADER_SIZE;
+
+    init_put_bits(&c->pb, frame, DCA_HEADER_SIZE);
+    put_frame_header(c);
     flush_put_bits(&c->pb);
 }
 
@@ -333,11 +351,11 @@ static int DCA_encode_frame(AVCodecContext *avctx,
 //    if (buf_size < MAX_CHANNELS*2048*sizeof(int16_t))
 //        return -1;
 
-    for (i = 0; i < 64; i ++) /* i is the decimated sample number */
-        for (channel=0; channel<2 ; channel++) {
+    for (i = 0; i < PCM_SAMPLES; i ++) /* i is the decimated sample number */
+        for (channel=0; channel<c->prim_channels; channel++) {
             /* Get 32 PCM samples */
             for (k = 0; k < 32; k++) { /* k is the sample number in a 32-sample block */
-                c->pcm[k] = samples[2 * (32*i+k) + channel] << 16;
+                c->pcm[k] = samples[avctx->channels * (32*i+k) + channel] << 16;
             }
             /* Put subband samples into the proper place */
             qmf_decompose(c, c->pcm, &c->subband[i][channel][0], channel);
@@ -345,18 +363,31 @@ static int DCA_encode_frame(AVCodecContext *avctx,
 
     put_frame(c, c->subband, frame);
 
-    return put_bits_count(&c->pb)>>3;
+    return c->frame_size;
 }
 
 static int DCA_encode_init(AVCodecContext *avctx) {
-    //DCAContext *c = avctx->priv_data;
+    DCAContext *c = avctx->priv_data;
+    int i;
 
-    if(avctx->channels != 2 || avctx->sample_rate != 44100) {
-        av_log(avctx, AV_LOG_ERROR, "Only 44.1 kHz stereo is supported at the moment!\n");
+    c->prim_channels = FFMIN(avctx->channels, 5); //XXX only 5 channels
+
+    for(i=0; i<16; i++){
+        if(dca_sample_rates[i] == avctx->sample_rate)
+            break;
+    }
+    if(i==16){
+        av_log(avctx, AV_LOG_ERROR, "Sample rate %iHz not supported\n", avctx->sample_rate);
+        return -1;
+    }
+    c->sample_rate_code = i;
+
+    if(avctx->channels != 2 && avctx->channels != 6) {
+        av_log(avctx, AV_LOG_ERROR, "Only stereo and 5.1 supported at the moment!\n");
         return -1;
     }
 
-    avctx->frame_size = 2048;
+    avctx->frame_size = 32 * PCM_SAMPLES;
 
     qmf_init();
     return 0;
