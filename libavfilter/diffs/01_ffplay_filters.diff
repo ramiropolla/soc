@@ -1,6 +1,6 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 17789)
+--- ffplay.c	(revision 18133)
 +++ ffplay.c	(working copy)
 @@ -29,6 +29,12 @@
  #include "libavcodec/audioconvert.h"
@@ -38,7 +38,7 @@ Index: ffplay.c
  } VideoPicture;
  
  typedef struct SubPicture {
-@@ -172,6 +185,10 @@
+@@ -173,6 +186,10 @@
      //    QETimer *video_timer;
      char filename[1024];
      int width, height, xleft, ytop;
@@ -49,7 +49,7 @@ Index: ffplay.c
  } VideoState;
  
  static void show_help(void);
-@@ -212,6 +229,9 @@
+@@ -213,6 +230,9 @@
  static int error_recognition = FF_ER_CAREFUL;
  static int error_concealment = 3;
  static int decoder_reorder_pts= 0;
@@ -59,7 +59,7 @@ Index: ffplay.c
  
  /* current context */
  static int is_full_screen;
-@@ -661,6 +681,13 @@
+@@ -662,6 +682,13 @@
  
      vp = &is->pictq[is->pictq_rindex];
      if (vp->bmp) {
@@ -73,7 +73,7 @@ Index: ffplay.c
          /* XXX: use variable in the frame */
          if (is->video_st->sample_aspect_ratio.num)
              aspect_ratio = av_q2d(is->video_st->sample_aspect_ratio);
-@@ -668,9 +695,10 @@
+@@ -669,9 +696,10 @@
              aspect_ratio = av_q2d(is->video_st->codec->sample_aspect_ratio);
          else
              aspect_ratio = 0;
@@ -85,7 +85,7 @@ Index: ffplay.c
          /* if an active format is indicated, then it overrides the
             mpeg format */
  #if 0
-@@ -873,9 +901,15 @@
+@@ -874,9 +902,15 @@
      } else if(!is_full_screen && screen_width){
          w = screen_width;
          h = screen_height;
@@ -101,7 +101,7 @@ Index: ffplay.c
      } else {
          w = 640;
          h = 480;
-@@ -1188,6 +1222,20 @@
+@@ -1189,6 +1223,20 @@
      if (vp->bmp)
          SDL_FreeYUVOverlay(vp->bmp);
  
@@ -122,7 +122,7 @@ Index: ffplay.c
  #if 0
      /* XXX: use generic function */
      /* XXX: disable overlay if no hardware acceleration or if RGB format */
-@@ -1205,12 +1253,9 @@
+@@ -1206,12 +1254,9 @@
          break;
      }
  #endif
@@ -136,7 +136,7 @@ Index: ffplay.c
  
      SDL_LockMutex(is->pictq_mutex);
      vp->allocated = 1;
-@@ -1227,8 +1272,11 @@
+@@ -1228,8 +1273,11 @@
      VideoPicture *vp;
      int dst_pix_fmt;
      AVPicture pict;
@@ -149,7 +149,7 @@ Index: ffplay.c
      /* wait until we have space to put a new picture */
      SDL_LockMutex(is->pictq_mutex);
      while (is->pictq_size >= VIDEO_PICTURE_QUEUE_SIZE &&
-@@ -1244,8 +1292,13 @@
+@@ -1245,8 +1293,13 @@
  
      /* alloc or resize hardware picture buffer */
      if (!vp->bmp ||
@@ -163,7 +163,7 @@ Index: ffplay.c
          SDL_Event event;
  
          vp->allocated = 0;
-@@ -1269,6 +1322,12 @@
+@@ -1270,6 +1323,12 @@
  
      /* if the frame is not skipped, then display it */
      if (vp->bmp) {
@@ -176,7 +176,7 @@ Index: ffplay.c
          /* get a pointer on the bitmap */
          SDL_LockYUVOverlay (vp->bmp);
  
-@@ -1280,18 +1339,30 @@
+@@ -1281,18 +1340,30 @@
          pict.linesize[0] = vp->bmp->pitches[0];
          pict.linesize[1] = vp->bmp->pitches[2];
          pict.linesize[2] = vp->bmp->pitches[1];
@@ -211,7 +211,7 @@ Index: ffplay.c
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1346,54 +1417,267 @@
+@@ -1347,54 +1418,267 @@
      return queue_picture(is, src_frame, pts);
  }
  
@@ -510,7 +510,7 @@ Index: ffplay.c
      av_free(frame);
      return 0;
  }
-@@ -2175,6 +2459,12 @@
+@@ -2171,6 +2455,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -523,7 +523,7 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2513,6 +2803,9 @@
+@@ -2509,6 +2799,9 @@
      { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
      { "sync", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
@@ -533,7 +533,7 @@ Index: ffplay.c
      { "default", OPT_FUNC2 | HAS_ARG | OPT_AUDIO | OPT_VIDEO | OPT_EXPERT, {(void*)opt_default}, "generic catch all option", "" },
      { NULL, },
  };
-@@ -2561,7 +2854,9 @@
+@@ -2557,7 +2850,9 @@
          avcodec_opts[i]= avcodec_alloc_context2(i);
      }
      avformat_opts = avformat_alloc_context();
