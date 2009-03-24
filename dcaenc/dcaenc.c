@@ -151,7 +151,7 @@ static void put_frame_header(DCAContext *c)
     /* Number of PCM sample blocks */
     put_bits(&c->pb, 7, PCM_SAMPLES-1);
 
-    /* Primary frame byte size: 7168 */
+    /* Primary frame byte size */
     put_bits(&c->pb, 14, c->frame_size-1);
 
     /* Audio channel arrangement: L + R (stereo) */
@@ -285,7 +285,6 @@ static inline uint32_t quantize(int32_t sample, int bits)
     return sample;
 }
 
-
 static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX_CHANNELS][32])
 {
     int i, j, sub, ss, ch;
@@ -345,7 +344,7 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
     /* Stde information CRC check word: not transmitted */
     /* VQ encoded high frequency subbands: not transmitted */
     /* LFE data: none */
-    /* Audio data: 4 subsubframes */
+    /* Audio data (subsubframes) */
 
     for (ss = 0; ss < SUBSUBFRAMES ; ss++)
         for (ch = 0; ch < c->prim_channels; ch++)
