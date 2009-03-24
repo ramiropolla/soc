@@ -30,6 +30,7 @@
 #define DCA_MAX_FRAME_SIZE (16383)
 #define DCA_HEADER_SIZE 13
 
+#define DCA_SUBBANDS 32 ///< Subband activity count
 #define SUBFRAMES 2
 #define SUBSUBFRAMES 2
 #define PCM_SAMPLES (SUBFRAMES*SUBSUBFRAMES*8)
@@ -223,14 +224,14 @@ static void put_primary_audio_header(DCAContext *c)
     /* Number of primary audio channels */
     put_bits(&c->pb, 3, c->prim_channels-1);
 
-    /* Subband activity count: 27 + 27 */
+    /* Subband activity count */
     for(ch=0; ch<c->prim_channels; ch++){
-        put_bits(&c->pb, 5, 25);
+        put_bits(&c->pb, 5, DCA_SUBBANDS-2);
     }
 
-    /* High frequency VQ start subband: 27, 27 */
+    /* High frequency VQ start subband */
     for(ch=0; ch<c->prim_channels; ch++){
-        put_bits(&c->pb, 5, 26);
+        put_bits(&c->pb, 5, DCA_SUBBANDS-1);
     }
 
     /* Joint intensity coding index: 0, 0 */
@@ -284,26 +285,26 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
 
     /* Prediction mode: no ADPCM, in each channel and subband */
     for (ch = 0; ch < c->prim_channels; ch++)
-        for (sub = 0; sub < 27; sub++)
+        for (sub = 0; sub < DCA_SUBBANDS; sub++)
             put_bits(&c->pb, 1, 0);
 
     /* Prediction VQ addres: not transmitted */
     /* Bit allocation index: 19 = "16 bits", for each channel and subband */
     for (ch = 0; ch < c->prim_channels; ch++)
-        for (sub = 0; sub < 27; sub++)
+        for (sub = 0; sub < DCA_SUBBANDS; sub++)
             put_bits(&c->pb, 5, 19);
 
     if(SUBSUBFRAMES>1){
         /* Transition mode: none for each channel and subband */
         for (ch = 0; ch < c->prim_channels; ch++)
-            for (sub = 0; sub < 27; sub++)
+            for (sub = 0; sub < DCA_SUBBANDS; sub++)
                 put_bits(&c->pb, 1, 0); /* according to Huffman codebook A4 */
     }
 
     /* Scale factors: the same for each channel and subband,
        encoded according to Table D.1.2 */
     for (ch = 0; ch < c->prim_channels; ch++)
-        for (sub = 0; sub < 27; sub++)
+        for (sub = 0; sub < DCA_SUBBANDS; sub++)
             put_bits(&c->pb, 7, 110);
 
     /* Joint subband scale factor codebook select: not transmitted */
@@ -317,7 +318,7 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
 
     for (ss = 0; ss < SUBSUBFRAMES ; ss++)
         for (ch = 0; ch < c->prim_channels; ch++)
-            for (sub = 0; sub < 27; sub++)
+            for (sub = 0; sub < DCA_SUBBANDS; sub++)
                 for (i = 0; i < 8; i++)
                     put_bits(&c->pb, 16, quantize(subband_data[ss * 8 + i][ch][sub]));
     /* DSYNC */
