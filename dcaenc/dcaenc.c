@@ -59,7 +59,7 @@ static inline int32_t mul32(int32_t a, int32_t b)
 
 /* Integer version of the cosine modulated Pseudo QMF */
 
-void qmf_init(void)
+static void qmf_init(void)
 {
     int i;
     int32_t c[17], s[17];
