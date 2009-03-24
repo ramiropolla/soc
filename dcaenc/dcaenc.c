@@ -25,12 +25,16 @@
 #include "dcaenc.h"
 #include "dcadata.h"
 
+#undef NDEBUG
+#include <assert.h>
+
 #define MAX_CHANNELS (6)
 #define DCA_SUBBANDS_32 (32)
 #define DCA_MAX_FRAME_SIZE (16383)
 #define DCA_HEADER_SIZE 13
 
 #define DCA_SUBBANDS 32 ///< Subband activity count
+#define QUANTIZER_BITS 16
 #define SUBFRAMES 2
 #define SUBSUBFRAMES 2
 #define PCM_SAMPLES (SUBFRAMES*SUBSUBFRAMES*8)
@@ -42,6 +46,7 @@ typedef struct {
     int frame_size;
     int prim_channels;
     int sample_rate_code;
+    int scale_factor[MAX_CHANNELS][DCA_SUBBANDS_32];
 
     int32_t pcm[DCA_SUBBANDS_32];
     int32_t subband[PCM_SAMPLES][MAX_CHANNELS][DCA_SUBBANDS_32]; /* [sample][channel][subband] */
@@ -266,17 +271,26 @@ static void put_primary_audio_header(DCAContext *c)
     /* Scale factor adjustment index: not transmitted */
 }
 
-/* TODO: don't hardcode 16-bit quantization */
-static uint32_t quantize(int32_t d)
+/**
+ * 8-23 bits quantization
+ * @param sample
+ * @param bits
+ */
+static inline uint32_t quantize(int32_t sample, int bits)
 {
-    d = d >> 16;
-    return d & 0xfffe; //XXX: this is done to avoid false syncwords
+    assert(sample < 1<<(bits-1));
+    assert(sample >= -(1<<(bits-1)));
+    sample &= sample & ((1<<bits)-1);
+    //sample &= sample & ((1<<bits)-2);  //XXX: this is done to avoid false syncwords
+    return sample;
 }
 
 
 static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX_CHANNELS][32])
 {
-    int i, sub, ss, ch;
+    int i, j, sub, ss, ch;
+    const uint32_t *scale_table = scale_factor_quant7;
+
     /* Subsubframes count */
     put_bits(&c->pb, 2, SUBSUBFRAMES -1);
 
@@ -289,10 +303,10 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
             put_bits(&c->pb, 1, 0);
 
     /* Prediction VQ addres: not transmitted */
-    /* Bit allocation index: 19 = "16 bits", for each channel and subband */
+    /* Bit allocation index */
     for (ch = 0; ch < c->prim_channels; ch++)
         for (sub = 0; sub < DCA_SUBBANDS; sub++)
-            put_bits(&c->pb, 5, 19);
+            put_bits(&c->pb, 5, QUANTIZER_BITS+3);
 
     if(SUBSUBFRAMES>1){
         /* Transition mode: none for each channel and subband */
@@ -301,11 +315,28 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
                 put_bits(&c->pb, 1, 0); /* according to Huffman codebook A4 */
     }
 
+    /* Determine scale_factor */
+    for(ch=0; ch<c->prim_channels; ch++)
+        for(sub=0; sub<DCA_SUBBANDS; sub++){
+            int m=0;
+            for(i=0; i<8*SUBSUBFRAMES; i++)
+                m = FFMAX(m, FFABS(subband_data[i][ch][sub]));
+            m /= (lossy_quant[QUANTIZER_BITS]<<(QUANTIZER_BITS-1)) >> 16; //XXX
+            i=0; j=128;
+            while(i<j){
+                int q=(i+j)>>1;
+                if(m < scale_table[q]) j=q;
+                else i=q+1;
+            }
+            assert(i<128);
+            c->scale_factor[ch][sub] = i;
+        }
+
     /* Scale factors: the same for each channel and subband,
        encoded according to Table D.1.2 */
     for (ch = 0; ch < c->prim_channels; ch++)
         for (sub = 0; sub < DCA_SUBBANDS; sub++)
-            put_bits(&c->pb, 7, 110);
+            put_bits(&c->pb, 7, c->scale_factor[ch][sub]);
 
     /* Joint subband scale factor codebook select: not transmitted */
     /* Scale factors for joint subband coding: not transmitted */
@@ -319,8 +350,14 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
     for (ss = 0; ss < SUBSUBFRAMES ; ss++)
         for (ch = 0; ch < c->prim_channels; ch++)
             for (sub = 0; sub < DCA_SUBBANDS; sub++)
-                for (i = 0; i < 8; i++)
-                    put_bits(&c->pb, 16, quantize(subband_data[ss * 8 + i][ch][sub]));
+                for (i = 0; i < 8; i++){
+                    ///XXX float is unnecessary
+                    float sample = subband_data[ss * 8 + i][ch][sub];
+                    sample /= scale_table[c->scale_factor[ch][sub]];
+                    sample *= 1<<16;
+                    sample /= lossy_quant[QUANTIZER_BITS];
+                    put_bits(&c->pb, QUANTIZER_BITS, quantize(sample, QUANTIZER_BITS));
+                }
     /* DSYNC */
     put_bits(&c->pb, 16, 0xffff);
 }
