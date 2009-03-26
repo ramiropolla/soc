@@ -40,7 +40,7 @@
 
 #include "avfilter.h"
 
-const char *const_names[]={
+static const char *const_names[]={
     "PI",
     "E",
     "AVTB",      ///< AV_TIME_BASE
