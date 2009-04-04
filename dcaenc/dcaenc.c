@@ -35,9 +35,11 @@
 
 #define DCA_SUBBANDS 32 ///< Subband activity count
 #define QUANTIZER_BITS 16
-#define SUBFRAMES 2
-#define SUBSUBFRAMES 2
+#define SUBFRAMES 1
+#define SUBSUBFRAMES 4
 #define PCM_SAMPLES (SUBFRAMES*SUBSUBFRAMES*8)
+#define LFE_BITS 8
+#define LFE_INTERPOLATION 64
 
 typedef struct {
     PutBitContext pb;
@@ -45,10 +47,13 @@ typedef struct {
     int start[MAX_CHANNELS];
     int frame_size;
     int prim_channels;
+    int lfe_channel;
     int sample_rate_code;
     int scale_factor[MAX_CHANNELS][DCA_SUBBANDS_32];
+    int lfe_scale_factor;
+    int lfe_data[SUBFRAMES*SUBSUBFRAMES*4];
 
-    int32_t pcm[DCA_SUBBANDS_32];
+    int32_t pcm[FFMAX(LFE_INTERPOLATION, DCA_SUBBANDS_32)];
     int32_t subband[PCM_SAMPLES][MAX_CHANNELS][DCA_SUBBANDS_32]; /* [sample][channel][subband] */
 } DCAContext;
 
@@ -142,6 +147,30 @@ static void qmf_decompose(DCAContext *c, int32_t in[32], int32_t out[32], int ch
     }
 }
 
+static int32_t lfe_fir_64i[512];
+static int lfe_downsample(DCAContext *c, int32_t in[LFE_INTERPOLATION]){
+    int i, j;
+    int channel = c->prim_channels;
+    int32_t accum = 0;
+
+    add_new_samples(c, in, LFE_INTERPOLATION, channel);
+    for (i = c->start[channel], j = 0; i < 512; i++, j++)
+        accum += mul32(c->history[channel][i], lfe_fir_64i[j]);
+    for (i = 0; i < c->start[channel]; i++, j++)
+        accum += mul32(c->history[channel][i], lfe_fir_64i[j]);
+    return accum;
+}
+
+static void init_lfe_fir(void){
+    static int initialized;
+    int i;
+    if(initialized)
+        return;
+    for(i=0; i<512; i++)
+        lfe_fir_64i[i] = lfe_fir_64[i] * (1<<25); //float -> int32_t
+    initialized = 1;
+}
+
 static void put_frame_header(DCAContext *c)
 {
     /* SYNC */
@@ -196,8 +225,8 @@ static void put_frame_header(DCAContext *c)
     /* Audio sync word insertion flag: after each sub-frame */
     put_bits(&c->pb, 1, 0);
 
-    /* Low frequency effects flag: not present */
-    put_bits(&c->pb, 2, 0);
+    /* Low frequency effects flag: not present or interpolation factor=64 */
+    put_bits(&c->pb, 2, c->lfe_channel?2:0);
 
     /* Predictor history switch flag: on */
     put_bits(&c->pb, 1, 1);
@@ -310,9 +339,11 @@ static inline void put_sample7(DCAContext *c, int64_t sample, int bits, int scal
     sample = (sample << 15) / ((int64_t) lossy_quant[bits+3] * scale_factor_quant7[scale_factor]);
     put_bits(&c->pb, bits, quantize((int)sample, bits));
 }
-static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX_CHANNELS][32])
+
+static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX_CHANNELS][32], int subframe)
 {
     int i, sub, ss, ch, max_value;
+    int32_t *lfe_data = c->lfe_data + 4*SUBSUBFRAMES*subframe;
 
     /* Subsubframes count */
     put_bits(&c->pb, 2, SUBSUBFRAMES -1);
@@ -347,6 +378,13 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
             c->scale_factor[ch][sub] = find_scale_factor7(max_value, QUANTIZER_BITS);
         }
 
+    if(c->lfe_channel){
+        max_value = 0;
+        for(i=0; i<4*SUBSUBFRAMES; i++)
+            max_value = FFMAX(max_value, FFABS(lfe_data[i]));
+        c->lfe_scale_factor = find_scale_factor7(max_value, LFE_BITS);
+    }
+
     /* Scale factors: the same for each channel and subband,
        encoded according to Table D.1.2 */
     for (ch = 0; ch < c->prim_channels; ch++)
@@ -359,7 +397,15 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
     /* Dynamic range coefficient: not transmitted */
     /* Stde information CRC check word: not transmitted */
     /* VQ encoded high frequency subbands: not transmitted */
-    /* LFE data: none */
+
+    /* LFE data */
+    if(c->lfe_channel){
+        for(i=0; i<4*SUBSUBFRAMES; i++)
+            put_sample7(c, lfe_data[i], LFE_BITS, c->lfe_scale_factor);
+
+        put_bits(&c->pb, 8, c->lfe_scale_factor);
+    }
+
     /* Audio data (subsubframes) */
 
     for (ss = 0; ss < SUBSUBFRAMES ; ss++)
@@ -379,7 +425,7 @@ void put_frame(DCAContext *c, int32_t subband_data[PCM_SAMPLES][MAX_CHANNELS][32
 
     put_primary_audio_header(c);
     for(i=0; i<SUBFRAMES; i++)
-        put_subframe(c, &subband_data[SUBSUBFRAMES * 8 * i]);
+        put_subframe(c, &subband_data[SUBSUBFRAMES * 8 * i], i);
 
     flush_put_bits(&c->pb);
     c->frame_size = (put_bits_count(&c->pb)>>3) + DCA_HEADER_SIZE;
@@ -409,6 +455,13 @@ static int DCA_encode_frame(AVCodecContext *avctx,
             qmf_decompose(c, c->pcm, &c->subband[i][channel][0], channel);
         }
 
+    for (i = 0; i < PCM_SAMPLES/2; i++){
+        for (k = 0; k < LFE_INTERPOLATION; k++) { /* k is the sample number in a 32-sample block */
+            c->pcm[k] = samples[avctx->channels * (LFE_INTERPOLATION*i+k) + c->prim_channels-1] << 16;
+        }
+        c->lfe_data[i] = lfe_downsample(c, c->pcm);
+    }
+
     put_frame(c, c->subband, frame);
 
     return c->frame_size;
@@ -418,7 +471,18 @@ static int DCA_encode_init(AVCodecContext *avctx) {
     DCAContext *c = avctx->priv_data;
     int i;
 
-    c->prim_channels = FFMIN(avctx->channels, 5); //XXX only 5 channels
+    c->prim_channels = avctx->channels;
+    c->lfe_channel = (avctx->channels==3 || avctx->channels==6);
+
+    if(c->lfe_channel){
+        init_lfe_fir();
+        c->prim_channels--;
+    }
+
+    if(c->prim_channels != 2 && c->prim_channels != 5) {
+        av_log(avctx, AV_LOG_ERROR, "Only stereo and 5.1 supported at the moment!\n");
+        return -1;
+    }
 
     for(i=0; i<16; i++){
         if(dca_sample_rates[i] == avctx->sample_rate)
@@ -429,11 +493,6 @@ static int DCA_encode_init(AVCodecContext *avctx) {
         return -1;
     }
     c->sample_rate_code = i;
-
-    if(avctx->channels != 2 && avctx->channels != 6) {
-        av_log(avctx, AV_LOG_ERROR, "Only stereo and 5.1 supported at the moment!\n");
-        return -1;
-    }
 
     avctx->frame_size = 32 * PCM_SAMPLES;
 
