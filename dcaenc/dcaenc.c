@@ -98,18 +98,27 @@ static int32_t band_delta_factor(int band, int sample_num)
         return cos_table[index & 127];
 }
 
+static void add_new_samples(DCAContext *c, const int32_t *in, int count, int channel){
+    int i;
+
+    /* Place new samples into the history buffer */
+    for (i = 0; i < count; i++){
+        c->history[channel][c->start[channel] + i] = in[i];
+        assert(c->start[channel] + i < 512);
+    }
+    c->start[channel] += count;
+    if (c->start[channel] == 512)
+        c->start[channel] = 0;
+    assert(c->start[channel] < 512);
+}
+
 static void qmf_decompose(DCAContext *c, int32_t in[32], int32_t out[32], int channel)
 {
     int band, i, j, k;
     int32_t resp;
     int32_t accum[DCA_SUBBANDS_32];
 
-    /* Place new samples into the history buffer */
-    for (i = 0; i < DCA_SUBBANDS_32; i++)
-        c->history[channel][c->start[channel] + i] = in[i];
-    c->start[channel] += DCA_SUBBANDS_32;
-    if (c->start[channel] == 512)
-        c->start[channel] = 0;
+    add_new_samples(c, in, DCA_SUBBANDS_32, channel);
 
     /* Calculate the dot product of the signal with the (possibly inverted)
        reference decoder's response to this vector:
@@ -285,10 +294,25 @@ static inline uint32_t quantize(int32_t sample, int bits)
     return sample;
 }
 
+static inline int find_scale_factor7(int64_t max_value, int bits){
+    int i=0, j=128, q;
+    max_value = ((max_value << 15) / lossy_quant[bits+3]) >> (bits-1);
+    while(i<j){
+        q=(i+j)>>1;
+        if(max_value < scale_factor_quant7[q]) j=q;
+        else i=q+1;
+    }
+    assert(i<128);
+    return i;
+}
+
+static inline void put_sample7(DCAContext *c, int64_t sample, int bits, int scale_factor){
+    sample = (sample << 15) / ((int64_t) lossy_quant[bits+3] * scale_factor_quant7[scale_factor]);
+    put_bits(&c->pb, bits, quantize((int)sample, bits));
+}
 static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX_CHANNELS][32])
 {
-    int i, j, sub, ss, ch;
-    const uint32_t *scale_table = scale_factor_quant7;
+    int i, sub, ss, ch, max_value;
 
     /* Subsubframes count */
     put_bits(&c->pb, 2, SUBSUBFRAMES -1);
@@ -317,18 +341,10 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
     /* Determine scale_factor */
     for(ch=0; ch<c->prim_channels; ch++)
         for(sub=0; sub<DCA_SUBBANDS; sub++){
-            int m=0;
+            max_value = 0;
             for(i=0; i<8*SUBSUBFRAMES; i++)
-                m = FFMAX(m, FFABS(subband_data[i][ch][sub]));
-            m /= (lossy_quant[QUANTIZER_BITS]<<(QUANTIZER_BITS-1)) >> 16; //XXX
-            i=0; j=128;
-            while(i<j){
-                int q=(i+j)>>1;
-                if(m < scale_table[q]) j=q;
-                else i=q+1;
-            }
-            assert(i<128);
-            c->scale_factor[ch][sub] = i;
+                max_value = FFMAX(max_value, FFABS(subband_data[i][ch][sub]));
+            c->scale_factor[ch][sub] = find_scale_factor7(max_value, QUANTIZER_BITS);
         }
 
     /* Scale factors: the same for each channel and subband,
@@ -349,14 +365,9 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
     for (ss = 0; ss < SUBSUBFRAMES ; ss++)
         for (ch = 0; ch < c->prim_channels; ch++)
             for (sub = 0; sub < DCA_SUBBANDS; sub++)
-                for (i = 0; i < 8; i++){
-                    ///XXX float is unnecessary
-                    float sample = subband_data[ss * 8 + i][ch][sub];
-                    sample /= scale_table[c->scale_factor[ch][sub]];
-                    sample *= 1<<16;
-                    sample /= lossy_quant[QUANTIZER_BITS];
-                    put_bits(&c->pb, QUANTIZER_BITS, quantize(sample, QUANTIZER_BITS));
-                }
+                for (i = 0; i < 8; i++)
+                    put_sample7(c, subband_data[ss*8+i][ch][sub], QUANTIZER_BITS, c->scale_factor[ch][sub]);
+
     /* DSYNC */
     put_bits(&c->pb, 16, 0xffff);
 }
