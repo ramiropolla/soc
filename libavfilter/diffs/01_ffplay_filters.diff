@@ -1,6 +1,6 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 18133)
+--- ffplay.c	(revision 18174)
 +++ ffplay.c	(working copy)
 @@ -29,6 +29,12 @@
  #include "libavcodec/audioconvert.h"
@@ -136,10 +136,10 @@ Index: ffplay.c
  
      SDL_LockMutex(is->pictq_mutex);
      vp->allocated = 1;
-@@ -1228,8 +1273,11 @@
+@@ -1227,8 +1272,11 @@
+ {
      VideoPicture *vp;
      int dst_pix_fmt;
-     AVPicture pict;
 +#if CONFIG_AVFILTER
 +    AVPicture pict_src;
 +#else
@@ -149,7 +149,7 @@ Index: ffplay.c
      /* wait until we have space to put a new picture */
      SDL_LockMutex(is->pictq_mutex);
      while (is->pictq_size >= VIDEO_PICTURE_QUEUE_SIZE &&
-@@ -1245,8 +1293,13 @@
+@@ -1244,8 +1292,13 @@
  
      /* alloc or resize hardware picture buffer */
      if (!vp->bmp ||
@@ -163,20 +163,19 @@ Index: ffplay.c
          SDL_Event event;
  
          vp->allocated = 0;
-@@ -1270,6 +1323,12 @@
- 
+@@ -1270,6 +1323,11 @@
      /* if the frame is not skipped, then display it */
      if (vp->bmp) {
+         AVPicture pict;
 +#if CONFIG_AVFILTER
 +        if(vp->picref)
 +            avfilter_unref_pic(vp->picref);
 +        vp->picref = src_frame->opaque;
 +#endif
-+
+ 
          /* get a pointer on the bitmap */
          SDL_LockYUVOverlay (vp->bmp);
- 
-@@ -1281,18 +1340,30 @@
+@@ -1283,18 +1341,30 @@
          pict.linesize[0] = vp->bmp->pitches[0];
          pict.linesize[1] = vp->bmp->pitches[2];
          pict.linesize[2] = vp->bmp->pitches[1];
@@ -211,7 +210,7 @@ Index: ffplay.c
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1347,54 +1418,267 @@
+@@ -1349,54 +1419,267 @@
      return queue_picture(is, src_frame, pts);
  }
  
@@ -510,7 +509,7 @@ Index: ffplay.c
      av_free(frame);
      return 0;
  }
-@@ -2171,6 +2455,12 @@
+@@ -2173,6 +2456,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -523,7 +522,7 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2509,6 +2799,9 @@
+@@ -2511,6 +2800,9 @@
      { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
      { "sync", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
@@ -533,7 +532,7 @@ Index: ffplay.c
      { "default", OPT_FUNC2 | HAS_ARG | OPT_AUDIO | OPT_VIDEO | OPT_EXPERT, {(void*)opt_default}, "generic catch all option", "" },
      { NULL, },
  };
-@@ -2557,7 +2850,9 @@
+@@ -2559,7 +2851,9 @@
          avcodec_opts[i]= avcodec_alloc_context2(i);
      }
      avformat_opts = avformat_alloc_context();
