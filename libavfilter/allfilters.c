@@ -42,6 +42,7 @@ void avfilter_register_all(void)
     REGISTER_FILTER(HFLIP,hflip,vf);
     REGISTER_FILTER(NEGATE,negate,vf);
     REGISTER_FILTER(NOFORMAT,noformat,vf);
+    REGISTER_FILTER(NULL,null,vf);
     REGISTER_FILTER(OVERLAY,overlay,vf);
     REGISTER_FILTER(ROTATE,rotate,vf);
     REGISTER_FILTER(SCALE,scale,vf);
