@@ -721,50 +721,6 @@ static unsigned int wma_get_large_val(WMA3DecodeContext* s)
     return get_bits_long(&s->getbit,n_bits);
 }
 
-static inline void wma_get_vec4(WMA3DecodeContext *s,int* vals,int* masks)
-{
-        unsigned int idx;
-        int i = 0;
-        // read 4 values
-        idx = get_vlc2(&s->getbit, s->vec4_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
-
-
-        if ( idx == FF_WMA3_HUFF_VEC4_SIZE - 1 )
-        {
-          while(i < 4){
-              idx = get_vlc2(&s->getbit, s->vec2_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC2_MAXBITS+VLCBITS-1)/VLCBITS));
-              if ( idx == FF_WMA3_HUFF_VEC2_SIZE - 1 ){
-                   vals[i] = get_vlc2(&s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
-                   if(vals[i] == FF_WMA3_HUFF_VEC1_SIZE - 1)
-                       vals[i] += wma_get_large_val(s);
-                   vals[i+1] = get_vlc2(&s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
-                   if(vals[i+1] == FF_WMA3_HUFF_VEC1_SIZE - 1)
-                       vals[i+1] += wma_get_large_val(s);
-              }else{
-                  vals[i] = (ff_wma3_symbol_to_vec2[idx] >> 4) & 0xF;
-                  vals[i+1] = ff_wma3_symbol_to_vec2[idx] & 0xF;
-              }
-              i += 2;
-          }
-        }
-        else
-        {
-          vals[0] = (unsigned char)(ff_wma3_symbol_to_vec4[idx] >> 8) >> 4;
-          vals[1] = (ff_wma3_symbol_to_vec4[idx] >> 8) & 0xF;
-          vals[2] = (ff_wma3_symbol_to_vec4[idx] >> 4) & 0xF;
-          vals[3] = ff_wma3_symbol_to_vec4[idx] & 0xF;
-        }
-
-        if(vals[0])
-            masks[0] = get_bits(&s->getbit,1);
-        if(vals[1])
-            masks[1] = get_bits(&s->getbit,1);
-        if(vals[2])
-            masks[2] = get_bits(&s->getbit,1);
-        if(vals[3])
-            masks[3] = get_bits(&s->getbit,1);
-}
-
 static int decode_coeffs(WMA3DecodeContext *s, int c)
 {
     int vlctable;
@@ -773,7 +729,7 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
     WMA3ChannelCtx* ci = &s->channel[c];
     int rl_mode = 0;
     int cur_coeff = 0;
-    int last_write = 0;
+    int num_zeros = 0;
     const uint8_t* run;
     const uint8_t* level;
 
@@ -794,7 +750,7 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
     while(cur_coeff < s->subframe_len){
         if(rl_mode){
             unsigned int idx;
-            int mask;
+            int sign;
             int val;
             idx = get_vlc2(&s->getbit, vlc->table, VLCBITS, vlcmax);
 
@@ -817,32 +773,52 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
                 cur_coeff += run[idx];
                 val = level[idx];
             }
-            mask = get_bits(&s->getbit,1) - 1;
-            ci->coeffs[cur_coeff] = (val^mask) - mask;
+            sign = get_bits(&s->getbit,1) - 1;
+            if(cur_coeff < s->subframe_len)
+                ci->coeffs[cur_coeff] = (val^sign) - sign;
             ++cur_coeff;
-        }else{
-            int i = 0;
+        }else if(cur_coeff + 3 < s->subframe_len){
             int vals[4];
-            int masks[4];
+            int i = 0;
+            unsigned int idx;
 
-            if( cur_coeff >= s->subframe_len )
-                return 0;
+            // read 4 values
+            idx = get_vlc2(&s->getbit, s->vec4_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
 
-            wma_get_vec4(s,vals,masks);
-
-            while(i < 4){
-                ++cur_coeff;
-                ++last_write;
-
-                if(vals[i]){
-                    ci->coeffs[cur_coeff-1] = (((int64_t)vals[i])^(masks[i] -1)) - (masks[i] -1);
-                    last_write = 0;
+            if ( idx == FF_WMA3_HUFF_VEC4_SIZE - 1 ){
+                while(i < 4){
+                    idx = get_vlc2(&s->getbit, s->vec2_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC2_MAXBITS+VLCBITS-1)/VLCBITS));
+                    if ( idx == FF_WMA3_HUFF_VEC2_SIZE - 1 ){
+                        vals[i] = get_vlc2(&s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
+                        if(vals[i] == FF_WMA3_HUFF_VEC1_SIZE - 1)
+                            vals[i] += wma_get_large_val(s);
+                        vals[i+1] = get_vlc2(&s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
+                        if(vals[i+1] == FF_WMA3_HUFF_VEC1_SIZE - 1)
+                            vals[i+1] += wma_get_large_val(s);
+                    }else{
+                        vals[i] = (ff_wma3_symbol_to_vec2[idx] >> 4) & 0xF;
+                        vals[i+1] = ff_wma3_symbol_to_vec2[idx] & 0xF;
+                    }
+                    i += 2;
                 }
-                if( cur_coeff >= s->subframe_len ) // handled entire subframe -> quit
-                    return 0;
-                if ( last_write > s->subframe_len / 256 ) // switch to RL mode
-                    rl_mode = 1;
-                ++i;
+            }else{
+                vals[0] = (ff_wma3_symbol_to_vec4[idx] >> 8) >> 4;
+                vals[1] = (ff_wma3_symbol_to_vec4[idx] >> 8) & 0xF;
+                vals[2] = (ff_wma3_symbol_to_vec4[idx] >> 4) & 0xF;
+                vals[3] = ff_wma3_symbol_to_vec4[idx] & 0xF;
+            }
+
+            for(i=0;i<4;i++){
+                if(vals[i]){
+                    int sign = get_bits(&s->getbit,1) - 1;
+                    ci->coeffs[cur_coeff] = (vals[i]^sign) - sign;
+                    num_zeros = 0;
+                }else{
+                    ++num_zeros;
+                    if ( num_zeros > s->subframe_len / 256 ) // switch to RL mode
+                        rl_mode = 1;
+                }
+                ++cur_coeff;
             }
         }
     }
