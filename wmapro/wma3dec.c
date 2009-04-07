@@ -1506,16 +1506,16 @@ static void save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len)
  *@param avctx codec context
  *@param data the output buffer
  *@param data_size number of bytes that were written to the output buffer
- *@param buf input buffer
- *@param buf_size input buffer length
+ *@param avpkt input packet
  *@return number of bytes that were read from the input buffer
  */
 static int wma3_decode_packet(AVCodecContext *avctx,
-                             void *data, int *data_size,
-                             const uint8_t *buf, int buf_size)
+                             void *data, int *data_size, AVPacket* avpkt)
 {
     GetBitContext gb;
     WMA3DecodeContext *s = avctx->priv_data;
+    const uint8_t* buf = avpkt->data;
+    int buf_size = avpkt->size;
     int more_frames=1;
     int num_bits_prev_frame;
     int packet_sequence_number;
