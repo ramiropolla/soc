@@ -561,6 +561,11 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
     return 0;
 }
 
+/**
+ *@brief Decode channel transformation parameters
+ *@param s codec context
+ *@return 0 in case of bitstream errors, 1 on success
+ */
 static int wma_decode_channel_transform(WMA3DecodeContext* s)
 {
     int i;
@@ -706,9 +711,15 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
     return 1;
 }
 
+/**
+ *@brief Decode an uncompressed coefficient.
+ *@param s codec context
+ *@return the decoded coefficient
+ */
 static unsigned int wma_get_large_val(WMA3DecodeContext* s)
 {
     int n_bits = 8;
+    /** decode length */
     if(get_bits(&s->getbit,1)){
         n_bits += 8;
         if(get_bits(&s->getbit,1)){
@@ -721,6 +732,12 @@ static unsigned int wma_get_large_val(WMA3DecodeContext* s)
     return get_bits_long(&s->getbit,n_bits);
 }
 
+/**
+ *@brief Extract the coefficients from the bitstream.
+ *@param s codec context
+ *@param c current channel number
+ *@return 0 in case of bitstream errors, 1 on success
+ */
 static int decode_coeffs(WMA3DecodeContext *s, int c)
 {
     int vlctable;
@@ -755,7 +772,7 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
             idx = get_vlc2(&s->getbit, vlc->table, VLCBITS, vlcmax);
 
             if( idx == 1)
-                return 0;
+                return 1;
             else if( !idx ){
                 val = wma_get_large_val(s);
                 /** escape decode */
@@ -823,9 +840,14 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
         }
     }
 
-    return 0;
+    return 1;
 }
 
+/**
+ *@brief Extract scale factors from the bitstream.
+ *@param s codec context
+ *@return 0 in case of bitstream errors, 1 on success
+ */
 static int wma_decode_scale_factors(WMA3DecodeContext* s)
 {
     int i;
@@ -914,6 +936,11 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
     return 1;
 }
 
+/**
+ *@brief Calculate a decorrelation matrix from the bitstream parameters.
+ *@param s codec context
+ *@param chgroup channel group for which the matrix needs to be calculated
+ */
 static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, WMA3ChannelGroup* chgroup)
 {
     int i;
@@ -949,6 +976,10 @@ static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, WMA3ChannelGroup
 
 }
 
+/**
+ *@brief Decorrelate and undo M/S stereo coding.
+ *@param s codec context
+ */
 static void wma_inverse_channel_transform(WMA3DecodeContext *s)
 {
     int i;
@@ -1028,6 +1059,10 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
     }
 }
 
+/**
+ *@brief Apply sine window and reconstruct the output buffer.
+ *@param s codec context
+ */
 static void wma_window(WMA3DecodeContext *s)
 {
     int i;
@@ -1054,6 +1089,11 @@ static void wma_window(WMA3DecodeContext *s)
     }
 }
 
+/**
+ *@brief Decode a single subframe (block).
+ *@param s codec context
+ *@return 0 if decoding failed, 1 on success
+ */
 static int wma_decode_subframe(WMA3DecodeContext *s)
 {
     int offset = s->samples_per_frame;
@@ -1292,10 +1332,9 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
 
 /**
  *@brief Decode one WMA frame.
- *@param s context
- *@param gb current get bit context
+ *@param s codec context
  *@return 0 if the trailer bit indicates that this is the last frame,
- *        1 if there are more frames
+ *        1 if there are additional frames
  */
 static int wma_decode_frame(WMA3DecodeContext *s)
 {
@@ -1578,6 +1617,10 @@ static int wma3_decode_packet(AVCodecContext *avctx,
     return avctx->block_align;
 }
 
+/**
+ *@brief Clear decoder buffers (for seeking).
+ *@param avctx codec context
+ */
 static void wma3_flush(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
