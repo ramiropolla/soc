@@ -503,9 +503,9 @@ Index: ffplay.c
                  stream_pause(cur_stream);
      }
   the_end:
-+ #if CONFIG_AVFILTER
++#if CONFIG_AVFILTER
 +    avfilter_graph_destroy(graph);
-+ #endif
++#endif
      av_free(frame);
      return 0;
  }
