@@ -886,7 +886,7 @@ static int decode_codestream(J2kDecoderContext *s)
 
 static int decode_frame(AVCodecContext *avctx,
                         void *data, int *data_size,
-                        uint8_t *buf, int buf_size)
+                        AVPacket *avpkt)
 {
     J2kDecoderContext *s = avctx->priv_data;
     AVFrame *picture = data;
@@ -896,8 +896,8 @@ static int decode_frame(AVCodecContext *avctx,
     av_log(s->avctx, AV_LOG_DEBUG, "start\n");
 
     // init
-    s->buf = s->buf_start = buf;
-    s->buf_end = buf + buf_size;
+    s->buf = s->buf_start = avpkt->data;
+    s->buf_end = s->buf_start + avpkt->size;
     s->curtileno = -1;
 
     ff_j2k_init_tier1_luts();
