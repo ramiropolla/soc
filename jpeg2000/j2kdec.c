@@ -31,6 +31,10 @@
 #include "j2k.h"
 #include "libavutil/common.h"
 
+#define JP2_SIG_TYPE    0x6A502020
+#define JP2_SIG_VALUE   0x0D0A870A
+#define JP2_CODESTREAM  0x6A703263
+
 #define HAD_COC 0x01
 #define HAD_QCC 0x02
 
@@ -884,6 +888,30 @@ static int decode_codestream(J2kDecoderContext *s)
     return 0;
 }
 
+static int jp2_find_codestream(J2kDecoderContext *s)
+{
+    int32_t atom_size;
+    int found_codestream = 0, search_range = 10;
+
+    // skip jpeg2k signature atom
+    s->buf += 12;
+
+    while(!found_codestream && search_range) {
+        atom_size = AV_RB32(s->buf);
+        if(AV_RB32(s->buf + 4) == JP2_CODESTREAM) {
+            found_codestream = 1;
+            s->buf += 8;
+        } else {
+            s->buf += atom_size;
+            search_range--;
+        }
+    }
+
+    if(found_codestream)
+        return 1;
+    return 0;
+}
+
 static int decode_frame(AVCodecContext *avctx,
                         void *data, int *data_size,
                         AVPacket *avpkt)
@@ -904,6 +932,16 @@ static int decode_frame(AVCodecContext *avctx,
 
     if (s->buf_end - s->buf < 2)
         return AVERROR(EINVAL);
+
+    // check if the image is in jp2 format
+    if((AV_RB32(s->buf) == 12) && (AV_RB32(s->buf + 4) == JP2_SIG_TYPE) &&
+       (AV_RB32(s->buf + 8) == JP2_SIG_VALUE)) {
+        if(!jp2_find_codestream(s)) {
+            av_log(avctx, AV_LOG_ERROR, "couldn't find jpeg2k codestream atom\n");
+            return -1;
+        }
+    }
+
     if (bytestream_get_be16(&s->buf) != J2K_SOC){
         av_log(avctx, AV_LOG_ERROR, "SOC marker not present\n");
         return -1;
