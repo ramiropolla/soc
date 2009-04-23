@@ -25,7 +25,6 @@
  * @author Kamil Nowosad
  */
 
-#include <float.h>
 #include "avcodec.h"
 #include "bytestream.h"
 #include "j2k.h"
