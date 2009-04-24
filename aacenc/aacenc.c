@@ -195,6 +195,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     s->psypp = ff_psy_preprocess_init(avctx);
     s->coder = &ff_aac_coders[0];
 
+    s->lambda = avctx->global_quality ? avctx->global_quality : 120;
 #if !CONFIG_HARDCODED_TABLES
     for (i = 0; i < 428; i++)
         ff_aac_pow2sf_tab[i] = pow(2, (i - 200)/4.);
@@ -510,7 +511,6 @@ static int aac_encode_frame(AVCodecContext *avctx,
         samples2 = samples + start_ch;
         la = samples2 + 1024 * avctx->channels + start_ch;
         if(!data) la = NULL;
-        s->lambda = 5e-7f;
         for(j = 0; j < chans; j++){
             IndividualChannelStream *ics = &cpe->ch[j].ics;
             int k;
@@ -565,6 +565,12 @@ static int aac_encode_frame(AVCodecContext *avctx,
     put_bits(&s->pb, 3, TYPE_END);
     flush_put_bits(&s->pb);
     avctx->frame_bits = put_bits_count(&s->pb);
+
+    // rate control stuff
+    if(!(avctx->flags & CODEC_FLAG_QSCALE)){
+        float ratio = avctx->bit_rate * 1024.0f / avctx->sample_rate / avctx->frame_bits;
+        s->lambda *= ratio;
+    }
 
     if(!data)
         s->last_frame = 1;
