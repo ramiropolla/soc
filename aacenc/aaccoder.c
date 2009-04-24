@@ -1103,13 +1103,13 @@ static void search_for_ms(AACEncContext *s, ChannelElement *cpe, const float lam
 
 AACCoefficientsEncoder ff_aac_coders[] = {
     {
-        search_for_quantizers_anmr,
-        encode_window_bands_info,
+        search_for_quantizers_faac,
+        encode_window_bands_info_fixed,
         quantize_and_encode_band,
 //        search_for_ms,
     },
     {
-        search_for_quantizers_faac,
+        search_for_quantizers_anmr,
         encode_window_bands_info,
         quantize_and_encode_band,
 //        search_for_ms,
