@@ -26,6 +26,7 @@
 
 /***********************************
  *              TODOs:
+ * add sane pulse detection
  * add temporal noise shaping
  ***********************************/
 
