@@ -865,7 +865,6 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
     int start = 0, i, w, w2, g;
     float uplim[128], maxq[128];
     int minq;
-#if 0
     float distfact = ((sce->ics.num_windows > 1) ? 85.80 : 147.84) / lambda;
     int last = 0, lastband = 0, curband = 0;
     float avg_energy = 0.0;
@@ -901,6 +900,11 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
     }
     last++;
     avg_energy /= last;
+    if(avg_energy == 0.0f){
+        for(i = 0; i < FF_ARRAY_ELEMS(sce->sf_idx); i++)
+            sce->sf_idx[i] = SCALE_ONE_POS;
+        return;
+    }
     for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w]){
         start = w*128;
         for(g = 0; g < sce->ics.num_swb; g++){
@@ -930,6 +934,9 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
             if(sce->ics.num_windows == 1){
                 start2 = FFMAX(peakpos - 2, start2);
                 end2   = FFMIN(peakpos + 3, end2);
+            }else{
+                start2 -= start;
+                end2   -= start;
             }
             start += size;
             thr = pow(thr / (avg_energy * (end2 - start2)), 0.3 + 0.1*(lastband - g) / lastband);
@@ -937,26 +944,6 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
             uplim[w*16+g] = distfact / (1.4 * thr + t*t*t + 0.075);
         }
     }
-#else
-    memset(maxq, 0, sizeof(maxq));
-    for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w]){
-        start = w*128;
-        for(g = 0; g < sce->ics.num_swb; g++){
-            float *coefs = sce->coeffs + start;
-            const int size = sce->ics.swb_sizes[g];
-            float thr = 0.0f;
-            for(w2 = 0; w2 < sce->ics.group_len[w]; w2++){
-                FFPsyBand *band = &s->psy.psy_bands[s->cur_channel*PSY_MAX_BANDS+(w+w2)*16+g];
-                thr += band->threshold;
-                for(i = 0; i < size; i++){
-                    maxq[w*16+g] = fmaxf(maxq[w*16+g], fabsf(coefs[w2*128 + i]));
-                }
-            }
-            uplim[w*16+g] = thr / lambda;
-            start += size;
-        }
-    }
-#endif
     memset(sce->sf_idx, 0, sizeof(sce->sf_idx));
     for(w = 0; w < sce->ics.num_windows; w += sce->ics.group_len[w]){
         start = w*128;
@@ -964,15 +951,17 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
             const float *coefs = sce->coeffs + start;
             const int size = sce->ics.swb_sizes[g];
             int scf, prev_scf, step;
+            int min_scf = 0, max_scf = 255;
+            float curdiff;
             if(maxq[w*16+g] < 21.544){
                 sce->zeroes[w*16+g] = 1;
                 continue;
             }
             sce->zeroes[w*16+g] = 0;
-            scf = prev_scf = av_clip(SCALE_ONE_POS + log2(1/maxq[w*16+g])*16/3, 60, 218);
+            scf = prev_scf = av_clip(SCALE_ONE_POS - SCALE_DIV_512 - log2(1/maxq[w*16+g])*16/3, 60, 218);
             step = 16;
             for(;;){
-                float dist = 0.0f, t;
+                float dist = 0.0f;
                 int quant_max;
 
                 for(w2 = 0; w2 < sce->ics.group_len[w]; w2++){
@@ -986,26 +975,29 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
                                                &b);
                     dist -= b;
                 }
-                quant_max = quant(maxq[w*16+g], ff_aac_pow2sf_tab[200 - scf + SCALE_ONE_POS]);
+                dist *= 1.0f/512.0f;
+                quant_max = quant(maxq[w*16+g], ff_aac_pow2sf_tab[200 - scf + SCALE_ONE_POS - SCALE_DIV_512]);
                 if(quant_max >= 8191){ // too much, return to the previous quantizer
                     sce->sf_idx[w*16+g] = prev_scf;
                     break;
                 }
                 prev_scf = scf;
-                t = pow(dist / size, -2.0/3.0);
-                if(FFABS(step) > 4){
-                    int newstep = 4*log(t / maxq[w*16+g])/log(2) - 2;
-                    step = av_clip(-newstep, -4, 4);
-                }
-                if(FFABS(step) >= 4){
-                    step = 1 - step;
-                    scf += step;
-                }else if(t >= uplim[w*16+g]){
-                    scf -= FFABS(step);
-                }else{
+                curdiff = fabsf(dist - uplim[w*16+g]);
+                if(curdiff == 0.0f)
+                    step = 0;
+                else
+                    step = fabsf(log(curdiff) / log(2));
+                if(dist > uplim[w*16+g])
+                    step = -step;
+                if(FFABS(step) <= 1 || (step > 0 && scf >= max_scf) || (step < 0 && scf <= min_scf)){
                     sce->sf_idx[w*16+g] = scf;
                     break;
                 }
+                scf += step;
+                if(step > 0)
+                    min_scf = scf;
+                else
+                    max_scf = scf;
             }
             start += size;
         }
