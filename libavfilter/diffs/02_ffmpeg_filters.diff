@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 18497)
+--- ffmpeg.c	(revision 18682)
 +++ ffmpeg.c	(working copy)
 @@ -40,6 +40,13 @@
  #include "libavutil/avstring.h"
@@ -257,7 +257,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1194,6 +1394,10 @@
+@@ -1193,6 +1393,10 @@
      static unsigned int samples_size= 0;
      AVSubtitle subtitle, *subtitle_to_free;
      int got_subtitle;
@@ -268,7 +268,7 @@ Index: ffmpeg.c
      AVPacket avpkt;
  
      if(ist->next_pts == AV_NOPTS_VALUE)
-@@ -1314,6 +1518,15 @@
+@@ -1313,6 +1517,15 @@
                                      &buffer_to_free);
          }
  
@@ -284,7 +284,7 @@ Index: ffmpeg.c
          // preprocess audio (volume)
          if (ist->st->codec->codec_type == CODEC_TYPE_AUDIO) {
              if (audio_volume != 256) {
-@@ -1335,10 +1548,18 @@
+@@ -1334,10 +1547,18 @@
              if (pts > now)
                  usleep(pts - now);
          }
@@ -304,7 +304,7 @@ Index: ffmpeg.c
              for(i=0;i<nb_ostreams;i++) {
                  int frame_size;
  
-@@ -1361,6 +1582,9 @@
+@@ -1360,6 +1581,9 @@
                              do_audio_out(os, ost, ist, data_buf, data_size);
                              break;
                          case CODEC_TYPE_VIDEO:
@@ -314,7 +314,7 @@ Index: ffmpeg.c
                              do_video_out(os, ost, ist, &picture, &frame_size);
                              if (vstats_filename && frame_size)
                                  do_video_stats(os, ost, frame_size);
-@@ -1421,7 +1645,17 @@
+@@ -1420,7 +1644,17 @@
                          av_free_packet(&opkt);
                      }
                  }
@@ -332,7 +332,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1854,10 +2088,21 @@
+@@ -1857,11 +2091,22 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          av_exit(1);
                      }
@@ -341,6 +341,7 @@ Index: ffmpeg.c
 +#else
                      ost->resample_height = icodec->height - (frame_topBand + frame_bottomBand);
 +#endif
+                     codec->bits_per_raw_sample= 0;
                  }
                  ost->encoding_needed = 1;
                  ist->decoding_needed = 1;
@@ -354,7 +355,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -3874,6 +4119,9 @@
+@@ -3879,6 +4124,9 @@
      { "psnr", OPT_BOOL | OPT_EXPERT | OPT_VIDEO, {(void*)&do_psnr}, "calculate PSNR of compressed frames" },
      { "vstats", OPT_EXPERT | OPT_VIDEO, {(void*)&opt_vstats}, "dump video coding statistics to file" },
      { "vstats_file", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_vstats_file}, "dump video coding statistics to file", "file" },

@@ -1,7 +1,7 @@
 #! /bin/sh
 
 echo "checking out pristine ffmpeg"
-svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r18497
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r18682
 
 echo "patching ffmpeg"
 for diff in $(ls $(pwd)/diffs/*.diff); do patch -d ffmpeg -p0 -i $diff; done
