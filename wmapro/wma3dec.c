@@ -390,6 +390,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     }
 
     dump_context(s);
+    avctx->channel_layout = channel_mask;
     return 0;
 }
 
