@@ -26,7 +26,7 @@
  */
 
 #include "avcodec.h"
-#include "bitstream.h"
+#include "get_bits.h"
 #include "wma3.h"
 #undef NDEBUG
 #include <assert.h>
