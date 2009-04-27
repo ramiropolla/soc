@@ -1,0 +1,25 @@
+From b3c1851cd831d1a6ca61525d90d58fbfdf72fece Mon Sep 17 00:00:00 2001
+From: Geza Kovacs <gkovacs@mit.edu>
+Date: Thu, 2 Apr 2009 04:44:50 -0400
+Subject: [PATCH] added extradata handling
+
+---
+ ffmpeg.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/ffmpeg.c b/ffmpeg.c
+index 6beb890..5359182 100644
+--- a/ffmpeg.c
++++ b/ffmpeg.c
+@@ -1650,6 +1650,8 @@ static int setup_output_file(AVFormatContext *output_format_context, AVFormatCon
+         AVCodec *codec = avcodec_find_encoder(input_format_context->streams[i]->codec->codec_id);
+         output_format_context->streams[i]->codec = avcodec_alloc_context();
+         output_format_context->streams[i]->codec->sample_aspect_ratio = output_format_context->streams[i]->sample_aspect_ratio;
++        output_format_context->streams[i]->codec->extradata = input_format_context->streams[i]->codec->extradata;
++        output_format_context->streams[i]->codec->extradata_size = input_format_context->streams[i]->codec->extradata_size;
+         output_format_context->streams[i]->codec->codec_type = input_format_context->streams[i]->codec->codec_type;
+         if (input_format_context->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO) {
+             if(output_format_context->oformat->flags & AVFMT_GLOBALHEADER)
+-- 
+1.6.0.4
+
