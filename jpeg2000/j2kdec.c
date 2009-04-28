@@ -76,7 +76,7 @@ typedef struct {
 static int get_bits(J2kDecoderContext *s, int n)
 {
     int res = 0;
-    if ((s->buf_end - s->buf) < (n - s->bit_index >> 8))
+    if (s->buf_end - s->buf < (n - s->bit_index >> 8))
         return AVERROR(EINVAL);
     while (--n >= 0){
         res <<= 1;
