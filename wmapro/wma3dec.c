@@ -1233,7 +1233,6 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             if(s->quant_step < 0){
                 s->negative_quantstep = 1;
                 av_log(s->avctx,AV_LOG_ERROR,"negative quant step\n");
-                return 0;
             }
         }
 
