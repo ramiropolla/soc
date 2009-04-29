@@ -833,9 +833,10 @@ static int decode_codestream(J2kDecoderContext *s)
     for (;;){
         int marker, len, ret = 0;
         uint8_t *oldbuf;
-
-        if (s->buf_end - s->buf < 2)
-            return AVERROR(EINVAL);
+        if (s->buf_end - s->buf < 2){
+            av_log(s->avctx, AV_LOG_ERROR, "Missing EOC\n");
+            break;
+        }
 
         marker = bytestream_get_be16(&s->buf);
         oldbuf = s->buf;
@@ -877,7 +878,7 @@ static int decode_codestream(J2kDecoderContext *s)
                 s->buf += len - 2; break;
             default:
                 av_log(s->avctx, AV_LOG_ERROR, "unsupported marker 0x%.4X at pos 0x%x\n", marker, s->buf - s->buf_start - 4);
-                return -1;
+                s->buf += len - 2; break;
         }
         if (s->buf - oldbuf != len || ret){
             av_log(s->avctx, AV_LOG_ERROR, "error during processing marker segment %.4x\n", marker);
