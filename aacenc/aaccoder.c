@@ -864,7 +864,7 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
 {
     int start = 0, i, w, w2, g;
     float uplim[128], maxq[128];
-    int minq;
+    int minq, maxsf;
     float distfact = ((sce->ics.num_windows > 1) ? 85.80 : 147.84) / lambda;
     int last = 0, lastband = 0, curband = 0;
     float avg_energy = 0.0;
@@ -1010,10 +1010,11 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
             minq = FFMIN(minq, sce->sf_idx[i]);
     }
     if(minq == INT_MAX) minq = 0;
+    maxsf = FFMIN(minq + SCALE_MAX_DIFF, SCALE_MAX_POS);
     for(i = 126; i >= 0; i--){
         if(!sce->sf_idx[i])
             sce->sf_idx[i] = sce->sf_idx[i+1];
-        sce->sf_idx[i] = av_clip(sce->sf_idx[i], minq, minq + SCALE_MAX_DIFF);
+        sce->sf_idx[i] = av_clip(sce->sf_idx[i], minq, maxsf);
     }
 }
 
