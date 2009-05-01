@@ -165,7 +165,6 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     }
 
     /** generic init */
-    s->packet_loss = 0; // FIXME: unneeded
     s->log2_frame_size = av_log2(avctx->block_align*8)+1;
 
     /** frame info */
