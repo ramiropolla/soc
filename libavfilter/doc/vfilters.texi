@@ -156,13 +156,12 @@ Rotate video by a chosen amount in degrees. By default, 45 degrees.
 @section scale
 
 @example
-./ffmpeg -i in.avi -vfilters "scale=200:100:sws_flags\=bicubic" out.avi
+./ffmpeg -i in.avi -vfilters "scale=200:100:sws_flags=bicubic" out.avi
 @end example
 
 Scale to new width/height and/or convert pixel format.
 The two first parameter are the desired width and height.
 If the third parameter @var{sws_flags} is absent, then @var{bilinear} is assumed.
-Be aware that the equal sign after @var{sws_flags} must be escaped, as in example.
 
 @section setpts
 
