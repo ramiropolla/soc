@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 18682)
+--- ffmpeg.c	(revision 18726)
 +++ ffmpeg.c	(working copy)
 @@ -40,6 +40,13 @@
  #include "libavutil/avstring.h"
