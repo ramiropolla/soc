@@ -1007,10 +1007,8 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                     }
                 }else{
                     for(y=s->cur_sfb_offsets[b];y<FFMIN(s->cur_sfb_offsets[b+1], s->subframe_len);y++){
-                        s->channel[0].coeffs[y] *= 362;
-                        s->channel[0].coeffs[y] /= 256;
-                        s->channel[1].coeffs[y] *= 362;
-                        s->channel[1].coeffs[y] /= 256;
+                        s->channel[0].coeffs[y] *= 1.4140625f;
+                        s->channel[1].coeffs[y] *= 1.4140625f;
                     }
                 }
             }
