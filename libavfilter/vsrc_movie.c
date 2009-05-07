@@ -243,6 +243,9 @@ static int request_frame(AVFilterLink *link)
 
     movie_get_frame(link);
 
+    if (mv->is_done)
+        return AVERROR_EOF;
+
     out = avfilter_ref_pic(mv->pic, ~AV_PERM_WRITE);
     out->pixel_aspect = mv->pCodecCtx->sample_aspect_ratio;
 
