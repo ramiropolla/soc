@@ -260,6 +260,11 @@ static av_cold void uninit(AVFilterContext *ctx)
 {
     MovieContext *mv = ctx->priv;
 
+    if(mv->pCodecCtx)
+        avcodec_close(mv->pCodecCtx);
+    if(mv->pFormatCtx)
+        av_close_input_file(mv->pFormatCtx);
+    av_freep(&mv->pFrame);
     if(mv->pic)
         avfilter_unref_pic(mv->pic);
 }
