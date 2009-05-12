@@ -27,7 +27,9 @@ typedef struct {
     int x, y;                   //< position of subpicture
 
     /** pics[0][0..1] are pictures for the main image.
-     *  pics[1][0..1] are pictures for the sub image */
+     *  pics[1][0..1] are pictures for the sub image.
+     *  pics[x][0]    are previously outputted images.
+     *  pics[x][1]    are queued, yet unused frames for each input. */
     AVFilterPicRef *pics[2][2];
 
     int bpp;                    //< bytes per pixel
@@ -87,13 +89,27 @@ static int config_input_main(AVFilterLink *link)
     return 0;
 }
 
+static void shift_input(OverlayContext *over, int idx)
+{
+    assert(over->pics[idx][0]);
+    assert(over->pics[idx][1]);
+    avfilter_unref_pic(over->pics[idx][0]);
+    over->pics[idx][0] = over->pics[idx][1];
+    over->pics[idx][1] = NULL;
+}
+
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     OverlayContext *over = link->dst->priv;
-    if(over->pics[link->dstpad][0])
-        avfilter_unref_pic(over->pics[link->dstpad][0]);
-    over->pics[link->dstpad][0] = over->pics[link->dstpad][1];
-    over->pics[link->dstpad][1] = picref;
+    /* There shouldn't be any previous queued frame in this queue */
+    assert(!over->pics[link->dstpad][1]);
+    if (over->pics[link->dstpad][0]) {
+        /* Queue the new frame */
+        over->pics[link->dstpad][1] = picref;
+    } else {
+        /* No previous unused frame, take this one into use directly */
+        over->pics[link->dstpad][0] = picref;
+    }
 }
 
 static void end_frame(AVFilterLink *link)
@@ -138,20 +154,43 @@ static int request_frame(AVFilterLink *link)
     int idx;
     int x, y, w, h;
 
-    /* the first time through, we need to pull a couple frames */
-    if(!over->pics[0][1] && !over->pics[1][1] &&
-       (avfilter_request_frame(link->src->inputs[0]) ||
-        avfilter_request_frame(link->src->inputs[1])))
-        return -1;
+    if (!over->pics[0][0] || !over->pics[1][0]) {
+        /* No frame output yet, we need one frame from each input */
+        if (!over->pics[0][0] && avfilter_request_frame(link->src->inputs[0]))
+            return AVERROR_EOF;
+        if (!over->pics[1][0] && avfilter_request_frame(link->src->inputs[1]))
+            return AVERROR_EOF;
+    } else {
+        int eof = 0;
 
-    /* then we pull a frame from the stream which currently has a lower pts */
-    if((idx = lower_timestamp(over)) == 2) {
-        if(avfilter_request_frame(link->src->inputs[0]) ||
-           avfilter_request_frame(link->src->inputs[1]))
-            return -1;
-    } else
-        if(avfilter_request_frame(link->src->inputs[idx]))
-            return -1;
+        /* Try pulling a new candidate from each input unless we already
+           have one */
+        for (idx = 0; idx < 2; idx++) {
+            if (!over->pics[idx][1] &&
+                 avfilter_request_frame(link->src->inputs[idx]))
+                eof++;
+        }
+        if (eof == 2)
+            return AVERROR_EOF; /* No new candidates in any input; EOF */
+
+        /* At least one new frame */
+        assert(over->pics[0][1] || over->pics[1][1]);
+
+        if (over->pics[0][1] && over->pics[1][1]) {
+            /* Neither one of the inputs has finished */
+            if ((idx = lower_timestamp(over)) == 2) {
+                shift_input(over, 0);
+                shift_input(over, 1);
+            } else
+                shift_input(over, idx);
+        } else if (over->pics[0][1]) {
+            /* Use the single new input frame */
+            shift_input(over, 0);
+        } else {
+            assert(over->pics[1][1]);
+            shift_input(over, 1);
+        }
+    }
 
     /* we draw the output frame */
     pic = avfilter_get_video_buffer(link, AV_PERM_WRITE);
