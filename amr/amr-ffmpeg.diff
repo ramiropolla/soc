@@ -14,7 +14,7 @@ Index: libavcodec/allcodecs.c
 ===================================================================
 --- libavcodec/allcodecs.c	(revision 17136)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -182,6 +182,7 @@
+@@ -195,6 +182,7 @@
      REGISTER_DECODER (AAC, aac);
      REGISTER_ENCDEC  (AC3, ac3);
      REGISTER_ENCDEC  (ALAC, alac);
@@ -26,34 +26,34 @@ Index: doc/general.texi
 ===================================================================
 --- doc/general.texi	(revision 17136)
 +++ doc/general.texi	(working copy)
-@@ -356,8 +356,8 @@
- @item AAC                    @tab  E  @tab  X
-     @tab encoding supported through external library libfaac
- @item AC-3                   @tab IX  @tab IX
+@@ -515,8 +356,8 @@
+ @item ADPCM Westwood Studios IMA @tab     @tab  X
+     @tab Used in Westwood Studios games like Command and Conquer.
+ @item ADPCM Yamaha           @tab  X  @tab  X
 -@item AMR-NB                 @tab  E  @tab  E
 -    @tab supported through external library libamrnb
 +@item AMR-NB                 @tab  X  @tab  E
 +    @tab encoding supported through external library libamrnb
  @item AMR-WB                 @tab  E  @tab  E
      @tab supported through external library libamrwb
- @item AMV IMA ADPCM          @tab     @tab  X
+ @item Apple lossless audio   @tab  X  @tab  X
 Index: Changelog
 ===================================================================
 --- Changelog	(revision 17136)
 +++ Changelog	(working copy)
-@@ -149,6 +149,7 @@
- - Electronic Arts TQI decoder
- - OpenJPEG based JPEG 2000 decoder
- - NC (NC4600) cameras file demuxer
+@@ -16,6 +149,7 @@
+ - Cook multichannel decoding support
+ - introduced avlanguage helpers in libavformat
+ - 8088flex TMV demuxer and decoder
 +- AMR-NB decoder
  
- version 0.4.9-pre1:
  
+ version 0.5:
 Index: libavcodec/celp_filters.c
 ===================================================================
 --- libavcodec/celp_filters.c	(revision 17468)
 +++ libavcodec/celp_filters.c	(working copy)
-@@ -85,6 +85,31 @@
+@@ -84,6 +85,31 @@
      return 0;
  }
  
