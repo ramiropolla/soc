@@ -21,7 +21,7 @@
 
 
 /**
- * @file amrnbfloatdec.c
+ * @file libavcodec/amrnbfloatdec.c
  * AMR narrowband decoder (floating point)
  */
 

@@ -24,7 +24,7 @@
 
 /**
  * Discrete wavelet transform
- * @file dwt.h
+ * @file libavcodec/dwt.h
  * @author Kamil Nowosad
  */
 

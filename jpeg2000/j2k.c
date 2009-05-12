@@ -21,7 +21,7 @@
 
 /**
  * JPEG2000 image encoder and decoder common functions
- * @file j2k.c
+ * @file libavcodec/j2k.c
  * @author Kamil Nowosad
  */
 

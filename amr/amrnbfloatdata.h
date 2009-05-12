@@ -21,7 +21,7 @@
 
 
 /**
- * @file amrnbfloatdata.h
+ * @file libavcodec/amrnbfloatdata.h
  * AMR narrowband data and definitions
  */
 

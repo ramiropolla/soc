@@ -24,7 +24,7 @@
 
 /**
  * JPEG2000 tables
- * @file j2k.h
+ * @file libavcodec/j2k.h
  * @author Kamil Nowosad
  */
 

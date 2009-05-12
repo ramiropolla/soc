@@ -23,7 +23,7 @@
 #define AVCODEC_AMRDATA_H
 
 /**
- * @file amrdata.h
+ * @file libavcodec/amrdata.h
  * AMR data and definitions
  */
 

@@ -20,7 +20,7 @@
  */
 
 /**
- * @file vf_rotate.c
+ * @file libavfilter/vf_rotate.c
  * rotation filter
  *
  * @todo copy code from rotozoom.c to remove use of floating-point

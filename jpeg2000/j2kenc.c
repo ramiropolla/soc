@@ -21,7 +21,7 @@
 
 /**
  * JPEG2000 image encoder
- * @file j2kenc.c
+ * @file libavcodec/j2kenc.c
  * @author Kamil Nowosad
  */
 

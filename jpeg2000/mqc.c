@@ -21,7 +21,7 @@
 
 /**
  * MQ-coder ecoder and decoder common functions
- * @file mqc.c
+ * @file libavcodec/mqc.c
  * @author Kamil Nowosad
  */
 
