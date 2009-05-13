@@ -617,7 +617,7 @@ Index: libavformat/mpegenc.c
 --- libavformat/mpegenc.c	(revision 13661)
 +++ libavformat/mpegenc.c	(working copy)
 @@ -23,6 +23,7 @@
- #include "libavcodec/bitstream.h"
+ #include "libavcodec/get_bits.h"
  #include "avformat.h"
  #include "mpeg.h"
 +#include "mpegpes.h"

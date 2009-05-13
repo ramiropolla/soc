@@ -32,7 +32,7 @@
 #include <stdlib.h>
 
 #include "avcodec.h"
-#include "bitstream.h"
+#include "get_bits.h"
 #include "libavutil/common.h"
 #include "internal.h"
 #include "celp_math.h"
