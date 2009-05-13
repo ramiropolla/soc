@@ -14,7 +14,7 @@ Index: libavcodec/allcodecs.c
 ===================================================================
 --- libavcodec/allcodecs.c	(revision 17136)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -195,6 +182,7 @@
+@@ -196,6 +182,7 @@
      REGISTER_DECODER (AAC, aac);
      REGISTER_ENCDEC  (AC3, ac3);
      REGISTER_ENCDEC  (ALAC, alac);
@@ -26,7 +26,7 @@ Index: doc/general.texi
 ===================================================================
 --- doc/general.texi	(revision 17136)
 +++ doc/general.texi	(working copy)
-@@ -515,8 +356,8 @@
+@@ -516,8 +356,8 @@
  @item ADPCM Westwood Studios IMA @tab     @tab  X
      @tab Used in Westwood Studios games like Command and Conquer.
  @item ADPCM Yamaha           @tab  X  @tab  X
@@ -41,10 +41,10 @@ Index: Changelog
 ===================================================================
 --- Changelog	(revision 17136)
 +++ Changelog	(working copy)
-@@ -16,6 +149,7 @@
- - Cook multichannel decoding support
- - introduced avlanguage helpers in libavformat
+@@ -18,6 +149,7 @@
  - 8088flex TMV demuxer and decoder
+ - per-stream language-tags extraction in asfdec
+ - V210 decoder and encoder
 +- AMR-NB decoder
  
  
