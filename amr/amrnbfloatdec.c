@@ -94,8 +94,9 @@ typedef struct AMRContext {
  *
  * @note It is safe to pass the same buffer for out and in_a or in_b.
  */
- void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
-                              float weight_coeff_a, float weight_coeff_b, int length)
+void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
+                             float weight_coeff_a, float weight_coeff_b,
+                             int length)
 {
     int i;
 
@@ -121,7 +122,8 @@ typedef struct AMRContext {
  *
  * TIA/EIA/IS-733 2.4.8.3-2/3/4/5, 2.4.8.6
  */
-void ff_apply_gain_ctrl(float *v_out, const float *v_ref, const float *v_in, const int length)
+void ff_apply_gain_ctrl(float *v_out, const float *v_ref, const float *v_in,
+                        const int length)
 {
     int   i;
     float scalefactor = ff_dot_productf(v_in, v_in, length);
@@ -172,7 +174,6 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
  *
  * @return the frame mode
  */
-
 enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
                            enum Mode *speech_mode)
 {
@@ -224,7 +225,6 @@ enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
  * @param lsf               input lsf vector
  * @param lsp               output lsp vector
  */
-
 static void lsf2lsp(float *lsf, float *lsp)
 {
     int i;
@@ -247,7 +247,8 @@ static void lsf2lsp(float *lsf, float *lsp)
  */
 static void lsf2lsp_for_mode122(AMRContext *p, float lsp[LP_FILTER_ORDER],
                                 const float prev_lsf[LP_FILTER_ORDER],
-                                const float *lsf_quantizer[5], const int quantizer_offset,
+                                const float *lsf_quantizer[5],
+                                const int quantizer_offset,
                                 const int sign, const int update_prev_lsf_r)
 {
     float lsf[LP_FILTER_ORDER];
@@ -275,7 +276,6 @@ static void lsf2lsp_for_mode122(AMRContext *p, float lsp[LP_FILTER_ORDER],
  *
  * @param p                 pointer to the AMRContext
  */
-
 static void lsf2lsp_5(AMRContext *p)
 {
     const uint16_t *lsf_param = p->frame.lsf;
@@ -305,7 +305,6 @@ static void lsf2lsp_5(AMRContext *p)
  *
  * @param p                 pointer to the AMRContext
  */
-
 static void lsf2lsp_3(AMRContext *p)
 {
     const uint16_t *lsf_param = p->frame.lsf;
@@ -345,7 +344,6 @@ static void lsf2lsp_3(AMRContext *p)
  * @param lsp                 input lsp vector
  * @param lpc                 output lpc coefficients
  */
-
 static void lsp2lpc(float *lsp, float *lpc_coeffs)
 {
     double lsp_double[LP_FILTER_ORDER];
@@ -375,9 +373,9 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
  * @param subframe            current subframe number
  * @param mode                mode of the current frame
  */
-
-static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index, const int prev_lag_int,
-                             const int subframe, const enum Mode mode)
+static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index,
+                             const int prev_lag_int, const int subframe,
+                             const enum Mode mode)
 {
     // subframe 1 or 3
     if(!(subframe & 1)) {
@@ -479,7 +477,9 @@ static void interp_pitch_vector(float *pitch_vector, int lag_int,
     }
 }
 
-static void decode_pitch_vector(AMRContext *p, const AMRNBSubframe *amr_subframe, const int subframe)
+static void decode_pitch_vector(AMRContext *p,
+                                const AMRNBSubframe *amr_subframe,
+                                const int subframe)
 {
     int prev_pitch_lag_int = p->pitch_lag_int;
     int pitch_lag_frac;
@@ -506,7 +506,6 @@ static void decode_pitch_vector(AMRContext *p, const AMRNBSubframe *amr_subframe
  * @param nr_pulses            number of pulses
  * @param fixed_vector         algebraic codebook vector
  */
-
 static void reconstruct_fixed_vector(int *pulse_position, int sign,
                                      int nr_pulses, float *fixed_vector)
 {
@@ -527,7 +526,8 @@ static void reconstruct_fixed_vector(int *pulse_position, int sign,
  * @param fixed_vector         pointer to the algebraic codebook vector
  */
 
-static void decode_8_pulses_31bits(const int16_t *fixed_index, float *fixed_vector)
+static void decode_8_pulses_31bits(const int16_t *fixed_index,
+                                   float *fixed_vector)
 {
     int pulse_position[8];
     int i, temp;
@@ -579,8 +579,8 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index, float *fixed_vect
  * @param fixed_index          positions of the ten pulses
  * @param fixed_vector         pointer to the algebraic codebook vector
  */
-
-static void decode_10_pulses_35bits(const int16_t *fixed_index, float *fixed_vector)
+static void decode_10_pulses_35bits(const int16_t *fixed_index,
+                                    float *fixed_vector)
 {
     int i;
 
@@ -663,7 +663,6 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
  *
  * @return the predicted fixed gain
  */
-
 static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
                                    enum Mode mode)
 {
@@ -693,9 +692,9 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
  *
  * @return fixed gain smoothed
  */
-
-static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *lsp_avg,
-                               const enum Mode mode) {
+static float fixed_gain_smooth(AMRContext *p , const float *lsp,
+                               const float *lsp_avg, const enum Mode mode)
+{
     float diff             = 0.0;
     int   i;
 
@@ -716,6 +715,7 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *ls
     }
     return p->fixed_gain[4];
 }
+
 /**
  * Decode fixed and pitch gains.
  *
@@ -724,8 +724,8 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsp, const float *ls
  * @param mode mode of the current frame
  * @param subframe current subframe number
  */
-
-static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe, const enum Mode mode, const int subframe)
+static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
+                         const enum Mode mode, const int subframe)
 {
     float fixed_gain_factor; // fixed gain correction factor {^gamma_gc} for the current frame
 
@@ -833,7 +833,6 @@ void apply_ir_filter(AMRContext *p, float *fixed_vector)
  * @param samples       pointer to the output speech samples
  * @param overflow      16-bit overflow flag
  */
-
 static int synthesis(AMRContext *p, float *excitation, float *lpc,
                      float *samples, uint8_t overflow)
 {
@@ -891,7 +890,6 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
  *
  * @param p             pointer to the AMRContext
  */
-
 static void update_state(AMRContext *p)
 {
     // update the previous frame's fourth subframe LSP vector
