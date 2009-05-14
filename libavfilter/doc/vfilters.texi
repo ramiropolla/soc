@@ -145,6 +145,18 @@ inputs through a @var{setpts=PTS-STARTPTS} filter to have them
 begin in the same zero timestamp, as it does the example for
 the @var{movie} filter.
 
+Parameters to the filter are separated by a colon. The first parameter
+is the x coordinate of the overlay, the second parameter is the y
+coordinate. The parameters need not be constant expressions, but may
+be expressions containing the names @var{mainW}, @var{mainH},
+@var{overlayW} and @var{overlayH}, for the size of the first and second
+input video, respectively. For example,
+@example
+overlay=mainW-overlayW-10:mainH-overlayH-10
+@end example
+can be used to draw the overlay at 10 pixels from the bottom right
+corner of the main video.
+
 @section rotate
 
 @example

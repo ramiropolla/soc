@@ -22,6 +22,23 @@
 #include <stdio.h>
 
 #include "avfilter.h"
+#include "libavcodec/eval.h"
+
+static const char *var_names[] = {
+    "mainW",    ///< width of the main video
+    "mainH",    ///< height of the main video
+    "overlayW", ///< width of the overlay video
+    "overlayH", ///< height of the overlay video
+    NULL
+};
+
+enum var_name {
+    MAIN_W,
+    MAIN_H,
+    OVERLAY_W,
+    OVERLAY_H,
+    VARS_NB
+};
 
 typedef struct {
     int x, y;                   //< position of subpicture
@@ -34,16 +51,19 @@ typedef struct {
 
     int bpp;                    //< bytes per pixel
     int hsub, vsub;             //< chroma subsampling
+
+    char x_expr[256], y_expr[256];
 } OverlayContext;
 
 static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     OverlayContext *over = ctx->priv;
 
-    if(!args || sscanf(args, "%d:%d", &over->x, &over->y) != 2) {
-        over->x =
-        over->y = 0;
-    }
+    av_strlcpy(over->x_expr, "0", sizeof(over->x_expr));
+    av_strlcpy(over->y_expr, "0", sizeof(over->y_expr));
+
+    if (args)
+        sscanf(args, "%255[^:]:%255[^:]", over->x_expr, over->y_expr);
 
     return 0;
 }
@@ -87,6 +107,37 @@ static int config_input_main(AVFilterLink *link)
     avcodec_get_chroma_sub_sample(link->format, &over->hsub, &over->vsub);
 
     return 0;
+}
+
+static int config_input_overlay(AVFilterLink *link)
+{
+    AVFilterContext *ctx  = link->dst;
+    OverlayContext  *over = link->dst->priv;
+    const char *error = NULL, *expr;
+    double var_values[VARS_NB];
+
+    /* Finish the configuration by evaluating the expressions
+       now when both inputs are configured. */
+    var_values[MAIN_W]    = ctx->inputs[0]->w;
+    var_values[MAIN_H]    = ctx->inputs[0]->h;
+    var_values[OVERLAY_W] = ctx->inputs[1]->w;
+    var_values[OVERLAY_H] = ctx->inputs[1]->h;
+
+    over->x = ff_eval2((expr = over->x_expr), var_values, var_names,
+                       NULL, NULL, NULL, NULL, NULL, &error);
+    if (error)
+        goto fail;
+    over->y = ff_eval2((expr = over->y_expr), var_values, var_names,
+                       NULL, NULL, NULL, NULL, NULL, &error);
+    if (error)
+        goto fail;
+
+    return 0;
+
+fail:
+    av_log(NULL, AV_LOG_ERROR,
+           "Error when evaluating the expression '%s': %s\n", expr, error);
+    return -1;
 }
 
 static void shift_input(OverlayContext *over, int idx)
@@ -238,6 +289,7 @@ AVFilter avfilter_vf_overlay =
                                   { .name            = "sub",
                                     .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
+                                    .config_props    = config_input_overlay,
                                     .end_frame       = end_frame,
                                     .min_perms       = AV_PERM_READ,
                                     .rej_perms       = AV_PERM_REUSE2, },
