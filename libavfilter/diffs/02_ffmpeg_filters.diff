@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 18769)
+--- ffmpeg.c	(revision 18829)
 +++ ffmpeg.c	(working copy)
 @@ -40,6 +40,13 @@
  #include "libavutil/avstring.h"
@@ -346,7 +346,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1857,11 +2098,22 @@
+@@ -1858,11 +2099,22 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          av_exit(1);
                      }
@@ -369,7 +369,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -2246,6 +2498,12 @@
+@@ -2247,6 +2499,12 @@
              avcodec_close(ist->st->codec);
          }
      }
@@ -382,7 +382,7 @@ Index: ffmpeg.c
  
      /* finished ! */
      ret = 0;
-@@ -3879,6 +4137,9 @@
+@@ -3880,6 +4138,9 @@
      { "psnr", OPT_BOOL | OPT_EXPERT | OPT_VIDEO, {(void*)&do_psnr}, "calculate PSNR of compressed frames" },
      { "vstats", OPT_EXPERT | OPT_VIDEO, {(void*)&opt_vstats}, "dump video coding statistics to file" },
      { "vstats_file", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_vstats_file}, "dump video coding statistics to file", "file" },
