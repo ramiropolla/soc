@@ -23,6 +23,7 @@
 
 #include "avfilter.h"
 #include "libavcodec/eval.h"
+#include "libavutil/avstring.h"
 
 static const char *var_names[] = {
     "mainW",    ///< width of the main video
