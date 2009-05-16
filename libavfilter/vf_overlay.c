@@ -186,12 +186,16 @@ static void copy_image(AVFilterPicRef *dst, int x, int y,
     int i;
 
     memcpy(&pic, &dst->data, sizeof(AVPicture));
-    pic.data[0] += x * bpp;
-    pic.data[0] += y * pic.linesize[0];
-    for(i = 1; i < 4; i ++) {
+    for(i = 0; i < 4; i ++) {
         if(pic.data[i]) {
-            pic.data[i] +=  x >> hsub;
-            pic.data[i] += (y >> vsub) * pic.linesize[i];
+            int x_off = x;
+            int y_off = y;
+            if (i == 1 || i == 2) {
+                x_off >>= hsub;
+                y_off >>= vsub;
+            }
+            pic.data[i] += x_off * bpp;
+            pic.data[i] += y_off * pic.linesize[i];
         }
     }
 
