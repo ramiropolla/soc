@@ -58,7 +58,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
     sscanf(args, "%d:%d:%d:%d:%s", &(context->x), &(context->y),
            &(context->w), &(context->h), tmp);
 
-    if (av_parse_color(rgba_color, tmp, context) < 0)
+    if (av_parse_color(rgba_color, tmp, ctx) < 0)
         return -1;
 
     context->color.y  = RGB_TO_Y(rgba_color[0], rgba_color[1], rgba_color[2]);
