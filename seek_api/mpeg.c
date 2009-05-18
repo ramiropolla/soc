@@ -597,6 +597,62 @@ static int64_t mpegps_read_dts(AVFormatContext *s, int stream_index,
     return dts;
 }
 
+static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
+                            int64_t min_ts, int64_t ts, int64_t max_ts, int flags)
+{
+    AVStream *st = s->streams[stream_index];
+    int ret, index;
+    AVPacket pkt1, *pkt = &pkt1;
+    AVIndexEntry *ie = st->index_entries;
+    int64_t pos, pts, left_keyframe_ts, left_keyframe_pos;
+
+    if (ts <min_ts || ts >max_ts) {
+        av_log(s, AV_LOG_ERROR, "Wrong range set for target timestamp!\n");
+        return -1;
+    }
+    if (ts < 0 || ts >= s->duration) {
+        av_log(s, AV_LOG_ERROR, "Timestamp is out of bounds! timestamp=0x%"PRIx64" duration=0x%"PRIx64"\n", ts, s->duration);
+        return -1;
+    }
+    if (st->discard >= AVDISCARD_ALL) {
+        av_log(s, AV_LOG_ERROR, "Not active stream!\n");
+        return -1;
+    }
+
+    index = av_index_search_timestamp(st, ts, flags);
+    if (index > 0) {
+        if (ie[index].timestamp >= min_ts && ie[index].timestamp <= max_ts){
+            url_fseek(s->pb, ie[index].pos, SEEK_SET);
+            return 0;
+        }
+    }
+
+    pos = url_ftell(s->pb);
+    for(;;){
+        ret = av_read_frame(s, pkt);
+        if (ret < 0) {
+            url_fseek(s->pb, pos, SEEK_SET);
+            return -1;
+        }
+
+        pts = pkt->pts;
+        av_free_packet(pkt);
+
+        if (pkt->flags&PKT_FLAG_KEY) {
+            if (pts < ts) {
+                left_keyframe_ts = pts;
+                left_keyframe_pos = pkt->pos;
+            }
+            else
+                break;
+        }
+    }
+    // check left_keyframe_ts and pts with ts_min and ts_max
+    if (ts >= min_ts && ts <= max_ts && ts- left_keyframe_ts < pts - ts)
+        url_fseek(s->pb, left_keyframe_pos, SEEK_SET);
+    return 0;
+}
+
 AVInputFormat mpegps_demuxer = {
     "mpeg",
     NULL_IF_CONFIG_SMALL("MPEG-PS format"),
@@ -608,4 +664,5 @@ AVInputFormat mpegps_demuxer = {
     NULL, //mpegps_read_seek,
     mpegps_read_dts,
     .flags = AVFMT_SHOW_IDS|AVFMT_TS_DISCONT,
+    .read_seek2 = mpegps_read_seek,
 };
