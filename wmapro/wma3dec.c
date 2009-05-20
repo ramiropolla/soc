@@ -312,7 +312,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
     /** init MDCT, FIXME: only init needed sizes */
     for(i = 0; i < BLOCK_NB_SIZES; i++)
-        ff_mdct_init(&s->mdct_ctx[i], BLOCK_MIN_BITS+1+i, 1, 1.0);
+        ff_mdct_init(&s->mdct_ctx[i], BLOCK_MIN_BITS+1+i, 1, 1.0 / (1<<(BLOCK_MIN_BITS+i-1)));
 
     /** init MDCT windows: simple sinus window */
     for(i=0 ; i<BLOCK_NB_SIZES ; i++) {
@@ -1276,7 +1276,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             int b;
             float* dst;
             if(c == s->lfe_channel)
-                memset(&s->channel[c].coeffs[s->cur_subwoofer_cutoff],0,4 * (subframe_len - s->cur_subwoofer_cutoff));
+                memset(&s->tmp[s->cur_subwoofer_cutoff],0,4 * (subframe_len - s->cur_subwoofer_cutoff));
 
             /** inverse quantization */
             for(b=0;b<s->num_bands;b++){
@@ -1293,15 +1293,13 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
                      min = s->channel[c].scale_factor_step * (s->channel[c].max_scale_factor - s->channel[c].resampled_scale_factors[b]);
                 quant = pow(10.0,(s->quant_step + s->channel[c].quant_step_modifier - min) / 20.0);
                 while(start < end){
-                    s->channel[c].coeffs[start] *= quant;
+                    s->tmp[start] = s->channel[c].coeffs[start] * quant;
                     ++start;
                 }
             }
 
             dst = &s->channel[c].out[s->samples_per_frame/2  + s->channel[c].subframe_offset[s->channel[c].cur_subframe]];
-            ff_imdct_half(&s->mdct_ctx[av_log2(subframe_len)-BLOCK_MIN_BITS], s->tmp, s->channel[c].coeffs); // DCTIV with reverse
-            for(b=0;b<subframe_len;b++)
-                dst[b] = s->tmp[b] / (subframe_len / 2);     // FIXME: try to remove this scaling
+            ff_imdct_half(&s->mdct_ctx[av_log2(subframe_len)-BLOCK_MIN_BITS], dst, s->tmp); // DCTIV with reverse
         }
     }else{
         for(i=0;i<s->channels_for_cur_subframe;i++){
