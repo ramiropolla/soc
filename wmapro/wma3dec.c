@@ -1356,8 +1356,6 @@ static int wma_decode_frame(WMA3DecodeContext *s)
     int len = 0;
     int i;
 
-    init_get_bits(&s->getbit, s->frame_data,s->prev_packet_bit_size);
-
     /** check for potential output buffer overflow */
     if(s->samples + s->num_channels * s->samples_per_frame > s->samples_end){
         av_log(s->avctx,AV_LOG_ERROR,"not enough space for the output samples\n");
@@ -1528,6 +1526,8 @@ static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len, int 
     /** copy remaining bits */
     if(len > 0)
         s->frame_data[pos++] = get_bits(gb,len) << (8 - len);
+
+    init_get_bits(&s->getbit, s->frame_data,s->prev_packet_bit_size);
 }
 
 /**
