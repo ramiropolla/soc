@@ -50,11 +50,11 @@ typedef struct {
     char              format_name[16];
     char              file_name[255];
     // Needed to load movies
-    AVFormatContext  *pFormatCtx;
-    int               videoStream;
-    AVCodecContext   *pCodecCtx;
+    AVFormatContext  *format_ctx;
+    int               video_stream;
+    AVCodecContext   *codec_ctx;
     int               is_done;
-    AVFrame          *pFrame;
+    AVFrame          *frame;
 
     int w, h;
     AVFilterPicRef *pic;
@@ -64,7 +64,7 @@ int movie_init(AVFilterContext *ctx)
 {
     AVInputFormat  *file_iformat = NULL;
     int             i;
-    AVCodec        *pCodec;
+    AVCodec        *codec;
     int64_t         timestamp;
     MovieContext   *mv = ctx->priv;
 
@@ -76,13 +76,13 @@ int movie_init(AVFilterContext *ctx)
         file_iformat = av_find_input_format(mv->format_name);
     else
         file_iformat = NULL;
-    mv->pFormatCtx = NULL;
-    if (av_open_input_file(&mv->pFormatCtx, mv->file_name, file_iformat, 0, NULL) != 0) {
+    mv->format_ctx = NULL;
+    if (av_open_input_file(&mv->format_ctx, mv->file_name, file_iformat, 0, NULL) != 0) {
         av_log(ctx, AV_LOG_ERROR,
             "movie_init() Failed to av_open_input_file '%s'\n", mv->file_name);
         return -1;
     }
-    if(av_find_stream_info(mv->pFormatCtx)<0) {
+    if(av_find_stream_info(mv->format_ctx)<0) {
         av_log(ctx, AV_LOG_ERROR, "movie_init() Failed to find stream info\n");
         return -1;
     }
@@ -91,9 +91,9 @@ int movie_init(AVFilterContext *ctx)
     if (mv->seek_point > 0) {
         timestamp = mv->seek_point;
         // add the stream start time, should it exist
-        if (mv->pFormatCtx->start_time != AV_NOPTS_VALUE)
-            timestamp += mv->pFormatCtx->start_time;
-        if (av_seek_frame(mv->pFormatCtx, -1, timestamp, AVSEEK_FLAG_BACKWARD) < 0) {
+        if (mv->format_ctx->start_time != AV_NOPTS_VALUE)
+            timestamp += mv->format_ctx->start_time;
+        if (av_seek_frame(mv->format_ctx, -1, timestamp, AVSEEK_FLAG_BACKWARD) < 0) {
             av_log(ctx, AV_LOG_ERROR, "%s: could not seek to position %"PRId64"\n",
                 mv->file_name, timestamp);
         }
@@ -101,44 +101,44 @@ int movie_init(AVFilterContext *ctx)
 
     // To make things nice and easy, we simply use the first video stream we find
     // TODO: allow to choose the video stream
-    mv->videoStream = -1;
-    for(i = 0; i < mv->pFormatCtx->nb_streams; i++)
-        if(mv->pFormatCtx->streams[i]->codec->codec_type==CODEC_TYPE_VIDEO) {
-            mv->videoStream = i;
+    mv->video_stream = -1;
+    for(i = 0; i < mv->format_ctx->nb_streams; i++)
+        if(mv->format_ctx->streams[i]->codec->codec_type==CODEC_TYPE_VIDEO) {
+            mv->video_stream = i;
             break;
         }
-    if(mv->videoStream == -1) {
+    if(mv->video_stream == -1) {
         av_log(ctx, AV_LOG_ERROR, "movie_init() No video stream found\n");
         return -1;
     }
     // Get a pointer to the codec context for the video stream
-    mv->pCodecCtx = mv->pFormatCtx->streams[mv->videoStream]->codec;
+    mv->codec_ctx = mv->format_ctx->streams[mv->video_stream]->codec;
 
     /*
      * So now we've got a pointer to the so-called codec context for our video
      * stream, but we still have to find the actual codec and open it.
      */
     // Find the decoder for the video stream
-    pCodec = avcodec_find_decoder(mv->pCodecCtx->codec_id);
-    if(!pCodec) {
+    codec = avcodec_find_decoder(mv->codec_ctx->codec_id);
+    if(!codec) {
         av_log(ctx, AV_LOG_ERROR, "movie_init() Failed to find any codec\n");
         return -1;
     }
 
     // Open codec
-    if(avcodec_open(mv->pCodecCtx, pCodec)<0) {
+    if(avcodec_open(mv->codec_ctx, codec)<0) {
         av_log(ctx, AV_LOG_ERROR, "movie_init() Failed to open codec\n");
         return -1;
     }
 
     // Allocate a video frame to store the decoded images in.
-    if(! (mv->pFrame = avcodec_alloc_frame()) ) {
+    if(! (mv->frame = avcodec_alloc_frame()) ) {
         av_log(ctx, AV_LOG_ERROR, "movie_init() Failed to alloc frame\n");
         return -1;
     }
 
-    mv->w = mv->pCodecCtx->width;
-    mv->h = mv->pCodecCtx->height;
+    mv->w = mv->codec_ctx->width;
+    mv->h = mv->codec_ctx->height;
 
     return 0;
 }
@@ -168,7 +168,7 @@ static int query_formats(AVFilterContext *ctx)
     MovieContext *mv = ctx->priv;
 
     avfilter_set_common_formats(ctx,
-        avfilter_make_format_list(1, mv->pCodecCtx->pix_fmt));
+        avfilter_make_format_list(1, mv->codec_ctx->pix_fmt));
     return 0;
 }
 
@@ -185,7 +185,7 @@ static int config_props(AVFilterLink *link)
 int movie_get_frame(AVFilterLink *link)
 {
     AVPacket packet;
-    int      frameFinished;
+    int      frame_finished;
 
     MovieContext *mv = link->src->priv;
 
@@ -198,30 +198,30 @@ int movie_get_frame(AVFilterLink *link)
     //av_log(link->src, AV_LOG_INFO, "movie_get_frame() w:%d h:%d\n", mv->w, mv->h);
 
     // Get frame
-    while(av_read_frame(mv->pFormatCtx, &packet)>=0)
+    while(av_read_frame(mv->format_ctx, &packet)>=0)
     {
         // Is this a packet from the video stream?
-        if(packet.stream_index == mv->videoStream)
+        if(packet.stream_index == mv->video_stream)
         {
             // Decode video frame
-            avcodec_decode_video2(mv->pCodecCtx, mv->pFrame, &frameFinished, &packet);
+            avcodec_decode_video2(mv->codec_ctx, mv->frame, &frame_finished, &packet);
 
             // Did we get a video frame?
-            if(frameFinished)
+            if(frame_finished)
             {
-                memcpy(mv->pic->data,     mv->pFrame->data,
-                       sizeof(mv->pFrame->data));
-                memcpy(mv->pic->linesize, mv->pFrame->linesize,
-                       sizeof(mv->pFrame->linesize));
+                memcpy(mv->pic->data,     mv->frame->data,
+                       sizeof(mv->frame->data));
+                memcpy(mv->pic->linesize, mv->frame->linesize,
+                       sizeof(mv->frame->linesize));
 
                 // Advance in the time line
                 mv->pic->pts = av_rescale_q(packet.pts,
-                    mv->pFormatCtx->streams[mv->videoStream]->time_base,
+                    mv->format_ctx->streams[mv->video_stream]->time_base,
                     AV_TIME_BASE_Q);
                 /* av_log(link->src, AV_LOG_INFO,
                   "movie_get_frame(%s) packet pts:%lld %lf vfpts:%lld\n",
                   mv->file_name, packet.pts, (double)packet.pts *
-                  av_q2d(mv->pFormatCtx->streams[mv->videoStream]->time_base),
+                  av_q2d(mv->format_ctx->streams[mv->video_stream]->time_base),
                   mv->pic->pts);*/
 
                 // We got it. Free the packet since we are returning
@@ -250,7 +250,7 @@ static int request_frame(AVFilterLink *link)
         return AVERROR_EOF;
 
     out = avfilter_ref_pic(mv->pic, ~AV_PERM_WRITE);
-    out->pixel_aspect = mv->pCodecCtx->sample_aspect_ratio;
+    out->pixel_aspect = mv->codec_ctx->sample_aspect_ratio;
 
     avfilter_start_frame(link, out);
     avfilter_draw_slice(link, 0, out->h);
@@ -263,11 +263,11 @@ static av_cold void uninit(AVFilterContext *ctx)
 {
     MovieContext *mv = ctx->priv;
 
-    if(mv->pCodecCtx)
-        avcodec_close(mv->pCodecCtx);
-    if(mv->pFormatCtx)
-        av_close_input_file(mv->pFormatCtx);
-    av_freep(&mv->pFrame);
+    if(mv->codec_ctx)
+        avcodec_close(mv->codec_ctx);
+    if(mv->format_ctx)
+        av_close_input_file(mv->format_ctx);
+    av_freep(&mv->frame);
     if(mv->pic)
         avfilter_unref_pic(mv->pic);
 }
