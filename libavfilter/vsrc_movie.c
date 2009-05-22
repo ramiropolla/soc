@@ -204,8 +204,7 @@ int movie_get_frame(AVFilterLink *link)
         if(packet.stream_index == mv->videoStream)
         {
             // Decode video frame
-            avcodec_decode_video(mv->pCodecCtx, mv->pFrame, &frameFinished,
-                packet.data, packet.size);
+            avcodec_decode_video2(mv->pCodecCtx, mv->pFrame, &frameFinished, &packet);
 
             // Did we get a video frame?
             if(frameFinished)
