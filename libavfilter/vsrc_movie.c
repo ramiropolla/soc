@@ -198,17 +198,14 @@ int movie_get_frame(AVFilterLink *link)
     //av_log(link->src, AV_LOG_INFO, "movie_get_frame() w:%d h:%d\n", mv->w, mv->h);
 
     // Get frame
-    while(av_read_frame(mv->format_ctx, &packet)>=0)
-    {
+    while(av_read_frame(mv->format_ctx, &packet)>=0) {
         // Is this a packet from the video stream?
-        if(packet.stream_index == mv->video_stream)
-        {
+        if(packet.stream_index == mv->video_stream) {
             // Decode video frame
             avcodec_decode_video2(mv->codec_ctx, mv->frame, &frame_finished, &packet);
 
             // Did we get a video frame?
-            if(frame_finished)
-            {
+            if(frame_finished) {
                 memcpy(mv->pic->data,     mv->frame->data,
                        sizeof(mv->frame->data));
                 memcpy(mv->pic->linesize, mv->frame->linesize,
