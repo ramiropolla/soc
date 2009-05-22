@@ -20,23 +20,6 @@
  */
 
  /*
- One usage example follows, usable too as test scenario.
-
- TODO Eventually move it into FFmpeg docs.
-
- Parameters of movie filter are
- seekpoint in microseconds : string format : string filename
-
- We can overlay a second movie on top of a main one
-
- input -----------> deltapts0 --> overlay --> output
-                                    ^
- movie --> scale--> deltapts1 ------|
-
- To do that
-
- ffmpeg -i in.avi -s 240x320 -vfilters "[in]setpts=PTS-STARTPTS,[T1]overlay=16:16[out];movie=3200000:avi:in.avi,scale=180:144,setpts=PTS-STARTPTS[T1]" -y out.avi
-
  TODO: this filter should use direct rendering (no allocation of a new frame)
        to be acceptable to FFmpeg main SVN
  */
