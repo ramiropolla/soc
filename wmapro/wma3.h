@@ -40,6 +40,7 @@
 /* size of block defines taken from wma.h */
 #define BLOCK_MIN_BITS  7                                    ///< log2 of min block size
 #define BLOCK_MAX_BITS 12                                    ///< log2 of max block size
+#define BLOCK_MIN_SIZE (1 << BLOCK_MIN_BITS)                 ///< minimum block size
 #define BLOCK_MAX_SIZE (1 << BLOCK_MAX_BITS)                 ///< maximum block size
 #define BLOCK_NB_SIZES (BLOCK_MAX_BITS - BLOCK_MIN_BITS + 1) ///< possible block sizes
 

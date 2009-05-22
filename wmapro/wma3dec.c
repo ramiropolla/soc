@@ -418,6 +418,12 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
     int c;
     int missing_samples = s->num_channels * s->samples_per_frame;
 
+    /* should never consume more than 3073 bits (256 iterations for the
+     * while loop when always the minimum amount of 128 samples is substracted
+     * from missing samples in the 8 channel case)
+     * 1 + BLOCK_MAX_SIZE * MAX_CHANNELS / BLOCK_MIN_SIZE * (MAX_CHANNELS  + 4)
+     */
+
     /** reset tiling information */
     for(c=0;c<s->num_channels;c++){
         s->channel[c].num_subframes = 0;
@@ -569,6 +575,10 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
 static int wma_decode_channel_transform(WMA3DecodeContext* s)
 {
     int i;
+    /* should never consume more than 1921 bits for the 8 channel case
+     * 1 + MAX_CHANNELS * ( MAX_CHANNELS + 2 + 3 * MAX_CHANNELS * MAX_CHANNELS + MAX_CHANNELS + MAX_BANDS + 1)
+     */
+
     for(i=0;i< s->num_channels;i++){
         memset(s->chgroup[i].decorrelation_matrix,0,4*s->num_channels * s->num_channels);
     }
@@ -718,6 +728,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
  */
 static unsigned int wma_get_large_val(WMA3DecodeContext* s)
 {
+    /* consumes up to 34 bits */
     int n_bits = 8;
     /** decode length */
     if(get_bits(&s->getbit,1)){
@@ -764,6 +775,8 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
         level = ff_wma3_coef0_level;
     }
 
+    /* read coefficients (consumes up to 167 bits per iteration for
+      4 vector coded large values) */
     while(cur_coeff < s->subframe_len){
         if(rl_mode){
             unsigned int idx;
@@ -799,7 +812,7 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
             int i = 0;
             unsigned int idx;
 
-            // read 4 values
+            /* read 4 values at once */
             idx = get_vlc2(&s->getbit, s->vec4_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
 
             if ( idx == FF_WMA3_HUFF_VEC4_SIZE - 1 ){
@@ -851,6 +864,11 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
 static int wma_decode_scale_factors(WMA3DecodeContext* s)
 {
     int i;
+
+    /* should never consume more than 5344 bits
+     *  MAX_CHANNELS * (1 +  MAX_BANDS * 23)
+     */
+
     for(i=0;i<s->channels_for_cur_subframe;i++){
         int c = s->channel_indexes_for_cur_subframe[i];
 
