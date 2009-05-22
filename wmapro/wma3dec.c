@@ -1505,30 +1505,30 @@ static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len, int 
         memcpy(s->frame_data, gb->buffer + (get_bits_count(gb) >> 3), (s->num_saved_bits  + 8)>> 3);
         skip_bits_long(gb, len);
     }else{
-    bit_offset = s->num_saved_bits & 7;
-    pos = (s->num_saved_bits - bit_offset) >> 3;
+        bit_offset = s->num_saved_bits & 7;
+        pos = (s->num_saved_bits - bit_offset) >> 3;
 
-    s->num_saved_bits += len;
+        s->num_saved_bits += len;
 
-    /** byte align prev_frame buffer */
-    if(bit_offset){
-        int missing = 8 - bit_offset;
-        if(len < missing)
-            missing = len;
-        s->frame_data[pos++] |=
-            get_bits(gb, missing) << (8 - bit_offset - missing);
-        len -= missing;
-    }
+        /** byte align prev_frame buffer */
+        if(bit_offset){
+            int missing = 8 - bit_offset;
+            if(len < missing)
+                missing = len;
+            s->frame_data[pos++] |=
+                get_bits(gb, missing) << (8 - bit_offset - missing);
+            len -= missing;
+        }
 
-    /** copy full bytes */
-    while(len > 7){
-        s->frame_data[pos++] = get_bits(gb,8);
-        len -= 8;
-    }
+        /** copy full bytes */
+        while(len > 7){
+            s->frame_data[pos++] = get_bits(gb,8);
+            len -= 8;
+        }
 
-    /** copy remaining bits */
-    if(len > 0)
-        s->frame_data[pos++] = get_bits(gb,len) << (8 - len);
+        /** copy remaining bits */
+        if(len > 0)
+            s->frame_data[pos++] = get_bits(gb,len) << (8 - len);
 
     }
 
