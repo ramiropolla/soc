@@ -1486,12 +1486,21 @@ static int remaining_bits(WMA3DecodeContext *s, GetBitContext* gb)
  *@param s codec context
  *@param gb bitstream reader context
  *@param len length of the partial frame
+ *@param append decides wether to reset the buffer or not
  */
-static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len)
+static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len, int append)
 {
-    int buflen = (s->prev_packet_bit_size + len + 8) / 8;
-    int bit_offset = s->prev_packet_bit_size % 8;
-    int pos = (s->prev_packet_bit_size - bit_offset) / 8;
+    int buflen;
+    int bit_offset;
+    int pos;
+
+    if(!append)
+        s->prev_packet_bit_size = 0;
+
+    buflen = (s->prev_packet_bit_size + len + 8) / 8;
+    bit_offset = s->prev_packet_bit_size % 8;
+    pos = (s->prev_packet_bit_size - bit_offset) / 8;
+
     s->prev_packet_bit_size += len;
 
     if(len <= 0 || buflen > MAX_FRAMESIZE){
@@ -1576,7 +1585,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
     if (num_bits_prev_frame > 0) {
         /** append the previous frame data to the remaining data from the
             previous packet to create a full frame */
-        wma_save_bits(s,&gb,num_bits_prev_frame);
+        wma_save_bits(s, &gb, num_bits_prev_frame, 1);
         av_log(avctx, AV_LOG_DEBUG, "accumulated %x bits of frame data\n",
                       s->prev_packet_bit_size);
 
@@ -1588,8 +1597,6 @@ static int wma3_decode_packet(AVCodecContext *avctx,
                       s->prev_packet_bit_size);
     }
 
-    /** reset previous frame buffer */
-    s->prev_packet_bit_size = 0;
     s->packet_loss = 0;
     /** decode the rest of the packet */
     while(!s->packet_loss && more_frames && remaining_bits(s,&gb) > s->log2_frame_size){
@@ -1597,8 +1604,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
 
         /** there is enough data for a full frame */
         if(remaining_bits(s,&gb) >= frame_size){
-            s->prev_packet_bit_size = 0;
-            wma_save_bits(s,&gb,frame_size);
+            wma_save_bits(s, &gb, frame_size, 0);
 
             /** decode the frame */
             more_frames = wma_decode_frame(s);
@@ -1611,10 +1617,9 @@ static int wma3_decode_packet(AVCodecContext *avctx,
     }
 
     if(!s->packet_loss){
-        s->prev_packet_bit_size = 0;
         /** save the rest of the data so that it can be decoded
             with the next packet */
-        wma_save_bits(s,&gb,remaining_bits(s,&gb));
+        wma_save_bits(s, &gb, remaining_bits(s,&gb), 0);
     }
 
     *data_size = (int8_t *)s->samples - (int8_t *)data;
