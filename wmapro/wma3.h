@@ -125,7 +125,9 @@ typedef struct WMA3DecodeContext {
 
     /* packet decode state */
     uint8_t          packet_sequence_number;        ///< current packet number
-    int              prev_packet_bit_size;          ///< saved number of bits
+    int              num_saved_bits;                ///< saved number of bits
+    int              frame_offset;                  ///< frame offset in the bit reservoir
+    int              subframe_offset;               ///< subframe offset in the bit reservoir
     uint8_t          bit5;                          ///< padding bit? (CBR files)
     uint8_t          bit6;                          ///< unknown
     uint8_t          packet_loss;                   ///< set in case of bitstream error

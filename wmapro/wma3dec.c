@@ -34,9 +34,6 @@
 #define VLCBITS            9
 #define SCALEVLCBITS       8
 
-
-unsigned int bitstreamcounter;
-
 /**
  *@brief helper function to print the most important members of the context
  *@param s context
@@ -1118,7 +1115,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     int total_samples = s->samples_per_frame * s->num_channels;
     int transmit_coeffs = 0;
 
-    bitstreamcounter = get_bits_count(&s->getbit);
+    s->subframe_offset = get_bits_count(&s->getbit);
 
     /** reset channel context and find the next block offset and size
         == the next block of the channel with the smallest number of decoded samples
@@ -1276,7 +1273,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             return 0;
     }
 
-    av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: subframe header length was %i\n",get_bits_count(&s->getbit) - bitstreamcounter);
+    av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: subframe header length was %i\n",get_bits_count(&s->getbit) - s->subframe_offset);
 
     /** parse coefficients */
     for(i=0;i<s->channels_for_cur_subframe;i++){
@@ -1285,7 +1282,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
                 decode_coeffs(s,c);
     }
 
-    av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: subframe length was %i\n",get_bits_count(&s->getbit) - bitstreamcounter);
+    av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: subframe length was %i\n",get_bits_count(&s->getbit) - s->subframe_offset);
 
     if(transmit_coeffs){
         wma_inverse_channel_transform(s);
@@ -1364,7 +1361,6 @@ static int wma_decode_frame(WMA3DecodeContext *s)
     }
 
     s->negative_quantstep = 0;
-    bitstreamcounter = get_bits_count(gb);
 
     /** get frame length */
     if(s->len_prefix)
@@ -1410,7 +1406,7 @@ static int wma_decode_frame(WMA3DecodeContext *s)
 
     }
 
-    av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: frame header length was %i\n",get_bits_count(gb) - bitstreamcounter);
+    av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: frame header length was %i\n",get_bits_count(gb) - s->frame_offset);
 
     /** reset subframe states */
     s->parsed_all_subframes = 0;
@@ -1454,12 +1450,12 @@ static int wma_decode_frame(WMA3DecodeContext *s)
 
 
     // FIXME: remove
-    av_log(s->avctx,AV_LOG_DEBUG,"frame[%i] skipping %i bits\n",s->frame_num,len - get_bits_count(gb) - 1);
-    if(len != get_bits_count(gb) + 2)
+    av_log(s->avctx,AV_LOG_DEBUG,"frame[%i] skipping %i bits\n",s->frame_num,len - (get_bits_count(gb) - s->frame_offset) - 1);
+    if(len != (get_bits_count(gb) - s->frame_offset) + 2)
         assert(0);
 
     /** skip the rest of the frame data */
-    skip_bits_long(gb,len - get_bits_count(gb) - 1);
+    skip_bits_long(gb,len - (get_bits_count(gb) - s->frame_offset) - 1);
 
     /** decode trailer bit */
     more_frames = get_bits1(gb);
@@ -1480,7 +1476,7 @@ static int remaining_bits(WMA3DecodeContext *s, GetBitContext* gb)
 }
 
 /**
- *@brief Fill the bit reservoir with a partial frame.
+ *@brief Fill the bit reservoir with a (partial) frame.
  *@param s codec context
  *@param gb bitstream reader context
  *@param len length of the partial frame
@@ -1493,19 +1489,26 @@ static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len, int 
     int pos;
 
     if(!append)
-        s->prev_packet_bit_size = 0;
+        s->num_saved_bits = 0;
 
-    buflen = (s->prev_packet_bit_size + len + 8) / 8;
-    bit_offset = s->prev_packet_bit_size % 8;
-    pos = (s->prev_packet_bit_size - bit_offset) / 8;
-
-    s->prev_packet_bit_size += len;
+    buflen = (s->num_saved_bits + len + 8) >> 3;
 
     if(len <= 0 || buflen > MAX_FRAMESIZE){
          av_log(s->avctx, AV_LOG_ERROR, "input buffer to small\n");
          s->packet_loss = 1;
          return;
     }
+
+    if(!append){
+        s->frame_offset = get_bits_count(gb) & 7;
+        s->num_saved_bits = s->frame_offset + len;
+        memcpy(s->frame_data, gb->buffer + (get_bits_count(gb) >> 3), (s->num_saved_bits  + 8)>> 3);
+        skip_bits_long(gb, len);
+    }else{
+    bit_offset = s->num_saved_bits & 7;
+    pos = (s->num_saved_bits - bit_offset) >> 3;
+
+    s->num_saved_bits += len;
 
     /** byte align prev_frame buffer */
     if(bit_offset){
@@ -1527,7 +1530,10 @@ static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len, int 
     if(len > 0)
         s->frame_data[pos++] = get_bits(gb,len) << (8 - len);
 
-    init_get_bits(&s->getbit, s->frame_data,s->prev_packet_bit_size);
+    }
+
+    init_get_bits(&s->getbit, s->frame_data,s->num_saved_bits);
+    skip_bits(&s->getbit, s->frame_offset);
 }
 
 /**
@@ -1587,14 +1593,14 @@ static int wma3_decode_packet(AVCodecContext *avctx,
             previous packet to create a full frame */
         wma_save_bits(s, &gb, num_bits_prev_frame, 1);
         av_log(avctx, AV_LOG_DEBUG, "accumulated %x bits of frame data\n",
-                      s->prev_packet_bit_size);
+                      s->num_saved_bits - s->frame_offset);
 
         /** decode the cross packet frame if it is valid */
         if(!s->packet_loss)
             wma_decode_frame(s);
-    }else if(s->prev_packet_bit_size){
+    }else if(s->num_saved_bits - s->frame_offset){
         av_log(avctx, AV_LOG_DEBUG, "ignoring %x previously saved bits\n",
-                      s->prev_packet_bit_size);
+                      s->num_saved_bits - s->frame_offset);
     }
 
     s->packet_loss = 0;
