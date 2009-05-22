@@ -1,6 +1,6 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 18854)
+--- ffplay.c	(revision 18855)
 +++ ffplay.c	(working copy)
 @@ -29,6 +29,12 @@
  #include "libavcodec/audioconvert.h"
@@ -215,7 +215,7 @@ Index: ffplay.c
          /* update the bitmap content */
          SDL_UnlockYUVOverlay(vp->bmp);
  
-@@ -1348,54 +1419,267 @@
+@@ -1348,54 +1419,269 @@
      return queue_picture(is, src_frame, pts);
  }
  
@@ -435,6 +435,7 @@ Index: ffplay.c
 +
 +        if (avfilter_graph_parse(graph, vfilters, inputs, outputs, NULL) < 0)
 +            goto the_end;
++        av_freep(&vfilters);
 +    } else {
 +        if(avfilter_link(filt_src, 0, filt_out, 0) < 0)          goto the_end;
 +    }
@@ -510,11 +511,12 @@ Index: ffplay.c
   the_end:
 +#if CONFIG_AVFILTER
 +    avfilter_graph_destroy(graph);
++    av_freep(&graph);
 +#endif
      av_free(frame);
      return 0;
  }
-@@ -2179,6 +2463,12 @@
+@@ -2179,6 +2465,12 @@
      /* free all pictures */
      for(i=0;i<VIDEO_PICTURE_QUEUE_SIZE; i++) {
          vp = &is->pictq[i];
@@ -527,7 +529,7 @@ Index: ffplay.c
          if (vp->bmp) {
              SDL_FreeYUVOverlay(vp->bmp);
              vp->bmp = NULL;
-@@ -2188,8 +2478,10 @@
+@@ -2188,8 +2480,10 @@
      SDL_DestroyCond(is->pictq_cond);
      SDL_DestroyMutex(is->subpq_mutex);
      SDL_DestroyCond(is->subpq_cond);
@@ -538,7 +540,17 @@ Index: ffplay.c
      av_free(is);
  }
  
-@@ -2525,6 +2817,9 @@
+@@ -2281,6 +2575,9 @@
+         av_free(avcodec_opts[i]);
+     av_free(avformat_opts);
+     av_free(sws_opts);
++#if CONFIG_AVFILTER
++    avfilter_uninit();
++#endif
+     if (show_status)
+         printf("\n");
+     SDL_Quit();
+@@ -2525,6 +2822,9 @@
      { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
      { "sync", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
@@ -548,7 +560,7 @@ Index: ffplay.c
      { "default", OPT_FUNC2 | HAS_ARG | OPT_AUDIO | OPT_VIDEO | OPT_EXPERT, {(void*)opt_default}, "generic catch all option", "" },
      { NULL, },
  };
-@@ -2573,7 +2868,9 @@
+@@ -2573,7 +2873,9 @@
          avcodec_opts[i]= avcodec_alloc_context2(i);
      }
      avformat_opts = avformat_alloc_context();
