@@ -1195,7 +1195,12 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         }
 
         if(num_fill_bits >= 0){
-            skip_bits(&s->getbit,num_fill_bits);
+            if(get_bits_count(&s->getbit) + num_fill_bits > s->num_saved_bits){
+                av_log(s->avctx,AV_LOG_ERROR,"invalid number of fill bits\n");
+                return 0;
+            }
+
+            skip_bits_long(&s->getbit,num_fill_bits);
         }
     }
 
@@ -1235,7 +1240,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         s->quant_step += quant;
         if(quant <= -32 || quant > 30)
             large_quant = 1;
-        while(large_quant){
+        while(large_quant && (get_bits_count(&s->getbit) + 5 < s->num_saved_bits)){
             quant = get_bits(&s->getbit,5);
             if(quant != 31){
                 s->quant_step += quant * sign;
@@ -1278,7 +1283,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     /** parse coefficients */
     for(i=0;i<s->channels_for_cur_subframe;i++){
         int c = s->channel_indexes_for_cur_subframe[i];
-        if(s->channel[c].transmit_coefs)
+        if(s->channel[c].transmit_coefs && get_bits_count(&s->getbit) < s->num_saved_bits)
                 wma_decode_coeffs(s,c);
     }
 
