@@ -38,7 +38,7 @@
  *@brief helper function to print the most important members of the context
  *@param s context
  */
-static void dump_context(WMA3DecodeContext *s)
+static void wma_dump_context(WMA3DecodeContext *s)
 {
 #define PRINT(a,b) av_log(s->avctx,AV_LOG_ERROR," %s = %d\n", a, b);
 #define PRINT_HEX(a,b) av_log(s->avctx,AV_LOG_ERROR," %s = %x\n", a, b);
@@ -59,7 +59,7 @@ static void dump_context(WMA3DecodeContext *s)
  *@param decode_flags codec compression features
  *@return number of output samples per frame
  */
-static int get_samples_per_frame(int sample_rate, unsigned int decode_flags)
+static int wma_get_samples_per_frame(int sample_rate, unsigned int decode_flags)
 {
 
     int samples_per_frame;
@@ -97,7 +97,7 @@ static int get_samples_per_frame(int sample_rate, unsigned int decode_flags)
  *@param avctx codec context
  *@return 0 on success, < 0 otherwise
  */
-static av_cold int wma3_decode_end(AVCodecContext *avctx)
+static av_cold int wma_decode_end(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
     int i;
@@ -132,7 +132,7 @@ static av_cold int wma3_decode_end(AVCodecContext *avctx)
  *@param avctx codec context
  *@return 0 on success, -1 otherwise
  */
-static av_cold int wma3_decode_init(AVCodecContext *avctx)
+static av_cold int wma_decode_init(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
     uint8_t *edata_ptr = avctx->extradata;
@@ -175,7 +175,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     }
 
     /** get frame len */
-    s->samples_per_frame = get_samples_per_frame(avctx->sample_rate,
+    s->samples_per_frame = wma_get_samples_per_frame(avctx->sample_rate,
                                                  s->decode_flags);
 
     /** init previous block len */
@@ -257,7 +257,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
 
     if(!s->num_sfb || !s->sfb_offsets || !s->subwoofer_cutoffs || !s->sf_offsets){
         av_log(avctx, AV_LOG_ERROR, "failed to allocate scale factor offset tables\n");
-        wma3_decode_end(avctx);
+        wma_decode_end(avctx);
         return -1;
     }
 
@@ -335,7 +335,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
     s->def_decorrelation_mat = av_mallocz(sizeof(float*) * (s->num_channels + 1));
     if(!s->def_decorrelation_mat){
         av_log(avctx, AV_LOG_ERROR, "failed to allocate decorrelation matrix\n");
-        wma3_decode_end(avctx);
+        wma_decode_end(avctx);
         return -1;
     }
 
@@ -345,7 +345,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
         s->def_decorrelation_mat[i] = av_mallocz(sizeof(float*) * i);
         if(!s->def_decorrelation_mat[i]){
             av_log(avctx, AV_LOG_ERROR, "failed to set up decorrelation matrix\n");
-            wma3_decode_end(avctx);
+            wma_decode_end(avctx);
             return -1;
         }
         switch(i){
@@ -385,7 +385,7 @@ static av_cold int wma3_decode_init(AVCodecContext *avctx)
         }
     }
 
-    dump_context(s);
+    wma_dump_context(s);
     avctx->channel_layout = channel_mask;
     return 0;
 }
@@ -746,7 +746,7 @@ static unsigned int wma_get_large_val(WMA3DecodeContext* s)
  *@param c current channel number
  *@return 0 in case of bitstream errors, 1 on success
  */
-static int decode_coeffs(WMA3DecodeContext *s, int c)
+static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
 {
     int vlctable;
     VLC* vlc;
@@ -1279,7 +1279,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     for(i=0;i<s->channels_for_cur_subframe;i++){
         int c = s->channel_indexes_for_cur_subframe[i];
         if(s->channel[c].transmit_coefs)
-                decode_coeffs(s,c);
+                wma_decode_coeffs(s,c);
     }
 
     av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: subframe length was %i\n",get_bits_count(&s->getbit) - s->subframe_offset);
@@ -1470,7 +1470,7 @@ static int wma_decode_frame(WMA3DecodeContext *s)
  *@param gb bitstream reader context
  *@return remaining size in bits
  */
-static int remaining_bits(WMA3DecodeContext *s, GetBitContext* gb)
+static int wma_remaining_bits(WMA3DecodeContext *s, GetBitContext* gb)
 {
     return s->buf_bit_size - get_bits_count(gb);
 }
@@ -1544,7 +1544,7 @@ static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len, int 
  *@param avpkt input packet
  *@return number of bytes that were read from the input buffer
  */
-static int wma3_decode_packet(AVCodecContext *avctx,
+static int wma_decode_packet(AVCodecContext *avctx,
                              void *data, int *data_size, AVPacket* avpkt)
 {
     GetBitContext gb;
@@ -1605,11 +1605,11 @@ static int wma3_decode_packet(AVCodecContext *avctx,
 
     s->packet_loss = 0;
     /** decode the rest of the packet */
-    while(!s->packet_loss && more_frames && remaining_bits(s,&gb) > s->log2_frame_size){
+    while(!s->packet_loss && more_frames && wma_remaining_bits(s,&gb) > s->log2_frame_size){
         int frame_size = show_bits(&gb, s->log2_frame_size);
 
         /** there is enough data for a full frame */
-        if(remaining_bits(s,&gb) >= frame_size){
+        if(wma_remaining_bits(s,&gb) >= frame_size){
             wma_save_bits(s, &gb, frame_size, 0);
 
             /** decode the frame */
@@ -1625,7 +1625,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
     if(!s->packet_loss){
         /** save the rest of the data so that it can be decoded
             with the next packet */
-        wma_save_bits(s, &gb, remaining_bits(s,&gb), 0);
+        wma_save_bits(s, &gb, wma_remaining_bits(s,&gb), 0);
     }
 
     *data_size = (int8_t *)s->samples - (int8_t *)data;
@@ -1637,7 +1637,7 @@ static int wma3_decode_packet(AVCodecContext *avctx,
  *@brief Clear decoder buffers (for seeking).
  *@param avctx codec context
  */
-static void wma3_flush(AVCodecContext *avctx)
+static void wma_flush(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
     int i;
@@ -1656,10 +1656,10 @@ AVCodec wmapro_decoder =
     CODEC_TYPE_AUDIO,
     CODEC_ID_WMAPRO,
     sizeof(WMA3DecodeContext),
-    wma3_decode_init,
+    wma_decode_init,
     NULL,
-    wma3_decode_end,
-    wma3_decode_packet,
-    .flush= wma3_flush,
+    wma_decode_end,
+    wma_decode_packet,
+    .flush= wma_flush,
     .long_name = NULL_IF_CONFIG_SMALL("Windows Media Audio 9 Professional"),
 };
