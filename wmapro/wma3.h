@@ -36,6 +36,7 @@
 #define MAX_SUBFRAMES  32                                    ///< max number of subframes per channel
 #define MAX_BANDS      29                                    ///< max number of scale factor bands
 #define MAX_FRAMESIZE  16384                                 ///< maximum compressed frame size
+#define MAX_FRAMEBITS  (MAX_FRAMESIZE << 3)                  ///< maximum frame size in bits
 
 /* size of block defines taken from wma.h */
 #define BLOCK_MIN_BITS  7                                    ///< log2 of min block size

@@ -28,8 +28,6 @@
 #include "avcodec.h"
 #include "get_bits.h"
 #include "wma3.h"
-#undef NDEBUG
-#include <assert.h>
 
 #define VLCBITS            9
 #define SCALEVLCBITS       8
@@ -1453,11 +1451,12 @@ static int wma_decode_frame(WMA3DecodeContext *s)
     else
         s->samples += s->num_channels * s->samples_per_frame;
 
-
-    // FIXME: remove
-    av_log(s->avctx,AV_LOG_DEBUG,"frame[%i] skipping %i bits\n",s->frame_num,len - (get_bits_count(gb) - s->frame_offset) - 1);
-    if(len != (get_bits_count(gb) - s->frame_offset) + 2)
-        assert(0);
+    if(len != (get_bits_count(gb) - s->frame_offset) + 2){
+        /* FIXME: not sure if this is always an error */
+        av_log(s->avctx,AV_LOG_ERROR,"frame[%i] would have to skip %i bits\n",s->frame_num,len - (get_bits_count(gb) - s->frame_offset) - 1);
+        s->packet_loss = 1;
+        return 0;
+    }
 
     /** skip the rest of the frame data */
     skip_bits_long(gb,len - (get_bits_count(gb) - s->frame_offset) - 1);
