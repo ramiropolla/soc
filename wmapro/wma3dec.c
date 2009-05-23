@@ -1492,8 +1492,10 @@ static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len, int 
     int bit_offset;
     int pos;
 
-    if(!append)
-        s->num_saved_bits = 0;
+    if(!append){
+        s->frame_offset = get_bits_count(gb) & 7;
+        s->num_saved_bits = s->frame_offset;
+    }
 
     buflen = (s->num_saved_bits + len + 8) >> 3;
 
@@ -1504,8 +1506,7 @@ static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len, int 
     }
 
     if(!append){
-        s->frame_offset = get_bits_count(gb) & 7;
-        s->num_saved_bits = s->frame_offset + len;
+        s->num_saved_bits += len;
         memcpy(s->frame_data, gb->buffer + (get_bits_count(gb) >> 3), (s->num_saved_bits  + 8)>> 3);
         skip_bits_long(gb, len);
     }else{
