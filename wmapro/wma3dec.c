@@ -894,15 +894,15 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
         if(s->channel[c].transmit_sf){
             int b;
 
-            if(!s->channel[c].reuse_sf){
+            if(!s->channel[c].reuse_sf){ //DPCM coded
                 int i;
+                int val;
                 s->channel[c].scale_factor_step = get_bits(&s->getbit,2) + 1;
-                for(i=0;i<s->num_bands;i++){
-                    int val = get_vlc2(&s->getbit, s->sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS)); // DPCM-coded
-                    if(!i)
-                        s->channel[c].scale_factors[i] = 45 / s->channel[c].scale_factor_step + val - 60;
-                    else
-                        s->channel[c].scale_factors[i]  = s->channel[c].scale_factors[i-1] + val - 60;
+                val = get_vlc2(&s->getbit, s->sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
+                s->channel[c].scale_factors[0] = 45 / s->channel[c].scale_factor_step + val - 60;
+                for(i=1;i<s->num_bands;i++){
+                    val = get_vlc2(&s->getbit, s->sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
+                    s->channel[c].scale_factors[i]  = s->channel[c].scale_factors[i-1] + val - 60;
                 }
             }else{     // rl-coded
                 int i;
