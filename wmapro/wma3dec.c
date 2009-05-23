@@ -912,22 +912,22 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                 for(i=0;i<s->num_bands;i++){
                     int idx;
                     short skip;
-                    short level_mask;
                     short val;
+                    short sign;
 
                     idx = get_vlc2(&s->getbit, s->sf_rl_vlc.table, VLCBITS, ((FF_WMA3_HUFF_SCALE_RL_MAXBITS+VLCBITS-1)/VLCBITS));
 
                     if( !idx ){
-                        uint32_t mask = get_bits(&s->getbit,14);
-                        level_mask = mask >> 6;
-                        val = (mask & 1) - 1;
-                        skip = (0x3f & mask)>>1;
+                        uint32_t code = get_bits(&s->getbit,14);
+                        val = code >> 6;
+                        sign = (code & 1) - 1;
+                        skip = (code & 0x3f)>>1;
                     }else if(idx == 1){
                         break;
                     }else{
                         skip = ff_wma3_scale_rl_run[idx];
-                        level_mask = ff_wma3_scale_rl_level[idx];
-                        val = get_bits(&s->getbit,1)-1;
+                        val = ff_wma3_scale_rl_level[idx];
+                        sign = get_bits(&s->getbit,1)-1;
                     }
 
                     i += skip;
@@ -935,7 +935,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                         av_log(s->avctx,AV_LOG_ERROR,"invalid scale factor coding\n");
                         return 0;
                     }else
-                        s->channel[c].scale_factors[i] += (val ^ level_mask) - val;
+                        s->channel[c].scale_factors[i] += (val ^ sign) - sign;
                 }
             }
 
