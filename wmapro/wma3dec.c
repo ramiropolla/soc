@@ -818,6 +818,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
     }
 
     if(rl_mode){
+        unsigned int coeff_mask = s->subframe_len - 1;
         while(cur_coeff < s->subframe_len){
             unsigned int idx;
             int sign;
@@ -844,8 +845,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
                 }
             }
             sign = get_bits(&s->getbit,1) - 1;
-            if(cur_coeff < s->subframe_len)
-                ci->coeffs[cur_coeff] = (val^sign) - sign;
+            ci->coeffs[cur_coeff & coeff_mask] = (val^sign) - sign;
             ++cur_coeff;
         }
     }
