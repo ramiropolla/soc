@@ -772,37 +772,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
 
     /* read coefficients (consumes up to 167 bits per iteration for
       4 vector coded large values) */
-    while(cur_coeff < s->subframe_len){
-        if(rl_mode){
-            unsigned int idx;
-            int sign;
-            int val;
-            idx = get_vlc2(&s->getbit, vlc->table, VLCBITS, vlcmax);
-
-            if( idx == 1)
-                return 1;
-            else if( !idx ){
-                val = wma_get_large_val(s);
-                /** escape decode */
-                if(get_bits(&s->getbit,1)){
-                    if(get_bits(&s->getbit,1)){
-                        if(get_bits(&s->getbit,1)){
-                            av_log(s->avctx,AV_LOG_ERROR,"broken escape sequence\n");
-                            return 0;
-                        }else
-                            cur_coeff += get_bits(&s->getbit,s->esc_len) + 4;
-                    }else
-                        cur_coeff += get_bits(&s->getbit,2) + 1;
-                }
-            }else{
-                cur_coeff += run[idx];
-                val = level[idx];
-            }
-            sign = get_bits(&s->getbit,1) - 1;
-            if(cur_coeff < s->subframe_len)
-                ci->coeffs[cur_coeff] = (val^sign) - sign;
-            ++cur_coeff;
-        }else if(cur_coeff + 3 < s->subframe_len){
+    while(!rl_mode && cur_coeff + 3 < s->subframe_len){
             int vals[4];
             int i = 0;
             unsigned int idx;
@@ -845,6 +815,38 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
                 }
                 ++cur_coeff;
             }
+    }
+
+    if(rl_mode){
+        while(cur_coeff < s->subframe_len){
+            unsigned int idx;
+            int sign;
+            int val;
+            idx = get_vlc2(&s->getbit, vlc->table, VLCBITS, vlcmax);
+
+            if( idx == 1)
+                break;
+            else if(!idx){
+                val = wma_get_large_val(s);
+                /** escape decode */
+                if(get_bits(&s->getbit,1)){
+                    if(get_bits(&s->getbit,1)){
+                        if(get_bits(&s->getbit,1)){
+                            av_log(s->avctx,AV_LOG_ERROR,"broken escape sequence\n");
+                            return 0;
+                        }else
+                            cur_coeff += get_bits(&s->getbit,s->esc_len) + 4;
+                    }else
+                        cur_coeff += get_bits(&s->getbit,2) + 1;
+                }
+            }else{
+                cur_coeff += run[idx];
+                val = level[idx];
+            }
+            sign = get_bits(&s->getbit,1) - 1;
+            if(cur_coeff < s->subframe_len)
+                ci->coeffs[cur_coeff] = (val^sign) - sign;
+            ++cur_coeff;
         }
     }
 
