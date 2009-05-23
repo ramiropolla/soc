@@ -824,9 +824,12 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
             int val;
             idx = get_vlc2(&s->getbit, vlc->table, VLCBITS, vlcmax);
 
-            if( idx == 1)
+            if( idx > 1){
+                cur_coeff += run[idx];
+                val = level[idx];
+            }else if( idx == 1)
                 break;
-            else if(!idx){
+            else{
                 val = wma_get_large_val(s);
                 /** escape decode */
                 if(get_bits(&s->getbit,1)){
@@ -839,9 +842,6 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
                     }else
                         cur_coeff += get_bits(&s->getbit,2) + 1;
                 }
-            }else{
-                cur_coeff += run[idx];
-                val = level[idx];
             }
             sign = get_bits(&s->getbit,1) - 1;
             if(cur_coeff < s->subframe_len)
