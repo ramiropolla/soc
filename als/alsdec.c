@@ -64,10 +64,10 @@ AVCodec als_decoder = {
     CODEC_TYPE_AUDIO,
     CODEC_ID_MP4ALS,
     sizeof(ALSDecContext),
-    als_decode_init,
+    decode_init,
     NULL,
-    als_decode_end,
-    als_decode_frame,
+    decode_end,
+    decode_frame,
     .long_name = NULL_IF_CONFIG_SMALL("MPEG-4 Audio Lossless Coding"),
 };
 
