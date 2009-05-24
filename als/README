@@ -1,0 +1,11 @@
+MPEG-4 ALS DECODER
+==================
+
+Author: Thilo Borgmann <thilo.borgmann@googlemail.com>
+Mentor: Justin Ruggles <justin.ruggles@gmail.com>
+
+This decoder is a project of the Google Summer of Code program 2009.
+
+Abstract: The MPEG-4 ALS codec exists quite a while. As FFmpeg lacks support for that, this project aims to include basic decoding functionality to the FFmpeg libraries.
+
+
