@@ -33,25 +33,28 @@ typedef struct {
 } ALSDecContext;
 
 
-/** Decode an ALS frame.
+/** Decodes an ALS frame.
  */
-static int als_decode_frame(AVCodecContext *avctx,
+static av_cold int decode_frame(AVCodecContext *avctx,
                             void *data, int *data_size,
-                            AVPacket *avpkt) {
+                            AVPacket *avpkt)
+{
     return 0;
 }
 
 
-/** Initialize the ALS decoder.
+/** Initializes the ALS decoder.
  */
-static int als_decode_init(AVCodecContext *avctx) {
+static av_cold int decode_init(AVCodecContext *avctx)
+{
     return 0;
 }
 
 
-/** Uninitialize the ALS decoder.
+/** Uninitializes the ALS decoder.
  */
-static int als_decode_end(AVCodecContext *avctx) {
+static av_cold int decode_end(AVCodecContext *avctx)
+{
     return 0;
 }
 
