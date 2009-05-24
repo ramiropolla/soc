@@ -755,6 +755,8 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
     int num_zeros = 0;
     const uint8_t* run;
     const uint8_t* level;
+    int zero_init = 0;
+    int rl_switchmask = (s->subframe_len>>8);
 
     av_log(s->avctx,AV_LOG_DEBUG,"decode coefficients for channel %i\n",c);
 
@@ -770,24 +772,31 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
         level = ff_wma3_coef0_level;
     }
 
+    /* for subframe_len 128 the first zero coefficient will switch to the run length mode */
+    if(s->subframe_len == 128){
+        zero_init = num_zeros = 1;
+        rl_switchmask = 1;
+    }
+
     /* read coefficients (consumes up to 167 bits per iteration for
       4 vector coded large values) */
     while(!rl_mode && cur_coeff + 3 < s->subframe_len){
         int vals[4];
-        int i = 0;
+        int i;
         unsigned int idx;
 
         /* read 4 values at once */
         idx = get_vlc2(&s->getbit, s->vec4_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
 
         if ( idx == FF_WMA3_HUFF_VEC4_SIZE - 1 ){
+            i = 0;
             while(i < 4){
                 idx = get_vlc2(&s->getbit, s->vec2_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC2_MAXBITS+VLCBITS-1)/VLCBITS));
                 if ( idx == FF_WMA3_HUFF_VEC2_SIZE - 1 ){
                     vals[i] = get_vlc2(&s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
                     if(vals[i] == FF_WMA3_HUFF_VEC1_SIZE - 1)
                         vals[i] += wma_get_large_val(s);
-                        vals[i+1] = get_vlc2(&s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
+                    vals[i+1] = get_vlc2(&s->getbit, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
                     if(vals[i+1] == FF_WMA3_HUFF_VEC1_SIZE - 1)
                         vals[i+1] += wma_get_large_val(s);
                 }else{
@@ -807,11 +816,10 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
             if(vals[i]){
                 int sign = get_bits(&s->getbit,1) - 1;
                 ci->coeffs[cur_coeff] = (vals[i]^sign) - sign;
-                num_zeros = 0;
+                num_zeros = zero_init;
             }else{
+                rl_mode |= (num_zeros & rl_switchmask);
                 ++num_zeros;
-                if ( num_zeros > s->subframe_len / 256 ) // switch to RL mode
-                    rl_mode = 1;
             }
             ++cur_coeff;
         }
