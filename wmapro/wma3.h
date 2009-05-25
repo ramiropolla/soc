@@ -132,7 +132,6 @@ typedef struct WMA3DecodeContext {
     uint8_t          bit5;                          ///< padding bit? (CBR files)
     uint8_t          bit6;                          ///< unknown
     uint8_t          packet_loss;                   ///< set in case of bitstream error
-    uint8_t          negative_quantstep;            ///< packet loss due to negative quant step
 
     /* frame decode state */
     unsigned int     frame_num;                     ///< current frame number
