@@ -869,6 +869,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
 static int wma_decode_scale_factors(WMA3DecodeContext* s)
 {
     int i;
+    const int idx0 = av_log2(s->samples_per_frame/s->subframe_len);
 
     /* should never consume more than 5344 bits
      *  MAX_CHANNELS * (1 +  MAX_BANDS * 23)
@@ -879,14 +880,13 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
 
         /** resample scale factors for the new block size */
         if(s->channel[c].reuse_sf){
+            const int idx1 = av_log2(s->samples_per_frame/s->channel[c].scale_factor_block_len);
+            const int* sf_offsets = &s->sf_offsets[s->num_possible_block_sizes * MAX_BANDS  * idx0
+                                                 + MAX_BANDS * idx1];
             int b;
-            for(b=0;b< s->num_bands;b++){
-                int idx0 = av_log2(s->samples_per_frame/s->subframe_len);
-                int idx1 = av_log2(s->samples_per_frame/s->channel[c].scale_factor_block_len);
-                int bidx = s->sf_offsets[s->num_possible_block_sizes * MAX_BANDS  * idx0
-                                                 + MAX_BANDS * idx1 + b];
-                s->channel[c].resampled_scale_factors[b] = s->channel[c].scale_factors[bidx];
-            }
+            for(b=0;b<s->num_bands;b++)
+                s->channel[c].resampled_scale_factors[b] = s->channel[c].scale_factors[*sf_offsets++];
+
             s->channel[c].max_scale_factor = s->channel[c].resampled_scale_factors[0];
             for(b=1;b<s->num_bands;b++){
                 if(s->channel[c].resampled_scale_factors[b] > s->channel[c].max_scale_factor)
