@@ -1063,8 +1063,11 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                         for(m = 0;m<s->chgroup[i].num_channels;m++)
                             sums[m] = 0;
 
-                        for(m = 0;m<s->chgroup[i].num_channels * s->chgroup[i].num_channels;m++)
-                            sums[m/s->chgroup[i].num_channels] += (matrix[m] * ch_data[m%s->chgroup[i].num_channels][0]);
+                        for(m = 0;m<s->chgroup[i].num_channels;m++){
+                            int k;
+                            for(k=0;k<s->chgroup[i].num_channels;k++)
+                                sums[m] += (matrix[m*s->chgroup[i].num_channels+k] * ch_data[k][0]);
+                        }
 
                         for(m = 0;m<s->chgroup[i].num_channels;m++){
                             ch_data[m][0] = sums[m];
