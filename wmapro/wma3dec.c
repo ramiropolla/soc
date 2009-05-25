@@ -592,7 +592,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
     }else{
         int remaining_channels = s->channels_for_cur_subframe;
 
-        if(get_bits(&s->getbit,1)){
+        if(get_bits1(&s->getbit)){
             av_log(s->avctx,AV_LOG_ERROR,"unsupported channel transform bit\n");
             return 0;
         }
@@ -610,7 +610,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                 for(i=0;i<s->channels_for_cur_subframe;i++){
                     int channel_idx = s->channel_indexes_for_cur_subframe[i];
                     if(!s->channel[channel_idx].grouped
-                       && get_bits(&s->getbit,1)){
+                       && get_bits1(&s->getbit)){
                         ++chgroup->num_channels;
                         s->channel[channel_idx].grouped = 1;
                         chgroup->use_channel[channel_idx] = 1;
@@ -635,8 +635,8 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                 chgroup->decorrelation_matrix[0] = 1.0;
 
             }else if(chgroup->num_channels == 2){
-                if(get_bits(&s->getbit,1)){
-                    if(!get_bits(&s->getbit,1)){
+                if(get_bits1(&s->getbit)){
+                    if(!get_bits1(&s->getbit)){
                         chgroup->no_rotation = 1;
                         chgroup->transform = 2;
                         chgroup->decorrelation_matrix[0] = 1.0;
@@ -653,8 +653,8 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                     chgroup->decorrelation_matrix[3] = 0.70703125;
                 }
             }else{
-                if(get_bits(&s->getbit,1)){
-                    if(get_bits(&s->getbit,1)){
+                if(get_bits1(&s->getbit)){
+                    if(get_bits1(&s->getbit)){
                         chgroup->no_rotation = 0;
                         chgroup->transform = 0;
                     }else{
@@ -687,7 +687,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                     chgroup->rotation_offset[i] = get_bits(&s->getbit,6);
                 }
                 for(i=0;i<chgroup->num_channels;i++)
-                    chgroup->positive[i] = get_bits(&s->getbit,1);
+                    chgroup->positive[i] = get_bits1(&s->getbit);
             }
 
             /* decode transform on / off */
@@ -697,11 +697,11 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                 for(i=0;i<s->num_bands;i++)
                     chgroup->transform_band[i] = 1;
             }else{
-                if(get_bits(&s->getbit,1) == 0){
+                if(get_bits1(&s->getbit) == 0){
                     int i;
                     // transform works on individual scale factor bands
                     for(i=0;i< s->num_bands;i++){
-                        chgroup->transform_band[i] = get_bits(&s->getbit,1);
+                        chgroup->transform_band[i] = get_bits1(&s->getbit);
                     }
                 }else{
                     int i;
@@ -726,11 +726,11 @@ static unsigned int wma_get_large_val(WMA3DecodeContext* s)
     /* consumes up to 34 bits */
     int n_bits = 8;
     /** decode length */
-    if(get_bits(&s->getbit,1)){
+    if(get_bits1(&s->getbit)){
         n_bits += 8;
-        if(get_bits(&s->getbit,1)){
+        if(get_bits1(&s->getbit)){
             n_bits += 8;
-            if(get_bits(&s->getbit,1)){
+            if(get_bits1(&s->getbit)){
                 n_bits += 7;
             }
         }
@@ -760,7 +760,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
 
     av_log(s->avctx,AV_LOG_DEBUG,"decode coefficients for channel %i\n",c);
 
-    vlctable = get_bits(&s->getbit, 1);
+    vlctable = get_bits1(&s->getbit);
     vlc = &s->coef_vlc[vlctable];
     vlcmax = s->coef_max[vlctable];
 
@@ -814,7 +814,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
 
         for(i=0;i<4;i++){
             if(vals[i]){
-                int sign = get_bits(&s->getbit,1) - 1;
+                int sign = get_bits1(&s->getbit) - 1;
                 ci->coeffs[cur_coeff] = (vals[i]^sign) - sign;
                 num_zeros = zero_init;
             }else{
@@ -841,9 +841,9 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
             else{
                 val = wma_get_large_val(s);
                 /** escape decode */
-                if(get_bits(&s->getbit,1)){
-                    if(get_bits(&s->getbit,1)){
-                        if(get_bits(&s->getbit,1)){
+                if(get_bits1(&s->getbit)){
+                    if(get_bits1(&s->getbit)){
+                        if(get_bits1(&s->getbit)){
                             av_log(s->avctx,AV_LOG_ERROR,"broken escape sequence\n");
                             return 0;
                         }else
@@ -852,7 +852,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
                         cur_coeff += get_bits(&s->getbit,2) + 1;
                 }
             }
-            sign = get_bits(&s->getbit,1) - 1;
+            sign = get_bits1(&s->getbit) - 1;
             ci->coeffs[cur_coeff & coeff_mask] = (val^sign) - sign;
             ++cur_coeff;
         }
@@ -895,7 +895,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
         }
 
         if(s->channel[c].cur_subframe > 0){
-            s->channel[c].transmit_sf = get_bits(&s->getbit,1);
+            s->channel[c].transmit_sf = get_bits1(&s->getbit);
         }else
             s->channel[c].transmit_sf = 1;
 
@@ -935,7 +935,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                     }else{
                         skip = ff_wma3_scale_rl_run[idx];
                         val = ff_wma3_scale_rl_level[idx];
-                        sign = get_bits(&s->getbit,1)-1;
+                        sign = get_bits1(&s->getbit)-1;
                     }
 
                     i += skip;
@@ -1198,7 +1198,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     s->esc_len = av_log2(s->subframe_len - 1) + 1;
 
     /** skip extended header if any */
-    if(get_bits(&s->getbit,1)){
+    if(get_bits1(&s->getbit)){
         int num_fill_bits;
         if(!(num_fill_bits = get_bits(&s->getbit,2))){
             num_fill_bits = get_bits(&s->getbit,4);
@@ -1216,7 +1216,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     }
 
     /** no idea for what the following bit is used */
-    if(get_bits(&s->getbit,1)){
+    if(get_bits1(&s->getbit)){
         av_log(s->avctx,AV_LOG_ERROR,"reserved bit set\n");
         return 0;
     }
@@ -1228,7 +1228,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
 
     for(i=0;i<s->channels_for_cur_subframe;i++){
         int c = s->channel_indexes_for_cur_subframe[i];
-        if((s->channel[c].transmit_coefs = get_bits(&s->getbit,1)))
+        if((s->channel[c].transmit_coefs = get_bits1(&s->getbit)))
             transmit_coeffs = 1;
     }
 
@@ -1238,7 +1238,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         int quant;
         int sign = 1;
         int large_quant = 0;
-        if((get_bits(&s->getbit,1))){ /** FIXME: might influence how often getvec4 may be called */
+        if((get_bits1(&s->getbit))){ /** FIXME: might influence how often getvec4 may be called */
             av_log(s->avctx,AV_LOG_ERROR,"unsupported quant step coding\n");
             return 0;
         }
@@ -1272,7 +1272,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             for(i=0;i<s->channels_for_cur_subframe;i++){
                 int c = s->channel_indexes_for_cur_subframe[i];
                 s->channel[c].quant_step_modifier = 0;
-                if(get_bits(&s->getbit,1)){
+                if(get_bits1(&s->getbit)){
                     if(modifier_len)
                         s->channel[c].quant_step_modifier = get_bits(&s->getbit,modifier_len) + 1;
                     else
@@ -1402,7 +1402,7 @@ static int wma_decode_frame(WMA3DecodeContext *s)
 
     /** no idea what these are for, might be the number of samples
         that need to be skipped at the beginning or end of a stream */
-    if(get_bits(gb,1)){
+    if(get_bits1(gb)){
         int skip;
 
         /** usually true for the first frame */
@@ -1412,7 +1412,7 @@ static int wma_decode_frame(WMA3DecodeContext *s)
         }
 
         /** sometimes true for the last frame */
-        if(get_bits(gb,1)){
+        if(get_bits1(gb)){
             skip = get_bits(gb,av_log2(s->samples_per_frame * 2));
             av_log(s->avctx,AV_LOG_DEBUG,"end skip: %i\n",skip);
         }
