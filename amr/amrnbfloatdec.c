@@ -914,10 +914,12 @@ static void update_state(AMRContext *p)
 
 
 static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
-                              const uint8_t *buf, int buf_size)
+                              AVPacket *avpkt)
 {
 
     AMRContext *p = avctx->priv_data;        // pointer to private data
+    const uint8_t *buf = avpkt->data;
+    int buf_size       = avpkt->size;
     float *buf_out = data;                   // pointer to the output data buffer
     int i, subframe;                         // counters
     enum Mode speech_mode = MODE_475;        // ???
