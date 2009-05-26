@@ -600,56 +600,55 @@ static int64_t mpegps_read_dts(AVFormatContext *s, int stream_index,
 static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
                             int64_t min_ts, int64_t ts, int64_t max_ts, int flags)
 {
-    AVStream *st = s->streams[stream_index];
-    int ret, index;
-    AVPacket pkt1, *pkt = &pkt1;
-    AVIndexEntry *ie = st->index_entries;
-    int64_t pos, pts, left_keyframe_ts, left_keyframe_pos;
+    AVStream *st;
+    int index;
+    int64_t pos, ret_ts, av_uninit(pos_min), av_uninit(pos_max), pos_limit;
 
-    if (ts <min_ts || ts >max_ts) {
-        av_log(s, AV_LOG_ERROR, "Wrong range set for target timestamp!\n");
-        return -1;
+    if (stream_index < 0){
+        stream_index= av_find_default_stream_index(s);
+        if(stream_index < 0)
+            return -1;
     }
-    if (ts < 0 || ts >= s->duration) {
-        av_log(s, AV_LOG_ERROR, "Timestamp is out of bounds! timestamp=0x%"PRIx64" duration=0x%"PRIx64"\n", ts, s->duration);
-        return -1;
-    }
+    st = s->streams[stream_index];
+    ts = av_rescale(ts, st->time_base.den, AV_TIME_BASE * (int64_t)st->time_base.num);
+
     if (st->discard >= AVDISCARD_ALL) {
         av_log(s, AV_LOG_ERROR, "Not active stream!\n");
         return -1;
     }
 
-    index = av_index_search_timestamp(st, ts, flags);
-    if (index > 0) {
-        if (ie[index].timestamp >= min_ts && ie[index].timestamp <= max_ts){
-            url_fseek(s->pb, ie[index].pos, SEEK_SET);
-            return 0;
-        }
-    }
-
-    pos = url_ftell(s->pb);
-    for(;;){
-        ret = av_read_frame(s, pkt);
-        if (ret < 0) {
-            url_fseek(s->pb, pos, SEEK_SET);
-            return -1;
-        }
-
-        pts = pkt->pts;
-        av_free_packet(pkt);
-
-        if (pkt->flags&PKT_FLAG_KEY) {
-            if (pts < ts) {
-                left_keyframe_ts = pts;
-                left_keyframe_pos = pkt->pos;
+    if (st->nb_index_entries) {
+        index = av_index_search_timestamp(st, ts, flags);
+        if (index > 0) {
+            if (st->index_entries[index].timestamp >= min_ts && st->index_entries[index].timestamp <= max_ts){
+                url_fseek(s->pb, st->index_entries[index].pos, SEEK_SET);
+                return 0;
             }
-            else
-                break;
         }
+
+        index = av_index_search_timestamp(st, min_ts, 0);
+        if (index > 0) {
+            pos_min = st->index_entries[index].pos;
+            min_ts = st->index_entries[index].timestamp;
+        }
+
+        index = av_index_search_timestamp(st, max_ts, AVSEEK_FLAG_BACKWARD);
+        if (index > 0) {
+            pos_max = st->index_entries[index].pos;
+            max_ts = st->index_entries[index].timestamp;
+            pos_limit = pos_max - st->index_entries[index].min_distance;
+        }
+    }else
+    {
+        min_ts =
+        max_ts = AV_NOPTS_VALUE;
     }
-    // check left_keyframe_ts and pts with ts_min and ts_max
-    if (ts >= min_ts && ts <= max_ts && ts- left_keyframe_ts < pts - ts)
-        url_fseek(s->pb, left_keyframe_pos, SEEK_SET);
+    pos= av_gen_search(s, stream_index, ts, pos_min, pos_max, pos_limit,
+                                        min_ts, max_ts, flags, &ret_ts, mpegps_read_dts);
+
+    // check return result
+    if (ret_ts >= min_ts && ret_ts <= max_ts)
+        url_fseek(s->pb, pos, SEEK_SET);
     return 0;
 }
 
