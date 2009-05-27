@@ -575,7 +575,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
      */
 
     for(i=0;i< s->num_channels;i++){
-        memset(s->chgroup[i].decorrelation_matrix,0,4*s->num_channels * s->num_channels);
+        memset(s->chgroup[i].decorrelation_matrix,0,sizeof(float) *s->num_channels * s->num_channels);
     }
 
     if(s->num_channels == 1 ){
@@ -585,7 +585,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
         s->chgroup[0].transform = 2;
         s->channel[0].resampled_scale_factors[0] = 0;
         memset(s->chgroup[0].transform_band,0,MAX_BANDS);
-        memset(s->chgroup[0].decorrelation_matrix,0,4*s->num_channels * s->num_channels);
+        memset(s->chgroup[0].decorrelation_matrix,0,sizeof(float) *s->num_channels * s->num_channels);
 
         s->chgroup[0].decorrelation_matrix[0] = 1.0;
 
@@ -968,7 +968,7 @@ static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, WMA3ChannelGroup
 {
     int i;
     int offset = 0;
-    memset(chgroup->decorrelation_matrix, 0, chgroup->num_channels * 4 * chgroup->num_channels);
+    memset(chgroup->decorrelation_matrix, 0, chgroup->num_channels * sizeof(float) * chgroup->num_channels);
     for(i=0;i<chgroup->num_channels;i++)
         chgroup->decorrelation_matrix[chgroup->num_channels * i + i] = chgroup->positive[i]?1.0:-1.0;
 
@@ -980,8 +980,8 @@ static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, WMA3ChannelGroup
                 int y;
                 float tmp1[MAX_CHANNELS];
                 float tmp2[MAX_CHANNELS];
-                memcpy(tmp1, &chgroup->decorrelation_matrix[x * chgroup->num_channels], 4 * (i + 1));
-                memcpy(tmp2, &chgroup->decorrelation_matrix[i * chgroup->num_channels], 4 * (i + 1));
+                memcpy(tmp1, &chgroup->decorrelation_matrix[x * chgroup->num_channels], sizeof(float) * (i + 1));
+                memcpy(tmp2, &chgroup->decorrelation_matrix[i * chgroup->num_channels], sizeof(float) * (i + 1));
                 for(y=0;y < i + 1 ; y++){
                     float v1 = tmp1[y];
                     float v2 = tmp2[y];
@@ -1306,7 +1306,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             int b;
             float* dst;
             if(c == s->lfe_channel)
-                memset(&s->tmp[s->cur_subwoofer_cutoff],0,4 * (subframe_len - s->cur_subwoofer_cutoff));
+                memset(&s->tmp[s->cur_subwoofer_cutoff],0,sizeof(float) * (subframe_len - s->cur_subwoofer_cutoff));
 
             /** inverse quantization */
             for(b=0;b<s->num_bands;b++){
