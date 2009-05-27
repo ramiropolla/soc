@@ -38,8 +38,8 @@
  */
 static void wma_dump_context(WMA3DecodeContext *s)
 {
-#define PRINT(a,b) av_log(s->avctx,AV_LOG_ERROR," %s = %d\n", a, b);
-#define PRINT_HEX(a,b) av_log(s->avctx,AV_LOG_ERROR," %s = %x\n", a, b);
+#define PRINT(a,b) av_log(s->avctx,AV_LOG_DEBUG," %s = %d\n", a, b);
+#define PRINT_HEX(a,b) av_log(s->avctx,AV_LOG_DEBUG," %s = %x\n", a, b);
 
     PRINT("ed sample bit depth",s->sample_bit_depth);
     PRINT_HEX("ed decode flags",s->decode_flags);
@@ -150,8 +150,8 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
 
         /** dump the extradata */
         for (i=0 ; i<avctx->extradata_size ; i++)
-            av_log(avctx, AV_LOG_ERROR, "[%x] ",avctx->extradata[i]);
-        av_log(avctx, AV_LOG_ERROR, "\n");
+            av_log(avctx, AV_LOG_DEBUG, "[%x] ",avctx->extradata[i]);
+        av_log(avctx, AV_LOG_DEBUG, "\n");
 
     } else {
         av_log(avctx, AV_LOG_ERROR, "Unknown extradata size %d.\n",
