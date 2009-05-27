@@ -135,7 +135,7 @@ typedef struct WMA3DecodeContext {
 
     /* frame decode state */
     unsigned int     frame_num;                     ///< current frame number
-    GetBitContext    getbit;                        ///< bitstream reader context
+    GetBitContext    gb;                            ///< bitstream reader context
     int              buf_bit_size;                  ///< buffer size in bits
     int16_t*         samples;                       ///< current samplebuffer pointer
     int16_t*         samples_end;                   ///< maximum samplebuffer pointer
