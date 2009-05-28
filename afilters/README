@@ -1,0 +1,7 @@
+Alright, here's how to get libavfilter up and compiling.
+
+If you've found this README, you've also found checkout.sh.
+* Running that script will check out a fresh ffmpeg from svn, and hardlink the .c and .h files you see here to the ffmpeg/libavfilter/ directory.
+* You can run configure and make as normal, but you'll have to descend to ffmpeg/libavfilter and run make to get libavfilter.a
+
+See the TODO for what works and doesnt work at this point :)

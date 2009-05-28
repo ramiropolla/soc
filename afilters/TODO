@@ -1,0 +1,13 @@
+
+At current, I still need to
+
+Phase 1:
+* Finalize Audio API
+* Keep the filters fast
+* Create method for converting between different PCM formats, and linking the chain together correctly
+
+Phase 2:
+* Write a few filters for the API
+* Integrate libavfilter into the ffmpeg executable
+* Document
+
