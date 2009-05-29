@@ -483,6 +483,8 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
     const int run_esc = (1 << run_bits) - 1;
     int idx, ppos, count;
     int stackrun[120], stackcb[120], stack_len;
+    float next_minrd = INFINITY;
+    int next_mincb = 0;
 
     start = win*128;
     for(cb = 0; cb < 12; cb++){
@@ -500,8 +502,10 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
                 path[swb+1][cb].run = path[swb][cb].run + 1;
             }
         }else{
-            float minrd = INFINITY;
-            int mincb = 0;
+            float minrd = next_minrd;
+            int mincb = next_mincb;
+            next_minrd = INFINITY;
+            next_mincb = 0;
             for(cb = 0; cb < 12; cb++){
                 float rd = 0.0f;
                 for(w = 0; w < group_len; w++){
@@ -510,23 +514,23 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
                                              sce->sf_idx[(win+w)*16+swb], cb,
                                              lambda / band->threshold, INFINITY, NULL);
                 }
+                float cost_stay_here = path[swb][cb].cost + rd;
+                float cost_get_here  = minrd              + rd + run_bits + 4;
                 if(   run_value_bits[sce->ics.num_windows == 8][path[swb][cb].run]
                    != run_value_bits[sce->ics.num_windows == 8][path[swb][cb].run+1])
-                    rd += run_bits;
-                path[swb+1][cb].prev_idx = cb;
-                path[swb+1][cb].cost = path[swb][cb].cost + rd;
-                path[swb+1][cb].run = path[swb][cb].run + 1;
-                if(rd < minrd){
-                    minrd = rd;
-                    mincb = cb;
-                }
-            }
-            for(cb = 0; cb < 12; cb++){
-                float cost = path[swb][cb].cost + minrd + run_bits + 4;
-                if(cost < path[swb+1][cb].cost){
+                    cost_stay_here += run_bits;
+                if (cost_get_here < cost_stay_here) {
                     path[swb+1][cb].prev_idx = mincb;
-                    path[swb+1][cb].cost = cost;
-                    path[swb+1][cb].run = 1;
+                    path[swb+1][cb].cost     = cost_get_here;
+                    path[swb+1][cb].run      = 1;
+                } else {
+                    path[swb+1][cb].prev_idx = cb;
+                    path[swb+1][cb].cost     = cost_stay_here;
+                    path[swb+1][cb].run      = path[swb][cb].run + 1;
+                }
+                if (path[swb+1][cb].cost < next_minrd) {
+                    next_minrd = path[swb+1][cb].cost;
+                    next_mincb = cb;
                 }
             }
         }
@@ -545,7 +549,7 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
         cb = idx;
         stackrun[stack_len] = path[ppos][cb].run;
         stackcb [stack_len] = cb;
-        idx = path[ppos][cb].prev_idx;
+        idx = path[ppos-path[ppos][cb].run+1][cb].prev_idx;
         ppos -= path[ppos][cb].run;
         stack_len++;
     }
