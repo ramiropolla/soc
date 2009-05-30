@@ -432,6 +432,10 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
         }
     }
 
+    /** calculate sine values for the decorrelation matrix */
+    for(i=0;i<33;i++)
+        s->sin64[i] = sin(i*M_PI / 64.0);
+
     wma_dump_context(s);
     avctx->channel_layout = channel_mask;
     return 0;
@@ -644,11 +648,19 @@ static void wma_decode_decorrelation_matrix(WMA3DecodeContext* s, WMA3ChannelGro
                 float v1 = tmp1[y];
                 float v2 = tmp2[y];
                 int n = rotation_offset[offset + x];
-                float cosv = sin(n*M_PI / 64.0);                // FIXME: use one table for this
-                float sinv = -cos(n*M_PI / 64.0);
+                float sinv;
+                float cosv;
 
-                chgroup->decorrelation_matrix[y + x * chgroup->num_channels] = (v1 * cosv) + (v2 * sinv);
-                chgroup->decorrelation_matrix[y + i * chgroup->num_channels] = (v1 * -sinv) + (v2 * cosv);
+                if(n<32){
+                    sinv = s->sin64[n];
+                    cosv = s->sin64[32-n];
+                }else{
+                    sinv = s->sin64[64-n];
+                    cosv = -s->sin64[n-32];
+                }
+
+                chgroup->decorrelation_matrix[y + x * chgroup->num_channels] = (v1 * sinv) - (v2 * cosv);
+                chgroup->decorrelation_matrix[y + i * chgroup->num_channels] = (v1 * cosv) + (v2 * sinv);
             }
         }
         offset += i;
