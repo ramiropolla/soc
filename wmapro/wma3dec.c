@@ -1303,11 +1303,6 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             /** apply imdct (ff_imdct_half == DCTIV with reverse) */
             ff_imdct_half(&s->mdct_ctx[av_log2(subframe_len)-BLOCK_MIN_BITS], s->channel[c].coeffs, s->tmp);
         }
-    }else{
-        for(i=0;i<s->channels_for_cur_subframe;i++){
-            int c = s->channel_indexes_for_cur_subframe[i];
-            memset(s->channel[c].coeffs,0,subframe_len * sizeof(float));
-        }
     }
 
     /** window and overlapp-add */
