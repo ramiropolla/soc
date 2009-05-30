@@ -583,6 +583,7 @@ static void wma_decode_decorrelation_matrix(WMA3DecodeContext* s, WMA3ChannelGro
     int i;
     int offset = 0;
     char rotation_offset[MAX_CHANNELS * MAX_CHANNELS];
+    memset(chgroup->decorrelation_matrix,0,sizeof(float) *s->num_channels * s->num_channels);
 
     for(i=0;i<chgroup->num_channels  * (chgroup->num_channels - 1) >> 1;i++)
         rotation_offset[i] = get_bits(&s->gb,6);
@@ -636,10 +637,6 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
     /* should never consume more than 1921 bits for the 8 channel case
      * 1 + MAX_CHANNELS * ( MAX_CHANNELS + 2 + 3 * MAX_CHANNELS * MAX_CHANNELS + MAX_CHANNELS + MAX_BANDS + 1)
      */
-
-    for(i=0;i< s->num_channels;i++){
-        memset(s->chgroup[i].decorrelation_matrix,0,sizeof(float) *s->num_channels * s->num_channels);
-    }
 
     /** in the one channel case channel transforms are pointless */
     s->num_chgroups = 0;
