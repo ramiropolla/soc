@@ -741,10 +741,15 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                     chgroup->transform = 2;
                     if(get_bits1(&s->gb))
                         wma_decode_decorrelation_matrix(s, chgroup);
-                    else
-                        memcpy(chgroup->decorrelation_matrix,
-                               s->def_decorrelation_mat[chgroup->num_channels],
-                               chgroup->num_channels * chgroup->num_channels * sizeof(float));
+                    else{
+                        int x;
+                        for(x = 0; x < chgroup->num_channels ; x++){
+                            int y;
+                            for(y=0;y< chgroup->num_channels ;y++){
+                                chgroup->decorrelation_matrix[y + x * chgroup->num_channels] = s->def_decorrelation_mat[chgroup->num_channels][x][y];
+                            }
+                        }
+                    }
                 }
             }
 
