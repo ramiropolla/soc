@@ -611,7 +611,38 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
     return 0;
 }
 
-static void wma_calc_decorrelation_matrix(WMA3ChannelGroup* chgroup);
+/**
+ *@brief Calculate a decorrelation matrix from the bitstream parameters.
+ *@param chgroup channel group for which the matrix needs to be calculated
+ */
+static void wma_calc_decorrelation_matrix(WMA3ChannelGroup* chgroup)
+{
+    int i;
+    int offset = 0;
+
+    for(i=1;i<chgroup->num_channels;i++){
+        int x;
+        for(x=0;x<i;x++){
+            int y;
+            float tmp1[MAX_CHANNELS];
+            float tmp2[MAX_CHANNELS];
+            memcpy(tmp1, &chgroup->decorrelation_matrix[x * chgroup->num_channels], sizeof(float) * (i + 1));
+            memcpy(tmp2, &chgroup->decorrelation_matrix[i * chgroup->num_channels], sizeof(float) * (i + 1));
+            for(y=0;y < i + 1 ; y++){
+                float v1 = tmp1[y];
+                float v2 = tmp2[y];
+                int n = chgroup->rotation_offset[offset + x];
+                float cosv = sin(n*M_PI / 64.0);                // FIXME: use one table for this
+                float sinv = -cos(n*M_PI / 64.0);
+
+                chgroup->decorrelation_matrix[y + x * chgroup->num_channels] = (v1 * cosv) + (v2 * sinv);
+                chgroup->decorrelation_matrix[y + i * chgroup->num_channels] = (v1 * -sinv) + (v2 * cosv);
+            }
+        }
+        offset += i;
+    }
+}
+
 /**
  *@brief Decode channel transformation parameters
  *@param s codec context
@@ -1005,38 +1036,6 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
         }
     }
     return 1;
-}
-
-/**
- *@brief Calculate a decorrelation matrix from the bitstream parameters.
- *@param chgroup channel group for which the matrix needs to be calculated
- */
-static void wma_calc_decorrelation_matrix(WMA3ChannelGroup* chgroup)
-{
-    int i;
-    int offset = 0;
-
-    for(i=1;i<chgroup->num_channels;i++){
-        int x;
-        for(x=0;x<i;x++){
-            int y;
-            float tmp1[MAX_CHANNELS];
-            float tmp2[MAX_CHANNELS];
-            memcpy(tmp1, &chgroup->decorrelation_matrix[x * chgroup->num_channels], sizeof(float) * (i + 1));
-            memcpy(tmp2, &chgroup->decorrelation_matrix[i * chgroup->num_channels], sizeof(float) * (i + 1));
-            for(y=0;y < i + 1 ; y++){
-                float v1 = tmp1[y];
-                float v2 = tmp2[y];
-                int n = chgroup->rotation_offset[offset + x];
-                float cosv = sin(n*M_PI / 64.0);                // FIXME: use one table for this
-                float sinv = -cos(n*M_PI / 64.0);
-
-                chgroup->decorrelation_matrix[y + x * chgroup->num_channels] = (v1 * cosv) + (v2 * sinv);
-                chgroup->decorrelation_matrix[y + i * chgroup->num_channels] = (v1 * -sinv) + (v2 * cosv);
-            }
-        }
-        offset += i;
-    }
 }
 
 /**
