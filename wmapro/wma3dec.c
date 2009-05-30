@@ -1151,7 +1151,7 @@ static void wma_window(WMA3DecodeContext *s)
         int prev_block_len = s->channel[c].prev_block_len;
         int block_len = s->channel[c].subframe_len[j];
         int winlen = prev_block_len;
-        start = &s->channel[c].out[(s->samples_per_frame>>1) + s->channel[c].subframe_offset[j] - (prev_block_len >> 1)];
+        start = s->channel[c].coeffs - (prev_block_len >> 1);
 
         if(block_len <= prev_block_len){
             start += (prev_block_len - block_len)>>1;
@@ -1358,7 +1358,6 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         for(i=0;i<s->channels_for_cur_subframe;i++){
             int c = s->channel_indexes_for_cur_subframe[i];
             int b;
-            float* dst;
             if(c == s->lfe_channel)
                 memset(&s->tmp[s->cur_subwoofer_cutoff],0,sizeof(float) * (subframe_len - s->cur_subwoofer_cutoff));
 
@@ -1382,16 +1381,13 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
                 }
             }
 
-            dst = &s->channel[c].out[(s->samples_per_frame>>1)  + s->channel[c].subframe_offset[s->channel[c].cur_subframe]];
             /** apply imdct (ff_imdct_half == DCTIV with reverse) */
-            ff_imdct_half(&s->mdct_ctx[av_log2(subframe_len)-BLOCK_MIN_BITS], dst, s->tmp);
+            ff_imdct_half(&s->mdct_ctx[av_log2(subframe_len)-BLOCK_MIN_BITS], s->channel[c].coeffs, s->tmp);
         }
     }else{
         for(i=0;i<s->channels_for_cur_subframe;i++){
             int c = s->channel_indexes_for_cur_subframe[i];
-            float* dst;
-            dst = &s->channel[c].out[(s->samples_per_frame>>1)  + s->channel[c].subframe_offset[s->channel[c].cur_subframe]];
-            memset(dst,0,subframe_len * sizeof(float));
+            memset(s->channel[c].coeffs,0,subframe_len * sizeof(float));
         }
     }
 
