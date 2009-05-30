@@ -75,8 +75,7 @@ typedef struct {
  */
 typedef struct {
     int   num_channels;
-    int   no_rotation;                                     ///< controls the type of the transform
-    int   transform;                                       ///< also controls the type of the transform
+    int   transform;                                       ///< controls the type of the transform
     char  transform_band[MAX_BANDS];                       ///< controls if the transform is enabled for a certain band
     char  rotation_offset[MAX_CHANNELS * MAX_CHANNELS];
     float decorrelation_matrix[MAX_CHANNELS*MAX_CHANNELS];

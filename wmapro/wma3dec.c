@@ -671,8 +671,9 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
 
         for(s->num_chgroups = 0; remaining_channels && s->num_chgroups < s->channels_for_cur_subframe;s->num_chgroups++){
             WMA3ChannelGroup* chgroup = &s->chgroup[s->num_chgroups];
+            int all_bands = 0;
+            int calc_matrix = 0;
             chgroup->num_channels = 0;
-            chgroup->no_rotation = 0;
             chgroup->transform = 0;
 
             /** decode channel mask */
@@ -697,57 +698,36 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
             }
 
             /** decode transform type */
-            if(chgroup->num_channels == 1){
-                chgroup->no_rotation = 1;
-                chgroup->transform = 2;
-                chgroup->decorrelation_matrix[0] = 1.0;
-
-            }else if(chgroup->num_channels == 2){
+            if(chgroup->num_channels == 2){
                 if(get_bits1(&s->gb)){
                     if(!get_bits1(&s->gb)){
-                        chgroup->no_rotation = 1;
-                        chgroup->transform = 2;
-                        chgroup->decorrelation_matrix[0] = 1.0;
-                        chgroup->decorrelation_matrix[1] = 0;
-                        chgroup->decorrelation_matrix[2] = 0;
-                        chgroup->decorrelation_matrix[3] = 1.0;
+                        all_bands = 1;
                     }
                 }else{
-                    chgroup->no_rotation = 1;
                     chgroup->transform = 1;
                     chgroup->decorrelation_matrix[0] = 0.70703125;  /** cos(pi/4) */
                     chgroup->decorrelation_matrix[1] = -0.70703125;
                     chgroup->decorrelation_matrix[2] = 0.70703125;
                     chgroup->decorrelation_matrix[3] = 0.70703125;
                 }
-            }else{
+            }else if(chgroup->num_channels > 2){
                 if(get_bits1(&s->gb)){
                     if(get_bits1(&s->gb)){
-                        chgroup->no_rotation = 0;
-                        chgroup->transform = 0;
+                        chgroup->transform = 2;
+                        calc_matrix = 1;
                     }else{
-                        int x;
-                        chgroup->no_rotation = 1;
-                        chgroup->transform = 3;
-                        for(x = 0; x < chgroup->num_channels ; x++){
-                            int y;
-                            for(y=0;y< chgroup->num_channels ;y++){
-                                chgroup->decorrelation_matrix[y + x * chgroup->num_channels] = s->def_decorrelation_mat[chgroup->num_channels][x][y];
-                        }
-                        }
+                        chgroup->transform = 2;
+                        memcpy(chgroup->decorrelation_matrix,
+                               s->def_decorrelation_mat[chgroup->num_channels],
+                               chgroup->num_channels * chgroup->num_channels * sizeof(float));
                     }
                 }else{
-                    int i;
-                    chgroup->no_rotation = 1;
-                    chgroup->transform = 2;
-                    for(i=0;i<chgroup->num_channels;i++){
-                        chgroup->decorrelation_matrix[i+i*chgroup->num_channels] = 1.0;
-                    }
+                    all_bands = 1;
                 }
             }
 
             /** decode additional transform parameters */
-            if(!chgroup->no_rotation){
+            if(calc_matrix){
                 int n_offset = chgroup->num_channels  * (chgroup->num_channels - 1) >> 1;
                 int i;
                 for(i=0;i<n_offset;i++){
@@ -759,7 +739,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
             }
 
             /** decode transform on / off */
-            if(chgroup->num_channels <= 1 ||  ((chgroup->no_rotation != 1 || chgroup->transform == 2) && chgroup->no_rotation)){
+            if(chgroup->num_channels <= 1 || all_bands){
                 memset(chgroup->transform_band,1,s->num_bands);
             }else{
                 /** transform can be enabled for individual bands */
@@ -1038,14 +1018,10 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
 
     for(i=0;i<s->num_chgroups;i++){
 
-        if(s->chgroup[i].num_channels == 1)
-            continue;
-
-        if(s->chgroup[i].no_rotation == 1 && s->chgroup[i].transform == 2)
+        if(!s->chgroup[i].transform)
             continue;
 
         if((s->num_channels == 2) &&
-            (s->chgroup[i].no_rotation == 1) &&
             (s->chgroup[i].transform == 1)){
             int b;
             /** M/S stereo decoding */
