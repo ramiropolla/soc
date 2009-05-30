@@ -1145,24 +1145,23 @@ static void wma_window(WMA3DecodeContext *s)
     int i;
     for(i=0;i<s->channels_for_cur_subframe;i++){
         int c = s->channel_indexes_for_cur_subframe[i];
-        int j = s->channel[c].cur_subframe;
         float* start;
         float* window;
-        int prev_block_len = s->channel[c].prev_block_len;
-        int block_len = s->channel[c].subframe_len[j];
-        int winlen = prev_block_len;
-        start = s->channel[c].coeffs - (prev_block_len >> 1);
+        int winlen = s->channel[c].prev_block_len;
+        start = s->channel[c].coeffs - (winlen >> 1);
 
-        if(block_len <= prev_block_len){
-            start += (prev_block_len - block_len)>>1;
-            winlen = block_len;
+        if(s->subframe_len < winlen){
+            start += (winlen - s->subframe_len)>>1;
+            winlen = s->subframe_len;
         }
 
         window = s->windows[av_log2(winlen)-BLOCK_MIN_BITS];
 
-        s->dsp.vector_fmul_window(start, start, start + (winlen>>1), window, 0, winlen>>1);
+        winlen >>= 1;
 
-        s->channel[c].prev_block_len = block_len;
+        s->dsp.vector_fmul_window(start, start, start + winlen, window, 0, winlen);
+
+        s->channel[c].prev_block_len = s->subframe_len;
     }
 }
 
