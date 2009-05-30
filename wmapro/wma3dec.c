@@ -343,7 +343,7 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
         for(b=0;b< s->num_sfb[i];b++){
             int x;
             int offset = ((s->sfb_offsets[MAX_BANDS * i + b]
-                          + s->sfb_offsets[MAX_BANDS * i + b + 1] - 1)<<i)/2;
+                          + s->sfb_offsets[MAX_BANDS * i + b + 1] - 1)<<i) >> 1;
             for(x=0;x<s->num_possible_block_sizes;x++){
                 int v = 0;
                 while(s->sfb_offsets[MAX_BANDS * x + v +1] << x < offset)
@@ -726,7 +726,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
 
             /** decode additional transform parameters */
             if(!chgroup->no_rotation){
-                int n_offset = chgroup->num_channels  * (chgroup->num_channels - 1) / 2;
+                int n_offset = chgroup->num_channels  * (chgroup->num_channels - 1) >> 1;
                 int i;
                 for(i=0;i<n_offset;i++){
                     chgroup->rotation_offset[i] = get_bits(&s->gb,6);
@@ -1151,16 +1151,16 @@ static void wma_window(WMA3DecodeContext *s)
         int prev_block_len = s->channel[c].prev_block_len;
         int block_len = s->channel[c].subframe_len[j];
         int winlen = prev_block_len;
-        start = &s->channel[c].out[s->samples_per_frame/2 + s->channel[c].subframe_offset[j] - prev_block_len /2 ];
+        start = &s->channel[c].out[(s->samples_per_frame>>1) + s->channel[c].subframe_offset[j] - (prev_block_len >> 1)];
 
         if(block_len <= prev_block_len){
-            start += (prev_block_len - block_len)/2;
+            start += (prev_block_len - block_len)>>1;
             winlen = block_len;
         }
 
         window = s->windows[av_log2(winlen)-BLOCK_MIN_BITS];
 
-        s->dsp.vector_fmul_window(start, start, start + winlen/2, window, 0, winlen/2);
+        s->dsp.vector_fmul_window(start, start, start + (winlen>>1), window, 0, winlen>>1);
 
         s->channel[c].prev_block_len = block_len;
     }
@@ -1234,7 +1234,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
                 s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[frame_offset];
             }
         }
-        s->channel[c].coeffs = &s->channel[c].out[s->samples_per_frame/2  + offset];
+        s->channel[c].coeffs = &s->channel[c].out[(s->samples_per_frame>>1)  + offset];
         memset(s->channel[c].coeffs,0,sizeof(float) * subframe_len);
 
         /** init some things if this is the first subframe */
@@ -1285,7 +1285,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             transmit_coeffs = 1;
     }
 
-    s->quant_step = 90 * s->sample_bit_depth / 16;
+    s->quant_step = 90 * s->sample_bit_depth >> 4;
 
     if(transmit_coeffs){
         int quant;
@@ -1382,7 +1382,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
                 }
             }
 
-            dst = &s->channel[c].out[s->samples_per_frame/2  + s->channel[c].subframe_offset[s->channel[c].cur_subframe]];
+            dst = &s->channel[c].out[(s->samples_per_frame>>1)  + s->channel[c].subframe_offset[s->channel[c].cur_subframe]];
             /** apply imdct (ff_imdct_half == DCTIV with reverse) */
             ff_imdct_half(&s->mdct_ctx[av_log2(subframe_len)-BLOCK_MIN_BITS], dst, s->tmp);
         }
@@ -1390,7 +1390,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         for(i=0;i<s->channels_for_cur_subframe;i++){
             int c = s->channel_indexes_for_cur_subframe[i];
             float* dst;
-            dst = &s->channel[c].out[s->samples_per_frame/2  + s->channel[c].subframe_offset[s->channel[c].cur_subframe]];
+            dst = &s->channel[c].out[(s->samples_per_frame>>1)  + s->channel[c].subframe_offset[s->channel[c].cur_subframe]];
             memset(dst,0,subframe_len * sizeof(float));
         }
     }
