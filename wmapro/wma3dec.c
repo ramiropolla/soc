@@ -1177,6 +1177,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     int i;
     int total_samples = s->samples_per_frame * s->num_channels;
     int transmit_coeffs = 0;
+    int c;
 
     s->subframe_offset = get_bits_count(&s->gb);
 
@@ -1215,24 +1216,24 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
 
     av_log(s->avctx, AV_LOG_DEBUG,"subframe is part of %i channels\n",s->channels_for_cur_subframe);
 
+    c = s->channel_indexes_for_cur_subframe[0];
+
+    /** calculate number of scale factor bands and their offsets */
+    if(s->channel[c].num_subframes <= 1){
+        s->num_bands = s->num_sfb[0];
+        s->cur_sfb_offsets = s->sfb_offsets;
+        s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[0];
+    }else{
+        int frame_offset = av_log2(s->samples_per_frame/s->channel[c].subframe_len[s->channel[c].cur_subframe]);
+        s->num_bands = s->num_sfb[frame_offset];
+        s->cur_sfb_offsets = &s->sfb_offsets[MAX_BANDS * frame_offset];
+        s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[frame_offset];
+    }
+
     /** configure the decoder for the current subframe */
     for(i=0;i<s->channels_for_cur_subframe;i++){
         int c = s->channel_indexes_for_cur_subframe[i];
 
-        /** calculate number of scale factor bands and their offsets */
-        /* FIXME move out of the loop */
-        if(!i){
-            if(s->channel[c].num_subframes <= 1){
-                s->num_bands = s->num_sfb[0];
-                s->cur_sfb_offsets = s->sfb_offsets;
-                s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[0];
-            }else{
-                int frame_offset = av_log2(s->samples_per_frame/s->channel[c].subframe_len[s->channel[c].cur_subframe]);
-                s->num_bands = s->num_sfb[frame_offset];
-                s->cur_sfb_offsets = &s->sfb_offsets[MAX_BANDS * frame_offset];
-                s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[frame_offset];
-            }
-        }
         s->channel[c].coeffs = &s->channel[c].out[(s->samples_per_frame>>1)  + offset];
         memset(s->channel[c].coeffs,0,sizeof(float) * subframe_len);
 
