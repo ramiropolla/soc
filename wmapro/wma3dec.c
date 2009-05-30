@@ -660,18 +660,8 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
     }
 
     /** in the one channel case channel transforms are pointless */
-    if(s->num_channels == 1 ){
-        s->num_chgroups = 0;
-        s->chgroup[0].num_channels = 1;
-        s->chgroup[0].no_rotation = 1;
-        s->chgroup[0].transform = 2;
-        s->channel[0].resampled_scale_factors[0] = 0;
-        memset(s->chgroup[0].transform_band,0,MAX_BANDS);
-        memset(s->chgroup[0].decorrelation_matrix,0,sizeof(float) *s->num_channels * s->num_channels);
-
-        s->chgroup[0].decorrelation_matrix[0] = 1.0;
-
-    }else{
+    s->num_chgroups = 0;
+    if(s->num_channels > 1){
         int remaining_channels = s->channels_for_cur_subframe;
 
         if(get_bits1(&s->gb)){
