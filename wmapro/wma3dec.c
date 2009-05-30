@@ -1636,7 +1636,7 @@ static int wma_decode_packet(AVCodecContext *avctx,
         int frame_size = show_bits(&gb, s->log2_frame_size);
 
         /** there is enough data for a full frame */
-        if(wma_remaining_bits(s,&gb) >= frame_size){
+        if(wma_remaining_bits(s,&gb) >= frame_size && frame_size > 0){
             wma_save_bits(s, &gb, frame_size, 0);
 
             /** decode the frame */
