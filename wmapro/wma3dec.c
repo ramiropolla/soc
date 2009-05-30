@@ -671,8 +671,6 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
 
         for(s->num_chgroups = 0; remaining_channels && s->num_chgroups < s->channels_for_cur_subframe;s->num_chgroups++){
             WMA3ChannelGroup* chgroup = &s->chgroup[s->num_chgroups];
-            int all_bands = 0;
-            int calc_matrix = 0;
             chgroup->num_channels = 0;
             chgroup->transform = 0;
 
@@ -700,8 +698,8 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
             /** decode transform type */
             if(chgroup->num_channels == 2){
                 if(get_bits1(&s->gb)){
-                    if(!get_bits1(&s->gb)){
-                        all_bands = 1;
+                    if(get_bits1(&s->gb)){
+                        av_log(s->avctx, AV_LOG_ERROR, "unsupported channel transform type\n");
                     }
                 }else{
                     if(s->num_channels == 2){
@@ -717,38 +715,29 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
             }else if(chgroup->num_channels > 2){
                 if(get_bits1(&s->gb)){
                     if(get_bits1(&s->gb)){
+                        int n_offset = chgroup->num_channels  * (chgroup->num_channels - 1) >> 1;
+                        int i;
                         chgroup->transform = 2;
-                        calc_matrix = 1;
+                        for(i=0;i<n_offset;i++){
+                            chgroup->rotation_offset[i] = get_bits(&s->gb,6);
+                        }
+                        for(i=0;i<chgroup->num_channels;i++)
+                            chgroup->decorrelation_matrix[chgroup->num_channels * i + i] = get_bits1(&s->gb)?1.0:-1.0;
+                        wma_calc_decorrelation_matrix(chgroup);
                     }else{
                         chgroup->transform = 2;
                         memcpy(chgroup->decorrelation_matrix,
                                s->def_decorrelation_mat[chgroup->num_channels],
                                chgroup->num_channels * chgroup->num_channels * sizeof(float));
                     }
-                }else{
-                    all_bands = 1;
                 }
-            }
-
-            /** decode additional transform parameters */
-            if(calc_matrix){
-                int n_offset = chgroup->num_channels  * (chgroup->num_channels - 1) >> 1;
-                int i;
-                for(i=0;i<n_offset;i++){
-                    chgroup->rotation_offset[i] = get_bits(&s->gb,6);
-                }
-                for(i=0;i<chgroup->num_channels;i++)
-                    chgroup->decorrelation_matrix[chgroup->num_channels * i + i] = get_bits1(&s->gb)?1.0:-1.0;
-                wma_calc_decorrelation_matrix(chgroup);
             }
 
             /** decode transform on / off */
-            if(chgroup->num_channels <= 1 || all_bands){
-                memset(chgroup->transform_band,1,s->num_bands);
-            }else{
-                /** transform can be enabled for individual bands */
+            if(chgroup->transform){
                 if(!get_bits1(&s->gb)){
                     int i;
+                    /** transform can be enabled for individual bands */
                     for(i=0;i< s->num_bands;i++){
                         chgroup->transform_band[i] = get_bits1(&s->gb);
                     }
