@@ -106,7 +106,7 @@ static void wma_dump_context(WMA3DecodeContext *s)
  *@param decode_flags codec compression features
  *@return number of output samples per frame
  */
-static int wma_get_samples_per_frame(int sample_rate, unsigned int decode_flags)
+static int av_cold wma_get_samples_per_frame(int sample_rate, unsigned int decode_flags)
 {
 
     int samples_per_frame;
