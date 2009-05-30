@@ -704,11 +704,15 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                         all_bands = 1;
                     }
                 }else{
-                    chgroup->transform = 1;
-                    chgroup->decorrelation_matrix[0] = 0.70703125;  /** cos(pi/4) */
-                    chgroup->decorrelation_matrix[1] = -0.70703125;
-                    chgroup->decorrelation_matrix[2] = 0.70703125;
-                    chgroup->decorrelation_matrix[3] = 0.70703125;
+                    if(s->num_channels == 2){
+                        chgroup->transform = 1;
+                    }else{
+                        chgroup->transform = 2;
+                        chgroup->decorrelation_matrix[0] = 0.70703125;  /** cos(pi/4) */
+                        chgroup->decorrelation_matrix[1] = -0.70703125;
+                        chgroup->decorrelation_matrix[2] = 0.70703125;
+                        chgroup->decorrelation_matrix[3] = 0.70703125;
+                    }
                 }
             }else if(chgroup->num_channels > 2){
                 if(get_bits1(&s->gb)){
@@ -1018,11 +1022,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
 
     for(i=0;i<s->num_chgroups;i++){
 
-        if(!s->chgroup[i].transform)
-            continue;
-
-        if((s->num_channels == 2) &&
-            (s->chgroup[i].transform == 1)){
+        if(s->chgroup[i].transform == 1){
             int b;
             /** M/S stereo decoding */
             for(b = 0; b < s->num_bands;b++){
@@ -1041,7 +1041,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                     }
                 }
             }
-        }else{
+        }else if(s->chgroup[i].transform){
             int x;
             int b;
             int cnt = 0;
