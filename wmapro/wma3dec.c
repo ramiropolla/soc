@@ -1013,7 +1013,6 @@ static void wma_calc_decorrelation_matrix(WMA3ChannelGroup* chgroup)
 {
     int i;
     int offset = 0;
-    memset(chgroup->decorrelation_matrix, 0, chgroup->num_channels * sizeof(float) * chgroup->num_channels);
     for(i=0;i<chgroup->num_channels;i++)
         chgroup->decorrelation_matrix[chgroup->num_channels * i + i] = chgroup->positive[i]?1.0:-1.0;
 
