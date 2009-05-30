@@ -742,7 +742,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                     chgroup->transform_band[i] = 1;
             }else{
                 /** transform can be enabled for individual bands */
-                if(get_bits1(&s->gb) == 0){
+                if(!get_bits1(&s->gb)){
                     int i;
                     for(i=0;i< s->num_bands;i++){
                         chgroup->transform_band[i] = get_bits1(&s->gb);
@@ -1210,7 +1210,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     }
 
     /** check if the frame will be complete after processing the estimated block */
-    if(total_samples == 0)
+    if(!total_samples)
         s->parsed_all_subframes = 1;
 
 
@@ -1222,7 +1222,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
 
         /** calculate number of scale factor bands and their offsets */
         /* FIXME move out of the loop */
-        if(i == 0){
+        if(!i){
             if(s->channel[c].num_subframes <= 1){
                 s->num_bands = s->num_sfb[0];
                 s->cur_sfb_offsets = s->sfb_offsets;
