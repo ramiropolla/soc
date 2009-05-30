@@ -737,9 +737,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
 
             /** decode transform on / off */
             if(chgroup->num_channels <= 1 ||  ((chgroup->no_rotation != 1 || chgroup->transform == 2) && chgroup->no_rotation)){
-                int i;
-                for(i=0;i<s->num_bands;i++)
-                    chgroup->transform_band[i] = 1;
+                memset(chgroup->transform_band,1,s->num_bands);
             }else{
                 /** transform can be enabled for individual bands */
                 if(!get_bits1(&s->gb)){
@@ -748,9 +746,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                         chgroup->transform_band[i] = get_bits1(&s->gb);
                     }
                 }else{
-                    int i;
-                    for(i=0;i<s->num_bands;i++)
-                        chgroup->transform_band[i] = 1;
+                    memset(chgroup->transform_band,1,s->num_bands);
                 }
             }
             remaining_channels -= chgroup->num_channels;
