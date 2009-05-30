@@ -23,6 +23,55 @@
 /**
  * @file  libavcodec/wma3dec.c
  * @brief wmapro decoder implementation
+ * Wmapro is an MDCT based codec comparable to wma standard or AAC.
+ * The decoding therefore consist of the following steps:
+ * - bitstream decoding
+ * - reconstruction of per channel data
+ * - rescaling and requantization
+ * - IMDCT
+ * - windowing and overlapp-add
+ *
+ * The compressed wmapro bitstream is split into individual packets.
+ * Every such packet contains one or more wma frames.
+ * The compressed frames may have a variable length and frames may
+ * cross packet boundaries.
+ * Common to all wmapro frames is the number of samples that are stored in
+ * a frame.
+ * The number of samples and a few other decode flags are stored
+ * as extradata that has to be passed to the decoder.
+ *
+ * The wmapro frames themselves are again split into a variable number of
+ * subframes. Every subframe contains the data for 2^N time domain samples
+ * where N varies between 7 and 12.
+ *
+ * The frame layouts for the individual channels of a wma frame does not need
+ * to be the same.
+ * However, if the offsets and lengths of several subframes of a frame are the
+ * same, the subframes of the channels can be grouped.
+ * Every group may then use special coding techniques like M/S stereo coding
+ * to improve the compression ratio. These channel transformations do not
+ * need to be applied to a whole subframe. Instead, they can also work on
+ * individual scale factor bands (see below).
+ * The coefficients that cary the audio signal in the frequency domain
+ * are transmitted as huffman coded vectors with 4, 2 and 1 elements.
+ * In addition to that, the encoder can switch to a run level coding scheme
+ * by transmitting subframen_length / 128 zero coefficients.
+ *
+ * Before the audio signal can be converted to the time domain, the
+ * coefficients have to be rescaled and inverse quantized.
+ * A subframe is therefore split into several scale factor bands that get
+ * scaled individually.
+ * Scale factors are submitted for every frame but they might be shared
+ * between the subframes of a channel. Scale factors are initially DPCM coded.
+ * Once scale factors are shared, the differences are transmitted as run
+ * level codes.
+ * Every subframe length and offset combination in the frame layout shares a
+ * common quantization factor that can be adjusted for every channel by a
+ * modifier.
+ * After the inverse quantization, the coefficients get processed by an IMDCT.
+ * The resulting values are then windowed with a sine window and the first half
+ * of the values are added to the second half of the output from the previous
+ * subframe in order to reconstruct the output samples.
  */
 
 #include "avcodec.h"
@@ -74,7 +123,7 @@ static int wma_get_samples_per_frame(int sample_rate, unsigned int decode_flags)
     else
         samples_per_frame = 8192;
 
-    /* WMA voice code  if (decode_flags & 0x800) {
+    /** WMA voice code  if (decode_flags & 0x800) {
         tmp = ((decode_flags & 6) >> 1) | ((decode_flags & 0x600) >> 7);
         samples_per_frame = (tmp+1)*160;
     } else { */
@@ -141,7 +190,7 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
     s->avctx = avctx;
     dsputil_init(&s->dsp, avctx);
 
-    /* FIXME: is this really the right thing to do for 24 bits? */
+    /** FIXME: is this really the right thing to do for 24 bits? */
     s->sample_bit_depth = 16; // avctx->bits_per_sample;
     if (avctx->extradata_size >= 18) {
         s->decode_flags     = AV_RL16(edata_ptr+14);
@@ -578,6 +627,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
         memset(s->chgroup[i].decorrelation_matrix,0,sizeof(float) *s->num_channels * s->num_channels);
     }
 
+    /** in the one channel case channel transforms are pointless */
     if(s->num_channels == 1 ){
         s->num_chgroups = 0;
         s->chgroup[0].num_channels = 1;
@@ -603,7 +653,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
             chgroup->no_rotation = 0;
             chgroup->transform = 0;
 
-            /* decode channel mask */
+            /** decode channel mask */
             memset(chgroup->use_channel,0,sizeof(chgroup->use_channel));
 
             if(remaining_channels > 2){
@@ -624,11 +674,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                 }
             }
 
-            /** done decode channel mask */
-
-            /* decide x form type
-               FIXME: port this to float, all rotations should lie
-                      on the unit circle */
+            /** decode transform type */
             if(chgroup->num_channels == 1){
                 chgroup->no_rotation = 1;
                 chgroup->transform = 2;
@@ -647,7 +693,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                 }else{
                     chgroup->no_rotation = 1;
                     chgroup->transform = 1;
-                    chgroup->decorrelation_matrix[0] = 0.70703125;  // FIXME: cos(pi/4)
+                    chgroup->decorrelation_matrix[0] = 0.70703125;  /** cos(pi/4) */
                     chgroup->decorrelation_matrix[1] = -0.70703125;
                     chgroup->decorrelation_matrix[2] = 0.70703125;
                     chgroup->decorrelation_matrix[3] = 0.70703125;
@@ -678,9 +724,8 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                 }
             }
 
-            /** done decide x form type */
-
-            if(!chgroup->no_rotation){ /** decode channel transform */
+            /** decode additional transform parameters */
+            if(!chgroup->no_rotation){
                 int n_offset = chgroup->num_channels  * (chgroup->num_channels - 1) / 2;
                 int i;
                 for(i=0;i<n_offset;i++){
@@ -690,16 +735,15 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                     chgroup->positive[i] = get_bits1(&s->gb);
             }
 
-            /* decode transform on / off */
+            /** decode transform on / off */
             if(chgroup->num_channels <= 1 ||  ((chgroup->no_rotation != 1 || chgroup->transform == 2) && chgroup->no_rotation)){
-                // done
                 int i;
                 for(i=0;i<s->num_bands;i++)
                     chgroup->transform_band[i] = 1;
             }else{
+                /** transform can be enabled for individual bands */
                 if(get_bits1(&s->gb) == 0){
                     int i;
-                    // transform works on individual scale factor bands
                     for(i=0;i< s->num_bands;i++){
                         chgroup->transform_band[i] = get_bits1(&s->gb);
                     }
@@ -709,7 +753,6 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                         chgroup->transform_band[i] = 1;
                 }
             }
-            /** done decode transform on / off */
             remaining_channels -= chgroup->num_channels;
         }
     }
@@ -723,7 +766,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
  */
 static unsigned int wma_get_large_val(WMA3DecodeContext* s)
 {
-    /* consumes up to 34 bits */
+    /** consumes up to 34 bits */
     int n_bits = 8;
     /** decode length */
     if(get_bits1(&s->gb)){
@@ -772,20 +815,19 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
         level = ff_wma3_coef0_level;
     }
 
-    /* for subframe_len 128 the first zero coefficient will switch to the run length mode */
+    /** for subframe_len 128 the first zero coefficient will switch to the run level mode */
     if(s->subframe_len == 128){
         zero_init = num_zeros = 1;
         rl_switchmask = 1;
     }
 
-    /* read coefficients (consumes up to 167 bits per iteration for
+    /** decode vector coefficients (consumes up to 167 bits per iteration for
       4 vector coded large values) */
     while(!rl_mode && cur_coeff + 3 < s->subframe_len){
         int vals[4];
         int i;
         unsigned int idx;
 
-        /* read 4 values at once */
         idx = get_vlc2(&s->gb, s->vec4_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
 
         if ( idx == FF_WMA3_HUFF_VEC4_SIZE - 1 ){
@@ -812,12 +854,15 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
              vals[3] = ff_wma3_symbol_to_vec4[idx] & 0xF;
         }
 
+        /** decode sign */
         for(i=0;i<4;i++){
             if(vals[i]){
                 int sign = get_bits1(&s->gb) - 1;
                 ci->coeffs[cur_coeff] = (vals[i]^sign) - sign;
                 num_zeros = zero_init;
             }else{
+                /** switch to run level mode when subframe_len / 128 zeros
+                   were found in a row */
                 rl_mode |= (num_zeros & rl_switchmask);
                 ++num_zeros;
             }
@@ -825,6 +870,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
         }
     }
 
+    /** decode run level coded coefficients */
     if(rl_mode){
         unsigned int coeff_mask = s->subframe_len - 1;
         while(cur_coeff < s->subframe_len){
@@ -852,6 +898,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
                         cur_coeff += get_bits(&s->gb,2) + 1;
                 }
             }
+            /** decode sign */
             sign = get_bits1(&s->gb) - 1;
             ci->coeffs[cur_coeff & coeff_mask] = (val^sign) - sign;
             ++cur_coeff;
@@ -871,7 +918,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
     int i;
     const int idx0 = av_log2(s->samples_per_frame/s->subframe_len);
 
-    /* should never consume more than 5344 bits
+    /** should never consume more than 5344 bits
      *  MAX_CHANNELS * (1 +  MAX_BANDS * 23)
      */
 
@@ -902,9 +949,10 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
         if(s->channel[c].transmit_sf){
             int b;
 
-            if(!s->channel[c].reuse_sf){ //DPCM coded
+            if(!s->channel[c].reuse_sf){
                 int i;
                 int val;
+                /** decode DPCM coded scale factors */
                 s->channel[c].scale_factor_step = get_bits(&s->gb,2) + 1;
                 val = get_vlc2(&s->gb, s->sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
                 s->channel[c].scale_factors[0] = 45 / s->channel[c].scale_factor_step + val - 60;
@@ -912,8 +960,10 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                     val = get_vlc2(&s->gb, s->sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
                     s->channel[c].scale_factors[i]  = s->channel[c].scale_factors[i-1] + val - 60;
                 }
-            }else{     // rl-coded
+            }else{
                 int i;
+                /** run level decode differences to the resampled factors */
+
                 memcpy(s->channel[c].scale_factors,s->channel[c].resampled_scale_factors,
                        4 * s->num_bands);
 
@@ -1019,9 +1069,10 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
             (s->chgroup[i].no_rotation == 1) &&
             (s->chgroup[i].transform == 1)){
             int b;
+            /** M/S stereo decoding */
             for(b = 0; b < s->num_bands;b++){
                 int y;
-                if(s->chgroup[i].transform_band[b] == 1){ // M/S stereo
+                if(s->chgroup[i].transform_band[b] == 1){
                     for(y=s->cur_sfb_offsets[b];y<FFMIN(s->cur_sfb_offsets[b+1], s->subframe_len);y++){
                         float v1 = s->channel[0].coeffs[y];
                         float v2 = s->channel[1].coeffs[y];
@@ -1041,12 +1092,15 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
             int cnt = 0;
             float* ch_data[MAX_CHANNELS];
             float  sums[MAX_CHANNELS * MAX_CHANNELS];
+
+            /** multichannel decorrelation */
             if(!s->chgroup[i].no_rotation)
                 wma_calc_decorrelation_matrix(s,&s->chgroup[i]);
 
+            /** get the channels that use the transform */
             for(x=0;x<s->channels_for_cur_subframe;x++){
                 int chan = s->channel_indexes_for_cur_subframe[x];
-                if(s->chgroup[i].use_channel[chan] == 1){    // assign ptrs
+                if(s->chgroup[i].use_channel[chan] == 1){
                     ch_data[cnt] = s->channel[chan].coeffs;
                     ++cnt;
                 }
@@ -1055,7 +1109,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
             for(b = 0; b < s->num_bands;b++){
                 int y;
                 if(s->chgroup[i].transform_band[b] == 1){
-                    // multiply values with decorrelation_matrix
+                    /** multiply values with the decorrelation_matrix */
                     for(y=s->cur_sfb_offsets[b];y<FFMIN(s->cur_sfb_offsets[b+1], s->subframe_len);y++){
                         float* matrix = s->chgroup[i].decorrelation_matrix;
                         int m;
@@ -1074,7 +1128,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                             ++ch_data[m];
                         }
                     }
-                }else{      /** skip band */
+                }else{     /** skip band */
                     for(y=0;y<s->chgroup[i].num_channels;y++)
                         ch_data[y] += s->cur_sfb_offsets[b+1] -  s->cur_sfb_offsets[b];
                 }
@@ -1168,7 +1222,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         int c = s->channel_indexes_for_cur_subframe[i];
 
         /** calculate number of scale factor bands and their offsets */
-        /** FIXME move out of the loop */
+        /* FIXME move out of the loop */
         if(i == 0){
             if(s->channel[c].num_subframes <= 1){
                 s->num_bands = s->num_sfb[0];
@@ -1238,7 +1292,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         int quant;
         int sign = 1;
         int large_quant = 0;
-        if((get_bits1(&s->gb))){ /** FIXME: might influence how often getvec4 may be called */
+        if((get_bits1(&s->gb))){ /** FIXME: might change run level mode decision */
             av_log(s->avctx,AV_LOG_ERROR,"unsupported quant step coding\n");
             return 0;
         }
@@ -1300,6 +1354,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: subframe length was %i\n",get_bits_count(&s->gb) - s->subframe_offset);
 
     if(transmit_coeffs){
+        /** reconstruct the per channel data */
         wma_inverse_channel_transform(s);
         for(i=0;i<s->channels_for_cur_subframe;i++){
             int c = s->channel_indexes_for_cur_subframe[i];
@@ -1308,7 +1363,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             if(c == s->lfe_channel)
                 memset(&s->tmp[s->cur_subwoofer_cutoff],0,sizeof(float) * (subframe_len - s->cur_subwoofer_cutoff));
 
-            /** inverse quantization */
+            /** inverse quantization and rescaling */
             for(b=0;b<s->num_bands;b++){
                 int start = s->cur_sfb_offsets[b];
                 int end = s->cur_sfb_offsets[b+1];
@@ -1329,7 +1384,8 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             }
 
             dst = &s->channel[c].out[s->samples_per_frame/2  + s->channel[c].subframe_offset[s->channel[c].cur_subframe]];
-            ff_imdct_half(&s->mdct_ctx[av_log2(subframe_len)-BLOCK_MIN_BITS], dst, s->tmp); // DCTIV with reverse
+            /** apply imdct (ff_imdct_half == DCTIV with reverse) */
+            ff_imdct_half(&s->mdct_ctx[av_log2(subframe_len)-BLOCK_MIN_BITS], dst, s->tmp);
         }
     }else{
         for(i=0;i<s->channels_for_cur_subframe;i++){
@@ -1340,6 +1396,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         }
     }
 
+    /** window and overlapp-add */
     wma_window(s);
 
     /** handled one subframe */
@@ -1429,7 +1486,7 @@ static int wma_decode_frame(WMA3DecodeContext *s)
         s->channel[i].reuse_sf = 0;
     }
 
-    /** parse all subframes */
+    /** decode all subframes */
     while(!s->parsed_all_subframes){
         if(!wma_decode_subframe(s)){
             s->packet_loss = 1;
@@ -1462,7 +1519,7 @@ static int wma_decode_frame(WMA3DecodeContext *s)
         s->samples += s->num_channels * s->samples_per_frame;
 
     if(len != (get_bits_count(gb) - s->frame_offset) + 2){
-        /* FIXME: not sure if this is always an error */
+        /** FIXME: not sure if this is always an error */
         av_log(s->avctx,AV_LOG_ERROR,"frame[%i] would have to skip %i bits\n",s->frame_num,len - (get_bits_count(gb) - s->frame_offset) - 1);
         s->packet_loss = 1;
         return 0;

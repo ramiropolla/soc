@@ -31,14 +31,14 @@
 #include "wma3data.h"
 #include "dsputil.h"
 
-/* current decoder limitations */
+/** current decoder limitations */
 #define MAX_CHANNELS    8                                    ///< max number of handled channels
 #define MAX_SUBFRAMES  32                                    ///< max number of subframes per channel
 #define MAX_BANDS      29                                    ///< max number of scale factor bands
 #define MAX_FRAMESIZE  16384                                 ///< maximum compressed frame size
 #define MAX_FRAMEBITS  (MAX_FRAMESIZE << 3)                  ///< maximum frame size in bits
 
-/* size of block defines taken from wma.h */
+/** size of block defines taken from wma.h */
 #define BLOCK_MIN_BITS  7                                    ///< log2 of min block size
 #define BLOCK_MAX_BITS 12                                    ///< log2 of max block size
 #define BLOCK_MIN_SIZE (1 << BLOCK_MIN_BITS)                 ///< minimum block size
@@ -88,7 +88,7 @@ typedef struct {
  * @brief main decoder context
  */
 typedef struct WMA3DecodeContext {
-    /* generic decoder variables */
+    /** generic decoder variables */
     AVCodecContext*  avctx;                         ///< codec context for av_log
     DSPContext       dsp;                           ///< accelerated dsp functions
     uint8_t          frame_data[MAX_FRAMESIZE +
@@ -104,7 +104,7 @@ typedef struct WMA3DecodeContext {
     VLC              coef_vlc[2];                   ///< coefficient run length vlc codes
     int              coef_max[2];                   ///< max length of vlc codes
 
-    /* frame size dependent frame information (set during initialization) */
+    /** frame size dependent frame information (set during initialization) */
     uint8_t          lossless;                      ///< lossless mode
     unsigned int     decode_flags;                  ///< used compression features
     uint8_t          len_prefix;                    ///< frame is prefixed with its length
@@ -124,7 +124,7 @@ typedef struct WMA3DecodeContext {
     int*             sf_offsets;                    ///< scale factor resample matrix
     int*             subwoofer_cutoffs;             ///< subwoofer cutoff values
 
-    /* packet decode state */
+    /** packet decode state */
     uint8_t          packet_sequence_number;        ///< current packet number
     int              num_saved_bits;                ///< saved number of bits
     int              frame_offset;                  ///< frame offset in the bit reservoir
@@ -133,7 +133,7 @@ typedef struct WMA3DecodeContext {
     uint8_t          bit6;                          ///< unknown
     uint8_t          packet_loss;                   ///< set in case of bitstream error
 
-    /* frame decode state */
+    /** frame decode state */
     unsigned int     frame_num;                     ///< current frame number
     GetBitContext    gb;                            ///< bitstream reader context
     int              buf_bit_size;                  ///< buffer size in bits
@@ -143,7 +143,7 @@ typedef struct WMA3DecodeContext {
     int              skip_frame;                    ///< skip output step
     int              parsed_all_subframes;          ///< all subframes decoded?
 
-    /* subframe/block decode state */
+    /** subframe/block decode state */
     int              subframe_len;                  ///< current subframe length
     int              channels_for_cur_subframe;     ///< number of channels that contain the subframe
     int              channel_indexes_for_cur_subframe[MAX_CHANNELS];

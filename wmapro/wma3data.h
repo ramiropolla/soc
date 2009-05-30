@@ -86,7 +86,7 @@ static const uint8_t ff_wma3_scale_huffbits[FF_WMA3_HUFF_SCALE_SIZE] = {
 
 
 /**
- * @name huffman, run and level tables for run length coded scale factors
+ * @name huffman, run and level tables for run level coded scale factors
  * @{
  */
 #define FF_WMA3_HUFF_SCALE_RL_SIZE 120
@@ -157,7 +157,7 @@ static const uint8_t ff_wma3_scale_rl_level[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
 
 
 /**
- * @name huffman, run and level codes for run length coded coefficients
+ * @name huffman, run and level codes for run level coded coefficients
  * @{
  */
 #define FF_WMA3_HUFF_COEF0_SIZE 272
