@@ -79,7 +79,6 @@ typedef struct {
     int   transform;                                       ///< also controls the type of the transform
     char  transform_band[MAX_BANDS];                       ///< controls if the transform is enabled for a certain band
     char  rotation_offset[MAX_CHANNELS * MAX_CHANNELS];
-    char  positive[MAX_CHANNELS * MAX_CHANNELS];           ///< FIXME: What are these numbers used for?
     float decorrelation_matrix[MAX_CHANNELS*MAX_CHANNELS];
     char  use_channel[MAX_CHANNELS];
 } WMA3ChannelGroup;

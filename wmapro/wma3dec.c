@@ -732,7 +732,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                     chgroup->rotation_offset[i] = get_bits(&s->gb,6);
                 }
                 for(i=0;i<chgroup->num_channels;i++)
-                    chgroup->positive[i] = get_bits1(&s->gb);
+                    chgroup->decorrelation_matrix[chgroup->num_channels * i + i] = get_bits1(&s->gb)?1.0:-1.0;
             }
 
             /** decode transform on / off */
@@ -1013,8 +1013,6 @@ static void wma_calc_decorrelation_matrix(WMA3ChannelGroup* chgroup)
 {
     int i;
     int offset = 0;
-    for(i=0;i<chgroup->num_channels;i++)
-        chgroup->decorrelation_matrix[chgroup->num_channels * i + i] = chgroup->positive[i]?1.0:-1.0;
 
     for(i=1;i<chgroup->num_channels;i++){
         int x;
