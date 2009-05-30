@@ -1011,10 +1011,9 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
 
 /**
  *@brief Calculate a decorrelation matrix from the bitstream parameters.
- *@param s codec context
  *@param chgroup channel group for which the matrix needs to be calculated
  */
-static void wma_calc_decorrelation_matrix(WMA3DecodeContext *s, WMA3ChannelGroup* chgroup)
+static void wma_calc_decorrelation_matrix(WMA3ChannelGroup* chgroup)
 {
     int i;
     int offset = 0;
@@ -1095,7 +1094,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
 
             /** multichannel decorrelation */
             if(!s->chgroup[i].no_rotation)
-                wma_calc_decorrelation_matrix(s,&s->chgroup[i]);
+                wma_calc_decorrelation_matrix(&s->chgroup[i]);
 
             /** get the channels that use the transform */
             for(x=0;x<s->channels_for_cur_subframe;x++){
