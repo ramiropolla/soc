@@ -611,6 +611,7 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
     return 0;
 }
 
+static void wma_calc_decorrelation_matrix(WMA3ChannelGroup* chgroup);
 /**
  *@brief Decode channel transformation parameters
  *@param s codec context
@@ -733,6 +734,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                 }
                 for(i=0;i<chgroup->num_channels;i++)
                     chgroup->decorrelation_matrix[chgroup->num_channels * i + i] = get_bits1(&s->gb)?1.0:-1.0;
+                wma_calc_decorrelation_matrix(chgroup);
             }
 
             /** decode transform on / off */
@@ -1082,8 +1084,6 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
             float  sums[MAX_CHANNELS * MAX_CHANNELS];
 
             /** multichannel decorrelation */
-            if(!s->chgroup[i].no_rotation)
-                wma_calc_decorrelation_matrix(&s->chgroup[i]);
 
             /** get the channels that use the transform */
             for(x=0;x<s->channels_for_cur_subframe;x++){
