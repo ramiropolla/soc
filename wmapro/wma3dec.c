@@ -154,11 +154,7 @@ static av_cold int wma_decode_end(AVCodecContext *avctx)
     av_free(s->subwoofer_cutoffs);
     av_free(s->sf_offsets);
 
-    if(s->def_decorrelation_mat){
-        for(i=1;i<=s->num_channels;i++)
-            av_free(s->def_decorrelation_mat[i]);
-        av_free(s->def_decorrelation_mat);
-    }
+    av_free(s->def_decorrelation_mat);
 
     free_vlc(&s->sf_vlc);
     free_vlc(&s->sf_rl_vlc);
@@ -379,58 +375,20 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
     }
 
     /** set up decorrelation matrixes */
-    s->def_decorrelation_mat = av_mallocz(sizeof(float*) * (s->num_channels + 1));
+    s->def_decorrelation_mat = av_mallocz(sizeof(float*) * (MAX_CHANNELS + 1));
     if(!s->def_decorrelation_mat){
         av_log(avctx, AV_LOG_ERROR, "failed to allocate decorrelation matrix\n");
         wma_decode_end(avctx);
         return -1;
     }
 
-    s->def_decorrelation_mat[0] = 0;
-    for(i=1;i<=s->num_channels;i++){
-        const float* tab = ff_wma3_default_decorrelation_matrices;
-        s->def_decorrelation_mat[i] = av_mallocz(sizeof(float*) * i);
-        if(!s->def_decorrelation_mat[i]){
-            av_log(avctx, AV_LOG_ERROR, "failed to set up decorrelation matrix\n");
-            wma_decode_end(avctx);
-            return -1;
-        }
-        switch(i){
-            case 1:
-                s->def_decorrelation_mat[i][0] = &tab[0];
-                break;
-            case 2:
-                s->def_decorrelation_mat[i][0] = &tab[1];
-                s->def_decorrelation_mat[i][1] = &tab[3];
-                break;
-            case 3:
-                s->def_decorrelation_mat[i][0] = &tab[5];
-                s->def_decorrelation_mat[i][1] = &tab[8];
-                s->def_decorrelation_mat[i][2] = &tab[11];
-                break;
-            case 4:
-                s->def_decorrelation_mat[i][0] = &tab[14];
-                s->def_decorrelation_mat[i][1] = &tab[18];
-                s->def_decorrelation_mat[i][2] = &tab[22];
-                s->def_decorrelation_mat[i][3] = &tab[26];
-                break;
-            case 5:
-                s->def_decorrelation_mat[i][0] = &tab[30];
-                s->def_decorrelation_mat[i][1] = &tab[35];
-                s->def_decorrelation_mat[i][2] = &tab[40];
-                s->def_decorrelation_mat[i][3] = &tab[45];
-                s->def_decorrelation_mat[i][4] = &tab[50];
-                break;
-            case 6:
-                s->def_decorrelation_mat[i][0] = &tab[55];
-                s->def_decorrelation_mat[i][1] = &tab[61];
-                s->def_decorrelation_mat[i][2] = &tab[67];
-                s->def_decorrelation_mat[i][3] = &tab[73];
-                s->def_decorrelation_mat[i][4] = &tab[79];
-                s->def_decorrelation_mat[i][5] = &tab[85];
-                break;
-        }
-    }
+    /** FIXME more than 6 coupled channels not supported */
+    s->def_decorrelation_mat[1] = &ff_wma3_default_decorrelation_matrices[0];
+    s->def_decorrelation_mat[2] = &ff_wma3_default_decorrelation_matrices[1];
+    s->def_decorrelation_mat[3] = &ff_wma3_default_decorrelation_matrices[5];
+    s->def_decorrelation_mat[4] = &ff_wma3_default_decorrelation_matrices[14];
+    s->def_decorrelation_mat[5] = &ff_wma3_default_decorrelation_matrices[30];
+    s->def_decorrelation_mat[6] = &ff_wma3_default_decorrelation_matrices[55];
 
     /** calculate sine values for the decorrelation matrix */
     for(i=0;i<33;i++)
@@ -742,12 +700,13 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                     if(get_bits1(&s->gb))
                         wma_decode_decorrelation_matrix(s, chgroup);
                     else{
-                        int x;
-                        for(x = 0; x < chgroup->num_channels ; x++){
-                            int y;
-                            for(y=0;y< chgroup->num_channels ;y++){
-                                chgroup->decorrelation_matrix[y + x * chgroup->num_channels] = s->def_decorrelation_mat[chgroup->num_channels][x][y];
-                            }
+                        /** FIXME: more than 6 coupled channels not supported */
+                        if(chgroup->num_channels > 6){
+                            av_log(s->avctx,AV_LOG_ERROR, "coupled channels > 6\n");
+                        }else{
+                            memcpy(chgroup->decorrelation_matrix,
+                                s->def_decorrelation_mat[chgroup->num_channels],
+                                sizeof(float) * chgroup->num_channels * chgroup->num_channels);
                         }
                     }
                 }
