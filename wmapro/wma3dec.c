@@ -613,12 +613,24 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
 
 /**
  *@brief Calculate a decorrelation matrix from the bitstream parameters.
+ *@param s codec context
  *@param chgroup channel group for which the matrix needs to be calculated
  */
-static void wma_calc_decorrelation_matrix(WMA3ChannelGroup* chgroup)
+static void wma_decode_decorrelation_matrix(WMA3DecodeContext* s, WMA3ChannelGroup* chgroup)
 {
     int i;
     int offset = 0;
+    char rotation_offset[MAX_CHANNELS * MAX_CHANNELS];
+
+    for(i=0;i<chgroup->num_channels  * (chgroup->num_channels - 1) >> 1;i++)
+        rotation_offset[i] = get_bits(&s->gb,6);
+
+    for(i=0;i<chgroup->num_channels;i++){
+        if(get_bits1(&s->gb))
+            chgroup->decorrelation_matrix[chgroup->num_channels * i + i]=  1.0;
+        else
+            chgroup->decorrelation_matrix[chgroup->num_channels * i + i]= -1.0;
+    }
 
     for(i=1;i<chgroup->num_channels;i++){
         int x;
@@ -631,7 +643,7 @@ static void wma_calc_decorrelation_matrix(WMA3ChannelGroup* chgroup)
             for(y=0;y < i + 1 ; y++){
                 float v1 = tmp1[y];
                 float v2 = tmp2[y];
-                int n = chgroup->rotation_offset[offset + x];
+                int n = rotation_offset[offset + x];
                 float cosv = sin(n*M_PI / 64.0);                // FIXME: use one table for this
                 float sinv = -cos(n*M_PI / 64.0);
 
@@ -714,22 +726,13 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                 }
             }else if(chgroup->num_channels > 2){
                 if(get_bits1(&s->gb)){
-                    if(get_bits1(&s->gb)){
-                        int n_offset = chgroup->num_channels  * (chgroup->num_channels - 1) >> 1;
-                        int i;
-                        chgroup->transform = 2;
-                        for(i=0;i<n_offset;i++){
-                            chgroup->rotation_offset[i] = get_bits(&s->gb,6);
-                        }
-                        for(i=0;i<chgroup->num_channels;i++)
-                            chgroup->decorrelation_matrix[chgroup->num_channels * i + i] = get_bits1(&s->gb)?1.0:-1.0;
-                        wma_calc_decorrelation_matrix(chgroup);
-                    }else{
-                        chgroup->transform = 2;
+                    chgroup->transform = 2;
+                    if(get_bits1(&s->gb))
+                        wma_decode_decorrelation_matrix(s, chgroup);
+                    else
                         memcpy(chgroup->decorrelation_matrix,
                                s->def_decorrelation_mat[chgroup->num_channels],
                                chgroup->num_channels * chgroup->num_channels * sizeof(float));
-                    }
                 }
             }
 
