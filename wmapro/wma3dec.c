@@ -961,7 +961,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                 /** run level decode differences to the resampled factors */
 
                 memcpy(s->channel[c].scale_factors,s->channel[c].resampled_scale_factors,
-                       4 * s->num_bands);
+                       sizeof(int) * s->num_bands);
 
                 for(i=0;i<s->num_bands;i++){
                     int idx;
