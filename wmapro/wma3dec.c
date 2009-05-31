@@ -1215,17 +1215,17 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         }
         s->quant_step += quant;
         if(quant <= -32 || quant > 30){
-        while(get_bits_count(&s->gb) + 5 < s->num_saved_bits){
-            quant = get_bits(&s->gb,5);
-            if(quant != 31){
-                s->quant_step += quant * sign;
-                break;
+            while(get_bits_count(&s->gb) + 5 < s->num_saved_bits){
+                quant = get_bits(&s->gb,5);
+                if(quant != 31){
+                    s->quant_step += quant * sign;
+                    break;
+                }
+                s->quant_step += 31 * sign;
+                if(s->quant_step < 0){
+                    av_log(s->avctx,AV_LOG_DEBUG,"negative quant step\n");
+                }
             }
-            s->quant_step += 31 * sign;
-            if(s->quant_step < 0){
-                av_log(s->avctx,AV_LOG_DEBUG,"negative quant step\n");
-            }
-        }
         }
 
         /** decode quantization step modifiers for every channel */
