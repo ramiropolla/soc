@@ -214,7 +214,7 @@ Index: ffmpeg.c
 +        return -1;
 +    if(avfilter_graph_config_formats(filt_graph_all))
 +        return -1;
-+    if(avfilter_config_links(ist->out_video_filter))
++    if(avfilter_graph_config_links(filt_graph_all, NULL))
 +        return -1;
 +
 +    codec->width = ist->out_video_filter->inputs[0]->w;
