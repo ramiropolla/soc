@@ -113,7 +113,6 @@ typedef struct WMA3DecodeContext {
     int8_t           num_channels;                  ///< number of channels
     int8_t           lfe_channel;                   ///< lfe channel index
     const float**    def_decorrelation_mat;         ///< default decorrelation matrix
-    uint8_t          allow_subframes;               ///< frames may contain subframes
     uint8_t          max_num_subframes;             ///< maximum number of subframes
     int8_t           num_possible_block_sizes;      ///< nb of supported block sizes
     uint16_t         min_samples_per_subframe;      ///< minimum samples per subframe
@@ -127,8 +126,6 @@ typedef struct WMA3DecodeContext {
     int              num_saved_bits;                ///< saved number of bits
     int              frame_offset;                  ///< frame offset in the bit reservoir
     int              subframe_offset;               ///< subframe offset in the bit reservoir
-    uint8_t          bit5;                          ///< padding bit? (CBR files)
-    uint8_t          bit6;                          ///< unknown
     uint8_t          packet_loss;                   ///< set in case of bitstream error
 
     /** frame decode state */

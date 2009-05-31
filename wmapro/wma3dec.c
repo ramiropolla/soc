@@ -228,7 +228,6 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
     /** subframe info */
     s->max_num_subframes = 1 << ((s->decode_flags & 0x38) >> 3);
     s->num_possible_block_sizes = av_log2(s->max_num_subframes) + 1;
-    s->allow_subframes = s->max_num_subframes > 1;
     s->min_samples_per_subframe = s->samples_per_frame / s->max_num_subframes;
     s->dynamic_range_compression = (s->decode_flags & 0x80) >> 7;
 
@@ -838,7 +837,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
 
     /** decode run level coded coefficients */
     if(rl_mode){
-        unsigned int coeff_mask = s->subframe_len - 1;
+        const unsigned int coeff_mask = s->subframe_len - 1;
         while(cur_coeff < s->subframe_len){
             unsigned int idx;
             int sign;
@@ -1204,7 +1203,6 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     if(transmit_coeffs){
         int quant;
         int sign = 1;
-        int large_quant = 0;
         if((get_bits1(&s->gb))){ /** FIXME: might change run level mode decision */
             av_log(s->avctx,AV_LOG_ERROR,"unsupported quant step coding\n");
             return 0;
@@ -1216,9 +1214,8 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             sign = -1;
         }
         s->quant_step += quant;
-        if(quant <= -32 || quant > 30)
-            large_quant = 1;
-        while(large_quant && (get_bits_count(&s->gb) + 5 < s->num_saved_bits)){
+        if(quant <= -32 || quant > 30){
+        while(get_bits_count(&s->gb) + 5 < s->num_saved_bits){
             quant = get_bits(&s->gb,5);
             if(quant != 31){
                 s->quant_step += quant * sign;
@@ -1228,6 +1225,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             if(s->quant_step < 0){
                 av_log(s->avctx,AV_LOG_DEBUG,"negative quant step\n");
             }
+        }
         }
 
         /** decode quantization step modifiers for every channel */
@@ -1546,8 +1544,7 @@ static int wma_decode_packet(AVCodecContext *avctx,
     /** parse packet header */
     init_get_bits(&gb, buf, s->buf_bit_size);
     packet_sequence_number    = get_bits(&gb, 4);
-    s->bit5                   = get_bits1(&gb);
-    s->bit6                   = get_bits1(&gb);
+    skip_bits(&gb, 2);
 
     /** get number of bits that need to be added to the previous frame */
     num_bits_prev_frame = get_bits(&gb, s->log2_frame_size);
