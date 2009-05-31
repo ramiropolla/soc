@@ -1619,8 +1619,10 @@ static void wma_flush(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
     int i;
+    /** reset output buffer as a part of it is used during the windowing of a
+        new frame */
     for(i=0;i<s->num_channels;i++)
-        memset(s->channel[i].out, 0, sizeof(s->channel[0].out));
+        memset(s->channel[i].out, 0, s->samples_per_frame * sizeof(float));
     s->packet_loss = 1;
 }
 
