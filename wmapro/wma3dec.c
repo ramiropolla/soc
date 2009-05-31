@@ -1019,23 +1019,30 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
     for(i=0;i<s->num_chgroups;i++){
 
         if(s->chgroup[i].transform == 1){
-            int b;
             /** M/S stereo decoding */
-            for(b = 0; b < s->num_bands;b++){
-                int y;
-                if(s->chgroup[i].transform_band[b] == 1){
-                    for(y=s->cur_sfb_offsets[b];y<FFMIN(s->cur_sfb_offsets[b+1], s->subframe_len);y++){
-                        float v1 = s->channel[0].coeffs[y];
-                        float v2 = s->channel[1].coeffs[y];
-                        s->channel[0].coeffs[y] = v1 - v2;
-                        s->channel[1].coeffs[y] = v1 + v2;
+            int* sfb_offsets = s->cur_sfb_offsets;
+            float* ch0 = *sfb_offsets + s->channel[0].coeffs;
+            float* ch1 = *sfb_offsets++ + s->channel[1].coeffs;
+            const char* tb = s->chgroup[i].transform_band;
+            const char* tb_end = tb + s->num_bands;
+
+            while(tb < tb_end){
+                const float* ch0_end = s->channel[0].coeffs +
+                                       FFMIN(*sfb_offsets,s->subframe_len);
+                if(*tb++ == 1){
+                    while(ch0 < ch0_end){
+                        const float v1 = *ch0;
+                        const float v2 = *ch1;
+                        *ch0++ = v1 - v2;
+                        *ch1++ = v1 + v2;
                     }
                 }else{
-                    for(y=s->cur_sfb_offsets[b];y<FFMIN(s->cur_sfb_offsets[b+1], s->subframe_len);y++){
-                        s->channel[0].coeffs[y] *= 181.0 / 128;
-                        s->channel[1].coeffs[y] *= 181.0 / 128;
+                    while(ch0 < ch0_end){
+                        *ch0++ *= 181.0 / 128;
+                        *ch1++ *= 181.0 / 128;
                     }
                 }
+                ++sfb_offsets;
             }
         }else if(s->chgroup[i].transform){
             int x;
