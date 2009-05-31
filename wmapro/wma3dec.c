@@ -81,6 +81,14 @@
 #define VLCBITS            9
 #define SCALEVLCBITS       8
 
+static VLC              sf_vlc;                        ///< scale factor dpcm vlc
+static VLC              sf_rl_vlc;                     ///< scale factor run length vlc
+static VLC              vec4_vlc;                      ///< 4 coefficients per symbol
+static VLC              vec2_vlc;                      ///< 2 coefficients per symbol
+static VLC              vec1_vlc;                      ///< 1 coefficient per symbol
+static VLC              coef_vlc[2];                   ///< coefficient run length vlc codes
+
+
 /**
  *@brief helper function to print the most important members of the context
  *@param s context
@@ -155,14 +163,6 @@ static av_cold int wma_decode_end(AVCodecContext *avctx)
     av_free(s->sf_offsets);
 
     av_free(s->def_decorrelation_mat);
-
-    free_vlc(&s->sf_vlc);
-    free_vlc(&s->sf_rl_vlc);
-    free_vlc(&s->coef_vlc[0]);
-    free_vlc(&s->coef_vlc[1]);
-    free_vlc(&s->vec4_vlc);
-    free_vlc(&s->vec2_vlc);
-    free_vlc(&s->vec1_vlc);
 
     for(i=0 ; i<BLOCK_NB_SIZES ; i++)
         ff_mdct_end(&s->mdct_ctx[i]);
@@ -259,37 +259,37 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
         return -1;
     }
 
-    init_vlc(&s->sf_vlc, SCALEVLCBITS, FF_WMA3_HUFF_SCALE_SIZE,
+    INIT_VLC_STATIC(&sf_vlc, SCALEVLCBITS, FF_WMA3_HUFF_SCALE_SIZE,
                  ff_wma3_scale_huffbits, 1, 1,
-                 ff_wma3_scale_huffcodes, 4, 4, 0);
+                 ff_wma3_scale_huffcodes, 4, 4, 616);
 
-    init_vlc(&s->sf_rl_vlc, VLCBITS, FF_WMA3_HUFF_SCALE_RL_SIZE,
+    INIT_VLC_STATIC(&sf_rl_vlc, VLCBITS, FF_WMA3_HUFF_SCALE_RL_SIZE,
                  ff_wma3_scale_rl_huffbits, 1, 1,
-                 ff_wma3_scale_rl_huffcodes, 4, 4, 0);
+                 ff_wma3_scale_rl_huffcodes, 4, 4, 1406);
 
-    init_vlc(&s->coef_vlc[0], VLCBITS, FF_WMA3_HUFF_COEF0_SIZE,
+    INIT_VLC_STATIC(&coef_vlc[0], VLCBITS, FF_WMA3_HUFF_COEF0_SIZE,
                  ff_wma3_coef0_huffbits, 1, 1,
-                 ff_wma3_coef0_huffcodes, 4, 4, 0);
+                 ff_wma3_coef0_huffcodes, 4, 4, 2108);
 
     s->coef_max[0] = ((FF_WMA3_HUFF_COEF0_MAXBITS+VLCBITS-1)/VLCBITS);
 
-    init_vlc(&s->coef_vlc[1], VLCBITS, FF_WMA3_HUFF_COEF1_SIZE,
+    INIT_VLC_STATIC(&coef_vlc[1], VLCBITS, FF_WMA3_HUFF_COEF1_SIZE,
                  ff_wma3_coef1_huffbits, 1, 1,
-                 ff_wma3_coef1_huffcodes, 4, 4, 0);
+                 ff_wma3_coef1_huffcodes, 4, 4, 3912);
 
     s->coef_max[1] = ((FF_WMA3_HUFF_COEF1_MAXBITS+VLCBITS-1)/VLCBITS);
 
-    init_vlc(&s->vec4_vlc, VLCBITS, FF_WMA3_HUFF_VEC4_SIZE,
+    INIT_VLC_STATIC(&vec4_vlc, VLCBITS, FF_WMA3_HUFF_VEC4_SIZE,
                  ff_wma3_vec4_huffbits, 1, 1,
-                 ff_wma3_vec4_huffcodes, 4, 4, 0);
+                 ff_wma3_vec4_huffcodes, 4, 4, 604);
 
-    init_vlc(&s->vec2_vlc, VLCBITS, FF_WMA3_HUFF_VEC2_SIZE,
+    INIT_VLC_STATIC(&vec2_vlc, VLCBITS, FF_WMA3_HUFF_VEC2_SIZE,
                  ff_wma3_vec2_huffbits, 1, 1,
-                 ff_wma3_vec2_huffcodes, 4, 4, 0);
+                 ff_wma3_vec2_huffcodes, 4, 4, 562);
 
-    init_vlc(&s->vec1_vlc, VLCBITS, FF_WMA3_HUFF_VEC1_SIZE,
+    INIT_VLC_STATIC(&vec1_vlc, VLCBITS, FF_WMA3_HUFF_VEC1_SIZE,
                  ff_wma3_vec1_huffbits, 1, 1,
-                 ff_wma3_vec1_huffcodes, 4, 4, 0);
+                 ff_wma3_vec1_huffcodes, 4, 4, 562);
 
     s->num_sfb = av_mallocz(sizeof(int)*s->num_possible_block_sizes);
     s->sfb_offsets = av_mallocz(MAX_BANDS * sizeof(int) *s->num_possible_block_sizes);
@@ -769,7 +769,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
     av_log(s->avctx,AV_LOG_DEBUG,"decode coefficients for channel %i\n",c);
 
     vlctable = get_bits1(&s->gb);
-    vlc = &s->coef_vlc[vlctable];
+    vlc = &coef_vlc[vlctable];
     vlcmax = s->coef_max[vlctable];
 
     if(vlctable){
@@ -793,17 +793,17 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
         int i;
         unsigned int idx;
 
-        idx = get_vlc2(&s->gb, s->vec4_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
+        idx = get_vlc2(&s->gb, vec4_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
 
         if ( idx == FF_WMA3_HUFF_VEC4_SIZE - 1 ){
             i = 0;
             while(i < 4){
-                idx = get_vlc2(&s->gb, s->vec2_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC2_MAXBITS+VLCBITS-1)/VLCBITS));
+                idx = get_vlc2(&s->gb, vec2_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC2_MAXBITS+VLCBITS-1)/VLCBITS));
                 if ( idx == FF_WMA3_HUFF_VEC2_SIZE - 1 ){
-                    vals[i] = get_vlc2(&s->gb, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
+                    vals[i] = get_vlc2(&s->gb, vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
                     if(vals[i] == FF_WMA3_HUFF_VEC1_SIZE - 1)
                         vals[i] += wma_get_large_val(s);
-                    vals[i+1] = get_vlc2(&s->gb, s->vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
+                    vals[i+1] = get_vlc2(&s->gb, vec1_vlc.table, VLCBITS, ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
                     if(vals[i+1] == FF_WMA3_HUFF_VEC1_SIZE - 1)
                         vals[i+1] += wma_get_large_val(s);
                 }else{
@@ -919,10 +919,10 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                 int val;
                 /** decode DPCM coded scale factors */
                 s->channel[c].scale_factor_step = get_bits(&s->gb,2) + 1;
-                val = get_vlc2(&s->gb, s->sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
+                val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
                 s->channel[c].scale_factors[0] = 45 / s->channel[c].scale_factor_step + val - 60;
                 for(i=1;i<s->num_bands;i++){
-                    val = get_vlc2(&s->gb, s->sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
+                    val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
                     s->channel[c].scale_factors[i]  = s->channel[c].scale_factors[i-1] + val - 60;
                 }
             }else{
@@ -938,7 +938,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                     short val;
                     short sign;
 
-                    idx = get_vlc2(&s->gb, s->sf_rl_vlc.table, VLCBITS, ((FF_WMA3_HUFF_SCALE_RL_MAXBITS+VLCBITS-1)/VLCBITS));
+                    idx = get_vlc2(&s->gb, sf_rl_vlc.table, VLCBITS, ((FF_WMA3_HUFF_SCALE_RL_MAXBITS+VLCBITS-1)/VLCBITS));
 
                     if( !idx ){
                         uint32_t code = get_bits(&s->gb,14);

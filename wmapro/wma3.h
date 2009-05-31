@@ -94,12 +94,6 @@ typedef struct WMA3DecodeContext {
     DECLARE_ALIGNED_16(float, tmp[BLOCK_MAX_SIZE]); ///< imdct output buffer
     float*           windows[BLOCK_NB_SIZES];       ///< window per block size
     float            sin64[33];                     ///< sinus table for decorrelation
-    VLC              sf_vlc;                        ///< scale factor dpcm vlc
-    VLC              sf_rl_vlc;                     ///< scale factor run length vlc
-    VLC              vec4_vlc;                      ///< 4 coefficients per symbol
-    VLC              vec2_vlc;                      ///< 2 coefficients per symbol
-    VLC              vec1_vlc;                      ///< 1 coefficient per symbol
-    VLC              coef_vlc[2];                   ///< coefficient run length vlc codes
     int              coef_max[2];                   ///< max length of vlc codes
 
     /** frame size dependent frame information (set during initialization) */
