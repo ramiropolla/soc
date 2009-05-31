@@ -602,53 +602,53 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
 {
     AVStream *st;
     int index;
-    int64_t pos, ret_ts, av_uninit(pos_min), av_uninit(pos_max), pos_limit;
+    int64_t pos, ret_ts, av_uninit(pos_min), av_uninit(pos_max), pos_limit = -1;
 
     if (stream_index < 0){
         stream_index= av_find_default_stream_index(s);
         if(stream_index < 0)
             return -1;
+        st = s->streams[stream_index];
+        ts = av_rescale(ts, st->time_base.den, AV_TIME_BASE * (int64_t)st->time_base.num);
     }
-    st = s->streams[stream_index];
-    ts = av_rescale(ts, st->time_base.den, AV_TIME_BASE * (int64_t)st->time_base.num);
 
     if (st->discard >= AVDISCARD_ALL) {
         av_log(s, AV_LOG_ERROR, "Not active stream!\n");
         return -1;
     }
 
-    if (st->nb_index_entries) {
-        index = av_index_search_timestamp(st, ts, flags);
-        if (index > 0) {
-            if (st->index_entries[index].timestamp >= min_ts && st->index_entries[index].timestamp <= max_ts){
-                url_fseek(s->pb, st->index_entries[index].pos, SEEK_SET);
-                return 0;
-            }
-        }
+    min_ts =
+    max_ts = AV_NOPTS_VALUE;
 
-        index = av_index_search_timestamp(st, min_ts, 0);
-        if (index > 0) {
+    if (st->index_entries) {
+        AVIndexEntry *e;
+
+        index = av_index_search_timestamp(st, ts, flags | AVSEEK_FLAG_BACKWARD);
+        index = FFMAX(index, 0);
+        e= &st->index_entries[index];
+
+        if (e->timestamp <= ts || e->pos == e->min_distance) {
             pos_min = st->index_entries[index].pos;
             min_ts = st->index_entries[index].timestamp;
         }
 
-        index = av_index_search_timestamp(st, max_ts, AVSEEK_FLAG_BACKWARD);
-        if (index > 0) {
+        index = av_index_search_timestamp(st, ts, flags & ~AVSEEK_FLAG_BACKWARD);
+        if (index >= 0) {
             pos_max = st->index_entries[index].pos;
             max_ts = st->index_entries[index].timestamp;
             pos_limit = pos_max - st->index_entries[index].min_distance;
         }
-    }else
-    {
-        min_ts =
-        max_ts = AV_NOPTS_VALUE;
     }
+    av_log(s, AV_LOG_DEBUG, "pos_min=0x%"PRIx64" pos_max=0x%"PRIx64" pos_limit=0x%"PRIx64" max_ts=%"PRId64" min_ts=%"PRId64" ts=%"PRId64"\n",
+           pos_min, pos_max, pos_limit, max_ts, min_ts, ts);
     pos= av_gen_search(s, stream_index, ts, pos_min, pos_max, pos_limit,
                                         min_ts, max_ts, flags, &ret_ts, mpegps_read_dts);
-
+    if (pos < 0)
+        return -1;
     // check return result
     if (ret_ts >= min_ts && ret_ts <= max_ts)
         url_fseek(s->pb, pos, SEEK_SET);
+    av_update_cur_dts(s, st, ret_ts);
     return 0;
 }
 
