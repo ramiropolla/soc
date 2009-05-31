@@ -49,7 +49,7 @@
  * @brief decoder context for a single channel
  */
 typedef struct {
-    int      prev_block_len;                          ///< length of the previous block
+    int16_t  prev_block_len;                          ///< length of the previous block
     uint8_t  transmit_coefs;                          ///< transmit coefficients
     uint8_t  num_subframes;                           ///< number of subframes
     uint16_t subframe_len[MAX_SUBFRAMES];             ///< subframe length in samples
@@ -58,14 +58,14 @@ typedef struct {
     uint16_t channel_len;                             ///< channel length in samples
     uint16_t decoded_samples;                         ///< already processed samples
     uint8_t  grouped;                                 ///< channel is part of a group
-    int      quant_step_modifier;                     ///< deviation from the main quantization step
-    int      transmit_sf;                             ///< transmit scale factors
-    int      reuse_sf;                                ///< share scale factors between subframes
-    int      scale_factor_step;                       ///< scaling step
+    int8_t   quant_step_modifier;                     ///< deviation from the main quantization step
+    int8_t   transmit_sf;                             ///< transmit scale factors
+    int8_t   reuse_sf;                                ///< share scale factors between subframes
+    int8_t   scale_factor_step;                       ///< scaling step
     int      max_scale_factor;                        ///< maximum scale factor
     int      scale_factors[MAX_BANDS];                ///< scale factor values
     int      resampled_scale_factors[MAX_BANDS];      ///< scale factors from a previous block
-    int      scale_factor_block_len;                  ///< scale factor reference block length
+    int16_t  scale_factor_block_len;                  ///< scale factor reference block length
     float*   coeffs;                                  ///< pointer to the decode buffer
     DECLARE_ALIGNED_16(float, out[2*BLOCK_MAX_SIZE]); ///< output buffer
 } WMA3ChannelCtx;
@@ -98,7 +98,7 @@ typedef struct WMA3DecodeContext {
 
     /** frame size dependent frame information (set during initialization) */
     uint8_t          lossless;                      ///< lossless mode
-    unsigned int     decode_flags;                  ///< used compression features
+    uint32_t         decode_flags;                  ///< used compression features
     uint8_t          len_prefix;                    ///< frame is prefixed with its length
     uint8_t          dynamic_range_compression;     ///< frame contains DRC data
     uint8_t          sample_bit_depth;              ///< bits per sample
@@ -110,10 +110,10 @@ typedef struct WMA3DecodeContext {
     uint8_t          max_num_subframes;             ///< maximum number of subframes
     int8_t           num_possible_block_sizes;      ///< nb of supported block sizes
     uint16_t         min_samples_per_subframe;      ///< minimum samples per subframe
-    int*             num_sfb;                       ///< scale factor bands per block size
-    int*             sfb_offsets;                   ///< scale factor band offsets
-    int*             sf_offsets;                    ///< scale factor resample matrix
-    int*             subwoofer_cutoffs;             ///< subwoofer cutoff values
+    int8_t*          num_sfb;                       ///< scale factor bands per block size
+    int16_t*         sfb_offsets;                   ///< scale factor band offsets
+    int16_t*         sf_offsets;                    ///< scale factor resample matrix
+    int16_t*         subwoofer_cutoffs;             ///< subwoofer cutoff values
 
     /** packet decode state */
     uint8_t          packet_sequence_number;        ///< current packet number
@@ -123,24 +123,24 @@ typedef struct WMA3DecodeContext {
     uint8_t          packet_loss;                   ///< set in case of bitstream error
 
     /** frame decode state */
-    unsigned int     frame_num;                     ///< current frame number
+    uint32_t         frame_num;                     ///< current frame number
     GetBitContext    gb;                            ///< bitstream reader context
     int              buf_bit_size;                  ///< buffer size in bits
     int16_t*         samples;                       ///< current samplebuffer pointer
     int16_t*         samples_end;                   ///< maximum samplebuffer pointer
     uint8_t          drc_gain;                      ///< gain for the DRC tool
-    int              skip_frame;                    ///< skip output step
-    int              parsed_all_subframes;          ///< all subframes decoded?
+    int8_t           skip_frame;                    ///< skip output step
+    int8_t           parsed_all_subframes;          ///< all subframes decoded?
 
     /** subframe/block decode state */
-    int              subframe_len;                  ///< current subframe length
-    int              channels_for_cur_subframe;     ///< number of channels that contain the subframe
-    int              channel_indexes_for_cur_subframe[MAX_CHANNELS];
-    int              cur_subwoofer_cutoff;          ///< subwoofer cutoff value
-    int              num_bands;                     ///< number of scale factor bands
-    int*             cur_sfb_offsets;               ///< sfb offsets for the current block
+    int16_t          subframe_len;                  ///< current subframe length
+    int8_t           channels_for_cur_subframe;     ///< number of channels that contain the subframe
+    int8_t           channel_indexes_for_cur_subframe[MAX_CHANNELS];
+    int16_t          cur_subwoofer_cutoff;          ///< subwoofer cutoff value
+    int8_t           num_bands;                     ///< number of scale factor bands
+    int16_t*         cur_sfb_offsets;               ///< sfb offsets for the current block
     int              quant_step;                    ///< quantization step
-    int              esc_len;                       ///< length of escaped coefficients
+    int8_t           esc_len;                       ///< length of escaped coefficients
 
     uint8_t          num_chgroups;                  ///< number of channel groups
     WMA3ChannelGroup chgroup[MAX_CHANNELS];         ///< channel group information

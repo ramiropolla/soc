@@ -180,7 +180,7 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
     uint8_t *edata_ptr = avctx->extradata;
-    int* sfb_offsets;
+    int16_t* sfb_offsets;
     unsigned int channel_mask;
     int i;
 
@@ -292,12 +292,13 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
                  ff_wma3_vec1_huffbits, 1, 1,
                  ff_wma3_vec1_huffcodes, 4, 4, 562);
 
-    s->num_sfb = av_mallocz(sizeof(int)*s->num_possible_block_sizes);
+    s->num_sfb = av_mallocz(sizeof(int8_t)*s->num_possible_block_sizes);
     s->sfb_offsets = av_mallocz(MAX_BANDS *
-                                sizeof(int) * s->num_possible_block_sizes);
-    s->subwoofer_cutoffs = av_mallocz(sizeof(int)*s->num_possible_block_sizes);
+                                sizeof(int16_t) * s->num_possible_block_sizes);
+    s->subwoofer_cutoffs = av_mallocz(sizeof(int16_t) *
+                                      s->num_possible_block_sizes);
     s->sf_offsets = av_mallocz(MAX_BANDS * s->num_possible_block_sizes *
-                               s->num_possible_block_sizes * sizeof(int));
+                               s->num_possible_block_sizes * sizeof(int16_t));
 
     if(!s->num_sfb ||
        !s->sfb_offsets || !s->subwoofer_cutoffs || !s->sf_offsets){
@@ -926,8 +927,9 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
         /** resample scale factors for the new block size */
         if(s->channel[c].reuse_sf){
             const int idx1 = av_log2(s->samples_per_frame/s->channel[c].scale_factor_block_len);
-            const int* sf_offsets = &s->sf_offsets[s->num_possible_block_sizes * MAX_BANDS  * idx0
-                                                 + MAX_BANDS * idx1];
+            const int16_t* sf_offsets =
+                               &s->sf_offsets[s->num_possible_block_sizes *
+                               MAX_BANDS  * idx0 + MAX_BANDS * idx1];
             int b;
             for(b=0;b<s->num_bands;b++)
                 s->channel[c].resampled_scale_factors[b] = s->channel[c].scale_factors[*sf_offsets++];
@@ -1020,7 +1022,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
 
         if(s->chgroup[i].transform == 1){
             /** M/S stereo decoding */
-            int* sfb_offsets = s->cur_sfb_offsets;
+            int16_t* sfb_offsets = s->cur_sfb_offsets;
             float* ch0 = *sfb_offsets + s->channel[0].coeffs;
             float* ch1 = *sfb_offsets++ + s->channel[1].coeffs;
             const char* tb = s->chgroup[i].transform_band;
