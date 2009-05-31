@@ -1,8 +1,8 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 18829)
+--- ffmpeg.c	(revision 19066)
 +++ ffmpeg.c	(working copy)
-@@ -40,6 +40,13 @@
+@@ -41,6 +41,13 @@
  #include "libavutil/avstring.h"
  #include "libavformat/os_support.h"
  
@@ -16,7 +16,7 @@ Index: ffmpeg.c
  #if HAVE_SYS_RESOURCE_H
  #include <sys/types.h>
  #include <sys/resource.h>
-@@ -147,6 +154,10 @@
+@@ -148,6 +155,10 @@
  static int loop_input = 0;
  static int loop_output = AVFMT_NOOUTPUTLOOP;
  static int qp_hist = 0;
@@ -27,7 +27,7 @@ Index: ffmpeg.c
  
  static int intra_only = 0;
  static int audio_sample_rate = 44100;
-@@ -287,6 +298,13 @@
+@@ -288,6 +299,13 @@
                                  is not defined */
      int64_t       pts;       /* current pts */
      int is_start;            /* is 1 at the start and after a discontinuity */
@@ -41,7 +41,7 @@ Index: ffmpeg.c
  } AVInputStream;
  
  typedef struct AVInputFile {
-@@ -302,6 +320,185 @@
+@@ -303,6 +321,185 @@
  static struct termios oldtty;
  #endif
  
@@ -227,7 +227,7 @@ Index: ffmpeg.c
  static void term_exit(void)
  {
  #if HAVE_TERMIOS_H
-@@ -442,6 +639,10 @@
+@@ -443,6 +640,10 @@
      av_free(audio_out2);
      av_free(samples);
  
@@ -238,7 +238,7 @@ Index: ffmpeg.c
      if (received_sigterm) {
          fprintf(stderr,
              "Received signal %d: terminating.\n",
-@@ -892,6 +1093,9 @@
+@@ -893,6 +1094,9 @@
      if (nb_frames <= 0)
          return;
  
@@ -248,7 +248,7 @@ Index: ffmpeg.c
      if (ost->video_crop) {
          if (av_picture_crop((AVPicture *)&picture_crop_temp, (AVPicture *)in_picture, dec->pix_fmt, ost->topBand, ost->leftBand) < 0) {
              fprintf(stderr, "error cropping picture\n");
-@@ -903,6 +1107,7 @@
+@@ -904,6 +1108,7 @@
      } else {
          formatted_picture = in_picture;
      }
@@ -256,7 +256,7 @@ Index: ffmpeg.c
  
      final_picture = formatted_picture;
      padding_src = formatted_picture;
-@@ -920,12 +1125,14 @@
+@@ -921,12 +1126,14 @@
          }
      }
  
@@ -346,7 +346,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1858,11 +2099,22 @@
+@@ -1867,11 +2108,22 @@
                          fprintf(stderr, "Cannot get resampling context\n");
                          av_exit(1);
                      }
@@ -369,7 +369,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -2247,6 +2499,12 @@
+@@ -2256,6 +2508,12 @@
              avcodec_close(ist->st->codec);
          }
      }
@@ -382,7 +382,7 @@ Index: ffmpeg.c
  
      /* finished ! */
      ret = 0;
-@@ -3880,6 +4138,9 @@
+@@ -3872,6 +4130,9 @@
      { "psnr", OPT_BOOL | OPT_EXPERT | OPT_VIDEO, {(void*)&do_psnr}, "calculate PSNR of compressed frames" },
      { "vstats", OPT_EXPERT | OPT_VIDEO, {(void*)&opt_vstats}, "dump video coding statistics to file" },
      { "vstats_file", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_vstats_file}, "dump video coding statistics to file", "file" },
