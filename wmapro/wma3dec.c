@@ -367,10 +367,8 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
     for(i=0;i< s->num_possible_block_sizes;i++){
         int block_size = s->samples_per_frame / (1 << i);
         int cutoff = ceil(block_size * 440.0 / (double)s->avctx->sample_rate + 0.5);
-        if(cutoff < 4)
-            cutoff = 4;
-        if(cutoff > block_size)
-            cutoff = block_size;
+        cutoff = FFMAX(cutoff, 4);
+        cutoff = FFMIN(cutoff, block_size);
         s->subwoofer_cutoffs[i] = cutoff;
     }
 
@@ -1491,8 +1489,7 @@ static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len, int 
         /** byte align prev_frame buffer */
         if(bit_offset){
             int missing = 8 - bit_offset;
-            if(len < missing)
-                missing = len;
+            missing = FFMIN(len, missing);
             s->frame_data[pos++] |=
                 get_bits(gb, missing) << (8 - bit_offset - missing);
             len -= missing;
