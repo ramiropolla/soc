@@ -671,12 +671,11 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
         for(s->num_chgroups = 0; remaining_channels &&
             s->num_chgroups < s->channels_for_cur_subframe;s->num_chgroups++){
             WMA3ChannelGroup* chgroup = &s->chgroup[s->num_chgroups];
+            float** channel_data = chgroup->channel_data;
             chgroup->num_channels = 0;
             chgroup->transform = 0;
 
             /** decode channel mask */
-            memset(chgroup->use_channel,0,sizeof(chgroup->use_channel));
-
             if(remaining_channels > 2){
                 for(i=0;i<s->channels_for_cur_subframe;i++){
                     int channel_idx = s->channel_indexes_for_cur_subframe[i];
@@ -684,14 +683,16 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                        && get_bits1(&s->gb)){
                         ++chgroup->num_channels;
                         s->channel[channel_idx].grouped = 1;
-                        chgroup->use_channel[channel_idx] = 1;
+                        *channel_data++ = s->channel[channel_idx].coeffs;
                     }
                 }
             }else{
                 chgroup->num_channels = remaining_channels;
-                for(i=0;i<s->num_channels ;i++){
-                    chgroup->use_channel[i] = s->channel[i].grouped != 1;
-                    s->channel[i].grouped = 1;
+                for(i=0;i<s->channels_for_cur_subframe ;i++){
+                    int channel_idx = s->channel_indexes_for_cur_subframe[i];
+                    if(!s->channel[channel_idx].grouped)
+                        *channel_data++ = s->channel[channel_idx].coeffs;
+                    s->channel[channel_idx].grouped = 1;
                 }
             }
 
@@ -1047,50 +1048,37 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                 ++sfb_offsets;
             }
         }else if(s->chgroup[i].transform){
-            int x;
-            int b;
-            int cnt = 0;
-            float* ch_data[MAX_CHANNELS];
-            float  sums[MAX_CHANNELS * MAX_CHANNELS];
+            float data[MAX_CHANNELS];
+            const int num_channels = s->chgroup[i].num_channels;
+            float** ch_data = s->chgroup[i].channel_data;
+            float** ch_end = ch_data + num_channels;
+            const int8_t* tb = s->chgroup[i].transform_band;
+            int16_t* sfb;
 
             /** multichannel decorrelation */
-
-            /** get the channels that use the transform */
-            for(x=0;x<s->channels_for_cur_subframe;x++){
-                int chan = s->channel_indexes_for_cur_subframe[x];
-                if(s->chgroup[i].use_channel[chan] == 1){
-                    ch_data[cnt] = s->channel[chan].coeffs;
-                    ++cnt;
-                }
-            }
-
-            for(b = 0; b < s->num_bands;b++){
-                int y;
-                if(s->chgroup[i].transform_band[b] == 1){
+            for(sfb = s->cur_sfb_offsets ;
+                sfb < s->cur_sfb_offsets + s->num_bands;sfb++){
+                if(*tb++ == 1){
+                    int y;
                     /** multiply values with the decorrelation_matrix */
-                    for(y=s->cur_sfb_offsets[b];y<FFMIN(s->cur_sfb_offsets[b+1], s->subframe_len);y++){
-                        float* matrix = s->chgroup[i].decorrelation_matrix;
-                        int m;
+                    for(y=sfb[0];y<FFMIN(sfb[1], s->subframe_len);y++){
+                        const float* mat = s->chgroup[i].decorrelation_matrix;
+                        const float* data_end= data + num_channels;
+                        float* data_ptr= data;
+                        float** ch;
 
-                        for(m = 0;m<s->chgroup[i].num_channels;m++)
-                            sums[m] = 0;
+                        for(ch = ch_data;ch < ch_end; ch++)
+                           *data_ptr++ = (*ch)[y];
 
-                        for(m = 0;m<s->chgroup[i].num_channels;m++){
-                            int k;
-                            for(k=0;k<s->chgroup[i].num_channels;k++)
-                                sums[m] += ch_data[k][0] *
-                                       matrix[m*s->chgroup[i].num_channels+k];
-                        }
+                        for(ch = ch_data; ch < ch_end; ch++){
+                            float sum = 0;
+                            data_ptr = data;
+                            while(data_ptr < data_end)
+                                sum += *data_ptr++ * *mat++;
 
-                        for(m = 0;m<s->chgroup[i].num_channels;m++){
-                            ch_data[m][0] = sums[m];
-                            ++ch_data[m];
+                            (*ch)[y] = sum;
                         }
                     }
-                }else{     /** skip band */
-                    for(y=0;y<s->chgroup[i].num_channels;y++)
-                        ch_data[y] +=
-                          s->cur_sfb_offsets[b+1] - s->cur_sfb_offsets[b];
                 }
             }
         }
