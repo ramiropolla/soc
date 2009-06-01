@@ -1205,15 +1205,18 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     for(i=0;i<s->channels_for_cur_subframe;i++){
         int c = s->channel_indexes_for_cur_subframe[i];
 
-        s->channel[c].coeffs = &s->channel[c].out[(s->samples_per_frame>>1)  + offset];
+        s->channel[c].coeffs = &s->channel[c].out[(s->samples_per_frame>>1)
+                                                  + offset];
         memset(s->channel[c].coeffs,0,sizeof(float) * subframe_len);
 
         /** init some things if this is the first subframe */
         if(!s->channel[c].cur_subframe){
               s->channel[c].scale_factor_step = 1;
               s->channel[c].max_scale_factor = 0;
-              memset(s->channel[c].scale_factors, 0, sizeof(s->channel[c].scale_factors));
-              memset(s->channel[c].resampled_scale_factors, 0, sizeof(s->channel[c].resampled_scale_factors));
+              memset(s->channel[c].scale_factors, 0,
+                     sizeof(s->channel[c].scale_factors));
+              memset(s->channel[c].resampled_scale_factors, 0,
+                     sizeof(s->channel[c].resampled_scale_factors));
         }
 
     }
@@ -1298,7 +1301,8 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
                 s->channel[c].quant_step_modifier = 0;
                 if(get_bits1(&s->gb)){
                     if(modifier_len)
-                        s->channel[c].quant_step_modifier = get_bits(&s->gb,modifier_len) + 1;
+                        s->channel[c].quant_step_modifier =
+                                get_bits(&s->gb,modifier_len) + 1;
                     else
                         s->channel[c].quant_step_modifier = 1;
                 }else
@@ -1333,7 +1337,8 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             int c = s->channel_indexes_for_cur_subframe[i];
             int b;
             if(c == s->lfe_channel)
-                memset(&s->tmp[s->cur_subwoofer_cutoff],0,sizeof(float) * (subframe_len - s->cur_subwoofer_cutoff));
+                memset(&s->tmp[s->cur_subwoofer_cutoff],0,
+                     sizeof(float) * (subframe_len - s->cur_subwoofer_cutoff));
 
             /** inverse quantization and rescaling */
             for(b=0;b<s->num_bands;b++){
