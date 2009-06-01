@@ -602,14 +602,17 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
 {
     AVStream *st;
     int index;
-    int64_t pos, ret_ts, av_uninit(pos_min), av_uninit(pos_max), pos_limit = -1;
-
+    AVPacket pkt1, *pkt = &pkt1;
+    int64_t pos, pts, ret_ts, av_uninit(pos_min), av_uninit(pos_max), pos_limit = -1;
+    flags = flags | (ts - min_ts > (uint64_t)(max_ts - ts) ? AVSEEK_FLAG_BACKWARD : 0);
     if (stream_index < 0){
         stream_index= av_find_default_stream_index(s);
         if(stream_index < 0)
             return -1;
         st = s->streams[stream_index];
         ts = av_rescale(ts, st->time_base.den, AV_TIME_BASE * (int64_t)st->time_base.num);
+    } else {
+        st = s->streams[stream_index];
     }
 
     if (st->discard >= AVDISCARD_ALL) {
@@ -628,8 +631,8 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
         e= &st->index_entries[index];
 
         if (e->timestamp <= ts || e->pos == e->min_distance) {
-            pos_min = st->index_entries[index].pos;
-            min_ts = st->index_entries[index].timestamp;
+            pos_min = e->pos;
+            min_ts = e->timestamp;
         }
 
         index = av_index_search_timestamp(st, ts, flags & ~AVSEEK_FLAG_BACKWARD);
@@ -645,10 +648,25 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
                                         min_ts, max_ts, flags, &ret_ts, mpegps_read_dts);
     if (pos < 0)
         return -1;
-    // check return result
-    if (ret_ts >= min_ts && ret_ts <= max_ts)
-        url_fseek(s->pb, pos, SEEK_SET);
-    av_update_cur_dts(s, st, ret_ts);
+    url_fseek(s->pb, pos, SEEK_SET);
+    av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64"\n", pos);
+
+    // find the keyframe
+    for (;;) {
+        if (av_read_frame(s, pkt) < 0){
+            av_log(s, AV_LOG_ERROR, "can not find the key frame\n");
+            return -1;
+        }
+        av_free_packet(pkt);
+        if(pkt->flags&PKT_FLAG_KEY){
+            pos = pkt->pos;
+            pts= pkt->pts;
+            av_log(s, AV_LOG_DEBUG, "keyframe pos = %"PRId64"\n", pos);
+            break;
+        }
+    }
+
+    av_update_cur_dts(s, st, pts);
     return 0;
 }
 
