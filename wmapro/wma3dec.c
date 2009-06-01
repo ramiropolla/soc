@@ -474,10 +474,13 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
             int read_channel_mask = 1;
             int channels_for_cur_subframe = 0;
             int subframe_len;
+            /** minimum number of samples that need to be read */
+            int min_samples = s->min_samples_per_subframe;
 
             if(fixed_channel_layout){
                 read_channel_mask = 0;
                 channels_for_cur_subframe = s->num_channels;
+                min_samples *= channels_for_cur_subframe;
                 min_channel_len = s->channel[0].channel_len;
             }else{
                 /** find channels with the smallest overall length */
@@ -490,9 +493,10 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
                         ++channels_for_cur_subframe;
                     }
                 }
+                min_samples *= channels_for_cur_subframe;
 
                 if(channels_for_cur_subframe == 1 ||
-                  s->min_samples_per_subframe * channels_for_cur_subframe == missing_samples)
+                   min_samples == missing_samples)
                     read_channel_mask = 0;
             }
 
@@ -508,8 +512,9 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
                 }
             }
 
-            /** if we have the choice get next subframe length from the bitstream */
-            if(s->min_samples_per_subframe * channels_for_cur_subframe != missing_samples){
+            /** if we have the choice get next subframe length from the
+                bitstream */
+            if(min_samples != missing_samples){
                 int log2_subframe_len = 0;
                 /* 1 bit indicates if the subframe length is zero */
                 if(subframe_len_zero_bit){
