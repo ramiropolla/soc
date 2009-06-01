@@ -87,6 +87,7 @@ static VLC              vec4_vlc;         ///< 4 coefficients per symbol
 static VLC              vec2_vlc;         ///< 2 coefficients per symbol
 static VLC              vec1_vlc;         ///< 1 coefficient per symbol
 static VLC              coef_vlc[2];      ///< coefficient run length vlc codes
+static float            sin64[33];        ///< sinus table for decorrelation
 
 
 /**
@@ -396,7 +397,7 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
 
     /** calculate sine values for the decorrelation matrix */
     for(i=0;i<33;i++)
-        s->sin64[i] = sin(i*M_PI / 64.0);
+        sin64[i] = sin(i*M_PI / 64.0);
 
     wma_dump_context(s);
     avctx->channel_layout = channel_mask;
@@ -625,11 +626,11 @@ static void wma_decode_decorrelation_matrix(WMA3DecodeContext* s,
                 float cosv;
 
                 if(n<32){
-                    sinv = s->sin64[n];
-                    cosv = s->sin64[32-n];
+                    sinv = sin64[n];
+                    cosv = sin64[32-n];
                 }else{
-                    sinv = s->sin64[64-n];
-                    cosv = -s->sin64[n-32];
+                    sinv = sin64[64-n];
+                    cosv = -sin64[n-32];
                 }
 
                 chgroup->decorrelation_matrix[y + x * chgroup->num_channels] =
