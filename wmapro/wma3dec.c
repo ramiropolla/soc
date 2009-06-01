@@ -1165,15 +1165,16 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     /** get a list of all channels that contain the estimated block */
     s->channels_for_cur_subframe = 0;
     for(i=0;i<s->num_channels;i++){
+        const int cur_subframe = s->channel[i].cur_subframe;
         /** substract already processed samples */
         total_samples -= s->channel[i].decoded_samples;
 
         /** and count if there are multiple subframes that match our profile */
         if(offset == s->channel[i].decoded_samples &&
-           subframe_len == s->channel[i].subframe_len[s->channel[i].cur_subframe]){
-             total_samples -= s->channel[i].subframe_len[s->channel[i].cur_subframe];
+           subframe_len == s->channel[i].subframe_len[cur_subframe]){
+             total_samples -= s->channel[i].subframe_len[cur_subframe];
              s->channel[i].decoded_samples +=
-                s->channel[i].subframe_len[s->channel[i].cur_subframe];
+                s->channel[i].subframe_len[cur_subframe];
              s->channel_indexes_for_cur_subframe[s->channels_for_cur_subframe] = i;
              ++s->channels_for_cur_subframe;
         }
