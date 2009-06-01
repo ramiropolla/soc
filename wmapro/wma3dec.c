@@ -920,7 +920,6 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
 static int wma_decode_scale_factors(WMA3DecodeContext* s)
 {
     int i;
-    const int idx0 = av_log2(s->samples_per_frame/s->subframe_len);
 
     /** should never consume more than 5344 bits
      *  MAX_CHANNELS * (1 +  MAX_BANDS * 23)
@@ -928,21 +927,31 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
 
     for(i=0;i<s->channels_for_cur_subframe;i++){
         int c = s->channel_indexes_for_cur_subframe[i];
+        int* sf;
+        int* sf_end = s->channel[c].scale_factors + s->num_bands;
 
         /** resample scale factors for the new block size */
         if(s->channel[c].reuse_sf){
-            const int idx1 = av_log2(s->samples_per_frame/s->channel[c].scale_factor_block_len);
+            const int blocks_per_frame = s->samples_per_frame/s->subframe_len;
+            const int res_blocks_per_frame = s->samples_per_frame /
+                                          s->channel[c].scale_factor_block_len;
+            const int idx0 = av_log2(blocks_per_frame);
+            const int idx1 = av_log2(res_blocks_per_frame);
             const int16_t* sf_offsets =
                                &s->sf_offsets[s->num_possible_block_sizes *
                                MAX_BANDS  * idx0 + MAX_BANDS * idx1];
             int b;
             for(b=0;b<s->num_bands;b++)
-                s->channel[c].resampled_scale_factors[b] = s->channel[c].scale_factors[*sf_offsets++];
+                s->channel[c].resampled_scale_factors[b] =
+                                   s->channel[c].scale_factors[*sf_offsets++];
 
-            s->channel[c].max_scale_factor = s->channel[c].resampled_scale_factors[0];
-            for(b=1;b<s->num_bands;b++){
-                if(s->channel[c].resampled_scale_factors[b] > s->channel[c].max_scale_factor)
-                    s->channel[c].max_scale_factor = s->channel[c].resampled_scale_factors[b];
+            s->channel[c].max_scale_factor =
+                                   s->channel[c].resampled_scale_factors[0];
+            sf = s->channel[c].resampled_scale_factors + 1;
+            while(sf < s->channel[c].resampled_scale_factors + s->num_bands){
+                if(*sf > s->channel[c].max_scale_factor)
+                    s->channel[c].max_scale_factor = *sf;
+                ++sf;
             }
         }
 
@@ -952,24 +961,26 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
             s->channel[c].transmit_sf = 1;
 
         if(s->channel[c].transmit_sf){
-            int b;
 
             if(!s->channel[c].reuse_sf){
-                int i;
                 int val;
                 /** decode DPCM coded scale factors */
                 s->channel[c].scale_factor_step = get_bits(&s->gb,2) + 1;
-                val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
-                s->channel[c].scale_factors[0] = 45 / s->channel[c].scale_factor_step + val - 60;
-                for(i=1;i<s->num_bands;i++){
-                    val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS, ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
-                    s->channel[c].scale_factors[i]  = s->channel[c].scale_factors[i-1] + val - 60;
+                val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS,
+                   ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
+                s->channel[c].scale_factors[0] = 45 /
+                              s->channel[c].scale_factor_step + val - 60;
+                for(sf = s->channel[c].scale_factors + 1; sf < sf_end; sf++) {
+                    val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS,
+                  ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
+                    *sf = *(sf - 1) + val - 60;
                 }
             }else{
                 int i;
                 /** run level decode differences to the resampled factors */
 
-                memcpy(s->channel[c].scale_factors,s->channel[c].resampled_scale_factors,
+                memcpy(s->channel[c].scale_factors,
+                       s->channel[c].resampled_scale_factors,
                        sizeof(int) * s->num_bands);
 
                 for(i=0;i<s->num_bands;i++){
@@ -996,7 +1007,8 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
 
                     i += skip;
                     if(i >= s->num_bands){
-                        av_log(s->avctx,AV_LOG_ERROR,"invalid scale factor coding\n");
+                        av_log(s->avctx,AV_LOG_ERROR,
+                               "invalid scale factor coding\n");
                         return 0;
                     }else
                         s->channel[c].scale_factors[i] += (val ^ sign) - sign;
@@ -1005,9 +1017,9 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
 
             s->channel[c].reuse_sf = 1;
             s->channel[c].max_scale_factor = s->channel[c].scale_factors[0];
-            for(b=1;b<s->num_bands;b++){
-                if(s->channel[c].max_scale_factor < s->channel[c].scale_factors[b])
-                    s->channel[c].max_scale_factor = s->channel[c].scale_factors[b];
+            for(sf=s->channel[c].scale_factors + 1; sf < sf_end; sf++){
+                if(s->channel[c].max_scale_factor < *sf)
+                    s->channel[c].max_scale_factor = *sf;
             }
             s->channel[c].scale_factor_block_len = s->subframe_len;
         }
