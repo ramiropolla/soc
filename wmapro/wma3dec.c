@@ -1344,16 +1344,18 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             for(b=0;b<s->num_bands;b++){
                 int start = s->cur_sfb_offsets[b];
                 int end = s->cur_sfb_offsets[b+1];
-                int min;
+                int sf = s->channel[c].max_scale_factor;
                 float quant;
                 if(end > s->subframe_len)
                     end = s->subframe_len;
 
                 if(s->channel[c].transmit_sf)
-                     min = s->channel[c].scale_factor_step * (s->channel[c].max_scale_factor - s->channel[c].scale_factors[b]);
+                     sf -= s->channel[c].scale_factors[b];
                 else
-                     min = s->channel[c].scale_factor_step * (s->channel[c].max_scale_factor - s->channel[c].resampled_scale_factors[b]);
-                quant = pow(10.0,(s->quant_step + s->channel[c].quant_step_modifier - min) / 20.0);
+                     sf -= s->channel[c].resampled_scale_factors[b];
+                sf *= -s->channel[c].scale_factor_step;
+                sf += s->quant_step + s->channel[c].quant_step_modifier;
+                quant = pow(10.0,sf / 20.0);
                 while(start < end){
                     s->tmp[start] = s->channel[c].coeffs[start] * quant;
                     ++start;
