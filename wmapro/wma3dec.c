@@ -363,10 +363,10 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
 
     /** init MDCT windows: simple sinus window */
     for(i=0 ; i<BLOCK_NB_SIZES ; i++) {
-        int n;
-        n = 1 << (BLOCK_MAX_BITS - i);
-        ff_sine_window_init(ff_sine_windows[BLOCK_MAX_BITS - i - 7], n);
-        s->windows[BLOCK_NB_SIZES-i-1] = ff_sine_windows[BLOCK_MAX_BITS - i - 7];
+        const int n = 1 << (BLOCK_MAX_BITS - i);
+        const int win_idx = BLOCK_MAX_BITS - i - 7;
+        ff_sine_window_init(ff_sine_windows[win_idx], n);
+        s->windows[BLOCK_NB_SIZES-i-1] = ff_sine_windows[win_idx];
     }
 
     /** calculate subwoofer cutoff values */
