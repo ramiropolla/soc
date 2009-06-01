@@ -1172,11 +1172,11 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         /** and count if there are multiple subframes that match our profile */
         if(offset == s->channel[i].decoded_samples &&
            subframe_len == s->channel[i].subframe_len[cur_subframe]){
-             total_samples -= s->channel[i].subframe_len[cur_subframe];
-             s->channel[i].decoded_samples +=
+            total_samples -= s->channel[i].subframe_len[cur_subframe];
+            s->channel[i].decoded_samples +=
                 s->channel[i].subframe_len[cur_subframe];
-             s->channel_indexes_for_cur_subframe[s->channels_for_cur_subframe] = i;
-             ++s->channels_for_cur_subframe;
+            s->channel_indexes_for_cur_subframe[s->channels_for_cur_subframe] = i;
+            ++s->channels_for_cur_subframe;
         }
     }
 
