@@ -374,9 +374,7 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
         int block_size = s->samples_per_frame / (1 << i);
         int cutoff = ceil(block_size * 440.0
                           / (double)s->avctx->sample_rate + 0.5);
-        cutoff = FFMAX(cutoff, 4);
-        cutoff = FFMIN(cutoff, block_size);
-        s->subwoofer_cutoffs[i] = cutoff;
+        s->subwoofer_cutoffs[i] = av_clip(cutoff,4,block_size);
     }
 
     /** set up decorrelation matrixes */
