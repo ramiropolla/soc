@@ -38,6 +38,9 @@
 #define AMR_BLOCK_SIZE    160
 #define AMR_SUBFRAME_SIZE  40
 
+// AMR is designed to produce 16-bit PCM samples (3GPP TS 26.090 4.2)
+#define AMR_SAMPLE_SCALE 32768.0
+
 // definition of modes for decoder
 #define NO_DATA 15
 enum Mode {
