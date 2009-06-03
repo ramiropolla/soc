@@ -365,6 +365,8 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
  * of the pitch lag for one subframe at 1/6 resolution for MODE_122,
  * 1/3 for other modes.
  *
+ * The choice of pitch lag is described in 3GPP TS 26.090 section 5.6.1.
+ *
  * @param lag_int             integer part of pitch lag of the current subframe
  * @param lag_frac            fractional part of pitch lag of the current subframe
  * @param pitch_index         parsed adaptive codebook (pitch) index
@@ -376,8 +378,8 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index,
                              const int prev_lag_int, const int subframe,
                              const enum Mode mode)
 {
-    // subframe 1 or 3
-    if (!(subframe & 1)) {
+    if (subframe == 0 ||
+        (subframe == 2 && mode != MODE_475 && mode != MODE_515)) {
         if (mode == MODE_122) {
             if (pitch_index < 463) {
                 *lag_int  = (pitch_index + 5) / 6 + 17;
@@ -394,7 +396,6 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index,
             *lag_int  = pitch_index - 112;
             *lag_frac = 0;
         }
-    // subframe 2 or 4
     } else {
         if (mode == MODE_122) {
             *lag_int  = (pitch_index + 5) / 6 - 1;
