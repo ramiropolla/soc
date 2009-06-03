@@ -605,6 +605,7 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
     AVPacket pkt1, *pkt = &pkt1;
     int64_t pos, pts, ret_ts, av_uninit(pos_min), av_uninit(pos_max), pos_limit = -1;
     flags = flags | (ts - min_ts > (uint64_t)(max_ts - ts) ? AVSEEK_FLAG_BACKWARD : 0);
+
     if (stream_index < 0){
         stream_index= av_find_default_stream_index(s);
         if(stream_index < 0)
@@ -651,6 +652,7 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
     url_fseek(s->pb, pos, SEEK_SET);
     av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64"\n", pos);
 
+    if (ts >= ret_ts) {
     // find the keyframe
     for (;;) {
         if (av_read_frame(s, pkt) < 0){
@@ -661,12 +663,12 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
         if(pkt->flags&PKT_FLAG_KEY){
             pos = pkt->pos;
             pts= pkt->pts;
-            av_log(s, AV_LOG_DEBUG, "keyframe pos = %"PRId64"\n", pos);
+            av_log(s, AV_LOG_DEBUG, "keyframe pos = %"PRId64" pts = %"PRId64"\n", pos, pts);
             break;
         }
     }
-
-    av_update_cur_dts(s, st, pts);
+    }
+    av_update_cur_dts(s, st, ret_ts);
     return 0;
 }
 
