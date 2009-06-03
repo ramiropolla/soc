@@ -507,6 +507,7 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
             next_minrd = INFINITY;
             next_mincb = 0;
             for(cb = 0; cb < 12; cb++){
+                float cost_stay_here, cost_get_here;
                 float rd = 0.0f;
                 for(w = 0; w < group_len; w++){
                     FFPsyBand *band = &s->psy.psy_bands[s->cur_channel*PSY_MAX_BANDS+(win+w)*16+swb];
@@ -514,8 +515,8 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
                                              sce->sf_idx[(win+w)*16+swb], cb,
                                              lambda / band->threshold, INFINITY, NULL);
                 }
-                float cost_stay_here = path[swb][cb].cost + rd;
-                float cost_get_here  = minrd              + rd + run_bits + 4;
+                cost_stay_here = path[swb][cb].cost + rd;
+                cost_get_here  = minrd              + rd + run_bits + 4;
                 if(   run_value_bits[sce->ics.num_windows == 8][path[swb][cb].run]
                    != run_value_bits[sce->ics.num_windows == 8][path[swb][cb].run+1])
                     cost_stay_here += run_bits;
