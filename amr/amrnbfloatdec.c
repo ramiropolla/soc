@@ -872,9 +872,9 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
 
     for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
         // detect overflow
-        if (fabsf(samples[i]) > AMR_SAMPLE_SCALE) {
+        if (fabsf(samples[i]) > AMR_SAMPLE_BOUND) {
             overflow_temp = 1;
-            samples[i] = av_clipf(samples[i], -AMR_SAMPLE_SCALE, AMR_SAMPLE_SCALE);
+            samples[i] = av_clipf(samples[i], -AMR_SAMPLE_BOUND, AMR_SAMPLE_BOUND);
         }
 
     return overflow_temp;
@@ -998,7 +998,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
             buf_out[subframe * AMR_SUBFRAME_SIZE + i] =
-                p->samples_in[LP_FILTER_ORDER + i] / AMR_SAMPLE_SCALE;
+                p->samples_in[LP_FILTER_ORDER + i] * AMR_SAMPLE_SCALE;
     }
 
     /* report how many samples we got */
