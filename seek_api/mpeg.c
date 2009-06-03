@@ -653,20 +653,20 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
     av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64"\n", pos);
 
     if (ts >= ret_ts) {
-    // find the keyframe
-    for (;;) {
-        if (av_read_frame(s, pkt) < 0){
-            av_log(s, AV_LOG_ERROR, "can not find the key frame\n");
-            return -1;
+        // find the keyframe
+        for (;;) {
+            if (av_read_frame(s, pkt) < 0){
+                av_log(s, AV_LOG_ERROR, "can not find the key frame\n");
+                return -1;
+            }
+            av_free_packet(pkt);
+            if(pkt->flags&PKT_FLAG_KEY){
+                pos = pkt->pos;
+                pts= pkt->pts;
+                av_log(s, AV_LOG_DEBUG, "keyframe pos = %"PRId64" pts = %"PRId64"\n", pos, pts);
+                break;
+            }
         }
-        av_free_packet(pkt);
-        if(pkt->flags&PKT_FLAG_KEY){
-            pos = pkt->pos;
-            pts= pkt->pts;
-            av_log(s, AV_LOG_DEBUG, "keyframe pos = %"PRId64" pts = %"PRId64"\n", pos, pts);
-            break;
-        }
-    }
     }
     av_update_cur_dts(s, st, ret_ts);
     return 0;
