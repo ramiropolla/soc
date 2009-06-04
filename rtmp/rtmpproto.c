@@ -49,9 +49,7 @@ typedef struct RTMPContext {
  * url syntax: rtp://host:port[?option=val...]
  * option: 'ttl=n'       : set the ttl value (for multicast only)
  *         'localport=n' : set the local port to n
- *
  */
-
 static int rtmp_open(URLContext *h, const char *uri, int flags)
 {
     RTMPContext *s;
