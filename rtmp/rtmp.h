@@ -21,6 +21,7 @@
 
 #ifndef AVFORMAT_RTMP_H
 #define AVFORMAT_RTMP_H
+
 #include "avformat.h"
 
 /** RTMP default port */
