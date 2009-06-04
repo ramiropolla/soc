@@ -1,11 +1,11 @@
 #!/bin/sh
 
 echo "Checking out FFmpeg SVN trunk code..."
-svn co svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg && \
+svn co svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg &&
 cd ffmpeg
 
 echo "Patching build system"
-patch -p1 < ../aac_enc.patch && \
+patch -p1 < ../aac_enc.patch &&
 cd libavcodec
 
 echo "Copying and downloading source code to libavcodec dir"
