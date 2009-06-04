@@ -1,0 +1,40 @@
+Index: libavformat/Makefile
+===================================================================
+--- libavformat/Makefile	(revision 18770)
++++ libavformat/Makefile	(working copy)
+@@ -187,6 +187,7 @@
+ OBJS-$(CONFIG_ROQ_DEMUXER)               += idroq.o
+ OBJS-$(CONFIG_ROQ_MUXER)                 += raw.o
+ OBJS-$(CONFIG_RPL_DEMUXER)               += rpl.o
++OBJS-$(CONFIG_RTMP_DEMUXER)              += rtmpdec.o rtmppkt.o
+ OBJS-$(CONFIG_RTP_MUXER)                 += rtp.o         \
+                                             rtp_aac.o     \
+                                             rtp_amr.o     \
+@@ -243,6 +244,7 @@
+ OBJS-$(CONFIG_GOPHER_PROTOCOL)           += gopher.o
+ OBJS-$(CONFIG_HTTP_PROTOCOL)             += http.o
+ OBJS-$(CONFIG_PIPE_PROTOCOL)             += file.o
++OBJS-$(CONFIG_RTMP_PROTOCOL)             += rtmpproto.o
+ OBJS-$(CONFIG_RTP_PROTOCOL)              += rtpproto.o
+ OBJS-$(CONFIG_TCP_PROTOCOL)              += tcp.o
+ OBJS-$(CONFIG_UDP_PROTOCOL)              += udp.o
+Index: libavformat/allformats.c
+===================================================================
+--- libavformat/allformats.c	(revision 18770)
++++ libavformat/allformats.c	(working copy)
+@@ -164,6 +164,7 @@
+     REGISTER_MUXDEMUX (RM, rm);
+     REGISTER_MUXDEMUX (ROQ, roq);
+     REGISTER_DEMUXER  (RPL, rpl);
++    REGISTER_DEMUXER  (RTMP, rtmp);
+     REGISTER_MUXER    (RTP, rtp);
+     REGISTER_DEMUXER  (RTSP, rtsp);
+     REGISTER_DEMUXER  (SDP, sdp);
+@@ -207,6 +208,7 @@
+     REGISTER_PROTOCOL (GOPHER, gopher);
+     REGISTER_PROTOCOL (HTTP, http);
+     REGISTER_PROTOCOL (PIPE, pipe);
++    REGISTER_PROTOCOL (RTMP, rtmp);
+     REGISTER_PROTOCOL (RTP, rtp);
+     REGISTER_PROTOCOL (TCP, tcp);
+     REGISTER_PROTOCOL (UDP, udp);

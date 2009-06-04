@@ -1,0 +1,39 @@
+/*
+ * RTMP definitions
+ * Copyright (c) 2009 Kostya Shishkov
+ *
+ * This file is part of FFmpeg.
+ *
+ * FFmpeg is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * FFmpeg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with FFmpeg; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
+#ifndef AVFORMAT_RTMP_H
+#define AVFORMAT_RTMP_H
+#include "avformat.h"
+
+/** RTMP default port */
+#define RTMP_DEFAULT_PORT 1935
+
+/** RTMP handshake data size */
+#define RTMP_HANDSHAKE_PACKET_SIZE 1536
+
+#define RTMP_CLIENT_VER1    9
+#define RTMP_CLIENT_VER2    0
+#define RTMP_CLIENT_VER3  124
+#define RTMP_CLIENT_VER4    2
+
+#define RTMP_CLIENT_VER_STR  "LNX" #RTMP_CLIENT_VER1 "," #RTMP_CLIENT_VER2
+
+#endif /* AVFORMAT_RTMP_H */

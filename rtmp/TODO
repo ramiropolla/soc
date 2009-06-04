@@ -1,0 +1,4 @@
+Proper handshake
+Proper "connect" call (additional parameters and filename parsing)
+Factorize a lot of FLV demuxer code
+Set correct timestamps
