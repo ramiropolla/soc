@@ -391,7 +391,7 @@ static int mpegps_read_pes_header(AVFormatContext *s,
             if(startcode == s->streams[i]->id &&
                !url_is_streamed(s->pb) /* index useless on streams anyway */) {
                 ff_reduce_index(s, i);
-                av_add_index_entry(s->streams[i], *ppos, dts, 0, 0, AVINDEX_KEYFRAME /* FIXME keyframe? */);
+                av_add_index_entry(s->streams[i], *ppos, dts, 0, 0, AVFMT_GENERIC_INDEX /* FIXME keyframe? */);
             }
         }
     }
@@ -597,6 +597,116 @@ static int64_t mpegps_read_dts(AVFormatContext *s, int stream_index,
     return dts;
 }
 
+/* 0 for sucess and -1 for error */
+static int find_keyframe(AVFormatContext *s, int64_t *ret_pos, int64_t *pts, int64_t target_ts, int flags)
+{
+    AVPacket pkt1, *pkt = &pkt1;
+    int64_t pre_pts, pre_pos, size;
+
+    for (;;) {
+        if (av_read_frame(s, pkt) < 0)
+            return -1;
+
+        size = pkt->size;
+        av_free_packet(pkt);
+        if (!(pkt->flags & PKT_FLAG_KEY))
+            continue;
+
+        *ret_pos += size;
+        *pts = pkt->pts;
+
+        if (*pts < target_ts) {
+            pre_pts = *pts;
+            pre_pos = *ret_pos;
+        } else
+            break;
+    }
+
+    if (flags & AVSEEK_FLAG_BACKWARD) {
+        *ret_pos = pre_pts;
+        *pts = pre_pos;
+    }
+    return 0;
+}
+
+static int mpegps_read_seek1(struct AVFormatContext *s, int stream_index,
+                            int64_t min_ts, int64_t ts, int64_t max_ts, int flags)
+{
+    AVStream* st;
+    int index;
+    int64_t pos, av_uninit(pos_min), av_uninit(pos_max), pos_limit;
+    int64_t ts_min, ts_max, ret_ts, pts;
+
+    if (min_ts > ts || max_ts < ts)
+        return -1;
+
+    if (stream_index < 0) {
+        stream_index= av_find_default_stream_index(s);
+        if(stream_index < 0)
+            return -1;
+        st = s->streams[stream_index];
+        ts = av_rescale(ts, st->time_base.den, AV_TIME_BASE * (int64_t)st->time_base.num);
+    } else
+        st = s->streams[stream_index];
+
+    if (ts < 0) {
+        pts = ts = 0;
+        url_fseek(s->pb, 0, SEEK_SET);
+        goto sucess;
+    }
+
+    if (st->discard >= AVDISCARD_ALL) {
+        av_log(s, AV_LOG_ERROR, "Not active stream!\n");
+        return -1;
+    }
+
+    if (st->index_entries) {
+        AVIndexEntry *e;
+        index = av_index_search_timestamp(st, ts, flags | AVSEEK_FLAG_BACKWARD);
+
+        if (index >= 0) {
+            e = &st->index_entries[index];
+            pos = e->pos;
+            pts = e->timestamp;
+            url_fseek(s->pb, pos, SEEK_SET);
+            av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64", pts  = %"PRId64", targe timestamp = %"PRId64"\n", pos, pts, ts);
+
+            if (e->timestamp == ts) { // find the target timestamp
+                goto sucess;
+            } else { // seek around to get the keyframe, then seek there
+                if (find_keyframe(s, &pos,&pts,ts, flags) == 0) {
+                    url_fseek(s->pb, pos, SEEK_SET);
+                    goto sucess;
+                } else {
+                    av_update_cur_dts(s, st, pts);
+                    return -1;
+                }
+            }
+        }
+     }
+    // search the scr use binary search
+    ts_max=
+    ts_min= AV_NOPTS_VALUE;
+    pos_limit= -1;
+    pos= av_gen_search(s, stream_index, ts, pos_min, pos_max, pos_limit, ts_min, ts_max, flags | AVSEEK_FLAG_BACKWARD, &ret_ts, mpegps_read_dts);
+    av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64", ret_ts  = %"PRId64"\n", pos, ret_ts);
+    if(pos<0)
+        return -1;
+
+    url_fseek(s->pb, pos, SEEK_SET);
+    if (find_keyframe(s, &pos, &ret_ts, ts, flags) == 0) {
+        url_fseek(s->pb, pos, SEEK_SET);
+        pts =  ret_ts;
+        goto sucess;
+    } else {
+        av_update_cur_dts(s, st, ret_ts);
+        return -1;
+    }
+sucess:
+    av_update_cur_dts(s, st, pts);
+    return 0;
+}
+
 static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
                             int64_t min_ts, int64_t ts, int64_t max_ts, int flags)
 {
@@ -683,5 +793,5 @@ AVInputFormat mpegps_demuxer = {
     NULL, //mpegps_read_seek,
     mpegps_read_dts,
     .flags = AVFMT_SHOW_IDS|AVFMT_TS_DISCONT,
-    .read_seek2 = mpegps_read_seek,
+    .read_seek2 = mpegps_read_seek1,
 };
