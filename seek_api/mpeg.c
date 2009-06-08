@@ -391,7 +391,7 @@ static int mpegps_read_pes_header(AVFormatContext *s,
             if(startcode == s->streams[i]->id &&
                !url_is_streamed(s->pb) /* index useless on streams anyway */) {
                 ff_reduce_index(s, i);
-                av_add_index_entry(s->streams[i], *ppos, dts, 0, 0, AVFMT_GENERIC_INDEX /* FIXME keyframe? */);
+                av_add_index_entry(s->streams[i], *ppos, dts, 0, 0, 0 /* FIXME keyframe? */);
             }
         }
     }
@@ -792,6 +792,6 @@ AVInputFormat mpegps_demuxer = {
     NULL,
     NULL, //mpegps_read_seek,
     mpegps_read_dts,
-    .flags = AVFMT_SHOW_IDS|AVFMT_TS_DISCONT,
+    .flags = AVFMT_SHOW_IDS|AVFMT_TS_DISCONT|AVFMT_GENERIC_INDEX,
     .read_seek2 = mpegps_read_seek1,
 };
