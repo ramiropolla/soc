@@ -662,7 +662,7 @@ static int mpegps_read_seek1(struct AVFormatContext *s, int stream_index,
 
     if (st->index_entries) {
         AVIndexEntry *e;
-        index = av_index_search_timestamp(st, ts, flags | AVSEEK_FLAG_BACKWARD);
+        index = av_index_search_timestamp(st, ts, flags | AVSEEK_FLAG_ANY);
 
         if (index >= 0) {
             e = &st->index_entries[index];
