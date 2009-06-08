@@ -629,7 +629,7 @@ static int find_keyframe(AVFormatContext *s, int64_t *ret_pos, int64_t *pts, int
     return 0;
 }
 
-static int mpegps_read_seek1(struct AVFormatContext *s, int stream_index,
+static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
                             int64_t min_ts, int64_t ts, int64_t max_ts, int flags)
 {
     AVStream* st;
@@ -718,5 +718,5 @@ AVInputFormat mpegps_demuxer = {
     NULL, //mpegps_read_seek,
     mpegps_read_dts,
     .flags = AVFMT_SHOW_IDS|AVFMT_TS_DISCONT|AVFMT_GENERIC_INDEX,
-    .read_seek2 = mpegps_read_seek1,
+    .read_seek2 = mpegps_read_seek,
 };
