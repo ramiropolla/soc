@@ -671,7 +671,7 @@ static int mpegps_read_seek1(struct AVFormatContext *s, int stream_index,
             url_fseek(s->pb, pos, SEEK_SET);
             av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64", pts  = %"PRId64", targe timestamp = %"PRId64"\n", pos, pts, ts);
 
-            if (e->timestamp == ts) { // find the target timestamp
+            if (pts == ts) { // find the target timestamp
                 goto sucess;
             } else { // seek around to get the keyframe, then seek there
                 if (find_keyframe(s, &pos,&pts,ts, flags) == 0) {
