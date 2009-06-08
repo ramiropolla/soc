@@ -101,6 +101,20 @@ typedef struct AVFilterPicRef
 #define AV_PERM_REUSE2   0x10   ///< can output the buffer multiple times, modified each time
 } AVFilterPicRef;
 
+
+typedef struct AVFilterSamples
+{
+    /* data */
+    void *data;
+    int *n_samples;
+
+    void *priv;
+    void (*free)(struct AVFilterSamples *samples)
+
+}AVFilterSamples;
+
+
+
 /**
  * Adds a new reference to a picture.
  * @param ref   an existing reference to the picture
@@ -345,6 +359,17 @@ struct AVFilterPad
      * and another value on error.
      */
     int (*config_props)(AVFilterLink *link);
+
+
+    /**
+     * Process an audio buffer. This function is where the audio filter should
+     * recieve and process data
+     */
+    int (*start_buffer)(AVFilterLink *link);
+
+    int (*end_buffer)(AVFilterLink *link);
+
+
 };
 
 /** default handler for start_frame() for video inputs */

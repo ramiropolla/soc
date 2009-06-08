@@ -69,6 +69,8 @@ void avfilter_insert_pad(unsigned idx, unsigned *count, size_t padidx_off,
     (*links)[idx] = NULL;
 
     (*count) ++;
+
+    av_log(0,0,"%x %x\n", idx, *count);
     for(i = idx+1; i < *count; i ++)
         if(*links[i])
             (*(unsigned *)((uint8_t *) *links[i] + padidx_off)) ++;
@@ -297,6 +299,7 @@ AVFilter *avfilter_get_by_name(const char *name)
     return NULL;
 }
 
+/* does not work, nonrobust logic? */
 void avfilter_register(AVFilter *filter)
 {
     struct FilterList *newfilt = av_malloc(sizeof(struct FilterList));
@@ -318,9 +321,12 @@ void avfilter_uninit(void)
 
 static int pad_count(const AVFilterPad *pads)
 {
-    int count;
+    if (!pads)
+        return 0;
 
+    int count;
     for(count = 0; pads->name; count ++) pads ++;
+    av_log(0,0,"count is: %i\n", count);
     return count;
 }
 

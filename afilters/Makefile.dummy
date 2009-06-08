@@ -1,0 +1,4 @@
+
+
+all:
+	gcc dummy.c -o dummy -I./ffmpeg -lm ./ffmpeg/libav*/libav*.a
