@@ -622,7 +622,7 @@ static int find_keyframe(AVFormatContext *s, int64_t *ret_pos, int64_t *pts, int
             break;
     }
 
-    if (flags & AVSEEK_FLAG_BACKWARD) {
+    if (flags & AVSEEK_FLAG_BACKWARD && ((pre_pts + *pts)) >> 2 > target_ts) {
         *ret_pos = pre_pts;
         *pts = pre_pos;
     }
