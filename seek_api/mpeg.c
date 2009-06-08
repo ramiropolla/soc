@@ -688,7 +688,7 @@ static int mpegps_read_seek1(struct AVFormatContext *s, int stream_index,
     ts_max=
     ts_min= AV_NOPTS_VALUE;
     pos_limit= -1;
-    pos= av_gen_search(s, stream_index, ts, pos_min, pos_max, pos_limit, ts_min, ts_max, flags | AVSEEK_FLAG_BACKWARD, &ret_ts, mpegps_read_dts);
+    pos= av_gen_search(s, stream_index, ts, pos_min, pos_max, pos_limit, ts_min, ts_max, flags, &ret_ts, mpegps_read_dts);
     av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64", ret_ts  = %"PRId64"\n", pos, ret_ts);
     if(pos<0)
         return -1;
