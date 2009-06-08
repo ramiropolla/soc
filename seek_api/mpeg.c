@@ -597,7 +597,7 @@ static int64_t mpegps_read_dts(AVFormatContext *s, int stream_index,
     return dts;
 }
 
-/* 0 for sucess and -1 for error */
+/* 0 for success and -1 for error */
 static int find_keyframe(AVFormatContext *s, int64_t *ret_pos, int64_t *pts, int64_t target_ts, int flags)
 {
     AVPacket pkt1, *pkt = &pkt1;
@@ -652,7 +652,7 @@ static int mpegps_read_seek1(struct AVFormatContext *s, int stream_index,
     if (ts < 0) {
         pts = ts = 0;
         url_fseek(s->pb, 0, SEEK_SET);
-        goto sucess;
+        goto success;
     }
 
     if (st->discard >= AVDISCARD_ALL) {
@@ -672,11 +672,11 @@ static int mpegps_read_seek1(struct AVFormatContext *s, int stream_index,
             av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64", pts  = %"PRId64", targe timestamp = %"PRId64"\n", pos, pts, ts);
 
             if (pts == ts) { // find the target timestamp
-                goto sucess;
+                goto success;
             } else { // seek around to get the keyframe, then seek there
                 if (find_keyframe(s, &pos,&pts,ts, flags) == 0) {
                     url_fseek(s->pb, pos, SEEK_SET);
-                    goto sucess;
+                    goto success;
                 } else {
                     av_update_cur_dts(s, st, pts);
                     return -1;
@@ -697,12 +697,12 @@ static int mpegps_read_seek1(struct AVFormatContext *s, int stream_index,
     if (find_keyframe(s, &pos, &ret_ts, ts, flags) == 0) {
         url_fseek(s->pb, pos, SEEK_SET);
         pts =  ret_ts;
-        goto sucess;
+        goto success;
     } else {
         av_update_cur_dts(s, st, ret_ts);
         return -1;
     }
-sucess:
+success:
     av_update_cur_dts(s, st, pts);
     return 0;
 }
