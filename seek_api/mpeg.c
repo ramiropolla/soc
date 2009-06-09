@@ -385,16 +385,6 @@ static int mpegps_read_pes_header(AVFormatContext *s,
     }
     if(len<0)
         goto error_redo;
-    if(dts != AV_NOPTS_VALUE && ppos){
-        int i;
-        for(i=0; i<s->nb_streams; i++){
-            if(startcode == s->streams[i]->id &&
-               !url_is_streamed(s->pb) /* index useless on streams anyway */) {
-                ff_reduce_index(s, i);
-                av_add_index_entry(s->streams[i], *ppos, dts, 0, 0, 0 /* FIXME keyframe? */);
-            }
-        }
-    }
 
     *pstart_code = startcode;
     *ppts = pts;
