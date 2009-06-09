@@ -588,7 +588,7 @@ static int64_t mpegps_read_dts(AVFormatContext *s, int stream_index,
 }
 
 /* 0 for success and -1 for error */
-static int find_keyframe(AVFormatContext *s, int64_t *ret_pos, int64_t *pts, int64_t target_ts, int flags)
+static int find_keyframe(AVFormatContext *s, int stream_index, int64_t *ret_pos, int64_t *pts, int64_t target_ts, int flags)
 {
     AVPacket pkt1, *pkt = &pkt1;
     int64_t pre_pts, pre_pos, size;
@@ -599,10 +599,11 @@ static int find_keyframe(AVFormatContext *s, int64_t *ret_pos, int64_t *pts, int
 
         size = pkt->size;
         av_free_packet(pkt);
-        if (!(pkt->flags & PKT_FLAG_KEY))
+        if (!(pkt->flags & PKT_FLAG_KEY) || (stream_index != pkt->stream_index)) {
+            *ret_pos += size;
             continue;
+        }
 
-        *ret_pos += size;
         *pts = pkt->pts;
 
         if (*pts < target_ts) {
@@ -652,7 +653,7 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
 
     if (st->index_entries) {
         AVIndexEntry *e;
-        index = av_index_search_timestamp(st, ts, flags | AVSEEK_FLAG_ANY);
+        index = av_index_search_timestamp(st, ts, flags);
 
         if (index >= 0) {
             e = &st->index_entries[index];
@@ -663,8 +664,8 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
 
             if (pts == ts) { // find the target timestamp
                 goto success;
-            } else { // seek around to get the keyframe, then seek there
-                if (find_keyframe(s, &pos,&pts,ts, flags) == 0) {
+            } else if (pts < ts){ // seek around to get the keyframe, then seek there
+                if (find_keyframe(s, stream_index, &pos,&pts,ts, flags) == 0) {
                     url_fseek(s->pb, pos, SEEK_SET);
                     goto success;
                 } else {
@@ -684,7 +685,7 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
         return -1;
 
     url_fseek(s->pb, pos, SEEK_SET);
-    if (find_keyframe(s, &pos, &ret_ts, ts, flags) == 0) {
+    if (find_keyframe(s, stream_index, &pos, &ret_ts, ts, flags) == 0) {
         url_fseek(s->pb, pos, SEEK_SET);
         pts =  ret_ts;
         goto success;
