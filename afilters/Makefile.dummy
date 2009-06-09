@@ -1,4 +1,3 @@
 
-
 all:
-	gcc dummy.c -o dummy -I./ffmpeg -lm ./ffmpeg/libav*/libav*.a
+	gcc dummy.c -o dummy -I./ffmpeg -lm ./ffmpeg/libavfilter/libavfilter.a ffmpeg/libavcodec/libavcodec.a  ffmpeg/libavformat/libavformat.a ffmpeg/libavutil/libavutil.a

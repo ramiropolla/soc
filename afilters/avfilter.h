@@ -102,16 +102,35 @@ typedef struct AVFilterPicRef
 } AVFilterPicRef;
 
 
+/* two structures that contain the data to be processed for the audio buf */
+/* contains samples. audio analogue to AVFilterPic */
 typedef struct AVFilterSamples
 {
     /* data */
     void *data;
-    int *n_samples;
+    int data_size; /* data size in bytes */
+    int n_samples;
 
     void *priv;
-    void (*free)(struct AVFilterSamples *samples)
+    void (*free)(struct AVFilterSamples *samples);
 
 }AVFilterSamples;
+
+/**
+ * A reference to an audio buffer. contains info about the AVFilterSamples
+ * Do not use AVFilterSamples directly
+ */
+typedef struct AVFilterSamplesRef
+{
+    AVFilterSamples *samples;
+
+    int sample_type;           /* contains type of sample in the buffer*/
+    int sample_rate;
+
+}AVFilterSamplesRef;
+
+
+
 
 
 
@@ -365,9 +384,9 @@ struct AVFilterPad
      * Process an audio buffer. This function is where the audio filter should
      * recieve and process data
      */
-    int (*start_buffer)(AVFilterLink *link);
+    int (*start_buffer)(AVFilterLink *link, AVFilterSamplesRef *sample_ref);
 
-    int (*end_buffer)(AVFilterLink *link);
+    int (*end_buffer)(AVFilterLink *link, AVFilterSamplesRef *sample_ref);
 
 
 };
@@ -497,6 +516,11 @@ struct AVFilterLink
 
     AVFilterPicRef *cur_pic;
     AVFilterPicRef *outpic;
+
+    /** the audio buffer reference is sent accross the link by the source. */
+    AVFilterSamplesRef *srcbuf;
+    AVFilterSamplesRef *cur_buf;
+    AVFilterSamplesRef *outbuf;
 };
 
 /**

@@ -231,6 +231,26 @@ void avfilter_start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     start_frame(link, link->cur_pic);
 }
 
+void avfilter_start_buffer(AVFilterLink *link, AVFilterSamplesRef *sample_ref)
+{
+    void (*start_buf) (AVFilterLink *, AVFilterSamplesRef *);
+    AVFilterPad *dst = &link_dpad(link);
+
+    if (!(start_buf = dst->start_buffer))
+    {
+        av_log(0,0,"it is %x\n", 0);
+        start_buf = NULL; /* FIXME: should have a default function pointer
+                            like avfilter_default_start_buffer */
+    }
+
+
+    av_log(0,0,"it is %x\n", start_buf);
+    link->cur_buf = sample_ref;
+
+    start_buf(link, link->cur_pic);
+}
+
+
 void avfilter_end_frame(AVFilterLink *link)
 {
     void (*end_frame)(AVFilterLink *);
@@ -246,7 +266,6 @@ void avfilter_end_frame(AVFilterLink *link)
         avfilter_unref_pic(link->srcpic);
         link->srcpic = NULL;
     }
-
 }
 
 void avfilter_draw_slice(AVFilterLink *link, int y, int h)

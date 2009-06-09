@@ -29,17 +29,18 @@ typedef struct
 {
     int history[100]; /*just an example */
 
-
 } af_null_priv_t;
 
 
-static int start_buf(AVFilterLink *link)
+static int start_buf(AVFilterLink *link, AVFilterSamplesRef *sample_ref)
 {
+    av_log(0,0, "Starting buffer\n");
     return;
 }
 
-static int end_buf(AVFilterLink *link)
+static int end_buf(AVFilterLink *link, AVFilterSamplesRef *sample_ref)
 {
+    av_log(0,0, "Ending buffer\n");
     return;
 }
 
