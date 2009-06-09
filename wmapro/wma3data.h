@@ -585,4 +585,17 @@ static const float ff_wma3_default_decorrelation_matrices[] = {
     0.410156,  0.410156, -0.558594,  0.500000, -0.410156,  0.289062, -0.148438,
 };
 
+/**
+ * @brief default decorrelation matrix offsets
+ */
+static const float *ff_wma3_default_decorrelation[] = {
+    NULL,
+    &ff_wma3_default_decorrelation_matrices[0],
+    &ff_wma3_default_decorrelation_matrices[1],
+    &ff_wma3_default_decorrelation_matrices[5],
+    &ff_wma3_default_decorrelation_matrices[14],
+    &ff_wma3_default_decorrelation_matrices[30],
+    &ff_wma3_default_decorrelation_matrices[55]
+};
+
 #endif /* AVCODEC_WMA3DATA_H */
