@@ -665,14 +665,6 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
 
             if (pts == ts) { // find the target timestamp
                 goto success;
-            } else if (pts < ts){ // seek around to get the keyframe, then seek there
-                if (find_keyframe(s, stream_index, &pos,&pts,ts, flags) == 0) {
-                    url_fseek(s->pb, pos, SEEK_SET);
-                    goto success;
-                } else {
-                    av_update_cur_dts(s, st, pts);
-                    return -1;
-                }
             }
         }
      }
