@@ -159,10 +159,10 @@ static av_cold int wma_decode_end(AVCodecContext *avctx)
     WMA3DecodeContext *s = avctx->priv_data;
     int i;
 
-    av_free(s->num_sfb);
-    av_free(s->sfb_offsets);
-    av_free(s->subwoofer_cutoffs);
-    av_free(s->sf_offsets);
+    av_freep(&s->num_sfb);
+    av_freep(&s->sfb_offsets);
+    av_freep(&s->subwoofer_cutoffs);
+    av_freep(&s->sf_offsets);
 
     for (i=0 ; i<BLOCK_NB_SIZES ; i++)
         ff_mdct_end(&s->mdct_ctx[i]);
