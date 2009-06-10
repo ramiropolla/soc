@@ -138,8 +138,8 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 
     gcd = av_gcd(out->outpic->pixel_aspect.num, out->outpic->pixel_aspect.den);
     if (gcd > 1) {
-    out->outpic->pixel_aspect.num /= gcd;
-    out->outpic->pixel_aspect.den /= gcd;
+        out->outpic->pixel_aspect.num /= gcd;
+        out->outpic->pixel_aspect.den /= gcd;
     }
 
     avfilter_start_frame(out, avfilter_ref_pic(out->outpic, ~0));
