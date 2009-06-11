@@ -95,6 +95,12 @@ static VLC              vec1_vlc;         ///< 1 coefficient per symbol
 static VLC              coef_vlc[2];      ///< coefficient run length vlc codes
 static float            sin64[33];        ///< sinus table for decorrelation
 
+#ifdef TRACE
+#define DBG av_log
+#else
+#define DBG(...)
+#endif
+
 
 /**
  *@brief helper function to print the most important members of the context
@@ -199,11 +205,12 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
         s->decode_flags     = AV_RL16(edata_ptr+14);
         channel_mask    = AV_RL32(edata_ptr+2);
 //        s->sample_bit_depth = AV_RL16(edata_ptr);
-
+#ifdef TRACE
         /** dump the extradata */
         for (i=0 ; i<avctx->extradata_size ; i++)
             av_log(avctx, AV_LOG_DEBUG, "[%x] ",avctx->extradata[i]);
         av_log(avctx, AV_LOG_DEBUG, "\n");
+#endif
 
     } else {
         ff_log_ask_for_sample(avctx, "Unknown extradata size\n");
@@ -564,7 +571,7 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
         int i;
         int offset = 0;
         for (i=0;i<s->channel[c].num_subframes;i++) {
-            av_log(s->avctx, AV_LOG_DEBUG,"frame[%i] channel[%i] subframe[%i]"
+            DBG(s->avctx, AV_LOG_DEBUG,"frame[%i] channel[%i] subframe[%i]"
                    " len %i\n",s->frame_num,c,i,s->channel[c].subframe_len[i]);
             s->channel[c].subframe_offset[i] = offset;
             offset += s->channel[c].subframe_len[i];
@@ -786,7 +793,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
     int zero_init = 0;
     int rl_switchmask = (s->subframe_len>>8);
 
-    av_log(s->avctx,AV_LOG_DEBUG,"decode coefficients for channel %i\n",c);
+    DBG(s->avctx,AV_LOG_DEBUG,"decode coefficients for channel %i\n",c);
 
     vlctable = get_bits1(&s->gb);
     vlc = &coef_vlc[vlctable];
@@ -1135,7 +1142,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         }
     }
 
-    av_log(s->avctx, AV_LOG_DEBUG,
+    DBG(s->avctx, AV_LOG_DEBUG,
            "processing subframe with offset %i len %i\n",offset,subframe_len);
 
     /** get a list of all channels that contain the estimated block */
@@ -1162,7 +1169,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         s->parsed_all_subframes = 1;
 
 
-    av_log(s->avctx, AV_LOG_DEBUG,"subframe is part of %i channels\n",
+    DBG(s->avctx, AV_LOG_DEBUG,"subframe is part of %i channels\n",
            s->channels_for_cur_subframe);
 
     /** calculate number of scale factor bands and their offsets */
@@ -1283,7 +1290,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             return 0;
     }
 
-    av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: subframe header length was %i\n",
+    DBG(s->avctx,AV_LOG_DEBUG,"BITSTREAM: subframe header length was %i\n",
            get_bits_count(&s->gb) - s->subframe_offset);
 
     /** parse coefficients */
@@ -1294,7 +1301,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
                 wma_decode_coeffs(s,c);
     }
 
-    av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: subframe length was %i\n",
+    DBG(s->avctx,AV_LOG_DEBUG,"BITSTREAM: subframe length was %i\n",
            get_bits_count(&s->gb) - s->subframe_offset);
 
     if (transmit_coeffs) {
@@ -1374,7 +1381,7 @@ static int wma_decode_frame(WMA3DecodeContext *s)
     if (s->len_prefix)
         len = get_bits(gb,s->log2_frame_size);
 
-    av_log(s->avctx,AV_LOG_DEBUG,"decoding frame with length %x\n",len);
+    DBG(s->avctx,AV_LOG_DEBUG,"decoding frame with length %x\n",len);
 
     /** decode tile information */
     if (wma_decode_tilehdr(s)) {
@@ -1392,7 +1399,7 @@ static int wma_decode_frame(WMA3DecodeContext *s)
     /** read drc info */
     if (s->dynamic_range_compression) {
         s->drc_gain = get_bits(gb,8);
-        av_log(s->avctx,AV_LOG_DEBUG,"drc_gain %i\n",s->drc_gain);
+        DBG(s->avctx,AV_LOG_DEBUG,"drc_gain %i\n",s->drc_gain);
     }
 
     /** no idea what these are for, might be the number of samples
@@ -1403,18 +1410,18 @@ static int wma_decode_frame(WMA3DecodeContext *s)
         /** usually true for the first frame */
         if (get_bits1(gb)) {
             skip = get_bits(gb,av_log2(s->samples_per_frame * 2));
-            av_log(s->avctx,AV_LOG_DEBUG,"start skip: %i\n",skip);
+            DBG(s->avctx,AV_LOG_DEBUG,"start skip: %i\n",skip);
         }
 
         /** sometimes true for the last frame */
         if (get_bits1(gb)) {
             skip = get_bits(gb,av_log2(s->samples_per_frame * 2));
-            av_log(s->avctx,AV_LOG_DEBUG,"end skip: %i\n",skip);
+            DBG(s->avctx,AV_LOG_DEBUG,"end skip: %i\n",skip);
         }
 
     }
 
-    av_log(s->avctx,AV_LOG_DEBUG,"BITSTREAM: frame header length was %i\n",
+    DBG(s->avctx,AV_LOG_DEBUG,"BITSTREAM: frame header length was %i\n",
            get_bits_count(gb) - s->frame_offset);
 
     /** reset subframe states */
@@ -1589,7 +1596,7 @@ static int wma_decode_packet(AVCodecContext *avctx,
 
     /** get number of bits that need to be added to the previous frame */
     num_bits_prev_frame = get_bits(&gb, s->log2_frame_size);
-    av_log(avctx, AV_LOG_DEBUG, "packet[%d]: nbpf %x\n", avctx->frame_number,
+    DBG(avctx, AV_LOG_DEBUG, "packet[%d]: nbpf %x\n", avctx->frame_number,
                   num_bits_prev_frame);
 
     /** check for packet loss */
@@ -1605,14 +1612,14 @@ static int wma_decode_packet(AVCodecContext *avctx,
         /** append the previous frame data to the remaining data from the
             previous packet to create a full frame */
         wma_save_bits(s, &gb, num_bits_prev_frame, 1);
-        av_log(avctx, AV_LOG_DEBUG, "accumulated %x bits of frame data\n",
+        DBG(avctx, AV_LOG_DEBUG, "accumulated %x bits of frame data\n",
                       s->num_saved_bits - s->frame_offset);
 
         /** decode the cross packet frame if it is valid */
         if (!s->packet_loss)
             wma_decode_frame(s);
     }else if (s->num_saved_bits - s->frame_offset) {
-        av_log(avctx, AV_LOG_DEBUG, "ignoring %x previously saved bits\n",
+        DBG(avctx, AV_LOG_DEBUG, "ignoring %x previously saved bits\n",
                       s->num_saved_bits - s->frame_offset);
     }
 
@@ -1630,7 +1637,7 @@ static int wma_decode_packet(AVCodecContext *avctx,
             more_frames = wma_decode_frame(s);
 
             if (!more_frames) {
-                av_log(avctx, AV_LOG_DEBUG, "no more frames\n");
+                DBG(avctx, AV_LOG_DEBUG, "no more frames\n");
             }
         }else
             more_frames = 0;
