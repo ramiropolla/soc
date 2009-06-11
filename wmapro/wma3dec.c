@@ -813,8 +813,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
                        ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
 
         if ( idx == FF_WMA3_HUFF_VEC4_SIZE - 1 ) {
-            i = 0;
-            while (i < 4) {
+            for (i=0 ; i < 4 ; i+= 2) {
                 idx = get_vlc2(&s->gb, vec2_vlc.table, VLCBITS,
                               ((FF_WMA3_HUFF_VEC2_MAXBITS+VLCBITS-1)/VLCBITS));
                 if ( idx == FF_WMA3_HUFF_VEC2_SIZE - 1 ) {
@@ -830,7 +829,6 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
                     vals[i] = (ff_wma3_symbol_to_vec2[idx] >> 4) & 0xF;
                     vals[i+1] = ff_wma3_symbol_to_vec2[idx] & 0xF;
                 }
-                i += 2;
             }
         }else{
              vals[0] = (ff_wma3_symbol_to_vec4[idx] >> 8) >> 4;
