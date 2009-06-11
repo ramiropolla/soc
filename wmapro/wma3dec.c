@@ -1302,31 +1302,29 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         wma_inverse_channel_transform(s);
         for (i=0;i<s->channels_for_cur_subframe;i++) {
             int c = s->channel_indexes_for_cur_subframe[i];
+            int* sf;
             int b;
+
+            if (s->channel[c].transmit_sf)
+                sf = s->channel[c].scale_factors;
+            else
+                sf = s->channel[c].resampled_scale_factors;
+
             if (c == s->lfe_channel)
                 memset(&s->tmp[s->cur_subwoofer_cutoff],0,
                      sizeof(float) * (subframe_len - s->cur_subwoofer_cutoff));
 
             /** inverse quantization and rescaling */
             for (b=0;b<s->num_bands;b++) {
-                int start = s->cur_sfb_offsets[b];
-                int end = s->cur_sfb_offsets[b+1];
-                int sf = s->channel[c].max_scale_factor;
-                float quant;
-                if (end > s->subframe_len)
-                    end = s->subframe_len;
+                const int end = FFMIN(s->cur_sfb_offsets[b+1],s->subframe_len);
+                const int exp = s->channel[c].quant_step -
+                            (s->channel[c].max_scale_factor - *sf++) *
+                            s->channel[c].scale_factor_step;
+                const float quant = pow(10.0,exp / 20.0);
+                int start;
 
-                if (s->channel[c].transmit_sf)
-                     sf -= s->channel[c].scale_factors[b];
-                else
-                     sf -= s->channel[c].resampled_scale_factors[b];
-                sf *= -s->channel[c].scale_factor_step;
-                sf += s->channel[c].quant_step;
-                quant = pow(10.0,sf / 20.0);
-                while (start < end) {
+                for (start = s->cur_sfb_offsets[b]; start < end; start++)
                     s->tmp[start] = s->channel[c].coeffs[start] * quant;
-                    ++start;
-                }
             }
 
             /** apply imdct (ff_imdct_half == DCTIV with reverse) */
