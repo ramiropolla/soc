@@ -962,9 +962,9 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
 
                 for (i=0;i<s->num_bands;i++) {
                     int idx;
-                    short skip;
-                    short val;
-                    short sign;
+                    int skip;
+                    int val;
+                    int sign;
 
                     idx = get_vlc2(&s->gb, sf_rl_vlc.table, VLCBITS, SCALERLMAXDEPTH);
 
