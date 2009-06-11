@@ -20,7 +20,7 @@
  */
 
 /**
- * @file aaccoder.c
+ * @file libavcodec/aaccoder.c
  * AAC coefficients encoder
  */
 
