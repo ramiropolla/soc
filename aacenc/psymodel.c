@@ -27,7 +27,7 @@ extern const FFPsyModel ff_aac_psy_model;
 
 av_cold int ff_psy_init(FFPsyContext *ctx, AVCodecContext *avctx,
                         int num_lens,
-                        uint8_t **bands, int* num_bands)
+                        const uint8_t **bands, const int* num_bands)
 {
     ctx->avctx = avctx;
     ctx->psy_bands = av_mallocz(sizeof(FFPsyBand) * PSY_MAX_BANDS * avctx->channels);

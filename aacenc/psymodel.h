@@ -89,7 +89,7 @@ typedef struct FFPsyModel {
  */
 av_cold int ff_psy_init(FFPsyContext *ctx, AVCodecContext *avctx,
                         int num_lens,
-                        uint8_t **bands, int* num_bands);
+                        const uint8_t **bands, const int* num_bands);
 
 /**
  * Suggest window sequence for channel.
