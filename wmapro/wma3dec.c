@@ -81,6 +81,11 @@
 
 #define VLCBITS            9
 #define SCALEVLCBITS       8
+#define VEC4MAXDEPTH    ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS)
+#define VEC2MAXDEPTH    ((FF_WMA3_HUFF_VEC2_MAXBITS+VLCBITS-1)/VLCBITS)
+#define VEC1MAXDEPTH    ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS)
+#define SCALEMAXDEPTH   ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS)
+#define SCALERLMAXDEPTH ((FF_WMA3_HUFF_SCALE_RL_MAXBITS+VLCBITS-1)/VLCBITS)
 
 static VLC              sf_vlc;           ///< scale factor dpcm vlc
 static VLC              sf_rl_vlc;        ///< scale factor run length vlc
@@ -809,20 +814,16 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
         int i;
         unsigned int idx;
 
-        idx = get_vlc2(&s->gb, vec4_vlc.table, VLCBITS,
-                       ((FF_WMA3_HUFF_VEC4_MAXBITS+VLCBITS-1)/VLCBITS));
+        idx = get_vlc2(&s->gb, vec4_vlc.table, VLCBITS, VEC4MAXDEPTH);
 
         if ( idx == FF_WMA3_HUFF_VEC4_SIZE - 1 ) {
             for (i=0 ; i < 4 ; i+= 2) {
-                idx = get_vlc2(&s->gb, vec2_vlc.table, VLCBITS,
-                              ((FF_WMA3_HUFF_VEC2_MAXBITS+VLCBITS-1)/VLCBITS));
+                idx = get_vlc2(&s->gb, vec2_vlc.table, VLCBITS, VEC2MAXDEPTH);
                 if ( idx == FF_WMA3_HUFF_VEC2_SIZE - 1 ) {
-                    vals[i] = get_vlc2(&s->gb, vec1_vlc.table, VLCBITS,
-                              ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
+                    vals[i] = get_vlc2(&s->gb, vec1_vlc.table, VLCBITS, VEC1MAXDEPTH);
                     if (vals[i] == FF_WMA3_HUFF_VEC1_SIZE - 1)
                         vals[i] += wma_get_large_val(s);
-                    vals[i+1] = get_vlc2(&s->gb, vec1_vlc.table, VLCBITS,
-                              ((FF_WMA3_HUFF_VEC1_MAXBITS+VLCBITS-1)/VLCBITS));
+                    vals[i+1] = get_vlc2(&s->gb, vec1_vlc.table, VLCBITS, VEC1MAXDEPTH);
                     if (vals[i+1] == FF_WMA3_HUFF_VEC1_SIZE - 1)
                         vals[i+1] += wma_get_large_val(s);
                 }else{
@@ -946,13 +947,11 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                 int val;
                 /** decode DPCM coded scale factors */
                 s->channel[c].scale_factor_step = get_bits(&s->gb,2) + 1;
-                val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS,
-                   ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
+                val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS, SCALEMAXDEPTH);
                 s->channel[c].scale_factors[0] = 45 /
                               s->channel[c].scale_factor_step + val - 60;
                 for (sf = s->channel[c].scale_factors + 1; sf < sf_end; sf++) {
-                    val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS,
-                  ((FF_WMA3_HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS));
+                    val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS, SCALEMAXDEPTH);
                     *sf = *(sf - 1) + val - 60;
                 }
             }else{
@@ -969,8 +968,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                     short val;
                     short sign;
 
-                    idx = get_vlc2(&s->gb, sf_rl_vlc.table, VLCBITS,
-                          ((FF_WMA3_HUFF_SCALE_RL_MAXBITS+VLCBITS-1)/VLCBITS));
+                    idx = get_vlc2(&s->gb, sf_rl_vlc.table, VLCBITS, SCALERLMAXDEPTH);
 
                     if ( !idx ) {
                         uint32_t code = get_bits(&s->gb,14);
