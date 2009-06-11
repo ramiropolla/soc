@@ -31,7 +31,7 @@
  ***********************************/
 
 #include "avcodec.h"
-#include "bitstream.h"
+#include "put_bits.h"
 #include "dsputil.h"
 #include "mpeg4audio.h"
 

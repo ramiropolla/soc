@@ -23,7 +23,7 @@
 #define AVCODEC_AACENC_H
 
 #include "avcodec.h"
-#include "bitstream.h"
+#include "put_bits.h"
 #include "dsputil.h"
 
 #include "aac.h"
