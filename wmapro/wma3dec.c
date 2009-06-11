@@ -79,6 +79,7 @@
 #include "get_bits.h"
 #include "wma3data.h"
 #include "dsputil.h"
+#include "wma.h"
 
 #ifdef TRACE
 #define DBG av_log
@@ -87,18 +88,14 @@
 #endif
 
 /** current decoder limitations */
-#define MAX_CHANNELS    8                                    ///< max number of handled channels
+#define WMAPRO_MAX_CHANNELS    8                             ///< max number of handled channels
 #define MAX_SUBFRAMES  32                                    ///< max number of subframes per channel
 #define MAX_BANDS      29                                    ///< max number of scale factor bands
 #define MAX_FRAMESIZE  16384                                 ///< maximum compressed frame size
-#define MAX_FRAMEBITS  (MAX_FRAMESIZE << 3)                  ///< maximum frame size in bits
 
-/** size of block defines taken from wma.h */
-#define BLOCK_MIN_BITS  7                                    ///< log2 of min block size
-#define BLOCK_MAX_BITS 12                                    ///< log2 of max block size
-#define BLOCK_MIN_SIZE (1 << BLOCK_MIN_BITS)                 ///< minimum block size
-#define BLOCK_MAX_SIZE (1 << BLOCK_MAX_BITS)                 ///< maximum block size
-#define BLOCK_NB_SIZES (BLOCK_MAX_BITS - BLOCK_MIN_BITS + 1) ///< possible block sizes
+#define WMAPRO_BLOCK_MAX_BITS 12                                           ///< log2 of max block size
+#define WMAPRO_BLOCK_MAX_SIZE (1 << WMAPRO_BLOCK_MAX_BITS)                 ///< maximum block size
+#define WMAPRO_BLOCK_SIZES    (WMAPRO_BLOCK_MAX_BITS - BLOCK_MIN_BITS + 1) ///< possible block sizes
 
 
 #define VLCBITS            9
@@ -139,7 +136,7 @@ typedef struct {
     int      resampled_scale_factors[MAX_BANDS];      ///< scale factors from a previous block
     int16_t  scale_factor_block_len;                  ///< scale factor reference block length
     float*   coeffs;                                  ///< pointer to the decode buffer
-    DECLARE_ALIGNED_16(float, out[2*BLOCK_MAX_SIZE]); ///< output buffer
+    DECLARE_ALIGNED_16(float, out[2*WMAPRO_BLOCK_MAX_SIZE]); ///< output buffer
 } WMA3ChannelCtx;
 
 /**
@@ -149,8 +146,8 @@ typedef struct {
     uint8_t num_channels;                                     ///< number of channels in the group
     int8_t  transform;                                        ///< controls the type of the transform
     int8_t  transform_band[MAX_BANDS];                        ///< controls if the transform is enabled for a certain band
-    float   decorrelation_matrix[MAX_CHANNELS*MAX_CHANNELS];  ///< decorrelation matrix
-    float*  channel_data[MAX_CHANNELS];                       ///< transformation coefficients
+    float   decorrelation_matrix[WMAPRO_MAX_CHANNELS*WMAPRO_MAX_CHANNELS];
+    float*  channel_data[WMAPRO_MAX_CHANNELS];                ///< transformation coefficients
 } WMA3ChannelGroup;
 
 /**
@@ -162,9 +159,9 @@ typedef struct WMA3DecodeContext {
     DSPContext       dsp;                           ///< accelerated dsp functions
     uint8_t          frame_data[MAX_FRAMESIZE +
                       FF_INPUT_BUFFER_PADDING_SIZE];///< compressed frame data
-    MDCTContext      mdct_ctx[BLOCK_NB_SIZES];      ///< MDCT context per block size
-    DECLARE_ALIGNED_16(float, tmp[BLOCK_MAX_SIZE]); ///< imdct output buffer
-    float*           windows[BLOCK_NB_SIZES];       ///< window per block size
+    MDCTContext      mdct_ctx[WMAPRO_BLOCK_SIZES];  ///< MDCT context per block size
+    DECLARE_ALIGNED_16(float, tmp[WMAPRO_BLOCK_MAX_SIZE]); ///< imdct output buffer
+    float*           windows[WMAPRO_BLOCK_SIZES];   ///< window per block size
     int              coef_max[2];                   ///< max length of vlc codes
 
     /** frame size dependent frame information (set during initialization) */
@@ -205,16 +202,16 @@ typedef struct WMA3DecodeContext {
     /** subframe/block decode state */
     int16_t          subframe_len;                  ///< current subframe length
     int8_t           channels_for_cur_subframe;     ///< number of channels that contain the subframe
-    int8_t           channel_indexes_for_cur_subframe[MAX_CHANNELS];
+    int8_t           channel_indexes_for_cur_subframe[WMAPRO_MAX_CHANNELS];
     int16_t          cur_subwoofer_cutoff;          ///< subwoofer cutoff value
     int8_t           num_bands;                     ///< number of scale factor bands
     int16_t*         cur_sfb_offsets;               ///< sfb offsets for the current block
     int8_t           esc_len;                       ///< length of escaped coefficients
 
     uint8_t          num_chgroups;                  ///< number of channel groups
-    WMA3ChannelGroup chgroup[MAX_CHANNELS];         ///< channel group information
+    WMA3ChannelGroup chgroup[WMAPRO_MAX_CHANNELS];  ///< channel group information
 
-    WMA3ChannelCtx   channel[MAX_CHANNELS];         ///< per channel data
+    WMA3ChannelCtx   channel[WMAPRO_MAX_CHANNELS];  ///< per channel data
 } WMA3DecodeContext;
 
 
@@ -292,7 +289,7 @@ static av_cold int wma_decode_end(AVCodecContext *avctx)
     av_freep(&s->subwoofer_cutoffs);
     av_freep(&s->sf_offsets);
 
-    for (i=0 ; i<BLOCK_NB_SIZES ; i++)
+    for (i=0 ; i<WMAPRO_BLOCK_SIZES ; i++)
         ff_mdct_end(&s->mdct_ctx[i]);
 
     return 0;
@@ -380,7 +377,7 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
         }
     }
 
-    if (s->num_channels < 0 || s->num_channels > MAX_CHANNELS) {
+    if (s->num_channels < 0 || s->num_channels > WMAPRO_MAX_CHANNELS) {
         ff_log_ask_for_sample(avctx, "invalid number of channels\n");
         return -1;
     }
@@ -481,16 +478,16 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
     }
 
     /** init MDCT, FIXME: only init needed sizes */
-    for (i = 0; i < BLOCK_NB_SIZES; i++)
+    for (i = 0; i < WMAPRO_BLOCK_SIZES; i++)
         ff_mdct_init(&s->mdct_ctx[i],
                      BLOCK_MIN_BITS+1+i, 1, 1.0 / (1<<(BLOCK_MIN_BITS+i-1)));
 
     /** init MDCT windows: simple sinus window */
-    for (i=0 ; i<BLOCK_NB_SIZES ; i++) {
-        const int n = 1 << (BLOCK_MAX_BITS - i);
-        const int win_idx = BLOCK_MAX_BITS - i - 7;
+    for (i=0 ; i<WMAPRO_BLOCK_SIZES ; i++) {
+        const int n = 1 << (WMAPRO_BLOCK_MAX_BITS - i);
+        const int win_idx = WMAPRO_BLOCK_MAX_BITS - i - 7;
         ff_sine_window_init(ff_sine_windows[win_idx], n);
-        s->windows[BLOCK_NB_SIZES-i-1] = ff_sine_windows[win_idx];
+        s->windows[WMAPRO_BLOCK_SIZES-i-1] = ff_sine_windows[win_idx];
     }
 
     /** calculate subwoofer cutoff values */
@@ -704,7 +701,7 @@ static void wma_decode_decorrelation_matrix(WMA3DecodeContext* s,
 {
     int i;
     int offset = 0;
-    char rotation_offset[MAX_CHANNELS * MAX_CHANNELS];
+    char rotation_offset[WMAPRO_MAX_CHANNELS * WMAPRO_MAX_CHANNELS];
     memset(chgroup->decorrelation_matrix,0,
            sizeof(float) *s->num_channels * s->num_channels);
 
@@ -722,8 +719,8 @@ static void wma_decode_decorrelation_matrix(WMA3DecodeContext* s,
         int x;
         for (x=0;x<i;x++) {
             int y;
-            float tmp1[MAX_CHANNELS];
-            float tmp2[MAX_CHANNELS];
+            float tmp1[WMAPRO_MAX_CHANNELS];
+            float tmp2[WMAPRO_MAX_CHANNELS];
             memcpy(tmp1,
                    &chgroup->decorrelation_matrix[x * chgroup->num_channels],
                    sizeof(float) * (i + 1));
@@ -1160,7 +1157,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                 ++sfb_offsets;
             }
         } else if (s->chgroup[i].transform) {
-            float data[MAX_CHANNELS];
+            float data[WMAPRO_MAX_CHANNELS];
             const int num_channels = s->chgroup[i].num_channels;
             float** ch_data = s->chgroup[i].channel_data;
             float** ch_end = ch_data + num_channels;
