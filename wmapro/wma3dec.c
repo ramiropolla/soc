@@ -313,7 +313,7 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
     sfb_offsets = s->sfb_offsets;
 
     for (i=0;i<s->num_possible_block_sizes;i++) {
-        int subframe_len = s->samples_per_frame / (1 << i);
+        int subframe_len = s->samples_per_frame >> i;
         int x;
         int band = 1;
 
