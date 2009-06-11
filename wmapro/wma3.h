@@ -75,8 +75,8 @@ typedef struct {
  */
 typedef struct {
     uint8_t num_channels;                                     ///< number of channels in the group
-    char    transform;                                        ///< controls the type of the transform
-    char    transform_band[MAX_BANDS];                        ///< controls if the transform is enabled for a certain band
+    int8_t  transform;                                        ///< controls the type of the transform
+    int8_t  transform_band[MAX_BANDS];                        ///< controls if the transform is enabled for a certain band
     float   decorrelation_matrix[MAX_CHANNELS*MAX_CHANNELS];  ///< decorrelation matrix
     float*  channel_data[MAX_CHANNELS];                       ///< transformation coefficients
 } WMA3ChannelGroup;
