@@ -947,12 +947,10 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                 int val;
                 /** decode DPCM coded scale factors */
                 s->channel[c].scale_factor_step = get_bits(&s->gb,2) + 1;
-                val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS, SCALEMAXDEPTH);
-                s->channel[c].scale_factors[0] = 45 /
-                              s->channel[c].scale_factor_step + val - 60;
-                for (sf = s->channel[c].scale_factors + 1; sf < sf_end; sf++) {
-                    val = get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS, SCALEMAXDEPTH);
-                    *sf = *(sf - 1) + val - 60;
+                val = 45 / s->channel[c].scale_factor_step;
+                for (sf = s->channel[c].scale_factors; sf < sf_end; sf++) {
+                    val += get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS, SCALEMAXDEPTH) - 60;
+                    *sf = val;
                 }
             }else{
                 int i;
