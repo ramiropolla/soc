@@ -267,7 +267,7 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
 
     INIT_VLC_STATIC(&sf_vlc, SCALEVLCBITS, FF_WMA3_HUFF_SCALE_SIZE,
                  ff_wma3_scale_huffbits, 1, 1,
-                 ff_wma3_scale_huffcodes, 4, 4, 616);
+                 ff_wma3_scale_huffcodes, 2, 2, 616);
 
     INIT_VLC_STATIC(&sf_rl_vlc, VLCBITS, FF_WMA3_HUFF_SCALE_RL_SIZE,
                  ff_wma3_scale_rl_huffbits, 1, 1,
@@ -287,15 +287,15 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
 
     INIT_VLC_STATIC(&vec4_vlc, VLCBITS, FF_WMA3_HUFF_VEC4_SIZE,
                  ff_wma3_vec4_huffbits, 1, 1,
-                 ff_wma3_vec4_huffcodes, 4, 4, 604);
+                 ff_wma3_vec4_huffcodes, 2, 2, 604);
 
     INIT_VLC_STATIC(&vec2_vlc, VLCBITS, FF_WMA3_HUFF_VEC2_SIZE,
                  ff_wma3_vec2_huffbits, 1, 1,
-                 ff_wma3_vec2_huffcodes, 4, 4, 562);
+                 ff_wma3_vec2_huffcodes, 2, 2, 562);
 
     INIT_VLC_STATIC(&vec1_vlc, VLCBITS, FF_WMA3_HUFF_VEC1_SIZE,
                  ff_wma3_vec1_huffbits, 1, 1,
-                 ff_wma3_vec1_huffcodes, 4, 4, 562);
+                 ff_wma3_vec1_huffcodes, 2, 2, 562);
 
     s->num_sfb = av_mallocz(sizeof(int8_t)*s->num_possible_block_sizes);
     s->sfb_offsets = av_mallocz(MAX_BANDS *
