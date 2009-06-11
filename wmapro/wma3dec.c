@@ -534,7 +534,7 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
                     --channels_for_cur_subframe;
                     if (!read_channel_mask ||
                        channel_mask & (1<<channels_for_cur_subframe)) {
-                        if (chan->num_subframes > 31) {
+                        if (chan->num_subframes >= MAX_SUBFRAMES) {
                             av_log(s->avctx, AV_LOG_ERROR,
                                     "broken frame: num subframes > 31\n");
                             return -1;
