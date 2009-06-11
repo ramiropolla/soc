@@ -1004,7 +1004,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
 }
 
 /**
- *@brief Decorrelate and undo M/S stereo coding.
+ *@brief Reconstruct the individual channel data.
  *@param s codec context
  */
 static void wma_inverse_channel_transform(WMA3DecodeContext *s)
