@@ -61,14 +61,14 @@ static const uint8_t* run_value_bits[2] = {
  */
 static av_always_inline int quant(float coef, const float Q)
 {
-    return av_clip((int)(pow(fabsf(coef) * Q, 0.75) + 0.4054), 0, 8191);
+    return pow(coef * Q, 0.75) + 0.4054;
 }
 
 #if 1
 
 static av_always_inline int quant2(float coef, const float Q)
 {
-    return av_clip((int)(pow(fabsf(coef) * Q, 0.75)), 0, 8191);
+    return pow(coef * Q, 0.75);
 }
 
 static const uint8_t aac_cb_range [12] = {0, 3, 3, 3, 3, 9, 9, 8, 8, 13, 13, 17};
@@ -107,8 +107,8 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
         int quants[4][2];
         mincost = 0.0f;
         for(j = 0; j < dim; j++){
-            quants[j][0] = quant2(in[i+j], Q);
-            quants[j][1] = quant (in[i+j], Q);
+            quants[j][0] = quant2(fabsf(in[i+j]), Q);
+            quants[j][1] = quant (fabsf(in[i+j]), Q);
             for(k = 0; k < 2; k++){
                 quants[j][k] = FFMIN(quants[j][k], maxval);
                 if(!IS_CODEBOOK_UNSIGNED(cb) && in[i+j] < 0.0f)
@@ -151,7 +151,7 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
                             di = t - 165140.0f;
                             curbits += 21;
                         }else{
-                            int c = quant(t, Q);
+                            int c = av_clip(quant(t, Q), 0, 8191);
                             di = t - c*cbrt(c)*IQ;
                             curbits += av_log2(c)*2 - 4 + 1;
                         }
@@ -210,8 +210,8 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
         int quants[4][2];
         mincost = 0.0f;
         for(j = 0; j < dim; j++){
-            quants[j][0] = av_clip(quant2(in[i+j], Q), -maxval, maxval);
-            quants[j][1] = av_clip(quant (in[i+j], Q), -maxval, maxval);
+            quants[j][0] = quant2(fabsf(in[i+j]), Q);
+            quants[j][1] = quant (fabsf(in[i+j]), Q);
             for(k = 0; k < 2; k++){
                 quants[j][k] = FFMIN(quants[j][k], maxval);
                 if(!IS_CODEBOOK_UNSIGNED(cb) && in[i+j] < 0.0f)
@@ -254,7 +254,7 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
                             di = t - 165140.0f;
                             curbits += 21;
                         }else{
-                            int c = quant(t, Q);
+                            int c = av_clip(quant(t, Q), 0, 8191);
                             di = t - c*cbrt(c)*IQ;
                             curbits += av_log2(c)*2 - 4 + 1;
                         }
@@ -286,7 +286,7 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
         if(cb == ESC_BT){
             for(j = 0; j < 2; j++){
                 if(ff_aac_codebook_vectors[cb-1][minidx*2+j] == 64.0f){
-                    int coef = quant(in[i+j], Q);
+                    int coef = av_clip(quant(fabsf(in[i+j]), Q), 0, 8191);
                     int len = av_log2(coef);
 
                     put_bits(pb, len - 4 + 1, (1 << (len - 4 + 1)) - 2);
@@ -341,7 +341,7 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
                             di = t - 165140.0f;
                             curbits += 21;
                         }else{
-                            int c = quant(t, IQ);
+                            int c = av_clip(quant(t, IQ), 0, 8191);
                             di = t - c*cbrt(c)*Q;
                             curbits += av_log2(c)*2 - 4 + 1;
                         }
@@ -414,7 +414,7 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
                             di = t - 165140.0f;
                             curbits += 21;
                         }else{
-                            int c = quant(t, IQ);
+                            int c = av_clip(quant(t, IQ), 0, 8191);
                             di = t - c*cbrt(c)*Q;
                             curbits += av_log2(c)*2 - 4 + 1;
                         }
@@ -446,7 +446,7 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
         if(cb == ESC_BT){
             for(j = 0; j < 2; j++){
                 if(ff_aac_codebook_vectors[cb-1][minidx*2+j] == 64.0f){
-                    int coef = quant(in[i+j], IQ);
+                    int coef = av_clip(quant(fabsf(in[i+j]), IQ), 0, 8191);
                     int len = av_log2(coef);
 
                     put_bits(pb, len - 4 + 1, (1 << (len - 4 + 1)) - 2);
