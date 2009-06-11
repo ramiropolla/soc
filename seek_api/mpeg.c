@@ -541,7 +541,7 @@ static int mpegps_read_packet(AVFormatContext *s,
             return AVERROR(EINVAL);
     }
     av_new_packet(pkt, len);
-    pkt->pos = url_ftell(s->pb);
+    pkt->pos = dummy_pos;
     get_buffer(s->pb, pkt->data, pkt->size);
     pkt->pts = pts;
     pkt->dts = dts;
