@@ -1238,32 +1238,26 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
     s->quant_step = 90 * s->sample_bit_depth >> 4;
 
     if (transmit_coeffs) {
-        int quant;
-        int sign = 1;
+        int step;
         if ((get_bits1(&s->gb))) {
             /** FIXME: might change run level mode decision */
             ff_log_ask_for_sample(s->avctx, "unsupported quant step coding\n");
             return 0;
         }
         /** decode quantization step */
-        quant = get_bits(&s->gb,6);
-        if (quant & 0x20) {
-            quant |= 0xFFFFFFC0u;
-            sign = -1;
-        }
-        s->quant_step += quant;
-        if (quant <= -32 || quant > 30) {
-            while (get_bits_count(&s->gb) + 5 < s->num_saved_bits) {
-                quant = get_bits(&s->gb,5);
-                if (quant != 31) {
-                    s->quant_step += quant * sign;
-                    break;
-                }
-                s->quant_step += 31 * sign;
-                if (s->quant_step < 0) {
-                    av_log(s->avctx,AV_LOG_DEBUG,"negative quant step\n");
-                }
+        step = get_sbits(&s->gb,6);
+        s->quant_step += step;
+        if (step == -32 || step == 31) {
+            const int sign = (step == 31) - 1;
+            int quant = 0;
+            while (get_bits_count(&s->gb) + 5 < s->num_saved_bits &&
+                   (step = get_bits(&s->gb,5)) == 31 ) {
+                     quant += 31;
             }
+            s->quant_step += ((quant + step) ^ sign) - sign;
+        }
+        if (s->quant_step < 0) {
+            av_log(s->avctx,AV_LOG_DEBUG,"negative quant step\n");
         }
 
         /** decode quantization step modifiers for every channel */
