@@ -58,7 +58,7 @@ typedef struct {
     uint16_t channel_len;                             ///< channel length in samples
     uint16_t decoded_samples;                         ///< already processed samples
     uint8_t  grouped;                                 ///< channel is part of a group
-    int8_t   quant_step_modifier;                     ///< deviation from the main quantization step
+    int      quant_step;                              ///< quantization step
     int8_t   transmit_sf;                             ///< transmit scale factors
     int8_t   reuse_sf;                                ///< share scale factors between subframes
     int8_t   scale_factor_step;                       ///< scaling step
@@ -137,7 +137,6 @@ typedef struct WMA3DecodeContext {
     int16_t          cur_subwoofer_cutoff;          ///< subwoofer cutoff value
     int8_t           num_bands;                     ///< number of scale factor bands
     int16_t*         cur_sfb_offsets;               ///< sfb offsets for the current block
-    int              quant_step;                    ///< quantization step
     int8_t           esc_len;                       ///< length of escaped coefficients
 
     uint8_t          num_chgroups;                  ///< number of channel groups

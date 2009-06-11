@@ -1235,10 +1235,9 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
             transmit_coeffs = 1;
     }
 
-    s->quant_step = 90 * s->sample_bit_depth >> 4;
-
     if (transmit_coeffs) {
         int step;
+        int quant_step = 90 * s->sample_bit_depth >> 4;
         if ((get_bits1(&s->gb))) {
             /** FIXME: might change run level mode decision */
             ff_log_ask_for_sample(s->avctx, "unsupported quant step coding\n");
@@ -1246,7 +1245,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         }
         /** decode quantization step */
         step = get_sbits(&s->gb,6);
-        s->quant_step += step;
+        quant_step += step;
         if (step == -32 || step == 31) {
             const int sign = (step == 31) - 1;
             int quant = 0;
@@ -1254,30 +1253,28 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
                    (step = get_bits(&s->gb,5)) == 31 ) {
                      quant += 31;
             }
-            s->quant_step += ((quant + step) ^ sign) - sign;
+            quant_step += ((quant + step) ^ sign) - sign;
         }
-        if (s->quant_step < 0) {
+        if (quant_step < 0) {
             av_log(s->avctx,AV_LOG_DEBUG,"negative quant step\n");
         }
 
         /** decode quantization step modifiers for every channel */
 
         if (s->channels_for_cur_subframe == 1)
-            s->channel[s->channel_indexes_for_cur_subframe[0]].quant_step_modifier = 0;
+            s->channel[s->channel_indexes_for_cur_subframe[0]].quant_step = quant_step;
         else{
             int modifier_len = get_bits(&s->gb,3);
             for (i=0;i<s->channels_for_cur_subframe;i++) {
                 int c = s->channel_indexes_for_cur_subframe[i];
-                s->channel[c].quant_step_modifier = 0;
+                s->channel[c].quant_step = quant_step;
                 if (get_bits1(&s->gb)) {
                     if (modifier_len)
-                        s->channel[c].quant_step_modifier =
+                        s->channel[c].quant_step +=
                                 get_bits(&s->gb,modifier_len) + 1;
                     else
-                        s->channel[c].quant_step_modifier = 1;
-                }else
-                    s->channel[c].quant_step_modifier = 0;
-
+                        ++s->channel[c].quant_step;
+                }
             }
         }
 
@@ -1324,7 +1321,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
                 else
                      sf -= s->channel[c].resampled_scale_factors[b];
                 sf *= -s->channel[c].scale_factor_step;
-                sf += s->quant_step + s->channel[c].quant_step_modifier;
+                sf += s->channel[c].quant_step;
                 quant = pow(10.0,sf / 20.0);
                 while (start < end) {
                     s->tmp[start] = s->channel[c].coeffs[start] * quant;
