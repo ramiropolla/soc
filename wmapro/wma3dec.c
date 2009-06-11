@@ -257,13 +257,10 @@ static av_cold int wma_decode_init(AVCodecContext *avctx)
     s->lfe_channel = -1;
 
     if (channel_mask & 8) {
-        unsigned int mask = 1;
-        for (i=0;i<32;i++) {
+        unsigned int mask;
+        for (mask=1;mask < 16;mask <<= 1) {
             if (channel_mask & mask)
                 ++s->lfe_channel;
-            if (mask & 8)
-                break;
-            mask <<= 1;
         }
     }
 
