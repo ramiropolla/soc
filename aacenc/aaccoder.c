@@ -308,6 +308,7 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
                                  const float lambda, const float uplim, int *bits)
 {
     const float Q = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
+    const float IQ = 1.0/Q;
     int i, j, k;
     float cost = 0;
     const int dim = cb < FIRST_PAIR_BT ? 4 : 2;
@@ -340,7 +341,7 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
                             di = t - 165140.0f;
                             curbits += 21;
                         }else{
-                            int c = quant(t, 1.0/Q);
+                            int c = quant(t, IQ);
                             di = t - c*cbrt(c)*Q;
                             curbits += av_log2(c)*2 - 4 + 1;
                         }
