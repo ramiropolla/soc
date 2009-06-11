@@ -441,9 +441,9 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
         fixed_channel_layout = get_bits1(&s->gb);
 
         /** calculate subframe len bits */
-        if (s->lossless)
+        if (s->lossless) {
             subframe_len_bits = av_log2(s->max_num_subframes - 1) + 1;
-        else if (s->max_num_subframes == 16) {
+        }else if (s->max_num_subframes == 16) {
             subframe_len_zero_bit = 1;
             subframe_len_bits = 3;
         }else
