@@ -439,7 +439,7 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
             s->channel[c].subframe_len[0] = s->samples_per_frame;
             s->channel[c].channel_len = 0;
         }
-    }else{ /** subframe length and number of subframes is not constant */
+    } else { /** subframe length and number of subframes is not constant */
         /** bits needed for the subframe length */
         int subframe_len_bits = 0;
         /** first bit indicates if length is zero */
@@ -452,10 +452,10 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
         /** calculate subframe len bits */
         if (s->lossless) {
             subframe_len_bits = av_log2(s->max_num_subframes - 1) + 1;
-        }else if (s->max_num_subframes == 16) {
+        } else if (s->max_num_subframes == 16) {
             subframe_len_zero_bit = 1;
             subframe_len_bits = 3;
-        }else
+        } else
             subframe_len_bits = av_log2(av_log2(s->max_num_subframes)) + 1;
 
         /** loop until the frame data is split between the subframes */
@@ -473,7 +473,7 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
                 channels_for_cur_subframe = s->num_channels;
                 min_samples *= channels_for_cur_subframe;
                 min_channel_len = s->channel[0].channel_len;
-            }else{
+            } else {
                 /** find channels with the smallest overall length */
                 for (c=0;c<s->num_channels;c++) {
                     if (s->channel[c].channel_len <= min_channel_len) {
@@ -514,14 +514,14 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
                             get_bits(&s->gb,subframe_len_bits-1);
                         ++log2_subframe_len;
                     }
-                }else
+                } else
                     log2_subframe_len = get_bits(&s->gb,subframe_len_bits);
 
                 if (s->lossless) {
                     subframe_len =
                         s->samples_per_frame / s->max_num_subframes;
                     subframe_len *= log2_subframe_len + 1;
-                }else
+                } else
                     subframe_len =
                         s->samples_per_frame / (1 << log2_subframe_len);
 
@@ -532,7 +532,7 @@ static int wma_decode_tilehdr(WMA3DecodeContext *s)
                         "broken frame: subframe_len %i\n", subframe_len);
                     return -1;
                 }
-            }else
+            } else
                 subframe_len = s->min_samples_per_subframe;
 
             for (c=0; c<s->num_channels;c++) {
@@ -624,7 +624,7 @@ static void wma_decode_decorrelation_matrix(WMA3DecodeContext* s,
                 if (n<32) {
                     sinv = sin64[n];
                     cosv = sin64[32-n];
-                }else{
+                } else {
                     sinv = sin64[64-n];
                     cosv = -sin64[n-32];
                 }
@@ -681,7 +681,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                         *channel_data++ = s->channel[channel_idx].coeffs;
                     }
                 }
-            }else{
+            } else {
                 chgroup->num_channels = remaining_channels;
                 for (i=0;i<s->channels_for_cur_subframe ;i++) {
                     int channel_idx = s->channel_indexes_for_cur_subframe[i];
@@ -698,10 +698,10 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                         ff_log_ask_for_sample(s->avctx,
                                "unsupported channel transform type\n");
                     }
-                }else{
+                } else {
                     if (s->num_channels == 2) {
                         chgroup->transform = 1;
-                    }else{
+                    } else {
                         chgroup->transform = 2;
                         /** cos(pi/4) */
                         chgroup->decorrelation_matrix[0] = 0.70703125;
@@ -710,17 +710,17 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                         chgroup->decorrelation_matrix[3] = 0.70703125;
                     }
                 }
-            }else if (chgroup->num_channels > 2) {
+            } else if (chgroup->num_channels > 2) {
                 if (get_bits1(&s->gb)) {
                     chgroup->transform = 2;
                     if (get_bits1(&s->gb))
                         wma_decode_decorrelation_matrix(s, chgroup);
-                    else{
+                    else {
                         /** FIXME: more than 6 coupled channels not supported */
                         if (chgroup->num_channels > 6) {
                             ff_log_ask_for_sample(s->avctx,
                                    "coupled channels > 6\n");
-                        }else{
+                        } else {
                             memcpy(chgroup->decorrelation_matrix,
                               ff_wma3_default_decorrelation[chgroup->num_channels],
                               sizeof(float) * chgroup->num_channels *
@@ -738,7 +738,7 @@ static int wma_decode_channel_transform(WMA3DecodeContext* s)
                     for (i=0;i< s->num_bands;i++) {
                         chgroup->transform_band[i] = get_bits1(&s->gb);
                     }
-                }else{
+                } else {
                     memset(chgroup->transform_band,1,s->num_bands);
                 }
             }
@@ -799,7 +799,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
     if (vlctable) {
         run = ff_wma3_coef1_run;
         level = ff_wma3_coef1_level;
-    }else{
+    } else {
         run = ff_wma3_coef0_run;
         level = ff_wma3_coef0_level;
     }
@@ -830,12 +830,12 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
                     vals[i+1] = get_vlc2(&s->gb, vec1_vlc.table, VLCBITS, VEC1MAXDEPTH);
                     if (vals[i+1] == FF_WMA3_HUFF_VEC1_SIZE - 1)
                         vals[i+1] += wma_get_large_val(s);
-                }else{
+                } else {
                     vals[i] = (ff_wma3_symbol_to_vec2[idx] >> 4) & 0xF;
                     vals[i+1] = ff_wma3_symbol_to_vec2[idx] & 0xF;
                 }
             }
-        }else{
+        } else {
              vals[0] = (ff_wma3_symbol_to_vec4[idx] >> 8) >> 4;
              vals[1] = (ff_wma3_symbol_to_vec4[idx] >> 8) & 0xF;
              vals[2] = (ff_wma3_symbol_to_vec4[idx] >> 4) & 0xF;
@@ -848,7 +848,7 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
                 int sign = get_bits1(&s->gb) - 1;
                 ci->coeffs[cur_coeff] = (vals[i]^sign) - sign;
                 num_zeros = zero_init;
-            }else{
+            } else {
                 /** switch to run level mode when subframe_len / 128 zeros
                    were found in a row */
                 rl_mode |= (num_zeros & rl_switchmask);
@@ -870,9 +870,9 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
             if ( idx > 1) {
                 cur_coeff += run[idx];
                 val = level[idx];
-            }else if ( idx == 1)
+            } else if ( idx == 1)
                 break;
-            else{
+            else {
                 val = wma_get_large_val(s);
                 /** escape decode */
                 if (get_bits1(&s->gb)) {
@@ -881,9 +881,9 @@ static int wma_decode_coeffs(WMA3DecodeContext *s, int c)
                             av_log(s->avctx,AV_LOG_ERROR,
                                    "broken escape sequence\n");
                             return 0;
-                        }else
+                        } else
                             cur_coeff += get_bits(&s->gb,s->esc_len) + 4;
-                    }else
+                    } else
                         cur_coeff += get_bits(&s->gb,2) + 1;
                 }
             }
@@ -942,7 +942,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
 
         if (s->channel[c].cur_subframe > 0) {
             s->channel[c].transmit_sf = get_bits1(&s->gb);
-        }else
+        } else
             s->channel[c].transmit_sf = 1;
 
         if (s->channel[c].transmit_sf) {
@@ -956,7 +956,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                     val += get_vlc2(&s->gb, sf_vlc.table, SCALEVLCBITS, SCALEMAXDEPTH) - 60;
                     *sf = val;
                 }
-            }else{
+            } else {
                 int i;
                 /** run level decode differences to the resampled factors */
 
@@ -977,9 +977,9 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                         val = code >> 6;
                         sign = (code & 1) - 1;
                         skip = (code & 0x3f)>>1;
-                    }else if (idx == 1) {
+                    } else if (idx == 1) {
                         break;
-                    }else{
+                    } else {
                         skip = ff_wma3_scale_rl_run[idx];
                         val = ff_wma3_scale_rl_level[idx];
                         sign = get_bits1(&s->gb)-1;
@@ -990,7 +990,7 @@ static int wma_decode_scale_factors(WMA3DecodeContext* s)
                         av_log(s->avctx,AV_LOG_ERROR,
                                "invalid scale factor coding\n");
                         return 0;
-                    }else
+                    } else
                         s->channel[c].scale_factors[i] += (val ^ sign) - sign;
                 }
             }
@@ -1035,7 +1035,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                         *ch0++ = v1 - v2;
                         *ch1++ = v1 + v2;
                     }
-                }else{
+                } else {
                     while (ch0 < ch0_end) {
                         *ch0++ *= 181.0 / 128;
                         *ch1++ *= 181.0 / 128;
@@ -1043,7 +1043,7 @@ static void wma_inverse_channel_transform(WMA3DecodeContext *s)
                 }
                 ++sfb_offsets;
             }
-        }else if (s->chgroup[i].transform) {
+        } else if (s->chgroup[i].transform) {
             float data[MAX_CHANNELS];
             const int num_channels = s->chgroup[i].num_channels;
             float** ch_data = s->chgroup[i].channel_data;
@@ -1174,7 +1174,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
         s->num_bands = s->num_sfb[0];
         s->cur_sfb_offsets = s->sfb_offsets;
         s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[0];
-    }else{
+    } else {
         int frame_offset = av_log2(s->samples_per_frame/subframe_len);
         s->num_bands = s->num_sfb[frame_offset];
         s->cur_sfb_offsets = &s->sfb_offsets[MAX_BANDS * frame_offset];
@@ -1267,7 +1267,7 @@ static int wma_decode_subframe(WMA3DecodeContext *s)
 
         if (s->channels_for_cur_subframe == 1)
             s->channel[s->channel_indexes_for_cur_subframe[0]].quant_step = quant_step;
-        else{
+        else {
             int modifier_len = get_bits(&s->gb,3);
             for (i=0;i<s->channels_for_cur_subframe;i++) {
                 int c = s->channel_indexes_for_cur_subframe[i];
@@ -1523,7 +1523,7 @@ static void wma_save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len,
         memcpy(s->frame_data, gb->buffer + (get_bits_count(gb) >> 3),
               (s->num_saved_bits  + 8)>> 3);
         skip_bits_long(gb, len);
-    }else{
+    } else {
         bit_offset = s->num_saved_bits & 7;
         pos = (s->num_saved_bits - bit_offset) >> 3;
 
@@ -1615,7 +1615,7 @@ static int wma_decode_packet(AVCodecContext *avctx,
         /** decode the cross packet frame if it is valid */
         if (!s->packet_loss)
             wma_decode_frame(s);
-    }else if (s->num_saved_bits - s->frame_offset) {
+    } else if (s->num_saved_bits - s->frame_offset) {
         DBG(avctx, AV_LOG_DEBUG, "ignoring %x previously saved bits\n",
                       s->num_saved_bits - s->frame_offset);
     }
@@ -1636,7 +1636,7 @@ static int wma_decode_packet(AVCodecContext *avctx,
             if (!more_frames) {
                 DBG(avctx, AV_LOG_DEBUG, "no more frames\n");
             }
-        }else
+        } else
             more_frames = 0;
     }
 
