@@ -31,7 +31,7 @@
 /**
  * @brief frequencies to divide the frequency spectrum into scale factor bands
  */
-static const uint16_t ff_wma3_critical_freq[] = {
+static const uint16_t critical_freq[] = {
      100,   200,    300,    400,    510,    630,    770,
      920,  1080,   1270,   1480,   1720,   2000,   2320,
     2700,  3150,   3700,   4400,   5300,   6400,   7700,
@@ -43,9 +43,9 @@ static const uint16_t ff_wma3_critical_freq[] = {
  * @name huffman tables for DPCM-coded scale factors
  * @{
  */
-#define FF_WMA3_HUFF_SCALE_SIZE 121
-#define FF_WMA3_HUFF_SCALE_MAXBITS 19
-static const uint16_t ff_wma3_scale_huffcodes[FF_WMA3_HUFF_SCALE_SIZE] = {
+#define HUFF_SCALE_SIZE 121
+#define HUFF_SCALE_MAXBITS 19
+static const uint16_t scale_huffcodes[HUFF_SCALE_SIZE] = {
     0xE639, 0xE6C2, 0xE6C1, 0xE6C0, 0xE63F, 0xE63E, 0xE63D, 0xE63C,
     0xE63B, 0xE63A, 0xE638, 0xE637, 0xE636, 0xE635, 0xE634, 0xE632,
     0xE633, 0xE620, 0x737B, 0xE610, 0xE611, 0xE612, 0xE613, 0xE614,
@@ -64,7 +64,7 @@ static const uint16_t ff_wma3_scale_huffcodes[FF_WMA3_HUFF_SCALE_SIZE] = {
     0xE6F5,
 };
 
-static const uint8_t ff_wma3_scale_huffbits[FF_WMA3_HUFF_SCALE_SIZE] = {
+static const uint8_t scale_huffbits[HUFF_SCALE_SIZE] = {
     19, 19, 19, 19, 19, 19, 19, 19,
     19, 19, 19, 19, 19, 19, 19, 19,
     19, 19, 18, 19, 19, 19, 19, 19,
@@ -89,9 +89,9 @@ static const uint8_t ff_wma3_scale_huffbits[FF_WMA3_HUFF_SCALE_SIZE] = {
  * @name huffman, run and level tables for run level coded scale factors
  * @{
  */
-#define FF_WMA3_HUFF_SCALE_RL_SIZE 120
-#define FF_WMA3_HUFF_SCALE_RL_MAXBITS 21
-static const uint32_t ff_wma3_scale_rl_huffcodes[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
+#define HUFF_SCALE_RL_SIZE 120
+#define HUFF_SCALE_RL_MAXBITS 21
+static const uint32_t scale_rl_huffcodes[HUFF_SCALE_RL_SIZE] = {
     0x00010C, 0x000001, 0x10FE2A, 0x000003, 0x000003, 0x000001, 0x000013,
     0x000020, 0x000029, 0x000014, 0x000016, 0x000045, 0x000049, 0x00002F,
     0x000042, 0x00008E, 0x00008F, 0x000129, 0x000009, 0x00000D, 0x0004AC,
@@ -112,7 +112,7 @@ static const uint32_t ff_wma3_scale_rl_huffcodes[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
     0x0002B1,
 };
 
-static const uint8_t ff_wma3_scale_rl_huffbits[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
+static const uint8_t scale_rl_huffbits[HUFF_SCALE_RL_SIZE] = {
      9,  2, 21,  2,  4,  5,  5,
      6,  6,  7,  7,  7,  7,  6,
      7,  8,  8,  9, 10, 10, 11,
@@ -134,7 +134,7 @@ static const uint8_t ff_wma3_scale_rl_huffbits[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
 };
 
 
-static const uint8_t ff_wma3_scale_rl_run[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
+static const uint8_t scale_rl_run[HUFF_SCALE_RL_SIZE] = {
      0,  0,  0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
     16, 17, 18, 19, 20, 21, 22, 23, 24,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
     10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,  0,  1,  2,  3,
@@ -144,7 +144,7 @@ static const uint8_t ff_wma3_scale_rl_run[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
      0,  1,  0,  1,  0,  1,
 };
 
-static const uint8_t ff_wma3_scale_rl_level[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
+static const uint8_t scale_rl_level[HUFF_SCALE_RL_SIZE] = {
      0,  0,  1,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
      2,  2,  2,  2,  2,  2,  2,  2,  2,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,
      3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  4,  4,  4,  4,
@@ -160,9 +160,9 @@ static const uint8_t ff_wma3_scale_rl_level[FF_WMA3_HUFF_SCALE_RL_SIZE] = {
  * @name huffman, run and level codes for run level coded coefficients
  * @{
  */
-#define FF_WMA3_HUFF_COEF0_SIZE 272
-#define FF_WMA3_HUFF_COEF0_MAXBITS 21
-static const uint32_t ff_wma3_coef0_huffcodes[FF_WMA3_HUFF_COEF0_SIZE] = {
+#define HUFF_COEF0_SIZE 272
+#define HUFF_COEF0_MAXBITS 21
+static const uint32_t coef0_huffcodes[HUFF_COEF0_SIZE] = {
     0x00004A, 0x00002B, 0x000000, 0x000003, 0x000006, 0x000009, 0x00000F,
     0x000010, 0x000016, 0x000011, 0x000016, 0x000028, 0x00002F, 0x000026,
     0x000029, 0x000045, 0x000055, 0x00005D, 0x000042, 0x00004E, 0x000051,
@@ -204,7 +204,7 @@ static const uint32_t ff_wma3_coef0_huffcodes[FF_WMA3_HUFF_COEF0_SIZE] = {
     0x087448, 0x0047E4, 0x043A20, 0x00542A, 0x087449, 0x00898C,
 };
 
-static const uint8_t ff_wma3_coef0_huffbits[FF_WMA3_HUFF_COEF0_SIZE] = {
+static const uint8_t coef0_huffbits[HUFF_COEF0_SIZE] = {
      8,  7,  2,  3,  3,  4,  4,
      5,  5,  6,  6,  6,  6,  7,
      7,  7,  7,  7,  8,  8,  8,
@@ -247,9 +247,9 @@ static const uint8_t ff_wma3_coef0_huffbits[FF_WMA3_HUFF_COEF0_SIZE] = {
 };
 
 
-#define FF_WMA3_HUFF_COEF1_SIZE 244
-#define FF_WMA3_HUFF_COEF1_MAXBITS 22
-static const uint32_t ff_wma3_coef1_huffcodes[FF_WMA3_HUFF_COEF1_SIZE] = {
+#define HUFF_COEF1_SIZE 244
+#define HUFF_COEF1_MAXBITS 22
+static const uint32_t coef1_huffcodes[HUFF_COEF1_SIZE] = {
     0x0001E2, 0x00007F, 0x000000, 0x000002, 0x000008, 0x00000E, 0x000019,
     0x00002F, 0x000037, 0x000060, 0x00006C, 0x000095, 0x0000C6, 0x0000F0,
     0x00012E, 0x000189, 0x0001A5, 0x0001F8, 0x000253, 0x00030A, 0x000344,
@@ -287,7 +287,7 @@ static const uint32_t ff_wma3_coef1_huffcodes[FF_WMA3_HUFF_COEF1_SIZE] = {
     0x175AC0, 0x005D61, 0x3F3C05, 0x006130, 0x3F3C04, 0x0062B5,
 };
 
-static const uint8_t ff_wma3_coef1_huffbits[FF_WMA3_HUFF_COEF1_SIZE] = {
+static const uint8_t coef1_huffbits[HUFF_COEF1_SIZE] = {
      9,  7,  2,  3,  4,  4,  5,
      6,  6,  7,  7,  8,  8,  8,
      9,  9,  9,  9, 10, 10, 10,
@@ -326,7 +326,7 @@ static const uint8_t ff_wma3_coef1_huffbits[FF_WMA3_HUFF_COEF1_SIZE] = {
 };
 
 
-static const uint8_t ff_wma3_coef0_run[FF_WMA3_HUFF_COEF0_SIZE] = {
+static const uint8_t coef0_run[HUFF_COEF0_SIZE] = {
       0,   0,   0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,
      12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,
      26,  27,  28,  29,  30,  31,  32,  33,  34,  35,  36,  37,  38,  39,
@@ -349,7 +349,7 @@ static const uint8_t ff_wma3_coef0_run[FF_WMA3_HUFF_COEF0_SIZE] = {
       1,   0,   1,   0,   1,   0,
 };
 
-static const uint8_t ff_wma3_coef0_level[FF_WMA3_HUFF_COEF0_SIZE] = {
+static const uint8_t coef0_level[HUFF_COEF0_SIZE] = {
       0,   0,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
       1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
       1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
@@ -373,7 +373,7 @@ static const uint8_t ff_wma3_coef0_level[FF_WMA3_HUFF_COEF0_SIZE] = {
 };
 
 
-static const uint8_t ff_wma3_coef1_run[FF_WMA3_HUFF_COEF1_SIZE] = {
+static const uint8_t coef1_run[HUFF_COEF1_SIZE] = {
      0,  0,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
     34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,
@@ -390,7 +390,7 @@ static const uint8_t ff_wma3_coef1_run[FF_WMA3_HUFF_COEF1_SIZE] = {
      1,  0,  1,  0,  1,  0,  1,  0,  0,  0,
 };
 
-static const uint8_t ff_wma3_coef1_level[FF_WMA3_HUFF_COEF1_SIZE] = {
+static const uint8_t coef1_level[HUFF_COEF1_SIZE] = {
      0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
      1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
      1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
@@ -413,9 +413,9 @@ static const uint8_t ff_wma3_coef1_level[FF_WMA3_HUFF_COEF1_SIZE] = {
  * @name huffman and vector lookup tables for vector-coded coefficients
  * @{
  */
-#define FF_WMA3_HUFF_VEC4_SIZE 127
-#define FF_WMA3_HUFF_VEC4_MAXBITS 14
-static const uint16_t ff_wma3_vec4_huffcodes[FF_WMA3_HUFF_VEC4_SIZE] = {
+#define HUFF_VEC4_SIZE 127
+#define HUFF_VEC4_MAXBITS 14
+static const uint16_t vec4_huffcodes[HUFF_VEC4_SIZE] = {
     0x0019, 0x0027, 0x00F2, 0x03BA, 0x0930, 0x1267, 0x0031, 0x0030,
     0x0097, 0x0221, 0x058B, 0x0124, 0x00EB, 0x01D4, 0x03D8, 0x0584,
     0x0364, 0x045F, 0x0F66, 0x0931, 0x24CD, 0x002F, 0x0039, 0x00E8,
@@ -434,7 +434,7 @@ static const uint16_t ff_wma3_vec4_huffcodes[FF_WMA3_HUFF_VEC4_SIZE] = {
     0x03C4, 0x08B8, 0x078B, 0x0755, 0x0581, 0x0F67, 0x0000,
 };
 
-static const uint8_t ff_wma3_vec4_huffbits[FF_WMA3_HUFF_VEC4_SIZE] = {
+static const uint8_t vec4_huffbits[HUFF_VEC4_SIZE] = {
      5,  6,  8, 10, 12, 13,  6,  6,
      8, 10, 11,  9,  8,  9, 10, 11,
     10, 11, 12, 12, 14,  6,  6,  8,
@@ -454,9 +454,9 @@ static const uint8_t ff_wma3_vec4_huffbits[FF_WMA3_HUFF_VEC4_SIZE] = {
 };
 
 
-#define FF_WMA3_HUFF_VEC2_SIZE 137
-#define FF_WMA3_HUFF_VEC2_MAXBITS 12
-static const uint16_t ff_wma3_vec2_huffcodes[FF_WMA3_HUFF_VEC2_SIZE] = {
+#define HUFF_VEC2_SIZE 137
+#define HUFF_VEC2_MAXBITS 12
+static const uint16_t vec2_huffcodes[HUFF_VEC2_SIZE] = {
     0x055, 0x01C, 0x01A, 0x02B, 0x028, 0x067, 0x08B, 0x039,
     0x170, 0x10D, 0x2A5, 0x047, 0x464, 0x697, 0x523, 0x8CB,
     0x01B, 0x00E, 0x000, 0x010, 0x012, 0x036, 0x048, 0x04C,
@@ -477,7 +477,7 @@ static const uint16_t ff_wma3_vec2_huffcodes[FF_WMA3_HUFF_VEC2_SIZE] = {
     0x001,
 };
 
-static const uint8_t ff_wma3_vec2_huffbits[FF_WMA3_HUFF_VEC2_SIZE] = {
+static const uint8_t vec2_huffbits[HUFF_VEC2_SIZE] = {
      7,  6,  6,  6,  7,  7,  8,  9,
      9, 10, 10, 11, 11, 11, 12, 12,
      6,  4,  5,  5,  6,  6,  7,  8,
@@ -499,9 +499,9 @@ static const uint8_t ff_wma3_vec2_huffbits[FF_WMA3_HUFF_VEC2_SIZE] = {
 };
 
 
-#define FF_WMA3_HUFF_VEC1_SIZE 101
-#define FF_WMA3_HUFF_VEC1_MAXBITS 11
-static const uint16_t ff_wma3_vec1_huffcodes[FF_WMA3_HUFF_VEC1_SIZE] = {
+#define HUFF_VEC1_SIZE 101
+#define HUFF_VEC1_MAXBITS 11
+static const uint16_t vec1_huffcodes[HUFF_VEC1_SIZE] = {
     0x01A, 0x003, 0x017, 0x010, 0x00C, 0x009, 0x005, 0x000,
     0x00D, 0x00A, 0x009, 0x00C, 0x00F, 0x002, 0x004, 0x007,
     0x00B, 0x00F, 0x01C, 0x006, 0x010, 0x015, 0x01C, 0x022,
@@ -517,7 +517,7 @@ static const uint16_t ff_wma3_vec1_huffcodes[FF_WMA3_HUFF_VEC1_SIZE] = {
     0x297, 0x355, 0x372, 0x373, 0x016,
 };
 
-static const uint8_t ff_wma3_vec1_huffbits[FF_WMA3_HUFF_VEC1_SIZE] = {
+static const uint8_t vec1_huffbits[HUFF_VEC1_SIZE] = {
      7,  6,  5,  5,  5,  5,  5,  5,
      4,  4,  4,  4,  4,  5,  5,  5,
      5,  5,  5,  6,  6,  6,  6,  6,
@@ -534,7 +534,7 @@ static const uint8_t ff_wma3_vec1_huffbits[FF_WMA3_HUFF_VEC1_SIZE] = {
 };
 
 
-static const uint16_t ff_wma3_symbol_to_vec4[FF_WMA3_HUFF_VEC4_SIZE] = {
+static const uint16_t symbol_to_vec4[HUFF_VEC4_SIZE] = {
         0,    1,      2,     3,     4,     5,    16,    17,    18,    19,
        20,   32,     33,    34,    35,    48,    49,    50,    64,    65,
        80,   256,   257,   258,   259,   260,   272,   273,   274,   275,
@@ -551,7 +551,7 @@ static const uint16_t ff_wma3_symbol_to_vec4[FF_WMA3_HUFF_VEC4_SIZE] = {
 };
 
 
-static const uint8_t ff_wma3_symbol_to_vec2[FF_WMA3_HUFF_VEC2_SIZE] = {
+static const uint8_t symbol_to_vec2[HUFF_VEC2_SIZE] = {
       0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,
      15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,
      30,  32,  33,  34,  35,  36,  37,  38,  39,  40,  41,  42,  43,  44,  45,
@@ -569,7 +569,7 @@ static const uint8_t ff_wma3_symbol_to_vec2[FF_WMA3_HUFF_VEC2_SIZE] = {
 /**
  * @brief decorrelation matrix for multichannel streams
  **/
-static const float ff_wma3_default_decorrelation_matrices[] = {
+static const float default_decorrelation_matrices[] = {
     1.000000,  0.707031, -0.707031,  0.707031,  0.707031,  0.578125,  0.707031,
     0.410156,  0.578125, -0.707031,  0.410156,  0.578125,  0.000000, -0.816406,
     0.500000,  0.652344,  0.500000,  0.269531,  0.500000,  0.269531, -0.500000,
@@ -588,14 +588,14 @@ static const float ff_wma3_default_decorrelation_matrices[] = {
 /**
  * @brief default decorrelation matrix offsets
  */
-static const float *ff_wma3_default_decorrelation[] = {
+static const float *default_decorrelation[] = {
     NULL,
-    &ff_wma3_default_decorrelation_matrices[0],
-    &ff_wma3_default_decorrelation_matrices[1],
-    &ff_wma3_default_decorrelation_matrices[5],
-    &ff_wma3_default_decorrelation_matrices[14],
-    &ff_wma3_default_decorrelation_matrices[30],
-    &ff_wma3_default_decorrelation_matrices[55]
+    &default_decorrelation_matrices[0],
+    &default_decorrelation_matrices[1],
+    &default_decorrelation_matrices[5],
+    &default_decorrelation_matrices[14],
+    &default_decorrelation_matrices[30],
+    &default_decorrelation_matrices[55]
 };
 
 #endif /* AVCODEC_WMA3DATA_H */
