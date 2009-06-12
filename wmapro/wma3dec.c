@@ -306,6 +306,8 @@ static av_cold int decode_init(AVCodecContext *avctx)
     s->avctx = avctx;
     dsputil_init(&s->dsp, avctx);
 
+    avctx->sample_fmt = SAMPLE_FMT_S16;
+
     /** FIXME: is this really the right thing to do for 24 bits? */
     s->sample_bit_depth = 16; // avctx->bits_per_sample;
     if (avctx->extradata_size >= 18) {
