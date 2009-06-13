@@ -1,6 +1,6 @@
 /*
- * M3U muxer and demuxer
- * Copyright (c) 2001 Geza Kovacs
+ * General components used by playlist formats
+ * Copyright (c) 2009 Geza Kovacs
  *
  * This file is part of FFmpeg.
  *
@@ -19,42 +19,29 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-/*
- * Based on AU muxer and demuxer in au.c
- */
-
 #include "avformat.h"
 #include "playlist.h"
-
-int av_open_input_playelem(PlayElem *pe)
-{
-    return av_open_input_file(&(pe->ic), pe->filename, pe->fmt, pe->buf_size, pe->ap);
-}
-
+#include "internal.h"
+#include <time.h>
 
 // based on decode_thread() in ffplay.c
-int av_alloc_playelem(unsigned char *filename, PlayElem *pe)
+int av_alloc_playelem(unsigned char *filename,
+                      PlayElem *pe)
 {
-//    AVProbeData *pd;
     AVFormatContext *ic;
     AVFormatParameters *ap;
-//    pd = av_malloc(sizeof(AVProbeData));
-//    ic = av_malloc(sizeof(AVFormatContext));
+    ic = av_malloc(sizeof(AVFormatContext));
     ap = av_malloc(sizeof(AVFormatParameters));
     memset(ap, 0, sizeof(AVFormatParameters));
     ap->width = 0;
     ap->height = 0;
     ap->time_base = (AVRational){1, 25};
     ap->pix_fmt = 0;
-//    pd->filename = filename;
-//    pd->buf = NULL;
-//    pd->buf_size = 0;
     pe->ic = ic;
     pe->filename = filename;
     pe->fmt = 0;
     pe->buf_size = 0;
     pe->ap = ap;
-//    pe->fmt = pe->ic->iformat;
     return 0;
 }
 
@@ -65,39 +52,33 @@ PlayElem* av_make_playelem(unsigned char *filename)
     err = av_alloc_playelem(filename, pe);
     if (err < 0)
         print_error("during-av_alloc_playelem", err);
-    err = av_open_input_playelem(pe);
+    err = av_open_input_file(&(pe->ic), pe->filename, pe->fmt, pe->buf_size, pe->ap);
     if (err < 0)
         print_error("during-open_input_playelem", err);
     pe->fmt = pe->ic->iformat;
-    if (!pe->fmt)
-    {
+    if (!pe->fmt) {
         fprintf(stderr, "pefmt not set\n");
-        fflush(stderr);
     }
     err = av_find_stream_info(pe->ic);
-    if (err < 0)
-    {
-        fprintf(stderr, "failed codec probe av_find_stream_info");
-        fflush(stderr);
+    if (err < 0) {
+        fprintf(stderr, "failed codec probe av_find_stream_info\n");
     }
-    if(pe->ic->pb)
-    {
+    if(pe->ic->pb) {
         pe->ic->pb->eof_reached = 0;
     }
-    else
-    {
+    else {
         fprintf(stderr, "failed pe ic pb not set");
-        fflush(stderr);
     }
-    if(!pe->fmt)
-    {
+    if(!pe->fmt) {
         fprintf(stderr, "failed pe ic fmt not set");
-        fflush(stderr);
     }
+    pe->time_offset = 0;
+    pe->indv_time = clock();
     return pe;
 }
 
-PlaylistD* av_make_playlistd(unsigned char **flist, int flist_len)
+PlaylistD* av_make_playlistd(unsigned char **flist,
+                             int flist_len)
 {
     int i;
     PlaylistD *playld = av_malloc(sizeof(PlaylistD));
@@ -105,63 +86,170 @@ PlaylistD* av_make_playlistd(unsigned char **flist, int flist_len)
     playld->pelist_size = flist_len;
     playld->pelist = av_malloc(playld->pelist_size * sizeof(PlayElem*));
     memset(playld->pelist, 0, playld->pelist_size * sizeof(PlayElem*));
-    for (int i = 0; i < playld->pelist_size; ++i)
-    {
-        playld->pelist[i] = av_make_playelem(flist[i]);
-    }
     return playld;
 }
 
-int playlist_populate_context(PlaylistD *playld, AVFormatContext *s)
+char* conc_strings(char *string1, char *string2) {
+    char *str1;
+    char *str2;
+    char *str;
+    str1 = string1;
+    str2 = string2;
+    while (*string1 != 0)
+        ++string1;
+    while (*string2 != 0)
+        ++string2;
+    str = av_malloc((string1-str1)+(string2-str2));
+    string1 = str1;
+    string2 = str2;
+    while (*string1 != 0)
+        str[string1-str1] = *(string1++);
+    str += (string1-str1);
+    while (*string2 != 0)
+        str[string2-str2] = *(string2++);
+    return (str-string1)+str1;
+}
+
+char* buf_getline(ByteIOContext *s)
+{
+    char *q;
+    char *oq;
+    int bufsize = 64;
+    q = av_malloc(bufsize);
+    oq = q;
+    while (1) {
+        int c = url_fgetc(s);
+        if (c == EOF)
+            return NULL;
+        if (c == '\n')
+            break;
+        *q = c;
+        if ((++q)-oq == bufsize) {
+            oq = av_realloc(oq, bufsize+64);
+            q = oq + bufsize;
+            bufsize += 64;
+        }
+    }
+    *q = 0;
+    q = oq;
+    while (*q != 0 && *q != '#') {
+        ++q;
+    }
+    *q = 0;
+    oq = av_realloc(oq, (q-oq)+1);
+    return oq;
+}
+
+void split_wd_fn(char *filepath,
+                 char **workingdir,
+                 char **filename)
+{
+    char *ofp;
+    char *cofp;
+    char *lslash = filepath;
+    ofp = filepath;
+    cofp = filepath;
+    while (*filepath != 0) {
+        if (*filepath == '/' || *filepath == '\\')
+            lslash = filepath+1;
+        ++filepath;
+    }
+    *workingdir = av_malloc((lslash-ofp)+1);
+    *filename = av_malloc((filepath-lslash)+1);
+    while (cofp < lslash)
+        (*workingdir)[cofp-ofp] = *(cofp++);
+    (*workingdir)[cofp-ofp] = 0;
+    while (cofp < filepath)
+        (*filename)[cofp-lslash] = *(cofp++);
+    (*filename)[cofp-lslash] = 0;
+}
+
+int playlist_populate_context(PlaylistD *playld,
+                              AVFormatContext *s)
 {
     int i;
-    AVFormatContext *ic = playld->pelist[playld->pe_curidx]->ic;
-    AVFormatParameters *nap = playld->pelist[playld->pe_curidx]->ap;
-    ic->iformat->read_header(ic, nap);
+//    unsigned int stream_offset;
+    AVFormatContext *ic;
+    AVFormatParameters *nap;
+    printf("playlist_populate_context called\n");
+    playld->pelist[playld->pe_curidx] = av_make_playelem(playld->flist[playld->pe_curidx]);
+    ic = playld->pelist[playld->pe_curidx]->ic;
+    nap = playld->pelist[playld->pe_curidx]->ap;
+    ic->iformat->read_header(ic, 0);
+//    stream_offset = get_stream_offset(s);
     s->nb_streams = ic->nb_streams;
-    for (i = 0; i < ic->nb_streams; ++i)
-    {
+//    s->nb_streams = ic->nb_streams + stream_offset;
+    for (i = 0; i < ic->nb_streams; ++i) {
         s->streams[i] = ic->streams[i];
+//        s->streams[i+stream_offset] = ic->streams[i];
     }
+    // TODO remove this ugly hack
+    s->av_class = ic->av_class;
+    s->oformat = ic->oformat;
+    s->pb = ic->pb;
+    s->timestamp = ic->timestamp;
+    s->year = ic->year;
+    s->track = ic->track;
+    s->ctx_flags = ic->ctx_flags;
+    s->packet_buffer = ic->packet_buffer;
+    s->start_time = ic->start_time;
+    s->duration = ic->duration;
+    s->file_size = ic->file_size;
+    s->bit_rate = ic->bit_rate;
+    s->cur_st = ic->cur_st;
+    s->cur_ptr_deprecated = ic->cur_ptr_deprecated;
+    s->cur_len_deprecated = ic->cur_len_deprecated;
+    s->cur_pkt_deprecated = ic->cur_pkt_deprecated;
+    s->data_offset = ic->data_offset;
+    s->index_built = ic->index_built;
+    s->mux_rate = ic->mux_rate;
+    s->packet_size = ic->packet_size;
+    s->preload = ic->preload;
+    s->max_delay = ic->max_delay;
+    s->loop_output = ic->loop_output;
+    s->flags = ic->flags;
+    s->loop_input = ic->loop_input;
+    s->probesize = ic->probesize;
+    s->max_analyze_duration = ic->max_analyze_duration;
+    s->key = ic->key;
+    s->keylen = ic->keylen;
+    s->nb_programs = ic->nb_programs;
+    s->programs = ic->programs;
+    s->video_codec_id = ic->video_codec_id;
+    s->audio_codec_id = ic->audio_codec_id;
+    s->subtitle_codec_id = ic->subtitle_codec_id;
+    s->max_index_size = ic->max_index_size;
+    s->max_picture_buffer = ic->max_picture_buffer;
+    s->nb_chapters = ic->nb_chapters;
+    s->chapters = ic->chapters;
+    s->debug = ic->debug;
+    s->raw_packet_buffer = ic->raw_packet_buffer;
+    s->raw_packet_buffer_end = ic->raw_packet_buffer_end;
+    s->packet_buffer_end = ic->packet_buffer_end;
+    s->metadata = ic->metadata;
     return 0;
 }
 
-int check_file_extn(char *cch, char *extn)
+int compare_bufs(unsigned char *buf,
+                 unsigned char *rbuf)
 {
-    int pos;
-    int extnl;
-    pos = -1;
-    extnl = 0;
-    while (extn[extnl] != 0)
-       ++extnl;
-    pos = -1;
-    if (!cch)
-    {
-        return 0;
+    while (*rbuf != 0) {
+        if (*rbuf != *buf)
+            return 0;
+        ++buf;
+        ++rbuf;
     }
-    if (*cch == 0)
-    {
-        return 0;
-    }
-    while (*cch != 0)
-    {
-        if (*cch == '.')
-        {
-            pos = 0;
-        }
-        else if (pos >= 0)
-        {
-            if (*cch == extn[pos])
-                ++pos;
-            else
-                pos = -1;
-            if (pos == extnl)
-            {
-                return 1;
-            }
-        }
-        ++cch;
-    }
-    return 0;
+    return 1;
+}
+
+unsigned int get_stream_offset(AVFormatContext *s)
+{
+    PlaylistD *playld;
+    int i;
+    unsigned int snum = 0;
+    playld = s->priv_data;
+    for (i = 0; i < playld->pe_curidx; ++i)
+        snum += playld->pelist[i]->ic->nb_streams;
+    return snum;
 }
 

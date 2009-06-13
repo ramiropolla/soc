@@ -1,6 +1,6 @@
 /*
  * M3U muxer and demuxer
- * Copyright (c) 2001 Geza Kovacs
+ * Copyright (c) 2009 Geza Kovacs
  *
  * This file is part of FFmpeg.
  *
@@ -19,12 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-/*
- * Based on AU muxer and demuxer in au.c
- */
-
 #include "avformat.h"
-#include "raw.h"
 #include "riff.h"
 #include "playlist.h"
 
@@ -33,185 +28,165 @@
 
 /* The ffmpeg codecs we support, and the IDs they have in the file */
 static const AVCodecTag codec_m3u_tags[] = {
-    { CODEC_ID_PCM_MULAW, 1 },
-    { CODEC_ID_PCM_S8, 2 },
-    { CODEC_ID_PCM_S16BE, 3 },
-    { CODEC_ID_PCM_S24BE, 4 },
-    { CODEC_ID_PCM_S32BE, 5 },
-    { CODEC_ID_PCM_F32BE, 6 },
-    { CODEC_ID_PCM_F64BE, 7 },
-    { CODEC_ID_PCM_ALAW, 27 },
     { 0, 0 },
 };
 
-
-
-#if CONFIG_PLAYLIST_MUXER
-/* AUDIO_FILE header */
-static int put_m3u_header(ByteIOContext *pb, AVCodecContext *enc)
-{
-    if(!enc->codec_tag)
-        return -1;
-    put_tag(pb, ".snd");       /* magic number */
-    put_be32(pb, 24);           /* header size */
-    put_be32(pb, M3U_UNKNOWN_SIZE); /* data size */
-    put_be32(pb, (uint32_t)enc->codec_tag);     /* codec ID */
-    put_be32(pb, enc->sample_rate);
-    put_be32(pb, (uint32_t)enc->channels);
-    return 0;
-}
-
-static int m3u_write_header(AVFormatContext *s)
-{
-    ByteIOContext *pb = s->pb;
-
-    s->priv_data = NULL;
-
-    /* format header */
-    if (put_m3u_header(pb, s->streams[0]->codec) < 0) {
-        return -1;
-    }
-
-    put_flush_packet(pb);
-
-    return 0;
-}
-
-static int m3u_write_packet(AVFormatContext *s, AVPacket *pkt)
-{
-    ByteIOContext *pb = s->pb;
-    put_buffer(pb, pkt->data, pkt->size);
-    return 0;
-}
-
-static int m3u_write_trailer(AVFormatContext *s)
-{
-    ByteIOContext *pb = s->pb;
-    int64_t file_size;
-
-    if (!url_is_streamed(s->pb)) {
-
-        /* update file size */
-        file_size = url_ftell(pb);
-        url_fseek(pb, 8, SEEK_SET);
-        put_be32(pb, (uint32_t)(file_size - 24));
-        url_fseek(pb, file_size, SEEK_SET);
-
-        put_flush_packet(pb);
-    }
-
-    return 0;
-}
-#endif /* CONFIG_M3U_MUXER */
-
-
-
-static int compare_bufs(unsigned char *buf, unsigned char *rbuf)
-{
-    while (*rbuf != 0)
-    {
-        if (*rbuf != *buf)
-            return 0;
-        ++buf;
-        ++rbuf;
-    }
-    return 1;
-}
-
 static int m3u_probe(AVProbeData *p)
 {
-    if (p->buf_size >= 7 && p->buf != 0)
-    {
+    if (p->buf != 0) {
         if (compare_bufs(p->buf, "#EXTM3U"))
             return AVPROBE_SCORE_MAX;
         else
             return 0;
     }
-    if (check_file_extn(p->filename, "m3u"))
+    if (match_ext(p->filename, "m3u"))
         return AVPROBE_SCORE_MAX/2;
     else
         return 0;
 }
 
-static int m3u_list_files(unsigned char *buffer, int buffer_size, unsigned char **file_list, unsigned int *lfx_ptr)
+static int m3u_list_files(ByteIOContext *s,
+                          char ***flist_ptr,
+                          unsigned int *lfx_ptr,
+                          char *workingdir)
 {
-    unsigned int i;
-    unsigned int lfx = 0;
-    unsigned int fx = 0;
-    unsigned char hashed_out = 0;
-    unsigned char fldata[262144];
-    memset(fldata, 0, 262144);
-    memset(file_list, 0, 512 * sizeof(unsigned char*));
-    for (i = 0; i < 512; ++i)
-    {
-        file_list[i] = fldata+i*512;
-    }
-    for (i = 0; i < buffer_size; ++i)
-    {
-        if (buffer[i] == 0)
+    char **ofl;
+    int i;
+    int bufsize = 16;
+    i = 0;
+    ofl = av_malloc(sizeof(char*) * bufsize);
+    while (1) {
+        char *c = buf_getline(s);
+        if (c == NULL) // EOF
             break;
-        if (buffer[i] == '#')
-        {
-            hashed_out = 1;
+        if (*c == 0) // hashed out
             continue;
+        ofl[i] = c;
+        if (++i == bufsize) {
+            bufsize += 16;
+            ofl = av_realloc(ofl, sizeof(char*) * bufsize);
         }
-        if (buffer[i] == '\n')
-        {
-            hashed_out = 0;
-            if (fx != 0)
-            {
-                fx = 0;
-                ++lfx;
-            }
-            continue;
-        }
-        if (hashed_out)
-            continue;
-        file_list[lfx][fx] = buffer[i];
-        ++fx;
     }
-    *lfx_ptr = lfx;
+    *flist_ptr = ofl;
+    *lfx_ptr = i;
+    ofl[i] = 0;
+    while (*ofl != 0) { // determine if relative paths
+        FILE *file;
+        char *fullfpath = conc_strings(workingdir, *ofl);
+        file = fopen(fullfpath, "r");
+        if (file) {
+            fclose(file);
+            *ofl = fullfpath;
+        }
+        ++ofl;
+    }
     return 0;
 }
 
-
-
-/* m3u input */
 static int m3u_read_header(AVFormatContext *s,
-                          AVFormatParameters *ap)
+                           AVFormatParameters *ap)
 {
-    unsigned char *flist[512];
-    int flist_len;
-    ByteIOContext *pb;
-    PlaylistD *playld;
-    pb = s->pb;
-    m3u_list_files(pb->buffer, pb->buffer_size, flist, &flist_len);
-    playld = av_make_playlistd(flist, flist_len);
+    printf("m3u read header called\n");
+    PlaylistD *playld = av_malloc(sizeof(PlaylistD));
+    split_wd_fn(s->filename,
+                &playld->workingdir,
+                &playld->filename);
+    m3u_list_files(s->pb,
+                   &(playld->flist),
+                   &(playld->pelist_size),
+                   playld->workingdir);
+//    playld = av_make_playlistd(flist, flist_len);
+    playld->pelist = av_malloc(playld->pelist_size * sizeof(PlayElem*));
+    memset(playld->pelist, 0, playld->pelist_size * sizeof(PlayElem*));
+    playld->pe_curidx = 0;
     s->priv_data = playld;
     playlist_populate_context(playld, s);
     return 0;
 }
 
-#define MAX_SIZE 4096
-
 static int m3u_read_packet(AVFormatContext *s,
-                          AVPacket *pkt)
+                           AVPacket *pkt)
 {
+    int i;
     int ret;
+    int time_offset = 0;
     PlaylistD *playld;
     AVFormatContext *ic;
     playld = s->priv_data;
     retr:
     ic = playld->pelist[playld->pe_curidx]->ic;
     ret = ic->iformat->read_packet(ic, pkt);
+//    if (pkt) {
+//        pkt->stream_index += get_stream_offset(s);
+//    }
     if (ret < 0 && playld->pe_curidx < playld->pelist_size - 1)
     {
         ++playld->pe_curidx;
-        // TODO clear all existing streams before repopulating
+//        pkt->destruct(pkt);
+        pkt = av_malloc(sizeof(AVPacket));
         playlist_populate_context(playld, s);
         goto retr;
     }
     return ret;
+}
+
+static int m3u_read_seek(AVFormatContext *s,
+                         int stream_index,
+                         int64_t pts,
+                         int flags)
+{
+    PlaylistD *playld;
+    AVFormatContext *ic;
+    playld = s->priv_data;
+    ic = playld->pelist[playld->pe_curidx]->ic;
+    ic->iformat->read_seek(ic, stream_index, pts, flags);
+}
+
+static int m3u_read_play(AVFormatContext *s)
+{
+    printf("m3u_read_play called\n");
+    PlaylistD *playld;
+    AVFormatContext *ic;
+    playld = s->priv_data;
+    ic = playld->pelist[playld->pe_curidx]->ic;
+    return av_read_play(ic);
+}
+
+static int m3u_read_pause(AVFormatContext *s)
+{
+    printf("m3u_read_pause called\n");
+    PlaylistD *playld;
+    AVFormatContext *ic;
+    playld = s->priv_data;
+    ic = playld->pelist[playld->pe_curidx]->ic;
+    return av_read_pause(ic);
+}
+
+static int m3u_read_close(AVFormatContext *s)
+{
+    printf("m3u_read_close called\n");
+    PlaylistD *playld;
+    AVFormatContext *ic;
+    playld = s->priv_data;
+    ic = playld->pelist[playld->pe_curidx]->ic;
+    if (ic->iformat->read_close)
+        return ic->iformat->read_close(ic);
+    return 0;
+}
+
+static int m3u_read_timestamp(AVFormatContext *s,
+                              int stream_index,
+                              int64_t *pos,
+                              int64_t pos_limit)
+{
+    printf("m3u_read_timestamp called\n");
+    PlaylistD *playld;
+    AVFormatContext *ic;
+    playld = s->priv_data;
+    ic = playld->pelist[playld->pe_curidx]->ic;
+    if (ic->iformat->read_timestamp)
+        return ic->iformat->read_timestamp(ic, stream_index, pos, pos_limit);
+    return 0;
 }
 
 #if CONFIG_M3U_DEMUXER
@@ -222,24 +197,17 @@ AVInputFormat m3u_demuxer = {
     m3u_probe,
     m3u_read_header,
     m3u_read_packet,
-    NULL,
-    pcm_read_seek,
-    .codec_tag= (const AVCodecTag* const []){codec_m3u_tags, 0},
+    m3u_read_close, //m3u_read_close
+    m3u_read_seek,
+    m3u_read_timestamp, //m3u_read_timestamp
+    NULL, //flags
+    NULL, //extensions
+    NULL, //value
+    m3u_read_play,
+    m3u_read_pause,
+    (const AVCodecTag* const []){codec_m3u_tags, 0},
+    NULL, //m3u_read_seek2
+    NULL, //metadata_conv
+    NULL, //next
 };
 #endif
-
-#if CONFIG_M3U_MUXER
-AVOutputFormat m3u_muxer = {
-    "m3u",
-    NULL_IF_CONFIG_SMALL("M3U format"),
-    "audio/x-mpegurl",
-    "m3u",
-    0,
-    CODEC_ID_PCM_S16BE,
-    CODEC_ID_NONE,
-    m3u_write_header,
-    m3u_write_packet,
-    m3u_write_trailer,
-    .codec_tag= (const AVCodecTag* const []){codec_m3u_tags, 0},
-};
-#endif //CONFIG_M3U_MUXER

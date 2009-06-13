@@ -1,6 +1,6 @@
 /*
- * M3U muxer and demuxer
- * Copyright (c) 2001 Geza Kovacs
+ * General components used by playlist formats
+ * Copyright (c) 2009 Geza Kovacs
  *
  * This file is part of FFmpeg.
  *
@@ -19,10 +19,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-/*
- * Based on AU muxer and demuxer in au.c
- */
-
 
 typedef struct PlayElem {
     AVFormatContext *ic;
@@ -30,12 +26,21 @@ typedef struct PlayElem {
     AVInputFormat *fmt;
     int buf_size;
     AVFormatParameters *ap;
+    int64_t time_offset;
+    int64_t indv_time;
 } PlayElem;
 
 typedef struct PlaylistD {
+    char **flist;
+//    int flist_len;
     PlayElem **pelist;
     int pelist_size;
     int pe_curidx;
+    AVChapter **chlist;
+    int chlist_size;
+    int ch_curidx;
+    char *workingdir;
+    char *filename;
 } PlaylistD;
 
 int av_open_input_playelem(PlayElem *pe);
@@ -46,5 +51,14 @@ PlaylistD* av_make_playlistd(unsigned char **flist, int flist_len);
 
 int check_file_extn(char *cch, char *extn);
 
+int compare_bufs(unsigned char *buf, unsigned char *rbuf);
+
 int playlist_populate_context(PlaylistD *playld, AVFormatContext *s);
 
+char* conc_strings(char *string1, char *string2);
+
+char* buf_getline(ByteIOContext *s);
+
+void split_wd_fn(char *filepath, char **workingdir, char **filename);
+
+unsigned int get_stream_offset(AVFormatContext *s);
