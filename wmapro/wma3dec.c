@@ -590,9 +590,10 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                     subframe_len =
                         s->samples_per_frame / s->max_num_subframes;
                     subframe_len *= log2_subframe_len + 1;
-                } else
+                } else {
                     subframe_len =
                         s->samples_per_frame / (1 << log2_subframe_len);
+                }
 
                 /** sanity check the length */
                 if (subframe_len < s->min_samples_per_subframe
@@ -665,9 +666,9 @@ static void decode_decorrelation_matrix(WMA3DecodeContext* s,
         rotation_offset[i] = get_bits(&s->gb,6);
 
     for (i=0;i<chgroup->num_channels;i++) {
-        if (get_bits1(&s->gb))
+        if (get_bits1(&s->gb)) {
             chgroup->decorrelation_matrix[chgroup->num_channels * i + i]=  1.0;
-        else
+        } else
             chgroup->decorrelation_matrix[chgroup->num_channels * i + i]= -1.0;
     }
 
@@ -782,9 +783,9 @@ static int decode_channel_transform(WMA3DecodeContext* s)
             } else if (chgroup->num_channels > 2) {
                 if (get_bits1(&s->gb)) {
                     chgroup->transform = 2;
-                    if (get_bits1(&s->gb))
+                    if (get_bits1(&s->gb)) {
                         decode_decorrelation_matrix(s, chgroup);
-                    else {
+                    } else {
                         /** FIXME: more than 6 coupled channels not supported */
                         if (chgroup->num_channels > 6) {
                             ff_log_ask_for_sample(s->avctx,
@@ -939,9 +940,9 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
             if ( idx > 1) {
                 cur_coeff += run[idx];
                 val = level[idx];
-            } else if ( idx == 1)
+            } else if ( idx == 1) {
                 break;
-            else {
+            } else {
                 val = get_large_val(s);
                 /** escape decode */
                 if (get_bits1(&s->gb)) {
@@ -1334,18 +1335,18 @@ static int decode_subframe(WMA3DecodeContext *s)
 
         /** decode quantization step modifiers for every channel */
 
-        if (s->channels_for_cur_subframe == 1)
+        if (s->channels_for_cur_subframe == 1) {
             s->channel[s->channel_indexes_for_cur_subframe[0]].quant_step = quant_step;
-        else {
+        } else {
             int modifier_len = get_bits(&s->gb,3);
             for (i=0;i<s->channels_for_cur_subframe;i++) {
                 int c = s->channel_indexes_for_cur_subframe[i];
                 s->channel[c].quant_step = quant_step;
                 if (get_bits1(&s->gb)) {
-                    if (modifier_len)
+                    if (modifier_len) {
                         s->channel[c].quant_step +=
                                 get_bits(&s->gb,modifier_len) + 1;
-                    else
+                    } else
                         ++s->channel[c].quant_step;
                 }
             }
@@ -1378,9 +1379,9 @@ static int decode_subframe(WMA3DecodeContext *s)
             int* sf;
             int b;
 
-            if (s->channel[c].transmit_sf)
+            if (s->channel[c].transmit_sf) {
                 sf = s->channel[c].scale_factors;
-            else
+            } else
                 sf = s->channel[c].resampled_scale_factors;
 
             if (c == s->lfe_channel)
@@ -1526,9 +1527,9 @@ static int decode_frame(WMA3DecodeContext *s)
                 s->samples_per_frame * sizeof(float));
     }
 
-    if (s->skip_frame)
+    if (s->skip_frame) {
         s->skip_frame = 0;
-    else
+    } else
         s->samples += s->num_channels * s->samples_per_frame;
 
     if (len != (get_bits_count(gb) - s->frame_offset) + 2) {
