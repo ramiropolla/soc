@@ -229,46 +229,6 @@ static void av_cold dump_context(WMA3DecodeContext *s)
 }
 
 /**
- *@brief Get the samples per frame for this stream.
- *@param sample_rate output sample_rate
- *@param decode_flags codec compression features
- *@return number of output samples per frame
- */
-static int av_cold get_samples_per_frame(int sample_rate,
-                                             unsigned int decode_flags)
-{
-
-    int samples_per_frame;
-    int tmp;
-
-    if (sample_rate <= 16000)
-        samples_per_frame = 512;
-    else if (sample_rate <= 22050)
-        samples_per_frame = 1024;
-    else if (sample_rate <= 48000)
-        samples_per_frame = 2048;
-    else if (sample_rate <= 96000)
-        samples_per_frame = 4096;
-    else
-        samples_per_frame = 8192;
-
-    /** WMA voice code  if (decode_flags & 0x800) {
-        tmp = ((decode_flags & 6) >> 1) | ((decode_flags & 0x600) >> 7);
-        samples_per_frame = (tmp+1)*160;
-    } else { */
-
-    tmp = decode_flags & 0x6;
-    if (tmp == 0x2)
-        samples_per_frame <<= 1;
-    else if (tmp == 0x4)
-        samples_per_frame >>= 1;
-    else if (tmp == 0x6)
-        samples_per_frame >>= 2;
-
-    return samples_per_frame;
-}
-
-/**
  *@brief Uninitialize the decoder and free all resources.
  *@param avctx codec context
  *@return 0 on success, < 0 otherwise
@@ -340,8 +300,8 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     /** get frame len */
-    s->samples_per_frame = get_samples_per_frame(avctx->sample_rate,
-                                                 s->decode_flags);
+    s->samples_per_frame = 1 << ff_wma_get_frame_len_bits(avctx->sample_rate,
+                                                          3, s->decode_flags);
 
     /** init previous block len */
     for (i=0;i<avctx->channels;i++)
