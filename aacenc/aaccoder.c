@@ -1016,6 +1016,7 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
             minq = FFMIN(minq, sce->sf_idx[i]);
     }
     if(minq == INT_MAX) minq = 0;
+    minq = FFMIN(minq, SCALE_MAX_POS);
     maxsf = FFMIN(minq + SCALE_MAX_DIFF, SCALE_MAX_POS);
     for(i = 126; i >= 0; i--){
         if(!sce->sf_idx[i])
