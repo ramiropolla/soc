@@ -961,6 +961,7 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
             float curdiff;
             if(maxq[w*16+g] < 21.544){
                 sce->zeroes[w*16+g] = 1;
+                start += size;
                 continue;
             }
             sce->zeroes[w*16+g] = 0;
