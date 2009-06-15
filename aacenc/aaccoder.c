@@ -929,7 +929,7 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
             for(w2 = 0; w2 < sce->ics.group_len[w]; w2++){
                 for(i = 0; i < size; i++){
                     float t = coefs[w2*128+i]*coefs[w2*128+i];
-                    maxq[w*16+g] = fmaxf(maxq[w*16+g], coefs[w2*128 + i]);
+                    maxq[w*16+g] = fmaxf(maxq[w*16+g], fabsf(coefs[w2*128 + i]));
                     thr += t;
                     if(sce->ics.num_windows == 1 && maxval < t){
                         maxval = t;
