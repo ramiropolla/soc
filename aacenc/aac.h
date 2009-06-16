@@ -206,7 +206,6 @@ typedef struct {
     DECLARE_ALIGNED_16(float, coeffs[1024]);  ///< coefficients for IMDCT
     DECLARE_ALIGNED_16(float, saved[1024]);   ///< overlap
     DECLARE_ALIGNED_16(float, ret[1024]);     ///< PCM output
-    DECLARE_ALIGNED_16(int,   icoefs[1024]);  ///< integer coefficients for encoding
     PredictorState predictor_state[MAX_PREDICTORS];
 } SingleChannelElement;
 
