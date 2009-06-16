@@ -30,11 +30,10 @@
 /** RTMP handshake data size */
 #define RTMP_HANDSHAKE_PACKET_SIZE 1536
 
+#define RTMP_CLIENT_PLATFORM "LNX"
 #define RTMP_CLIENT_VER1    9
 #define RTMP_CLIENT_VER2    0
 #define RTMP_CLIENT_VER3  124
 #define RTMP_CLIENT_VER4    2
-
-#define RTMP_CLIENT_VER_STR  "LNX" #RTMP_CLIENT_VER1 "," #RTMP_CLIENT_VER2
 
 #endif /* AVFORMAT_RTMP_H */
