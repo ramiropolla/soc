@@ -39,41 +39,57 @@
 typedef struct RTMPState {
     URLContext *rtmp_hd;
     RTMPPacketHistory rhist, whist;
+    char playpath[256];
 } RTMPState;
 
-static void gen_connect(AVFormatContext *s, RTMPState *rt, const char *name)
+static void gen_connect(AVFormatContext *s, RTMPState *rt, const char *proto,
+                        const char *host, int port, const char *app)
 {
-    uint8_t buf[65536], *p = buf;
+    RTMPPacket pkt;
+    uint8_t ver[32], *p;
+    char tcurl[512];
     double num = 1.0;
-    int size;
+    uint8_t bool;
 
-    bytestream_put_byte(&p, 0x3);
-    bytestream_put_be24(&p, 1);
-    bytestream_put_be24(&p, 0);
-    bytestream_put_byte(&p, RTMP_PT_INVOKE);
-    bytestream_put_le32(&p, 0);
+    rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0, 4096);
+    p = pkt.data;
 
+    snprintf(tcurl, sizeof(tcurl), "%s://%s:%d/%s", proto, host, port, app);
     rtmp_amf_write_tag(&p, AMF_STRING, "connect");
     rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
     rtmp_amf_write_tag(&p, AMF_OBJECT, NULL);
-    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "tcUrl");
-    rtmp_amf_write_tag(&p, AMF_STRING, name);
     rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "app");
-    rtmp_amf_write_tag(&p, AMF_STRING, "app");
+    rtmp_amf_write_tag(&p, AMF_STRING, app);
+
+    snprintf(ver, sizeof(ver), "%s %d,%d,%d,%d", RTMP_CLIENT_PLATFORM, RTMP_CLIENT_VER1,
+                                                 RTMP_CLIENT_VER2, RTMP_CLIENT_VER3, RTMP_CLIENT_VER4);
     rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "flashVer");
-    rtmp_amf_write_tag(&p, AMF_STRING, "LNX 6,0,82,0");
-    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "playpath");
-    rtmp_amf_write_tag(&p, AMF_STRING, "1.mp4");
+    rtmp_amf_write_tag(&p, AMF_STRING, ver);
+    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "tcUrl");
+    rtmp_amf_write_tag(&p, AMF_STRING, tcurl);
+    bool = 0;
+    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "fpad");
+    rtmp_amf_write_tag(&p, AMF_NUMBER, &bool);
+    num = 15.0;
+    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "capabilities");
+    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
+    num = 1639.0;
+    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "audioCodecs");
+    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
+    num = 252.0;
+    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "videoCodecs");
+    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
+    num = 1.0;
+    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "videoFunction");
+    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
     rtmp_amf_write_tag(&p, AMF_OBJECT_END, NULL);
 
-    size = p - buf;
-    p = buf + 4;
-    bytestream_put_be24(&p, size - 12);
+    pkt.data_size = p - pkt.data;
 
-    url_write(rt->rtmp_hd, buf, size);
+    rtmp_packet_write(s, rt->rtmp_hd, &pkt, &rt->whist);
 }
 
-static void gen_play(AVFormatContext *s, RTMPState *rt)
+static void gen_create_stream(AVFormatContext *s, RTMPState *rt)
 {
     RTMPPacket pkt;
     uint8_t *p;
@@ -89,14 +105,36 @@ static void gen_play(AVFormatContext *s, RTMPState *rt)
 
     rtmp_packet_write(s, rt->rtmp_hd, &pkt, &rt->whist);
     rtmp_packet_destroy(&pkt);
+}
 
-    rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0, 17);
+static void gen_play(AVFormatContext *s, RTMPState *rt)
+{
+    RTMPPacket pkt;
+    uint8_t *p;
+    double num;
+
+    rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0,
+                       29 + strlen(rt->playpath));
 
     num = 0.0;
     p = pkt.data;
     rtmp_amf_write_tag(&p, AMF_STRING, "play");
     rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
     rtmp_amf_write_tag(&p, AMF_NULL, NULL);
+    rtmp_amf_write_tag(&p, AMF_STRING, rt->playpath);
+    num = 0.0;
+    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
+
+    rtmp_packet_write(s, rt->rtmp_hd, &pkt, &rt->whist);
+    rtmp_packet_destroy(&pkt);
+
+    // set client buffer time disguised in ping packet
+    rtmp_packet_create(&pkt, RTMP_NETWORK_CHANNEL, RTMP_PT_PING, 1, 10);
+
+    p = pkt.data;
+    bytestream_put_be16(&p, 3);
+    bytestream_put_be32(&p, 1);
+    bytestream_put_be32(&p, 256); //TODO: what is a good value here?
 
     rtmp_packet_write(s, rt->rtmp_hd, &pkt, &rt->whist);
     rtmp_packet_destroy(&pkt);
@@ -151,13 +189,13 @@ static int rtmp_read_header(AVFormatContext *s,
                             AVFormatParameters *ap)
 {
     RTMPState *rt = s->priv_data;
-    char hostname[256];
+    char proto[8], hostname[256], path[512], app[128], *fname;
     int port;
-    uint8_t buf[65536];
+    uint8_t buf[2048];
     AVStream *st;
 
-    url_split(NULL, 0, NULL, 0, hostname, sizeof(hostname), &port,
-              NULL, 0, s->filename);
+    url_split(proto, sizeof(proto), NULL, 0, hostname, sizeof(hostname), &port,
+              path, sizeof(path), s->filename);
 
     rtmp_init_hist(&rt->rhist);
     rtmp_init_hist(&rt->whist);
@@ -167,8 +205,39 @@ static int rtmp_read_header(AVFormatContext *s,
     url_open(&rt->rtmp_hd, buf, URL_RDWR);
     if (rtmp_handshake(s, rt))
         return -1;
-    gen_connect(s, rt, s->filename);
-    gen_play(s, rt);
+
+    //extract "app" part from path
+    if (!strncmp(path, "/ondemand/", 10)) {
+        fname = path + 10;
+        memcpy(app, "ondemand", 9);
+    } else {
+        char *p = strchr(path + 1, '/');
+        if (!p) {
+            fname = path + 1;
+            app[0] = '\0';
+        } else {
+            fname = strchr(p + 1, '/');
+            if (!fname) {
+                fname = p + 1;
+                strncpy(app, path + 1, p - path - 1);
+            } else {
+                fname++;
+                strncpy(app, path + 1, fname - path - 2);
+            }
+        }
+    }
+    if (!strcmp(fname + strlen(fname) - 4, ".f4v") ||
+        !strcmp(fname + strlen(fname) - 4, ".mp4")) {
+        memcpy(rt->playpath, "mp4:", 5);
+    } else {
+        rt->playpath[0] = ':';
+        rt->playpath[0] = 0;
+    }
+    strncat(rt->playpath, fname, sizeof(rt->playpath) - 5);
+
+    av_log(s, AV_LOG_DEBUG, "Proto = %s, path = %s, app = %s, fname = %s\n",
+           proto, path, app, rt->playpath);
+    gen_connect(s, rt, proto, hostname, port, app);
 
     st = av_new_stream(s, 0);
     if (!st)
