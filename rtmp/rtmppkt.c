@@ -140,6 +140,8 @@ int rtmp_packet_write(AVFormatContext *ctx, URLContext *h, RTMPPacket *pkt,
 {
     uint8_t pkt_hdr[16], *p = pkt_hdr;
     int mode = RTMP_PS_TWELVEBYTES;
+    int chunk_size = hist->chunk_size[pkt->stream_id];
+    int off = 0;
 
     if (pkt->type != RTMP_PT_INVOKE)
         mode = RTMP_PS_EIGHTBYTES;
@@ -154,7 +156,15 @@ int rtmp_packet_write(AVFormatContext *ctx, URLContext *h, RTMPPacket *pkt,
         }
     }
     url_write(h, pkt_hdr, p-pkt_hdr);
-    url_write(h, pkt->data, pkt->data_size);
+    while (off < pkt->data_size) {
+        int towrite = FFMIN(chunk_size, pkt->data_size - off);
+        url_write(h, pkt->data + off, towrite);
+        off += towrite;
+        if (off < pkt->data_size) {
+            uint8_t marker = 0xC0 | pkt->stream_id;
+            url_write(h, &marker, 1);
+        }
+    }
     return 0;
 }
 
