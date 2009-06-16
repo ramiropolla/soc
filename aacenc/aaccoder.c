@@ -148,7 +148,7 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
                     }
                     if(vec[k] == 64.0f){//FIXME: slow
                         if(t >= 165140.0f*IQ){ // clipped value
-                            di = t - 165140.0f;
+                            di = t - 165140.0f*IQ;
                             curbits += 21;
                         }else{
                             int c = av_clip(quant(t, Q), 0, 8191);
@@ -251,7 +251,7 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
                     }
                     if(vec[k] == 64.0f){//FIXME: slow
                         if(t >= 165140.0f*IQ){ // clipped value
-                            di = t - 165140.0f;
+                            di = t - 165140.0f*IQ;
                             curbits += 21;
                         }else{
                             int c = av_clip(quant(t, Q), 0, 8191);
@@ -338,7 +338,7 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
                     }
                     if(vec[k] == 64.0f){//FIXME: slow
                         if(t >= 165140.0f*Q){ // clipped value
-                            di = t - 165140.0f;
+                            di = t - 165140.0f*Q;
                             curbits += 21;
                         }else{
                             int c = av_clip(quant(t, IQ), 0, 8191);
@@ -411,7 +411,7 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
                     }
                     if(vec[k] == 64.0f){//FIXME: slow
                         if(t >= 165140.0f*Q){ // clipped value
-                            di = t - 165140.0f;
+                            di = t - 165140.0f*Q;
                             curbits += 21;
                         }else{
                             int c = av_clip(quant(t, IQ), 0, 8191);
