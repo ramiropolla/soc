@@ -628,7 +628,7 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
     AVStream* st;
     int index;
     int64_t pos, ret_pos, av_uninit(pos_min), av_uninit(pos_max), pos_limit;
-    int64_t ts_min, ts_max, ret_ts, pts;
+    int64_t ts_min, ts_max, ret_ts, pts = INT64_MAX;
 
     if (min_ts > ts || max_ts < ts)
         return -1;
