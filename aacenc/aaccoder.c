@@ -84,6 +84,7 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
 {
     const float IQ = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
     const float  Q = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
+    const float CLIPPED_ESCAPE = 165140.0f*IQ;
     int i, j, k;
     float cost = 0;
     const int dim = cb < FIRST_PAIR_BT ? 4 : 2;
@@ -147,8 +148,8 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
                         break;
                     }
                     if(vec[k] == 64.0f){//FIXME: slow
-                        if(t >= 165140.0f*IQ){ // clipped value
-                            di = t - 165140.0f*IQ;
+                        if (t >= CLIPPED_ESCAPE) {
+                            di = t - CLIPPED_ESCAPE;
                             curbits += 21;
                         }else{
                             int c = av_clip(quant(t, Q), 0, 8191);
@@ -191,6 +192,7 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
 {
     const float IQ = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
     const float  Q = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
+    const float CLIPPED_ESCAPE = 165140.0f*IQ;
     const int range = aac_cb_range[cb];
     const int maxval = aac_cb_maxval[cb];
     const int dim = (cb < FIRST_PAIR_BT) ? 4 : 2;
@@ -250,8 +252,8 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
                         break;
                     }
                     if(vec[k] == 64.0f){//FIXME: slow
-                        if(t >= 165140.0f*IQ){ // clipped value
-                            di = t - 165140.0f*IQ;
+                        if (t >= CLIPPED_ESCAPE) {
+                            di = t - CLIPPED_ESCAPE;
                             curbits += 21;
                         }else{
                             int c = av_clip(quant(t, Q), 0, 8191);
@@ -309,6 +311,7 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
 {
     const float Q = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
     const float IQ = 1.0/Q;
+    const float CLIPPED_ESCAPE = 165140.0f*Q;
     int i, j, k;
     float cost = 0;
     const int dim = cb < FIRST_PAIR_BT ? 4 : 2;
@@ -337,8 +340,8 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
                         break;
                     }
                     if(vec[k] == 64.0f){//FIXME: slow
-                        if(t >= 165140.0f*Q){ // clipped value
-                            di = t - 165140.0f*Q;
+                        if (t >= CLIPPED_ESCAPE) {
+                            di = t - CLIPPED_ESCAPE;
                             curbits += 21;
                         }else{
                             int c = av_clip(quant(t, IQ), 0, 8191);
@@ -386,6 +389,7 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
 {
     const float Q  = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
     const float IQ = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
+    const float CLIPPED_ESCAPE = 165140.0f*Q;
     int i, j, k;
     const int dim = cb < FIRST_PAIR_BT ? 4 : 2;
 //START_TIMER
@@ -410,8 +414,8 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
                         break;
                     }
                     if(vec[k] == 64.0f){//FIXME: slow
-                        if(t >= 165140.0f*Q){ // clipped value
-                            di = t - 165140.0f*Q;
+                        if (t >= CLIPPED_ESCAPE) {
+                            di = t - CLIPPED_ESCAPE;
                             curbits += 21;
                         }else{
                             int c = av_clip(quant(t, IQ), 0, 8191);
