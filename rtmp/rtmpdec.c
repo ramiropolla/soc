@@ -24,6 +24,8 @@
 
 #include "libavcodec/bytestream.h"
 #include "libavutil/avstring.h"
+#include "libavutil/lfg.h"
+#include "libavutil/sha.h"
 #include "avformat.h"
 
 #include <unistd.h>
@@ -41,6 +43,28 @@ typedef struct RTMPState {
     RTMPPacketHistory rhist, whist;
     char playpath[256];
 } RTMPState;
+
+#define PLAYER_KEY_OPEN_PART_LEN 30
+static const uint8_t rtmp_player_key[] =
+{
+    0x47, 0x65, 0x6E, 0x75, 0x69, 0x6E, 0x65, 0x20, 0x41, 0x64, 0x6F, 0x62, 0x65,
+    0x20, 0x46, 0x6C, 0x61, 0x73, 0x68, 0x20, 0x50, 0x6C, 0x61, 0x79, 0x65, 0x72,
+    0x20, 0x30, 0x30, 0x31, 0xF0, 0xEE, 0xC2, 0x4A, 0x80, 0x68, 0xBE, 0xE8, 0x2E,
+    0x00, 0xD0, 0xD1, 0x02, 0x9E, 0x7E, 0x57, 0x6E, 0xEC, 0x5D, 0x2D, 0x29, 0x80,
+    0x6F, 0xAB, 0x93, 0xB8, 0xE6, 0x36, 0xCF, 0xEB, 0x31, 0xAE
+};
+
+#define SERVER_KEY_OPEN_PART_LEN 36
+static const uint8_t rtmp_server_key[] =
+{
+    0x47, 0x65, 0x6E, 0x75, 0x69, 0x6E, 0x65, 0x20, 0x41, 0x64, 0x6F, 0x62, 0x65,
+    0x20, 0x46, 0x6C, 0x61, 0x73, 0x68, 0x20, 0x4D, 0x65, 0x64, 0x69, 0x61, 0x20,
+    0x53, 0x65, 0x72, 0x76, 0x65, 0x72, 0x20, 0x30, 0x30, 0x31, // Genuine Adobe Flash Media Server 001
+
+    0xF0, 0xEE, 0xC2, 0x4A, 0x80, 0x68, 0xBE, 0xE8, 0x2E, 0x00, 0xD0, 0xD1, 0x02,
+    0x9E, 0x7E, 0x57, 0x6E, 0xEC, 0x5D, 0x2D, 0x29, 0x80, 0x6F, 0xAB, 0x93, 0xB8,
+    0xE6, 0x36, 0xCF, 0xEB, 0x31, 0xAE
+};
 
 static void gen_connect(AVFormatContext *s, RTMPState *rt, const char *proto,
                         const char *host, int port, const char *app)
@@ -142,32 +166,151 @@ static void gen_play(AVFormatContext *s, RTMPState *rt)
     rtmp_packet_destroy(&pkt);
 }
 
+//TODO: Move HMAC code somewhere. Eventually.
+#define HMAC_IPAD_VAL 0x36
+#define HMAC_OPAD_VAL 0x5C
+
+static void rtmp_calc_digest(const uint8_t *src, int len, int gap,
+                             const uint8_t *key, int keylen, uint8_t *dst)
+{
+    struct AVSHA *sha;
+    uint8_t hmac_buf[64+32];
+    int i;
+
+    sha = av_mallocz(av_sha_size);
+
+    memset(hmac_buf, 0, 64);
+    if (keylen < 64)
+        memcpy(hmac_buf, key, keylen);
+    else {
+        av_sha_init(sha, 256);
+        av_sha_update(sha,key, keylen);
+        av_sha_final(sha, hmac_buf);
+    }
+    for (i = 0; i < 64; i++)
+        hmac_buf[i] ^= HMAC_IPAD_VAL;
+
+    av_sha_init(sha, 256);
+    av_sha_update(sha, hmac_buf, 64);
+    if (gap <= 0)
+        av_sha_update(sha, src, len);
+    else { //skip 32 bytes used for storing digest
+        av_sha_update(sha, src, gap);
+        av_sha_update(sha, src + gap + 32, len - gap - 32);
+    }
+    av_sha_final(sha, hmac_buf + 64);
+
+    for (i = 0; i < 64; i++)
+        hmac_buf[i] ^= HMAC_IPAD_VAL ^ HMAC_OPAD_VAL; //reuse XORed key for opad
+    av_sha_init(sha, 256);
+    av_sha_update(sha, hmac_buf, 64+32);
+    av_sha_final(sha, dst);
+
+    av_free(sha);
+}
+
+static int rtmp_handshake_imprint_with_digest(uint8_t *buf)
+{
+    int i, digest_pos = 0;
+
+    for (i = 8; i < 12; i++)
+        digest_pos += buf[i];
+    digest_pos = (digest_pos % 728) + 12;
+
+    rtmp_calc_digest(buf, RTMP_HANDSHAKE_PACKET_SIZE, digest_pos,
+                     rtmp_player_key, PLAYER_KEY_OPEN_PART_LEN,
+                     buf + digest_pos);
+    return digest_pos;
+}
+
+static int rtmp_validate_digest(uint8_t *buf, int off)
+{
+    int i, digest_pos = 0;
+    uint8_t digest[32];
+
+    for (i = 0; i < 4; i++)
+        digest_pos += buf[i + off];
+    digest_pos = (digest_pos % 728) + off + 4;
+
+    rtmp_calc_digest(buf, RTMP_HANDSHAKE_PACKET_SIZE, digest_pos,
+                     rtmp_server_key, SERVER_KEY_OPEN_PART_LEN,
+                     digest);
+    if (!memcmp(digest, buf + digest_pos, 32))
+        return digest_pos;
+    return 0;
+}
+
 static int rtmp_handshake(AVFormatContext *s, RTMPState *rt)
 {
-    uint8_t buf [1+RTMP_HANDSHAKE_PACKET_SIZE];
-    uint8_t buf2[1+RTMP_HANDSHAKE_PACKET_SIZE*2];
+    AVLFG rnd;
+    uint8_t tosend    [RTMP_HANDSHAKE_PACKET_SIZE+1];
+    uint8_t clientdata[RTMP_HANDSHAKE_PACKET_SIZE];
+    uint8_t serverdata[RTMP_HANDSHAKE_PACKET_SIZE+1];
     int i;
+    int server_pos, client_pos;
+    uint8_t digest[32];
 
     av_log(s, AV_LOG_DEBUG, "Handshaking...\n");
 
+    av_lfg_init(&rnd, 0xDEADC0DE);
     // generate handshake packet - 1536 bytes of pseudorandom data
-    buf[0] = 3; //unencrypted data
-    memset(buf+1, 0, RTMP_HANDSHAKE_PACKET_SIZE);
+    tosend[0] = 3; //unencrypted data
+    memset(tosend+1, 0, 4);
     //write client "version"
-    buf[5] = 9;
-    buf[5] = 0;
-    buf[7] = 124;
-    buf[8] = 2;
+    tosend[5] = RTMP_CLIENT_VER1;
+    tosend[6] = RTMP_CLIENT_VER2;
+    tosend[7] = RTMP_CLIENT_VER3;
+    tosend[8] = RTMP_CLIENT_VER4;
+    for (i = 9; i <= RTMP_HANDSHAKE_PACKET_SIZE; i++)
+        tosend[i] = av_lfg_get(&rnd) >> 24;
+    client_pos = rtmp_handshake_imprint_with_digest(tosend + 1);
 
-    url_write(rt->rtmp_hd, buf, RTMP_HANDSHAKE_PACKET_SIZE + 1);
-    i = url_read_complete(rt->rtmp_hd, buf2, RTMP_HANDSHAKE_PACKET_SIZE*2 + 1);
-    if (i != 1 + RTMP_HANDSHAKE_PACKET_SIZE*2 || memcmp(buf + 1, buf2 + 1 + RTMP_HANDSHAKE_PACKET_SIZE, RTMP_HANDSHAKE_PACKET_SIZE)) {
-        av_log(s, AV_LOG_ERROR, "RTMP handshake failed\n");
+    url_write(rt->rtmp_hd, tosend, RTMP_HANDSHAKE_PACKET_SIZE + 1);
+    i = url_read_complete(rt->rtmp_hd, serverdata, RTMP_HANDSHAKE_PACKET_SIZE + 1);
+    if (i != RTMP_HANDSHAKE_PACKET_SIZE + 1) {
+        av_log(s, AV_LOG_ERROR, "Cannot read RTMP handshake response\n");
         return -1;
     }
-    // write reply back to server
-    url_write(rt->rtmp_hd, buf2 + 1, RTMP_HANDSHAKE_PACKET_SIZE);
+    i = url_read_complete(rt->rtmp_hd, clientdata, RTMP_HANDSHAKE_PACKET_SIZE);
+    if (i != RTMP_HANDSHAKE_PACKET_SIZE) {
+        av_log(s, AV_LOG_ERROR, "Cannot read RTMP handshake response\n");
+        return -1;
+    }
 
+    av_log(s, AV_LOG_DEBUG, "Server version %d.%d.%d.%d\n",
+           serverdata[5], serverdata[6], serverdata[7], serverdata[8]);
+
+    server_pos = rtmp_validate_digest(serverdata + 1, 772);
+    if (!server_pos) {
+        server_pos = rtmp_validate_digest(serverdata + 1, 8);
+        if (!server_pos) {
+            av_log(s, AV_LOG_ERROR, "Server response validating failed\n");
+            return -1;
+        }
+    }
+
+    rtmp_calc_digest(tosend + 1 + client_pos, 32, 0,
+                     rtmp_server_key, sizeof(rtmp_server_key),
+                     digest);
+    rtmp_calc_digest(clientdata, RTMP_HANDSHAKE_PACKET_SIZE-32, 0,
+                     digest, 32,
+                     digest);
+    if (memcmp(digest, clientdata + RTMP_HANDSHAKE_PACKET_SIZE - 32, 32)) {
+        av_log(s, AV_LOG_ERROR, "Signature mismatch\n");
+        return -1;
+    }
+
+    for (i = 0; i < RTMP_HANDSHAKE_PACKET_SIZE; i++)
+        tosend[i] = av_lfg_get(&rnd) >> 24;
+    rtmp_calc_digest(serverdata + 1 + server_pos, 32, 0,
+                     rtmp_player_key, sizeof(rtmp_player_key),
+                     digest);
+    rtmp_calc_digest(tosend,  RTMP_HANDSHAKE_PACKET_SIZE - 32, 0,
+                     digest, 32,
+                     tosend + RTMP_HANDSHAKE_PACKET_SIZE - 32);
+
+    // write reply back to server
+    url_write(rt->rtmp_hd, tosend, RTMP_HANDSHAKE_PACKET_SIZE);
     return 0;
 }
 
