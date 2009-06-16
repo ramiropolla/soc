@@ -267,16 +267,18 @@ void rtmp_packet_inspect(AVFormatContext *ctx, RTMPPacket *pkt)
     switch (pkt->type) {
     case RTMP_PT_CHUNK_SIZE:   av_log(NULL,0,"chunk size %d",AV_RB32(pkt->data));break;
     case RTMP_PT_BYTES_READ:   av_log(NULL,0,"bytes read");break;
-    case RTMP_PT_PING:         av_log(NULL,0,"ping");break;
+    case RTMP_PT_PING:         av_log(NULL,0,"ping type = %d", AV_RB16(pkt->data));break;
     case RTMP_PT_SERVER_BW:    av_log(NULL,0,"server BW=%d",AV_RB32(pkt->data));break;
     case RTMP_PT_CLIENT_BW:    av_log(NULL,0,"client BW=%d",AV_RB32(pkt->data));break;
     case RTMP_PT_AUDIO:        av_log(NULL,0,"audio");break;
     case RTMP_PT_VIDEO:        av_log(NULL,0,"video");break;
     case RTMP_PT_NOTIFY:       av_log(NULL,0,"notify");break;
     case RTMP_PT_INVOKE:       av_log(NULL,0,"invoke");break;
+    case RTMP_PT_METADATA:     av_log(NULL,0,"metadata");break;
     default:                   av_log(NULL,0,"%X",pkt->type);
     }
-    av_log(NULL,0," ts %d size %d\n",pkt->timestamp, pkt->data_size);
-    if (pkt->type == RTMP_PT_INVOKE || pkt->type == RTMP_PT_NOTIFY)
+    av_log(NULL,0," ts %d/%d size %d\n", pkt->timestamp, pkt->extra, pkt->data_size);
+    if (pkt->type == RTMP_PT_INVOKE || pkt->type == RTMP_PT_NOTIFY
+     || pkt->type == RTMP_PT_METADATA)
         parse_amf(pkt->data, pkt->data_size);
 }
