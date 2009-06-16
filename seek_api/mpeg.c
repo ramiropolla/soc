@@ -672,7 +672,6 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
                 }
 
                 if (find_keyframe(s, stream_index, &pos, &pts, ts, flags) == 0) {
-                    url_fseek(s->pb, pos, SEEK_SET);
                     goto success;
                 } else {
                     return -1;
@@ -696,7 +695,6 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
         pts = ret_ts;
     }
     if (find_keyframe(s, stream_index, &pos, &pts, ts, flags) == 0) {
-        url_fseek(s->pb, pos, SEEK_SET);
         goto success;
     } else {
         return -1;
