@@ -36,8 +36,8 @@ typedef struct {
 /** Decodes an ALS frame.
  */
 static int decode_frame(AVCodecContext *avctx,
-                                void *data, int *data_size,
-                                AVPacket *avpkt)
+                        void *data, int *data_size,
+                        AVPacket *avpkt)
 {
     return 0;
 }
