@@ -150,7 +150,7 @@ int rtmp_packet_write(AVFormatContext *ctx, URLContext *h, RTMPPacket *pkt,
             bytestream_put_be24(&p, pkt->data_size);
             bytestream_put_byte(&p, pkt->type);
             if (mode == RTMP_PS_TWELVEBYTES)
-                bytestream_put_le32(&p, 0); //FIXME put real data here
+                bytestream_put_le32(&p, pkt->extra);
         }
     }
     url_write(h, pkt_hdr, p-pkt_hdr);
@@ -168,6 +168,7 @@ int rtmp_packet_create(RTMPPacket *pkt, int stream_id, RTMPPacketType type,
     pkt->stream_id = stream_id;
     pkt->type      = type;
     pkt->timestamp = timestamp;
+    pkt->extra     = 0;
 
     return 0;
 }

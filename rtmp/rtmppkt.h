@@ -101,6 +101,7 @@ typedef struct RTMPPacket {
     uint8_t        stream_id; ///< stream ID
     RTMPPacketType type;      ///< packet type
     int            timestamp; ///< packet timestamp
+    int            extra;     ///< additional data
     uint8_t        *data;     ///< packet payload
     int            data_size; ///< packet payload size
 } RTMPPacket;
