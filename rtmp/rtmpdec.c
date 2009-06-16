@@ -95,6 +95,7 @@ static void gen_create_stream(AVFormatContext *s, RTMPState *rt)
     uint8_t *p;
     double num;
 
+    av_log(s, AV_LOG_DEBUG, "Creating stream...\n");
     rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0, 25);
 
     num = 3.0;
@@ -113,6 +114,7 @@ static void gen_play(AVFormatContext *s, RTMPState *rt)
     uint8_t *p;
     double num;
 
+    av_log(s, AV_LOG_DEBUG, "Sending play command for '%s'\n", rt->playpath);
     rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0,
                        29 + strlen(rt->playpath));
 
