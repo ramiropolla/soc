@@ -1,4 +1,3 @@
-Implement SHA-256 digest needed for proper handshake
 Proper handshake
 Proper "connect" call (additional parameters and filename parsing)
 Factorize a lot of FLV demuxer code
