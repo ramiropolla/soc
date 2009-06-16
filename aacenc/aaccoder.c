@@ -993,7 +993,7 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
                 if(curdiff == 0.0f)
                     step = 0;
                 else
-                    step = fabsf(log(curdiff) / log(2));
+                    step = fabsf(log2(curdiff));
                 if(dist > uplim[w*16+g])
                     step = -step;
                 if(FFABS(step) <= 1 || (step > 0 && scf >= max_scf) || (step < 0 && scf <= min_scf)){
