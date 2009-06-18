@@ -49,6 +49,10 @@ typedef struct RTMPState {
     char playpath[256];
     ClientState state;
     int main_stream_id;
+    uint8_t *flv_data;
+    int flv_size;
+    ByteIOContext pb;
+    int wrong_dts;
 } RTMPState;
 
 #define PLAYER_KEY_OPEN_PART_LEN 30
@@ -419,6 +423,7 @@ static int rtmp_read_header(AVFormatContext *s,
     st->codec->codec_type = CODEC_TYPE_AUDIO;
     av_set_pts_info(st, 32, 1, 1000); /* 32 bit pts in ms */
 
+    init_put_byte(&rt->pb, NULL, 0, 0, NULL, NULL, NULL, NULL);
     return 0;
 }
 
@@ -534,15 +539,15 @@ static int rtmp_parse_result(AVFormatContext *s, RTMPState *rt, RTMPPacket *pkt)
 static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
 {
     RTMPState *rt = s->priv_data;
-    AVStream *st = NULL;
     struct timespec ts;
-    int i, ret;
+    int ret;
 
     ts.tv_sec = 0;
     ts.tv_nsec = 500000000;
-    for (;;) {
+
+    while (url_ftell(&rt->pb) == rt->flv_size) {
         RTMPPacket rpkt;
-        int i;
+        int has_data = 0;
         if ((ret = rtmp_packet_read(s, rt->rtmp_hd, &rpkt, &rt->rhist)) != 0) {
             if (ret > 0) {
                 nanosleep(&ts, NULL);
@@ -557,73 +562,47 @@ static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
             rtmp_packet_destroy(&rpkt);
             return -1;
         }
+        if (!rpkt.data_size) {
+            rtmp_packet_destroy(&rpkt);
+            continue;
+        }
+        if (rpkt.type == RTMP_PT_VIDEO || rpkt.type == RTMP_PT_AUDIO || rpkt.type == RTMP_PT_NOTIFY) {
+            uint8_t *p;
 
-        if (rpkt.type == RTMP_PT_CHUNK_SIZE)
-            for(i=0;i<RTMP_CHANNELS;i++)rt->rhist.chunk_size[i/*rpkt.stream_id*/] = AV_RB32(rpkt.data);
-        if (rpkt.type == RTMP_PT_VIDEO || rpkt.type == RTMP_PT_AUDIO) {
-            int is_audio = rpkt.type == RTMP_PT_AUDIO;
-            int flags;
-            int off = 1;
-
-            flags = rpkt.data[0];
-            for (i = 0; i < s->nb_streams; i++) {
-                st = s->streams[i];
-                if (st->id == is_audio)
-                    break;
-            }
-            if (is_audio && (!st->codec->channels || !st->codec->sample_rate || !st->codec->bits_per_coded_sample)) {
-                st->codec->channels = (flags & FLV_AUDIO_CHANNEL_MASK) == FLV_STEREO ? 2 : 1;
-                st->codec->sample_rate = (44100 << ((flags & FLV_AUDIO_SAMPLERATE_MASK) >> FLV_AUDIO_SAMPLERATE_OFFSET) >> 3);
-                st->codec->bits_per_coded_sample = (flags & FLV_AUDIO_SAMPLESIZE_MASK) ? 16 : 8;
-            }
-            if (!st->codec->codec_id) {
-                if (is_audio)
-                    flv_set_audio_codec(s, st, flags & FLV_AUDIO_CODECID_MASK);
-                else
-                    flv_set_video_codec(s, st, flags & FLV_VIDEO_CODECID_MASK);
-            }
-            if (st->codec->codec_id == CODEC_ID_AAC ||
-                st->codec->codec_id == CODEC_ID_H264) {
-                int type = rpkt.data[off++];
-
-                if (st->codec->codec_id == CODEC_ID_H264) {
-                    off += 3;
-                }
-                if (!type) {
-                    av_free(st->codec->extradata);
-                    st->codec->extradata = av_mallocz(rpkt.data_size - off + FF_INPUT_BUFFER_PADDING_SIZE);
-                    if (!st->codec->extradata) {
-                        av_log(s, AV_LOG_ERROR, "Cannot allocate extradata\n");
-                        return AVERROR(ENOMEM);
-                    }
-                    st->codec->extradata_size = rpkt.data_size - off;
-                    memcpy(st->codec->extradata, rpkt.data + off, rpkt.data_size - off);
-                    rtmp_packet_destroy(&rpkt);
-                    continue;
-                }
-            }
-            if (off < rpkt.data_size) {
-                if (av_new_packet(pkt, rpkt.data_size - off) < 0) {
-                    rtmp_packet_destroy(&rpkt);
-                    return -1;
-                }
-                memcpy(pkt->data, rpkt.data + off, rpkt.data_size - off);
-                pkt->stream_index = st->index;
-                //pkt->pts = rpkt.timestamp;
-                rtmp_packet_destroy(&rpkt);
-
-                return pkt->size;
-            }
+            rt->flv_size = rpkt.data_size + 15;
+            rt->flv_data = p = av_realloc(rt->flv_data, rt->flv_size);
+            bytestream_put_be32(&p, 0);
+            bytestream_put_byte(&p, rpkt.type);
+            bytestream_put_be24(&p, rpkt.data_size);
+            bytestream_put_be24(&p, rpkt.extra);
+            bytestream_put_byte(&p, rpkt.extra >> 24);
+            bytestream_put_be24(&p, 0);
+            bytestream_put_buffer(&p, rpkt.data, rpkt.data_size);
+            has_data = 1;
+        } else if (rpkt.type == RTMP_PT_METADATA) {
+            rt->flv_size = rpkt.data_size + 4;
+            rt->flv_data = av_realloc(rt->flv_data, rt->flv_size);
+            memset(rt->flv_data, 0, 4); //previous packet size
+            memcpy(rt->flv_data + 4, rpkt.data, rpkt.data_size);
+            has_data = 1;
         }
         rtmp_packet_destroy(&rpkt);
+        if (has_data) {
+            init_put_byte(&rt->pb, rt->flv_data, rt->flv_size, 0, NULL, NULL, NULL, NULL);
+            break;
+        }
     }
-    return AVERROR(EIO);
+    ret = ff_flv_read_packet(s, &rt->pb, pkt, &rt->wrong_dts);
+    if (ret == AVERROR_EOF)
+        return AVERROR(EAGAIN);
+    return ret;
 }
 
 static int rtmp_read_close(AVFormatContext *s)
 {
     RTMPState *rt = s->priv_data;
 
+    av_freep(&rt->flv_data);
     url_close(rt->rtmp_hd);
     return 0;
 }
