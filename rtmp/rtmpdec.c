@@ -36,10 +36,18 @@
 #include "rtmp.h"
 #include "rtmppkt.h"
 
+typedef enum {
+    STATE_START,
+    STATE_HANDSHAKED,
+    STATE_CONNECTING,
+    STATE_PLAYING,
+} ClientState;
+
 typedef struct RTMPState {
     URLContext *rtmp_hd;
     RTMPPacketHistory rhist, whist;
     char playpath[256];
+    ClientState state;
 } RTMPState;
 
 #define PLAYER_KEY_OPEN_PART_LEN 30
@@ -346,9 +354,11 @@ static int rtmp_read_header(AVFormatContext *s,
         port = RTMP_DEFAULT_PORT;
     snprintf(buf, sizeof(buf), "tcp://%s:%d", hostname, port);
     url_open(&rt->rtmp_hd, buf, URL_RDWR);
+    rt->state = STATE_START;
     if (rtmp_handshake(s, rt))
         return -1;
 
+    rt->state = STATE_HANDSHAKED;
     //extract "app" part from path
     if (!strncmp(path, "/ondemand/", 10)) {
         fname = path + 10;
