@@ -281,7 +281,4 @@ void rtmp_packet_inspect(AVFormatContext *ctx, RTMPPacket *pkt)
     av_log(NULL,0," ts %d/%d size %d\n", pkt->timestamp, pkt->extra, pkt->data_size);
     if (pkt->type == RTMP_PT_INVOKE || pkt->type == RTMP_PT_NOTIFY)
         parse_amf(pkt->data, pkt->data_size);
-    if (pkt->type == RTMP_PT_VIDEO && pkt->data_size < 10){
-    int i;av_log(NULL,0,"Data:");for(i=0;i<pkt->data_size;i++)av_log(NULL,0," %02X",pkt->data[i]);av_log(NULL,0,"\n");
-    }
 }
