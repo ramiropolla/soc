@@ -465,6 +465,47 @@ static int flv_set_video_codec(AVFormatContext *s, AVStream *vstream, int flv_co
     return 0;
 }
 
+static int rtmp_parse_result(AVFormatContext *s, RTMPState *rt, RTMPPacket *pkt)
+{
+    int i, t;
+
+    switch (pkt->type) {
+    case RTMP_PT_CHUNK_SIZE:
+        if (pkt->data_size != 4) {
+            av_log(s, AV_LOG_ERROR, "Chunk size change packet is not 4 (%d)\n",
+                   pkt->data_size);
+            return -1;
+        }
+        t = AV_RB32(pkt->data);
+        for (i = 0; i < RTMP_CHANNELS; i++) {
+            rt->rhist.chunk_size[i] = t;
+            rt->whist.chunk_size[i] = t;
+        }
+        break;
+    case RTMP_PT_INVOKE:
+        if (!memcmp(pkt->data, "\002\000\006_error", 9)) {//TODO: search data for error description
+            return -1;
+        }
+        if (!memcmp(pkt->data, "\002\000\007_result", 10)) {
+            switch (rt->state) {
+            case STATE_HANDSHAKED:
+                gen_create_stream(s, rt);
+                rt->state = STATE_CONNECTING;
+                break;
+            case STATE_CONNECTING:
+                gen_play(s, rt);
+                rt->state = STATE_PLAYING;
+                break;
+            }
+        }
+        if (!memcmp(pkt->data, "\002\000\008onStatus", 11)) {
+            //TODO: catch stream close event
+        }
+        break;
+    }
+    return 0;
+}
+
 static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
 {
     RTMPState *rt = s->priv_data;
@@ -486,10 +527,11 @@ static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
             }
         }
 
-#ifdef DEBUG
-if(rpkt.type != RTMP_PT_VIDEO && rpkt.type != RTMP_PT_AUDIO) rtmp_packet_inspect(s, &rpkt);
-//if(rpkt.data_size)for(i = 0; i < rpkt.data_size;i++)av_log(NULL,0," %02X",rpkt.data[i]);av_log(NULL,0,"\n");
-#endif
+        ret = rtmp_parse_result(s, rt, &rpkt);
+        if (ret < 0) {//serious error in packet
+            rtmp_packet_destroy(&rpkt);
+            return -1;
+        }
 
         if (rpkt.type == RTMP_PT_CHUNK_SIZE)
             for(i=0;i<RTMP_CHANNELS;i++)rt->rhist.chunk_size[i/*rpkt.stream_id*/] = AV_RB32(rpkt.data);
