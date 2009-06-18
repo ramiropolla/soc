@@ -36,8 +36,6 @@
 #include "rtmp.h"
 #include "rtmppkt.h"
 
-#define DEBUG 1
-
 typedef struct RTMPState {
     URLContext *rtmp_hd;
     RTMPPacketHistory rhist, whist;
