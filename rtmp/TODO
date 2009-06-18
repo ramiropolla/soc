@@ -1,2 +1,2 @@
-Factorize a lot of FLV demuxer code
 Set correct timestamps
+Parse error and status messages
