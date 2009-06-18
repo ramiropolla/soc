@@ -69,7 +69,7 @@ void rtmp_amf_write_tag(uint8_t **dst, AMFType type, const void *data)
 }
 
 int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
-                     RTMPPacketHistory *hist)
+                     int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t hdr, t, buf[16];
     int stream_id, timestamp, data_size, offset = 0;
@@ -117,15 +117,15 @@ int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
     if (hdr == RTMP_PS_TWELVEBYTES)
         p->extra = AV_RL32(buf);
     while (data_size > 0) {
-        int toread = FFMIN(data_size, hist->chunk_size[stream_id]);
+        int toread = FFMIN(data_size, chunk_size);
         int r;
         if ((r = url_read_complete(h, p->data + offset, toread)) != toread) {
             av_log(ctx, AV_LOG_ERROR, "Need %d read %d\n", toread, r);
             rtmp_packet_destroy(p);
             return -1;
         }
-        data_size -= hist->chunk_size[stream_id];
-        offset    += hist->chunk_size[stream_id];
+        data_size -= chunk_size;
+        offset    += chunk_size;
         if (data_size > 0) {
             url_read_complete(h, &t, 1); //marker
             if (t != (0xC0 + stream_id)) {
@@ -138,11 +138,10 @@ int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
 }
 
 int rtmp_packet_write(AVFormatContext *ctx, URLContext *h, RTMPPacket *pkt,
-                      RTMPPacketHistory *hist)
+                      int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t pkt_hdr[16], *p = pkt_hdr;
     int mode = RTMP_PS_TWELVEBYTES;
-    int chunk_size = hist->chunk_size[pkt->stream_id];
     int off = 0;
 
     if (pkt->type != RTMP_PT_INVOKE)
@@ -280,7 +279,9 @@ void rtmp_packet_inspect(AVFormatContext *ctx, RTMPPacket *pkt)
     default:                   av_log(NULL,0,"%X",pkt->type);
     }
     av_log(NULL,0," ts %d/%d size %d\n", pkt->timestamp, pkt->extra, pkt->data_size);
-    if (pkt->type == RTMP_PT_INVOKE || pkt->type == RTMP_PT_NOTIFY
-     || pkt->type == RTMP_PT_METADATA)
+    if (pkt->type == RTMP_PT_INVOKE || pkt->type == RTMP_PT_NOTIFY)
         parse_amf(pkt->data, pkt->data_size);
+    if (pkt->type == RTMP_PT_VIDEO && pkt->data_size < 10){
+    int i;av_log(NULL,0,"Data:");for(i=0;i<pkt->data_size;i++)av_log(NULL,0," %02X",pkt->data[i]);av_log(NULL,0,"\n");
+    }
 }

@@ -106,26 +106,16 @@ typedef struct RTMPPacket {
     int            data_size; ///< packet payload size
 } RTMPPacket;
 
-/**
- * saved parameters for reading RTMP packets
- *
- * Since RTMP server may choose to send partial packet for some channel we need
- * to set missing parameters from the previous packet on the same channel.
- */
-typedef struct RTMPPacketHistory {
-    RTMPPacket prev_pkt[RTMP_CHANNELS];    ///< previous read packet parameters
-    int        chunk_size[RTMP_CHANNELS];  ///< chunk size for each channel
-} RTMPPacketHistory;
-
-
 int rtmp_packet_create(RTMPPacket *pkt, int stream_id, RTMPPacketType type,
                        int timestamp, int size);
 
 void rtmp_packet_destroy(RTMPPacket *pkt);
 
-int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p, RTMPPacketHistory *hist);
+int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
+                     int chunk_size, RTMPPacket *prev_pkt);
 
-int rtmp_packet_write(AVFormatContext *ctx, URLContext *h, RTMPPacket *p, RTMPPacketHistory *hist);
+int rtmp_packet_write(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
+                      int chunk_size, RTMPPacket *prev_pkt);
 
 int rtmp_amf_tag_size(int type, const void *data);
 

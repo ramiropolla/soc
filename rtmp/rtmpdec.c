@@ -45,7 +45,8 @@ typedef enum {
 
 typedef struct RTMPState {
     URLContext *rtmp_hd;
-    RTMPPacketHistory rhist, whist;
+    RTMPPacket prev_pkt[2][RTMP_CHANNELS];
+    int chunk_size;
     char playpath[256];
     ClientState state;
     int main_stream_id;
@@ -121,7 +122,7 @@ static void gen_connect(AVFormatContext *s, RTMPState *rt, const char *proto,
 
     pkt.data_size = p - pkt.data;
 
-    rtmp_packet_write(s, rt->rtmp_hd, &pkt, &rt->whist);
+    rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
 }
 
 static void gen_create_stream(AVFormatContext *s, RTMPState *rt)
@@ -139,7 +140,7 @@ static void gen_create_stream(AVFormatContext *s, RTMPState *rt)
     rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
     rtmp_amf_write_tag(&p, AMF_NULL, NULL);
 
-    rtmp_packet_write(s, rt->rtmp_hd, &pkt, &rt->whist);
+    rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 }
 
@@ -163,7 +164,7 @@ static void gen_play(AVFormatContext *s, RTMPState *rt)
     num = 0.0;
     rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
 
-    rtmp_packet_write(s, rt->rtmp_hd, &pkt, &rt->whist);
+    rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 
     // set client buffer time disguised in ping packet
@@ -174,7 +175,7 @@ static void gen_play(AVFormatContext *s, RTMPState *rt)
     bytestream_put_be32(&p, 1);
     bytestream_put_be32(&p, 256); //TODO: what is a good value here?
 
-    rtmp_packet_write(s, rt->rtmp_hd, &pkt, &rt->whist);
+    rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 }
 
@@ -187,7 +188,7 @@ static void gen_pong(AVFormatContext *s, RTMPState *rt, RTMPPacket *ppkt)
     p = pkt.data;
     bytestream_put_be16(&p, 7);
     bytestream_put_be32(&p, AV_RB32(ppkt->data+2) + 1);
-    rtmp_packet_write(s, rt->rtmp_hd, &pkt, &rt->whist);
+    rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 }
 
@@ -339,15 +340,6 @@ static int rtmp_handshake(AVFormatContext *s, RTMPState *rt)
     return 0;
 }
 
-static void rtmp_init_hist(RTMPPacketHistory *hist)
-{
-    int i;
-
-    for (i = 0; i < RTMP_CHANNELS; i++) {
-        hist->chunk_size[i] = (i == RTMP_AUDIO_CHANNEL) ? 64 : 128;
-    }
-}
-
 static int rtmp_probe(AVProbeData *p)
 {
     if (av_strstart(p->filename, "rtmp:", NULL))
@@ -367,8 +359,6 @@ static int rtmp_read_header(AVFormatContext *s,
     url_split(proto, sizeof(proto), NULL, 0, hostname, sizeof(hostname), &port,
               path, sizeof(path), s->filename);
 
-    rtmp_init_hist(&rt->rhist);
-    rtmp_init_hist(&rt->whist);
     if(port == -1)
         port = RTMP_DEFAULT_PORT;
     snprintf(buf, sizeof(buf), "tcp://%s:%d", hostname, port);
@@ -377,6 +367,7 @@ static int rtmp_read_header(AVFormatContext *s,
     if (rtmp_handshake(s, rt))
         return -1;
 
+    rt->chunk_size = 128;
     rt->state = STATE_HANDSHAKED;
     //extract "app" part from path
     if (!strncmp(path, "/ondemand/", 10)) {
@@ -438,11 +429,7 @@ static int rtmp_parse_result(AVFormatContext *s, RTMPState *rt, RTMPPacket *pkt)
                    pkt->data_size);
             return -1;
         }
-        t = AV_RB32(pkt->data);
-        for (i = 0; i < RTMP_CHANNELS; i++) {
-            rt->rhist.chunk_size[i] = t;
-            rt->whist.chunk_size[i] = t;
-        }
+        rt->chunk_size = AV_RB32(pkt->data);
         break;
     case RTMP_PT_PING:
         t = AV_RB16(pkt->data);
@@ -490,7 +477,7 @@ static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
     while (url_ftell(&rt->pb) == rt->flv_size) {
         RTMPPacket rpkt;
         int has_data = 0;
-        if ((ret = rtmp_packet_read(s, rt->rtmp_hd, &rpkt, &rt->rhist)) != 0) {
+        if ((ret = rtmp_packet_read(s, rt->rtmp_hd, &rpkt, rt->chunk_size, rt->prev_pkt[0])) != 0) {
             if (ret > 0) {
                 nanosleep(&ts, NULL);
                 continue;
