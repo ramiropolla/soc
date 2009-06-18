@@ -114,6 +114,8 @@ int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
         }
     }
     rtmp_packet_create(p, stream_id, type, type, data_size);
+    if (hdr == RTMP_PS_TWELVEBYTES)
+        p->extra = AV_RL32(buf);
     while (data_size > 0) {
         int toread = FFMIN(data_size, hist->chunk_size[stream_id]);
         int r;
