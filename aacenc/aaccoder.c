@@ -64,6 +64,21 @@ static av_always_inline int quant(float coef, const float Q)
     return pow(coef * Q, 0.75) + 0.4054;
 }
 
+static void quantize_bands(int (*out)[2], const float* in, int size, float Q, int is_signed, int maxval)
+{
+    int i;
+    double qc;
+    for (i = 0; i < size; i++) {
+        qc = pow(fabsf(in[i]) * Q, 0.75);
+        out[i][0] = (int)FFMIN((int)qc, maxval);
+        out[i][1] = (int)FFMIN((int)(qc + 0.4054), maxval);
+        if (is_signed && in[i] < 0.0f) {
+            out[i][0] = -out[i][0];
+            out[i][1] = -out[i][1];
+        }
+    }
+}
+
 static av_always_inline int quant2(float coef, const float Q)
 {
     return pow(coef * Q, 0.75);
@@ -77,7 +92,7 @@ static const uint8_t aac_cb_maxval[12] = {0, 1, 1, 2, 2, 4, 4, 7, 7, 12, 12, 16}
  *
  * @return quantization distortion
  */
-static float quantize_band_cost(const float *in, int size, int scale_idx, int cb,
+static float quantize_band_cost(struct AACEncContext *s, const float *in, int size, int scale_idx, int cb,
                                  const float lambda, const float uplim, int *bits)
 {
     const float IQ = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
@@ -103,22 +118,16 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
     for(i = 1; i < dim; i++)
         offs[i] = offs[i-1]*range;
 #endif /* USE_REALLY_FULL_SEARCH */
+    quantize_bands(s->qcoefs, in, size, Q, !IS_CODEBOOK_UNSIGNED(cb), maxval);
     for(i = 0; i < size; i += dim){
         float mincost;
         int minidx = 0;
         int minbits = 0;
         const float *vec;
 #ifndef USE_REALLY_FULL_SEARCH
-        int quants[4][2];
+        int (*quants)[2] = &s->qcoefs[i];
         mincost = 0.0f;
         for(j = 0; j < dim; j++){
-            quants[j][0] = quant2(fabsf(in[i+j]), Q);
-            quants[j][1] = quant (fabsf(in[i+j]), Q);
-            for(k = 0; k < 2; k++){
-                quants[j][k] = FFMIN(quants[j][k], maxval);
-                if(!IS_CODEBOOK_UNSIGNED(cb) && in[i+j] < 0.0f)
-                    quants[j][k] = -quants[j][k];
-            }
             mincost += in[i+j]*in[i+j]*lambda;
         }
         minidx = IS_CODEBOOK_UNSIGNED(cb) ? 0 : 40;
@@ -197,7 +206,7 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
     return cost;
 }
 
-static void quantize_and_encode_band(PutBitContext *pb, const float *in, int size,
+static void quantize_and_encode_band(struct AACEncContext *s, PutBitContext *pb, const float *in, int size,
                                      int scale_idx, int cb, const float lambda)
 {
     const float IQ = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
@@ -220,22 +229,16 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
     for(i = 1; i < dim; i++)
         offs[i] = offs[i-1]*range;
 #endif /* USE_REALLY_FULL_SEARCH */
+    quantize_bands(s->qcoefs, in, size, Q, !IS_CODEBOOK_UNSIGNED(cb), maxval);
     for(i = 0; i < size; i += dim){
         float mincost;
         int minidx = 0;
         int minbits = 0;
         const float *vec;
 #ifndef USE_REALLY_FULL_SEARCH
-        int quants[4][2];
+        int (*quants)[2] = &s->qcoefs[i];
         mincost = 0.0f;
         for(j = 0; j < dim; j++){
-            quants[j][0] = quant2(fabsf(in[i+j]), Q);
-            quants[j][1] = quant (fabsf(in[i+j]), Q);
-            for(k = 0; k < 2; k++){
-                quants[j][k] = FFMIN(quants[j][k], maxval);
-                if(!IS_CODEBOOK_UNSIGNED(cb) && in[i+j] < 0.0f)
-                    quants[j][k] = -quants[j][k];
-            }
             mincost += in[i+j]*in[i+j]*lambda;
         }
         minidx = IS_CODEBOOK_UNSIGNED(cb) ? 0 : 40;
@@ -376,7 +379,7 @@ static void encode_window_bands_info(AACEncContext *s, SingleChannelElement *sce
                 float rd = 0.0f;
                 for(w = 0; w < group_len; w++){
                     FFPsyBand *band = &s->psy.psy_bands[s->cur_channel*PSY_MAX_BANDS+(win+w)*16+swb];
-                    rd += quantize_band_cost(sce->coeffs + start + w*128, size,
+                    rd += quantize_band_cost(s, sce->coeffs + start + w*128, size,
                                              sce->sf_idx[(win+w)*16+swb], cb,
                                              lambda / band->threshold, INFINITY, NULL);
                 }
@@ -514,7 +517,7 @@ static void search_for_quantizers_anmr(AVCodecContext *avctx, AACEncContext *s,
                         FFPsyBand *band = &s->psy.psy_bands[s->cur_channel*PSY_MAX_BANDS+(w+w2)*16+g];
                         int cb;
                         for(cb = 0; cb <= ESC_BT; cb++){
-                            dists[cb] += quantize_band_cost(coefs + w2*128, sce->ics.swb_sizes[g],
+                            dists[cb] += quantize_band_cost(s, coefs + w2*128, sce->ics.swb_sizes[g],
                                                             q, cb, lambda / band->threshold, INFINITY, NULL);
                         }
                     }
@@ -668,7 +671,7 @@ static void search_for_quantizers_twoloop(AVCodecContext *avctx, AACEncContext *
                         int bb = 0;
                         for(w2 = 0; w2 < sce->ics.group_len[w]; w2++){
                             int b;
-                            dist += quantize_band_cost(coefs + w2*128,
+                            dist += quantize_band_cost(s, coefs + w2*128,
                                                        sce->ics.swb_sizes[g],
                                                        sce->sf_idx[w*16+g],
                                                        ESC_BT,
@@ -837,7 +840,7 @@ static void search_for_quantizers_faac(AVCodecContext *avctx, AACEncContext *s,
 
                 for(w2 = 0; w2 < sce->ics.group_len[w]; w2++){
                     int b;
-                    dist += quantize_band_cost(coefs + w2*128,
+                    dist += quantize_band_cost(s, coefs + w2*128,
                                                sce->ics.swb_sizes[g],
                                                scf,
                                                ESC_BT,
@@ -946,22 +949,22 @@ static void search_for_ms(AACEncContext *s, ChannelElement *cpe, const float lam
                         S[i] =  sce0->coeffs[start+w2*128+i]
                               - sce1->coeffs[start+w2*128+i];
                     }
-                    dist1 += quantize_band_cost(sce0->coeffs + start + w2*128,
+                    dist1 += quantize_band_cost(s, sce0->coeffs + start + w2*128,
                                                 sce0->ics.swb_sizes[g],
                                                 sce0->sf_idx[(w+w2)*16+g],
                                                 sce0->band_type[(w+w2)*16+g],
                                                 lambda / band0->threshold, INFINITY, NULL);
-                    dist1 += quantize_band_cost(sce1->coeffs + start + w2*128,
+                    dist1 += quantize_band_cost(s, sce1->coeffs + start + w2*128,
                                                 sce1->ics.swb_sizes[g],
                                                 sce1->sf_idx[(w+w2)*16+g],
                                                 sce1->band_type[(w+w2)*16+g],
                                                 lambda / band1->threshold, INFINITY, NULL);
-                    dist2 += quantize_band_cost(M,
+                    dist2 += quantize_band_cost(s, M,
                                                 sce0->ics.swb_sizes[g],
                                                 sce0->sf_idx[(w+w2)*16+g],
                                                 sce0->band_type[(w+w2)*16+g],
                                                 lambda / maxthr, INFINITY, NULL);
-                    dist2 += quantize_band_cost(S,
+                    dist2 += quantize_band_cost(s, S,
                                                 sce1->ics.swb_sizes[g],
                                                 sce1->sf_idx[(w+w2)*16+g],
                                                 sce1->band_type[(w+w2)*16+g],
