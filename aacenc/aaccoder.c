@@ -117,8 +117,8 @@ static float quantize_band_cost(struct AACEncContext *s, const float *in, int si
     offs[0] = 1;
     for(i = 1; i < dim; i++)
         offs[i] = offs[i-1]*range;
-#endif /* USE_REALLY_FULL_SEARCH */
     quantize_bands(s->qcoefs, in, size, Q, !IS_CODEBOOK_UNSIGNED(cb), maxval);
+#endif /* USE_REALLY_FULL_SEARCH */
     for(i = 0; i < size; i += dim){
         float mincost;
         int minidx = 0;
@@ -228,8 +228,8 @@ static void quantize_and_encode_band(struct AACEncContext *s, PutBitContext *pb,
     offs[0] = 1;
     for(i = 1; i < dim; i++)
         offs[i] = offs[i-1]*range;
-#endif /* USE_REALLY_FULL_SEARCH */
     quantize_bands(s->qcoefs, in, size, Q, !IS_CODEBOOK_UNSIGNED(cb), maxval);
+#endif /* USE_REALLY_FULL_SEARCH */
     for(i = 0; i < size; i += dim){
         float mincost;
         int minidx = 0;
