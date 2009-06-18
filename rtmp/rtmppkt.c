@@ -129,7 +129,8 @@ int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
         if (data_size > 0) {
             url_read_complete(h, &t, 1); //marker
             if (t != (0xC0 + stream_id)) {
-                av_log(ctx, AV_LOG_ERROR, "Expected marker %02X, got %02X\n", t, 0xC0 + stream_id);
+                av_log(ctx, AV_LOG_ERROR, "Expected marker %02X, got %02X\n",
+                       t, 0xC0 + stream_id);
                 return -1;
             }
         }

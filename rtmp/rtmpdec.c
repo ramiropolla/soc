@@ -98,7 +98,7 @@ static void gen_connect(AVFormatContext *s, RTMPState *rt, const char *proto,
     rtmp_amf_write_tag(&p, AMF_STRING, app);
 
     snprintf(ver, sizeof(ver), "%s %d,%d,%d,%d", RTMP_CLIENT_PLATFORM, RTMP_CLIENT_VER1,
-                                                 RTMP_CLIENT_VER2, RTMP_CLIENT_VER3, RTMP_CLIENT_VER4);
+             RTMP_CLIENT_VER2, RTMP_CLIENT_VER3, RTMP_CLIENT_VER4);
     rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "flashVer");
     rtmp_amf_write_tag(&p, AMF_STRING, ver);
     rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "tcUrl");
@@ -477,7 +477,8 @@ static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
     while (url_ftell(&rt->pb) == rt->flv_size) {
         RTMPPacket rpkt;
         int has_data = 0;
-        if ((ret = rtmp_packet_read(s, rt->rtmp_hd, &rpkt, rt->chunk_size, rt->prev_pkt[0])) != 0) {
+        if ((ret = rtmp_packet_read(s, rt->rtmp_hd, &rpkt,
+                                    rt->chunk_size, rt->prev_pkt[0])) != 0) {
             if (ret > 0) {
                 nanosleep(&ts, NULL);
                 continue;
@@ -495,7 +496,8 @@ static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
             rtmp_packet_destroy(&rpkt);
             continue;
         }
-        if (rpkt.type == RTMP_PT_VIDEO || rpkt.type == RTMP_PT_AUDIO || rpkt.type == RTMP_PT_NOTIFY) {
+        if (rpkt.type == RTMP_PT_VIDEO || rpkt.type == RTMP_PT_AUDIO
+         || rpkt.type == RTMP_PT_NOTIFY) {
             uint8_t *p;
 
             rt->flv_size = rpkt.data_size + 15;
