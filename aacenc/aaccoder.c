@@ -64,8 +64,6 @@ static av_always_inline int quant(float coef, const float Q)
     return pow(coef * Q, 0.75) + 0.4054;
 }
 
-#if 1
-
 static av_always_inline int quant2(float coef, const float Q)
 {
     return pow(coef * Q, 0.75);
@@ -89,22 +87,28 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
     float cost = 0;
     const int dim = cb < FIRST_PAIR_BT ? 4 : 2;
     int resbits = 0;
+#ifndef USE_REALLY_FULL_SEARCH
     const int range = aac_cb_range[cb];
     const int maxval = aac_cb_maxval[cb];
     int offs[4];
+#endif /* USE_REALLY_FULL_SEARCH */
 
     if(!cb){
         for(i = 0; i < size; i++)
             cost += in[i]*in[i]*lambda;
         return cost;
     }
+#ifndef USE_REALLY_FULL_SEARCH
     offs[0] = 1;
     for(i = 1; i < dim; i++)
         offs[i] = offs[i-1]*range;
+#endif /* USE_REALLY_FULL_SEARCH */
     for(i = 0; i < size; i += dim){
         float mincost;
         int minidx = 0;
         int minbits = 0;
+        const float *vec;
+#ifndef USE_REALLY_FULL_SEARCH
         int quants[4][2];
         mincost = 0.0f;
         for(j = 0; j < dim; j++){
@@ -124,7 +128,6 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
             float rd = 0.0f;
             int curbits;
             int curidx = IS_CODEBOOK_UNSIGNED(cb) ? 0 : 40;
-            const float *vec;
             int same = 0;
             for(k = 0; k < dim; k++){
                 if((j & (1 << k)) && quants[k][0] == quants[k][1]){
@@ -138,6 +141,13 @@ static float quantize_band_cost(const float *in, int size, int scale_idx, int cb
                 curidx += quants[k][!!(j & (1 << k))] * offs[dim - 1 - k];
             curbits = ff_aac_spectral_bits[cb-1][curidx];
             vec = &ff_aac_codebook_vectors[cb-1][curidx*dim];
+#else
+        mincost = INFINITY;
+        vec = ff_aac_codebook_vectors[cb-1];
+        for(j = 0; j < ff_aac_spectral_sizes[cb-1]; j++, vec += dim){
+            float rd = 0.0f;
+            int curbits = ff_aac_spectral_bits[cb-1][j];
+#endif /* USE_REALLY_FULL_SEARCH */
             if(IS_CODEBOOK_UNSIGNED(cb)){
                 for(k = 0; k < dim; k++){
                     float t = fabsf(in[i+k]);
@@ -193,22 +203,29 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
     const float IQ = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
     const float  Q = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
     const float CLIPPED_ESCAPE = 165140.0f*IQ;
-    const int range = aac_cb_range[cb];
-    const int maxval = aac_cb_maxval[cb];
     const int dim = (cb < FIRST_PAIR_BT) ? 4 : 2;
     int i, j, k;
+#ifndef USE_REALLY_FULL_SEARCH
+    const int range = aac_cb_range[cb];
+    const int maxval = aac_cb_maxval[cb];
     int offs[4];
+#endif /* USE_REALLY_FULL_SEARCH */
 
+//START_TIMER
     if(!cb)
         return;
 
+#ifndef USE_REALLY_FULL_SEARCH
     offs[0] = 1;
     for(i = 1; i < dim; i++)
         offs[i] = offs[i-1]*range;
+#endif /* USE_REALLY_FULL_SEARCH */
     for(i = 0; i < size; i += dim){
         float mincost;
         int minidx = 0;
         int minbits = 0;
+        const float *vec;
+#ifndef USE_REALLY_FULL_SEARCH
         int quants[4][2];
         mincost = 0.0f;
         for(j = 0; j < dim; j++){
@@ -228,7 +245,6 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
             float rd = 0.0f;
             int curbits;
             int curidx = IS_CODEBOOK_UNSIGNED(cb) ? 0 : 40;
-            const float *vec;
             int same = 0;
             for(k = 0; k < dim; k++){
                 if((j & (1 << k)) && quants[k][0] == quants[k][1]){
@@ -242,6 +258,14 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
                 curidx += quants[k][!!(j & (1 << k))] * offs[dim - 1 - k];
             curbits = ff_aac_spectral_bits[cb-1][curidx];
             vec = &ff_aac_codebook_vectors[cb-1][curidx*dim];
+#else
+        vec = ff_aac_codebook_vectors[cb-1];
+        mincost = INFINITY;
+        for(j = 0; j < ff_aac_spectral_sizes[cb-1]; j++, vec += dim){
+            float rd = 0.0f;
+            int curbits = ff_aac_spectral_bits[cb-1][j];
+            int curidx = j;
+#endif /* USE_REALLY_FULL_SEARCH */
             if(IS_CODEBOOK_UNSIGNED(cb)){
                 for(k = 0; k < dim; k++){
                     float t = fabsf(in[i+k]);
@@ -297,172 +321,8 @@ static void quantize_and_encode_band(PutBitContext *pb, const float *in, int siz
             }
         }
     }
-}
-
-#else
-
-/**
- * Calculate rate distortion cost for quantizing with given codebook
- *
- * @return quantization distortion
- */
-static float quantize_band_cost(const float *in, int size, int scale_idx, int cb,
-                                 const float lambda, const float uplim, int *bits)
-{
-    const float Q = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
-    const float IQ = 1.0/Q;
-    const float CLIPPED_ESCAPE = 165140.0f*Q;
-    int i, j, k;
-    float cost = 0;
-    const int dim = cb < FIRST_PAIR_BT ? 4 : 2;
-    int resbits = 0;
-
-    if(!cb){
-        for(i = 0; i < size; i++)
-            cost += in[i]*in[i]*lambda;
-        return cost;
-    }
-    for(i = 0; i < size; i += dim){
-        float mincost = INFINITY;
-        int minidx = 0;
-        int minbits = 0;
-        const float *vec = ff_aac_codebook_vectors[cb-1];
-        for(j = 0; j < ff_aac_spectral_sizes[cb-1]; j++, vec += dim){
-            float rd = 0.0f;
-            int curbits = ff_aac_spectral_bits[cb-1][j];
-            if(IS_CODEBOOK_UNSIGNED(cb)){
-                for(k = 0; k < dim; k++){
-                    float t = fabsf(in[i+k]);
-                    float di;
-                    //do not code with escape sequence small values
-                    if(vec[k] == 64.0f && t < 39.0f*Q){
-                        rd = INFINITY;
-                        break;
-                    }
-                    if(vec[k] == 64.0f){//FIXME: slow
-                        if (t >= CLIPPED_ESCAPE) {
-                            di = t - CLIPPED_ESCAPE;
-                            curbits += 21;
-                        }else{
-                            int c = av_clip(quant(t, IQ), 0, 8191);
-                            di = t - c*cbrt(c)*Q;
-                            curbits += av_log2(c)*2 - 4 + 1;
-                        }
-                    }else{
-                        di = t - vec[k]*Q;
-                    }
-                    if(vec[k] != 0.0f)
-                        curbits++;
-                    rd += di*di*lambda;
-                }
-            }else{
-                for(k = 0; k < dim; k++){
-                    float di = in[i+k] - vec[k]*Q;
-                    rd += di*di*lambda;
-                }
-            }
-            rd += curbits;
-            if(rd < mincost){
-                mincost = rd;
-                minidx = j;
-                minbits = curbits;
-            }
-        }
-        cost += mincost;
-        resbits += minbits;
-        if(cost >= uplim)
-            return uplim;
-    }
-
-    if(bits)
-        *bits = resbits;
-    return cost;
-}
-
-/**
- * Prepare coefficients for encoding.
- *
- * @return sum of coefficient absolute values
- */
-static void quantize_and_encode_band(PutBitContext *pb, const float *in, int size,
-                                      int scale_idx, int cb, const float lambda)
-{
-    const float Q  = ff_aac_pow2sf_tab[200 + scale_idx - SCALE_ONE_POS + SCALE_DIV_512];
-    const float IQ = ff_aac_pow2sf_tab[200 - scale_idx + SCALE_ONE_POS - SCALE_DIV_512];
-    const float CLIPPED_ESCAPE = 165140.0f*Q;
-    int i, j, k;
-    const int dim = cb < FIRST_PAIR_BT ? 4 : 2;
-//START_TIMER
-    if(!cb)
-        return;
-
-    for(i = 0; i < size; i += dim){
-        float mincost = INFINITY;
-        int minidx = 0;
-        int minbits = 0;
-        const float *vec = ff_aac_codebook_vectors[cb-1];
-        for(j = 0; j < ff_aac_spectral_sizes[cb-1]; j++, vec += dim){
-            float rd = 0.0f;
-            int curbits = ff_aac_spectral_bits[cb-1][j];
-            if(IS_CODEBOOK_UNSIGNED(cb)){
-                for(k = 0; k < dim; k++){
-                    float t = fabsf(in[i+k]);
-                    float di;
-                    //do not code with escape sequence small values
-                    if(vec[k] == 64.0f && t < 39.0f*Q){
-                        rd = INFINITY;
-                        break;
-                    }
-                    if(vec[k] == 64.0f){//FIXME: slow
-                        if (t >= CLIPPED_ESCAPE) {
-                            di = t - CLIPPED_ESCAPE;
-                            curbits += 21;
-                        }else{
-                            int c = av_clip(quant(t, IQ), 0, 8191);
-                            di = t - c*cbrt(c)*Q;
-                            curbits += av_log2(c)*2 - 4 + 1;
-                        }
-                    }else{
-                        di = t - vec[k]*Q;
-                    }
-                    if(vec[k] != 0.0f)
-                        curbits++;
-                    rd += di*di*lambda;
-                }
-            }else{
-                for(k = 0; k < dim; k++){
-                    float di = in[i+k] - vec[k]*Q;
-                    rd += di*di*lambda;
-                }
-            }
-            rd += curbits;
-            if(rd < mincost){
-                mincost = rd;
-                minidx = j;
-                minbits = curbits;
-            }
-        }
-        put_bits(pb, ff_aac_spectral_bits[cb-1][minidx], ff_aac_spectral_codes[cb-1][minidx]);
-        if(IS_CODEBOOK_UNSIGNED(cb))
-            for(j = 0; j < dim; j++)
-                if(ff_aac_codebook_vectors[cb-1][minidx*dim+j] != 0.0f)
-                    put_bits(pb, 1, in[i+j] < 0.0f);
-        if(cb == ESC_BT){
-            for(j = 0; j < 2; j++){
-                if(ff_aac_codebook_vectors[cb-1][minidx*2+j] == 64.0f){
-                    int coef = av_clip(quant(fabsf(in[i+j]), IQ), 0, 8191);
-                    int len = av_log2(coef);
-
-                    put_bits(pb, len - 4 + 1, (1 << (len - 4 + 1)) - 2);
-                    put_bits(pb, len, coef & ((1 << len) - 1));
-                }
-            }
-        }
-    }
 //STOP_TIMER("quantize_and_encode")
 }
-
-#endif
 
 /**
  * structure used in optimal codebook search
