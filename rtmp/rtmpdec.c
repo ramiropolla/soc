@@ -427,64 +427,6 @@ static int rtmp_read_header(AVFormatContext *s,
     return 0;
 }
 
-static void flv_set_audio_codec(AVFormatContext *s, AVStream *astream, int flv_codecid) {
-    AVCodecContext *acodec = astream->codec;
-    switch(flv_codecid) {
-        //no distinction between S16 and S8 PCM codec flags
-        case FLV_CODECID_PCM:
-            acodec->codec_id = acodec->bits_per_coded_sample == 8 ? CODEC_ID_PCM_S8 :
-#ifdef WORDS_BIGENDIAN
-                                CODEC_ID_PCM_S16BE;
-#else
-                                CODEC_ID_PCM_S16LE;
-#endif
-            break;
-        case FLV_CODECID_PCM_LE:
-            acodec->codec_id = acodec->bits_per_coded_sample == 8 ? CODEC_ID_PCM_S8 : CODEC_ID_PCM_S16LE; break;
-        case FLV_CODECID_AAC  : acodec->codec_id = CODEC_ID_AAC;                                    break;
-        case FLV_CODECID_ADPCM: acodec->codec_id = CODEC_ID_ADPCM_SWF;                              break;
-        case FLV_CODECID_SPEEX:
-            acodec->codec_id = CODEC_ID_SPEEX;
-            acodec->sample_rate = 16000;
-            break;
-        case FLV_CODECID_MP3  : acodec->codec_id = CODEC_ID_MP3      ; astream->need_parsing = AVSTREAM_PARSE_FULL; break;
-        case FLV_CODECID_NELLYMOSER_8KHZ_MONO:
-            acodec->sample_rate = 8000; //in case metadata does not otherwise declare samplerate
-        case FLV_CODECID_NELLYMOSER:
-            acodec->codec_id = CODEC_ID_NELLYMOSER;
-            break;
-        default:
-            av_log(s, AV_LOG_INFO, "Unsupported audio codec (%x)\n", flv_codecid >> FLV_AUDIO_CODECID_OFFSET);
-            acodec->codec_tag = flv_codecid >> FLV_AUDIO_CODECID_OFFSET;
-    }
-}
-
-static int flv_set_video_codec(AVFormatContext *s, AVStream *vstream, int flv_codecid) {
-    AVCodecContext *vcodec = vstream->codec;
-    switch(flv_codecid) {
-        case FLV_CODECID_H263  : vcodec->codec_id = CODEC_ID_FLV1   ; break;
-        case FLV_CODECID_SCREEN: vcodec->codec_id = CODEC_ID_FLASHSV; break;
-        case FLV_CODECID_VP6   : vcodec->codec_id = CODEC_ID_VP6F   ;
-        case FLV_CODECID_VP6A  :
-            if(flv_codecid == FLV_CODECID_VP6A)
-                vcodec->codec_id = CODEC_ID_VP6A;
-            if(vcodec->extradata_size != 1) {
-                vcodec->extradata_size = 1;
-                vcodec->extradata = av_malloc(1);
-            }
-            vcodec->extradata[0] = get_byte(s->pb);
-            return 1; // 1 byte body size adjustment for flv_read_packet()
-        case FLV_CODECID_H264:
-            vcodec->codec_id = CODEC_ID_H264;
-            return 3; // not 4, reading packet type will consume one byte
-        default:
-            av_log(s, AV_LOG_INFO, "Unsupported video codec (%x)\n", flv_codecid);
-            vcodec->codec_tag = flv_codecid;
-    }
-
-    return 0;
-}
-
 static int rtmp_parse_result(AVFormatContext *s, RTMPState *rt, RTMPPacket *pkt)
 {
     int i, t;
