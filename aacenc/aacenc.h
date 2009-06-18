@@ -65,6 +65,7 @@ typedef struct AACEncContext {
     int last_frame;
     float lambda;
     DECLARE_ALIGNED_16(int,   qcoefs[96][2]);    ///< quantized coefficients
+    DECLARE_ALIGNED_16(float, scoefs[1024]);     ///< scaled coefficients
 } AACEncContext;
 
 #endif /* AVCODEC_AACENC_H */

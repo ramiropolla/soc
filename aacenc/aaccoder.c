@@ -64,18 +64,26 @@ static av_always_inline int quant(float coef, const float Q)
     return pow(coef * Q, 0.75) + 0.4054;
 }
 
-static void quantize_bands(int (*out)[2], const float* in, int size, float Q, int is_signed, int maxval)
+static void quantize_bands(int (*out)[2], const float *in, const float *scaled, int size, float Q34, int is_signed, int maxval)
 {
     int i;
     double qc;
     for (i = 0; i < size; i++) {
-        qc = pow(fabsf(in[i]) * Q, 0.75);
+        qc = scaled[i] * Q34;
         out[i][0] = (int)FFMIN((int)qc, maxval);
         out[i][1] = (int)FFMIN((int)(qc + 0.4054), maxval);
         if (is_signed && in[i] < 0.0f) {
             out[i][0] = -out[i][0];
             out[i][1] = -out[i][1];
         }
+    }
+}
+
+static void abs_pow34_v(float *out, const float* in, const int size)
+{
+    int i;
+    for (i = 0; i < size; i++) {
+        out[i] = pow(fabsf(in[i]), 0.75);
     }
 }
 
@@ -103,9 +111,11 @@ static float quantize_band_cost(struct AACEncContext *s, const float *in, int si
     const int dim = cb < FIRST_PAIR_BT ? 4 : 2;
     int resbits = 0;
 #ifndef USE_REALLY_FULL_SEARCH
+    const float  Q34 = pow(Q, 0.75);
     const int range = aac_cb_range[cb];
     const int maxval = aac_cb_maxval[cb];
     int offs[4];
+    float *scaled = s->scoefs;
 #endif /* USE_REALLY_FULL_SEARCH */
 
     if(!cb){
@@ -117,7 +127,8 @@ static float quantize_band_cost(struct AACEncContext *s, const float *in, int si
     offs[0] = 1;
     for(i = 1; i < dim; i++)
         offs[i] = offs[i-1]*range;
-    quantize_bands(s->qcoefs, in, size, Q, !IS_CODEBOOK_UNSIGNED(cb), maxval);
+    abs_pow34_v(scaled, in, size);
+    quantize_bands(s->qcoefs, in, scaled, size, Q34, !IS_CODEBOOK_UNSIGNED(cb), maxval);
 #endif /* USE_REALLY_FULL_SEARCH */
     for(i = 0; i < size; i += dim){
         float mincost;
@@ -215,9 +226,11 @@ static void quantize_and_encode_band(struct AACEncContext *s, PutBitContext *pb,
     const int dim = (cb < FIRST_PAIR_BT) ? 4 : 2;
     int i, j, k;
 #ifndef USE_REALLY_FULL_SEARCH
+    const float  Q34 = pow(Q, 0.75);
     const int range = aac_cb_range[cb];
     const int maxval = aac_cb_maxval[cb];
     int offs[4];
+    float *scaled = s->scoefs;
 #endif /* USE_REALLY_FULL_SEARCH */
 
 //START_TIMER
@@ -228,7 +241,8 @@ static void quantize_and_encode_band(struct AACEncContext *s, PutBitContext *pb,
     offs[0] = 1;
     for(i = 1; i < dim; i++)
         offs[i] = offs[i-1]*range;
-    quantize_bands(s->qcoefs, in, size, Q, !IS_CODEBOOK_UNSIGNED(cb), maxval);
+    abs_pow34_v(scaled, in, size);
+    quantize_bands(s->qcoefs, in, scaled, size, Q34, !IS_CODEBOOK_UNSIGNED(cb), maxval);
 #endif /* USE_REALLY_FULL_SEARCH */
     for(i = 0; i < size; i += dim){
         float mincost;
