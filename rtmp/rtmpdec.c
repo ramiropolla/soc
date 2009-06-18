@@ -172,6 +172,19 @@ static void gen_play(AVFormatContext *s, RTMPState *rt)
     rtmp_packet_destroy(&pkt);
 }
 
+static void gen_pong(AVFormatContext *s, RTMPState *rt, RTMPPacket *ppkt)
+{
+    RTMPPacket pkt;
+    uint8_t *p;
+
+    rtmp_packet_create(&pkt, RTMP_NETWORK_CHANNEL, RTMP_PT_PING, ppkt->timestamp + 1, 6);
+    p = pkt.data;
+    bytestream_put_be16(&p, 7);
+    bytestream_put_be32(&p, AV_RB32(ppkt->data+2) + 1);
+    rtmp_packet_write(s, rt->rtmp_hd, &pkt, &rt->whist);
+    rtmp_packet_destroy(&pkt);
+}
+
 //TODO: Move HMAC code somewhere. Eventually.
 #define HMAC_IPAD_VAL 0x36
 #define HMAC_OPAD_VAL 0x5C
@@ -481,6 +494,11 @@ static int rtmp_parse_result(AVFormatContext *s, RTMPState *rt, RTMPPacket *pkt)
             rt->rhist.chunk_size[i] = t;
             rt->whist.chunk_size[i] = t;
         }
+        break;
+    case RTMP_PT_PING:
+        t = AV_RB16(pkt->data);
+        if (t == 6)
+            gen_pong(s, rt, pkt);
         break;
     case RTMP_PT_INVOKE:
         if (!memcmp(pkt->data, "\002\000\006_error", 9)) {//TODO: search data for error description
