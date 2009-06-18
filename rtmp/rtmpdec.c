@@ -44,16 +44,16 @@ typedef enum {
 } ClientState;
 
 typedef struct RTMPState {
-    URLContext *rtmp_hd;
-    RTMPPacket prev_pkt[2][RTMP_CHANNELS];
-    int chunk_size;
-    char playpath[256];
-    ClientState state;
-    int main_stream_id;
-    uint8_t *flv_data;
-    int flv_size;
+    URLContext*   rtmp_hd;
+    RTMPPacket    prev_pkt[2][RTMP_CHANNELS];
+    int           chunk_size;
+    char          playpath[256];
+    ClientState   state;
+    int           main_stream_id;
+    uint8_t*      flv_data;
+    int           flv_size;
     ByteIOContext pb;
-    int wrong_dts;
+    int           wrong_dts;
 } RTMPState;
 
 #define PLAYER_KEY_OPEN_PART_LEN 30
