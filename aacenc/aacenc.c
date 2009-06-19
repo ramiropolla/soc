@@ -572,6 +572,10 @@ static int aac_encode_frame(AVCodecContext *avctx,
         s->lambda *= ratio;
     }
 
+    if (avctx->frame_bits > 6144*avctx->channels) {
+        av_log(avctx, AV_LOG_ERROR, "input buffer violation %d > %d.\n", avctx->frame_bits, 6144*avctx->channels);
+    }
+
     if(!data)
         s->last_frame = 1;
     memcpy(s->samples, s->samples + 1024 * avctx->channels, 1024 * avctx->channels * sizeof(s->samples[0]));
