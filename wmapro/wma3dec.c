@@ -1661,7 +1661,7 @@ static int decode_packet(AVCodecContext *avctx,
             more_frames = 0;
     }
 
-    if (!s->packet_loss) {
+    if (!s->packet_loss && remaining_bits(s,&gb) > 0) {
         /** save the rest of the data so that it can be decoded
             with the next packet */
         save_bits(s, &gb, remaining_bits(s,&gb), 0);
