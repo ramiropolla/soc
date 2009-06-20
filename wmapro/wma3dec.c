@@ -819,28 +819,6 @@ static int decode_channel_transform(WMA3DecodeContext* s)
 }
 
 /**
- *@brief Decode an uncompressed coefficient.
- *@param s codec context
- *@return the decoded coefficient
- */
-static unsigned int get_large_val(WMA3DecodeContext* s)
-{
-    /** consumes up to 34 bits */
-    int n_bits = 8;
-    /** decode length */
-    if (get_bits1(&s->gb)) {
-        n_bits += 8;
-        if (get_bits1(&s->gb)) {
-            n_bits += 8;
-            if (get_bits1(&s->gb)) {
-                n_bits += 7;
-            }
-        }
-    }
-    return get_bits_long(&s->gb,n_bits);
-}
-
-/**
  *@brief Extract the coefficients from the bitstream.
  *@param s codec context
  *@param c current channel number
@@ -855,8 +833,8 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
     int rl_mode = 0;
     int cur_coeff = 0;
     int num_zeros = 0;
-    const uint8_t* run;
-    const uint8_t* level;
+    const uint16_t* run;
+    const uint16_t* level;
     int zero_init = 0;
     int rl_switchmask = (s->subframe_len>>8);
 
@@ -896,10 +874,10 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
                 if ( idx == HUFF_VEC2_SIZE - 1 ) {
                     vals[i] = get_vlc2(&s->gb, vec1_vlc.table, VLCBITS, VEC1MAXDEPTH);
                     if (vals[i] == HUFF_VEC1_SIZE - 1)
-                        vals[i] += get_large_val(s);
+                        vals[i] += ff_wma_get_large_val(&s->gb);
                     vals[i+1] = get_vlc2(&s->gb, vec1_vlc.table, VLCBITS, VEC1MAXDEPTH);
                     if (vals[i+1] == HUFF_VEC1_SIZE - 1)
-                        vals[i+1] += get_large_val(s);
+                        vals[i+1] += ff_wma_get_large_val(&s->gb);
                 } else {
                     vals[i] = (symbol_to_vec2[idx] >> 4) & 0xF;
                     vals[i+1] = symbol_to_vec2[idx] & 0xF;
@@ -930,38 +908,11 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
 
     /** decode run level coded coefficients */
     if (rl_mode) {
-        const unsigned int coeff_mask = s->subframe_len - 1;
-        while (cur_coeff < s->subframe_len) {
-            unsigned int idx;
-            int sign;
-            int val;
-            idx = get_vlc2(&s->gb, vlc->table, VLCBITS, vlcmax);
-
-            if ( idx > 1) {
-                cur_coeff += run[idx];
-                val = level[idx];
-            } else if ( idx == 1) {
-                break;
-            } else {
-                val = get_large_val(s);
-                /** escape decode */
-                if (get_bits1(&s->gb)) {
-                    if (get_bits1(&s->gb)) {
-                        if (get_bits1(&s->gb)) {
-                            av_log(s->avctx,AV_LOG_ERROR,
-                                   "broken escape sequence\n");
-                            return 0;
-                        } else
-                            cur_coeff += get_bits(&s->gb,s->esc_len) + 4;
-                    } else
-                        cur_coeff += get_bits(&s->gb,2) + 1;
-                }
-            }
-            /** decode sign */
-            sign = get_bits1(&s->gb) - 1;
-            ci->coeffs[cur_coeff & coeff_mask] = (val^sign) - sign;
-            ++cur_coeff;
-        }
+        if(ff_wma_run_level_decode(s->avctx, &s->gb, vlc,
+                             level, run, 1, ci->coeffs,
+                             cur_coeff, s->subframe_len, s->subframe_len,
+                             s->esc_len, 0))
+            return -1;
     }
 
     return 1;
