@@ -665,12 +665,9 @@ static void decode_decorrelation_matrix(WMA3DecodeContext* s,
     for (i=0;i<chgroup->num_channels  * (chgroup->num_channels - 1) >> 1;i++)
         rotation_offset[i] = get_bits(&s->gb,6);
 
-    for (i=0;i<chgroup->num_channels;i++) {
-        if (get_bits1(&s->gb)) {
-            chgroup->decorrelation_matrix[chgroup->num_channels * i + i]=  1.0;
-        } else
-            chgroup->decorrelation_matrix[chgroup->num_channels * i + i]= -1.0;
-    }
+    for (i=0;i<chgroup->num_channels;i++)
+        chgroup->decorrelation_matrix[chgroup->num_channels * i + i] =
+                                                get_bits1(&s->gb) ? 1.0 : -1.0;
 
     for (i=1;i<chgroup->num_channels;i++) {
         int x;
