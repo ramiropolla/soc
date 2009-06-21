@@ -1534,7 +1534,7 @@ static void save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len,
     buflen = (s->num_saved_bits + len + 8) >> 3;
 
     if (len <= 0 || buflen > MAX_FRAMESIZE) {
-         ff_log_ask_for_sample(s->avctx, "input buffer to small\n");
+         ff_log_ask_for_sample(s->avctx, "input buffer too small\n");
          s->packet_loss = 1;
          return;
     }
