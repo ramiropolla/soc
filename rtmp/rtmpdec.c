@@ -54,6 +54,7 @@ typedef struct RTMPState {
     int           flv_size;
     ByteIOContext pb;
     int           wrong_dts;
+    uint32_t      video_ts, audio_ts;
 } RTMPState;
 
 #define PLAYER_KEY_OPEN_PART_LEN 30
@@ -500,14 +501,22 @@ static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
         if (rpkt.type == RTMP_PT_VIDEO || rpkt.type == RTMP_PT_AUDIO
          || rpkt.type == RTMP_PT_NOTIFY) {
             uint8_t *p;
+            uint32_t ts = rpkt.timestamp;
 
+            if (rpkt.type == RTMP_PT_VIDEO) {
+                rt->video_ts += rpkt.timestamp;
+                ts = rt->video_ts;
+            } else if (rpkt.type == RTMP_PT_AUDIO) {
+                rt->audio_ts += rpkt.timestamp;
+                ts = rt->audio_ts;
+            }
             rt->flv_size = rpkt.data_size + 15;
             rt->flv_data = p = av_realloc(rt->flv_data, rt->flv_size);
             bytestream_put_be32(&p, 0);
             bytestream_put_byte(&p, rpkt.type);
             bytestream_put_be24(&p, rpkt.data_size);
-            bytestream_put_be24(&p, rpkt.extra);
-            bytestream_put_byte(&p, rpkt.extra >> 24);
+            bytestream_put_be24(&p, ts);
+            bytestream_put_byte(&p, ts >> 24);
             bytestream_put_be24(&p, 0);
             bytestream_put_buffer(&p, rpkt.data, rpkt.data_size);
             has_data = 1;
