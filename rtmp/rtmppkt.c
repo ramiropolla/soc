@@ -72,7 +72,7 @@ int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
                      int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t hdr, t, buf[16];
-    int stream_id, timestamp, data_size, offset = 0;
+    int stream_id, timestamp, data_size, offset = 0, extra = 0;
     uint8_t type;
 
     if (url_read(h, &hdr, 1) != 1) {
@@ -102,20 +102,29 @@ int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
                 av_log(ctx, AV_LOG_ERROR, "reading type failed\n");
                 return -1;
             }
-            if (hdr == RTMP_PS_TWELVEBYTES)
+            if (hdr == RTMP_PS_TWELVEBYTES) {
                 if (url_read(h, buf, 4) != 4) {
                     av_log(ctx, AV_LOG_ERROR, "reading timestamp2 failed\n");
                     return -1;
                 }
+                extra = AV_RL32(buf);
+            } else {
+                extra = prev_pkt[stream_id].extra;
+            }
         } else {
-            av_log(ctx, AV_LOG_ERROR, "Fourbytes!\n\n\n");
-            //todo
-            return -1;
+            data_size = prev_pkt[stream_id].data_size;
+            type      = prev_pkt[stream_id].type;
+            extra     = prev_pkt[stream_id].extra;
         }
     }
-    rtmp_packet_create(p, stream_id, type, type, data_size);
-    if (hdr == RTMP_PS_TWELVEBYTES)
-        p->extra = AV_RL32(buf);
+    rtmp_packet_create(p, stream_id, type, timestamp, data_size);
+    p->extra = extra;
+    // save history
+    prev_pkt[stream_id].stream_id = type;
+    prev_pkt[stream_id].type      = stream_id;
+    prev_pkt[stream_id].data_size = data_size;
+    prev_pkt[stream_id].timestamp = timestamp;
+    prev_pkt[stream_id].extra     = extra;
     while (data_size > 0) {
         int toread = FFMIN(data_size, chunk_size);
         int r;
