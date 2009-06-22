@@ -154,8 +154,8 @@ int rtmp_packet_write(AVFormatContext *ctx, URLContext *h, RTMPPacket *pkt,
     int mode = RTMP_PS_TWELVEBYTES;
     int off = 0;
 
-    if (pkt->type != RTMP_PT_INVOKE)
-        mode = RTMP_PS_EIGHTBYTES;
+//    if (pkt->type != RTMP_PT_INVOKE)
+//        mode = RTMP_PS_EIGHTBYTES;
     bytestream_put_byte(&p, pkt->stream_id | (mode << 6));
     if (mode != RTMP_PS_ONEBYTE) {
         bytestream_put_be24(&p, pkt->timestamp);
