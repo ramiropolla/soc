@@ -430,6 +430,7 @@ static int rtmp_parse_result(AVFormatContext *s, RTMPState *rt, RTMPPacket *pkt)
             return -1;
         }
         rt->chunk_size = AV_RB32(pkt->data);
+        av_log(s, AV_LOG_DEBUG, "New chunk size = %d\n", rt->chunk_size);
         break;
     case RTMP_PT_PING:
         t = AV_RB16(pkt->data);
