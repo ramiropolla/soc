@@ -535,12 +535,12 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
     //av_log(s, AV_LOG_DEBUG, "Proto = %s, path = %s, app = %s, fname = %s\n",
     //       proto, path, app, rt->playpath);
     gen_connect(s, rt, proto, hostname, port, app);
-    }
 
     rt->flv_data = av_malloc(13);
     rt->flv_size = 13;
     rt->flv_off  = 0;
     memcpy(rt->flv_data, "FLV\1\5\0\0\0\011\0\0\0\0", 13);
+    }
 
     s->max_packet_size = url_get_max_packet_size(rt->rtmp_hd);
     s->is_streamed = 1;
