@@ -1,192 +1,20 @@
-Index: libavformat/flvdec.c
-===================================================================
---- libavformat/flvdec.c	(revision 19214)
-+++ libavformat/flvdec.c	(working copy)
-@@ -304,39 +304,38 @@
-     return 0;
- }
- 
--static int flv_read_packet(AVFormatContext *s, AVPacket *pkt)
-+int ff_flv_read_packet(AVFormatContext *s, ByteIOContext *pb, AVPacket *pkt, int *wrong_dts)
- {
--    FLVContext *flv = s->priv_data;
-     int ret, i, type, size, flags, is_audio;
-     int64_t next, pos;
-     int64_t dts, pts = AV_NOPTS_VALUE;
-     AVStream *st = NULL;
- 
-  for(;;){
--    pos = url_ftell(s->pb);
--    url_fskip(s->pb, 4); /* size of previous packet */
--    type = get_byte(s->pb);
--    size = get_be24(s->pb);
--    dts = get_be24(s->pb);
--    dts |= get_byte(s->pb) << 24;
-+    pos = url_ftell(pb);
-+    url_fskip(pb, 4); /* size of previous packet */
-+    type = get_byte(pb);
-+    size = get_be24(pb);
-+    dts = get_be24(pb);
-+    dts |= get_byte(pb) << 24;
- //    av_log(s, AV_LOG_DEBUG, "type:%d, size:%d, dts:%d\n", type, size, dts);
--    if (url_feof(s->pb))
-+    if (url_feof(pb))
-         return AVERROR_EOF;
--    url_fskip(s->pb, 3); /* stream id, always 0 */
-+    url_fskip(pb, 3); /* stream id, always 0 */
-     flags = 0;
- 
-     if(size == 0)
-         continue;
- 
--    next= size + url_ftell(s->pb);
-+    next= size + url_ftell(pb);
- 
-     if (type == FLV_TAG_TYPE_AUDIO) {
-         is_audio=1;
--        flags = get_byte(s->pb);
-+        flags = get_byte(pb);
-         size--;
-     } else if (type == FLV_TAG_TYPE_VIDEO) {
-         is_audio=0;
--        flags = get_byte(s->pb);
-+        flags = get_byte(pb);
-         size--;
-         if ((flags & 0xf0) == 0x50) /* video info / command frame */
-             goto skip;
-@@ -346,7 +345,7 @@
-         else /* skip packet */
-             av_log(s, AV_LOG_DEBUG, "skipping flv packet: type %d, size %d, flags %d\n", type, size, flags);
-     skip:
--        url_fseek(s->pb, next, SEEK_SET);
-+        url_fseek(pb, next, SEEK_SET);
-         continue;
-     }
- 
-@@ -370,7 +369,7 @@
-        ||(st->discard >= AVDISCARD_BIDIR  &&  ((flags & FLV_VIDEO_FRAMETYPE_MASK) == FLV_FRAME_DISP_INTER && !is_audio))
-        || st->discard >= AVDISCARD_ALL
-        ){
--        url_fseek(s->pb, next, SEEK_SET);
-+        url_fseek(pb, next, SEEK_SET);
-         continue;
-     }
-     if ((flags & FLV_VIDEO_FRAMETYPE_MASK) == FLV_FRAME_KEY)
-@@ -379,17 +378,17 @@
-  }
- 
-     // if not streamed and no duration from metadata then seek to end to find the duration from the timestamps
--    if(!url_is_streamed(s->pb) && s->duration==AV_NOPTS_VALUE){
-+    if(!url_is_streamed(pb) && s->duration==AV_NOPTS_VALUE){
-         int size;
--        const int64_t pos= url_ftell(s->pb);
--        const int64_t fsize= url_fsize(s->pb);
--        url_fseek(s->pb, fsize-4, SEEK_SET);
--        size= get_be32(s->pb);
--        url_fseek(s->pb, fsize-3-size, SEEK_SET);
--        if(size == get_be24(s->pb) + 11){
--            s->duration= get_be24(s->pb) * (int64_t)AV_TIME_BASE / 1000;
-+        const int64_t pos= url_ftell(pb);
-+        const int64_t fsize= url_fsize(pb);
-+        url_fseek(pb, fsize-4, SEEK_SET);
-+        size= get_be32(pb);
-+        url_fseek(pb, fsize-3-size, SEEK_SET);
-+        if(size == get_be24(pb) + 11){
-+            s->duration= get_be24(pb) * (int64_t)AV_TIME_BASE / 1000;
-         }
--        url_fseek(s->pb, pos, SEEK_SET);
-+        url_fseek(pb, pos, SEEK_SET);
-     }
- 
-     if(is_audio){
-@@ -407,16 +406,16 @@
- 
-     if (st->codec->codec_id == CODEC_ID_AAC ||
-         st->codec->codec_id == CODEC_ID_H264) {
--        int type = get_byte(s->pb);
-+        int type = get_byte(pb);
-         size--;
-         if (st->codec->codec_id == CODEC_ID_H264) {
--            int32_t cts = (get_be24(s->pb)+0xff800000)^0xff800000; // sign extension
-+            int32_t cts = (get_be24(pb)+0xff800000)^0xff800000; // sign extension
-             pts = dts + cts;
-             if (cts < 0) { // dts are wrong
--                flv->wrong_dts = 1;
-+                *wrong_dts = 1;
-                 av_log(s, AV_LOG_WARNING, "negative cts, previous timestamps might be wrong\n");
-             }
--            if (flv->wrong_dts)
-+            if (*wrong_dts)
-                 dts = AV_NOPTS_VALUE;
-         }
-         if (type == 0) {
-@@ -442,7 +441,7 @@
-     if (!size)
-         return AVERROR(EAGAIN);
- 
--    ret= av_get_packet(s->pb, pkt, size);
-+    ret= av_get_packet(pb, pkt, size);
-     if (ret < 0) {
-         return AVERROR(EIO);
-     }
-@@ -459,6 +458,13 @@
-     return ret;
- }
- 
-+static int flv_read_packet(AVFormatContext *s, AVPacket *pkt)
-+{
-+    FLVContext *flv = s->priv_data;
-+
-+    return ff_flv_read_packet(s, &s->pb, pkt, &flv->wrong_dts);
-+}
-+
- AVInputFormat flv_demuxer = {
-     "flv",
-     NULL_IF_CONFIG_SMALL("FLV format"),
 Index: libavformat/Makefile
 ===================================================================
---- libavformat/Makefile	(revision 19214)
+--- libavformat/Makefile	(revision 19256)
 +++ libavformat/Makefile	(working copy)
-@@ -188,6 +188,7 @@
- OBJS-$(CONFIG_ROQ_DEMUXER)               += idroq.o
- OBJS-$(CONFIG_ROQ_MUXER)                 += raw.o
- OBJS-$(CONFIG_RPL_DEMUXER)               += rpl.o
-+OBJS-$(CONFIG_RTMP_DEMUXER)              += rtmpdec.o rtmppkt.o
- OBJS-$(CONFIG_RTP_MUXER)                 += rtp.o         \
-                                             rtp_aac.o     \
-                                             rtp_amr.o     \
-@@ -246,6 +247,7 @@
+@@ -246,6 +246,7 @@
  OBJS-$(CONFIG_GOPHER_PROTOCOL)           += gopher.o
  OBJS-$(CONFIG_HTTP_PROTOCOL)             += http.o
  OBJS-$(CONFIG_PIPE_PROTOCOL)             += file.o
-+OBJS-$(CONFIG_RTMP_PROTOCOL)             += rtmpproto.o
++OBJS-$(CONFIG_RTMP_PROTOCOL)             += rtmpproto.o rtmppkt.o
  OBJS-$(CONFIG_RTP_PROTOCOL)              += rtpproto.o
  OBJS-$(CONFIG_TCP_PROTOCOL)              += tcp.o
  OBJS-$(CONFIG_UDP_PROTOCOL)              += udp.o
-Index: libavformat/flv.h
-===================================================================
---- libavformat/flv.h	(revision 19214)
-+++ libavformat/flv.h	(working copy)
-@@ -110,4 +110,6 @@
-     AMF_DATA_TYPE_UNSUPPORTED = 0x0d,
- } AMFDataType;
- 
-+extern int ff_flv_read_packet(AVFormatContext *s, ByteIOContext *pb, AVPacket *pkt, int *wrong_dts);
-+
- #endif /* AVFORMAT_FLV_H */
 Index: libavformat/allformats.c
 ===================================================================
---- libavformat/allformats.c	(revision 19214)
+--- libavformat/allformats.c	(revision 19256)
 +++ libavformat/allformats.c	(working copy)
-@@ -165,6 +165,7 @@
-     REGISTER_MUXDEMUX (RM, rm);
-     REGISTER_MUXDEMUX (ROQ, roq);
-     REGISTER_DEMUXER  (RPL, rpl);
-+    REGISTER_DEMUXER  (RTMP, rtmp);
-     REGISTER_MUXER    (RTP, rtp);
-     REGISTER_DEMUXER  (RTSP, rtsp);
-     REGISTER_DEMUXER  (SDP, sdp);
-@@ -209,6 +210,7 @@
+@@ -209,6 +209,7 @@
      REGISTER_PROTOCOL (GOPHER, gopher);
      REGISTER_PROTOCOL (HTTP, http);
      REGISTER_PROTOCOL (PIPE, pipe);
