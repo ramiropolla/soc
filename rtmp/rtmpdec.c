@@ -383,10 +383,12 @@ static int rtmp_read_header(AVFormatContext *s,
             fname = strchr(p + 1, '/');
             if (!fname) {
                 fname = p + 1;
-                strncpy(app, path + 1, p - path - 1);
+                memcpy(app, path + 1, p - path - 1);
+                app[p - path - 1] = 0;
             } else {
                 fname++;
-                strncpy(app, path + 1, fname - path - 2);
+                memcpy(app, path + 1, fname - path - 2);
+                app[fname - path - 2] = 0;
             }
         }
     }
