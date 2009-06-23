@@ -43,7 +43,7 @@ typedef enum {
     STATE_PLAYING,
 } ClientState;
 
-typedef struct RTMPState {
+typedef struct RTMPContext {
     URLContext*   rtmp_hd;
     RTMPPacket    prev_pkt[2][RTMP_CHANNELS];
     int           chunk_size;
@@ -55,7 +55,7 @@ typedef struct RTMPState {
     ByteIOContext pb;
     int           wrong_dts;
     uint32_t      video_ts, audio_ts;
-} RTMPState;
+} RTMPContext;
 
 #define PLAYER_KEY_OPEN_PART_LEN 30
 static const uint8_t rtmp_player_key[] =
@@ -79,7 +79,7 @@ static const uint8_t rtmp_server_key[] =
     0xE6, 0x36, 0xCF, 0xEB, 0x31, 0xAE
 };
 
-static void gen_connect(AVFormatContext *s, RTMPState *rt, const char *proto,
+static void gen_connect(AVFormatContext *s, RTMPContext *rt, const char *proto,
                         const char *host, int port, const char *app)
 {
     RTMPPacket pkt;
@@ -126,7 +126,7 @@ static void gen_connect(AVFormatContext *s, RTMPState *rt, const char *proto,
     rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
 }
 
-static void gen_create_stream(AVFormatContext *s, RTMPState *rt)
+static void gen_create_stream(AVFormatContext *s, RTMPContext *rt)
 {
     RTMPPacket pkt;
     uint8_t *p;
@@ -145,7 +145,7 @@ static void gen_create_stream(AVFormatContext *s, RTMPState *rt)
     rtmp_packet_destroy(&pkt);
 }
 
-static void gen_play(AVFormatContext *s, RTMPState *rt)
+static void gen_play(AVFormatContext *s, RTMPContext *rt)
 {
     RTMPPacket pkt;
     uint8_t *p;
@@ -180,7 +180,7 @@ static void gen_play(AVFormatContext *s, RTMPState *rt)
     rtmp_packet_destroy(&pkt);
 }
 
-static void gen_pong(AVFormatContext *s, RTMPState *rt, RTMPPacket *ppkt)
+static void gen_pong(AVFormatContext *s, RTMPContext *rt, RTMPPacket *ppkt)
 {
     RTMPPacket pkt;
     uint8_t *p;
@@ -267,7 +267,7 @@ static int rtmp_validate_digest(uint8_t *buf, int off)
     return 0;
 }
 
-static int rtmp_handshake(AVFormatContext *s, RTMPState *rt)
+static int rtmp_handshake(AVFormatContext *s, RTMPContext *rt)
 {
     AVLFG rnd;
     uint8_t tosend    [RTMP_HANDSHAKE_PACKET_SIZE+1];
@@ -351,7 +351,7 @@ static int rtmp_probe(AVProbeData *p)
 static int rtmp_read_header(AVFormatContext *s,
                             AVFormatParameters *ap)
 {
-    RTMPState *rt = s->priv_data;
+    RTMPContext *rt = s->priv_data;
     char proto[8], hostname[256], path[512], app[128], *fname;
     int port;
     uint8_t buf[2048];
@@ -421,7 +421,7 @@ static int rtmp_read_header(AVFormatContext *s,
     return 0;
 }
 
-static int rtmp_parse_result(AVFormatContext *s, RTMPState *rt, RTMPPacket *pkt)
+static int rtmp_parse_result(AVFormatContext *s, RTMPContext *rt, RTMPPacket *pkt)
 {
     int i, t;
 
@@ -471,7 +471,7 @@ static int rtmp_parse_result(AVFormatContext *s, RTMPState *rt, RTMPPacket *pkt)
 
 static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
 {
-    RTMPState *rt = s->priv_data;
+    RTMPContext *rt = s->priv_data;
     struct timespec ts;
     int ret;
 
@@ -543,7 +543,7 @@ static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
 
 static int rtmp_read_close(AVFormatContext *s)
 {
-    RTMPState *rt = s->priv_data;
+    RTMPContext *rt = s->priv_data;
 
     av_freep(&rt->flv_data);
     url_close(rt->rtmp_hd);
@@ -553,7 +553,7 @@ static int rtmp_read_close(AVFormatContext *s)
 AVInputFormat rtmp_demuxer = {
     "rtmp",
     NULL_IF_CONFIG_SMALL("RTMP"),
-    sizeof(RTMPState),
+    sizeof(RTMPContext),
     rtmp_probe,
     rtmp_read_header,
     rtmp_read_packet,
