@@ -514,12 +514,10 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
                 fname = strchr(p + 1, '/');
                 if (!fname) {
                     fname = p + 1;
-                    strncpy(app, path + 1, p - path - 1);
-                    app[p - path - 1] = '\0';
+                    av_strlcpy(app, path + 1, p - path);
                 } else {
                     fname++;
-                    strncpy(app, path + 1, fname - path - 2);
-                    app[fname - path - 2] = '\0';
+                    av_strlcpy(app, path + 1, fname - path - 1);
                 }
             }
         }
