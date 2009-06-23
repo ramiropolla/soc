@@ -123,7 +123,7 @@ static void gen_connect(AVFormatContext *s, RTMPContext *rt, const char *proto,
 
     pkt.data_size = p - pkt.data;
 
-    rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    rtmp_packet_write(rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
 }
 
 static void gen_create_stream(AVFormatContext *s, RTMPContext *rt)
@@ -141,7 +141,7 @@ static void gen_create_stream(AVFormatContext *s, RTMPContext *rt)
     rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
     rtmp_amf_write_tag(&p, AMF_NULL, NULL);
 
-    rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    rtmp_packet_write(rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 }
 
@@ -165,7 +165,7 @@ static void gen_play(AVFormatContext *s, RTMPContext *rt)
     num = 0.0;
     rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
 
-    rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    rtmp_packet_write(rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 
     // set client buffer time disguised in ping packet
@@ -176,7 +176,7 @@ static void gen_play(AVFormatContext *s, RTMPContext *rt)
     bytestream_put_be32(&p, 1);
     bytestream_put_be32(&p, 256); //TODO: what is a good value here?
 
-    rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    rtmp_packet_write(rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 }
 
@@ -189,7 +189,7 @@ static void gen_pong(AVFormatContext *s, RTMPContext *rt, RTMPPacket *ppkt)
     p = pkt.data;
     bytestream_put_be16(&p, 7);
     bytestream_put_be32(&p, AV_RB32(ppkt->data+2) + 1);
-    rtmp_packet_write(s, rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    rtmp_packet_write(rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 }
 
@@ -481,7 +481,7 @@ static int rtmp_read_packet(AVFormatContext *s, AVPacket *pkt)
     while (url_ftell(&rt->pb) == rt->flv_size) {
         RTMPPacket rpkt;
         int has_data = 0;
-        if ((ret = rtmp_packet_read(s, rt->rtmp_hd, &rpkt,
+        if ((ret = rtmp_packet_read(rt->rtmp_hd, &rpkt,
                                     rt->chunk_size, rt->prev_pkt[0])) != 0) {
             if (ret > 0) {
                 nanosleep(&ts, NULL);

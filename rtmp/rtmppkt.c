@@ -68,7 +68,7 @@ void rtmp_amf_write_tag(uint8_t **dst, AMFType type, const void *data)
     }
 }
 
-int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
+int rtmp_packet_read(URLContext *h, RTMPPacket *p,
                      int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t hdr, t, buf[16];
@@ -76,35 +76,29 @@ int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
     uint8_t type;
 
     if (url_read(h, &hdr, 1) != 1) {
-        av_log(ctx, AV_LOG_ERROR, "Cannot read packet header\n");
         return -1;
     }
     stream_id = hdr & 0x3F;
 
     hdr >>= 6;
     if (hdr == RTMP_PS_ONEBYTE) {
-        av_log(ctx, AV_LOG_ERROR, "Onebyte header!\n\n\n");
         //todo
         return -1;
     } else {
         if (url_read_complete(h, buf, 3) != 3) {
-            av_log(ctx, AV_LOG_ERROR, "reading timestamp failed\n");
             return -1;
         }
         timestamp = AV_RB24(buf);
         if (hdr != RTMP_PS_FOURBYTES) {
             if (url_read_complete(h, buf, 3) != 3) {
-                av_log(ctx, AV_LOG_ERROR, "reading size failed\n");
                 return -1;
             }
             data_size = AV_RB24(buf);
             if (url_read_complete(h, &type, 1) != 1) {
-                av_log(ctx, AV_LOG_ERROR, "reading type failed\n");
                 return -1;
             }
             if (hdr == RTMP_PS_TWELVEBYTES) {
                 if (url_read(h, buf, 4) != 4) {
-                    av_log(ctx, AV_LOG_ERROR, "reading timestamp2 failed\n");
                     return -1;
                 }
                 extra = AV_RL32(buf);
@@ -129,7 +123,6 @@ int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
         int toread = FFMIN(data_size, chunk_size);
         int r;
         if ((r = url_read_complete(h, p->data + offset, toread)) != toread) {
-            av_log(ctx, AV_LOG_ERROR, "Need %d read %d\n", toread, r);
             rtmp_packet_destroy(p);
             return -1;
         }
@@ -138,8 +131,6 @@ int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
         if (data_size > 0) {
             url_read_complete(h, &t, 1); //marker
             if (t != (0xC0 + stream_id)) {
-                av_log(ctx, AV_LOG_ERROR, "Expected marker %02X, got %02X\n",
-                       t, 0xC0 + stream_id);
                 return -1;
             }
         }
@@ -147,7 +138,7 @@ int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
     return 0;
 }
 
-int rtmp_packet_write(AVFormatContext *ctx, URLContext *h, RTMPPacket *pkt,
+int rtmp_packet_write(URLContext *h, RTMPPacket *pkt,
                       int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t pkt_hdr[16], *p = pkt_hdr;
@@ -264,7 +255,7 @@ static void parse_amf(const uint8_t *data, int size)
     }
 }
 
-void rtmp_packet_inspect(AVFormatContext *ctx, RTMPPacket *pkt)
+void rtmp_packet_inspect(RTMPPacket *pkt)
 {
     av_log(NULL,0,"Packet on ");
     switch (pkt->stream_id) {

@@ -111,16 +111,16 @@ int rtmp_packet_create(RTMPPacket *pkt, int stream_id, RTMPPacketType type,
 
 void rtmp_packet_destroy(RTMPPacket *pkt);
 
-int rtmp_packet_read(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
+int rtmp_packet_read(URLContext *h, RTMPPacket *p,
                      int chunk_size, RTMPPacket *prev_pkt);
 
-int rtmp_packet_write(AVFormatContext *ctx, URLContext *h, RTMPPacket *p,
+int rtmp_packet_write(URLContext *h, RTMPPacket *p,
                       int chunk_size, RTMPPacket *prev_pkt);
 
 int rtmp_amf_tag_size(int type, const void *data);
 
 void rtmp_amf_write_tag(uint8_t **dst, AMFType type, const void *data);
 
-void rtmp_packet_inspect(AVFormatContext *ctx, RTMPPacket *pkt);
+void rtmp_packet_inspect(RTMPPacket *pkt);
 
 #endif /* AVFORMAT_RTMPPKT_H */
