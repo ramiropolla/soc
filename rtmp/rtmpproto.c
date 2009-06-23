@@ -495,51 +495,51 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
         //av_log(s, AV_LOG_ERROR, "RTMP output is not supported yet\n");
         goto fail;
     } else {
-    rt->state = STATE_START;
-    if (rtmp_handshake(s, rt))
-        return -1;
+        rt->state = STATE_START;
+        if (rtmp_handshake(s, rt))
+            return -1;
 
-    rt->chunk_size = 128;
-    rt->state = STATE_HANDSHAKED;
-    //extract "app" part from path
-    if (!strncmp(path, "/ondemand/", 10)) {
-        fname = path + 10;
-        memcpy(app, "ondemand", 9);
-    } else {
-        char *p = strchr(path + 1, '/');
-        if (!p) {
-            fname = path + 1;
-            app[0] = '\0';
+        rt->chunk_size = 128;
+        rt->state = STATE_HANDSHAKED;
+        //extract "app" part from path
+        if (!strncmp(path, "/ondemand/", 10)) {
+            fname = path + 10;
+            memcpy(app, "ondemand", 9);
         } else {
-            fname = strchr(p + 1, '/');
-            if (!fname) {
-                fname = p + 1;
-                strncpy(app, path + 1, p - path - 1);
-                app[p - path - 1] = '\0';
+            char *p = strchr(path + 1, '/');
+            if (!p) {
+                fname = path + 1;
+                app[0] = '\0';
             } else {
-                fname++;
-                strncpy(app, path + 1, fname - path - 2);
-                app[fname - path - 2] = '\0';
+                fname = strchr(p + 1, '/');
+                if (!fname) {
+                    fname = p + 1;
+                    strncpy(app, path + 1, p - path - 1);
+                    app[p - path - 1] = '\0';
+                } else {
+                    fname++;
+                    strncpy(app, path + 1, fname - path - 2);
+                    app[fname - path - 2] = '\0';
+                }
             }
         }
-    }
-    if (!strcmp(fname + strlen(fname) - 4, ".f4v") ||
-        !strcmp(fname + strlen(fname) - 4, ".mp4")) {
-        memcpy(rt->playpath, "mp4:", 5);
-    } else {
-        rt->playpath[0] = ':';
-        rt->playpath[0] = 0;
-    }
-    strncat(rt->playpath, fname, sizeof(rt->playpath) - 5);
+        if (!strcmp(fname + strlen(fname) - 4, ".f4v") ||
+            !strcmp(fname + strlen(fname) - 4, ".mp4")) {
+            memcpy(rt->playpath, "mp4:", 5);
+        } else {
+            rt->playpath[0] = ':';
+            rt->playpath[0] = 0;
+        }
+        strncat(rt->playpath, fname, sizeof(rt->playpath) - 5);
 
-    //av_log(s, AV_LOG_DEBUG, "Proto = %s, path = %s, app = %s, fname = %s\n",
-    //       proto, path, app, rt->playpath);
-    gen_connect(s, rt, proto, hostname, port, app);
+        //av_log(s, AV_LOG_DEBUG, "Proto = %s, path = %s, app = %s, fname = %s\n",
+        //       proto, path, app, rt->playpath);
+        gen_connect(s, rt, proto, hostname, port, app);
 
-    rt->flv_data = av_malloc(13);
-    rt->flv_size = 13;
-    rt->flv_off  = 0;
-    memcpy(rt->flv_data, "FLV\1\5\0\0\0\011\0\0\0\0", 13);
+        rt->flv_data = av_malloc(13);
+        rt->flv_size = 13;
+        rt->flv_off  = 0;
+        memcpy(rt->flv_data, "FLV\1\5\0\0\0\011\0\0\0\0", 13);
     }
 
     s->max_packet_size = url_get_max_packet_size(rt->rtmp_hd);
