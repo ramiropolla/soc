@@ -148,7 +148,7 @@ typedef struct {
  * @brief main decoder context
  */
 typedef struct WMA3DecodeContext {
-    /** generic decoder variables */
+    /* generic decoder variables */
     AVCodecContext*  avctx;                         ///< codec context for av_log
     DSPContext       dsp;                           ///< accelerated dsp functions
     uint8_t          frame_data[MAX_FRAMESIZE +
@@ -158,7 +158,7 @@ typedef struct WMA3DecodeContext {
     float*           windows[WMAPRO_BLOCK_SIZES];   ///< window per block size
     int              coef_max[2];                   ///< max length of vlc codes
 
-    /** frame size dependent frame information (set during initialization) */
+    /* frame size dependent frame information (set during initialization) */
     uint8_t          lossless;                      ///< lossless mode
     uint32_t         decode_flags;                  ///< used compression features
     uint8_t          len_prefix;                    ///< frame is prefixed with its length
@@ -176,14 +176,14 @@ typedef struct WMA3DecodeContext {
     int16_t*         sf_offsets;                    ///< scale factor resample matrix
     int16_t*         subwoofer_cutoffs;             ///< subwoofer cutoff values
 
-    /** packet decode state */
+    /* packet decode state */
     uint8_t          packet_sequence_number;        ///< current packet number
     int              num_saved_bits;                ///< saved number of bits
     int              frame_offset;                  ///< frame offset in the bit reservoir
     int              subframe_offset;               ///< subframe offset in the bit reservoir
     uint8_t          packet_loss;                   ///< set in case of bitstream error
 
-    /** frame decode state */
+    /* frame decode state */
     uint32_t         frame_num;                     ///< current frame number
     GetBitContext    gb;                            ///< bitstream reader context
     int              buf_bit_size;                  ///< buffer size in bits
@@ -193,7 +193,7 @@ typedef struct WMA3DecodeContext {
     int8_t           skip_frame;                    ///< skip output step
     int8_t           parsed_all_subframes;          ///< all subframes decoded?
 
-    /** subframe/block decode state */
+    /* subframe/block decode state */
     int16_t          subframe_len;                  ///< current subframe length
     int8_t           channels_for_cur_subframe;     ///< number of channels that contain the subframe
     int8_t           channel_indexes_for_cur_subframe[WMAPRO_MAX_CHANNELS];
