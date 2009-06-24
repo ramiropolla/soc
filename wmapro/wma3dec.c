@@ -571,9 +571,8 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                 /* 1 bit indicates if the subframe length is zero */
                 if (subframe_len_zero_bit) {
                     if (get_bits1(&s->gb)) {
-                        log2_subframe_len =
+                        log2_subframe_len = 1 +
                             get_bits(&s->gb,subframe_len_bits-1);
-                        ++log2_subframe_len;
                     }
                 } else
                     log2_subframe_len = get_bits(&s->gb,subframe_len_bits);
