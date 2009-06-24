@@ -482,7 +482,6 @@ static av_cold int decode_init(AVCodecContext *avctx)
 static int decode_tilehdr(WMA3DecodeContext *s)
 {
     int c;
-    int missing_samples = s->num_channels * s->samples_per_frame;
 
     /* should never consume more than 3073 bits (256 iterations for the
      * while loop when always the minimum amount of 128 samples is substracted
@@ -503,6 +502,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
             s->channel[c].subframe_len[0] = s->samples_per_frame;
         }
     } else { /** subframe length and number of subframes is not constant */
+        int missing_samples = s->num_channels * s->samples_per_frame;
         int subframe_len_bits = 0;     /** bits needed for the subframe length */
         int subframe_len_zero_bit = 0; /** first bit indicates if length is zero */
         int fixed_channel_layout;      /** all channels have the same subframe layout */
