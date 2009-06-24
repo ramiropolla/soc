@@ -162,7 +162,7 @@ typedef struct WMA3DecodeContext {
     uint32_t         decode_flags;                  ///< used compression features
     uint8_t          len_prefix;                    ///< frame is prefixed with its length
     uint8_t          dynamic_range_compression;     ///< frame contains DRC data
-    uint8_t          sample_bit_depth;              ///< bits per sample
+    uint8_t          bits_per_sample;
     uint16_t         samples_per_frame;             ///< number of samples to output
     uint16_t         log2_frame_size;               ///< frame size
     int8_t           num_channels;                  ///< number of channels
@@ -217,7 +217,7 @@ static void av_cold dump_context(WMA3DecodeContext *s)
 #define PRINT(a,b) av_log(s->avctx,AV_LOG_DEBUG," %s = %d\n", a, b);
 #define PRINT_HEX(a,b) av_log(s->avctx,AV_LOG_DEBUG," %s = %x\n", a, b);
 
-    PRINT("ed sample bit depth",s->sample_bit_depth);
+    PRINT("ed sample bit depth",s->bits_per_sample);
     PRINT_HEX("ed decode flags",s->decode_flags);
     PRINT("samples per frame",s->samples_per_frame);
     PRINT("log2 frame size",s->log2_frame_size);
@@ -268,11 +268,11 @@ static av_cold int decode_init(AVCodecContext *avctx)
     avctx->sample_fmt = SAMPLE_FMT_S16;
 
     /** FIXME: is this really the right thing to do for 24 bits? */
-    s->sample_bit_depth = 16; // avctx->bits_per_sample;
+    s->bits_per_sample = 16; // avctx->bits_per_sample;
     if (avctx->extradata_size >= 18) {
         s->decode_flags     = AV_RL16(edata_ptr+14);
         channel_mask    = AV_RL32(edata_ptr+2);
-//        s->sample_bit_depth = AV_RL16(edata_ptr);
+//        s->bits_per_sample = AV_RL16(edata_ptr);
 #ifdef DEBUG
         /** dump the extradata */
         for (i=0 ; i<avctx->extradata_size ; i++)
@@ -1252,7 +1252,7 @@ static int decode_subframe(WMA3DecodeContext *s)
 
     if (transmit_coeffs) {
         int step;
-        int quant_step = 90 * s->sample_bit_depth >> 4;
+        int quant_step = 90 * s->bits_per_sample >> 4;
         if ((get_bits1(&s->gb))) {
             /** FIXME: might change run level mode decision */
             ff_log_ask_for_sample(s->avctx, "unsupported quant step coding\n");
