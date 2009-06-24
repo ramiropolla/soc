@@ -1101,10 +1101,9 @@ static void window(WMA3DecodeContext *s)
     int i;
     for (i=0;i<s->channels_for_cur_subframe;i++) {
         int c = s->channel_indexes_for_cur_subframe[i];
-        float* start;
         float* window;
         int winlen = s->channel[c].prev_block_len;
-        start = s->channel[c].coeffs - (winlen >> 1);
+        float* start = s->channel[c].coeffs - (winlen >> 1);
 
         if (s->subframe_len < winlen) {
             start += (winlen - s->subframe_len)>>1;
