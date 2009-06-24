@@ -156,7 +156,6 @@ typedef struct WMA3DecodeContext {
     MDCTContext      mdct_ctx[WMAPRO_BLOCK_SIZES];  ///< MDCT context per block size
     DECLARE_ALIGNED_16(float, tmp[WMAPRO_BLOCK_MAX_SIZE]); ///< imdct output buffer
     float*           windows[WMAPRO_BLOCK_SIZES];   ///< window per block size
-    int              coef_max[2];                   ///< max length of vlc codes
 
     /* frame size dependent frame information (set during initialization) */
     uint8_t          lossless;                      ///< lossless mode
@@ -350,13 +349,9 @@ static av_cold int decode_init(AVCodecContext *avctx)
                  coef0_huffbits, 1, 1,
                  coef0_huffcodes, 4, 4, 2108);
 
-    s->coef_max[0] = ((HUFF_COEF0_MAXBITS+VLCBITS-1)/VLCBITS);
-
     INIT_VLC_STATIC(&coef_vlc[1], VLCBITS, HUFF_COEF1_SIZE,
                  coef1_huffbits, 1, 1,
                  coef1_huffcodes, 4, 4, 3912);
-
-    s->coef_max[1] = ((HUFF_COEF1_MAXBITS+VLCBITS-1)/VLCBITS);
 
     INIT_VLC_STATIC(&vec4_vlc, VLCBITS, HUFF_VEC4_SIZE,
                  vec4_huffbits, 1, 1,
@@ -825,7 +820,6 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
 {
     int vlctable;
     VLC* vlc;
-    int vlcmax;
     WMA3ChannelCtx* ci = &s->channel[c];
     int rl_mode = 0;
     int cur_coeff = 0;
@@ -839,7 +833,6 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
 
     vlctable = get_bits1(&s->gb);
     vlc = &coef_vlc[vlctable];
-    vlcmax = s->coef_max[vlctable];
 
     if (vlctable) {
         run = coef1_run;
