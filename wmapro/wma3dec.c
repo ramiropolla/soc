@@ -562,7 +562,8 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                         "broken frame: zero frames for subframe_len\n");
                     return -1;
                 }
-            }
+            } else
+                channel_mask = -1;
 
             /** if we have the choice get next subframe length from the
                 bitstream */
@@ -602,8 +603,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                 /** add subframes to the individual channels */
                 if (min_channel_len == chan->channel_len) {
                     --channels_for_cur_subframe;
-                    if (!read_channel_mask ||
-                       channel_mask & (1<<channels_for_cur_subframe)) {
+                    if (channel_mask & (1<<channels_for_cur_subframe)) {
                         if (chan->num_subframes >= MAX_SUBFRAMES) {
                             av_log(s->avctx, AV_LOG_ERROR,
                                     "broken frame: num subframes > 31\n");
