@@ -286,7 +286,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     /** generic init */
-    s->log2_frame_size = av_log2(avctx->block_align*8)+1;
+    s->log2_frame_size = av_log2(avctx->block_align) + 4;
 
     /** frame info */
     s->skip_frame = 1; /** skip first frame */
