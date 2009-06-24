@@ -27,7 +27,7 @@
  * The decoding therefore consist of the following steps:
  * - bitstream decoding
  * - reconstruction of per channel data
- * - rescaling and requantization
+ * - rescaling and inverse quantization
  * - IMDCT
  * - windowing and overlapp-add
  *
