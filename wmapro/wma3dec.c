@@ -822,8 +822,6 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
     int num_zeros = 0;
     const uint16_t* run;
     const uint16_t* level;
-    int zero_init = 0;
-    int rl_switchmask = (s->subframe_len>>8);
 
     dprintf(s->avctx, "decode coefficients for channel %i\n",c);
 
@@ -836,13 +834,6 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
     } else {
         run = coef0_run;
         level = coef0_level;
-    }
-
-    /** for subframe_len 128 the first zero coefficient will switch to
-        the run level mode */
-    if (s->subframe_len == 128) {
-        zero_init = num_zeros = 1;
-        rl_switchmask = 1;
     }
 
     /** decode vector coefficients (consumes up to 167 bits per iteration for
@@ -881,12 +872,11 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
             if (vals[i]) {
                 int sign = get_bits1(&s->gb) - 1;
                 ci->coeffs[cur_coeff] = (vals[i]^sign) - sign;
-                num_zeros = zero_init;
+                num_zeros = 0;
             } else {
                 /** switch to run level mode when subframe_len / 128 zeros
                    were found in a row */
-                rl_mode |= (num_zeros & rl_switchmask);
-                ++num_zeros;
+                rl_mode |= (++num_zeros > s->subframe_len>>8);
             }
             ++cur_coeff;
         }
