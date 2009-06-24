@@ -441,7 +441,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     /** calculate subwoofer cutoff values */
     for (i=0;i< s->num_possible_block_sizes;i++) {
-        int block_size = s->samples_per_frame / (1 << i);
+        int block_size = s->samples_per_frame >> i;
         int cutoff = ceil(block_size * 440.0
                           / (double)s->avctx->sample_rate + 0.5);
         s->subwoofer_cutoffs[i] = av_clip(cutoff,4,block_size);
