@@ -45,6 +45,7 @@ typedef enum {
     STATE_START,
     STATE_HANDSHAKED,
     STATE_CONNECTING,
+    STATE_READY,
     STATE_PLAYING,
 } ClientState;
 
@@ -382,7 +383,7 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
                 else
                     rt->main_stream_id = (int) av_int2dbl(AV_RB64(pkt->data + 21));
                 gen_play(s, rt);
-                rt->state = STATE_PLAYING;
+                rt->state = STATE_READY;
                 break;
             }
         }
@@ -403,13 +404,18 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
                     av_log(NULL/*s*/, AV_LOG_ERROR, "Server error: %s\n",tmpstr);
                 return -1;
             }
+            t = rtmp_amf_find_field(ptr, "code", tmpstr, sizeof(tmpstr));
+            if (!t && !strcmp(tmpstr, "NetStream.Play.Start")) {
+                rt->state = STATE_PLAYING;
+                return 0;
+            }
         }
         break;
     }
     return 0;
 }
 
-static int get_packet(URLContext *s)
+static int get_packet(URLContext *s, int for_header)
 {
     RTMPContext *rt = s->priv_data;
     struct timespec ts;
@@ -435,6 +441,10 @@ static int get_packet(URLContext *s)
         if (ret < 0) {//serious error in packet
             rtmp_packet_destroy(&rpkt);
             return -1;
+        }
+        if (for_header && rt->state == STATE_PLAYING) {
+            rtmp_packet_destroy(&rpkt);
+            return 0;
         }
         if (!rpkt.data_size) {
             rtmp_packet_destroy(&rpkt);
@@ -549,7 +559,9 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
         //       proto, path, app, rt->playpath);
         gen_connect(s, rt, proto, hostname, port, app);
 
-        rt->flv_data = av_malloc(13);
+        if (get_packet(s, 1) < 0)
+            goto fail;
+        rt->flv_data = av_realloc(rt->flv_data, 13);
         rt->flv_size = 13;
         rt->flv_off  = 0;
         memcpy(rt->flv_data, "FLV\1\5\0\0\0\011\0\0\0\0", 13);
@@ -586,7 +598,7 @@ static int rtmp_read(URLContext *s, uint8_t *buf, int size)
             size -= data_left;
             rt->flv_off = rt->flv_size;
         }
-        if ((ret = get_packet(s)) < 0)
+        if ((ret = get_packet(s, 0)) < 0)
            return ret;
     }
     return orig_size;
