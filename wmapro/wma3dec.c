@@ -503,12 +503,9 @@ static int decode_tilehdr(WMA3DecodeContext *s)
             s->channel[c].subframe_len[0] = s->samples_per_frame;
         }
     } else { /** subframe length and number of subframes is not constant */
-        /** bits needed for the subframe length */
-        int subframe_len_bits = 0;
-        /** first bit indicates if length is zero */
-        int subframe_len_zero_bit = 0;
-        /** all channels have the same subframe layout */
-        int fixed_channel_layout;
+        int subframe_len_bits = 0;     /** bits needed for the subframe length */
+        int subframe_len_zero_bit = 0; /** first bit indicates if length is zero */
+        int fixed_channel_layout;      /** all channels have the same subframe layout */
 
         fixed_channel_layout = get_bits1(&s->gb);
 
