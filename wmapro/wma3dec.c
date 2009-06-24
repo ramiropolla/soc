@@ -521,7 +521,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
         /** loop until the frame data is split between the subframes */
         while (missing_samples > 0) {
             unsigned int channel_mask = 0;
-            int min_channel_len = s->samples_per_frame;
+            int min_channel_len;
             int read_channel_mask = 1;
             int channels_for_cur_subframe = 0;
             int subframe_len;
@@ -534,6 +534,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                 min_samples *= channels_for_cur_subframe;
                 min_channel_len = s->channel[0].channel_len;
             } else {
+                min_channel_len = s->samples_per_frame;
                 /** find channels with the smallest overall length */
                 for (c=0;c<s->num_channels;c++) {
                     if (s->channel[c].channel_len <= min_channel_len) {
