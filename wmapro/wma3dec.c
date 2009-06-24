@@ -311,7 +311,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     s->max_num_subframes = 1 << log2_num_subframes;
     s->num_possible_block_sizes = log2_num_subframes + 1;
     s->min_samples_per_subframe = s->samples_per_frame / s->max_num_subframes;
-    s->dynamic_range_compression = (s->decode_flags & 0x80) >> 7;
+    s->dynamic_range_compression = (s->decode_flags & 0x80);
 
     if (s->max_num_subframes > MAX_SUBFRAMES) {
         av_log(avctx, AV_LOG_ERROR, "invalid number of subframes %i\n",
