@@ -119,6 +119,11 @@ int rtmp_packet_write(URLContext *h, RTMPPacket *p,
 
 int rtmp_amf_tag_size(int type, const void *data);
 
+int rtmp_amf_skip_data(const uint8_t *data);
+
+int rtmp_amf_find_field(const uint8_t *data, const uint8_t *name,
+                        uint8_t *dst, int dst_size);
+
 void rtmp_amf_write_tag(uint8_t **dst, AMFType type, const void *data);
 
 void rtmp_packet_inspect(RTMPPacket *pkt);

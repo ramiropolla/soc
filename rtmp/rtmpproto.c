@@ -386,8 +386,23 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
                 break;
             }
         }
-        if (!memcmp(pkt->data, "\002\000\008onStatus", 11)) {
-            //TODO: catch stream close event
+        if (!memcmp(pkt->data, "\002\000\010onStatus", 11)) {
+            const uint8_t* ptr = pkt->data + 11;
+            uint8_t tmpstr[256];
+            int t;
+
+            for (i = 0; i < 2; i++) {
+                t = rtmp_amf_skip_data(ptr);
+                if (t < 0)
+                    return 1;
+                ptr += t;
+            }
+            t = rtmp_amf_find_field(ptr, "level", tmpstr, sizeof(tmpstr));
+            if (!t && !strcmp(tmpstr, "error")) {
+                if (!rtmp_amf_find_field(ptr, "description", tmpstr, sizeof(tmpstr)))
+                    av_log(NULL/*s*/, AV_LOG_ERROR, "Server error: %s\n",tmpstr);
+                return -1;
+            }
         }
         break;
     }

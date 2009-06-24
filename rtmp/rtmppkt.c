@@ -193,6 +193,70 @@ void rtmp_packet_destroy(RTMPPacket *pkt)
     pkt->data_size = 0;
 }
 
+int rtmp_amf_skip_data(const uint8_t *data)
+{
+    const uint8_t *base = data;
+
+    switch (*data++) {
+    case AMF_NUMBER:      return 9;
+    case AMF_BOOLEAN:     return 2;
+    case AMF_STRING:      return 3 + AV_RB16(data);
+    case AMF_LONG_STRING: return 5 + AV_RB32(data);
+    case AMF_NULL:        return 1;
+    case AMF_ECMA_ARRAY:
+        data += 4;
+    case AMF_OBJECT:
+        for (;;) {
+            int size = bytestream_get_be16(&data);
+            if (!size) {
+                data++;
+                break;
+            }
+            data += size;
+            data += rtmp_amf_skip_data(data);
+        }
+        return data - base;
+    case AMF_OBJECT_END:  return 1;
+    default:              return -1;
+    }
+}
+
+int rtmp_amf_find_field(const uint8_t *data, const uint8_t *name,
+                        uint8_t *dst, int dst_size)
+{
+    int namelen = strlen(name);
+    int len;
+
+    if (*data++ != AMF_OBJECT)
+        return -1;
+    for (;;) {
+        int size = bytestream_get_be16(&data);
+        if (!size)
+            break;
+        data += size;
+        if (size == namelen && !memcmp(data-size, name, namelen)) {
+            switch (*data++) {
+            case AMF_NUMBER:
+                snprintf(dst, dst_size, "%g", av_int2dbl(AV_RB64(data)));
+                return 0;
+            case AMF_BOOLEAN:
+                snprintf(dst, dst_size, "%s", *data ? "true" : "false");
+                return 0;
+            case AMF_STRING:
+                len = bytestream_get_be16(&data);
+                av_strlcpy(dst, data, FFMIN(len+1, dst_size));
+                return 0;
+            default:
+                return -1;
+            }
+        }
+        len = rtmp_amf_skip_data(data);
+        if (len < 0)
+            return -1;
+        data += len;
+    }
+    return -1;
+}
 
 static void parse_amf(const uint8_t *data, int size)
 {
