@@ -501,7 +501,6 @@ static int decode_tilehdr(WMA3DecodeContext *s)
         for (c=0;c<s->num_channels;c++) {
             s->channel[c].num_subframes = 1;
             s->channel[c].subframe_len[0] = s->samples_per_frame;
-            s->channel[c].channel_len = 0;
         }
     } else { /** subframe length and number of subframes is not constant */
         /** bits needed for the subframe length */
