@@ -647,6 +647,16 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
         av_log(s, AV_LOG_ERROR, "Not active stream!\n");
         return -1;
     }
+    pos_min = s->data_offset;
+    ts_min = mpegps_read_dts(s, stream_index, &pos_min, INT64_MAX);
+    if (ts_min == AV_NOPTS_VALUE)
+        return -1;
+    if (ts < ts_min) {
+        pos = pos_min;
+        pts = ts_min;
+        url_fseek(s->pb, pos, SEEK_SET);
+        goto success;
+    }
 
     if (st->index_entries) {
         AVIndexEntry *e;
@@ -659,39 +669,35 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
         pos = e->pos;
         pts = e->timestamp;
         av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64", pts  = %"PRId64", targe timestamp = %"PRId64"\n", pos, pts, ts);
-        if (flags & AVSEEK_FLAG_ANY) {
+        if (ts == pts) {
+            url_fseek(s->pb, pos, SEEK_SET);
+            goto success;
+        }
 
+        if (flags & AVSEEK_FLAG_ANY) {
             while(pts > ts) { // find the index timestamp smaller than target timestamp
                 index--;
                 pts = st->index_entries[index].timestamp;
                 pos = st->index_entries[index].pos;
             }
+        }
 
-            if (find_keyframe(s, stream_index, &pos, &pts, ts, flags) == 0) {
-                goto success;
-            } else {
-                return -1;
-            }
-        } else {
-            url_fseek(s->pb, pos, SEEK_SET);
+        if (find_keyframe(s, stream_index, &pos, &pts, ts, flags) == 0) {
             goto success;
+        } else {
+            return -1;
         }
     }
+
     // search the scr use binary search
-    ts_max =
-    ts_min = AV_NOPTS_VALUE;
+    ts_max = AV_NOPTS_VALUE;
     pos_limit = -1;
-    if (flags & AVSEEK_FLAG_ANY) // add flag AVSEEK_FLAG_BACKWARD in order to get the smaller timestamp frame, then we can use av_read_frame() get next frame
-        ret_pos = av_gen_search(s, stream_index, ts, pos_min, pos_max, pos_limit, ts_min, ts_max, flags | AVSEEK_FLAG_BACKWARD, &ret_ts, mpegps_read_dts);
-    else
-        ret_pos = av_gen_search(s, stream_index, ts, pos_min, pos_max, pos_limit, ts_min, ts_max, flags, &ret_ts, mpegps_read_dts);
-    av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64", ret_ts  = %"PRId64"\n", pos, ret_ts);
+    ret_pos = av_gen_search(s, stream_index, ts, pos_min, pos_max, pos_limit, ts_min, ts_max, flags, &ret_ts, mpegps_read_dts);
+    av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64", ret_ts  = %"PRId64"\n", ret_pos, ret_ts);
     if (ret_pos<0)
         return -1;
-    if (ret_ts < pts) { // in order to find the keyframe closer to target timestamp
-        pos = ret_pos;
-        pts = ret_ts;
-    }
+    pts = ret_ts;
+    pos = ret_pos;
 
     if (find_keyframe(s, stream_index, &pos, &pts, ts, flags) == 0) {
         goto success;
