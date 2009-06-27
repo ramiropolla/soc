@@ -188,6 +188,8 @@ int av_parser_parse2(AVCodecParserContext *s,
     if (index < 0)
         index = 0;
     s->cur_offset += index;
+    if (s->pos == -1)
+        s->pos = s->last_pos + index;
     return index;
 }
 
