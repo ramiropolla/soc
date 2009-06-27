@@ -937,8 +937,6 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
                     pkt->stream_index = st->index;
                     pkt->pts = st->parser->pts;
                     pkt->dts = st->parser->dts;
-                    if (st->parser->pos == -1)
-                        st->parser->pos = st->parser->last_pos + len;
                     pkt->pos = st->parser->pos;
                     pkt->destruct = NULL;
                     compute_pkt_fields(s, st, st->parser, pkt);
