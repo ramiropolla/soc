@@ -706,7 +706,12 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
     }
 success:
     av_update_cur_dts(s, st, pts);
-    return 0;
+    if (pts <= max_ts && pts >= min_ts)
+        return 0;
+    else {
+        av_log(s, AV_LOG_ERROR,"The target pts = %"PRId64" is out of range. min_ts = %"PRId64", max_ts = %"PRId64"\n", pts, min_ts, max_ts);
+        return -1;
+    }
 }
 
 AVInputFormat mpegps_demuxer = {
