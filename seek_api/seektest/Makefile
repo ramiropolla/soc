@@ -304,4 +304,6 @@ tests/%$(HOSTEXESUF): tests/%.c
 tests/seek_test$(EXESUF): tests/seek_test.c $(FF_DEP_LIBS)
 	$(CC) $(FF_LDFLAGS) $(CFLAGS) -o $@ $< $(FF_EXTRALIBS)
 
+tests/seek_test2$(EXESUF): tests/seek_test2.c $(FF_DEP_LIBS)
+    $(CC) $(FF_LDFLAGS) $(CFLAGS) -o $@ $< $(FF_EXTRALIBS)
 .PHONY: documentation *test regtest-* zlib-error alltools check
