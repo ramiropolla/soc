@@ -1,0 +1,8 @@
+This directory is used for test new seek api.
+I'll modify seek_test2.c to update the test case.
+
+instructions:
+1) check a ffmpeg tree.
+2) cp seek_test2.c ffmpeg/tests/seek_test2.c
+3) cp Makefile ffmpeg/Makefile
+4) cd ffmpeg/tests/ and run ./seek_test2
