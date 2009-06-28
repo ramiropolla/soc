@@ -5,4 +5,6 @@ instructions:
 1) check a ffmpeg tree.
 2) cp seek_test2.c ffmpeg/tests/seek_test2.c
 3) cp Makefile ffmpeg/Makefile
-4) cd ffmpeg/tests/ and run ./seek_test2
+4) cp test*.sh ffmpeg/tests/
+5) make, and make tests/seek_test2
+6) run test*.sh
