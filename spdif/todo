@@ -1,0 +1,21 @@
+-add support/test on big-endian machine ?
+
+-test AC3 - tested with TomorrowNeverDies-2.1-48khz-192kbit.ac3, Canyon-5.1-48khz-448kbit.ac3,
+               Broadway-5.1-48khz-448kbit.ac3 and FFmpeg AC3 encoder
+-test DTS - tested with (only RAW_BE version) 5.1 24bit.dts, ES 6.1 - 5.1 16bit.dts and FFmpeg DCA encoder
+
+-add support for little-endian DTS
+-add support for 14-bit DTS
+
+-add support for mpeg
+-add support for wma
+-add support for aac
+-add support for eac3
+
+-sending data stream direct to spdif
+
+-control latency
+-frequency sampling
+
+usage:
+./ffmpeg -y -i test_48khz.dts -acodec copy -f spdif test.spdif && ./ffmpeg -ar 48000 -f s16le -ac 2 -i test.spdif -f alsa plughw:0
