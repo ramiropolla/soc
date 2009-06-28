@@ -70,8 +70,11 @@ typedef struct {
 typedef struct {
     AVCodecContext    *avctx;
     ALSSpecificConfig sconf;
+    GetBitContext     gb;                ///< A bit reader context.
     unsigned int      num_frames;        ///< Number of frames to decode. 0 if unknown.
     unsigned int      last_frame_length; ///< Length of the last frame to decode. 0 if unknown.
+    unsigned int      frame_id;          ///< The frame id / number of the current frame.
+    unsigned int      js_switch;         ///< If true, joint-stereo decoding is enforced.
 } ALSDecContext;
 
 
@@ -259,12 +262,140 @@ static av_cold int read_specific_config(ALSDecContext *ctx,
 }
 
 
+/** Parses the bs_info item to extract the block partitioning.
+ */
+static void parse_bs_info(uint32_t bs_info, unsigned int n, unsigned int div,
+                          unsigned int **div_blocks, unsigned int *num_blocks)
+{
+    if (n < 32 && ((bs_info >> (30 - n)) & 1)) {
+        // if the level is valid and the investigated bit n is set
+        // then recursively check both children at bits (2n+1) and (2n+2)
+        n   *= 2;
+        div += 1;
+        parse_bs_info(bs_info, n + 1, div, div_blocks, num_blocks);
+        parse_bs_info(bs_info, n + 2, div, div_blocks, num_blocks);
+    } else {
+        // else the bit is not set or the last level has been reached
+        // (bit implicitly not set)
+        **div_blocks = div;
+        (*div_blocks)++;
+        (*num_blocks)++;
+    }
+}
+
+
+/** Reads the frame data.
+ */
+static int read_frame_data(ALSDecContext *ctx)
+{
+    ALSSpecificConfig *sconf = &ctx->sconf;
+    GetBitContext *gb = &ctx->gb;
+    int c, b;
+    uint32_t bs_info = 0;
+    unsigned int num_blocks;
+    unsigned int div_blocks[32];
+    unsigned int *ptr_div_blocks = &div_blocks[0];
+
+    // skip ra_unit_size if present
+    if (sconf->ra_flag == 1 && !(ctx->frame_id % sconf->random_access))
+        skip_bits_long(gb, 32);
+
+    if (sconf->mc_coding && sconf->joint_stereo) {
+        ctx->js_switch = get_bits1(gb);
+        align_get_bits(gb);
+    }
+
+    if (!sconf->mc_coding || ctx->js_switch) {
+        int independent_bs = !sconf->joint_stereo;
+
+        for (c = 0; c < sconf->channels; c++) {
+            if (sconf->block_switching) {
+                unsigned int bs_info_len = 1 << (sconf->block_switching + 2);
+                bs_info = get_bits_long(gb, bs_info_len);
+                bs_info <<= (32 - bs_info_len);
+            }
+
+            num_blocks = 0;
+            parse_bs_info(bs_info, 0, 0, &ptr_div_blocks, &num_blocks);
+#ifdef DEBUG
+            dprintf(ctx->avctx, "bs_info = %x, block sizes:", bs_info);
+            for (b = 0; b < num_blocks; b++)
+                dprintf(ctx->avctx, " %i", div_blocks[b]);
+            dprintf(ctx->avctx, "\n");
+#endif
+            // if this is the last channel, it has to be decoded independently
+            if (c == sconf->channels - 1)
+                independent_bs = 1;
+
+            // if joint_stereo and block_switching is set, independent decoding
+            // is signaled via the first bit of bs_info
+            if(sconf->joint_stereo && sconf->block_switching)
+                independent_bs = bs_info >> 31;
+
+            if (independent_bs) {
+                for (b = 0; b < num_blocks; b++) {
+                    dprintf(ctx->avctx, "reading block A\n");
+                    read_block_data(ctx);
+                }
+            } else {
+                for (b = 0; b < num_blocks; b++) {
+                    dprintf(ctx->avctx, "reading block B\n");
+                    read_block_data(ctx);
+                    dprintf(ctx->avctx, "reading block C\n");
+                    read_block_data(ctx);
+                }
+                c++;
+            }
+        }
+    } else {
+        if (sconf->block_switching) {
+            unsigned int bs_info_len = 1 << (sconf->block_switching + 2);
+            bs_info = get_bits_long(gb, bs_info_len);
+            bs_info <<= (32 - bs_info_len);
+        }
+
+        num_blocks = 0;
+        parse_bs_info(bs_info, 0, 0, &ptr_div_blocks, &num_blocks);
+#ifdef DEBUG
+            dprintf(ctx->avctx, "bs_info = %x, block sizes:", bs_info);
+            for (b = 0; b < num_blocks; b++)
+                dprintf(ctx->avctx, " %i", div_blocks[b]);
+            dprintf(ctx->avctx, "\n");
+#endif
+
+        for (b = 0; b < num_blocks; b++) {
+            dprintf(ctx->avctx, "reading block D\n");
+            read_block_data(ctx);
+            // TODO: read_channel_data
+        }
+    }
+
+    if (sconf->floating) {
+        unsigned int num_bytes_diff_float = get_bits_long(gb, 32);
+        // TODO: read_diff_float_data
+    }
+
+    return 0;
+}
+
+
 /** Decodes an ALS frame.
  */
 static int decode_frame(AVCodecContext *avctx,
                         void *data, int *data_size,
                         AVPacket *avpkt)
 {
+    ALSDecContext *ctx       = avctx->priv_data;
+    const uint8_t *buffer    = avpkt->data;
+    int buffer_size          = avpkt->size;
+
+    init_get_bits(&ctx->gb, buffer, buffer_size * 8);
+
+    if(read_frame_data(ctx)) {
+        av_log(ctx->avctx, AV_LOG_ERROR, "Reading frame data failed.\n");
+        return -1;
+    }
+
     return 0;
 }
 
