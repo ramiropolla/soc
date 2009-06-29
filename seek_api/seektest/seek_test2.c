@@ -34,6 +34,7 @@
 int main(int argc, char **argv)
 {
     const char *filename;
+    const int ts_delta = 3000; // FIXME for more test case
     AVFormatContext *ic;
     int i, ret, stream_id;
     int64_t timestamp;
@@ -96,8 +97,8 @@ int main(int argc, char **argv)
             timestamp= av_rescale_q(timestamp, AV_TIME_BASE_Q, st->time_base);
         }
         //FIXME fully test the new seek API
-        if(i&1) ret = avformat_seek_file(ic, stream_id, INT64_MIN, timestamp, INT64_MAX, 0);
-        else    ret = avformat_seek_file(ic, stream_id, INT64_MIN, timestamp, INT64_MAX, 0);
+        if(i&1) ret = avformat_seek_file(ic, stream_id, timestamp - ts_delta, timestamp, timestamp + ts_delta, 1);
+        else    ret = avformat_seek_file(ic, stream_id, timestamp - ts_delta, timestamp, timestamp + ts_delta, 0);
         printf("ret:%2d st:%2d ts:%.2f flags:%d\n", ret, stream_id, timestamp*(stream_id<0 ? 0.09:1/*1.0/AV_TIME_BASE : av_q2d(st->time_base*90000)*/), i&1);
     }
 
