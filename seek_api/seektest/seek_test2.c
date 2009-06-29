@@ -99,7 +99,7 @@ int main(int argc, char **argv)
         //FIXME fully test the new seek API
         if(i&1) ret = avformat_seek_file(ic, stream_id, timestamp - ts_delta, timestamp, timestamp + ts_delta, 1);
         else    ret = avformat_seek_file(ic, stream_id, timestamp - ts_delta, timestamp, timestamp + ts_delta, 0);
-        printf("ret:%2d st:%2d ts:%.2f flags:%d\n", ret, stream_id, timestamp*(stream_id<0 ? 0.09:1/*1.0/AV_TIME_BASE : av_q2d(st->time_base*90000)*/), i&1);
+        printf("ret:%2d st:%2d ts:%"PRId64" flags:%d\n", ret, stream_id, stream_id < 0 ? av_rescale(timestamp, st->time_base.den, AV_TIME_BASE * (int64_t)st->time_base.num) : timestamp, i&1);
     }
 
     return 0;
