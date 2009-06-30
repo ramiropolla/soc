@@ -190,7 +190,7 @@ int av_parser_parse2(AVCodecParserContext *s,
         index = 0;
     s->cur_offset += index;
     if (s->pos == -1)
-        s->pos = s->last_pos + index;
+        s->pos = s->cur_frame_pos[s->cur_frame_start_index];
     return index;
 }
 
