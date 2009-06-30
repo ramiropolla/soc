@@ -87,18 +87,13 @@ static int m3u_read_header(AVFormatContext *s,
                            AVFormatParameters *ap)
 {
     printf("m3u read header called\n");
-    PlaylistD *playld = av_malloc(sizeof(PlaylistD));
-    ff_split_wd_fn(s->filename,
-                &playld->workingdir,
-                &playld->filename);
+    PlaylistD *playld = ff_make_playlistd(s->filename);
     m3u_list_files(s->pb,
                    &(playld->flist),
                    &(playld->pelist_size),
                    playld->workingdir);
-//    playld = av_make_playlistd(flist, flist_len);
     playld->pelist = av_malloc(playld->pelist_size * sizeof(PlayElem*));
     memset(playld->pelist, 0, playld->pelist_size * sizeof(PlayElem*));
-    playld->pe_curidx = 0;
     s->priv_data = playld;
     ff_playlist_populate_context(playld, s);
     return 0;
@@ -107,20 +102,36 @@ static int m3u_read_header(AVFormatContext *s,
 static int m3u_read_packet(AVFormatContext *s,
                            AVPacket *pkt)
 {
-    int i;
     int ret;
-    int time_offset = 0;
     PlaylistD *playld;
     AVFormatContext *ic;
     playld = s->priv_data;
     retr:
     ic = playld->pelist[playld->pe_curidx]->ic;
     ret = ic->iformat->read_packet(ic, pkt);
-//    if (pkt) {
-//        pkt->stream_index += get_stream_offset(s);
-//    }
-    if (ret < 0 && playld->pe_curidx < playld->pelist_size - 1)
-    {
+    if (ret >= 0) {
+            // TODO storing previous packet pts/dts is ugly hack
+            // ic->stream[]->cur_dts correct
+            // ic->strea[]->duration correct
+            // pkt->pts incorrect (huge negative)
+            // pkt->dts correct, depended on by ffmpeg (need to change)
+            // ic->stream[]->pts incorrect (0)
+            // ic->start_time always 0
+            // changing ic->start_time has no effect
+            // ic->duration correct, divide by AV_TIME_BASE to get seconds
+        if (pkt) {
+            playld->dts_prevpacket = pkt->dts;
+            pkt->dts += playld->dts_offset;
+        }
+    }
+    // TODO switch from AVERROR_EOF to AVERROR_EOS
+    else if (ret == AVERROR_EOF && playld->pe_curidx < playld->pelist_size - 1) {
+        // TODO account for out-of-sync audio/video by using per-stream offsets
+        // using streams[]->duration slightly overestimates offset
+//        playld->dts_offset += ic->streams[0]->duration;
+        // using streams[]->cur_dts slightly overestimates offset
+//        playld->dts_offset += ic->streams[0]->cur_dts;
+        playld->dts_offset += playld->dts_prevpacket;
         ++playld->pe_curidx;
 //        pkt->destruct(pkt);
         pkt = av_malloc(sizeof(AVPacket));

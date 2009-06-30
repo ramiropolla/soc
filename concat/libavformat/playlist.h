@@ -41,11 +41,15 @@ typedef struct PlaylistD {
     int ch_curidx;
     char *workingdir;
     char *filename;
+//    int64_t pts_offset;
+    int64_t dts_offset;
+//    int64_t pts_prevpacket;
+    int64_t dts_prevpacket;
 } PlaylistD;
 
-PlayElem* ff_make_playelem(unsigned char *filename);
+PlayElem* ff_make_playelem(char *filename);
 
-PlaylistD* ff_make_playlistd(unsigned char **flist, int flist_len);
+PlaylistD* ff_make_playlistd(char *filename);
 
 int ff_playlist_populate_context(PlaylistD *playld, AVFormatContext *s);
 

@@ -45,7 +45,7 @@ int ff_alloc_playelem(unsigned char *filename,
     return 0;
 }
 
-PlayElem* ff_make_playelem(unsigned char *filename)
+PlayElem* ff_make_playelem(char *filename)
 {
     int err;
     PlayElem *pe = av_malloc(sizeof(PlayElem));
@@ -77,15 +77,17 @@ PlayElem* ff_make_playelem(unsigned char *filename)
     return pe;
 }
 
-PlaylistD* ff_make_playlistd(unsigned char **flist,
-                             int flist_len)
+PlaylistD* ff_make_playlistd(char *filename)
 {
-    int i;
     PlaylistD *playld = av_malloc(sizeof(PlaylistD));
+//    playld->pts_offset = 0;
+    playld->dts_offset = 0;
+//    playld->pts_prevpacket = 0;
+    playld->dts_prevpacket = 0;
     playld->pe_curidx = 0;
-    playld->pelist_size = flist_len;
-    playld->pelist = av_malloc(playld->pelist_size * sizeof(PlayElem*));
-    memset(playld->pelist, 0, playld->pelist_size * sizeof(PlayElem*));
+    ff_split_wd_fn(filename,
+                   &playld->workingdir,
+                   &playld->filename);
     return playld;
 }
 
@@ -170,7 +172,6 @@ int ff_playlist_populate_context(PlaylistD *playld,
                                  AVFormatContext *s)
 {
     int i;
-//    unsigned int stream_offset;
     AVFormatContext *ic;
     AVFormatParameters *nap;
     printf("playlist_populate_context called\n");
@@ -178,12 +179,9 @@ int ff_playlist_populate_context(PlaylistD *playld,
     ic = playld->pelist[playld->pe_curidx]->ic;
     nap = playld->pelist[playld->pe_curidx]->ap;
     ic->iformat->read_header(ic, 0);
-//    stream_offset = get_stream_offset(s);
     s->nb_streams = ic->nb_streams;
-//    s->nb_streams = ic->nb_streams + stream_offset;
     for (i = 0; i < ic->nb_streams; ++i) {
         s->streams[i] = ic->streams[i];
-//        s->streams[i+stream_offset] = ic->streams[i];
     }
     // TODO remove this ugly hack
     s->av_class = ic->av_class;
