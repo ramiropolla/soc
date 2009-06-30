@@ -592,7 +592,7 @@ static int64_t mpegps_read_dts(AVFormatContext *s, int stream_index,
 static int find_keyframe(AVFormatContext *s, int stream_index, int64_t *ret_pos, int64_t *pts, int64_t target_ts, int flags)
 {
     AVPacket pkt1, *pkt = &pkt1;
-    int64_t pre_pts = *pts, pre_pos = *ret_pos;
+    int64_t prev_pts = *pts, prev_pos = *ret_pos;
 
     url_fseek(s->pb, *ret_pos, SEEK_SET);
     for (;;) {
@@ -609,15 +609,15 @@ static int find_keyframe(AVFormatContext *s, int stream_index, int64_t *ret_pos,
         *ret_pos = pkt->pos;
 
         if (*pts < target_ts) {
-            pre_pts = *pts;
-            pre_pos = *ret_pos;
+            prev_pts = *pts;
+            prev_pos = *ret_pos;
         } else
             break;
     }
 
-    if (flags & AVSEEK_FLAG_BACKWARD && ((pre_pts + *pts) >> 2 > target_ts)) {
-        *ret_pos = pre_pts;
-        *pts = pre_pos;
+    if (flags & AVSEEK_FLAG_BACKWARD && ((prev_pts + *pts) >> 2 > target_ts)) {
+        *ret_pos = prev_pts;
+        *pts = prev_pos;
     }
     return 0;
 }
