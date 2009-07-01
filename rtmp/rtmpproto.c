@@ -41,28 +41,32 @@
 #include "rtmp.h"
 #include "rtmppkt.h"
 
+/** RTMP protocol handler state */
 typedef enum {
-    STATE_START,
-    STATE_HANDSHAKED,
-    STATE_CONNECTING,
-    STATE_READY,
-    STATE_PLAYING,
+    STATE_START,      ///< client has not done anything
+    STATE_HANDSHAKED, ///< client has performed handshake
+    STATE_CONNECTING, ///< client connected to server successfully
+    STATE_READY,      ///< client has sent all needed commands and waits for server reply
+    STATE_PLAYING,    ///< client has started receiving multimedia data from server
 } ClientState;
 
+/** protocol handler context */
 typedef struct RTMPContext {
-    URLContext*   rtmp_hd;
-    RTMPPacket    prev_pkt[2][RTMP_CHANNELS];
-    int           chunk_size;
-    char          playpath[256];
-    ClientState   state;
-    int           main_channel_id;
-    uint8_t*      flv_data;
-    int           flv_size;
-    int           flv_off;
-    uint32_t      video_ts, audio_ts;
+    URLContext*   rtmp_hd;                    ///< context for TCP stream
+    RTMPPacket    prev_pkt[2][RTMP_CHANNELS]; ///< packet history used when reading and sending packets
+    int           chunk_size;                 ///< chunk size
+    char          playpath[256];              ///< RTMP playpath
+    ClientState   state;                      ///< current state
+    int           main_channel_id;            ///< an additional channel id which is used for some invokes
+    uint8_t*      flv_data;                   ///< buffer with data for demuxer
+    int           flv_size;                   ///< current buffer size
+    int           flv_off;                    ///< number of bytes read from current buffer
+    uint32_t      video_ts;                   ///< current video timestamp
+    uint32_t      audio_ts;                   ///< current audio timestamp
 } RTMPContext;
 
-#define PLAYER_KEY_OPEN_PART_LEN 30
+#define PLAYER_KEY_OPEN_PART_LEN 30   ///< length of partial key used for first client digest signing
+/** Client key used for digest signing */
 static const uint8_t rtmp_player_key[] =
 {
     0x47, 0x65, 0x6E, 0x75, 0x69, 0x6E, 0x65, 0x20, 0x41, 0x64, 0x6F, 0x62, 0x65,
@@ -72,7 +76,8 @@ static const uint8_t rtmp_player_key[] =
     0x6F, 0xAB, 0x93, 0xB8, 0xE6, 0x36, 0xCF, 0xEB, 0x31, 0xAE
 };
 
-#define SERVER_KEY_OPEN_PART_LEN 36
+#define SERVER_KEY_OPEN_PART_LEN 36   ///< length of partial key used for first server digest signing
+/** Key used for RTMP server digest signing */
 static const uint8_t rtmp_server_key[] =
 {
     0x47, 0x65, 0x6E, 0x75, 0x69, 0x6E, 0x65, 0x20, 0x41, 0x64, 0x6F, 0x62, 0x65,
@@ -461,6 +466,7 @@ static int get_packet(URLContext *s, int for_header)
                 rt->audio_ts += rpkt.timestamp;
                 ts = rt->audio_ts;
             }
+            // generate packet header and put data into buffer for FLV demuxer
             rt->flv_off  = 0;
             rt->flv_size = rpkt.data_size + 15;
             rt->flv_data = p = av_realloc(rt->flv_data, rt->flv_size);
@@ -473,6 +479,7 @@ static int get_packet(URLContext *s, int for_header)
             bytestream_put_be32(&p, 0);
             has_data = 1;
         } else if (rpkt.type == RTMP_PT_METADATA) {
+            // we got raw FLV data, make it available for FLV demuxer
             rt->flv_off  = 0;
             rt->flv_size = rpkt.data_size;
             rt->flv_data = av_realloc(rt->flv_data, rt->flv_size);
@@ -560,6 +567,7 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
 
         if (get_packet(s, 1) < 0)
             goto fail;
+        // generate FLV header for demuxer
         rt->flv_data = av_realloc(rt->flv_data, 13);
         rt->flv_size = 13;
         rt->flv_off  = 0;
