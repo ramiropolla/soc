@@ -83,7 +83,7 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
                 return -1;
             }
             if (hdr == RTMP_PS_TWELVEBYTES) {
-                if (url_read(h, buf, 4) != 4) {
+                if (url_read_complete(h, buf, 4) != 4) {
                     return -1;
                 }
                 extra = AV_RL32(buf);
