@@ -98,7 +98,7 @@ typedef enum AMFType {
  * structure for holding RTMP packets
  */
 typedef struct RTMPPacket {
-    uint8_t        stream_id; ///< stream ID
+    uint8_t        channel_id;///< RTMP channel ID
     RTMPPacketType type;      ///< packet type
     int            timestamp; ///< packet timestamp
     int            extra;     ///< additional data
@@ -106,7 +106,7 @@ typedef struct RTMPPacket {
     int            data_size; ///< packet payload size
 } RTMPPacket;
 
-int rtmp_packet_create(RTMPPacket *pkt, int stream_id, RTMPPacketType type,
+int rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
                        int timestamp, int size);
 
 void rtmp_packet_destroy(RTMPPacket *pkt);

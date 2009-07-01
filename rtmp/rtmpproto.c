@@ -55,7 +55,7 @@ typedef struct RTMPContext {
     int           chunk_size;
     char          playpath[256];
     ClientState   state;
-    int           main_stream_id;
+    int           main_channel_id;
     uint8_t*      flv_data;
     int           flv_size;
     int           flv_off;
@@ -160,7 +160,7 @@ static void gen_play(URLContext *s, RTMPContext *rt)
     //av_log(s, AV_LOG_DEBUG, "Sending play command for '%s'\n", rt->playpath);
     rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0,
                        29 + strlen(rt->playpath));
-    pkt.extra = rt->main_stream_id;
+    pkt.extra = rt->main_channel_id;
 
     num = 0.0;
     p = pkt.data;
@@ -381,7 +381,7 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
                 if (pkt->data[10] || pkt->data[19] != 5 || pkt->data[20])
                     av_log(NULL, AV_LOG_WARNING, "Unexpected reply on connect()\n");
                 else
-                    rt->main_stream_id = (int) av_int2dbl(AV_RB64(pkt->data + 21));
+                    rt->main_channel_id = (int) av_int2dbl(AV_RB64(pkt->data + 21));
                 gen_play(s, rt);
                 rt->state = STATE_READY;
                 break;

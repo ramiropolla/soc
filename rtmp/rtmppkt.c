@@ -72,13 +72,13 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
                      int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t hdr, t, buf[16];
-    int stream_id, timestamp, data_size, offset = 0, extra = 0;
+    int channel_id, timestamp, data_size, offset = 0, extra = 0;
     uint8_t type;
 
     if (url_read(h, &hdr, 1) != 1) {
         return -1;
     }
-    stream_id = hdr & 0x3F;
+    channel_id = hdr & 0x3F;
 
     hdr >>= 6;
     if (hdr == RTMP_PS_ONEBYTE) {
@@ -103,22 +103,22 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
                 }
                 extra = AV_RL32(buf);
             } else {
-                extra = prev_pkt[stream_id].extra;
+                extra = prev_pkt[channel_id].extra;
             }
         } else {
-            data_size = prev_pkt[stream_id].data_size;
-            type      = prev_pkt[stream_id].type;
-            extra     = prev_pkt[stream_id].extra;
+            data_size = prev_pkt[channel_id].data_size;
+            type      = prev_pkt[channel_id].type;
+            extra     = prev_pkt[channel_id].extra;
         }
     }
-    rtmp_packet_create(p, stream_id, type, timestamp, data_size);
+    rtmp_packet_create(p, channel_id, type, timestamp, data_size);
     p->extra = extra;
     // save history
-    prev_pkt[stream_id].stream_id = type;
-    prev_pkt[stream_id].type      = stream_id;
-    prev_pkt[stream_id].data_size = data_size;
-    prev_pkt[stream_id].timestamp = timestamp;
-    prev_pkt[stream_id].extra     = extra;
+    prev_pkt[channel_id].channel_id = type;
+    prev_pkt[channel_id].type      = channel_id;
+    prev_pkt[channel_id].data_size = data_size;
+    prev_pkt[channel_id].timestamp = timestamp;
+    prev_pkt[channel_id].extra     = extra;
     while (data_size > 0) {
         int toread = FFMIN(data_size, chunk_size);
         int r;
@@ -130,7 +130,7 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
         offset    += chunk_size;
         if (data_size > 0) {
             url_read_complete(h, &t, 1); //marker
-            if (t != (0xC0 + stream_id)) {
+            if (t != (0xC0 + channel_id)) {
                 return -1;
             }
         }
@@ -147,7 +147,7 @@ int rtmp_packet_write(URLContext *h, RTMPPacket *pkt,
 
 //    if (pkt->type != RTMP_PT_INVOKE)
 //        mode = RTMP_PS_EIGHTBYTES;
-    bytestream_put_byte(&p, pkt->stream_id | (mode << 6));
+    bytestream_put_byte(&p, pkt->channel_id | (mode << 6));
     if (mode != RTMP_PS_ONEBYTE) {
         bytestream_put_be24(&p, pkt->timestamp);
         if (mode != RTMP_PS_FOURBYTES) {
@@ -163,21 +163,21 @@ int rtmp_packet_write(URLContext *h, RTMPPacket *pkt,
         url_write(h, pkt->data + off, towrite);
         off += towrite;
         if (off < pkt->data_size) {
-            uint8_t marker = 0xC0 | pkt->stream_id;
+            uint8_t marker = 0xC0 | pkt->channel_id;
             url_write(h, &marker, 1);
         }
     }
     return 0;
 }
 
-int rtmp_packet_create(RTMPPacket *pkt, int stream_id, RTMPPacketType type,
+int rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
                        int timestamp, int size)
 {
     pkt->data = av_malloc(size);
     if (!pkt->data)
         return -1;
     pkt->data_size = size;
-    pkt->stream_id = stream_id;
+    pkt->channel_id = channel_id;
     pkt->type      = type;
     pkt->timestamp = timestamp;
     pkt->extra     = 0;
@@ -322,12 +322,12 @@ static void parse_amf(const uint8_t *data, int size)
 void rtmp_packet_inspect(RTMPPacket *pkt)
 {
     av_log(NULL,0,"Packet on ");
-    switch (pkt->stream_id) {
+    switch (pkt->channel_id) {
     case RTMP_NETWORK_CHANNEL: av_log(NULL,0,"network channel");break;
     case RTMP_SYSTEM_CHANNEL:  av_log(NULL,0,"system channel");break;
     case RTMP_VIDEO_CHANNEL:   av_log(NULL,0,"video channel");break;
     case RTMP_AUDIO_CHANNEL:   av_log(NULL,0,"audio channel");break;
-    default:                   av_log(NULL,0,"channel %d",pkt->stream_id);
+    default:                   av_log(NULL,0,"channel %d",pkt->channel_id);
     }
     av_log(NULL,0," type ");
     switch (pkt->type) {
