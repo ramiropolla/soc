@@ -1,0 +1,53 @@
+ret: 0 st: 0 dts:22254 pts:25854 pos:14 size:37536 flags:1
+ret:-1 st:-1 ts:-90000 flags:0
+ret: 0 st: 0 dts:22254 pts:25854 pos:14 size:37536 flags:1
+ret:-1 st:-1 ts:170475 flags:1
+ret: 0 st: 0 dts:144654 pts:155454 pos:1308686 size:33020 flags:1
+ret:-1 st: 0 ts:70950 flags:0
+ret: 0 st: 0 dts:101454 pts:112254 pos:841742 size:32068 flags:1
+ret:-1 st: 0 ts:-28575 flags:1
+ret: 0 st: 0 dts:22254 pts:25854 pos:14 size:37536 flags:1
+ret: 0 st: 1 ts:231900 flags:0
+ret: 0 st: 1 dts:233214 pts:233214 pos:2443278 size:1536 flags:1
+ret: 0 st: 1 ts:132375 flags:1
+ret: 0 st: 1 dts:129534 pts:129534 pos:1327118 size:1536 flags:1
+ret: 0 st: 2 ts:32850 flags:0
+ret: 0 st: 2 dts:34494 pts:34494 pos:321550 size:1536 flags:1
+ret:-1 st: 2 ts:-66675 flags:1
+ret: 0 st: 2 dts:25854 pts:25854 pos:241678 size:1536 flags:1
+ret:-1 st:-1 ts:193800 flags:0
+ret: 0 st: 0 dts:187854 pts:198654 pos:1779726 size:34644 flags:0
+ret:-1 st:-1 ts:94275 flags:1
+ret: 0 st: 1 dts:58254 pts:69054 pos:372750 size:34952 flags:1
+ret:-1 st: 0 ts:-5250 flags:0
+ret: 0 st: 0 dts:22254 pts:25854 pos:14 size:37536 flags:1
+ret:-1 st: 0 ts:255225 flags:1
+ret: 0 st: 1 dts:231054 pts:241854 pos:2246670 size:36288 flags:1
+ret: 0 st: 1 ts:155700 flags:0
+ret: 0 st: 1 dts:158334 pts:158334 pos:1658894 size:1536 flags:1
+ret: 0 st: 1 ts:56175 flags:1
+ret: 0 st: 1 dts:54654 pts:54654 pos:509966 size:1536 flags:1
+ret:-1 st: 2 ts:-43350 flags:0
+ret: 0 st: 2 dts:25854 pts:25854 pos:241678 size:1536 flags:1
+ret: 0 st: 2 ts:217125 flags:1
+ret: 0 st: 2 dts:215934 pts:215934 pos:2267150 size:1536 flags:1
+ret:-1 st:-1 ts:117600 flags:0
+ret: 0 st: 1 dts:144654 pts:155454 pos:1308686 size:33020 flags:1
+ret:-1 st:-1 ts:18076 flags:1
+ret: 0 st: 0 dts:22254 pts:25854 pos:14 size:37536 flags:1
+ret:-1 st: 0 ts:-81449 flags:0
+ret: 0 st: 0 dts:22254 pts:25854 pos:14 size:37536 flags:1
+ret:-1 st: 0 ts:179026 flags:1
+ret: 0 st: 0 dts:187854 pts:198654 pos:1779726 size:34644 flags:1
+ret: 0 st: 1 ts:79501 flags:0
+ret: 0 st: 1 dts:80574 pts:80574 pos:821262 size:1536 flags:1
+ret:-1 st: 1 ts:-20024 flags:1
+ret: 0 st: 1 dts:25854 pts:25854 pos:239630 size:1536 flags:1
+ret: 0 st: 2 ts:240451 flags:0
+ret: 0 st: 2 dts:241854 pts:241854 pos:2574350 size:1536 flags:1
+ret: -1 st: 2 ts:140926 flags:1
+ret: 0 st: 2 dts:138174 pts:138174 pos:1409038 size:34390 flags:1
+ret:-1 st:-1 ts:41401 flags:0
+ret: 0 st: 1 dts:58254 pts:69054 pos:372750 size:34952 flags:1
+ret:-1 st:-1 ts:-58124 flags:1
+ret: 0 st: 0 dts:22254 pts:25854 pos:14 size:37536 flags:1
