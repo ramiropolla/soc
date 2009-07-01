@@ -51,20 +51,6 @@ typedef enum RTMPPacketType {
     RTMP_PT_METADATA     = 22,  ///< FLV metadata
 } RTMPPacketType;
 
-typedef enum RTMPObjectType {
-    RTMP_OT_CONNECT,
-    RTMP_OT_DISCONNECT,
-    RTMP_OT_SET_ATTR,
-    RTMP_OT_UPDATE_DATA,
-    RTMP_OT_UPDATE_ATTR,
-    RTMP_OT_SEND_MSG,
-    RTMP_OT_STATUS,
-    RTMP_OT_CLEAR_DATA,
-    RTMP_OT_DELETE_DATA,
-    RTMP_OT_DELETE_ATTR,
-    RTMP_OT_INITIAL_DATA,
-} RTMPObjectType;
-
 enum RTMPPacketSize {
     RTMP_PS_TWELVEBYTES = 0,
     RTMP_PS_EIGHTBYTES,
