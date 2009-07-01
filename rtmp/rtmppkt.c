@@ -115,10 +115,10 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
     p->extra = extra;
     // save history
     prev_pkt[channel_id].channel_id = type;
-    prev_pkt[channel_id].type      = channel_id;
-    prev_pkt[channel_id].data_size = data_size;
-    prev_pkt[channel_id].timestamp = timestamp;
-    prev_pkt[channel_id].extra     = extra;
+    prev_pkt[channel_id].type       = channel_id;
+    prev_pkt[channel_id].data_size  = data_size;
+    prev_pkt[channel_id].timestamp  = timestamp;
+    prev_pkt[channel_id].extra      = extra;
     while (data_size > 0) {
         int toread = FFMIN(data_size, chunk_size);
         int r;
@@ -176,11 +176,11 @@ int rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
     pkt->data = av_malloc(size);
     if (!pkt->data)
         return -1;
-    pkt->data_size = size;
+    pkt->data_size  = size;
     pkt->channel_id = channel_id;
-    pkt->type      = type;
-    pkt->timestamp = timestamp;
-    pkt->extra     = 0;
+    pkt->type       = type;
+    pkt->timestamp  = timestamp;
+    pkt->extra      = 0;
 
     return 0;
 }
