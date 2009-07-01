@@ -103,8 +103,6 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
 int rtmp_packet_write(URLContext *h, RTMPPacket *p,
                       int chunk_size, RTMPPacket *prev_pkt);
 
-int rtmp_amf_tag_size(int type, const void *data);
-
 int rtmp_amf_skip_data(const uint8_t *data);
 
 int rtmp_amf_find_field(const uint8_t *data, const uint8_t *name,

@@ -28,21 +28,6 @@
 
 #include "rtmppkt.h"
 
-static const int8_t amf_tag_sizes[17] = {
-    8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 4, 0, 0, 0, 0
-};
-
-int rtmp_amf_tag_size(int type, const void *data)
-{
-    if (type == AMF_STRING_IN_OBJECT || type == AMF_STRING)
-        return strlen(data) + 2;
-    if (type > AMF_TYPED_OBJECT)
-        return -1;
-    if (type == AMF_LONG_STRING)
-        return strlen(data) + 4;
-    return amf_tag_sizes[type];
-}
-
 void rtmp_amf_write_tag(uint8_t **dst, AMFType type, const void *data)
 {
     if (type != AMF_OBJECT_END && type != AMF_STRING_IN_OBJECT)
