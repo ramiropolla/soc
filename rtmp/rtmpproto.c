@@ -59,7 +59,6 @@ typedef struct RTMPContext {
     uint8_t*      flv_data;
     int           flv_size;
     int           flv_off;
-    int           wrong_dts;
     uint32_t      video_ts, audio_ts;
 } RTMPContext;
 
