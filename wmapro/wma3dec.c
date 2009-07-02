@@ -267,12 +267,10 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     avctx->sample_fmt = SAMPLE_FMT_FLT;
 
-    /** FIXME: is this really the right thing to do for 24 bits? */
-    s->bits_per_sample = 16; // avctx->bits_per_sample;
     if (avctx->extradata_size >= 18) {
         s->decode_flags     = AV_RL16(edata_ptr+14);
         channel_mask    = AV_RL32(edata_ptr+2);
-//        s->bits_per_sample = AV_RL16(edata_ptr);
+        s->bits_per_sample = AV_RL16(edata_ptr);
 #ifdef DEBUG
         /** dump the extradata */
         for (i=0 ; i<avctx->extradata_size ; i++)
@@ -429,7 +427,8 @@ static av_cold int decode_init(AVCodecContext *avctx)
     /** init MDCT, FIXME: only init needed sizes */
     for (i = 0; i < WMAPRO_BLOCK_SIZES; i++)
         ff_mdct_init(&s->mdct_ctx[i], BLOCK_MIN_BITS+1+i, 1,
-                     1.0 / (1<<(BLOCK_MIN_BITS + i + s->bits_per_sample - 2)));
+                     1.0 / (1 <<(BLOCK_MIN_BITS + i - 1))
+                     / (1 << (s->bits_per_sample - 1)));
 
     /** init MDCT windows: simple sinus window */
     for (i=0 ; i<WMAPRO_BLOCK_SIZES ; i++) {
