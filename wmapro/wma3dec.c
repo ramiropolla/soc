@@ -186,8 +186,8 @@ typedef struct WMA3DecodeContext {
     uint32_t         frame_num;                     ///< current frame number
     GetBitContext    gb;                            ///< bitstream reader context
     int              buf_bit_size;                  ///< buffer size in bits
-    int16_t*         samples;                       ///< current samplebuffer pointer
-    int16_t*         samples_end;                   ///< maximum samplebuffer pointer
+    float*           samples;                       ///< current samplebuffer pointer
+    float*           samples_end;                   ///< maximum samplebuffer pointer
     uint8_t          drc_gain;                      ///< gain for the DRC tool
     int8_t           skip_frame;                    ///< skip output step
     int8_t           parsed_all_subframes;          ///< all subframes decoded?
@@ -265,7 +265,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     s->avctx = avctx;
     dsputil_init(&s->dsp, avctx);
 
-    avctx->sample_fmt = SAMPLE_FMT_S16;
+    avctx->sample_fmt = SAMPLE_FMT_FLT;
 
     /** FIXME: is this really the right thing to do for 24 bits? */
     s->bits_per_sample = 16; // avctx->bits_per_sample;
@@ -1430,9 +1430,9 @@ static int decode_frame(WMA3DecodeContext *s)
         }
     }
 
-    /** convert samples to short and write them to the output buffer */
+    /** interleave samples and write them to the output buffer */
     for (i = 0; i < s->num_channels; i++) {
-        int16_t* ptr;
+        float* ptr;
         int incr = s->num_channels;
         float* iptr = s->channel[i].out;
         int x;
@@ -1440,7 +1440,8 @@ static int decode_frame(WMA3DecodeContext *s)
         ptr = s->samples + i;
 
         for (x=0;x<s->samples_per_frame;x++) {
-            *ptr = av_clip_int16(lrintf(*iptr++));
+            *ptr = (1./32768)* *iptr++;
+            *ptr = av_clipf(*ptr, -1.0, 32767.0 / 32768.0);
             ptr += incr;
         }
 
@@ -1567,7 +1568,7 @@ static int decode_packet(AVCodecContext *avctx,
     int packet_sequence_number;
 
     s->samples = data;
-    s->samples_end = (int16_t*)((int8_t*)data + *data_size);
+    s->samples_end = (float*)((int8_t*)data + *data_size);
     s->buf_bit_size = buf_size << 3;
 
 
