@@ -677,11 +677,11 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
                 pos = st->index_entries[index].pos;
             }
 
-        if (find_keyframe(s, stream_index, &pos, &pts, ts, flags) == 0) {
-            goto success;
-        } else {
-            return -1;
-        }
+            if (find_keyframe(s, stream_index, &pos, &pts, ts, flags) == 0) {
+                goto success;
+            } else {
+                return -1;
+            }
         } else {
             url_fseek(s->pb, pos, SEEK_SET);
             goto success;
