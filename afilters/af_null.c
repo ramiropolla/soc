@@ -21,42 +21,5 @@
  * null filter
  */
 
-#include <stdio.h>
-#include "avfilter.h"
 
 
-typedef struct
-{
-    int history[100]; /*just an example */
-
-} af_null_priv_t;
-
-
-static int start_buf(AVFilterLink *link, AVFilterSamplesRef *sample_ref)
-{
-    av_log(0,0, "Starting buffer\n");
-    return;
-}
-
-static int end_buf(AVFilterLink *link, AVFilterSamplesRef *sample_ref)
-{
-    av_log(0,0, "Ending buffer\n");
-    return;
-}
-
-AVFilter avfilter_af_null =
-{
-    .name      = "audio_null",
-
-    .priv_size = sizeof(af_null_priv_t),
-
-    .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_AUDIO,
-                                    .start_buffer    = start_buf,
-                                    .end_buffer      = end_buf },
-                                  { .name = NULL}},
-
-    .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_AUDIO, },
-                                  { .name = NULL}},
-};

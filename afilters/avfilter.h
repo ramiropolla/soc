@@ -104,30 +104,29 @@ typedef struct AVFilterPicRef
 
 /* two structures that contain the data to be processed for the audio buf */
 /* contains samples. audio analogue to AVFilterPic */
-typedef struct AVFilterSamples
+typedef struct AVFilterBuffer
 {
     /* data */
     void *data;
     int data_size; /* data size in bytes */
     int n_samples;
 
-    void *priv;
-    void (*free)(struct AVFilterSamples *samples);
+    void (*free)(struct AVFilterBuffer *samples);
 
-}AVFilterSamples;
+}AVFilterBuffer;
 
 /**
  * A reference to an audio buffer. contains info about the AVFilterSamples
  * Do not use AVFilterSamples directly
  */
-typedef struct AVFilterSamplesRef
+typedef struct AVFilterBufferRef
 {
-    AVFilterSamples *samples;
+    AVFilterBuffer *buffer;
 
     int sample_type;           /* contains type of sample in the buffer*/
     int sample_rate;
 
-}AVFilterSamplesRef;
+}AVFilterBufferRef;
 
 
 
@@ -381,12 +380,10 @@ struct AVFilterPad
 
 
     /**
-     * Process an audio buffer. This function is where the audio filter should
-     * recieve and process data
+     * Process an audio buffer. Filters can hook into this function to do the
+     * actual audio processing
      */
-    int (*start_buffer)(AVFilterLink *link, AVFilterSamplesRef *sample_ref);
-
-    int (*end_buffer)(AVFilterLink *link, AVFilterSamplesRef *sample_ref);
+    int (*filter_buffer)(AVFilterLink *link, AVFilterBufferRef *sample_ref);
 
 
 };
@@ -513,14 +510,14 @@ struct AVFilterLink
      * filters.
      */
     AVFilterPicRef *srcpic;
-
     AVFilterPicRef *cur_pic;
     AVFilterPicRef *outpic;
 
     /** the audio buffer reference is sent accross the link by the source. */
-    AVFilterSamplesRef *srcbuf;
-    AVFilterSamplesRef *cur_buf;
-    AVFilterSamplesRef *outbuf;
+    AVFilterBufferRef *srcbuf;
+    int link_size; /* size of data sent accross link each time */
+    AVFilterBufferRef *cur_buf;
+    AVFilterBufferRef *outbuf;
 };
 
 /**
@@ -535,7 +532,8 @@ int avfilter_link(AVFilterContext *src, unsigned srcpad,
                   AVFilterContext *dst, unsigned dstpad);
 
 /**
- * Negotiates the colorspace, dimensions, etc of all inputs to a filter.
+ * Negotiates the colorspace, dimensions, etc (video) or the
+*  samplerate, sample, format, etc (audio) of all inputs to a filter.
  * @param filter the filter to negotiate the properties for its inputs
  * @return       zero on successful negotiation
  */

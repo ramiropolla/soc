@@ -85,6 +85,7 @@ int avfilter_link(AVFilterContext *src, unsigned srcpad,
        src->outputs[srcpad]        || dst->inputs[dstpad])
         return -1;
 
+    av_log(0,0,"src is %X, dst is %X\n",src, dst);
     src->outputs[srcpad] =
     dst-> inputs[dstpad] = link = av_mallocz(sizeof(AVFilterLink));
 
@@ -92,7 +93,18 @@ int avfilter_link(AVFilterContext *src, unsigned srcpad,
     link->dst     = dst;
     link->srcpad  = srcpad;
     link->dstpad  = dstpad;
+
+
     link->format  = PIX_FMT_NONE;
+
+    /* FIXME shouldnt do static buffer alloc like this really, should be
+       variable */
+    link->link_size = 128;
+    link->srcbuf = (AVFilterBufferRef*) av_malloc(sizeof(AVFilterBufferRef));
+    link->srcbuf->buffer = (AVFilterBuffer*) av_malloc(sizeof(AVFilterBuffer));
+    link->srcbuf->buffer->data = (int16_t*) av_malloc(link->link_size *
+            sizeof(int16_t));
+    link->srcbuf->buffer->n_samples = link->link_size;
 
     return 0;
 }
@@ -131,7 +143,7 @@ int avfilter_config_links(AVFilterContext *filter)
 
     for(i = 0; i < filter->input_count; i ++) {
         AVFilterLink *link = filter->inputs[i];
-
+        av_log(0,0,"link is %x\n", filter->inputs[i]);
         if(!link) continue;
 
         switch(link->init_state) {
@@ -231,23 +243,40 @@ void avfilter_start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     start_frame(link, link->cur_pic);
 }
 
-void avfilter_start_buffer(AVFilterLink *link, AVFilterSamplesRef *sample_ref)
+void avfilter_filter_buffer(AVFilterLink *link, AVFilterBufferRef *sample_ref)
 {
-    void (*start_buf) (AVFilterLink *, AVFilterSamplesRef *);
-    AVFilterPad *dst = &link_dpad(link);
+    void (*filter_input_buffer) (AVFilterLink *, AVFilterBufferRef *);
+    void (*filter_output_buffer) (AVFilterLink *, AVFilterBufferRef *);
 
-    if (!(start_buf = dst->start_buffer))
+    AVFilterPad *src = &link->src->output_pads[link->srcpad];
+    AVFilterPad *dst = &link->dst->input_pads[link->dstpad];
+
+    int input_func = 1, output_func = 1;
+
+    if (!(filter_output_buffer = dst->filter_buffer))
     {
-        av_log(0,0,"it is %x\n", 0);
-        start_buf = NULL; /* FIXME: should have a default function pointer
+        av_log(0,0,"LINK HAS NO OUTPUT?\n", 0);
+        filter_output_buffer = NULL; /* FIXME: should have a default function pointer
                             like avfilter_default_start_buffer */
+        output_func = 0;
     }
 
+    if (!(filter_input_buffer = src->filter_buffer))
+    {
+        av_log(0,0,"LINK HAS NO INPUT?\n", 0);
+        filter_input_buffer = NULL; /* FIXME: should have a default function pointer
+                            like avfilter_default_start_buffer */
+        input_func = 0;
+    }
 
-    av_log(0,0,"it is %x\n", start_buf);
+    //av_log(0,0,"it is %x\n", filter_buffer);
     link->cur_buf = sample_ref;
 
-    start_buf(link, link->cur_pic);
+    if (output_func)
+    filter_output_buffer(link, link->srcbuf);
+
+    if (input_func)
+    filter_input_buffer(link, link->srcbuf);
 }
 
 
