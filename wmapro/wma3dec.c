@@ -428,8 +428,8 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     /** init MDCT, FIXME: only init needed sizes */
     for (i = 0; i < WMAPRO_BLOCK_SIZES; i++)
-        ff_mdct_init(&s->mdct_ctx[i],
-                     BLOCK_MIN_BITS+1+i, 1, 1.0 / (1<<(BLOCK_MIN_BITS+i-1)));
+        ff_mdct_init(&s->mdct_ctx[i], BLOCK_MIN_BITS+1+i, 1,
+                     1.0 / (1<<(BLOCK_MIN_BITS + i + s->bits_per_sample - 2)));
 
     /** init MDCT windows: simple sinus window */
     for (i=0 ; i<WMAPRO_BLOCK_SIZES ; i++) {
@@ -1440,8 +1440,7 @@ static int decode_frame(WMA3DecodeContext *s)
         ptr = s->samples + i;
 
         for (x=0;x<s->samples_per_frame;x++) {
-            *ptr = (1./32768)* *iptr++;
-            *ptr = av_clipf(*ptr, -1.0, 32767.0 / 32768.0);
+            *ptr = av_clipf(*iptr++, -1.0, 32767.0 / 32768.0);
             ptr += incr;
         }
 
