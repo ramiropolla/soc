@@ -669,10 +669,6 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
         pos = e->pos;
         pts = e->timestamp;
         av_log(s, AV_LOG_DEBUG, "the seek pos = %"PRId64", pts  = %"PRId64", targe timestamp = %"PRId64"\n", pos, pts, ts);
-        if (ts == pts) {
-            url_fseek(s->pb, pos, SEEK_SET);
-            goto success;
-        }
 
         if (flags & AVSEEK_FLAG_ANY) {
             while(pts > ts) { // find the index timestamp smaller than target timestamp
@@ -680,12 +676,15 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
                 pts = st->index_entries[index].timestamp;
                 pos = st->index_entries[index].pos;
             }
-        }
 
         if (find_keyframe(s, stream_index, &pos, &pts, ts, flags) == 0) {
             goto success;
         } else {
             return -1;
+        }
+        } else {
+            url_fseek(s->pb, pos, SEEK_SET);
+            goto success;
         }
     }
 
