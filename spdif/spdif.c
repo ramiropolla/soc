@@ -62,11 +62,23 @@ static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt){
     uint32_t syncword_dts = (pkt->data[0] << 24) | (pkt->data[1]<<16) | (pkt->data[2]<<8) | pkt->data[3];
     int samples;
 
-    if(syncword_dts != DCA_MARKER_RAW_BE){
-        av_log(NULL, AV_LOG_ERROR, "bad DTS syncword\n");
-        return -1;
+    switch(syncword_dts){
+        case DCA_MARKER_RAW_BE:
+            samples = ((((pkt->data[4] & 0x01) << 6) | (pkt->data[5] >> 2)) + 1) << 5;
+            break;
+        case DCA_MARKER_RAW_LE:
+            samples = ((((pkt->data[5] & 0x01) << 6) | (pkt->data[4] >> 2)) + 1) << 5;
+            break;
+        case DCA_MARKER_14B_BE:
+            samples = ((((pkt->data[5] & 0x07) << 4) | (pkt->data[6] & 0x3f)) >> 2) << 5;
+            break;
+        case DCA_MARKER_14B_LE:
+            samples = ((((pkt->data[4] & 0x07) << 4) | (pkt->data[7] & 0x3f)) >> 2) << 5;
+            break;
+        default:
+            av_log(NULL, AV_LOG_ERROR, "bad DTS syncword\n");
+            return -1;
     }
-    samples = ((((pkt->data[4] & 0x01) << 6) | (pkt->data[5] >> 2)) + 1) << 5; // :)
     av_log(NULL, AV_LOG_DEBUG, "samples=%i\n", samples);
     switch(samples){
         case 512:

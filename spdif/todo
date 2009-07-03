@@ -4,9 +4,6 @@
                Broadway-5.1-48khz-448kbit.ac3 and FFmpeg AC3 encoder
 -test DTS - tested with (only RAW_BE version) 5.1 24bit.dts, ES 6.1 - 5.1 16bit.dts and FFmpeg DCA encoder
 
--add support for little-endian DTS
--add support for 14-bit DTS
-
 -add support for mpeg
 -add support for wma
 -add support for aac
