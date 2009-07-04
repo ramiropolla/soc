@@ -645,7 +645,7 @@ static void decode_decorrelation_matrix(WMA3DecodeContext* s,
 {
     int i;
     int offset = 0;
-    char rotation_offset[WMAPRO_MAX_CHANNELS * WMAPRO_MAX_CHANNELS];
+    int8_t rotation_offset[WMAPRO_MAX_CHANNELS * WMAPRO_MAX_CHANNELS];
     memset(chgroup->decorrelation_matrix,0,
            sizeof(float) *s->num_channels * s->num_channels);
 
@@ -660,17 +660,9 @@ static void decode_decorrelation_matrix(WMA3DecodeContext* s,
         int x;
         for (x=0;x<i;x++) {
             int y;
-            float tmp1[WMAPRO_MAX_CHANNELS];
-            float tmp2[WMAPRO_MAX_CHANNELS];
-            memcpy(tmp1,
-                   &chgroup->decorrelation_matrix[x * chgroup->num_channels],
-                   sizeof(float) * (i + 1));
-            memcpy(tmp2,
-                   &chgroup->decorrelation_matrix[i * chgroup->num_channels],
-                   sizeof(float) * (i + 1));
             for (y=0;y < i + 1 ; y++) {
-                float v1 = tmp1[y];
-                float v2 = tmp2[y];
+                float v1 = chgroup->decorrelation_matrix[x * chgroup->num_channels + y];
+                float v2 = chgroup->decorrelation_matrix[i * chgroup->num_channels + y];
                 int n = rotation_offset[offset + x];
                 float sinv;
                 float cosv;
