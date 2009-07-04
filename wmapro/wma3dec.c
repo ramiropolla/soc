@@ -860,7 +860,7 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
              vals[0] = (symbol_to_vec4[idx] >> 8) >> 4;
              vals[1] = (symbol_to_vec4[idx] >> 8) & 0xF;
              vals[2] = (symbol_to_vec4[idx] >> 4) & 0xF;
-             vals[3] = symbol_to_vec4[idx] & 0xF;
+             vals[3] =  symbol_to_vec4[idx] & 0xF;
         }
 
         /** decode sign */
