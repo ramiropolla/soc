@@ -21,12 +21,12 @@
  */
 
 /**
- * @file  libavcodec/wma3data.h
+ * @file  libavcodec/wmaprodata.h
  * @brief tables for wmapro decoding
  */
 
-#ifndef AVCODEC_WMA3DATA_H
-#define AVCODEC_WMA3DATA_H
+#ifndef AVCODEC_WMAPRODATA_H
+#define AVCODEC_WMAPRODATA_H
 
 /**
  * @brief frequencies to divide the frequency spectrum into scale factor bands
@@ -598,4 +598,4 @@ static const float *default_decorrelation[] = {
     &default_decorrelation_matrices[55]
 };
 
-#endif /* AVCODEC_WMA3DATA_H */
+#endif /* AVCODEC_WMAPRODATA_H */
