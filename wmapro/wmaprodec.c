@@ -279,7 +279,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 #endif
 
     } else {
-        ff_log_ask_for_sample(avctx, "Unknown extradata size\n");
+        av_log_ask_for_sample(avctx, "Unknown extradata size\n");
         return AVERROR_INVALIDDATA;
     }
 
@@ -292,7 +292,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     s->len_prefix = (s->decode_flags & 0x40) >> 6;
 
     if (!s->len_prefix) {
-         ff_log_ask_for_sample(avctx, "no length prefix\n");
+         av_log_ask_for_sample(avctx, "no length prefix\n");
          return AVERROR_INVALIDDATA;
     }
 
@@ -331,7 +331,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     if (s->num_channels < 0 || s->num_channels > WMAPRO_MAX_CHANNELS) {
-        ff_log_ask_for_sample(avctx, "invalid number of channels\n");
+        av_log_ask_for_sample(avctx, "invalid number of channels\n");
         return AVERROR_NOTSUPP;
     }
 
@@ -704,7 +704,7 @@ static int decode_channel_transform(WMA3DecodeContext* s)
         int remaining_channels = s->channels_for_cur_subframe;
 
         if (get_bits1(&s->gb)) {
-            ff_log_ask_for_sample(s->avctx,
+            av_log_ask_for_sample(s->avctx,
                    "unsupported channel transform bit\n");
             return AVERROR_INVALIDDATA;
         }
@@ -741,7 +741,7 @@ static int decode_channel_transform(WMA3DecodeContext* s)
             if (chgroup->num_channels == 2) {
                 if (get_bits1(&s->gb)) {
                     if (get_bits1(&s->gb)) {
-                        ff_log_ask_for_sample(s->avctx,
+                        av_log_ask_for_sample(s->avctx,
                                "unsupported channel transform type\n");
                     }
                 } else {
@@ -764,7 +764,7 @@ static int decode_channel_transform(WMA3DecodeContext* s)
                     } else {
                         /** FIXME: more than 6 coupled channels not supported */
                         if (chgroup->num_channels > 6) {
-                            ff_log_ask_for_sample(s->avctx,
+                            av_log_ask_for_sample(s->avctx,
                                    "coupled channels > 6\n");
                         } else {
                             memcpy(chgroup->decorrelation_matrix,
@@ -1208,7 +1208,7 @@ static int decode_subframe(WMA3DecodeContext *s)
 
     /** no idea for what the following bit is used */
     if (get_bits1(&s->gb)) {
-        ff_log_ask_for_sample(s->avctx, "reserved bit set\n");
+        av_log_ask_for_sample(s->avctx, "reserved bit set\n");
         return AVERROR_INVALIDDATA;
     }
 
@@ -1228,7 +1228,7 @@ static int decode_subframe(WMA3DecodeContext *s)
         int quant_step = 90 * s->bits_per_sample >> 4;
         if ((get_bits1(&s->gb))) {
             /** FIXME: might change run level mode decision */
-            ff_log_ask_for_sample(s->avctx, "unsupported quant step coding\n");
+            av_log_ask_for_sample(s->avctx, "unsupported quant step coding\n");
             return AVERROR_INVALIDDATA;
         }
         /** decode quantization step */
@@ -1372,7 +1372,7 @@ static int decode_frame(WMA3DecodeContext *s)
 
     /** read postproc transform */
     if (s->num_channels > 1 && get_bits1(gb)) {
-        ff_log_ask_for_sample(s->avctx, "Unsupported postproc transform found\n");
+        av_log_ask_for_sample(s->avctx, "Unsupported postproc transform found\n");
         s->packet_loss = 1;
         return 0;
     }
@@ -1497,7 +1497,7 @@ static void save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len,
     buflen = (s->num_saved_bits + len + 8) >> 3;
 
     if (len <= 0 || buflen > MAX_FRAMESIZE) {
-         ff_log_ask_for_sample(s->avctx, "input buffer too small\n");
+         av_log_ask_for_sample(s->avctx, "input buffer too small\n");
          s->packet_loss = 1;
          return;
     }
