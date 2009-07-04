@@ -77,7 +77,7 @@
 #include "avcodec.h"
 #include "internal.h"
 #include "get_bits.h"
-#include "wma3data.h"
+#include "wmaprodata.h"
 #include "dsputil.h"
 #include "wma.h"
 
