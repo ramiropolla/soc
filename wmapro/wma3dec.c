@@ -113,8 +113,8 @@ static float            sin64[33];        ///< sinus table for decorrelation
  */
 typedef struct {
     int16_t  prev_block_len;                          ///< length of the previous block
-    uint8_t  transmit_coefs;                          ///< transmit coefficients
-    uint8_t  num_subframes;                           ///< number of subframes
+    uint8_t  transmit_coefs;
+    uint8_t  num_subframes;
     uint16_t subframe_len[MAX_SUBFRAMES];             ///< subframe length in samples
     uint16_t subframe_offset[MAX_SUBFRAMES];          ///< subframe position
     uint8_t  cur_subframe;                            ///< subframe index
@@ -155,7 +155,7 @@ typedef struct WMA3DecodeContext {
                       FF_INPUT_BUFFER_PADDING_SIZE];///< compressed frame data
     MDCTContext      mdct_ctx[WMAPRO_BLOCK_SIZES];  ///< MDCT context per block size
     DECLARE_ALIGNED_16(float, tmp[WMAPRO_BLOCK_MAX_SIZE]); ///< imdct output buffer
-    float*           windows[WMAPRO_BLOCK_SIZES];   ///< window per block size
+    float*           windows[WMAPRO_BLOCK_SIZES];   ///< windows for the different block sizes
 
     /* frame size dependent frame information (set during initialization) */
     uint8_t          lossless;                      ///< lossless mode
@@ -164,14 +164,14 @@ typedef struct WMA3DecodeContext {
     uint8_t          dynamic_range_compression;     ///< frame contains DRC data
     uint8_t          bits_per_sample;
     uint16_t         samples_per_frame;             ///< number of samples to output
-    uint16_t         log2_frame_size;               ///< frame size
-    int8_t           num_channels;                  ///< number of channels
+    uint16_t         log2_frame_size;
+    int8_t           num_channels;
     int8_t           lfe_channel;                   ///< lfe channel index
     uint8_t          max_num_subframes;             ///< maximum number of subframes
-    int8_t           num_possible_block_sizes;      ///< nb of supported block sizes
+    int8_t           num_possible_block_sizes;      ///< number of distinct block sizes that can be found in the file
     uint16_t         min_samples_per_subframe;      ///< minimum samples per subframe
     int8_t*          num_sfb;                       ///< scale factor bands per block size
-    int16_t*         sfb_offsets;                   ///< scale factor band offsets
+    int16_t*         sfb_offsets;                   ///< scale factor band offsets (multiples of 4)
     int16_t*         sf_offsets;                    ///< scale factor resample matrix
     int16_t*         subwoofer_cutoffs;             ///< subwoofer cutoff values
 
