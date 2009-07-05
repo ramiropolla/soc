@@ -1,14 +1,28 @@
 diff --git a/libavformat/allformats.c b/libavformat/allformats.c
-index ad47631..433be82 100644
+index ad47631..83d7d21 100644
 --- a/libavformat/allformats.c
 +++ b/libavformat/allformats.c
-@@ -66,6 +66,9 @@ void av_register_all(void)
+@@ -66,6 +66,7 @@ void av_register_all(void)
      REGISTER_DEMUXER  (BFI, bfi);
      REGISTER_DEMUXER  (C93, c93);
      REGISTER_DEMUXER  (CAVSVIDEO, cavsvideo);
 +    REGISTER_DEMUXER  (CONCAT, concat);
-+    REGISTER_DEMUXER  (M3U, m3u);
-+    REGISTER_DEMUXER  (PLS, pls);
      REGISTER_MUXER    (CRC, crc);
      REGISTER_MUXDEMUX (DAUD, daud);
      REGISTER_MUXDEMUX (DIRAC, dirac);
+@@ -98,6 +99,7 @@ void av_register_all(void)
+     REGISTER_MUXER    (IPOD, ipod);
+     REGISTER_DEMUXER  (ISS, iss);
+     REGISTER_DEMUXER  (LMLM4, lmlm4);
++    REGISTER_DEMUXER  (M3U, m3u);
+     REGISTER_MUXDEMUX (M4V, m4v);
+     REGISTER_MUXDEMUX (MATROSKA, matroska);
+     REGISTER_MUXER    (MATROSKA_AUDIO, matroska_audio);
+@@ -155,6 +157,7 @@ void av_register_all(void)
+     REGISTER_MUXDEMUX (PCM_U16BE, pcm_u16be);
+     REGISTER_MUXDEMUX (PCM_U16LE, pcm_u16le);
+     REGISTER_MUXDEMUX (PCM_U8,    pcm_u8);
++    REGISTER_DEMUXER  (PLS, pls);
+     REGISTER_MUXER    (PSP, psp);
+     REGISTER_DEMUXER  (PVA, pva);
+     REGISTER_DEMUXER  (QCP, qcp);
