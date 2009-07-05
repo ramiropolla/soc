@@ -1,6 +1,6 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 19066)
+--- ffplay.c	(revision 19346)
 +++ ffplay.c	(working copy)
 @@ -30,6 +30,12 @@
  #include "libavcodec/colorspace.h"
