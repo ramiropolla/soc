@@ -1,13 +1,12 @@
 diff --git a/libavformat/allformats.c b/libavformat/allformats.c
-index ad47631..5773fe6 100644
+index ad47631..08a460b 100644
 --- a/libavformat/allformats.c
 +++ b/libavformat/allformats.c
-@@ -66,6 +66,8 @@ void av_register_all(void)
+@@ -66,6 +66,7 @@ void av_register_all(void)
      REGISTER_DEMUXER  (BFI, bfi);
      REGISTER_DEMUXER  (C93, c93);
      REGISTER_DEMUXER  (CAVSVIDEO, cavsvideo);
 +    REGISTER_DEMUXER  (M3U, m3u);
-+    REGISTER_DEMUXER  (CONCAT, concat);
      REGISTER_MUXER    (CRC, crc);
      REGISTER_MUXDEMUX (DAUD, daud);
      REGISTER_MUXDEMUX (DIRAC, dirac);
