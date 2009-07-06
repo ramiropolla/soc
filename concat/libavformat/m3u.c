@@ -40,32 +40,38 @@ static int m3u_probe(AVProbeData *p)
         return 0;
 }
 
-static int m3u_list_files(ByteIOContext *s,
-                          char ***flist_ptr,
-                          unsigned int *lfx_ptr,
-                          char *workingdir)
+static int m3u_list_files(ByteIOContext *s, PlaylistContext *ctx)
+//                          char ***flist_ptr,
+//                          unsigned int *lfx_ptr,
+//                          char *workingdir)
 {
-    char **ofl;
-    int i;
+    char **flist;
+    int i, j;
     int bufsize = 16;
     i = 0;
-    ofl = av_malloc(sizeof(char*) * bufsize);
+    flist = av_malloc(sizeof(char*) * bufsize);
     while (1) {
         char *c = ff_buf_getline(s);
         if (c == NULL) // EOF
             break;
         if (*c == 0) // hashed out
             continue;
-        ofl[i] = c;
+        flist[i] = c;
         if (++i == bufsize) {
             bufsize += 16;
-            ofl = av_realloc(ofl, sizeof(char*) * bufsize);
+            flist = av_realloc(flist, sizeof(char*) * bufsize);
         }
     }
-    *flist_ptr = ofl;
-    *lfx_ptr = i;
-    ofl[i] = 0;
-    ff_playlist_relative_paths(ofl, workingdir);
+    ctx->pelist_size = i;
+    flist[i] = 0;
+    ff_playlist_relative_paths(flist, ctx->workingdir);
+    ctx->pelist = av_malloc(ctx->pelist_size * sizeof(*(ctx->pelist)));
+    memset(ctx->pelist, 0, ctx->pelist_size * sizeof(*(ctx->pelist)));
+    for (i = 0; i < ctx->pelist_size; ++i) {
+        ctx->pelist[i] = av_malloc(sizeof(*(ctx->pelist[i])));
+        ctx->pelist[i]->filename = flist[i];
+    }
+    av_free(flist);
     return 0;
 }
 
@@ -74,12 +80,7 @@ static int m3u_read_header(AVFormatContext *s,
 {
     int i;
     PlaylistContext *ctx = ff_playlist_make_context(s->filename);
-    m3u_list_files(s->pb,
-                   &(ctx->flist),
-                   &(ctx->pelist_size),
-                   ctx->workingdir);
-    ctx->pelist = av_malloc(ctx->pelist_size * sizeof(*(ctx->pelist)));
-    memset(ctx->pelist, 0, ctx->pelist_size * sizeof(*(ctx->pelist)));
+    m3u_list_files(s->pb, ctx);
     s->priv_data = ctx;
     for (i = 0; i < ctx->pe_curidxs_size; ++i) {
         ff_playlist_populate_context(ctx, s, i);

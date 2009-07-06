@@ -36,13 +36,10 @@ typedef struct PlayElem {
 } PlayElem;
 
 typedef struct PlaylistContext {
-    char **flist;
-//    int flist_len;
     PlayElem **pelist;
     int pelist_size;
     int *pe_curidxs;
     int pe_curidxs_size;
-//    int pe_curidx;
     AVChapter **chlist;
     int chlist_size;
     int ch_curidx;
@@ -52,7 +49,9 @@ typedef struct PlaylistContext {
     int time_offsets_size;
 } PlaylistContext;
 
-PlayElem* ff_playlist_make_playelem(char *filename);
+void ff_playlist_make_playelem(PlayElem* pe);
+
+int ff_playlist_setup_playelem(PlayElem *pe);
 
 PlaylistContext* ff_playlist_make_context(char *filename);
 

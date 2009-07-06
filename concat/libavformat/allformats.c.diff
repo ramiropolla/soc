@@ -1,5 +1,5 @@
 diff --git a/libavformat/allformats.c b/libavformat/allformats.c
-index ad47631..83d7d21 100644
+index ad47631..ef642c4 100644
 --- a/libavformat/allformats.c
 +++ b/libavformat/allformats.c
 @@ -66,6 +66,7 @@ void av_register_all(void)
@@ -26,3 +26,11 @@ index ad47631..83d7d21 100644
      REGISTER_MUXER    (PSP, psp);
      REGISTER_DEMUXER  (PVA, pva);
      REGISTER_DEMUXER  (QCP, qcp);
+@@ -199,6 +202,7 @@ void av_register_all(void)
+     REGISTER_DEMUXER  (WSVQA, wsvqa);
+     REGISTER_DEMUXER  (WV, wv);
+     REGISTER_DEMUXER  (XA, xa);
++    REGISTER_DEMUXER  (XSPF, xspf);
+     REGISTER_MUXDEMUX (YUV4MPEGPIPE, yuv4mpegpipe);
+ 
+     /* external libraries */
