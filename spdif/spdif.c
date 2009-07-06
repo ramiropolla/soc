@@ -30,12 +30,11 @@
 #define IEC958_AC3                0x01
 #define IEC958_MPEG1_LAYER1       0x04
 #define IEC958_MPEG1_LAYER23      0x05
-//#define IEC958_MPEG2_NO_EXT       0x05 /* No extension */
 //#define IEC958_MPEG2_EXT          0x06 /* With extension */
 //#define IEC958_MPEG2_AAC          0x07
-//#define IEC958_MPEG2_LAYER1_LSW   0x08 /* Low Sampling Frequency */
-//#define IEC958_MPEG2_LAYER2_LSW   0x09 /* Low Sampling Frequency */
-//#define IEC958_MPEG2_LAYER3_LSW   0x0A /* Low Sampling Frequency */
+#define IEC958_MPEG2_LAYER1_LSF   0x08 /* Low Sampling Frequency */
+#define IEC958_MPEG2_LAYER2_LSF   0x09 /* Low Sampling Frequency */
+#define IEC958_MPEG2_LAYER3_LSF   0x0A /* Low Sampling Frequency */
 #define IEC958_DTS1               0x0B
 #define IEC958_DTS2               0x0C
 #define IEC958_DTS3               0x0D
@@ -99,20 +98,27 @@ static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt){
     return 0;
 }
 
-static int spdif_header_mpeg1_layer1(AVFormatContext *s, AVPacket *pkt){
+static uint8_t mpeg_data_type[2][3] = {
+    //     LAYER1                      LAYER2                  LAYER3
+    { IEC958_MPEG2_LAYER1_LSF, IEC958_MPEG2_LAYER2_LSF, IEC958_MPEG2_LAYER3_LSF },  //MPEG2 LSF
+    { IEC958_MPEG1_LAYER1,     IEC958_MPEG1_LAYER23,    IEC958_MPEG1_LAYER23 },     //MPEG1
+};
+
+static uint16_t mpeg_pkt_offset[2][3] = {
+    //LAYER1  LAYER2  LAYER3
+    { 768,    2304,   1152 }, // MPEG2 LSF
+    { 384,    1152,   1152 }, // MPEG1
+};
+
+static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt){
     IEC958Context *ctx = s->priv_data;
+    int lsf = (pkt->data[1]>>3)&1;
+    int layer = 3-((pkt->data[1]>>1)&3);
 
-    ctx->data_type = IEC958_MPEG1_LAYER1;
-    ctx->pkt_offset = 384<<2; //TODO
-    return 0;
-}
-
-static int spdif_header_mpeg1_layer23(AVFormatContext *s, AVPacket *pkt){
-    IEC958Context *ctx = s->priv_data;
-
-    ctx->data_type = IEC958_MPEG1_LAYER23;
+    av_log(NULL, AV_LOG_DEBUG, "lsf: %i layer: %i\n", lsf, layer);
+    ctx->data_type = mpeg_data_type[lsf][layer];
+    ctx->pkt_offset = mpeg_pkt_offset[lsf][layer]<<2;
     // TODO Data type dependant info (normal/karaoke, dynamic range control)
-    ctx->pkt_offset = 1152<<2; //TODO
     return 0;
 }
 
@@ -124,11 +130,9 @@ static int spdif_write_header(AVFormatContext *s){
             ctx->header_info = spdif_header_ac3;
             break;
         case CODEC_ID_MP1:
-            ctx->header_info = spdif_header_mpeg1_layer1;
-            break;
         case CODEC_ID_MP2:
         case CODEC_ID_MP3:
-            ctx->header_info = spdif_header_mpeg1_layer23;
+            ctx->header_info = spdif_header_mpeg;
             break;
         case CODEC_ID_DTS:
             ctx->header_info = spdif_header_dts;

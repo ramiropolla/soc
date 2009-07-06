@@ -3,8 +3,12 @@
 -test AC3 - tested with TomorrowNeverDies-2.1-48khz-192kbit.ac3, Canyon-5.1-48khz-448kbit.ac3,
                Broadway-5.1-48khz-448kbit.ac3 and FFmpeg AC3 encoder
 -test DTS - tested with (only RAW_BE version) 5.1 24bit.dts, ES 6.1 - 5.1 16bit.dts and FFmpeg DCA encoder
+-test MPEG
 
--add support for mpeg
+-add support for mpeg2 with extension
+-info about normal/karaoke mode in mpeg
+-info about dynamic range control in mpeg
+
 -add support for wma
 -add support for aac
 -add support for eac3
