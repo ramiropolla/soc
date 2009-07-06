@@ -98,13 +98,13 @@ static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt){
     return 0;
 }
 
-static uint8_t mpeg_data_type[2][3] = {
+static const uint8_t mpeg_data_type[2][3] = {
     //     LAYER1                      LAYER2                  LAYER3
     { IEC958_MPEG2_LAYER1_LSF, IEC958_MPEG2_LAYER2_LSF, IEC958_MPEG2_LAYER3_LSF },  //MPEG2 LSF
     { IEC958_MPEG1_LAYER1,     IEC958_MPEG1_LAYER23,    IEC958_MPEG1_LAYER23 },     //MPEG1
 };
 
-static uint16_t mpeg_pkt_offset[2][3] = {
+static const uint16_t mpeg_pkt_offset[2][3] = {
     //LAYER1  LAYER2  LAYER3
     { 768,    2304,   1152 }, // MPEG2 LSF
     { 384,    1152,   1152 }, // MPEG1
