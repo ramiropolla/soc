@@ -169,7 +169,7 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt){
         put_be16(s->pb, data[i]); //XXX be?
 
     if(pkt->size&1)
-        put_be16(s->pb, (uint8_t)pkt->data[pkt->size-1]); //XXX be?
+        put_be16(s->pb, pkt->data[pkt->size-1]); //XXX be?
 
     i=(ctx->pkt_offset - BURST_HEADER_SIZE - pkt->size) >> 1;
     if(i < 0){
