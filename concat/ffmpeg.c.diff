@@ -1,5 +1,5 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index 22bfed8..d30a5ac 100644
+index 22bfed8..d3e812d 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -70,6 +70,8 @@
@@ -91,7 +91,7 @@ index 22bfed8..d30a5ac 100644
      AVFormatContext *ic;
      AVFormatParameters params, *ap = &params;
      int err, i, ret, rfps, rfps_base;
-@@ -2859,6 +2884,45 @@ static void opt_input_file(const char *filename)
+@@ -2859,6 +2884,46 @@ static void opt_input_file(const char *filename)
      using_stdin |= !strncmp(filename, "pipe:", 5) ||
                      !strcmp(filename, "/dev/stdin");
  
@@ -112,7 +112,8 @@ index 22bfed8..d30a5ac 100644
 +            av_strlcpy(playlist_ctx->pelist[playlist_ctx->pelist_size-1]->filename, filename, filenamelen+1);
 +            av_strlcpy(ic->filename, filename, sizeof(ic->filename));
 +            ic->nb_streams = 2;
-+            ic->iformat = concat_make_demuxer();
++            ic->iformat = av_malloc(sizeof(*(ic->iformat)));
++            concat_init_demuxer(ic->iformat);
 +            ic->priv_data = playlist_ctx;
 +            for (i = 0; i < playlist_ctx->pe_curidxs_size; ++i) {
 +                ff_playlist_populate_context(playlist_ctx, ic, i);
@@ -137,7 +138,7 @@ index 22bfed8..d30a5ac 100644
      /* get default parameters from command line */
      ic = avformat_alloc_context();
  
-@@ -2925,6 +2989,8 @@ static void opt_input_file(const char *filename)
+@@ -2925,6 +2990,8 @@ static void opt_input_file(const char *filename)
          start_time = 0;
      }
  
@@ -146,7 +147,7 @@ index 22bfed8..d30a5ac 100644
      /* update the current parameters so that they match the one of the input stream */
      for(i=0;i<ic->nb_streams;i++) {
          AVCodecContext *enc = ic->streams[i]->codec;
-@@ -3000,6 +3066,8 @@ static void opt_input_file(const char *filename)
+@@ -3000,6 +3067,8 @@ static void opt_input_file(const char *filename)
          dump_format(ic, nb_input_files, filename, 0);
  
      nb_input_files++;
@@ -155,7 +156,7 @@ index 22bfed8..d30a5ac 100644
      file_iformat = NULL;
      file_oformat = NULL;
  
-@@ -3874,6 +3942,7 @@ static const OptionDef options[] = {
+@@ -3874,6 +3943,7 @@ static const OptionDef options[] = {
      { "programid", HAS_ARG | OPT_INT | OPT_EXPERT, {(void*)&opt_programid}, "desired program number", "" },
      { "xerror", OPT_BOOL, {(void*)&exit_on_error}, "exit on error", "error" },
      { "copyinkf", OPT_BOOL | OPT_EXPERT, {(void*)&copy_initial_nonkeyframes}, "copy initial non-keyframes" },
