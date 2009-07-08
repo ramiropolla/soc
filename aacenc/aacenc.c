@@ -201,6 +201,10 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
         ff_aac_pow2sf_tab[i] = pow(2, (i - 200)/4.);
 #endif /* CONFIG_HARDCODED_TABLES */
 
+    if (avctx->channels > 5)
+        av_log(avctx, AV_LOG_ERROR, "This encoder does not yet enforce the restrictions on LFEs. "
+               "The output will most likely be an illegal bitstream.\n");
+
     return 0;
 }
 
