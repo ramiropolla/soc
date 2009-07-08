@@ -487,7 +487,7 @@ static int aac_encode_frame(AVCodecContext *avctx,
             for(i = 0; i < chan_map[0]; i++){
                 tag = chan_map[i+1];
                 chans = tag == TYPE_CPE ? 2 : 1;
-                ff_psy_preprocess(s->psypp, (uint16_t*)data + start_ch, samples2 + start_ch, start_ch + i, chans);
+                ff_psy_preprocess(s->psypp, (uint16_t*)data + start_ch, samples2 + start_ch, start_ch, chans);
                 start_ch += chans;
             }
         }
