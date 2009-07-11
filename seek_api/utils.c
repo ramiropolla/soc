@@ -943,7 +943,7 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
 
                     if((s->iformat->flags & AVFMT_GENERIC_INDEX) && pkt->flags & PKT_FLAG_KEY){
                         ff_reduce_index(s, st->index);
-                        av_add_index_entry(st, pkt->pos/*st->parser->frame_offset*/, pkt->dts,
+                        av_add_index_entry(st, pkt->pos/*st->parser->frame_offset*/, pkt->pts,
                                            0, 0, AVINDEX_KEYFRAME);
                     }
 
