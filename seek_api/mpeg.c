@@ -546,6 +546,8 @@ static int mpegps_read_packet(AVFormatContext *s,
     pkt->pts = pts;
     pkt->dts = dts;
     pkt->stream_index = st->index;
+    av_log(s, AV_LOG_DEBUG, "packet index = %d pts = %"PRId64" dts = %"PRId64" size = %d packet pos = %"PRId64"\n",
+            pkt->stream_index, pkt->pts, pkt->dts, pkt->size, pkt->pos);
 #if 0
     av_log(s, AV_LOG_DEBUG, "%d: pts=%0.3f dts=%0.3f size=%d\n",
            pkt->stream_index, pkt->pts / 90000.0, pkt->dts / 90000.0, pkt->size);
@@ -589,35 +591,64 @@ static int64_t mpegps_read_dts(AVFormatContext *s, int stream_index,
 }
 
 /* 0 for success and -1 for error */
-static int find_keyframe(AVFormatContext *s, int stream_index, int64_t *ret_pos, int64_t *pts, int64_t target_ts, int flags)
+static int find_keyframe(AVFormatContext *s, int stream_index, int index, int64_t *ret_pos, int64_t *pts, int64_t target_ts, int flags)
 {
     AVPacket pkt1, *pkt = &pkt1;
-    int64_t prev_pts = *pts, prev_pos = *ret_pos;
-
+    int64_t target_index_pts, prev_pts = *pts, prev_pos = *ret_pos, base_pos = *ret_pos;
+    int prev_stream_index, tmp_stream_index = stream_index;
+    int count_flag = 0;
+    AVStream *st = s->streams[stream_index];
+    AVIndexEntry *e;
+    if (index != -1) {
+        e = &st->index_entries[index];
+        target_index_pts = e->timestamp;
+    }
+begin:
     url_fseek(s->pb, *ret_pos, SEEK_SET);
     for (;;) {
+        prev_pts = *pts;
+        prev_pos = *ret_pos;
+        prev_stream_index = tmp_stream_index;
         if (av_read_frame(s, pkt) < 0)
             return -1;
 
-        av_free_packet(pkt);
-        if (!(pkt->flags & PKT_FLAG_KEY) || (stream_index != pkt->stream_index)) {
-            if (!(flags & AVSEEK_FLAG_ANY))
-                continue;
-        }
-
+        count_flag ++;
         *pts = pkt->pts;
         *ret_pos = pkt->pos;
-
-        if (*pts < target_ts) {
-            prev_pts = *pts;
-            prev_pos = *ret_pos;
-        } else
+        tmp_stream_index = pkt->stream_index;
+        av_free_packet(pkt);
+        if (!(pkt->flags & PKT_FLAG_KEY) || (stream_index != pkt->stream_index)) {
+            if (!(flags & AVSEEK_FLAG_ANY)) {
+                continue;
+            }
+        }
+        if (*pts > target_ts)
+            break;
+        else if (flags & AVSEEK_FLAG_BACKWARD && *pts == target_index_pts)
+        //else if (flags & AVSEEK_FLAG_BACKWARD)
             break;
     }
+    av_read_frame_flush(s);
+    if (count_flag == 1 && index) {
+        index --;
+        e = &st->index_entries[index];
+        *ret_pos = e->pos;
+        *pts = e->timestamp;
+        base_pos = *ret_pos;
+        goto begin;
+    }
 
-    if (flags & AVSEEK_FLAG_BACKWARD && ((prev_pts + *pts) >> 2 > target_ts)) {
-        *ret_pos = prev_pts;
-        *pts = prev_pos;
+    // find the frame before the target frame
+    url_fseek(s->pb,base_pos, SEEK_SET);
+    if (prev_pts != pkt->pts || prev_pos != pkt->pos) {
+        for (;;) {
+            if (av_read_frame(s, pkt) < 0)
+                return -1;
+            av_free_packet(pkt);
+
+            if (pkt->pts == prev_pts && pkt->pos == prev_pos)
+                break;
+        }
     }
     return 0;
 }
@@ -676,16 +707,12 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
                 pts = st->index_entries[index].timestamp;
                 pos = st->index_entries[index].pos;
             }
-
-            if (find_keyframe(s, stream_index, &pos, &pts, ts, flags) == 0) {
+        }
+            if (find_keyframe(s, stream_index, index, &pos, &pts, ts, flags) == 0) {
                 goto success;
             } else {
                 return -1;
             }
-        } else {
-            url_fseek(s->pb, pos, SEEK_SET);
-            goto success;
-        }
     }
 
     // search the scr use binary search
@@ -698,7 +725,7 @@ static int mpegps_read_seek(struct AVFormatContext *s, int stream_index,
     pts = ret_ts;
     pos = ret_pos;
 
-    if (find_keyframe(s, stream_index, &pos, &pts, ts, flags) == 0) {
+    if (find_keyframe(s, stream_index, -1, &pos, &pts, ts, flags) == 0) {
         goto success;
     } else {
         return -1;
