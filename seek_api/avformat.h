@@ -835,7 +835,11 @@ int av_find_stream_info(AVFormatContext *ic);
  */
 int av_read_packet(AVFormatContext *s, AVPacket *pkt);
 
+/**
+ * Flush the frame reader. *
+ */
 void av_read_frame_flush(AVFormatContext *s);
+
 /**
  * Returns the next frame of a stream.
  *
