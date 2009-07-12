@@ -55,6 +55,7 @@ typedef struct {
     uint8_t sgnd[4]; ///< if a component is signed
     uint8_t properties[4];
 
+    int precision;
     int ncomponents;
     int tile_width, tile_height; ///< tile size
     int numXtiles, numYtiles;
@@ -225,6 +226,7 @@ static int get_siz(J2kDecoderContext *s)
     for (i = 0; i < s->ncomponents; i++){ // Ssiz_i XRsiz_i, YRsiz_i
         uint8_t x = bytestream_get_byte(&s->buf);
         s->cbps[i] = (x & 0x7f) + 1;
+        s->precision = FFMAX(s->cbps[i], s->precision);
         s->sgnd[i] = (x & 0x80) == 1;
         if (bytestream_get_byte(&s->buf) != 1)
             return -1;
@@ -251,8 +253,14 @@ static int get_siz(J2kDecoderContext *s)
     s->avctx->height = s->height - s->image_offset_y;
 
     switch(s->ncomponents){
-        case 1: s->avctx->pix_fmt = PIX_FMT_GRAY8; break;
-        case 3: s->avctx->pix_fmt = PIX_FMT_RGB24; break;
+        case 1: if (s->precision > 8) {
+                    s->avctx->pix_fmt    = PIX_FMT_GRAY16;
+                } else s->avctx->pix_fmt = PIX_FMT_GRAY8;
+                break;
+        case 3: if (s->precision > 8) {
+                    s->avctx->pix_fmt    = PIX_FMT_RGB48;
+                } else s->avctx->pix_fmt = PIX_FMT_RGB24;
+                break;
         case 4: s->avctx->pix_fmt = PIX_FMT_BGRA; break;
     }
 
@@ -788,6 +796,7 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
     if (s->avctx->pix_fmt == PIX_FMT_BGRA) // RGBA -> BGRA
         FFSWAP(int *, src[0], src[2]);
 
+    if (s->precision <= 8) {
     for (; y < tile->comp[0].coord[1][1] - s->image_offset_y; y++){
         uint8_t *dst;
 
@@ -805,6 +814,23 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
             }
 
         line += s->picture.linesize[0];
+    }
+    } else {
+        for (; y < tile->comp[0].coord[1][1] - s->image_offset_y; y++) {
+            uint16_t *dst;
+            x = tile->comp[0].coord[0][0] - s->image_offset_x;
+            dst = line + x * s->ncomponents * 2;
+            for (; x < tile->comp[0].coord[0][1] - s->image_offset_x; x++) {
+                for (compno = 0; compno < s->ncomponents; compno++) {
+                    int32_t val;
+                    val = *src[compno]++ << (16 - s->cbps[compno]);
+                    val += 1 << 15;
+                    val = av_clip(val, 0, (1 << 16) - 1);
+                    *dst++ = val;
+                }
+            }
+            line += s->picture.linesize[0];
+        }
     }
     return 0;
 }
