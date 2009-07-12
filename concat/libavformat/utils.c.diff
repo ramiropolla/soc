@@ -1,5 +1,5 @@
 diff --git a/libavformat/utils.c b/libavformat/utils.c
-index cd18971..39279a4 100644
+index 3fce3fa..6e9ed25 100644
 --- a/libavformat/utils.c
 +++ b/libavformat/utils.c
 @@ -908,6 +908,10 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
