@@ -130,7 +130,7 @@ void ff_apply_gain_ctrl(float *v_out, const float *v_ref, const float *v_in,
     if (scalefactor)
         scalefactor = sqrt(ff_dot_productf(v_ref, v_ref, length) / scalefactor);
     else
-        ff_log_missing_feature(NULL, "Zero energy for gain control", 1);
+        av_log_missing_feature(NULL, "Zero energy for gain control", 1);
     for (i = 0; i < length; i++)
         v_out[i] = scalefactor * v_in[i];
 }
@@ -930,7 +930,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     // decode the bitstream to AMR parameters
     p->cur_frame_mode = decode_bitstream(p, buf, buf_size, &speech_mode);
     if (p->cur_frame_mode == MODE_DTX) {
-        ff_log_missing_feature(avctx, "dtx mode", 1);
+        av_log_missing_feature(avctx, "dtx mode", 1);
         return -1;
     }
 /*** LPC coefficient decoding ***/
