@@ -1,1 +1,44 @@
-
+diff --git a/libavformat/utils.c b/libavformat/utils.c
+index cd18971..39279a4 100644
+--- a/libavformat/utils.c
++++ b/libavformat/utils.c
+@@ -908,6 +908,10 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
+ {
+     AVStream *st;
+     int len, ret, i;
++    int stream_index;
++    AVStream *stream;
++    stream_index = 0;
++    stream = 0;
+ 
+     av_init_packet(pkt);
+ 
+@@ -941,8 +945,14 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
+                 /* return packet if any */
+                 if (pkt->size) {
+                 got_packet:
++                    if (stream && stream->codec && stream->codec->codec) {
++                        pkt->stream = stream;
++                        pkt->stream_index = stream_index;
++                    } else {
++                        pkt->stream = st;
++                        pkt->stream_index = st->index;
++                    }
+                     pkt->duration = 0;
+-                    pkt->stream_index = st->index;
+                     pkt->pts = st->parser->pts;
+                     pkt->dts = st->parser->dts;
+                     pkt->pos = st->parser->pos;
+@@ -978,8 +988,11 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
+                                         NULL, 0,
+                                         AV_NOPTS_VALUE, AV_NOPTS_VALUE,
+                                         AV_NOPTS_VALUE);
+-                        if (pkt->size)
++                        if (pkt->size) {
++                            stream_index = cur_pkt.stream_index;
++                            stream = cur_pkt.stream;
+                             goto got_packet;
++                        }
+                     }
+                 }
+                 /* no more packets: really terminate parsing */
