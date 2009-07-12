@@ -29,6 +29,7 @@ int ff_concatgen_read_packet(AVFormatContext *s,
     int stream_index;
     PlaylistContext *ctx;
     AVFormatContext *ic;
+    char have_switched_streams = 0;
     ctx = s->priv_data;
     stream_index = 0;
     retr:
@@ -37,41 +38,31 @@ int ff_concatgen_read_packet(AVFormatContext *s,
     if (pkt) {
         stream_index = pkt->stream_index;
         ic = ctx->pelist[ctx->pe_curidxs[stream_index]]->ic;
+        pkt->stream = ic->streams[pkt->stream_index];
     }
     if (ret >= 0) {
         if (pkt) {
             int64_t time_offset;
             time_offset = av_rescale_q(ctx->time_offsets[pkt->stream_index], AV_TIME_BASE_Q, ic->streams[stream_index]->time_base);
-            printf("%s conv stream time from %ld to %d/%d is %ld\n", ic->iformat->name, ctx->time_offsets[pkt->stream_index], ic->streams[stream_index]->time_base.num, ic->streams[stream_index]->time_base.den, time_offset);
+            fprintf(stderr, "%s conv stream time from %ld to %d/%d is %ld\n", ic->iformat->name, ctx->time_offsets[pkt->stream_index], ic->streams[stream_index]->time_base.num, ic->streams[stream_index]->time_base.den, time_offset);
             // TODO changing either dts or pts leads to timing issues on h264
             pkt->dts += time_offset;
             if (!ic->streams[pkt->stream_index]->codec->has_b_frames)
                 pkt->pts = pkt->dts + 1;
         }
-    }
+    } else if (ret < 0 && !have_switched_streams && ctx->pe_curidxs[stream_index] < ctx->pelist_size - 1) {
     // TODO switch from AVERROR_EOF to AVERROR_EOS
     // -32 AVERROR_EOF for avi, -51 for ogg
-    else if (ret < 0 && ctx->pe_curidxs[stream_index] < ctx->pelist_size - 1) {
-        // TODO account for out-of-sync audio/video by using per-stream offsets
-        // using streams[]->duration slightly overestimates offset
-//        playld->dts_offset += ic->streams[0]->duration;
-        // using streams[]->cur_dts slightly overestimates offset
-//        playld->dts_offset += ic->streams[0]->cur_dts;
-//        playld->dts_offset += playld->dts_prevpacket;
         printf("switching streams\n");
         for (i = 0; i < ic->nb_streams && i < ctx->pe_curidxs_size; ++i) {
             ctx->time_offsets[i] += ff_playlist_get_duration(ic, i);
         }
         ++ctx->pe_curidxs[stream_index];
-//        pkt->destruct(pkt);
-        pkt = av_malloc(sizeof(AVPacket));
-//        for (i = 0; i < playld->pe_curidxs_size; ++i) {
-            ff_playlist_populate_context(ctx, s, stream_index);
-//        }
+        ff_playlist_populate_context(ctx, s, stream_index);
+        have_switched_streams = 1;
         goto retr;
-    }
-    else {
-        printf("avpacket ret is %d\n", ret);
+    } else {
+        fprintf(stderr, "avpacket ret is %d\n", ret);
     }
     return ret;
 }
