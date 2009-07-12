@@ -1,12 +1,12 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index 22bfed8..04e6e5c 100644
+index 22bfed8..6f2abb3 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -70,6 +70,8 @@
  
  #undef exit
  
-+#include "libavformat/concat.h"
++#include "libavformat/playlist.h"
 +
  const char program_name[] = "FFmpeg";
  const int program_birth_year = 2000;
