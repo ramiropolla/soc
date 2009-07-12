@@ -41,17 +41,14 @@ Index: Changelog
 ===================================================================
 --- Changelog	(revision 19401)
 +++ Changelog	(working copy)
-@@ -28,9 +28,9 @@
+@@ -28,6 +28,7 @@
  - DivX (XSUB) subtitle encoder
  - nonfree libamr support for AMR-NB/WB decoding/encoding removed
  - Experimental AAC encoder
 +- AMR-NB decoder
  
  
--
- version 0.5:
  
- - DV50 AKA DVCPRO50 encoder, decoder, muxer and demuxer
 Index: libavcodec/celp_filters.c
 ===================================================================
 --- libavcodec/celp_filters.c	(revision 19401)
