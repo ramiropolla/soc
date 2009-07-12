@@ -57,7 +57,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
 
     /* luma plane */
     outrow = out->data[0] + y * out->linesize[0];
-    inrow  = in-> data[0] + y * in-> linesize[0] + in->w;
+    inrow  = in-> data[0] + y * in-> linesize[0] + in->w -1;
     for(i = 0; i < h; i++) {
         for(j = 0; j < link->w; j++)
             outrow[j] = inrow[-j];
@@ -70,7 +70,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
         if (in->data[plane]) {
             outrow = out->data[plane] + (y>>flip->vsub) * out->linesize[plane];
             inrow  = in-> data[plane] + (y>>flip->vsub) * in-> linesize[plane] +
-                     (link->w >> flip->hsub);
+                     (link->w >> flip->hsub) -1;
 
             for(i = 0; i < h >> flip->vsub; i++) {
                 for(j = 0; j < link->w >> flip->hsub; j++)
