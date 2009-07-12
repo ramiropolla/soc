@@ -1,8 +1,8 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 17136)
+--- libavcodec/Makefile	(revision 19401)
 +++ libavcodec/Makefile	(working copy)
-@@ -39,6 +39,7 @@
+@@ -42,6 +42,7 @@
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o lpc.o
@@ -12,10 +12,10 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 17136)
+--- libavcodec/allcodecs.c	(revision 19401)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -196,6 +182,7 @@
-     REGISTER_DECODER (AAC, aac);
+@@ -198,6 +198,7 @@
+     REGISTER_ENCDEC  (AAC, aac);
      REGISTER_ENCDEC  (AC3, ac3);
      REGISTER_ENCDEC  (ALAC, alac);
 +    REGISTER_DECODER (AMRNB, amrnb);
@@ -24,36 +24,39 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (COOK, cook);
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 17136)
+--- doc/general.texi	(revision 19401)
 +++ doc/general.texi	(working copy)
-@@ -516,8 +356,8 @@
+@@ -523,8 +523,8 @@
  @item ADPCM Westwood Studios IMA @tab     @tab  X
      @tab Used in Westwood Studios games like Command and Conquer.
  @item ADPCM Yamaha           @tab  X  @tab  X
 -@item AMR-NB                 @tab  E  @tab  E
--    @tab supported through external library libamrnb
+-    @tab supported through external library libopencore-amrnb
 +@item AMR-NB                 @tab  X  @tab  E
-+    @tab encoding supported through external library libamrnb
- @item AMR-WB                 @tab  E  @tab  E
-     @tab supported through external library libamrwb
++    @tab encoding supported through external library libopencore-amrnb
+ @item AMR-WB                 @tab     @tab  E
+     @tab decoding supported through external library libopencore-amrwb
  @item Apple lossless audio   @tab  X  @tab  X
 Index: Changelog
 ===================================================================
---- Changelog	(revision 17136)
+--- Changelog	(revision 19401)
 +++ Changelog	(working copy)
-@@ -18,6 +149,7 @@
- - 8088flex TMV demuxer and decoder
- - per-stream language-tags extraction in asfdec
- - V210 decoder and encoder
+@@ -28,9 +28,9 @@
+ - DivX (XSUB) subtitle encoder
+ - nonfree libamr support for AMR-NB/WB decoding/encoding removed
+ - Experimental AAC encoder
 +- AMR-NB decoder
  
  
+-
  version 0.5:
+ 
+ - DV50 AKA DVCPRO50 encoder, decoder, muxer and demuxer
 Index: libavcodec/celp_filters.c
 ===================================================================
---- libavcodec/celp_filters.c	(revision 17468)
+--- libavcodec/celp_filters.c	(revision 19401)
 +++ libavcodec/celp_filters.c	(working copy)
-@@ -84,6 +85,31 @@
+@@ -84,6 +84,31 @@
      return 0;
  }
  
@@ -87,7 +90,7 @@ Index: libavcodec/celp_filters.c
          const float* filter_coeffs,
 Index: libavcodec/celp_filters.h
 ===================================================================
---- libavcodec/celp_filters.h	(revision 17468)
+--- libavcodec/celp_filters.h	(revision 19401)
 +++ libavcodec/celp_filters.h	(working copy)
 @@ -70,6 +70,23 @@
          int rounder);
