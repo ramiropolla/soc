@@ -1,8 +1,8 @@
 diff --git a/libavformat/Makefile b/libavformat/Makefile
-index 8e8a869..7456eac 100644
+index f95b426..002b5d4 100644
 --- a/libavformat/Makefile
 +++ b/libavformat/Makefile
-@@ -34,6 +34,7 @@ OBJS-$(CONFIG_BETHSOFTVID_DEMUXER)       += bethsoftvid.o
+@@ -33,6 +33,7 @@ OBJS-$(CONFIG_BETHSOFTVID_DEMUXER)       += bethsoftvid.o
  OBJS-$(CONFIG_BFI_DEMUXER)               += bfi.o
  OBJS-$(CONFIG_C93_DEMUXER)               += c93.o vocdec.o voc.o
  OBJS-$(CONFIG_CAVSVIDEO_DEMUXER)         += raw.o
