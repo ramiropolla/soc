@@ -76,6 +76,11 @@ typedef struct AMRContext {
     uint8_t         prev_ir_filter_strength; ///< previous impulse response filter strength; 0 - strong, 1 - medium, 2 - none
     uint8_t                 ir_filter_onset; ///< flag for impulse response filter strength
 
+    float              post_process_mem[10]; ///< previous intermediate values in the formant filter
+    float                          tilt_mem; ///< previous input to tilt compensation filter
+    float                   post_filter_agc; ///< previous factor used for adaptive gain control
+    float                  high_pass_mem[2]; ///< previous intermediate values in the high-pass filter
+
     float samples_in[LP_FILTER_ORDER + AMR_SUBFRAME_SIZE]; ///< floating point samples
 
 } AMRContext;
@@ -914,9 +919,140 @@ static void update_state(AMRContext *p)
 
 /// @}
 
+/// @defgroup amr_postproc Post processing functions
+/// @{
 
+/**
+ * Get the tilt factor of a formant filter from its transfer function
+ *
+ * @param lpc_n LP_FILTER_ORDER + 1 coefficients of the numerator
+ * @param lpc_d LP_FILTER_ORDER coefficients of the denominator
+ */
+static float tilt_factor(float *lpc_n, float *lpc_d)
+{
+    // Truncated impulse response of the formant filter
+    float tmp[LP_FILTER_ORDER + AMR_TILT_RESPONSE] = {0};
+    float *hf = tmp + LP_FILTER_ORDER;
 
-static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
+    float rh0 = 0.0, rh1 = 0.0;
+
+    // Get impulse response of the transfer function given by lpc_n and lpc_d
+    memcpy(hf, lpc_n, sizeof(float) * (LP_FILTER_ORDER + 1));
+    ff_celp_lp_synthesis_filterf(hf, lpc_d, hf, AMR_TILT_RESPONSE,
+                                 LP_FILTER_ORDER);
+
+    rh0 = ff_dot_productf(hf, hf,     AMR_TILT_RESPONSE);
+    rh1 = ff_dot_productf(hf, hf + 1, AMR_TILT_RESPONSE - 1);
+
+    // The spec only specifies this check for 12.2 and 10.2 kbit/s
+    // modes. But in the ref source the tilt is always non-negative.
+    return rh1 >= 0.0 ? rh1 / rh0 * AMR_TILT_GAMMA_T : 0.0;
+}
+
+/**
+ * Apply tilt compensation filter, 1 - tilt * z^-1
+ *
+ * @param mem Pointer to one float to keep the filter's state
+ * @param tilt Tilt factor
+ * @param samples AMR_SUBFRAME_SIZE array where the filter is applied
+ */
+static void tilt_compensation(float *mem, float tilt, float *samples)
+{
+    float new_tilt_mem = samples[AMR_SUBFRAME_SIZE - 1];
+    int i;
+
+    for (i = AMR_SUBFRAME_SIZE - 1; i > 0; i--)
+         samples[i] -= tilt * samples[i - 1];
+
+    samples[0] -= tilt * *mem;
+    *mem = new_tilt_mem;
+}
+
+/**
+ * Perform adaptive post-filtering to enhance the quality of the speech.
+ * See section 6.2.1.
+ *
+ * @param p             pointer to the AMRContext
+ * @param lpc           interpolated LP coefficients for this subframe
+ * @param buf_out       output of the filter
+ */
+static void post_process(AMRContext *p, float *lpc, float *buf_out)
+{
+    int i;
+    float *samples = p->samples_in + LP_FILTER_ORDER;
+    float gain_scale_factor = 1.0;
+    float speech_gain = ff_dot_productf(samples, samples, AMR_SUBFRAME_SIZE);
+    float post_filter_gain;
+    float tmp[AMR_SUBFRAME_SIZE + LP_FILTER_ORDER];
+    const float *gamma_n, *gamma_d; // Formant filter factor table
+    float lpc_n[LP_FILTER_ORDER + 1], // Transfer function coefficients
+          lpc_d[LP_FILTER_ORDER];     //
+
+    if (p->cur_frame_mode == MODE_122 || p->cur_frame_mode == MODE_102) {
+        gamma_n = formant_high_n;
+        gamma_d = formant_high_d;
+    } else {
+        gamma_n = formant_low_n;
+        gamma_d = formant_low_d;
+    }
+
+    lpc_n[0] = 1;
+    for (i = 0; i < LP_FILTER_ORDER; i++) {
+         lpc_n[i + 1] = lpc[i] * gamma_n[i];
+         lpc_d[i]     = lpc[i] * gamma_d[i];
+    }
+
+    // Apply transfer function given by lpc_n and lpc_d
+    memcpy(tmp, p->post_process_mem, sizeof(float) * LP_FILTER_ORDER);
+    ff_celp_lp_synthesis_filterf(tmp + LP_FILTER_ORDER, lpc_d, samples,
+                                 AMR_SUBFRAME_SIZE, LP_FILTER_ORDER);
+    memcpy(p->post_process_mem, tmp + AMR_SUBFRAME_SIZE,
+           sizeof(float) * LP_FILTER_ORDER);
+    ff_celp_lp_zero_synthesis_filterf(buf_out, lpc_n, tmp + LP_FILTER_ORDER,
+                                      AMR_SUBFRAME_SIZE, LP_FILTER_ORDER + 1);
+
+    // Apply tilt compensation
+    tilt_compensation(&p->tilt_mem, tilt_factor(lpc_n, lpc_d), buf_out);
+
+    // Adaptive gain control
+    post_filter_gain = ff_dot_productf(buf_out, buf_out, AMR_SUBFRAME_SIZE);
+    if (post_filter_gain != 0)
+        gain_scale_factor = sqrt(speech_gain / post_filter_gain);
+
+    p->post_filter_agc = AMR_AGC_ALPHA * p->post_filter_agc +
+                         (1.0 - AMR_AGC_ALPHA) * gain_scale_factor;
+
+    for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
+        buf_out[i] *= p->post_filter_agc;
+}
+
+/**
+ * High-pass filtering and up-scaling
+ *
+ * @param high_pass_mem Pointer to two floats for the filter state
+ * @param samples AMR_SUBFRAME_SIZE buffer where the filter is applied
+ */
+void high_pass_filter(float *high_pass_mem, float *samples)
+{
+    int i;
+    float tmp[AMR_SUBFRAME_SIZE + 2];
+
+    memcpy(tmp, high_pass_mem, sizeof(float) * 2);
+    ff_celp_lp_synthesis_filterf(tmp + 2, high_pass_d, samples,
+                                 AMR_SUBFRAME_SIZE, 2);
+    memcpy(high_pass_mem, tmp + AMR_SUBFRAME_SIZE, sizeof(float) * 2);
+    ff_celp_lp_zero_synthesis_filterf(samples, high_pass_n, tmp + 2,
+                                      AMR_SUBFRAME_SIZE, 3);
+
+    for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
+        // Post-processing up-scales by 2. It's convenient to
+        // scale from PCM values to [-1,1] here too.
+        samples[i] *= 2.0 * AMR_SAMPLE_SCALE;
+}
+
+/// @}
+
+int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
                               AVPacket *avpkt)
 {
 
@@ -995,12 +1131,11 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
 /*** end of synthesis ***/
 
+        post_process(p, p->lpc[subframe], buf_out + subframe * AMR_SUBFRAME_SIZE);
+        high_pass_filter(p->high_pass_mem, buf_out + subframe * AMR_SUBFRAME_SIZE);
+
         // update buffers and history
         update_state(p);
-
-        for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
-            buf_out[subframe * AMR_SUBFRAME_SIZE + i] =
-                p->samples_in[LP_FILTER_ORDER + i] * AMR_SAMPLE_SCALE;
     }
 
     /* report how many samples we got */

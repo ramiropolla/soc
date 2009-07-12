@@ -2331,6 +2331,34 @@ static const float *ir_filters_lookup[2]          = { ir_filter_strong,         
 static const float *ir_filters_lookup_MODE_795[2] = { ir_filter_strong_MODE_795, ir_filter_medium };
 
 
+// post-processing tables
+
+// Powers of formant factors (section 6.2.1)
+static const float formant_high_n[10] = {
+0.700000, 0.490000, 0.343000, 0.240100, 0.168070,
+0.117649, 0.082354, 0.057648, 0.040354, 0.028248
+};
+static const float formant_high_d[10] = {
+0.750000, 0.562500, 0.421875, 0.316406, 0.237305,
+0.177979, 0.133484, 0.100113, 0.075085, 0.056314
+};
+static const float formant_low_n[10] = {
+0.550000, 0.302500, 0.166375, 0.091506, 0.050328,
+0.027681, 0.015224, 0.008373, 0.004605, 0.002533
+};
+static const float *formant_low_d = formant_high_n;
+
+// Number of impulse response coefficients used for tilt factor
+#define AMR_TILT_RESPONSE 22
+// Tilt factor = 1st reflection coefficient * gamma_t
+#define AMR_TILT_GAMMA_T 0.8
+// Adaptive gain control factor used in post-filter
+#define AMR_AGC_ALPHA 0.9
+
+// High-pass filter coefficients (section 6.2.2)
+static const float high_pass_n[] = {0.939819335, -1.879638672, 0.939819335};
+static const float high_pass_d[] = {             -1.933105469, 0.935913085};
+
 /**************************** end of tables *****************************/
 
 #endif /* AVCODEC_AMRNBFLOATDATA_H */
