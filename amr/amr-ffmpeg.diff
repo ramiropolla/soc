@@ -113,3 +113,13 @@ Index: libavcodec/celp_filters.h
   * LP synthesis filter.
   * @param out [out] pointer to output buffer
   *        - the array out[-filter_length, -1] must
+@@ -101,9 +118,6 @@
+  * @param buffer_length amount of data to process
+  * @param filter_length filter length (10 for 10th order LP filter)
+  *
+- * @note Output buffer must contain filter_length samples of past
+- *       speech data before pointer.
+- *
+  * Routine applies A(z) filter to given speech data.
+  */
+ void ff_celp_lp_zero_synthesis_filterf(
