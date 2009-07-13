@@ -8,7 +8,7 @@
 #include "af_src.c"
 #include "af_null.c"
 
-#if 0
+#if 1
 int dump_avfiltlink(AVFilterLink *link)
 {
     if (!link)
@@ -99,28 +99,46 @@ int main()
     src_context = avfilter_open(src_filter, "filter_src");
     avfilter_register(src_filter);
 
-    /* set up actual filter */
+    /* set up the first filter */
     AVFilterContext * avfiltcont=NULL;
     AVFilter *avfilt;
     avfilt = &avfilter_af_null;
     avfiltcont = avfilter_open(avfilt, "filterID1234");
     avfilter_register(avfilt);
 
+    /* set up the first filter */
+    AVFilterContext * avfiltcont2=NULL;
+    AVFilter *avfilt2;
+    avfilt2 = &avfilter_af_null2;
+    memcpy(avfilt2, &avfilter_af_null, sizeof(AVFilter));
+    avfiltcont2 = avfilter_open(avfilt2, "filtery");
+    avfilter_register(avfilt2);
+
     /*init filters */
     avfilter_init_filter(avfiltcont, NULL, NULL);
+    avfilter_init_filter(avfiltcont2, NULL, NULL);
     avfilter_init_filter(src_context, NULL, NULL);
 
     /* link filters */
     avfilter_link(src_context, 0, avfiltcont, 0);
+    avfilter_link(avfiltcont, 0, avfiltcont2, 0);
     avfilter_config_links(src_context);
     avfilter_config_links(avfiltcont);
+    avfilter_config_links(avfiltcont2);
 
+
+    dump_avfiltcont(src_context);
+    dump_avfiltcont(avfiltcont);
+    dump_avfiltcont(avfiltcont2);
 
     /* load some samples in the source filter */
     av_asrc_buffer_add_samples(src_context, &sample_buf);
 
     /* run this link */
+    printf("running first link\n");
     avfilter_filter_buffer(src_context->outputs[0], &sample_buf);
+    printf("running second link\n");
+    avfilter_filter_buffer(avfiltcont->outputs[0], &sample_buf);
 
 }
 
