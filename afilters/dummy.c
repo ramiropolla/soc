@@ -67,7 +67,6 @@ int dump_avfiltcont(AVFilterContext *cont)
 
 int main()
 {
-
     printf("AVfilter version: %x\n", avfilter_version());
 
     /* Simulates a 1024 buffer of sl16 audio data */

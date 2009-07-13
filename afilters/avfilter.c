@@ -269,14 +269,13 @@ void avfilter_filter_buffer(AVFilterLink *link, AVFilterBufferRef *sample_ref)
         input_func = 0;
     }
 
-    //av_log(0,0,"it is %x\n", filter_buffer);
     link->cur_buf = sample_ref;
 
     if (output_func)
-    filter_output_buffer(link, link->srcbuf);
+    filter_output_buffer(link, link->cur_buf);
 
     if (input_func)
-    filter_input_buffer(link, link->srcbuf);
+    filter_input_buffer(link, link->cur_buf);
 }
 
 

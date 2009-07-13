@@ -31,7 +31,8 @@ static int av_asrc_buffer_add_samples(AVFilterContext *ctx,
             printf("Error! not enough room\n");
             return attempted_load - priv->buf_ref.buffer->n_samples;
         }
-        memcpy(&priv->buf_ref.buffer->data[last] , samples->buffer->data, attempted_load);
+        memcpy(&priv->buf_ref.buffer->data[last] , samples->buffer->data,
+                sizeof(int16_t) * attempted_load);
         priv->last_used  = priv->last_used + attempted_load;
     }
 
@@ -61,7 +62,7 @@ static int dump_next(AVFilterLink *lnk, AVFilterBufferRef *sample_ref)
     printf("First Used:\t%i\n",priv->first_used);
     printf("Last Used:\t%i\n", priv->last_used);
 
-    printf("dumping buffer\n");
+   printf("dumping buffer\n");
     return 0;
 
 }
