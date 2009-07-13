@@ -797,24 +797,24 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
         FFSWAP(int *, src[0], src[2]);
 
     if (s->precision <= 8) {
-    for (; y < tile->comp[0].coord[1][1] - s->image_offset_y; y++){
-        uint8_t *dst;
+        for (; y < tile->comp[0].coord[1][1] - s->image_offset_y; y++){
+            uint8_t *dst;
 
-        x = tile->comp[0].coord[0][0] - s->image_offset_x;
-        dst = line + x * s->ncomponents;
+            x = tile->comp[0].coord[0][0] - s->image_offset_x;
+            dst = line + x * s->ncomponents;
 
-        for (; x < tile->comp[0].coord[0][1] - s->image_offset_x; x++)
-            for (compno = 0; compno < s->ncomponents; compno++){
-                *src[compno] += 1 << (s->cbps[compno]-1);
-                if (*src[compno] < 0)
-                    *src[compno] = 0;
-                else if (*src[compno] >= (1 << s->cbps[compno]))
-                    *src[compno] = (1 << s->cbps[compno]) - 1;
-                *dst++ = *src[compno]++;
-            }
+            for (; x < tile->comp[0].coord[0][1] - s->image_offset_x; x++)
+                for (compno = 0; compno < s->ncomponents; compno++){
+                    *src[compno] += 1 << (s->cbps[compno]-1);
+                    if (*src[compno] < 0)
+                        *src[compno] = 0;
+                    else if (*src[compno] >= (1 << s->cbps[compno]))
+                        *src[compno] = (1 << s->cbps[compno]) - 1;
+                    *dst++ = *src[compno]++;
+                }
 
-        line += s->picture.linesize[0];
-    }
+            line += s->picture.linesize[0];
+        }
     } else {
         for (; y < tile->comp[0].coord[1][1] - s->image_offset_y; y++) {
             uint16_t *dst;
