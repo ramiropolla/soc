@@ -18,8 +18,51 @@
 
 /**
  * @file libavfilter/vf_null.c
- * null filter
+ * null filter. used as an example, or for development
  */
 
+
+#include <stdio.h>
+#include "avfilter.h"
+static int filter(AVFilterLink *link, AVFilterBufferRef *sample_ref);
+
+typedef struct
+{
+    int history[100]; /*just an example */
+
+} af_null_priv_t;
+
+AVFilter avfilter_af_null =
+{
+    .name      = "audio_null",
+
+    .priv_size = sizeof(af_null_priv_t),
+
+    .inputs    = (AVFilterPad[]) {{ .name            = "default",
+                                    .type            = CODEC_TYPE_AUDIO,
+                                    .filter_buffer    = filter },
+                                  { .name = NULL}},
+
+    .outputs   = (AVFilterPad[]) {{ .name            = "default",
+                                    .type            = CODEC_TYPE_AUDIO, },
+                                  { .name = NULL}},
+};
+
+
+static int filter(AVFilterLink *link, AVFilterBufferRef *sample_ref)
+{
+    av_log(0,0, "Filter buffer\n");
+    int num_samples = sample_ref->buffer->n_samples;
+    int i;
+
+    int16_t *data;
+    data = (int16_t*) sample_ref->buffer->data;
+    for (i=0; i < num_samples; i++)
+    {
+        data[i]  = data[i] +1;
+    }
+
+    return 0;
+}
 
 
