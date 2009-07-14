@@ -48,22 +48,6 @@ AVFilter avfilter_af_null =
                                   { .name = NULL}},
 };
 
-AVFilter avfilter_af_null2 =
-{
-    .name      = "audio_null",
-
-    .priv_size = sizeof(af_null_priv_t),
-
-    .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_AUDIO,
-                                    .filter_buffer    = filter },
-                                  { .name = NULL}},
-
-    .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_AUDIO, },
-                                  { .name = NULL}},
-};
-
 
 static int filter(AVFilterLink *link, AVFilterBufferRef *sample_ref)
 {

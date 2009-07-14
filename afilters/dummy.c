@@ -102,14 +102,15 @@ int main()
     /* set up the first filter */
     AVFilterContext * avfiltcont=NULL;
     AVFilter *avfilt;
-    avfilt = &avfilter_af_null;
+    avfilt = (AVFilter*)malloc(sizeof(AVFilter));
+    memcpy(avfilt, &avfilter_af_null, sizeof(AVFilter));
     avfiltcont = avfilter_open(avfilt, "filterID1234");
     avfilter_register(avfilt);
 
     /* set up the first filter */
     AVFilterContext * avfiltcont2=NULL;
     AVFilter *avfilt2;
-    avfilt2 = &avfilter_af_null2;
+    avfilt2 = (AVFilter*)malloc(sizeof(AVFilter));
     memcpy(avfilt2, &avfilter_af_null, sizeof(AVFilter));
     avfiltcont2 = avfilter_open(avfilt2, "filtery");
     avfilter_register(avfilt2);
