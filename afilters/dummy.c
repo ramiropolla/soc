@@ -7,6 +7,7 @@
 #include "avfilter.h"
 #include "af_src.c"
 #include "af_null.c"
+#include "af_vol.c"
 
 #if 1
 int dump_avfiltlink(AVFilterLink *link)
@@ -111,7 +112,7 @@ int main()
     AVFilterContext * avfiltcont2=NULL;
     AVFilter *avfilt2;
     avfilt2 = (AVFilter*)malloc(sizeof(AVFilter));
-    memcpy(avfilt2, &avfilter_af_null, sizeof(AVFilter));
+    memcpy(avfilt2, &avfilter_af_volume, sizeof(AVFilter));
     avfiltcont2 = avfilter_open(avfilt2, "filtery");
     avfilter_register(avfilt2);
 

@@ -24,7 +24,7 @@
 
 #include <stdio.h>
 #include "avfilter.h"
-static int filter(AVFilterLink *link, AVFilterBufferRef *sample_ref);
+static int null_filter(AVFilterLink *link, AVFilterBufferRef *sample_ref);
 
 typedef struct
 {
@@ -40,7 +40,7 @@ AVFilter avfilter_af_null =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_AUDIO,
-                                    .filter_buffer    = filter },
+                                    .filter_buffer    = null_filter },
                                   { .name = NULL}},
 
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
@@ -48,8 +48,7 @@ AVFilter avfilter_af_null =
                                   { .name = NULL}},
 };
 
-
-static int filter(AVFilterLink *link, AVFilterBufferRef *sample_ref)
+static int null_filter(AVFilterLink *link, AVFilterBufferRef *sample_ref)
 {
     av_log(0,0, "Filter buffer\n");
     int num_samples = sample_ref->buffer->n_samples;
