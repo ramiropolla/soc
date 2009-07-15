@@ -1,5 +1,5 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index 22bfed8..5f8b256 100644
+index 22bfed8..16b5773 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -70,6 +70,8 @@
@@ -93,11 +93,10 @@ index 22bfed8..5f8b256 100644
      AVFormatContext *ic;
      AVFormatParameters params, *ap = &params;
      int err, i, ret, rfps, rfps_base;
-@@ -2859,6 +2884,42 @@ static void opt_input_file(const char *filename)
+@@ -2859,6 +2884,55 @@ static void opt_input_file(const char *filename)
      using_stdin |= !strncmp(filename, "pipe:", 5) ||
                      !strcmp(filename, "/dev/stdin");
  
-+
 +    if (concatenate_video_files) { // need to specify -conc before -i
 +        int filenamelen = strlen(filename);
 +        if (!playlist_ctx) {
@@ -131,12 +130,26 @@ index 22bfed8..5f8b256 100644
 +        }
 +        return;
 +    }
-+
++    // alternative interface for concat - specify -i item1,item2
++    playlist_ctx = ff_playlist_from_encodedstring(filename, ',');
++    if (playlist_ctx) {
++        av_log(ic, AV_LOG_DEBUG, "Generating playlist from encoded string\n");
++        concatenate_video_files = 1;
++        ic = avformat_alloc_context();
++        av_strlcpy(ic->filename, filename, sizeof(ic->filename));
++        ic->nb_streams = 2;
++        ic->iformat = ff_concat_alloc_demuxer();
++        ff_playlist_set_context(ic, playlist_ctx);
++        ff_playlist_populate_context(ic);
++        nb_input_files = 1;
++        input_files[0] = ic;
++        goto configcodecs;
++    }
 +
      /* get default parameters from command line */
      ic = avformat_alloc_context();
  
-@@ -2925,6 +2986,8 @@ static void opt_input_file(const char *filename)
+@@ -2925,6 +2999,8 @@ static void opt_input_file(const char *filename)
          start_time = 0;
      }
  
@@ -145,7 +158,7 @@ index 22bfed8..5f8b256 100644
      /* update the current parameters so that they match the one of the input stream */
      for(i=0;i<ic->nb_streams;i++) {
          AVCodecContext *enc = ic->streams[i]->codec;
-@@ -3000,6 +3063,8 @@ static void opt_input_file(const char *filename)
+@@ -3000,6 +3076,8 @@ static void opt_input_file(const char *filename)
          dump_format(ic, nb_input_files, filename, 0);
  
      nb_input_files++;
@@ -154,7 +167,7 @@ index 22bfed8..5f8b256 100644
      file_iformat = NULL;
      file_oformat = NULL;
  
-@@ -3874,6 +3939,7 @@ static const OptionDef options[] = {
+@@ -3874,6 +3952,7 @@ static const OptionDef options[] = {
      { "programid", HAS_ARG | OPT_INT | OPT_EXPERT, {(void*)&opt_programid}, "desired program number", "" },
      { "xerror", OPT_BOOL, {(void*)&exit_on_error}, "exit on error", "error" },
      { "copyinkf", OPT_BOOL | OPT_EXPERT, {(void*)&copy_initial_nonkeyframes}, "copy initial non-keyframes" },
