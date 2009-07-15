@@ -47,7 +47,7 @@ AVFilterPicRef *avfilter_default_get_video_buffer(AVFilterLink *link, int perms)
     ref->perms = perms | AV_PERM_READ;
 
     pic->refcount = 1;
-    pic->format   = link->format;
+    pic->format   = link->v_format;
     pic->free     = avfilter_default_free_video_buffer;
     ff_fill_linesize((AVPicture *)pic, pic->format, ref->w);
 

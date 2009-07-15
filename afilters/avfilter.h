@@ -36,6 +36,7 @@
 
 #include <stddef.h>
 #include "libavcodec/avcodec.h"
+#include "libavcodec/audioconvert.h"
 
 /**
  * Returns the LIBAVFILTER_VERSION_INT constant.
@@ -127,11 +128,6 @@ typedef struct AVFilterBufferRef
     int sample_rate;
 
 }AVFilterBufferRef;
-
-
-
-
-
 
 /**
  * Adds a new reference to a picture.
@@ -378,7 +374,6 @@ struct AVFilterPad
      */
     int (*config_props)(AVFilterLink *link);
 
-
     /**
      * Process an audio buffer. Filters can hook into this function to do the
      * actual audio processing
@@ -492,7 +487,8 @@ struct AVFilterLink
 
     int w;                      ///< agreed upon image width
     int h;                      ///< agreed upon image height
-    enum PixelFormat format;    ///< agreed upon image colorspace
+    enum PixelFormat v_format;    ///< agreed upon image colorspace [for video]
+    enum SampleFormat a_format;   ///< agreed upon sample format [for audio]
 
     /**
      * Lists of formats supported by the input and output filters respectively.
@@ -515,7 +511,10 @@ struct AVFilterLink
 
     /** the audio buffer reference is sent accross the link by the source. */
     AVFilterBufferRef *srcbuf;
+
     int link_size; /* size of data sent accross link each time */
+    AVAudioConvert *av_conv; /*context for translating accross links */
+
     AVFilterBufferRef *cur_buf;
     AVFilterBufferRef *outbuf;
 };

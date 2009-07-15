@@ -20,6 +20,7 @@
  */
 
 #include "libavcodec/imgconvert.h"
+#include "libavcodec/audioconvert.h"
 #include "avfilter.h"
 
 unsigned avfilter_version(void) {
@@ -95,7 +96,15 @@ int avfilter_link(AVFilterContext *src, unsigned srcpad,
     link->dstpad  = dstpad;
 
 
-    link->format  = PIX_FMT_NONE;
+    link->v_format  = PIX_FMT_NONE;
+
+    /* detect if input/output are the same pcm format*/
+    if (1)
+    {
+        link->av_conv = NULL;
+    } else {
+//        link->conv = av_audio_convert_alloc(out, 1, in, 1, matrcx, 0);
+    }
 
     /* FIXME shouldnt do static buffer alloc like this really, should be
        variable */
@@ -253,6 +262,10 @@ void avfilter_filter_buffer(AVFilterLink *link, AVFilterBufferRef *sample_ref)
 
     int input_func = 1, output_func = 1;
 
+    /* convert, if necessary */
+//    if (link->av_conv)
+//        av_audio_convert();
+
     if (!(filter_output_buffer = dst->filter_buffer))
     {
         av_log(0,0,"LINK HAS NO OUTPUT?\n", 0);
@@ -304,7 +317,7 @@ void avfilter_draw_slice(AVFilterLink *link, int y, int h)
 
     /* copy the slice if needed for permission reasons */
     if(link->srcpic) {
-        avcodec_get_chroma_sub_sample(link->format, &hsub, &vsub);
+        avcodec_get_chroma_sub_sample(link->v_format, &hsub, &vsub);
 
         for(i = 0; i < 4; i ++) {
             if(link->srcpic->data[i]) {
@@ -318,7 +331,7 @@ void avfilter_draw_slice(AVFilterLink *link, int y, int h)
 
         for(i = 0; i < 4; i ++) {
             int planew =
-                ff_get_plane_bytewidth(link->format, link->cur_pic->w, i);
+                ff_get_plane_bytewidth(link->v_format, link->cur_pic->w, i);
 
             if(!src[i]) continue;
 

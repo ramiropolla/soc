@@ -9,7 +9,7 @@
 #include "af_null.c"
 #include "af_vol.c"
 
-#if 1
+#if 0
 int dump_avfiltlink(AVFilterLink *link)
 {
     if (!link)
@@ -84,13 +84,15 @@ int main()
         tbuf[i] = i;
 #endif
     }   // sine wave, period 1024/100, range, 100 -> -100
+
     AVFilterBuffer samples;
+    AVFilterBufferRef sample_buf;
     samples.n_samples = n_samples;
     samples.data = tbuf;
     samples.data_size = sizeof(int16_t);
-    AVFilterBufferRef sample_buf;
-    sample_buf.buffer = &samples;
+
     sample_buf.sample_type = 10;
+    sample_buf.buffer = &samples;
     sample_buf.sample_rate = 128000;
 
     /* set up source filter */
@@ -129,9 +131,9 @@ int main()
     avfilter_config_links(avfiltcont2);
 
 
-    dump_avfiltcont(src_context);
+    /*dump_avfiltcont(src_context);
     dump_avfiltcont(avfiltcont);
-    dump_avfiltcont(avfiltcont2);
+    dump_avfiltcont(avfiltcont2);*/
 
     /* load some samples in the source filter */
     av_asrc_buffer_add_samples(src_context, &sample_buf);
