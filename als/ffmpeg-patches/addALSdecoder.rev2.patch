@@ -1,8 +1,20 @@
+Index: libavcodec/allcodecs.c
+===================================================================
+--- libavcodec/allcodecs.c	(revision 19441)
++++ libavcodec/allcodecs.c	(working copy)
+@@ -198,6 +198,7 @@
+     REGISTER_ENCDEC  (AAC, aac);
+     REGISTER_ENCDEC  (AC3, ac3);
+     REGISTER_ENCDEC  (ALAC, alac);
++    REGISTER_DECODER (ALS, als);
+     REGISTER_DECODER (APE, ape);
+     REGISTER_DECODER (ATRAC3, atrac3);
+     REGISTER_DECODER (COOK, cook);
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(Revision 18912)
-+++ libavcodec/Makefile	(Arbeitskopie)
-@@ -39,6 +39,7 @@
+--- libavcodec/Makefile	(revision 19441)
++++ libavcodec/Makefile	(working copy)
+@@ -42,6 +42,7 @@
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o lpc.o
@@ -10,15 +22,3 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
  OBJS-$(CONFIG_APE_DECODER)             += apedec.o
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
-Index: libavcodec/allcodecs.c
-===================================================================
---- libavcodec/allcodecs.c	(Revision 18912)
-+++ libavcodec/allcodecs.c	(Arbeitskopie)
-@@ -196,6 +196,7 @@
-     REGISTER_DECODER (AAC, aac);
-     REGISTER_ENCDEC  (AC3, ac3);
-     REGISTER_ENCDEC  (ALAC, alac);
-+    REGISTER_DECODER (ALS, als);
-     REGISTER_DECODER (APE, ape);
-     REGISTER_DECODER (ATRAC3, atrac3);
-     REGISTER_DECODER (COOK, cook);
