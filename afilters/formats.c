@@ -87,6 +87,19 @@ AVFilterFormats *avfilter_make_format_list(int len, ...)
     return ret;
 }
 
+AVFilterFormats *avfilter_all_sampleformats()
+{
+    AVFilterFormats *ret;
+    int i;
+    ret = av_mallocz(sizeof(AVFilterFormats));
+    ret->formats = av_malloc(sizeof(*ret->formats) * SAMPLE_FMT_NB);
+
+    for (i = 0; i < SAMPLE_FMT_NB; i++ )
+        ret->formats[i] = i;
+
+    return ret;
+}
+
 AVFilterFormats *avfilter_all_colorspaces(void)
 {
     AVFilterFormats *ret;
