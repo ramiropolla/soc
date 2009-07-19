@@ -795,15 +795,15 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
 
     if (s->precision <= 8) {
         for (compno = 0; compno < s->ncomponents; compno++){
-        y = tile->comp[0].coord[1][0] - s->image_offset_y;
-        line = s->picture.data[0] + y * s->picture.linesize[0];
-        for (; y < tile->comp[0].coord[1][1] - s->image_offset_y; y++){
-            uint8_t *dst;
+            y = tile->comp[0].coord[1][0] - s->image_offset_y;
+            line = s->picture.data[0] + y * s->picture.linesize[0];
+            for (; y < tile->comp[0].coord[1][1] - s->image_offset_y; y++){
+                uint8_t *dst;
 
-            x = tile->comp[0].coord[0][0] - s->image_offset_x;
-            dst = line + x * s->ncomponents + compno;
+                x = tile->comp[0].coord[0][0] - s->image_offset_x;
+                dst = line + x * s->ncomponents + compno;
 
-            for (; x < tile->comp[0].coord[0][1] - s->image_offset_x; x++) {
+                for (; x < tile->comp[0].coord[0][1] - s->image_offset_x; x++) {
                     *src[compno] += 1 << (s->cbps[compno]-1);
                     if (*src[compno] < 0)
                         *src[compno] = 0;
@@ -811,28 +811,28 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                         *src[compno] = (1 << s->cbps[compno]) - 1;
                     *dst = *src[compno]++;
                     dst += s->ncomponents;
+                }
+                line += s->picture.linesize[0];
             }
-            line += s->picture.linesize[0];
-        }
         }
     } else {
         for (compno = 0; compno < s->ncomponents; compno++) {
-        y = tile->comp[0].coord[1][0] - s->image_offset_y;
-        line = s->picture.data[0] + y * s->picture.linesize[0];
-        for (; y < tile->comp[0].coord[1][1] - s->image_offset_y; y++) {
-            uint16_t *dst;
-            x = tile->comp[0].coord[0][0] - s->image_offset_x;
-            dst = line + (x * s->ncomponents + compno) * 2;
-            for (; x < tile->comp[0].coord[0][1] - s->image_offset_x; x++) {
+            y = tile->comp[0].coord[1][0] - s->image_offset_y;
+            line = s->picture.data[0] + y * s->picture.linesize[0];
+            for (; y < tile->comp[0].coord[1][1] - s->image_offset_y; y++) {
+                uint16_t *dst;
+                x = tile->comp[0].coord[0][0] - s->image_offset_x;
+                dst = line + (x * s->ncomponents + compno) * 2;
+                for (; x < tile->comp[0].coord[0][1] - s->image_offset_x; x++) {
                     int32_t val;
                     val = *src[compno]++ << (16 - s->cbps[compno]);
                     val += 1 << 15;
                     val = av_clip(val, 0, (1 << 16) - 1);
                     *dst = val;
                     dst += s->ncomponents;
+                }
+                line += s->picture.linesize[0];
             }
-            line += s->picture.linesize[0];
-        }
         }
     }
     return 0;
