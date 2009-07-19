@@ -803,7 +803,7 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
             x = tile->comp[0].coord[0][0] - s->image_offset_x;
             dst = line + x * s->ncomponents;
 
-            for (; x < tile->comp[0].coord[0][1] - s->image_offset_x; x++)
+            for (; x < tile->comp[0].coord[0][1] - s->image_offset_x; x++) {
                 for (compno = 0; compno < s->ncomponents; compno++){
                     *src[compno] += 1 << (s->cbps[compno]-1);
                     if (*src[compno] < 0)
@@ -812,7 +812,7 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                         *src[compno] = (1 << s->cbps[compno]) - 1;
                     *dst++ = *src[compno]++;
                 }
-
+            }
             line += s->picture.linesize[0];
         }
     } else {
