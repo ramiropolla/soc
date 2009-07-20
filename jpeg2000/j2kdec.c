@@ -795,13 +795,13 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
         for (compno = 0; compno < s->ncomponents; compno++){
             y = tile->comp[compno].coord[1][0] - s->image_offset_y;
             line = s->picture.data[0] + y * s->picture.linesize[0];
-            for (; y < tile->comp[compno].coord[1][1] - s->image_offset_y; y++){
+            for (; y < tile->comp[compno].coord[1][1] - s->image_offset_y; y += s->cdy[compno]){
                 uint8_t *dst;
 
                 x = tile->comp[compno].coord[0][0] - s->image_offset_x;
                 dst = line + x * s->ncomponents + compno;
 
-                for (; x < tile->comp[compno].coord[0][1] - s->image_offset_x; x++) {
+                for (; x < tile->comp[compno].coord[0][1] - s->image_offset_x; x += s->cdx[compno]) {
                     *src[compno] += 1 << (s->cbps[compno]-1);
                     if (*src[compno] < 0)
                         *src[compno] = 0;
@@ -817,11 +817,11 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
         for (compno = 0; compno < s->ncomponents; compno++) {
             y = tile->comp[compno].coord[1][0] - s->image_offset_y;
             line = s->picture.data[0] + y * s->picture.linesize[0];
-            for (; y < tile->comp[compno].coord[1][1] - s->image_offset_y; y++) {
+            for (; y < tile->comp[compno].coord[1][1] - s->image_offset_y; y += s->cdy[compno]) {
                 uint16_t *dst;
                 x = tile->comp[compno].coord[0][0] - s->image_offset_x;
                 dst = line + (x * s->ncomponents + compno) * 2;
-                for (; x < tile->comp[compno].coord[0][1] - s->image_offset_x; x++) {
+                for (; x < tile->comp[compno].coord[0][1] - s->image_offset_x; x += s-> cdx[compno]) {
                     int32_t val;
                     val = *src[compno]++ << (16 - s->cbps[compno]);
                     val += 1 << 15;
