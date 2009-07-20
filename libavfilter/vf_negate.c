@@ -80,28 +80,28 @@ static void draw_slice(AVFilterLink *link, int y, int h)
             outrow += out->linesize[0];
         }
     } else {
-    /* luma plane */
-    inrow  = in-> data[0] + y * in-> linesize[0];
-    outrow = out->data[0] + y * out->linesize[0];
-    for(i = 0; i < h; i ++) {
-        for(j = 0; j < link->w; j ++)
-            outrow[j] = 255 - inrow[j] + neg->offY;
-        inrow  += in-> linesize[0];
-        outrow += out->linesize[0];
-    }
-
-    /* chroma planes */
-    for(plane = 1; plane < 3; plane ++) {
-        inrow  = in-> data[plane] + (y >> neg->vsub) * in-> linesize[plane];
-        outrow = out->data[plane] + (y >> neg->vsub) * out->linesize[plane];
-
-        for(i = 0; i < h >> neg->vsub; i ++) {
-            for(j = 0; j < link->w >> neg->hsub; j ++)
-                outrow[j] = 255 - inrow[j] + neg->offUV;
-            inrow  += in-> linesize[plane];
-            outrow += out->linesize[plane];
+        /* luma plane */
+        inrow  = in-> data[0] + y * in-> linesize[0];
+        outrow = out->data[0] + y * out->linesize[0];
+        for(i = 0; i < h; i ++) {
+            for(j = 0; j < link->w; j ++)
+                outrow[j] = 255 - inrow[j] + neg->offY;
+            inrow  += in-> linesize[0];
+            outrow += out->linesize[0];
         }
-    }
+
+        /* chroma planes */
+        for(plane = 1; plane < 3; plane ++) {
+            inrow  = in-> data[plane] + (y >> neg->vsub) * in-> linesize[plane];
+            outrow = out->data[plane] + (y >> neg->vsub) * out->linesize[plane];
+
+            for(i = 0; i < h >> neg->vsub; i ++) {
+                for(j = 0; j < link->w >> neg->hsub; j ++)
+                    outrow[j] = 255 - inrow[j] + neg->offUV;
+                inrow  += in-> linesize[plane];
+                outrow += out->linesize[plane];
+            }
+        }
     }
 
     avfilter_draw_slice(link->dst->outputs[0], y, h);
