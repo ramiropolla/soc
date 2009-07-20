@@ -30,11 +30,13 @@ typedef struct
 static int query_formats(AVFilterContext *ctx)
 {
     avfilter_set_common_formats(ctx,
-        avfilter_make_format_list(10,
+        avfilter_make_format_list(12,
                 PIX_FMT_YUV444P,  PIX_FMT_YUV422P,  PIX_FMT_YUV420P,
                 PIX_FMT_YUV411P,  PIX_FMT_YUV410P,
                 PIX_FMT_YUVJ444P, PIX_FMT_YUVJ422P, PIX_FMT_YUVJ420P,
-                PIX_FMT_YUV440P,  PIX_FMT_YUVJ440P));
+                PIX_FMT_YUV440P,  PIX_FMT_YUVJ440P,
+                PIX_FMT_MONOWHITE, PIX_FMT_MONOBLACK));
+
     return 0;
 }
 
@@ -68,6 +70,16 @@ static void draw_slice(AVFilterLink *link, int y, int h)
     uint8_t *inrow, *outrow;
     int i, j, plane;
 
+    if (link->format == PIX_FMT_MONOWHITE || link->format == PIX_FMT_MONOBLACK) {
+        inrow  = in ->data[0] + y * in ->linesize[0];
+        outrow = out->data[0] + y * out->linesize[0];
+        for (i = 0; i < h; i++) {
+            for (j = 0; j < link->w >> 3; j++)
+                outrow[j] = ~inrow[j];
+            inrow  += in-> linesize[0];
+            outrow += out->linesize[0];
+        }
+    } else {
     /* luma plane */
     inrow  = in-> data[0] + y * in-> linesize[0];
     outrow = out->data[0] + y * out->linesize[0];
@@ -89,6 +101,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
             inrow  += in-> linesize[plane];
             outrow += out->linesize[plane];
         }
+    }
     }
 
     avfilter_draw_slice(link->dst->outputs[0], y, h);
