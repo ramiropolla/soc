@@ -54,7 +54,7 @@ typedef struct {
     uint8_t cbps[4]; ///< bits per sample in particular components
     uint8_t sgnd[4]; ///< if a component is signed
     uint8_t properties[4];
-
+    int cdx[4], cdy[4];
     int precision;
     int ncomponents;
     int tile_width, tile_height; ///< tile size
@@ -228,10 +228,8 @@ static int get_siz(J2kDecoderContext *s)
         s->cbps[i] = (x & 0x7f) + 1;
         s->precision = FFMAX(s->cbps[i], s->precision);
         s->sgnd[i] = (x & 0x80) == 1;
-        if (bytestream_get_byte(&s->buf) != 1)
-            return -1;
-        if (bytestream_get_byte(&s->buf) != 1)
-            return -1;
+        s->cdx[i] = bytestream_get_byte(&s->buf);
+        s->cdy[i] = bytestream_get_byte(&s->buf);
     }
 
     s->numXtiles = ff_j2k_ceildiv(s->width - s->tile_offset_x, s->tile_width);
@@ -453,7 +451,7 @@ static int init_tile(J2kDecoderContext *s, int tileno)
         comp->coord[1][0] = FFMAX(tiley * s->tile_height + s->tile_offset_y, s->image_offset_y);
         comp->coord[1][1] = FFMIN((tiley+1)*s->tile_height + s->tile_offset_y, s->height);
 
-        if (ret = ff_j2k_init_component(comp, codsty, qntsty, s->cbps[compno]))
+        if (ret = ff_j2k_init_component(comp, codsty, qntsty, s->cbps[compno], s->cdx[compno], s->cdy[compno]))
             return ret;
     }
     return 0;
@@ -760,16 +758,16 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
                         int y, x;
                         decode_cblk(s, &t1, band->cblk + cblkno, xx1 - xx0, yy1 - yy0, bandpos);
                         if (codsty->transform == FF_DWT53){
-                            for (y = yy0; y < yy1; y++){
+                            for (y = yy0; y < yy1; y+=s->cdy[compno]){
                                 int *ptr = t1.data[y-yy0];
-                                for (x = xx0; x < xx1; x++){
+                                for (x = xx0; x < xx1; x+=s->cdx[compno]){
                                     comp->data[(comp->coord[0][1] - comp->coord[0][0]) * y + x] = *ptr++ >> 1;
                                 }
                             }
                         } else{
-                            for (y = yy0; y < yy1; y++){
+                            for (y = yy0; y < yy1; y+=s->cdy[compno]){
                                 int *ptr = t1.data[y-yy0];
-                                for (x = xx0; x < xx1; x++){
+                                for (x = xx0; x < xx1; x+=s->cdx[compno]){
                                     int tmp = ((int64_t)*ptr++) * ((int64_t)band->stepsize) >> 13, tmp2;
                                     tmp2 = FFABS(tmp>>1) + FFABS(tmp&1);
                                     comp->data[(comp->coord[0][1] - comp->coord[0][0]) * y + x] = tmp < 0 ? -tmp2 : tmp2;

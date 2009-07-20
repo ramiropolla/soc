@@ -197,7 +197,7 @@ void ff_j2k_set_significant(J2kT1Context *t1, int x, int y, int negative)
     t1->flags[y-1][x-1] |= J2K_T1_SIG_SE;
 }
 
-int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantStyle *qntsty, int cbps)
+int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantStyle *qntsty, int cbps, int dx, int dy)
 {
     int reslevelno, bandno, gbandno = 0, ret, i, j, csize = 1;
 
@@ -274,6 +274,14 @@ int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantSt
             }
             band->cblknx = ff_j2k_ceildiv(band->coord[0][1], band->codeblock_width)  - band->coord[0][0] / band->codeblock_width;
             band->cblkny = ff_j2k_ceildiv(band->coord[1][1], band->codeblock_height) - band->coord[1][0] / band->codeblock_height;
+
+            for (j = 0; j < 2; j++)
+                band->coord[0][j] = ff_j2k_ceildiv(band->coord[0][j], dx);
+            for (j = 0; j < 2; j++)
+                band->coord[1][j] = ff_j2k_ceildiv(band->coord[1][j], dy);
+
+            band->cblknx = ff_j2k_ceildiv(band->cblknx, dx);
+            band->cblkny = ff_j2k_ceildiv(band->cblkny, dy);
 
             band->cblk = av_malloc(band->cblknx * band->cblkny * sizeof(J2kCblk));
             if (!band->cblk)

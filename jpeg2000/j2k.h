@@ -213,7 +213,7 @@ static inline int ff_j2k_getsgnctxno(int flag, int *xorbit)
     return  ff_j2k_sgnctxno_lut[flag&15][(flag>>8)&15];
 }
 
-int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantStyle *qntsty, int cbps);
+int ff_j2k_init_component(J2kComponent *comp, J2kCodingStyle *codsty, J2kQuantStyle *qntsty, int cbps, int dx, int dy);
 void ff_j2k_reinit(J2kComponent *comp, J2kCodingStyle *codsty);
 void ff_j2k_cleanup(J2kComponent *comp, J2kCodingStyle *codsty);
 
