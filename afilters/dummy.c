@@ -125,15 +125,6 @@ int main()
     avfilter_init_filter(avfiltcont2, NULL, NULL);
     avfilter_init_filter(src_context, NULL, NULL);
 
-    /* configure formats?  */
-
-
-
-    /* merge lists? */
-    AVFilterFormats * merge;
-
-//    merge = avfilter_merge_formats(AVFilterFormats *a, AVFilterFormats *b)
-
 
     /* link filters */
     avfilter_link(src_context, 0, avfiltcont, 0);
