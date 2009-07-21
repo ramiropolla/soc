@@ -54,7 +54,8 @@ typedef struct AMRContext {
     float           lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
     float    prev_lsp_sub4[LP_FILTER_ORDER]; ///< lsp vector for the 4th subframe of the previous frame
 
-    float          lsp_avg[LP_FILTER_ORDER]; ///< vector of averaged lsp coefficients
+    float         lsf_q[4][LP_FILTER_ORDER]; ///< Interpolated LSF vector for fixed gain smoothing
+    float          lsf_avg[LP_FILTER_ORDER]; ///< vector of averaged lsf vector
 
     float           lpc[4][LP_FILTER_ORDER]; ///< lpc coefficient vectors for 4 subframes
 
@@ -146,7 +147,8 @@ static void reset_state(AMRContext *p)
 
     for (i = 0; i < LP_FILTER_ORDER; i++) {
         p->prev_lsp_sub4[i] = lsp_sub4_init[i] * 1000 / (float)(1 << 15);
-        p->lsp_avg[i]       = lsp_avg_init[i]         / (float)(1 << 15);
+        p->lsf_avg[i]       =
+        p->lsf_q[3][i]      = lsp_avg_init[i]         / (float)(1 << 15);
     }
 
     for (i = 0; i < 4; i++)
@@ -237,6 +239,23 @@ static void lsf2lsp(float *lsf, float *lsp)
 }
 
 /**
+ * Interpolate the LSF vector.
+ * The interpolation is done over all four subframes even in MODE_122.
+ *
+ * @param[in,out] lsf_q     LSFs in [0,1] for each subframe
+ * @param[in]     lsf_new   New LSFs in Hertz for subframe 4
+ */
+static void interpolate_lsf(float lsf_q[4][LP_FILTER_ORDER], float *lsf_new)
+{
+    int i;
+
+    for (i = 0; i < 4; i++)
+        ff_weighted_vector_sumf(lsf_q[i], lsf_q[3], lsf_new,
+                                0.25 * (3 - i), 0.25 * (i + 1) / FREQ_LSF,
+                                LP_FILTER_ORDER);
+}
+
+/**
  * Decode a set of 5 split-matrix quantized lsf indexes into an lsp vector.
  *
  * @param p the context
@@ -270,6 +289,10 @@ static void lsf2lsp_for_mode122(AMRContext *p, float lsp[LP_FILTER_ORDER],
 
     for (i = 0; i < LP_FILTER_ORDER; i++)
         lsf[i] += prev_lsf[i];
+
+    // store LSF vector for fixed gain smoothing
+    if (update_prev_lsf_r)
+        interpolate_lsf(p->lsf_q, lsf);
 
     lsf2lsp(lsf, lsp);
 }
@@ -328,6 +351,10 @@ static void lsf2lsp_3(AMRContext *p)
     // calculate mean-removed LSF vector and add mean
     for (i = 0; i < LP_FILTER_ORDER; i++)
         lsf_q[i] = lsf_r[i] + p->prev_lsf_r[i] * pred_fac[i] + lsf_3_mean[i];
+
+    // store LSF vector for fixed gain smoothing
+    interpolate_lsf(p->lsf_q, lsf_q);
+
     // update residual LSF vector from previous subframe
     memcpy(p->prev_lsf_r, lsf_r, LP_FILTER_ORDER * sizeof(*lsf_r));
 
@@ -1108,7 +1135,7 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
                 p->fixed_vector[i] += p->beta*p->fixed_vector[i-p->pitch_lag_int];
 
         // smooth fixed gain
-        p->fixed_gain[4] = fixed_gain_smooth(p, p->lsp[subframe], p->lsp_avg,
+        p->fixed_gain[4] = fixed_gain_smooth(p, p->lsf_q[subframe], p->lsf_avg,
                                              p->cur_frame_mode);
 
         apply_ir_filter(p, p->fixed_vector);
@@ -1135,7 +1162,7 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     }
 
     // update averaged lsp vector (used for fixed gain smoothing)
-    ff_weighted_vector_sumf(p->lsp_avg, p->lsp_avg, p->prev_lsp_sub4,
+    ff_weighted_vector_sumf(p->lsf_avg, p->lsf_avg, p->lsf_q[3],
                             0.84, 0.16, LP_FILTER_ORDER);
 
     /* report how many samples we got */

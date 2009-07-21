@@ -2037,6 +2037,7 @@ static const float pred_fac[LP_FILTER_ORDER] = {
 
 #define PRED_FAC_MODE_122 0.65
 #define FREQ_LSP_FAC      2.0*M_PI/8000.0
+#define FREQ_LSF          1/8000.0
 
 
 // pitch tables
