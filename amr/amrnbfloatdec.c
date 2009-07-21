@@ -1083,10 +1083,6 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     for (i = 0; i < 4; i++)
         lsp2lpc(p->lsp[i], p->lpc[i]);
 
-    // update averaged lsp vector (used for fixed gain smoothing)
-    ff_weighted_vector_sumf(p->lsp_avg, p->lsp_avg, p->prev_lsp_sub4,
-                            0.84, 0.16, LP_FILTER_ORDER);
-
 /*** end of LPC coefficient decoding ***/
 
     for (subframe = 0; subframe < 4; subframe++) {
@@ -1137,6 +1133,10 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         // update buffers and history
         update_state(p);
     }
+
+    // update averaged lsp vector (used for fixed gain smoothing)
+    ff_weighted_vector_sumf(p->lsp_avg, p->lsp_avg, p->prev_lsp_sub4,
+                            0.84, 0.16, LP_FILTER_ORDER);
 
     /* report how many samples we got */
     *data_size = AMR_BLOCK_SIZE * sizeof(float);
