@@ -262,10 +262,6 @@ void avfilter_filter_buffer(AVFilterLink *link, AVFilterBufferRef *sample_ref)
 
     int input_func = 1, output_func = 1;
 
-    /* convert, if necessary */
-//    if (link->av_conv)
-//        av_audio_convert();
-
     if (!(filter_output_buffer = dst->filter_buffer))
     {
         av_log(0,0,"LINK HAS NO OUTPUT?\n", 0);
@@ -284,9 +280,14 @@ void avfilter_filter_buffer(AVFilterLink *link, AVFilterBufferRef *sample_ref)
 
     link->cur_buf = sample_ref;
 
+    /* wrap up output filter's processes if necessary */
     if (output_func)
     filter_output_buffer(link, link->cur_buf);
 
+    /* convert pcm samples, if necessary */
+
+
+    /* do the input filter's processing*/
     if (input_func)
     filter_input_buffer(link, link->cur_buf);
 }

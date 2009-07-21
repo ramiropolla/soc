@@ -24,13 +24,17 @@
 
 #include <stdio.h>
 #include "avfilter.h"
+
 static int null_filter(AVFilterLink *link, AVFilterBufferRef *sample_ref);
+static int query_af_null_formats(AVFilterContext *ctx);
+static int init_af_null(AVFilterContext *ctx, const char *args, void *opaque);
 
 typedef struct
 {
     int history[100]; /*just an example */
 
 } af_null_priv_t;
+
 
 AVFilter avfilter_af_null =
 {
@@ -46,7 +50,37 @@ AVFilter avfilter_af_null =
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_AUDIO, },
                                   { .name = NULL}},
+
+    .init = init_af_null,
+    .query_formats = query_af_null_formats,
 };
+
+
+static int init_af_null(AVFilterContext *ctx, const char *args, void *opaque)
+{
+    printf("init afnull\n");
+    int i;
+    af_null_priv_t * p;
+    ctx->priv = av_mallocz(sizeof(af_null_priv_t));
+    p = (af_null_priv_t*) ctx->priv;
+    for (i=0; i<100; i++)
+       p->history[i] = i;
+
+    return 0;
+}
+
+static int query_af_null_formats(AVFilterContext *ctx)
+{
+    av_log(0,0, "query formats\n");
+
+    AVFilterFormats *formats;
+    formats = avfilter_make_format_list(3, CODEC_ID_PCM_S16LE,
+                                            CODEC_ID_PCM_S16BE,
+                                            CODEC_ID_PCM_F32LE);
+    avfilter_set_common_formats(ctx,formats);
+
+    return 0;
+}
 
 static int null_filter(AVFilterLink *link, AVFilterBufferRef *sample_ref)
 {

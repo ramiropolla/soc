@@ -85,6 +85,8 @@ int main()
 #endif
     }   // sine wave, period 1024/100, range, 100 -> -100
 
+    /* set up formats */
+
     AVFilterBuffer samples;
     AVFilterBufferRef sample_buf;
     samples.n_samples = n_samples;
@@ -123,12 +125,25 @@ int main()
     avfilter_init_filter(avfiltcont2, NULL, NULL);
     avfilter_init_filter(src_context, NULL, NULL);
 
+    /* configure formats?  */
+
+
+
+    /* merge lists? */
+    AVFilterFormats * merge;
+
+//    merge = avfilter_merge_formats(AVFilterFormats *a, AVFilterFormats *b)
+
+
     /* link filters */
     avfilter_link(src_context, 0, avfiltcont, 0);
     avfilter_link(avfiltcont, 0, avfiltcont2, 0);
     avfilter_config_links(src_context);
     avfilter_config_links(avfiltcont);
     avfilter_config_links(avfiltcont2);
+
+
+
 
 
     /*dump_avfiltcont(src_context);

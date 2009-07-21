@@ -91,6 +91,13 @@ static int src_buf_init (AVFilterContext *ctx,
 }
 
 
+static int query_af_src_formats(AVFilterContext *ctx)
+{
+    av_log(0,0, "query formats\n");
+    AVFilterFormats *formats1;
+    formats1 = avfilter_all_sampleformats();
+    avfilter_set_common_formats(ctx,formats1);
+}
 
 AVFilter avfilter_af_src =
 {
@@ -103,7 +110,8 @@ AVFilter avfilter_af_src =
     .outputs    = (AVFilterPad[]) { {.name = "default",
                                      .type = CODEC_TYPE_AUDIO,
                                      .filter_buffer = dump_next},
-                                    {.name = NULL}}
+                                    {.name = NULL}},
 
+    .query_formats = query_af_src_formats
 };
 
