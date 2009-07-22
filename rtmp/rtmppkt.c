@@ -187,10 +187,12 @@ void ff_rtmp_packet_destroy(RTMPPacket *pkt)
     pkt->data_size = 0;
 }
 
-int ff_amf_skip_data(const uint8_t *data)
+int ff_amf_skip_data(const uint8_t *data, const uint8_t *data_end)
 {
     const uint8_t *base = data;
 
+    if (data >= data_end)
+        return -1;
     switch (*data++) {
     case AMF_DATA_TYPE_NUMBER:      return 9;
     case AMF_DATA_TYPE_BOOL:        return 2;
@@ -202,12 +204,18 @@ int ff_amf_skip_data(const uint8_t *data)
     case AMF_DATA_TYPE_OBJECT:
         for (;;) {
             int size = bytestream_get_be16(&data);
+            int t;
             if (!size) {
                 data++;
                 break;
             }
             data += size;
-            data += ff_amf_skip_data(data);
+            if (data >= data_end)
+                return -1;
+            t = ff_amf_skip_data(data, data_end);
+            if (t < 0 || data + t >= data_end)
+                return -1;
+            data += t;
         }
         return data - base;
     case AMF_DATA_TYPE_OBJECT_END:  return 1;
@@ -215,12 +223,14 @@ int ff_amf_skip_data(const uint8_t *data)
     }
 }
 
-int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
+int ff_amf_find_field(const uint8_t *data, const uint8_t *data_end, const uint8_t *name,
                       uint8_t *dst, int dst_size)
 {
     int namelen = strlen(name);
     int len;
 
+    if (data >= data_end - 3)
+        return -1;
     if (*data++ != AMF_DATA_TYPE_OBJECT)
         return -1;
     for (;;) {
@@ -228,6 +238,8 @@ int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
         if (!size)
             break;
         data += size;
+        if (data >= data_end)
+            return -1;
         if (size == namelen && !memcmp(data-size, name, namelen)) {
             switch (*data++) {
             case AMF_DATA_TYPE_NUMBER:
@@ -244,8 +256,8 @@ int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
                 return -1;
             }
         }
-        len = ff_amf_skip_data(data);
-        if (len < 0)
+        len = ff_amf_skip_data(data, data_end);
+        if (len < 0 || data + len >= data_end)
             return -1;
         data += len;
     }

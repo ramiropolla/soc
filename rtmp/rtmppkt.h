@@ -136,20 +136,22 @@ int ff_rtmp_packet_write(URLContext *h, RTMPPacket *p,
  * Calculates number of bytes needed to skip first AMF entry in data.
  *
  * @param data input data
+ * @param data_end input buffer end
  * @return number of bytes used by first AMF entry
  */
-int ff_amf_skip_data(const uint8_t *data);
+int ff_amf_skip_data(const uint8_t *data, const uint8_t *data_end);
 
 /**
  * Retrieves value of given AMF object field in string form.
  *
  * @param data     AMF object data
+ * @param data_end input buffer end
  * @param name     name of field to retrieve
  * @param dst      buffer for storing result
  * @param dst_size output buffer size
  * @return 0 if search and retrieval succeeded, negative value otherwise
  */
-int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
+int ff_amf_find_field(const uint8_t *data, const uint8_t *data_end, const uint8_t *name,
                       uint8_t *dst, int dst_size);
 
 /**
