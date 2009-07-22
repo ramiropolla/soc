@@ -39,6 +39,13 @@
 #include "rtmp.h"
 #include "rtmppkt.h"
 
+/* we can't use av_log() with URLContext yet... */
+#if LIBAVFORMAT_VERSION_MAJOR < 53
+#define LOG_CONTEXT NULL
+#else
+#define LOG_CONTEXT s
+#endif
+
 /** RTMP protocol handler state */
 typedef enum {
     STATE_START,      ///< client has not done anything
@@ -138,7 +145,7 @@ static void gen_create_stream(URLContext *s, RTMPContext *rt)
     RTMPPacket pkt;
     uint8_t *p;
 
-    //av_log(s, AV_LOG_DEBUG, "Creating stream...\n");
+    av_log(LOG_CONTEXT, AV_LOG_DEBUG, "Creating stream...\n");
     ff_rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0, 25);
 
     p = pkt.data;
@@ -159,7 +166,7 @@ static void gen_play(URLContext *s, RTMPContext *rt)
     RTMPPacket pkt;
     uint8_t *p;
 
-    //av_log(s, AV_LOG_DEBUG, "Sending play command for '%s'\n", rt->playpath);
+    av_log(LOG_CONTEXT, AV_LOG_DEBUG, "Sending play command for '%s'\n", rt->playpath);
     ff_rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0,
                           29 + strlen(rt->playpath));
     pkt.extra = rt->main_channel_id;
@@ -305,7 +312,7 @@ static int rtmp_handshake(URLContext *s, RTMPContext *rt)
     int server_pos, client_pos;
     uint8_t digest[32];
 
-    //av_log(s, AV_LOG_DEBUG, "Handshaking...\n");
+    av_log(LOG_CONTEXT, AV_LOG_DEBUG, "Handshaking...\n");
 
     av_lfg_init(&rnd, 0xDEADC0DE);
     // generate handshake packet - 1536 bytes of pseudorandom data
@@ -323,23 +330,23 @@ static int rtmp_handshake(URLContext *s, RTMPContext *rt)
     url_write(rt->stream, tosend, RTMP_HANDSHAKE_PACKET_SIZE + 1);
     i = url_read_complete(rt->stream, serverdata, RTMP_HANDSHAKE_PACKET_SIZE + 1);
     if (i != RTMP_HANDSHAKE_PACKET_SIZE + 1) {
-        //av_log(s, AV_LOG_ERROR, "Cannot read RTMP handshake response\n");
+        av_log(LOG_CONTEXT, AV_LOG_ERROR, "Cannot read RTMP handshake response\n");
         return -1;
     }
     i = url_read_complete(rt->stream, clientdata, RTMP_HANDSHAKE_PACKET_SIZE);
     if (i != RTMP_HANDSHAKE_PACKET_SIZE) {
-        //av_log(s, AV_LOG_ERROR, "Cannot read RTMP handshake response\n");
+        av_log(LOG_CONTEXT, AV_LOG_ERROR, "Cannot read RTMP handshake response\n");
         return -1;
     }
 
-    //av_log(s, AV_LOG_DEBUG, "Server version %d.%d.%d.%d\n",
-    //       serverdata[5], serverdata[6], serverdata[7], serverdata[8]);
+    av_log(LOG_CONTEXT, AV_LOG_DEBUG, "Server version %d.%d.%d.%d\n",
+           serverdata[5], serverdata[6], serverdata[7], serverdata[8]);
 
     server_pos = rtmp_validate_digest(serverdata + 1, 772);
     if (!server_pos) {
         server_pos = rtmp_validate_digest(serverdata + 1, 8);
         if (!server_pos) {
-            //av_log(s, AV_LOG_ERROR, "Server response validating failed\n");
+            av_log(LOG_CONTEXT, AV_LOG_ERROR, "Server response validating failed\n");
             return -1;
         }
     }
@@ -351,7 +358,7 @@ static int rtmp_handshake(URLContext *s, RTMPContext *rt)
                      digest, 32,
                      digest);
     if (memcmp(digest, clientdata + RTMP_HANDSHAKE_PACKET_SIZE - 32, 32)) {
-        //av_log(s, AV_LOG_ERROR, "Signature mismatch\n");
+        av_log(LOG_CONTEXT, AV_LOG_ERROR, "Signature mismatch\n");
         return -1;
     }
 
@@ -381,16 +388,16 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
     switch (pkt->type) {
     case RTMP_PT_CHUNK_SIZE:
         if (pkt->data_size != 4) {
-            //av_log(s, AV_LOG_ERROR, "Chunk size change packet is not 4 (%d)\n",
-            //       pkt->data_size);
+            av_log(LOG_CONTEXT, AV_LOG_ERROR, "Chunk size change packet is not 4 (%d)\n",
+                   pkt->data_size);
             return -1;
         }
         rt->chunk_size = AV_RB32(pkt->data);
         if (rt->chunk_size <= 0) {
-            //av_log(s, AV_LOG_ERROR, "Incorrect chunk size %d\n", rt->chunk_size);
+            av_log(LOG_CONTEXT, AV_LOG_ERROR, "Incorrect chunk size %d\n", rt->chunk_size);
             return -1;
         }
-        //av_log(s, AV_LOG_DEBUG, "New chunk size = %d\n", rt->chunk_size);
+        av_log(LOG_CONTEXT, AV_LOG_DEBUG, "New chunk size = %d\n", rt->chunk_size);
         break;
     case RTMP_PT_PING:
         t = AV_RB16(pkt->data);
@@ -403,7 +410,7 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
 
             if (!ff_amf_find_field(pkt->data + 9, pkt->data + pkt->data_size,
                                    "description", tmpstr, sizeof(tmpstr)))
-                av_log(NULL/*s*/, AV_LOG_ERROR, "Server error: %s\n",tmpstr);
+                av_log(LOG_CONTEXT, AV_LOG_ERROR, "Server error: %s\n",tmpstr);
             return -1;
         }
         if (!memcmp(pkt->data, "\002\000\007_result", 10)) {
@@ -415,7 +422,7 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
             case STATE_CONNECTING:
                 //extract a number from result
                 if (pkt->data[10] || pkt->data[19] != 5 || pkt->data[20]) {
-                    av_log(NULL, AV_LOG_WARNING, "Unexpected reply on connect()\n");
+                    av_log(LOG_CONTEXT, AV_LOG_WARNING, "Unexpected reply on connect()\n");
                 } else {
                     rt->main_channel_id = (int) av_int2dbl(AV_RB64(pkt->data + 21));
                 }
@@ -440,7 +447,7 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
             if (!t && !strcmp(tmpstr, "error")) {
                 if (!ff_amf_find_field(ptr, pkt->data + pkt->data_size,
                                        "description", tmpstr, sizeof(tmpstr)))
-                    av_log(NULL/*s*/, AV_LOG_ERROR, "Server error: %s\n",tmpstr);
+                    av_log(LOG_CONTEXT, AV_LOG_ERROR, "Server error: %s\n",tmpstr);
                 return -1;
             }
             t = ff_amf_find_field(ptr, pkt->data + pkt->data_size,
@@ -556,7 +563,7 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
         goto fail;
 
     if (!is_input) {
-        //av_log(s, AV_LOG_ERROR, "RTMP output is not supported yet\n");
+        av_log(LOG_CONTEXT, AV_LOG_ERROR, "RTMP output is not supported yet\n");
         goto fail;
     } else {
         rt->state = STATE_START;
@@ -594,8 +601,8 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
         }
         strncat(rt->playpath, fname, sizeof(rt->playpath) - 5);
 
-        //av_log(s, AV_LOG_DEBUG, "Proto = %s, path = %s, app = %s, fname = %s\n",
-        //       proto, path, app, rt->playpath);
+        av_log(LOG_CONTEXT, AV_LOG_DEBUG, "Proto = %s, path = %s, app = %s, fname = %s\n",
+               proto, path, app, rt->playpath);
         gen_connect(s, rt, proto, hostname, port, app);
 
         if (get_packet(s, 1) < 0)
