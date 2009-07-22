@@ -52,7 +52,7 @@ typedef enum {
 
 /** protocol handler context */
 typedef struct RTMPContext {
-    URLContext*   rtmp_hd;                    ///< context for TCP stream
+    URLContext*   stream;                     ///< context for TCP stream
     RTMPPacket    prev_pkt[2][RTMP_CHANNELS]; ///< packet history used when reading and sending packets
     int           chunk_size;                 ///< chunk size
     char          playpath[256];              ///< RTMP playpath
@@ -133,7 +133,7 @@ static void gen_connect(URLContext *s, RTMPContext *rt, const char *proto,
 
     pkt.data_size = p - pkt.data;
 
-    rtmp_packet_write(rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
 }
 
 static void gen_create_stream(URLContext *s, RTMPContext *rt)
@@ -151,7 +151,7 @@ static void gen_create_stream(URLContext *s, RTMPContext *rt)
     rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
     rtmp_amf_write_tag(&p, AMF_NULL, NULL);
 
-    rtmp_packet_write(rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 }
 
@@ -175,7 +175,7 @@ static void gen_play(URLContext *s, RTMPContext *rt)
     num = 0.0;
     rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
 
-    rtmp_packet_write(rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 
     // set client buffer time disguised in ping packet
@@ -186,7 +186,7 @@ static void gen_play(URLContext *s, RTMPContext *rt)
     bytestream_put_be32(&p, 1);
     bytestream_put_be32(&p, 256); //TODO: what is a good value here?
 
-    rtmp_packet_write(rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 }
 
@@ -199,7 +199,7 @@ static void gen_pong(URLContext *s, RTMPContext *rt, RTMPPacket *ppkt)
     p = pkt.data;
     bytestream_put_be16(&p, 7);
     bytestream_put_be32(&p, AV_RB32(ppkt->data+2) + 1);
-    rtmp_packet_write(rt->rtmp_hd, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     rtmp_packet_destroy(&pkt);
 }
 
@@ -302,13 +302,13 @@ static int rtmp_handshake(URLContext *s, RTMPContext *rt)
         tosend[i] = av_lfg_get(&rnd) >> 24;
     client_pos = rtmp_handshake_imprint_with_digest(tosend + 1);
 
-    url_write(rt->rtmp_hd, tosend, RTMP_HANDSHAKE_PACKET_SIZE + 1);
-    i = url_read_complete(rt->rtmp_hd, serverdata, RTMP_HANDSHAKE_PACKET_SIZE + 1);
+    url_write(rt->stream, tosend, RTMP_HANDSHAKE_PACKET_SIZE + 1);
+    i = url_read_complete(rt->stream, serverdata, RTMP_HANDSHAKE_PACKET_SIZE + 1);
     if (i != RTMP_HANDSHAKE_PACKET_SIZE + 1) {
         //av_log(s, AV_LOG_ERROR, "Cannot read RTMP handshake response\n");
         return -1;
     }
-    i = url_read_complete(rt->rtmp_hd, clientdata, RTMP_HANDSHAKE_PACKET_SIZE);
+    i = url_read_complete(rt->stream, clientdata, RTMP_HANDSHAKE_PACKET_SIZE);
     if (i != RTMP_HANDSHAKE_PACKET_SIZE) {
         //av_log(s, AV_LOG_ERROR, "Cannot read RTMP handshake response\n");
         return -1;
@@ -347,7 +347,7 @@ static int rtmp_handshake(URLContext *s, RTMPContext *rt)
                      tosend + RTMP_HANDSHAKE_PACKET_SIZE - 32);
 
     // write reply back to server
-    url_write(rt->rtmp_hd, tosend, RTMP_HANDSHAKE_PACKET_SIZE);
+    url_write(rt->stream, tosend, RTMP_HANDSHAKE_PACKET_SIZE);
     return 0;
 }
 
@@ -431,7 +431,7 @@ static int get_packet(URLContext *s, int for_header)
     for(;;) {
         RTMPPacket rpkt;
         int has_data = 0;
-        if ((ret = rtmp_packet_read(rt->rtmp_hd, &rpkt,
+        if ((ret = rtmp_packet_read(rt->stream, &rpkt,
                                     rt->chunk_size, rt->prev_pkt[0])) != 0) {
             if (ret > 0) {
                 nanosleep(&ts, NULL);
@@ -519,7 +519,7 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
         port = RTMP_DEFAULT_PORT;
     snprintf(buf, sizeof(buf), "tcp://%s:%d", hostname, port);
 
-    if (url_open(&rt->rtmp_hd, buf, URL_RDWR) < 0)
+    if (url_open(&rt->stream, buf, URL_RDWR) < 0)
         goto fail;
 
     if (!is_input) {
@@ -574,13 +574,13 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
         memcpy(rt->flv_data, "FLV\1\5\0\0\0\011\0\0\0\0", 13);
     }
 
-    s->max_packet_size = url_get_max_packet_size(rt->rtmp_hd);
+    s->max_packet_size = url_get_max_packet_size(rt->stream);
     s->is_streamed = 1;
     return 0;
 
 fail:
-    if (rt->rtmp_hd)
-        url_close(rt->rtmp_hd);
+    if (rt->stream)
+        url_close(rt->stream);
     av_free(rt);
     return AVERROR(EIO);
 }
@@ -621,7 +621,7 @@ static int rtmp_close(URLContext *h)
     RTMPContext *rt = h->priv_data;
 
     av_freep(&rt->flv_data);
-    url_close(rt->rtmp_hd);
+    url_close(rt->stream);
     av_free(rt);
     return 0;
 }
