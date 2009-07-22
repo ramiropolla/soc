@@ -24,7 +24,7 @@
 
 #include "avformat.h"
 
-/* maximum possible number of different RTMP channels */
+/** maximum possible number of different RTMP channels */
 #define RTMP_CHANNELS 64
 
 /**
@@ -113,7 +113,7 @@ typedef struct RTMPPacket {
  * @param type       packet type
  * @param timestamp  packet timestamp
  * @param size       packet size
- * @return zero on success, -1 otherwise
+ * @return zero on success, negative value otherwise
  */
 int ff_rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
                           int timestamp, int size);
@@ -133,7 +133,7 @@ void ff_rtmp_packet_destroy(RTMPPacket *pkt);
  * @param chunk_size current chunk size
  * @param prev_pkt   previously read packet headers for all channels
  *                   (may be needed for restoring incomplete packet header)
- * @return zero on success, -1 otherwise
+ * @return zero on success, negative value otherwise
  */
 int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
                         int chunk_size, RTMPPacket *prev_pkt);
@@ -146,10 +146,16 @@ int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
  * @param chunk_size current chunk size
  * @param prev_pkt   previously sent packet headers for all channels
  *                   (may be used for packet header compressing)
- * @return zero on success, -1 otherwise
+ * @return zero on success, negative value otherwise
  */
 int ff_rtmp_packet_write(URLContext *h, RTMPPacket *p,
                          int chunk_size, RTMPPacket *prev_pkt);
+
+/**
+ * @defgroup amffuncs functions used to work with AMF format (which is also used in .flv)
+ * @see amf_* funcs in libavformat/flvdec.c
+ * @{
+ */
 
 /**
  * Calculates number of bytes needed to skip first AMF entry in data.
@@ -166,7 +172,7 @@ int ff_amf_skip_data(const uint8_t *data);
  * @param name     name of field to retrieve
  * @param dst      buffer for storing result
  * @param dst_size output buffer size
- * @return 0 if search and retrieval succeeded, -1 otherwise
+ * @return 0 if search and retrieval succeeded, negative value otherwise
  */
 int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
                       uint8_t *dst, int dst_size);
@@ -179,5 +185,7 @@ int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
  * @param data optional tag value
  */
 void ff_amf_write_tag(uint8_t **dst, AMFType type, const void *data);
+
+/** @} */ // AMF funcs
 
 #endif /* AVFORMAT_RTMPPKT_H */
