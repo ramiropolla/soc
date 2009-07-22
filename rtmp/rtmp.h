@@ -28,10 +28,15 @@
 
 #define RTMP_HANDSHAKE_PACKET_SIZE 1536
 
+/**
+ * emulated Flash client version - 9.0.124.2 on Linux
+ * @{
+ */
 #define RTMP_CLIENT_PLATFORM "LNX"
 #define RTMP_CLIENT_VER1    9
 #define RTMP_CLIENT_VER2    0
 #define RTMP_CLIENT_VER3  124
 #define RTMP_CLIENT_VER4    2
+/** @} */ //version defines
 
 #endif /* AVFORMAT_RTMP_H */
