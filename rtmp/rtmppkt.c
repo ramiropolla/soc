@@ -71,7 +71,8 @@ int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
                         int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t hdr, t, buf[16];
-    int channel_id, timestamp, data_size, offset = 0, extra = 0;
+    int channel_id, timestamp, data_size, offset = 0;
+    uint32_t extra = 0;
     uint8_t type;
 
     if (url_read(h, &hdr, 1) != 1) {

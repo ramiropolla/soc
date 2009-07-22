@@ -74,8 +74,8 @@ enum RTMPPacketSize {
 typedef struct RTMPPacket {
     uint8_t        channel_id; ///< RTMP channel ID
     RTMPPacketType type;       ///< packet type
-    int            timestamp;  ///< packet timestamp
-    int            extra;      ///< additional data
+    uint32_t       timestamp;  ///< packet timestamp
+    uint32_t       extra;      ///< additional data
     uint8_t        *data;      ///< packet payload
     int            data_size;  ///< packet payload size
 } RTMPPacket;
