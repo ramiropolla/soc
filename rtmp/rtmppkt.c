@@ -92,7 +92,8 @@ int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
             extra     = prev_pkt[channel_id].extra;
         }
     }
-    ff_rtmp_packet_create(p, channel_id, type, timestamp, data_size);
+    if (ff_rtmp_packet_create(p, channel_id, type, timestamp, data_size))
+        return -1;
     p->extra = extra;
     // save history
     prev_pkt[channel_id].channel_id = channel_id;
