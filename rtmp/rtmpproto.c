@@ -87,6 +87,9 @@ static const uint8_t rtmp_server_key[] = {
     0xE6, 0x36, 0xCF, 0xEB, 0x31, 0xAE
 };
 
+/**
+ * Generates 'connect' call and sends it to server.
+ */
 static void gen_connect(URLContext *s, RTMPContext *rt, const char *proto,
                         const char *host, int port, const char *app)
 {
@@ -127,6 +130,10 @@ static void gen_connect(URLContext *s, RTMPContext *rt, const char *proto,
     ff_rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
 }
 
+/**
+ * Generates 'createStream' call and sends it to server. It should make server
+ * allocate some channel for media streams.
+ */
 static void gen_create_stream(URLContext *s, RTMPContext *rt)
 {
     RTMPPacket pkt;
@@ -144,6 +151,10 @@ static void gen_create_stream(URLContext *s, RTMPContext *rt)
     ff_rtmp_packet_destroy(&pkt);
 }
 
+/**
+ * Generates 'play' call and sends it to server, then pings server
+ * to start actual playing.
+ */
 static void gen_play(URLContext *s, RTMPContext *rt)
 {
     RTMPPacket pkt;
@@ -176,6 +187,9 @@ static void gen_play(URLContext *s, RTMPContext *rt)
     ff_rtmp_packet_destroy(&pkt);
 }
 
+/**
+ * Generates ping reply and sends it to server.
+ */
 static void gen_pong(URLContext *s, RTMPContext *rt, RTMPPacket *ppkt)
 {
     RTMPPacket pkt;
@@ -193,6 +207,17 @@ static void gen_pong(URLContext *s, RTMPContext *rt, RTMPPacket *ppkt)
 #define HMAC_IPAD_VAL 0x36
 #define HMAC_OPAD_VAL 0x5C
 
+/**
+ * Calculates HMAC-SHA2 digest for RTMP handshake packets.
+ *
+ * @param src    input buffer
+ * @param len    input buffer length (should be 1536)
+ * @param gap    offset in buffer where 32 bytes should not be taken into account
+ *               when calculating digest (since it will be used to store that digest)
+ * @param key    digest key
+ * @param keylen digest key length
+ * @param dst    buffer where calculated digest will be stored (32 bytes)
+ */
 static void rtmp_calc_digest(const uint8_t *src, int len, int gap,
                              const uint8_t *key, int keylen, uint8_t *dst)
 {
@@ -231,6 +256,9 @@ static void rtmp_calc_digest(const uint8_t *src, int len, int gap,
     av_free(sha);
 }
 
+/**
+ * Puts HMAC-SHA2 digest of packet (except the place for digest itself) into that packet.
+ */
 static int rtmp_handshake_imprint_with_digest(uint8_t *buf)
 {
     int i, digest_pos = 0;
@@ -245,6 +273,9 @@ static int rtmp_handshake_imprint_with_digest(uint8_t *buf)
     return digest_pos;
 }
 
+/**
+ * Verifies that received server response has expected digest value.
+ */
 static int rtmp_validate_digest(uint8_t *buf, int off)
 {
     int i, digest_pos = 0;
@@ -262,6 +293,9 @@ static int rtmp_validate_digest(uint8_t *buf, int off)
     return 0;
 }
 
+/**
+ * Performs handshake with server by means of exchanging HMAC-SHA2 signed ppseudorangom data.
+ */
 static int rtmp_handshake(URLContext *s, RTMPContext *rt)
 {
     AVLFG rnd;
@@ -336,6 +370,11 @@ static int rtmp_handshake(URLContext *s, RTMPContext *rt)
     return 0;
 }
 
+/**
+ * Parses received packet and may perform some action depending on packet contents.
+ * @return 0 for no errors, -1 for serious errors which prevent further communications,
+ *         positive values for not critical errors
+ */
 static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
 {
     int i, t;
@@ -488,9 +527,11 @@ static int get_packet(URLContext *s, int for_header)
 }
 
 /**
- * url syntax: rtp://host:port[?option=val...]
- * option: 'ttl=n'       : set the ttl value (for multicast only)
- *         'localport=n' : set the local port to n
+ * Opens RTMP connection and verifies that stream can be played.
+ *
+ * URL syntax: rtmp://server[:port][/app][/playpath]
+ *             where 'app' is first one or two directories in the path (/ondemand/, /flash/live/, etc)
+ *             and 'playpath' is file name (the rest of path, may be prefixed with "mp4:")
  */
 static int rtmp_open(URLContext *s, const char *uri, int flags)
 {
