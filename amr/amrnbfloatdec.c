@@ -1132,17 +1132,19 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         decode_fixed_vector(p->fixed_vector, amr_subframe->pulses,
                             p->cur_frame_mode, subframe);
 
-        decode_gains(p, amr_subframe, p->cur_frame_mode, subframe);
-
 /*** pre-processing ***/
 
         p->beta = av_clipf(p->pitch_gain[4], 0.0,
                            p->cur_frame_mode == MODE_122 ? 1.0 : 0.8);
 
-        // conduct pitch sharpening as appropriate
+        // conduct pitch sharpening as appropriate (section 6.1.2)
         if (p->pitch_lag_int < AMR_SUBFRAME_SIZE)
             for (i = p->pitch_lag_int; i < AMR_SUBFRAME_SIZE; i++)
                 p->fixed_vector[i] += p->beta*p->fixed_vector[i-p->pitch_lag_int];
+
+        // Fixed gain calculation (section 6.1.3) uses the results of pitch
+        // sharpening (above)
+        decode_gains(p, amr_subframe, p->cur_frame_mode, subframe);
 
         // smooth fixed gain
         p->fixed_gain[4] = fixed_gain_smooth(p, p->lsf_q[subframe], p->lsf_avg,
