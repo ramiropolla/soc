@@ -180,6 +180,4 @@ int rtmp_amf_find_field(const uint8_t *data, const uint8_t *name,
  */
 void rtmp_amf_write_tag(uint8_t **dst, AMFType type, const void *data);
 
-void rtmp_packet_inspect(RTMPPacket *pkt);
-
 #endif /* AVFORMAT_RTMPPKT_H */
