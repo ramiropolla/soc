@@ -454,8 +454,8 @@ static int get_packet(URLContext *s, int for_header)
             ff_rtmp_packet_destroy(&rpkt);
             continue;
         }
-        if (rpkt.type == RTMP_PT_VIDEO || rpkt.type == RTMP_PT_AUDIO
-         || rpkt.type == RTMP_PT_NOTIFY) {
+        if (rpkt.type == RTMP_PT_VIDEO || rpkt.type == RTMP_PT_AUDIO ||
+            rpkt.type == RTMP_PT_NOTIFY) {
             uint8_t *p;
             uint32_t ts = rpkt.timestamp;
 
