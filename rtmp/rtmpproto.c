@@ -402,7 +402,8 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
         if (!memcmp(pkt->data, "\002\000\006_error", 9)) {
             uint8_t tmpstr[256];
 
-            if (!ff_amf_find_field(pkt->data + 9, pkt->data + pkt->data_size, "description", tmpstr, sizeof(tmpstr)))
+            if (!ff_amf_find_field(pkt->data + 9, pkt->data + pkt->data_size,
+                                   "description", tmpstr, sizeof(tmpstr)))
                 av_log(NULL/*s*/, AV_LOG_ERROR, "Server error: %s\n",tmpstr);
             return -1;
         }
@@ -435,13 +436,16 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
                     return 1;
                 ptr += t;
             }
-            t = ff_amf_find_field(ptr, pkt->data + pkt->data_size, "level", tmpstr, sizeof(tmpstr));
+            t = ff_amf_find_field(ptr, pkt->data + pkt->data_size,
+                                  "level", tmpstr, sizeof(tmpstr));
             if (!t && !strcmp(tmpstr, "error")) {
-                if (!ff_amf_find_field(ptr, pkt->data + pkt->data_size, "description", tmpstr, sizeof(tmpstr)))
+                if (!ff_amf_find_field(ptr, pkt->data + pkt->data_size,
+                                       "description", tmpstr, sizeof(tmpstr)))
                     av_log(NULL/*s*/, AV_LOG_ERROR, "Server error: %s\n",tmpstr);
                 return -1;
             }
-            t = ff_amf_find_field(ptr, pkt->data + pkt->data_size, "code", tmpstr, sizeof(tmpstr));
+            t = ff_amf_find_field(ptr, pkt->data + pkt->data_size,
+                                  "code", tmpstr, sizeof(tmpstr));
             if (!t && !strcmp(tmpstr, "NetStream.Play.Start")) {
                 rt->state = STATE_PLAYING;
                 return 0;
