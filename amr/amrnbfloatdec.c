@@ -1056,11 +1056,11 @@ static void post_process(AMRContext *p, float *lpc, float *buf_out)
     if (post_filter_gain != 0)
         gain_scale_factor = sqrt(speech_gain / post_filter_gain);
 
-    p->post_filter_agc = AMR_AGC_ALPHA * p->post_filter_agc +
-                         (1.0 - AMR_AGC_ALPHA) * gain_scale_factor;
-
-    for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
+    for (i = 0; i < AMR_SUBFRAME_SIZE; i++) {
+        p->post_filter_agc = AMR_AGC_ALPHA * p->post_filter_agc +
+                             (1.0 - AMR_AGC_ALPHA) * gain_scale_factor;
         buf_out[i] *= p->post_filter_agc;
+    }
 }
 
 /**
