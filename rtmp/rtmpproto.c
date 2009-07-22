@@ -217,9 +217,9 @@ static void rtmp_calc_digest(const uint8_t *src, int len, int gap,
     sha = av_mallocz(av_sha_size);
 
     memset(hmac_buf, 0, 64);
-    if (keylen < 64)
+    if (keylen < 64) {
         memcpy(hmac_buf, key, keylen);
-    else {
+    } else {
         av_sha_init(sha, 256);
         av_sha_update(sha,key, keylen);
         av_sha_final(sha, hmac_buf);
@@ -229,9 +229,9 @@ static void rtmp_calc_digest(const uint8_t *src, int len, int gap,
 
     av_sha_init(sha, 256);
     av_sha_update(sha, hmac_buf, 64);
-    if (gap <= 0)
+    if (gap <= 0) {
         av_sha_update(sha, src, len);
-    else { //skip 32 bytes used for storing digest
+    } else { //skip 32 bytes used for storing digest
         av_sha_update(sha, src, gap);
         av_sha_update(sha, src + gap + 32, len - gap - 32);
     }
@@ -382,10 +382,11 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
                 break;
             case STATE_CONNECTING:
                 //extract a number from result
-                if (pkt->data[10] || pkt->data[19] != 5 || pkt->data[20])
+                if (pkt->data[10] || pkt->data[19] != 5 || pkt->data[20]) {
                     av_log(NULL, AV_LOG_WARNING, "Unexpected reply on connect()\n");
-                else
+                } else {
                     rt->main_channel_id = (int) av_int2dbl(AV_RB64(pkt->data + 21));
+                }
                 gen_play(s, rt);
                 rt->state = STATE_READY;
                 break;
