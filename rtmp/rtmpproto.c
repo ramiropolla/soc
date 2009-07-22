@@ -26,7 +26,6 @@
 
 #include <unistd.h>
 #include <stdarg.h>
-#include <sys/time.h>
 
 #include "libavcodec/bytestream.h"
 #include "libavutil/avstring.h"
@@ -459,11 +458,7 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
 static int get_packet(URLContext *s, int for_header)
 {
     RTMPContext *rt = s->priv_data;
-    struct timespec ts;
     int ret;
-
-    ts.tv_sec = 0;
-    ts.tv_nsec = 500000000;
 
     for(;;) {
         RTMPPacket rpkt;
@@ -471,8 +466,7 @@ static int get_packet(URLContext *s, int for_header)
         if ((ret = ff_rtmp_packet_read(rt->stream, &rpkt,
                                        rt->chunk_size, rt->prev_pkt[0])) != 0) {
             if (ret > 0) {
-                nanosleep(&ts, NULL);
-                continue;
+                return AVERROR(EAGAIN);
             } else {
                 return AVERROR(EIO);
             }
