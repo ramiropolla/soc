@@ -102,34 +102,34 @@ static void gen_connect(URLContext *s, RTMPContext *rt, const char *proto,
     p = pkt.data;
 
     snprintf(tcurl, sizeof(tcurl), "%s://%s:%d/%s", proto, host, port, app);
-    rtmp_amf_write_tag(&p, AMF_STRING, "connect");
-    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
-    rtmp_amf_write_tag(&p, AMF_OBJECT, NULL);
-    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "app");
-    rtmp_amf_write_tag(&p, AMF_STRING, app);
+    ff_amf_write_tag(&p, AMF_STRING, "connect");
+    ff_amf_write_tag(&p, AMF_NUMBER, &num);
+    ff_amf_write_tag(&p, AMF_OBJECT, NULL);
+    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "app");
+    ff_amf_write_tag(&p, AMF_STRING, app);
 
     snprintf(ver, sizeof(ver), "%s %d,%d,%d,%d", RTMP_CLIENT_PLATFORM, RTMP_CLIENT_VER1,
              RTMP_CLIENT_VER2, RTMP_CLIENT_VER3, RTMP_CLIENT_VER4);
-    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "flashVer");
-    rtmp_amf_write_tag(&p, AMF_STRING, ver);
-    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "tcUrl");
-    rtmp_amf_write_tag(&p, AMF_STRING, tcurl);
+    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "flashVer");
+    ff_amf_write_tag(&p, AMF_STRING, ver);
+    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "tcUrl");
+    ff_amf_write_tag(&p, AMF_STRING, tcurl);
     bool = 0;
-    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "fpad");
-    rtmp_amf_write_tag(&p, AMF_NUMBER, &bool);
+    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "fpad");
+    ff_amf_write_tag(&p, AMF_NUMBER, &bool);
     num = 15.0;
-    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "capabilities");
-    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
+    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "capabilities");
+    ff_amf_write_tag(&p, AMF_NUMBER, &num);
     num = 1639.0;
-    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "audioCodecs");
-    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
+    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "audioCodecs");
+    ff_amf_write_tag(&p, AMF_NUMBER, &num);
     num = 252.0;
-    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "videoCodecs");
-    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
+    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "videoCodecs");
+    ff_amf_write_tag(&p, AMF_NUMBER, &num);
     num = 1.0;
-    rtmp_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "videoFunction");
-    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
-    rtmp_amf_write_tag(&p, AMF_OBJECT_END, NULL);
+    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "videoFunction");
+    ff_amf_write_tag(&p, AMF_NUMBER, &num);
+    ff_amf_write_tag(&p, AMF_OBJECT_END, NULL);
 
     pkt.data_size = p - pkt.data;
 
@@ -147,9 +147,9 @@ static void gen_create_stream(URLContext *s, RTMPContext *rt)
 
     num = 3.0;
     p = pkt.data;
-    rtmp_amf_write_tag(&p, AMF_STRING, "createStream");
-    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
-    rtmp_amf_write_tag(&p, AMF_NULL, NULL);
+    ff_amf_write_tag(&p, AMF_STRING, "createStream");
+    ff_amf_write_tag(&p, AMF_NUMBER, &num);
+    ff_amf_write_tag(&p, AMF_NULL, NULL);
 
     ff_rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     ff_rtmp_packet_destroy(&pkt);
@@ -168,12 +168,12 @@ static void gen_play(URLContext *s, RTMPContext *rt)
 
     num = 0.0;
     p = pkt.data;
-    rtmp_amf_write_tag(&p, AMF_STRING, "play");
-    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
-    rtmp_amf_write_tag(&p, AMF_NULL, NULL);
-    rtmp_amf_write_tag(&p, AMF_STRING, rt->playpath);
+    ff_amf_write_tag(&p, AMF_STRING, "play");
+    ff_amf_write_tag(&p, AMF_NUMBER, &num);
+    ff_amf_write_tag(&p, AMF_NULL, NULL);
+    ff_amf_write_tag(&p, AMF_STRING, rt->playpath);
     num = 0.0;
-    rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
+    ff_amf_write_tag(&p, AMF_NUMBER, &num);
 
     ff_rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     ff_rtmp_packet_destroy(&pkt);
@@ -397,18 +397,18 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
             int t;
 
             for (i = 0; i < 2; i++) {
-                t = rtmp_amf_skip_data(ptr);
+                t = ff_amf_skip_data(ptr);
                 if (t < 0)
                     return 1;
                 ptr += t;
             }
-            t = rtmp_amf_find_field(ptr, "level", tmpstr, sizeof(tmpstr));
+            t = ff_amf_find_field(ptr, "level", tmpstr, sizeof(tmpstr));
             if (!t && !strcmp(tmpstr, "error")) {
-                if (!rtmp_amf_find_field(ptr, "description", tmpstr, sizeof(tmpstr)))
+                if (!ff_amf_find_field(ptr, "description", tmpstr, sizeof(tmpstr)))
                     av_log(NULL/*s*/, AV_LOG_ERROR, "Server error: %s\n",tmpstr);
                 return -1;
             }
-            t = rtmp_amf_find_field(ptr, "code", tmpstr, sizeof(tmpstr));
+            t = ff_amf_find_field(ptr, "code", tmpstr, sizeof(tmpstr));
             if (!t && !strcmp(tmpstr, "NetStream.Play.Start")) {
                 rt->state = STATE_PLAYING;
                 return 0;

@@ -157,7 +157,7 @@ int ff_rtmp_packet_write(URLContext *h, RTMPPacket *p,
  * @param data input data
  * @return number of bytes used by first AMF entry
  */
-int rtmp_amf_skip_data(const uint8_t *data);
+int ff_amf_skip_data(const uint8_t *data);
 
 /**
  * Retrieves value of given AMF object field in string form.
@@ -168,7 +168,7 @@ int rtmp_amf_skip_data(const uint8_t *data);
  * @param dst_size output buffer size
  * @return 0 if search and retrieval succeeded, -1 otherwise
  */
-int rtmp_amf_find_field(const uint8_t *data, const uint8_t *name,
+int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
                         uint8_t *dst, int dst_size);
 
 /**
@@ -178,6 +178,6 @@ int rtmp_amf_find_field(const uint8_t *data, const uint8_t *name,
  * @param type tag type
  * @param data optional tag value
  */
-void rtmp_amf_write_tag(uint8_t **dst, AMFType type, const void *data);
+void ff_amf_write_tag(uint8_t **dst, AMFType type, const void *data);
 
 #endif /* AVFORMAT_RTMPPKT_H */

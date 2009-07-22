@@ -28,7 +28,7 @@
 
 #include "rtmppkt.h"
 
-void rtmp_amf_write_tag(uint8_t **dst, AMFType type, const void *data)
+void ff_amf_write_tag(uint8_t **dst, AMFType type, const void *data)
 {
     if (type != AMF_OBJECT_END && type != AMF_STRING_IN_OBJECT)
         bytestream_put_byte(dst, type);
@@ -173,7 +173,7 @@ void ff_rtmp_packet_destroy(RTMPPacket *pkt)
     pkt->data_size = 0;
 }
 
-int rtmp_amf_skip_data(const uint8_t *data)
+int ff_amf_skip_data(const uint8_t *data)
 {
     const uint8_t *base = data;
 
@@ -193,7 +193,7 @@ int rtmp_amf_skip_data(const uint8_t *data)
                 break;
             }
             data += size;
-            data += rtmp_amf_skip_data(data);
+            data += ff_amf_skip_data(data);
         }
         return data - base;
     case AMF_OBJECT_END:  return 1;
@@ -201,7 +201,7 @@ int rtmp_amf_skip_data(const uint8_t *data)
     }
 }
 
-int rtmp_amf_find_field(const uint8_t *data, const uint8_t *name,
+int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
                         uint8_t *dst, int dst_size)
 {
     int namelen = strlen(name);
@@ -230,7 +230,7 @@ int rtmp_amf_find_field(const uint8_t *data, const uint8_t *name,
                 return -1;
             }
         }
-        len = rtmp_amf_skip_data(data);
+        len = ff_amf_skip_data(data);
         if (len < 0)
             return -1;
         data += len;
