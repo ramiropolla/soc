@@ -26,15 +26,16 @@
 /* needed for gethostname() */
 #define _XOPEN_SOURCE 600
 
+#include <unistd.h>
+#include <stdarg.h>
+#include <sys/time.h>
+
 #include "libavcodec/bytestream.h"
 #include "libavutil/avstring.h"
 #include "libavutil/lfg.h"
 #include "libavutil/sha.h"
 #include "avformat.h"
 
-#include <unistd.h>
-#include <stdarg.h>
-#include <sys/time.h>
 #include "network.h"
 
 #include "flv.h"
