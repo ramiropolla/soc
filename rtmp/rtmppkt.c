@@ -70,22 +70,18 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
         //todo
         return -1;
     } else {
-        if (url_read_complete(h, buf, 3) != 3) {
+        if (url_read_complete(h, buf, 3) != 3)
             return AVERROR(EIO);
-        }
         timestamp = AV_RB24(buf);
         if (hdr != RTMP_PS_FOURBYTES) {
-            if (url_read_complete(h, buf, 3) != 3) {
+            if (url_read_complete(h, buf, 3) != 3)
                 return AVERROR(EIO);
-            }
             data_size = AV_RB24(buf);
-            if (url_read_complete(h, &type, 1) != 1) {
+            if (url_read_complete(h, &type, 1) != 1)
                 return AVERROR(EIO);
-            }
             if (hdr == RTMP_PS_TWELVEBYTES) {
-                if (url_read_complete(h, buf, 4) != 4) {
+                if (url_read_complete(h, buf, 4) != 4)
                     return AVERROR(EIO);
-                }
                 extra = AV_RL32(buf);
             } else {
                 extra = prev_pkt[channel_id].extra;
@@ -115,9 +111,8 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
         offset    += chunk_size;
         if (data_size > 0) {
             url_read_complete(h, &t, 1); //marker
-            if (t != (0xC0 + channel_id)) {
+            if (t != (0xC0 + channel_id))
                 return -1;
-            }
         }
     }
     return 0;
