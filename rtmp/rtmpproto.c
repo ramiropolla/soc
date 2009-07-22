@@ -362,6 +362,10 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
             return -1;
         }
         rt->chunk_size = AV_RB32(pkt->data);
+        if (rt->chunk_size <= 0) {
+            //av_log(s, AV_LOG_ERROR, "Incorrect chunk size %d\n", rt->chunk_size);
+            return -1;
+        }
         //av_log(s, AV_LOG_DEBUG, "New chunk size = %d\n", rt->chunk_size);
         break;
     case RTMP_PT_PING:
