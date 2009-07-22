@@ -73,6 +73,7 @@ typedef struct AMRContext {
 
     float                              beta; ///< beta = pitch_gain, bounded by [0.0,1.0] for 12.2 kbps or [0.0,0.8] for other modes
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
+    int                          hang_count; ///< the number of subframes since a hangover period started
 
     uint8_t         prev_ir_filter_strength; ///< previous impulse response filter strength; 0 - strong, 1 - medium, 2 - none
     uint8_t                 ir_filter_onset; ///< flag for impulse response filter strength
@@ -741,9 +742,16 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsf,
         // calculate diff
         diff += fabs(lsf_avg[i] - lsf[i]) / lsf_avg[i];
 
-    // if diff has been >0.65 for 10 frames (40 subframes) no smoothing is applied
-    if ((p->diff_count = diff > 0.65 ? p->diff_count + 1 : 0) < 40 &&
-        (mode < MODE_74 || mode == MODE_102)) {
+    // If diff is large for ten subframes, disable smoothing for a 40-subframe
+    // hangover period.
+    p->diff_count = diff > 0.65 ? p->diff_count + 1 : 0;
+
+    if (p->diff_count > 10)
+        p->hang_count = 0;
+
+    if (p->hang_count < 40) {
+        p->hang_count++;
+    } else if (mode < MODE_74 || mode == MODE_102) {
         // calculate the fixed gain smoothing factor (k_m)
         const float smoothing_factor = FFMIN(1.0, FFMAX(0.0, 4.0*diff - 1.6));
         // calculate the mean fixed gain for the current subframe
