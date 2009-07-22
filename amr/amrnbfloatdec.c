@@ -722,22 +722,24 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
 
 /**
  * fixed gain smoothing
+ * Note that where the spec specifies the "spectrum in the q domain"
+ * in section 6.1.4, in fact frequencies should be used.
  *
  * @param p the context
- * @param lsp lsp coefficients for the current subframe
- * @param lsp_avg averaged lsp coefficients
+ * @param lsf LSFs for the current subframe, in the range [0,1]
+ * @param lsf_avg averaged LSFs
  *
  * @return fixed gain smoothed
  */
-static float fixed_gain_smooth(AMRContext *p , const float *lsp,
-                               const float *lsp_avg, const enum Mode mode)
+static float fixed_gain_smooth(AMRContext *p , const float *lsf,
+                               const float *lsf_avg, const enum Mode mode)
 {
     float diff = 0.0;
     int i;
 
     for (i = 0; i < LP_FILTER_ORDER; i++)
         // calculate diff
-        diff += fabs(lsp_avg[i] - lsp[i]) / lsp_avg[i];
+        diff += fabs(lsf_avg[i] - lsf[i]) / lsf_avg[i];
 
     // if diff has been >0.65 for 10 frames (40 subframes) no smoothing is applied
     if ((p->diff_count = diff > 0.65 ? p->diff_count + 1 : 0) < 40 &&
@@ -1161,7 +1163,7 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         update_state(p);
     }
 
-    // update averaged lsp vector (used for fixed gain smoothing)
+    // update averaged lsf vector (used for fixed gain smoothing)
     ff_weighted_vector_sumf(p->lsf_avg, p->lsf_avg, p->lsf_q[3],
                             0.84, 0.16, LP_FILTER_ORDER);
 
