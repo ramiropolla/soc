@@ -126,8 +126,7 @@ int ff_rtmp_packet_write(URLContext *h, RTMPPacket *pkt,
     int mode = RTMP_PS_TWELVEBYTES;
     int off = 0;
 
-//    if (pkt->type != RTMP_PT_INVOKE)
-//        mode = RTMP_PS_EIGHTBYTES;
+    //TODO: header compression
     bytestream_put_byte(&p, pkt->channel_id | (mode << 6));
     if (mode != RTMP_PS_ONEBYTE) {
         bytestream_put_be24(&p, pkt->timestamp);
