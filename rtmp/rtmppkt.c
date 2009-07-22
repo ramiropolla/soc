@@ -19,9 +19,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-/* needed for gethostname() */
-#define _XOPEN_SOURCE 600
-
 #include "libavcodec/bytestream.h"
 #include "libavutil/avstring.h"
 #include "avformat.h"

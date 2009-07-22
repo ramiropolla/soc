@@ -23,8 +23,6 @@
  * @file libavformat/rtmpproto.c
  * RTMP protocol
  */
-/* needed for gethostname() */
-#define _XOPEN_SOURCE 600
 
 #include <unistd.h>
 #include <stdarg.h>
