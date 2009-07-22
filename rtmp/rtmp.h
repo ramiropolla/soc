@@ -24,10 +24,8 @@
 
 #include "avformat.h"
 
-/** RTMP default port */
 #define RTMP_DEFAULT_PORT 1935
 
-/** RTMP handshake data size */
 #define RTMP_HANDSHAKE_PACKET_SIZE 1536
 
 #define RTMP_CLIENT_PLATFORM "LNX"
