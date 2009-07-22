@@ -27,30 +27,47 @@
 #include "avformat.h"
 
 #include "rtmppkt.h"
+#include "flv.h"
 
-void ff_amf_write_tag(uint8_t **dst, AMFType type, const void *data)
+void ff_amf_write_bool(uint8_t **dst, int val)
 {
-    if (type != AMF_OBJECT_END && type != AMF_STRING_IN_OBJECT)
-        bytestream_put_byte(dst, type);
-    switch(type){
-    case AMF_NUMBER:
-        bytestream_put_be64(dst, av_dbl2int(*(const double*)data));
-        break;
-    case AMF_BOOLEAN:
-        bytestream_put_byte(dst, *(const uint8_t*)data);
-        break;
-    case AMF_STRING:
-    case AMF_STRING_IN_OBJECT:
-        bytestream_put_be16(dst, strlen(data));
-        bytestream_put_buffer(dst, data, strlen(data));
-        break;
-    case AMF_OBJECT_END:
-        bytestream_put_be24(dst, AMF_OBJECT_END);
-        break;
-    case AMF_STRICT_ARRAY:
-        bytestream_put_be32(dst, *(const uint32_t*)data);
-        break;
-    }
+    bytestream_put_byte(dst, AMF_DATA_TYPE_BOOL);
+    bytestream_put_byte(dst, val);
+}
+
+void ff_amf_write_number(uint8_t **dst, double val)
+{
+    bytestream_put_byte(dst, AMF_DATA_TYPE_NUMBER);
+    bytestream_put_be64(dst, av_dbl2int(val));
+}
+
+void ff_amf_write_string(uint8_t **dst, const char *str)
+{
+    bytestream_put_byte(dst, AMF_DATA_TYPE_STRING);
+    bytestream_put_be16(dst, strlen(str));
+    bytestream_put_buffer(dst, str, strlen(str));
+}
+
+void ff_amf_write_null(uint8_t **dst)
+{
+    bytestream_put_byte(dst, AMF_DATA_TYPE_NULL);
+}
+
+void ff_amf_write_object_start(uint8_t **dst)
+{
+    bytestream_put_byte(dst, AMF_DATA_TYPE_OBJECT);
+}
+
+void ff_amf_write_field_name(uint8_t **dst, const char *str)
+{
+    bytestream_put_be16(dst, strlen(str));
+    bytestream_put_buffer(dst, str, strlen(str));
+}
+
+void ff_amf_write_object_end(uint8_t **dst)
+{
+    // first two bytes are field name length = 0, AMF object should end with it and end marker
+    bytestream_put_be24(dst, AMF_DATA_TYPE_OBJECT_END);
 }
 
 int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
@@ -178,14 +195,14 @@ int ff_amf_skip_data(const uint8_t *data)
     const uint8_t *base = data;
 
     switch (*data++) {
-    case AMF_NUMBER:      return 9;
-    case AMF_BOOLEAN:     return 2;
-    case AMF_STRING:      return 3 + AV_RB16(data);
-    case AMF_LONG_STRING: return 5 + AV_RB32(data);
-    case AMF_NULL:        return 1;
-    case AMF_ECMA_ARRAY:
+    case AMF_DATA_TYPE_NUMBER:      return 9;
+    case AMF_DATA_TYPE_BOOL:        return 2;
+    case AMF_DATA_TYPE_STRING:      return 3 + AV_RB16(data);
+    case AMF_DATA_TYPE_LONG_STRING: return 5 + AV_RB32(data);
+    case AMF_DATA_TYPE_NULL:        return 1;
+    case AMF_DATA_TYPE_ARRAY:
         data += 4;
-    case AMF_OBJECT:
+    case AMF_DATA_TYPE_OBJECT:
         for (;;) {
             int size = bytestream_get_be16(&data);
             if (!size) {
@@ -196,7 +213,7 @@ int ff_amf_skip_data(const uint8_t *data)
             data += ff_amf_skip_data(data);
         }
         return data - base;
-    case AMF_OBJECT_END:  return 1;
+    case AMF_DATA_TYPE_OBJECT_END:  return 1;
     default:              return -1;
     }
 }
@@ -207,7 +224,7 @@ int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
     int namelen = strlen(name);
     int len;
 
-    if (*data++ != AMF_OBJECT)
+    if (*data++ != AMF_DATA_TYPE_OBJECT)
         return -1;
     for (;;) {
         int size = bytestream_get_be16(&data);
@@ -216,13 +233,13 @@ int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
         data += size;
         if (size == namelen && !memcmp(data-size, name, namelen)) {
             switch (*data++) {
-            case AMF_NUMBER:
+            case AMF_DATA_TYPE_NUMBER:
                 snprintf(dst, dst_size, "%g", av_int2dbl(AV_RB64(data)));
                 return 0;
-            case AMF_BOOLEAN:
+            case AMF_DATA_TYPE_BOOL:
                 snprintf(dst, dst_size, "%s", *data ? "true" : "false");
                 return 0;
-            case AMF_STRING:
+            case AMF_DATA_TYPE_STRING:
                 len = bytestream_get_be16(&data);
                 av_strlcpy(dst, data, FFMIN(len+1, dst_size));
                 return 0;

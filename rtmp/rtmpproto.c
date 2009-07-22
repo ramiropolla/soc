@@ -95,41 +95,34 @@ static void gen_connect(URLContext *s, RTMPContext *rt, const char *proto,
     RTMPPacket pkt;
     uint8_t ver[32], *p;
     char tcurl[512];
-    double num = 1.0;
-    uint8_t bool;
 
     ff_rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0, 4096);
     p = pkt.data;
 
     snprintf(tcurl, sizeof(tcurl), "%s://%s:%d/%s", proto, host, port, app);
-    ff_amf_write_tag(&p, AMF_STRING, "connect");
-    ff_amf_write_tag(&p, AMF_NUMBER, &num);
-    ff_amf_write_tag(&p, AMF_OBJECT, NULL);
-    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "app");
-    ff_amf_write_tag(&p, AMF_STRING, app);
+    ff_amf_write_string(&p, "connect");
+    ff_amf_write_number(&p, 1.0);
+    ff_amf_write_object_start(&p);
+    ff_amf_write_field_name(&p, "app");
+    ff_amf_write_string(&p, app);
 
     snprintf(ver, sizeof(ver), "%s %d,%d,%d,%d", RTMP_CLIENT_PLATFORM, RTMP_CLIENT_VER1,
              RTMP_CLIENT_VER2, RTMP_CLIENT_VER3, RTMP_CLIENT_VER4);
-    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "flashVer");
-    ff_amf_write_tag(&p, AMF_STRING, ver);
-    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "tcUrl");
-    ff_amf_write_tag(&p, AMF_STRING, tcurl);
-    bool = 0;
-    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "fpad");
-    ff_amf_write_tag(&p, AMF_NUMBER, &bool);
-    num = 15.0;
-    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "capabilities");
-    ff_amf_write_tag(&p, AMF_NUMBER, &num);
-    num = 1639.0;
-    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "audioCodecs");
-    ff_amf_write_tag(&p, AMF_NUMBER, &num);
-    num = 252.0;
-    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "videoCodecs");
-    ff_amf_write_tag(&p, AMF_NUMBER, &num);
-    num = 1.0;
-    ff_amf_write_tag(&p, AMF_STRING_IN_OBJECT, "videoFunction");
-    ff_amf_write_tag(&p, AMF_NUMBER, &num);
-    ff_amf_write_tag(&p, AMF_OBJECT_END, NULL);
+    ff_amf_write_field_name(&p, "flashVer");
+    ff_amf_write_string(&p, ver);
+    ff_amf_write_field_name(&p, "tcUrl");
+    ff_amf_write_string(&p, tcurl);
+    ff_amf_write_field_name(&p, "fpad");
+    ff_amf_write_bool(&p, 0);
+    ff_amf_write_field_name(&p, "capabilities");
+    ff_amf_write_number(&p, 15.0);
+    ff_amf_write_field_name(&p, "audioCodecs");
+    ff_amf_write_number(&p, 1639.0);
+    ff_amf_write_field_name(&p, "videoCodecs");
+    ff_amf_write_number(&p, 252.0);
+    ff_amf_write_field_name(&p, "videoFunction");
+    ff_amf_write_number(&p, 1.0);
+    ff_amf_write_object_end(&p);
 
     pkt.data_size = p - pkt.data;
 
@@ -140,16 +133,14 @@ static void gen_create_stream(URLContext *s, RTMPContext *rt)
 {
     RTMPPacket pkt;
     uint8_t *p;
-    double num;
 
     //av_log(s, AV_LOG_DEBUG, "Creating stream...\n");
     ff_rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0, 25);
 
-    num = 3.0;
     p = pkt.data;
-    ff_amf_write_tag(&p, AMF_STRING, "createStream");
-    ff_amf_write_tag(&p, AMF_NUMBER, &num);
-    ff_amf_write_tag(&p, AMF_NULL, NULL);
+    ff_amf_write_string(&p, "createStream");
+    ff_amf_write_number(&p, 3.0);
+    ff_amf_write_null(&p);
 
     ff_rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     ff_rtmp_packet_destroy(&pkt);
@@ -159,21 +150,18 @@ static void gen_play(URLContext *s, RTMPContext *rt)
 {
     RTMPPacket pkt;
     uint8_t *p;
-    double num;
 
     //av_log(s, AV_LOG_DEBUG, "Sending play command for '%s'\n", rt->playpath);
     ff_rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0,
                           29 + strlen(rt->playpath));
     pkt.extra = rt->main_channel_id;
 
-    num = 0.0;
     p = pkt.data;
-    ff_amf_write_tag(&p, AMF_STRING, "play");
-    ff_amf_write_tag(&p, AMF_NUMBER, &num);
-    ff_amf_write_tag(&p, AMF_NULL, NULL);
-    ff_amf_write_tag(&p, AMF_STRING, rt->playpath);
-    num = 0.0;
-    ff_amf_write_tag(&p, AMF_NUMBER, &num);
+    ff_amf_write_string(&p, "play");
+    ff_amf_write_number(&p, 0.0);
+    ff_amf_write_null(&p);
+    ff_amf_write_string(&p, rt->playpath);
+    ff_amf_write_number(&p, 0.0);
 
     ff_rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
     ff_rtmp_packet_destroy(&pkt);

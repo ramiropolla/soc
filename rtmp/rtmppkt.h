@@ -69,31 +69,6 @@ enum RTMPPacketSize {
 };
 
 /**
- * AMF types used in RTMP packets
- */
-typedef enum AMFType {
-    AMF_NUMBER = 0,   ///< number (double precision)
-    AMF_BOOLEAN,      ///< boolean value
-    AMF_STRING,       ///< Pascal-style string with length < 65536
-    AMF_OBJECT,       ///< AMF object, contains property names and values
-    AMF_MOVIE,        ///< Flash object
-    AMF_NULL,         ///< NULL value
-    AMF_UNDEFINED,    ///< undefined (return?) value
-    AMF_REFERENCE,    ///< reference
-    AMF_ECMA_ARRAY,   ///< ECMA array, almost like AMF object but has number of entries
-    AMF_OBJECT_END,   ///< marker for end of AMF object or ECMA array
-    AMF_STRICT_ARRAY, ///< strict array
-    AMF_DATE,         ///< date
-    AMF_LONG_STRING,  ///< Pascal-style string with possible length up to 4GB
-    AMF_UNSUPPORTED,  ///< unsipported feature indicator
-    AMD_RECORD_SET,   ///< record set
-    AMF_XML_OBJECT,   ///< XML object
-    AMF_TYPED_OBJECT, ///< typed object
-
-    AMF_STRING_IN_OBJECT = 99, ///< internal type used for AMF object field names
-} AMFType;
-
-/**
  * structure for holding RTMP packets
  */
 typedef struct RTMPPacket {
@@ -178,13 +153,57 @@ int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
                       uint8_t *dst, int dst_size);
 
 /**
- * Write AMF tag to buffer.
+ * Write boolean value in AMF format to buffer.
  *
- * @param dst  pointer to the input buffer (will be modified)
- * @param type tag type
- * @param data optional tag value
+ * @param dst pointer to the input buffer (will be modified)
+ * @param val value to write
  */
-void ff_amf_write_tag(uint8_t **dst, AMFType type, const void *data);
+void ff_amf_write_bool(uint8_t **dst, int val);
+
+/**
+ * Write number in AMF format to buffer.
+ *
+ * @param dst pointer to the input buffer (will be modified)
+ * @param num value to write
+ */
+void ff_amf_write_number(uint8_t **dst, double num);
+
+/**
+ * Write string in AMF format to buffer.
+ *
+ * @param dst pointer to the input buffer (will be modified)
+ * @param str string to write
+ */
+void ff_amf_write_string(uint8_t **dst, const char *str);
+
+/**
+ * Write AMF NULL value to buffer.
+ *
+ * @param dst pointer to the input buffer (will be modified)
+ */
+void ff_amf_write_null(uint8_t **dst);
+
+/**
+ * Write marker for AMF object to buffer.
+ *
+ * @param dst pointer to the input buffer (will be modified)
+ */
+void ff_amf_write_object_start(uint8_t **dst);
+
+/**
+ * Write string used as field name in AMF object to buffer.
+ *
+ * @param dst pointer to the input buffer (will be modified)
+ * @param str string to write
+ */
+void ff_amf_write_field_name(uint8_t **dst, const char *str);
+
+/**
+ * Write marker for end of AMF object to buffer.
+ *
+ * @param dst pointer to the input buffer (will be modified)
+ */
+void ff_amf_write_object_end(uint8_t **dst);
 
 /** @} */ // AMF funcs
 
