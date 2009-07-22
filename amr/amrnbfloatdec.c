@@ -1099,7 +1099,7 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     float *buf_out = data;                   // pointer to the output data buffer
     int i, subframe;                         // counters
     enum Mode speech_mode = MODE_475;        // ???
-    float exc_save[40];
+    float exc_feedback[AMR_SUBFRAME_SIZE];
 
     // decode the bitstream to AMR parameters
     p->cur_frame_mode = decode_bitstream(p, buf, buf_size, &speech_mode);
@@ -1149,7 +1149,7 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         // The excitation feedback is calculated without any processing such
         // as fixed gain smoothing. This isn't mentioned in the specification.
-        ff_weighted_vector_sumf(exc_save, p->excitation, p->fixed_vector,
+        ff_weighted_vector_sumf(exc_feedback, p->excitation, p->fixed_vector,
                                 p->pitch_gain[4], p->fixed_gain[4],
                                 AMR_SUBFRAME_SIZE);
 
@@ -1177,7 +1177,7 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         high_pass_filter(p->high_pass_mem, buf_out + subframe * AMR_SUBFRAME_SIZE);
 
         // update buffers and history
-        memcpy(p->excitation, exc_save, AMR_SUBFRAME_SIZE * sizeof(float));
+        memcpy(p->excitation, exc_feedback, AMR_SUBFRAME_SIZE * sizeof(float));
         update_state(p);
     }
 
