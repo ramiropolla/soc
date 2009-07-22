@@ -1,16 +1,6 @@
 TODO (for narrow band decoder)
 ====
 
-- synthesis filter
-  - validate input
-    - LPC coefficients should be correct
-    - fixed gain
-    - pitch gain
-    - fixed vector
-    - pitch vector
-  - validate output
-- post filter
 - check for FIXMEs and fix them
-- test all bit rate modes to make sure the internal logic is correct
-- add handlig of MODE_DTX
+- add handling of MODE_DTX
 - when all this is complete, request a review from Michael
