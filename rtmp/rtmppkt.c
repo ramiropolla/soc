@@ -219,7 +219,7 @@ int ff_amf_skip_data(const uint8_t *data, const uint8_t *data_end)
         }
         return data - base;
     case AMF_DATA_TYPE_OBJECT_END:  return 1;
-    default:              return -1;
+    default:                        return -1;
     }
 }
 
