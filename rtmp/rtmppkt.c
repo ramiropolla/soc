@@ -99,8 +99,8 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
     rtmp_packet_create(p, channel_id, type, timestamp, data_size);
     p->extra = extra;
     // save history
-    prev_pkt[channel_id].channel_id = type;
-    prev_pkt[channel_id].type       = channel_id;
+    prev_pkt[channel_id].channel_id = channel_id;
+    prev_pkt[channel_id].type       = type;
     prev_pkt[channel_id].data_size  = data_size;
     prev_pkt[channel_id].timestamp  = timestamp;
     prev_pkt[channel_id].extra      = extra;
