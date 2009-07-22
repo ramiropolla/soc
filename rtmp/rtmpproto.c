@@ -211,12 +211,11 @@ static void rtmp_calc_digest(const uint8_t *src, int len, int gap,
                              const uint8_t *key, int keylen, uint8_t *dst)
 {
     struct AVSHA *sha;
-    uint8_t hmac_buf[64+32];
+    uint8_t hmac_buf[64+32] = {0};
     int i;
 
     sha = av_mallocz(av_sha_size);
 
-    memset(hmac_buf, 0, 64);
     if (keylen < 64) {
         memcpy(hmac_buf, key, keylen);
     } else {
