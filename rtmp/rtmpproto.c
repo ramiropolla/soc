@@ -98,7 +98,7 @@ static void gen_connect(URLContext *s, RTMPContext *rt, const char *proto,
     double num = 1.0;
     uint8_t bool;
 
-    rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0, 4096);
+    ff_rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0, 4096);
     p = pkt.data;
 
     snprintf(tcurl, sizeof(tcurl), "%s://%s:%d/%s", proto, host, port, app);
@@ -133,7 +133,7 @@ static void gen_connect(URLContext *s, RTMPContext *rt, const char *proto,
 
     pkt.data_size = p - pkt.data;
 
-    rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    ff_rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
 }
 
 static void gen_create_stream(URLContext *s, RTMPContext *rt)
@@ -143,7 +143,7 @@ static void gen_create_stream(URLContext *s, RTMPContext *rt)
     double num;
 
     //av_log(s, AV_LOG_DEBUG, "Creating stream...\n");
-    rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0, 25);
+    ff_rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0, 25);
 
     num = 3.0;
     p = pkt.data;
@@ -151,8 +151,8 @@ static void gen_create_stream(URLContext *s, RTMPContext *rt)
     rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
     rtmp_amf_write_tag(&p, AMF_NULL, NULL);
 
-    rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
-    rtmp_packet_destroy(&pkt);
+    ff_rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    ff_rtmp_packet_destroy(&pkt);
 }
 
 static void gen_play(URLContext *s, RTMPContext *rt)
@@ -162,7 +162,7 @@ static void gen_play(URLContext *s, RTMPContext *rt)
     double num;
 
     //av_log(s, AV_LOG_DEBUG, "Sending play command for '%s'\n", rt->playpath);
-    rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0,
+    ff_rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0,
                        29 + strlen(rt->playpath));
     pkt.extra = rt->main_channel_id;
 
@@ -175,19 +175,19 @@ static void gen_play(URLContext *s, RTMPContext *rt)
     num = 0.0;
     rtmp_amf_write_tag(&p, AMF_NUMBER, &num);
 
-    rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
-    rtmp_packet_destroy(&pkt);
+    ff_rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    ff_rtmp_packet_destroy(&pkt);
 
     // set client buffer time disguised in ping packet
-    rtmp_packet_create(&pkt, RTMP_NETWORK_CHANNEL, RTMP_PT_PING, 1, 10);
+    ff_rtmp_packet_create(&pkt, RTMP_NETWORK_CHANNEL, RTMP_PT_PING, 1, 10);
 
     p = pkt.data;
     bytestream_put_be16(&p, 3);
     bytestream_put_be32(&p, 1);
     bytestream_put_be32(&p, 256); //TODO: what is a good value here?
 
-    rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
-    rtmp_packet_destroy(&pkt);
+    ff_rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    ff_rtmp_packet_destroy(&pkt);
 }
 
 static void gen_pong(URLContext *s, RTMPContext *rt, RTMPPacket *ppkt)
@@ -195,12 +195,12 @@ static void gen_pong(URLContext *s, RTMPContext *rt, RTMPPacket *ppkt)
     RTMPPacket pkt;
     uint8_t *p;
 
-    rtmp_packet_create(&pkt, RTMP_NETWORK_CHANNEL, RTMP_PT_PING, ppkt->timestamp + 1, 6);
+    ff_rtmp_packet_create(&pkt, RTMP_NETWORK_CHANNEL, RTMP_PT_PING, ppkt->timestamp + 1, 6);
     p = pkt.data;
     bytestream_put_be16(&p, 7);
     bytestream_put_be32(&p, AV_RB32(ppkt->data+2) + 1);
-    rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
-    rtmp_packet_destroy(&pkt);
+    ff_rtmp_packet_write(rt->stream, &pkt, rt->chunk_size, rt->prev_pkt[1]);
+    ff_rtmp_packet_destroy(&pkt);
 }
 
 //TODO: Move HMAC code somewhere. Eventually.
@@ -431,7 +431,7 @@ static int get_packet(URLContext *s, int for_header)
     for(;;) {
         RTMPPacket rpkt;
         int has_data = 0;
-        if ((ret = rtmp_packet_read(rt->stream, &rpkt,
+        if ((ret = ff_rtmp_packet_read(rt->stream, &rpkt,
                                     rt->chunk_size, rt->prev_pkt[0])) != 0) {
             if (ret > 0) {
                 nanosleep(&ts, NULL);
@@ -443,15 +443,15 @@ static int get_packet(URLContext *s, int for_header)
 
         ret = rtmp_parse_result(s, rt, &rpkt);
         if (ret < 0) {//serious error in packet
-            rtmp_packet_destroy(&rpkt);
+            ff_rtmp_packet_destroy(&rpkt);
             return -1;
         }
         if (for_header && rt->state == STATE_PLAYING) {
-            rtmp_packet_destroy(&rpkt);
+            ff_rtmp_packet_destroy(&rpkt);
             return 0;
         }
         if (!rpkt.data_size) {
-            rtmp_packet_destroy(&rpkt);
+            ff_rtmp_packet_destroy(&rpkt);
             continue;
         }
         if (rpkt.type == RTMP_PT_VIDEO || rpkt.type == RTMP_PT_AUDIO
@@ -486,7 +486,7 @@ static int get_packet(URLContext *s, int for_header)
             memcpy(rt->flv_data, rpkt.data, rpkt.data_size);
             has_data = 1;
         }
-        rtmp_packet_destroy(&rpkt);
+        ff_rtmp_packet_destroy(&rpkt);
         if (has_data)
             break;
     }

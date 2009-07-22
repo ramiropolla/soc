@@ -53,7 +53,7 @@ void rtmp_amf_write_tag(uint8_t **dst, AMFType type, const void *data)
     }
 }
 
-int rtmp_packet_read(URLContext *h, RTMPPacket *p,
+int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
                      int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t hdr, t, buf[16];
@@ -92,7 +92,7 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
             extra     = prev_pkt[channel_id].extra;
         }
     }
-    rtmp_packet_create(p, channel_id, type, timestamp, data_size);
+    ff_rtmp_packet_create(p, channel_id, type, timestamp, data_size);
     p->extra = extra;
     // save history
     prev_pkt[channel_id].channel_id = channel_id;
@@ -104,7 +104,7 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
         int toread = FFMIN(data_size, chunk_size);
         int r;
         if ((r = url_read_complete(h, p->data + offset, toread)) != toread) {
-            rtmp_packet_destroy(p);
+            ff_rtmp_packet_destroy(p);
             return AVERROR(EIO);
         }
         data_size -= chunk_size;
@@ -118,7 +118,7 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
     return 0;
 }
 
-int rtmp_packet_write(URLContext *h, RTMPPacket *pkt,
+int ff_rtmp_packet_write(URLContext *h, RTMPPacket *pkt,
                       int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t pkt_hdr[16], *p = pkt_hdr;
@@ -150,7 +150,7 @@ int rtmp_packet_write(URLContext *h, RTMPPacket *pkt,
     return 0;
 }
 
-int rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
+int ff_rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
                        int timestamp, int size)
 {
     pkt->data = av_malloc(size);
@@ -165,7 +165,7 @@ int rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
     return 0;
 }
 
-void rtmp_packet_destroy(RTMPPacket *pkt)
+void ff_rtmp_packet_destroy(RTMPPacket *pkt)
 {
     if (!pkt)
         return;

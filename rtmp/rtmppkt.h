@@ -115,7 +115,7 @@ typedef struct RTMPPacket {
  * @param size       packet size
  * @return zero on success, -1 otherwise
  */
-int rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
+int ff_rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
                        int timestamp, int size);
 
 /**
@@ -123,7 +123,7 @@ int rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
  *
  * @param pkt packet
  */
-void rtmp_packet_destroy(RTMPPacket *pkt);
+void ff_rtmp_packet_destroy(RTMPPacket *pkt);
 
 /**
  * Reads RTMP packet.
@@ -135,7 +135,7 @@ void rtmp_packet_destroy(RTMPPacket *pkt);
  *                   (may be needed for restoring incomplete packet header)
  * @return zero on success, -1 otherwise
  */
-int rtmp_packet_read(URLContext *h, RTMPPacket *p,
+int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
                      int chunk_size, RTMPPacket *prev_pkt);
 
 /**
@@ -148,7 +148,7 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
  *                   (may be used for packet header compressing)
  * @return zero on success, -1 otherwise
  */
-int rtmp_packet_write(URLContext *h, RTMPPacket *p,
+int ff_rtmp_packet_write(URLContext *h, RTMPPacket *p,
                       int chunk_size, RTMPPacket *prev_pkt);
 
 /**
