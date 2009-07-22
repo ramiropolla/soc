@@ -163,7 +163,7 @@ static void gen_play(URLContext *s, RTMPContext *rt)
 
     //av_log(s, AV_LOG_DEBUG, "Sending play command for '%s'\n", rt->playpath);
     ff_rtmp_packet_create(&pkt, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, 0,
-                       29 + strlen(rt->playpath));
+                          29 + strlen(rt->playpath));
     pkt.extra = rt->main_channel_id;
 
     num = 0.0;
@@ -432,7 +432,7 @@ static int get_packet(URLContext *s, int for_header)
         RTMPPacket rpkt;
         int has_data = 0;
         if ((ret = ff_rtmp_packet_read(rt->stream, &rpkt,
-                                    rt->chunk_size, rt->prev_pkt[0])) != 0) {
+                                       rt->chunk_size, rt->prev_pkt[0])) != 0) {
             if (ret > 0) {
                 nanosleep(&ts, NULL);
                 continue;

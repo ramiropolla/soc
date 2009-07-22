@@ -54,7 +54,7 @@ void rtmp_amf_write_tag(uint8_t **dst, AMFType type, const void *data)
 }
 
 int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
-                     int chunk_size, RTMPPacket *prev_pkt)
+                        int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t hdr, t, buf[16];
     int channel_id, timestamp, data_size, offset = 0, extra = 0;
@@ -119,7 +119,7 @@ int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
 }
 
 int ff_rtmp_packet_write(URLContext *h, RTMPPacket *pkt,
-                      int chunk_size, RTMPPacket *prev_pkt)
+                         int chunk_size, RTMPPacket *prev_pkt)
 {
     uint8_t pkt_hdr[16], *p = pkt_hdr;
     int mode = RTMP_PS_TWELVEBYTES;
@@ -151,7 +151,7 @@ int ff_rtmp_packet_write(URLContext *h, RTMPPacket *pkt,
 }
 
 int ff_rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
-                       int timestamp, int size)
+                          int timestamp, int size)
 {
     pkt->data = av_malloc(size);
     if (!pkt->data)

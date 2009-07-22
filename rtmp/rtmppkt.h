@@ -116,7 +116,7 @@ typedef struct RTMPPacket {
  * @return zero on success, -1 otherwise
  */
 int ff_rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
-                       int timestamp, int size);
+                          int timestamp, int size);
 
 /**
  * Frees RTMP packet.
@@ -136,7 +136,7 @@ void ff_rtmp_packet_destroy(RTMPPacket *pkt);
  * @return zero on success, -1 otherwise
  */
 int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
-                     int chunk_size, RTMPPacket *prev_pkt);
+                        int chunk_size, RTMPPacket *prev_pkt);
 
 /**
  * Sends RTMP packet.
@@ -149,7 +149,7 @@ int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
  * @return zero on success, -1 otherwise
  */
 int ff_rtmp_packet_write(URLContext *h, RTMPPacket *p,
-                      int chunk_size, RTMPPacket *prev_pkt);
+                         int chunk_size, RTMPPacket *prev_pkt);
 
 /**
  * Calculates number of bytes needed to skip first AMF entry in data.
