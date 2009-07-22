@@ -169,7 +169,7 @@ int ff_amf_skip_data(const uint8_t *data);
  * @return 0 if search and retrieval succeeded, -1 otherwise
  */
 int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
-                        uint8_t *dst, int dst_size);
+                      uint8_t *dst, int dst_size);
 
 /**
  * Write AMF tag to buffer.

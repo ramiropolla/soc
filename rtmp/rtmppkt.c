@@ -202,7 +202,7 @@ int ff_amf_skip_data(const uint8_t *data)
 }
 
 int ff_amf_find_field(const uint8_t *data, const uint8_t *name,
-                        uint8_t *dst, int dst_size)
+                      uint8_t *dst, int dst_size)
 {
     int namelen = strlen(name);
     int len;
