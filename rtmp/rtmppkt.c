@@ -61,7 +61,7 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
     uint8_t type;
 
     if (url_read(h, &hdr, 1) != 1) {
-        return -1;
+        return AVERROR(EIO);
     }
     channel_id = hdr & 0x3F;
 
@@ -71,20 +71,20 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
         return -1;
     } else {
         if (url_read_complete(h, buf, 3) != 3) {
-            return -1;
+            return AVERROR(EIO);
         }
         timestamp = AV_RB24(buf);
         if (hdr != RTMP_PS_FOURBYTES) {
             if (url_read_complete(h, buf, 3) != 3) {
-                return -1;
+                return AVERROR(EIO);
             }
             data_size = AV_RB24(buf);
             if (url_read_complete(h, &type, 1) != 1) {
-                return -1;
+                return AVERROR(EIO);
             }
             if (hdr == RTMP_PS_TWELVEBYTES) {
                 if (url_read_complete(h, buf, 4) != 4) {
-                    return -1;
+                    return AVERROR(EIO);
                 }
                 extra = AV_RL32(buf);
             } else {
@@ -109,7 +109,7 @@ int rtmp_packet_read(URLContext *h, RTMPPacket *p,
         int r;
         if ((r = url_read_complete(h, p->data + offset, toread)) != toread) {
             rtmp_packet_destroy(p);
-            return -1;
+            return AVERROR(EIO);
         }
         data_size -= chunk_size;
         offset    += chunk_size;
@@ -160,7 +160,7 @@ int rtmp_packet_create(RTMPPacket *pkt, int channel_id, RTMPPacketType type,
 {
     pkt->data = av_malloc(size);
     if (!pkt->data)
-        return -1;
+        return AVERROR(ENOMEM);
     pkt->data_size  = size;
     pkt->channel_id = channel_id;
     pkt->type       = type;
