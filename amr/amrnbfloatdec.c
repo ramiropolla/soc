@@ -1163,7 +1163,12 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         update_state(p);
     }
 
-    // update averaged lsf vector (used for fixed gain smoothing)
+    /* Update averaged lsf vector (used for fixed gain smoothing).
+     *
+     * Note that lsf_avg should not incorporate the current frame's LSFs
+     * for fixed_gain_smooth.
+     * The specification has an incorrect formula: the reference decoder uses
+     * qbar(n-1) rather than qbar(n) in section 6.1(4) equation 71. */
     ff_weighted_vector_sumf(p->lsf_avg, p->lsf_avg, p->lsf_q[3],
                             0.84, 0.16, LP_FILTER_ORDER);
 
