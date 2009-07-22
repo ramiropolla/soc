@@ -53,17 +53,17 @@ typedef enum {
 
 /** protocol handler context */
 typedef struct RTMPContext {
-    URLContext*   stream;                     ///< context for TCP stream
+    URLContext*   stream;                     ///< TCP stream used in interactions with RTMP server
     RTMPPacket    prev_pkt[2][RTMP_CHANNELS]; ///< packet history used when reading and sending packets
-    int           chunk_size;                 ///< chunk size
-    char          playpath[256];              ///< RTMP playpath
+    int           chunk_size;                 ///< size of chunks packet divided into
+    char          playpath[256];              ///< path to filename to play (with possible "mp4:" prefix)
     ClientState   state;                      ///< current state
     int           main_channel_id;            ///< an additional channel id which is used for some invokes
     uint8_t*      flv_data;                   ///< buffer with data for demuxer
     int           flv_size;                   ///< current buffer size
     int           flv_off;                    ///< number of bytes read from current buffer
-    uint32_t      video_ts;                   ///< current video timestamp
-    uint32_t      audio_ts;                   ///< current audio timestamp
+    uint32_t      video_ts;                   ///< current video timestamp in milliseconds
+    uint32_t      audio_ts;                   ///< current audio timestamp in milliseconds
 } RTMPContext;
 
 #define PLAYER_KEY_OPEN_PART_LEN 30   ///< length of partial key used for first client digest signing
