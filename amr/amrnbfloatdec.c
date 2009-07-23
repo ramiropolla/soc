@@ -796,7 +796,7 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
     // modes the pitch and codebook gains are joinly quantized (sec 5.8.2)
     // so the codebook gain cannot depend on the quantised pitch gain.
     if (mode == MODE_122)
-        p->beta = p->pitch_gain[4];
+        p->beta = FFMIN(p->pitch_gain[4], 1.0);
 
     // conduct pitch sharpening as appropriate (section 6.1.2)
     if (p->pitch_lag_int < AMR_SUBFRAME_SIZE)
@@ -923,7 +923,9 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
     // adaptive gain control are skipped
     if (p->pitch_gain[4] > 0.5 && !overflow) {
         float excitation_temp[AMR_SUBFRAME_SIZE];
-        float pitch_factor = (p->cur_frame_mode == MODE_122 ? 0.25 : 0.5)*p->beta*p->pitch_gain[4];
+        float pitch_factor = (p->cur_frame_mode == MODE_122 ? 0.25 : 0.5)
+            *FFMIN(p->pitch_gain[4], p->cur_frame_mode == MODE_122 ? 1.0 : SHARP_MAX)
+            *p->pitch_gain[4];
 
         for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
             // emphasize pitch vector contribution
