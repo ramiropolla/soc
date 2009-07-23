@@ -2302,6 +2302,10 @@ static const float gains_low[64][2] = {
 
 // pre-processing tables
 
+// The specification says 0.8, which should be 13107, but the reference C code
+// uses 13017 instead. (Amusingly the same applies to SHARP_MAX in g729dec.c.)
+#define SHARP_MAX 0.79449462890625
+
 // impulse response filter tables converted to float from Q15 int32_t used for
 // anti-sparseness processing
 static const float ir_filter_strong_MODE_795[AMR_SUBFRAME_SIZE] = {

@@ -71,7 +71,7 @@ typedef struct AMRContext {
     float                     pitch_gain[5]; ///< quantified pitch gains for the current and previous four subframes
     float                     fixed_gain[5]; ///< quantified fixed gains for the current and previous four subframes
 
-    float                              beta; ///< beta = previous pitch_gain, bounded by [0.0,0.8]
+    float                              beta; ///< beta = previous pitch_gain, bounded by [0.0,SHARP_MAX]
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
     int                          hang_count; ///< the number of subframes since a hangover period started
 
@@ -807,7 +807,7 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
     // MODE_475 only updates on the 2nd and 4th subframes - this follows from
     // the fact that the gains for two subframes are jointly quantised.
     if (mode != MODE_475 || subframe & 1)
-        p->beta = av_clipf(p->pitch_gain[4], 0.0, 0.8);
+        p->beta = av_clipf(p->pitch_gain[4], 0.0, SHARP_MAX);
 
     // ^g_c = g_c' * ^gamma_gc
     p->fixed_gain[4] = fixed_gain_factor
