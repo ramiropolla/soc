@@ -71,7 +71,7 @@ typedef struct AMRContext {
     float                     pitch_gain[5]; ///< quantified pitch gains for the current and previous four subframes
     float                     fixed_gain[5]; ///< quantified fixed gains for the current and previous four subframes
 
-    float                              beta; ///< beta = pitch_gain, bounded by [0.0,1.0] for 12.2 kbps or [0.0,0.8] for other modes
+    float                              beta; ///< beta = previous pitch_gain, bounded by [0.0,0.8]
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
     int                          hang_count; ///< the number of subframes since a hangover period started
 
@@ -764,7 +764,7 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsf,
 }
 
 /**
- * Decode fixed and pitch gains.
+ * Decode fixed and pitch gains, and apply pitch sharpening.
  *
  * @param p the context
  * @param amr_subframe unpacked amr subframe
@@ -775,6 +775,7 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
                          const enum Mode mode, const int subframe)
 {
     float fixed_gain_factor; // fixed gain correction factor {^gamma_gc} for the current frame
+    int i;
 
     // decode pitch gain and fixed gain correction factor
     if (mode == MODE_122 || mode == MODE_795) {
@@ -789,6 +790,24 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
         p->pitch_gain[4]  = gains[0];
         fixed_gain_factor = gains[1];
     }
+
+    // Only 12.2kbit/s mode uses the current pitch gain for pitch sharpening.
+    // The spec suggests the current pitch gain is always used, but in other
+    // modes the pitch and codebook gains are joinly quantized (sec 5.8.2)
+    // so the codebook gain cannot depend on the quantised pitch gain.
+    if (mode == MODE_122)
+        p->beta = p->pitch_gain[4];
+
+    // conduct pitch sharpening as appropriate (section 6.1.2)
+    if (p->pitch_lag_int < AMR_SUBFRAME_SIZE)
+        for (i = p->pitch_lag_int; i < AMR_SUBFRAME_SIZE; i++)
+            p->fixed_vector[i] += p->beta*p->fixed_vector[i-p->pitch_lag_int];
+
+    // Save pitch sharpening factor for the next subframe
+    // MODE_475 only updates on the 2nd and 4th subframes - this follows from
+    // the fact that the gains for two subframes are jointly quantised.
+    if (mode != MODE_475 || subframe & 1)
+        p->beta = av_clipf(p->pitch_gain[4], 0.0, 0.8);
 
     // ^g_c = g_c' * ^gamma_gc
     p->fixed_gain[4] = fixed_gain_factor
@@ -1140,16 +1159,6 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
 /*** pre-processing ***/
 
-        p->beta = av_clipf(p->pitch_gain[4], 0.0,
-                           p->cur_frame_mode == MODE_122 ? 1.0 : 0.8);
-
-        // conduct pitch sharpening as appropriate (section 6.1.2)
-        if (p->pitch_lag_int < AMR_SUBFRAME_SIZE)
-            for (i = p->pitch_lag_int; i < AMR_SUBFRAME_SIZE; i++)
-                p->fixed_vector[i] += p->beta*p->fixed_vector[i-p->pitch_lag_int];
-
-        // Fixed gain calculation (section 6.1.3) uses the results of pitch
-        // sharpening (above)
         decode_gains(p, amr_subframe, p->cur_frame_mode, subframe);
 
         // The excitation feedback is calculated without any processing such
