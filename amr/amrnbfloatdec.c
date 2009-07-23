@@ -876,7 +876,11 @@ static void anti_sparseness(AMRContext *p, float *fixed_vector, float fixed_gain
         ir_filter_strength++;
     }
 
-    //FIXME: disable filtering for very low level of fixed_gain
+    // Disable filtering for very low level of fixed_gain.
+    // Note this step is not specified in the technical description but is in
+    // the reference source in the function Ph_disp.
+    if (fixed_gain < 5.0)
+        ir_filter_strength = 2;
 
     if (p->cur_frame_mode != MODE_74 && p->cur_frame_mode < MODE_102 && ir_filter_strength < 2) {
         const float **filters = p->cur_frame_mode == MODE_795 ? ir_filters_lookup_MODE_795
