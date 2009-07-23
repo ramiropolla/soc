@@ -75,7 +75,7 @@ typedef struct AMRContext {
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
     int                          hang_count; ///< the number of subframes since a hangover period started
 
-    float                prev_ir_fixed_gain; ///< previous fixed gain used by impulse response filter
+    float            prev_sparse_fixed_gain; ///< previous fixed gain; used by anti-sparseness processing to determine "onset"
     uint8_t         prev_ir_filter_strength; ///< previous impulse response filter strength; 0 - strong, 1 - medium, 2 - none
     uint8_t                 ir_filter_onset; ///< flag for impulse response filter strength
 
@@ -826,17 +826,23 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
 /// @{
 
 /**
- * adaptive phase dispersion; forming of total excitation
+ * Reduce fixed vector sparseness by smoothing with one of three IR filters.
+ *
+ * This implements 3GPP TS 26.090 section 6.1(5).
+ *
+ * In the patent description "Method and device for coding speech in
+ * analysis-by-synthesis speech coders" by Ari P. Heikkinen, this method
+ * is called "adaptive phase dispersion". This name is also used in the
+ * reference source, but not in the spec.
  *
  * @param p the context
  * @param fixed_vector algebraic codebook vector
  * @param fixed_gain smoothed gain
  */
-static void apply_ir_filter(AMRContext *p, float *fixed_vector, float fixed_gain)
+static void anti_sparseness(AMRContext *p, float *fixed_vector, float fixed_gain)
 {
     int ir_filter_strength;
 
-    // anti-sparseness processing
     if (p->pitch_gain[4] < 0.6) {
         // strong filtering
         ir_filter_strength = 0;
@@ -849,7 +855,7 @@ static void apply_ir_filter(AMRContext *p, float *fixed_vector, float fixed_gain
     }
 
     // detect 'onset'
-    if (fixed_gain > 2.0 * p->prev_ir_fixed_gain) {
+    if (fixed_gain > 2.0 * p->prev_sparse_fixed_gain) {
         p->ir_filter_onset = 2;
     } else if (p->ir_filter_onset) {
         p->ir_filter_onset--;
@@ -886,7 +892,7 @@ static void apply_ir_filter(AMRContext *p, float *fixed_vector, float fixed_gain
 
     // update ir filter strength history
     p->prev_ir_filter_strength = ir_filter_strength;
-    p->prev_ir_fixed_gain = fixed_gain;
+    p->prev_sparse_fixed_gain = fixed_gain;
 }
 
 /// @}
@@ -1175,7 +1181,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         synth_fixed_gain = fixed_gain_smooth(p, p->lsf_q[subframe],
                                               p->lsf_avg, p->cur_frame_mode);
 
-        apply_ir_filter(p, p->fixed_vector, synth_fixed_gain);
+        anti_sparseness(p, p->fixed_vector, synth_fixed_gain);
 
 /*** end of pre-processing ***/
 
