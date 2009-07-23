@@ -832,7 +832,7 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
  * @param fixed_vector algebraic codebook vector
  * @param fixed_gain smoothed gain
  */
-void apply_ir_filter(AMRContext *p, float *fixed_vector, float fixed_gain)
+static void apply_ir_filter(AMRContext *p, float *fixed_vector, float fixed_gain)
 {
     int ir_filter_strength;
 
@@ -1094,7 +1094,7 @@ static void post_process(AMRContext *p, float *lpc, float *buf_out)
  * @param high_pass_mem Pointer to two floats for the filter state
  * @param samples AMR_SUBFRAME_SIZE buffer where the filter is applied
  */
-void high_pass_filter(float *high_pass_mem, float *samples)
+static void high_pass_filter(float *high_pass_mem, float *samples)
 {
     int i;
     float tmp[AMR_SUBFRAME_SIZE + 2];
@@ -1114,7 +1114,7 @@ void high_pass_filter(float *high_pass_mem, float *samples)
 
 /// @}
 
-int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
+static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
                               AVPacket *avpkt)
 {
 
