@@ -75,6 +75,7 @@ typedef struct AMRContext {
     int                          diff_count; ///< the number of subframes for which diff has been above 0.65
     int                          hang_count; ///< the number of subframes since a hangover period started
 
+    float                prev_ir_fixed_gain; ///< previous fixed gain used by impulse response filter
     uint8_t         prev_ir_filter_strength; ///< previous impulse response filter strength; 0 - strong, 1 - medium, 2 - none
     uint8_t                 ir_filter_onset; ///< flag for impulse response filter strength
 
@@ -757,7 +758,7 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsf,
         // calculate the mean fixed gain for the current subframe
         const float fixed_gain_mean = (p->fixed_gain[0] + p->fixed_gain[1] + p->fixed_gain[2] + p->fixed_gain[3] + p->fixed_gain[4])*0.2;
         // calculate the smoothed fixed gain
-        p->fixed_gain[4] = smoothing_factor*p->fixed_gain[4] + (1.0 - smoothing_factor)*fixed_gain_mean;
+        return smoothing_factor*p->fixed_gain[4] + (1.0 - smoothing_factor)*fixed_gain_mean;
     }
     return p->fixed_gain[4];
 }
@@ -809,8 +810,10 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
  * adaptive phase dispersion; forming of total excitation
  *
  * @param p the context
+ * @param fixed_vector algebraic codebook vector
+ * @param fixed_gain smoothed gain
  */
-void apply_ir_filter(AMRContext *p, float *fixed_vector)
+void apply_ir_filter(AMRContext *p, float *fixed_vector, float fixed_gain)
 {
     int ir_filter_strength;
 
@@ -827,7 +830,7 @@ void apply_ir_filter(AMRContext *p, float *fixed_vector)
     }
 
     // detect 'onset'
-    if (p->fixed_gain[4] > 2.0 * p->fixed_gain[3]) {
+    if (fixed_gain > 2.0 * p->prev_ir_fixed_gain) {
         p->ir_filter_onset = 2;
     } else if (p->ir_filter_onset) {
         p->ir_filter_onset--;
@@ -864,6 +867,7 @@ void apply_ir_filter(AMRContext *p, float *fixed_vector)
 
     // update ir filter strength history
     p->prev_ir_filter_strength = ir_filter_strength;
+    p->prev_ir_fixed_gain = fixed_gain;
 }
 
 /// @}
@@ -881,7 +885,7 @@ void apply_ir_filter(AMRContext *p, float *fixed_vector)
  * @param overflow      16-bit overflow flag
  */
 static int synthesis(AMRContext *p, float *excitation, float *lpc,
-                     float *samples, uint8_t overflow)
+                     float fixed_gain, float *samples, uint8_t overflow)
 {
     int i, overflow_temp = 0;
 
@@ -894,7 +898,7 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
     // construct the excitation vector
     for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
         excitation[i] = p->pitch_gain[4] * p->pitch_vector[i] +
-                        p->fixed_gain[4] * p->fixed_vector[i];
+                        fixed_gain * p->fixed_vector[i];
 
     // if an overflow has been detected, pitch vector contribution emphasis and
     // adaptive gain control are skipped
@@ -1100,6 +1104,7 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     int i, subframe;                         // counters
     enum Mode speech_mode = MODE_475;        // ???
     float exc_feedback[AMR_SUBFRAME_SIZE];
+    float synth_fixed_gain;
 
     // decode the bitstream to AMR parameters
     p->cur_frame_mode = decode_bitstream(p, buf, buf_size, &speech_mode);
@@ -1153,22 +1158,24 @@ int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
                                 p->pitch_gain[4], p->fixed_gain[4],
                                 AMR_SUBFRAME_SIZE);
 
-        // smooth fixed gain
-        p->fixed_gain[4] = fixed_gain_smooth(p, p->lsf_q[subframe], p->lsf_avg,
-                                             p->cur_frame_mode);
+        // Smooth fixed gain.
+        // The specification is ambiguous, but in the reference source, the
+        // smoothed value is NOT fed back into later fixed gain smoothing.
+        synth_fixed_gain = fixed_gain_smooth(p, p->lsf_q[subframe],
+                                              p->lsf_avg, p->cur_frame_mode);
 
-        apply_ir_filter(p, p->fixed_vector);
+        apply_ir_filter(p, p->fixed_vector, synth_fixed_gain);
 
 /*** end of pre-processing ***/
 
 /*** synthesis ***/
 
-        if (synthesis(p, p->excitation, p->lpc[subframe],
+        if (synthesis(p, p->excitation, p->lpc[subframe], synth_fixed_gain,
                       &p->samples_in[LP_FILTER_ORDER], 0))
             // overflow detected -> rerun synthesis scaling pitch vector down
             // by a factor of 4, skipping pitch vector contribution emphasis
             // and adaptive gain control
-            synthesis(p, p->excitation, p->lpc[subframe],
+            synthesis(p, p->excitation, p->lpc[subframe], synth_fixed_gain,
                       &p->samples_in[LP_FILTER_ORDER], 1);
 
 /*** end of synthesis ***/
