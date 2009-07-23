@@ -45,7 +45,7 @@
 
 /** RTMP protocol handler state */
 typedef enum {
-    STATE_START,      ///< client has not done anything
+    STATE_START,      ///< client has not done anything yet
     STATE_HANDSHAKED, ///< client has performed handshake
     STATE_CONNECTING, ///< client connected to server successfully
     STATE_READY,      ///< client has sent all needed commands and waits for server reply
@@ -56,10 +56,10 @@ typedef enum {
 typedef struct RTMPContext {
     URLContext*   stream;                     ///< TCP stream used in interactions with RTMP server
     RTMPPacket    prev_pkt[2][RTMP_CHANNELS]; ///< packet history used when reading and sending packets
-    int           chunk_size;                 ///< size of chunks packet divided into
+    int           chunk_size;                 ///< size of the chunks RTMP packets are divided into
     char          playpath[256];              ///< path to filename to play (with possible "mp4:" prefix)
     ClientState   state;                      ///< current state
-    int           main_channel_id;            ///< an additional channel id which is used for some invokes
+    int           main_channel_id;            ///< an additional channel ID which is used for some invocations
     uint8_t*      flv_data;                   ///< buffer with data for demuxer
     int           flv_size;                   ///< current buffer size
     int           flv_off;                    ///< number of bytes read from current buffer
@@ -91,7 +91,7 @@ static const uint8_t rtmp_server_key[] = {
 };
 
 /**
- * Generates 'connect' call and sends it to server.
+ * Generates 'connect' call and sends it to the server.
  */
 static void gen_connect(URLContext *s, RTMPContext *rt, const char *proto,
                         const char *host, int port, const char *app)
@@ -134,8 +134,8 @@ static void gen_connect(URLContext *s, RTMPContext *rt, const char *proto,
 }
 
 /**
- * Generates 'createStream' call and sends it to server. It should make server
- * allocate some channel for media streams.
+ * Generates 'createStream' call and sends it to the server. It should make
+ * the server allocate some channel for media streams.
  */
 static void gen_create_stream(URLContext *s, RTMPContext *rt)
 {
@@ -155,7 +155,7 @@ static void gen_create_stream(URLContext *s, RTMPContext *rt)
 }
 
 /**
- * Generates 'play' call and sends it to server, then pings server
+ * Generates 'play' call and sends it to the server, then pings the server
  * to start actual playing.
  */
 static void gen_play(URLContext *s, RTMPContext *rt)
@@ -191,7 +191,7 @@ static void gen_play(URLContext *s, RTMPContext *rt)
 }
 
 /**
- * Generates ping reply and sends it to server.
+ * Generates ping reply and sends it to the server.
  */
 static void gen_pong(URLContext *s, RTMPContext *rt, RTMPPacket *ppkt)
 {
@@ -297,7 +297,8 @@ static int rtmp_validate_digest(uint8_t *buf, int off)
 }
 
 /**
- * Performs handshake with server by means of exchanging HMAC-SHA2 signed ppseudorangom data.
+ * Performs handshake with the server by means of exchanging pseudorandom data
+ * signed with HMAC-SHA2 digest.
  */
 static int rtmp_handshake(URLContext *s, RTMPContext *rt)
 {
@@ -375,8 +376,8 @@ static int rtmp_handshake(URLContext *s, RTMPContext *rt)
 
 /**
  * Parses received packet and may perform some action depending on packet contents.
- * @return 0 for no errors, -1 for serious errors which prevent further communications,
- *         positive values for not critical errors
+ * @return 0 for no errors, -1 for serious errors which prevent further
+ *         communications, positive values for uncritical errors
  */
 static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
 {
@@ -385,8 +386,8 @@ static int rtmp_parse_result(URLContext *s, RTMPContext *rt, RTMPPacket *pkt)
     switch (pkt->type) {
     case RTMP_PT_CHUNK_SIZE:
         if (pkt->data_size != 4) {
-            av_log(LOG_CONTEXT, AV_LOG_ERROR, "Chunk size change packet is not 4 (%d)\n",
-                   pkt->data_size);
+            av_log(LOG_CONTEXT, AV_LOG_ERROR,
+                   "Chunk size change packet is not 4 bytes long (%d)\n", pkt->data_size);
             return -1;
         }
         rt->chunk_size = AV_RB32(pkt->data);
@@ -529,11 +530,13 @@ static int get_packet(URLContext *s, int for_header)
 }
 
 /**
- * Opens RTMP connection and verifies that stream can be played.
+ * Opens RTMP connection and verifies that the stream can be played.
  *
  * URL syntax: rtmp://server[:port][/app][/playpath]
- *             where 'app' is first one or two directories in the path (/ondemand/, /flash/live/, etc)
- *             and 'playpath' is file name (the rest of path, may be prefixed with "mp4:")
+ *             where 'app' is first one or two directories in the path
+ *             (e.g. /ondemand/, /flash/live/, etc.)
+ *             and 'playpath' is a file name (the rest of the path,
+ *             may be prefixed with "mp4:")
  */
 static int rtmp_open(URLContext *s, const char *uri, int flags)
 {
@@ -560,7 +563,7 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
         goto fail;
 
     if (!is_input) {
-        av_log(LOG_CONTEXT, AV_LOG_ERROR, "RTMP output is not supported yet\n");
+        av_log(LOG_CONTEXT, AV_LOG_ERROR, "RTMP output is not supported yet.\n");
         goto fail;
     } else {
         rt->state = STATE_START;
