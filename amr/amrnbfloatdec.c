@@ -65,7 +65,6 @@ typedef struct AMRContext {
     float                       *excitation; ///< pointer to the current excitation vector in excitation_buf
 
     float   pitch_vector[AMR_SUBFRAME_SIZE]; ///< adaptive code book (pitch) vector
-    float   fixed_vector[AMR_SUBFRAME_SIZE]; ///< algebraic code book (fixed) vector
 
     float               prediction_error[4]; ///< quantified prediction errors {20log10(^gamma_gc)} for previous four subframes
     float                     pitch_gain[5]; ///< quantified pitch gains for the current and previous four subframes
@@ -693,8 +692,10 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
  * @param p the context
  * @param subframe unpacked amr subframe
  * @param mode mode of the current frame
+ * @param fixed_vector vector to be modified
  */
-static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode)
+static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode,
+                             float *fixed_vector)
 {
     int i;
 
@@ -707,7 +708,7 @@ static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode)
     // conduct pitch sharpening as appropriate (section 6.1.2)
     if (p->pitch_lag_int < AMR_SUBFRAME_SIZE)
         for (i = p->pitch_lag_int; i < AMR_SUBFRAME_SIZE; i++)
-            p->fixed_vector[i] += p->beta*p->fixed_vector[i-p->pitch_lag_int];
+            fixed_vector[i] += p->beta*fixed_vector[i-p->pitch_lag_int];
 
     // Save pitch sharpening factor for the next subframe
     // MODE_475 only updates on the 2nd and 4th subframes - this follows from
@@ -829,13 +830,15 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
  * @param p the context
  * @param mode mode of the current frame
  * @param fixed_gain_factor gain correction factor
+ * @param fixed_vector algebraic codebook vector
  */
 static void set_fixed_gain(AMRContext *p, const enum Mode mode,
-                           float fixed_gain_factor)
+                           float fixed_gain_factor, float *fixed_vector)
 {
     // ^g_c = g_c' * ^gamma_gc
     p->fixed_gain[4] = fixed_gain_factor
-                     * fixed_gain_prediction(p->fixed_vector, p->prediction_error, mode);
+                     * fixed_gain_prediction(fixed_vector, p->prediction_error,
+                                             p->cur_frame_mode);
 
     // update quantified prediction error energy history
     memmove(&p->prediction_error[0], &p->prediction_error[1],
@@ -862,8 +865,10 @@ static void set_fixed_gain(AMRContext *p, const enum Mode mode,
  * @param p the context
  * @param fixed_vector algebraic codebook vector
  * @param fixed_gain smoothed gain
+ * @param spare_vector space for modified vector if necessary
  */
-static void anti_sparseness(AMRContext *p, float *fixed_vector, float fixed_gain)
+static float *anti_sparseness(AMRContext *p, float *fixed_vector,
+                              float fixed_gain, float *spare_vector)
 {
     int ir_filter_strength;
 
@@ -910,17 +915,16 @@ static void anti_sparseness(AMRContext *p, float *fixed_vector, float fixed_gain
         const float **filters = p->cur_frame_mode == MODE_795 ? ir_filters_lookup_MODE_795
                                                               : ir_filters_lookup;
         // circularly convolve the fixed vector with the impulse response
-        // FIXME: extra memcpy (ff_celp_convolve_circf needs in and out not to overlap)
-        float fixed_vector_temp[AMR_SUBFRAME_SIZE];
-
-        memcpy(fixed_vector_temp, fixed_vector, sizeof(fixed_vector_temp));
-        ff_celp_convolve_circf(fixed_vector, fixed_vector_temp,
+        ff_celp_convolve_circf(spare_vector, fixed_vector,
                                filters[ir_filter_strength], AMR_SUBFRAME_SIZE);
+        fixed_vector = spare_vector;
     }
 
     // update ir filter strength history
     p->prev_ir_filter_strength = ir_filter_strength;
     p->prev_sparse_fixed_gain = fixed_gain;
+
+    return fixed_vector;
 }
 
 /// @}
@@ -934,12 +938,14 @@ static void anti_sparseness(AMRContext *p, float *fixed_vector, float fixed_gain
  * @param p             pointer to the AMRContext
  * @param excitation    pointer to the excitation vector
  * @param lpc           pointer to the LPC coefficients
- * @param fixed_gain    fixed codebook gain to be used by synthesis
+ * @param fixed_gain    fixed codebook gain for synthesis
+ * @param fixed_vector  algebraic codebook vector
  * @param samples       pointer to the output speech samples
  * @param overflow      16-bit overflow flag
  */
 static int synthesis(AMRContext *p, float *excitation, float *lpc,
-                     float fixed_gain, float *samples, uint8_t overflow)
+                     float fixed_gain, float *fixed_vector, float *samples,
+                     uint8_t overflow)
 {
     int i, overflow_temp = 0;
 
@@ -952,7 +958,7 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
     // construct the excitation vector
     for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
         excitation[i] = p->pitch_gain[4] * p->pitch_vector[i] +
-                        fixed_gain * p->fixed_vector[i];
+                        fixed_gain * fixed_vector[i];
 
     // if an overflow has been detected, pitch vector contribution emphasis and
     // adaptive gain control are skipped
@@ -1161,7 +1167,10 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     enum Mode speech_mode = MODE_475;        // ???
     float fixed_gain_factor;
     float exc_feedback[AMR_SUBFRAME_SIZE];
-    float synth_fixed_gain;
+    float fixed_vector[AMR_SUBFRAME_SIZE];   // algebraic code book (fixed) vector
+    float spare_vector[AMR_SUBFRAME_SIZE];   // extra stack space to hold result from anti-spareness processing
+    float synth_fixed_gain;                  // the fixed gain that synthesis should use
+    float *synth_fixed_vector;               // pointer to the fixed vector that synthesis should use
 
     // decode the bitstream to AMR parameters
     p->cur_frame_mode = decode_bitstream(p, buf, buf_size, &speech_mode);
@@ -1192,7 +1201,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
 /*** end of adaptive code book (pitch) vector decoding ***/
 
-        decode_fixed_vector(p->fixed_vector, amr_subframe->pulses,
+        decode_fixed_vector(fixed_vector, amr_subframe->pulses,
                             p->cur_frame_mode, subframe);
 
         // The fixed gain (section 6.1.3) depends on the fixed vector
@@ -1202,15 +1211,16 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         decode_gains(p, amr_subframe, p->cur_frame_mode, subframe,
                      &fixed_gain_factor);
 
-        pitch_sharpening(p, subframe, p->cur_frame_mode);
+        pitch_sharpening(p, subframe, p->cur_frame_mode, fixed_vector);
 
-        set_fixed_gain(p, p->cur_frame_mode, fixed_gain_factor);
+        set_fixed_gain(p, p->cur_frame_mode, fixed_gain_factor,
+                       fixed_vector);
 
 /*** pre-processing ***/
 
         // The excitation feedback is calculated without any processing such
         // as fixed gain smoothing. This isn't mentioned in the specification.
-        ff_weighted_vector_sumf(exc_feedback, p->excitation, p->fixed_vector,
+        ff_weighted_vector_sumf(exc_feedback, p->excitation, fixed_vector,
                                 p->pitch_gain[4], p->fixed_gain[4],
                                 AMR_SUBFRAME_SIZE);
 
@@ -1220,19 +1230,20 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         synth_fixed_gain = fixed_gain_smooth(p, p->lsf_q[subframe],
                                               p->lsf_avg, p->cur_frame_mode);
 
-        anti_sparseness(p, p->fixed_vector, synth_fixed_gain);
+        synth_fixed_vector = anti_sparseness(p, fixed_vector, synth_fixed_gain,
+                                             spare_vector);
 
 /*** end of pre-processing ***/
 
 /*** synthesis ***/
 
         if (synthesis(p, p->excitation, p->lpc[subframe], synth_fixed_gain,
-                      &p->samples_in[LP_FILTER_ORDER], 0))
+                      synth_fixed_vector, &p->samples_in[LP_FILTER_ORDER], 0))
             // overflow detected -> rerun synthesis scaling pitch vector down
             // by a factor of 4, skipping pitch vector contribution emphasis
             // and adaptive gain control
             synthesis(p, p->excitation, p->lpc[subframe], synth_fixed_gain,
-                      &p->samples_in[LP_FILTER_ORDER], 1);
+                      synth_fixed_vector, &p->samples_in[LP_FILTER_ORDER], 1);
 
 /*** end of synthesis ***/
 
