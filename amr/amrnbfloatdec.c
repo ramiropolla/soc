@@ -97,7 +97,7 @@ typedef struct AMRContext {
  * @param in_a first vector
  * @param in_b second vector
  * @param weight_coeff_a first vector weight coefficient
- * @param weight_coeff_a second vector weight coefficient
+ * @param weight_coeff_b second vector weight coefficient
  * @param length vectors length
  *
  * @note It is safe to pass the same buffer for out and in_a or in_b.
@@ -176,6 +176,7 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
 /**
  * Decode the bitstream into the AMR parameters and discover the frame mode.
  *
+ * @param p the context
  * @param buf               pointer to the input buffer
  * @param buf_size          size of the input buffer
  * @param speech_mode       pointer to the speech mode
@@ -375,7 +376,7 @@ static void lsf2lsp_3(AMRContext *p)
  * Convert an lsp vector to lpc coefficients.
  *
  * @param lsp                 input lsp vector
- * @param lpc                 output lpc coefficients
+ * @param lpc_coeffs          output lpc coefficients
  */
 static void lsp2lpc(float *lsp, float *lpc_coeffs)
 {
@@ -690,9 +691,8 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
  * Apply pitch lag to the fixed vector (section 6.1.2)
  *
  * @param p the context
- * @param amr_subframe unpacked amr subframe
+ * @param subframe unpacked amr subframe
  * @param mode mode of the current frame
- * @param fixed_vector algebraic codebook vector
  */
 static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode)
 {
@@ -728,6 +728,7 @@ static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode)
  * @param fixed_vector         pointer to the algebraic codebook vector
  * @param prev_pred_error      pointer to the quantified prediction errors
  *                             from the previous four subframes
+ * @param mode mode of the current frame
  *
  * @return the predicted fixed gain
  */
@@ -760,6 +761,7 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
  * @param p the context
  * @param lsf LSFs for the current subframe, in the range [0,1]
  * @param lsf_avg averaged LSFs
+ * @param mode mode of the current frame
  *
  * @return fixed gain smoothed
  */
@@ -827,7 +829,6 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
  * @param p the context
  * @param mode mode of the current frame
  * @param fixed_gain_factor gain correction factor
- * @param fixed_vector algebraic codebook vector
  */
 static void set_fixed_gain(AMRContext *p, const enum Mode mode,
                            float fixed_gain_factor)
@@ -933,6 +934,7 @@ static void anti_sparseness(AMRContext *p, float *fixed_vector, float fixed_gain
  * @param p             pointer to the AMRContext
  * @param excitation    pointer to the excitation vector
  * @param lpc           pointer to the LPC coefficients
+ * @param fixed_gain    fixed codebook gain to be used by synthesis
  * @param samples       pointer to the output speech samples
  * @param overflow      16-bit overflow flag
  */
