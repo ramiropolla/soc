@@ -301,7 +301,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     /** frame info */
     s->skip_frame = 1; /** skip first frame */
     s->packet_loss = 1;
-    s->len_prefix = (s->decode_flags & 0x40) >> 6;
+    s->len_prefix = (s->decode_flags & 0x40);
 
     if (!s->len_prefix) {
          av_log_ask_for_sample(avctx, "no length prefix\n");
