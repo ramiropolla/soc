@@ -44,8 +44,20 @@
  * subframes. Every subframe contains the data for 2^N time domain samples
  * where N varies between 7 and 12.
  *
+ * Example wmapro bitstream (in samples):
+ *
+ * ||   packet 0           || packet 1 || packet 2      packets
+ * ---------------------------------------------------
+ * || frame 0      || frame 1       || frame 2    ||    frames
+ * ---------------------------------------------------
+ * ||   |      |   ||   |   |   |   ||            ||    subframes of channel 0
+ * ---------------------------------------------------
+ * ||      |   |   ||   |   |   |   ||            ||    subframes of channel 1
+ * ---------------------------------------------------
+ *
  * The frame layouts for the individual channels of a wma frame does not need
  * to be the same.
+ *
  * However, if the offsets and lengths of several subframes of a frame are the
  * same, the subframes of the channels can be grouped.
  * Every group may then use special coding techniques like M/S stereo coding
@@ -109,27 +121,27 @@ static VLC              coef_vlc[2];      ///< coefficient run length vlc codes
 static float            sin64[33];        ///< sinus table for decorrelation
 
 /**
- * @brief decoder context for a single channel
+ * @brief frame specific decoder context for a single channel
  */
 typedef struct {
     int16_t  prev_block_len;                          ///< length of the previous block
     uint8_t  transmit_coefs;
     uint8_t  num_subframes;
     uint16_t subframe_len[MAX_SUBFRAMES];             ///< subframe length in samples
-    uint16_t subframe_offset[MAX_SUBFRAMES];          ///< subframe position
-    uint8_t  cur_subframe;                            ///< subframe index
-    uint16_t channel_len;                             ///< channel length in samples
+    uint16_t subframe_offset[MAX_SUBFRAMES];          ///< subframe positions in the current frame
+    uint8_t  cur_subframe;                            ///< current subframe number
+    uint16_t channel_len;                             ///< channel frame length in samples
     uint16_t decoded_samples;                         ///< already processed samples
     uint8_t  grouped;                                 ///< channel is part of a group
-    int      quant_step;                              ///< quantization step
-    int8_t   transmit_sf;                             ///< transmit scale factors
+    int      quant_step;                              ///< quantization step for the current subframe
+    int8_t   transmit_sf;                             ///< transmit scale factors for the current subframe
     int8_t   reuse_sf;                                ///< share scale factors between subframes
-    int8_t   scale_factor_step;                       ///< scaling step
-    int      max_scale_factor;                        ///< maximum scale factor
-    int      scale_factors[MAX_BANDS];                ///< scale factor values
-    int      resampled_scale_factors[MAX_BANDS];      ///< scale factors from a previous block
+    int8_t   scale_factor_step;                       ///< scaling step for the current subframe
+    int      max_scale_factor;                        ///< maximum scale factor for the current subframe
+    int      scale_factors[MAX_BANDS];                ///< scale factor values for the current subframe
+    int      resampled_scale_factors[MAX_BANDS];      ///< scale factors from a previous subframe
     int16_t  scale_factor_block_len;                  ///< scale factor reference block length
-    float*   coeffs;                                  ///< pointer to the decode buffer
+    float*   coeffs;                                  ///< pointer to the subframe decode buffer
     DECLARE_ALIGNED_16(float, out[2*WMAPRO_BLOCK_MAX_SIZE]); ///< output buffer
 } WMA3ChannelCtx;
 
@@ -465,7 +477,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
  *       If the subframes are not evenly split, the algorithm estimates the
  *       channels with the lowest number of total samples.
  *       Afterwards, for each of these channels a bit is read from the
- *       bitstream that indicates if the channel contains a frame with the
+ *       bitstream that indicates if the channel contains a subframe with the
  *       next subframe size that is going to be read from the bitstream or not.
  *       If a channel contains such a subframe, the subframe size gets added to
  *       the channel's subframe list.
