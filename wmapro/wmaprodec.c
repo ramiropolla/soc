@@ -1119,6 +1119,7 @@ static int decode_subframe(WMA3DecodeContext *s)
     int i;
     int total_samples = s->samples_per_frame * s->num_channels;
     int transmit_coeffs = 0;
+    int frame_offset;
 
     s->subframe_offset = get_bits_count(&s->gb);
 
@@ -1166,16 +1167,10 @@ static int decode_subframe(WMA3DecodeContext *s)
            s->channels_for_cur_subframe);
 
     /** calculate number of scale factor bands and their offsets */
-    if (subframe_len == s->samples_per_frame) {
-        s->num_bands = s->num_sfb[0];
-        s->cur_sfb_offsets = s->sfb_offsets;
-        s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[0];
-    } else {
-        int frame_offset = av_log2(s->samples_per_frame/subframe_len);
-        s->num_bands = s->num_sfb[frame_offset];
-        s->cur_sfb_offsets = &s->sfb_offsets[MAX_BANDS * frame_offset];
-        s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[frame_offset];
-    }
+    frame_offset = av_log2(s->samples_per_frame/subframe_len);
+    s->num_bands = s->num_sfb[frame_offset];
+    s->cur_sfb_offsets = &s->sfb_offsets[MAX_BANDS * frame_offset];
+    s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[frame_offset];
 
     /** configure the decoder for the current subframe */
     for (i=0;i<s->channels_for_cur_subframe;i++) {
