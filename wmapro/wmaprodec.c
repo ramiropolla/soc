@@ -1082,7 +1082,7 @@ static void inverse_channel_transform(WMA3DecodeContext *s)
  *@brief Apply sine window and reconstruct the output buffer.
  *@param s codec context
  */
-static void window(WMA3DecodeContext *s)
+static void wmapro_window(WMA3DecodeContext *s)
 {
     int i;
     for (i=0;i<s->channels_for_cur_subframe;i++) {
@@ -1334,7 +1334,7 @@ static int decode_subframe(WMA3DecodeContext *s)
     }
 
     /** window and overlapp-add */
-    window(s);
+    wmapro_window(s);
 
     /** handled one subframe */
     for (i=0;i<s->channels_for_cur_subframe;i++) {
