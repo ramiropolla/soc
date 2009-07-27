@@ -47,7 +47,7 @@ typedef struct {
     int      random_access;          ///< Distance between RA frames (in frames, 0...255)
     int      ra_flag;                ///< Indicates where the size of ra units is stored.
     int      adapt_order;            ///< Adaptive order: 1 = on, 0 = off
-    int      coef_table;             ///< Table index of rice code parameters
+    int      coef_table;             ///< Table index of Rice code parameters
     int      long_term_prediction;   ///< Long term prediction (LTP): 1 = on, 0 = off
     int      max_order;              ///< Maximum prediction order (0..1023)
     int      block_switching;        ///< Number of block switching levels
@@ -296,7 +296,7 @@ static void parse_bs_info(uint32_t bs_info, unsigned int n, unsigned int div,
 }
 
 
-/** Reads and decodes a rice codeword.
+/** Reads and decodes a Rice codeword.
  */
 static int64_t decode_rice(GetBitContext *gb, unsigned int k)
 {
