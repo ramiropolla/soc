@@ -1119,7 +1119,7 @@ static void post_process(AMRContext *p, float *lpc, float *buf_out)
 
     // Adaptive gain control
     post_filter_gain = ff_dot_productf(buf_out, buf_out, AMR_SUBFRAME_SIZE);
-    if (post_filter_gain != 0)
+    if (post_filter_gain)
         gain_scale_factor = sqrt(speech_gain / post_filter_gain);
 
     for (i = 0; i < AMR_SUBFRAME_SIZE; i++) {
