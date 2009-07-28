@@ -6,7 +6,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o lpc.o
-+OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbfloatdec.o qcelp_lsp.o celp_filters.o celp_math.o acelp_filters.o
++OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbfloatdec.o qcelp_lsp.o celp_filters.o celp_math.o acelp_filters.o acelp_vectors.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
  OBJS-$(CONFIG_APE_DECODER)             += apedec.o
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o

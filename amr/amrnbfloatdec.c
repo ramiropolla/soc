@@ -38,6 +38,7 @@
 #include "celp_math.h"
 #include "celp_filters.h"
 #include "acelp_filters.h"
+#include "acelp_vectors.h"
 #include "amrnbfloatdata.h"
 
 void ff_celp_lspf2lpc(const double *lspf, float *lpc);
@@ -87,31 +88,6 @@ typedef struct AMRContext {
     float samples_in[LP_FILTER_ORDER + AMR_SUBFRAME_SIZE]; ///< floating point samples
 
 } AMRContext;
-
-/**
- * @note this function should be moved to acelp_vectors.[ch]
- *       and used in qcelpdec.c
- *
- * weighted sum of two vectors with rounding.
- * @param out [out] result of addition
- * @param in_a first vector
- * @param in_b second vector
- * @param weight_coeff_a first vector weight coefficient
- * @param weight_coeff_b second vector weight coefficient
- * @param length vectors length
- *
- * @note It is safe to pass the same buffer for out and in_a or in_b.
- */
-void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
-                             float weight_coeff_a, float weight_coeff_b,
-                             int length)
-{
-    int i;
-
-    for (i = 0; i < length; i++)
-        out[i] = weight_coeff_a * in_a[i]
-               + weight_coeff_b * in_b[i];
-}
 
 /**
  * @note this function should be moved to acelp_vectors.[ch]
