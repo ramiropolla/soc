@@ -27,6 +27,8 @@
 
 
 #include <stddef.h>
+#include <string.h>
+#include <math.h>
 
 #include "avcodec.h"
 #include "get_bits.h"
