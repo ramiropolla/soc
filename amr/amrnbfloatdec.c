@@ -89,36 +89,6 @@ typedef struct AMRContext {
 
 } AMRContext;
 
-/**
- * @note this function should be moved to acelp_vectors.[ch]
- *       and used in qcelpdec.c
- *
- * Apply adaptive gain control by gain scaling.
- *
- * @param v_out output vector
- * @param v_in gain-controlled vector
- * @param v_ref vector to control gain of
- * @param length vectors length
- *
- * FIXME: If v_ref is a zero vector, it energy is zero
- *        and the behavior of the gain control is
- *        undefined in the specs.
- *
- * TIA/EIA/IS-733 2.4.8.3-2/3/4/5, 2.4.8.6
- */
-void ff_apply_gain_ctrl(float *v_out, const float *v_ref, const float *v_in,
-                        const int length)
-{
-    int i;
-    float scalefactor = ff_dot_productf(v_in, v_in, length);
-    if (scalefactor)
-        scalefactor = sqrt(ff_dot_productf(v_ref, v_ref, length) / scalefactor);
-    else
-        av_log_missing_feature(NULL, "Zero energy for gain control", 1);
-    for (i = 0; i < length; i++)
-        v_out[i] = scalefactor * v_in[i];
-}
-
 static void reset_state(AMRContext *p)
 {
     int i;

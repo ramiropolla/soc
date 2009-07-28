@@ -199,3 +199,57 @@ Index: libavcodec/acelp_filters.h
 +void ff_acelp_high_pass_filterf(float *samples, float mem[2], int length);
 +
  #endif /* AVCODEC_ACELP_FILTERS_H */
+Index: libavcodec/acelp_vectors.c
+===================================================================
+--- libavcodec/acelp_vectors.c	(revision 19401)
++++ libavcodec/acelp_vectors.c	(working copy)
+@@ -22,6 +22,7 @@
+ 
+ #include <inttypes.h>
+ #include "avcodec.h"
++#include "celp_math.h"
+ #include "acelp_vectors.h"
+ 
+ const uint8_t ff_fc_2pulses_9bits_track1[16] =
+@@ -155,3 +156,14 @@
+         out[i] = weight_coeff_a * in_a[i]
+                + weight_coeff_b * in_b[i];
+ }
++
++void ff_apply_gain_ctrl(float *v_out, const float *v_ref, const float *v_in,
++                        const int length)
++{
++    int i;
++    float scalefactor = ff_dot_productf(v_in, v_in, length);
++    if (scalefactor)
++        scalefactor = sqrt(ff_dot_productf(v_ref, v_ref, length) / scalefactor);
++    for (i = 0; i < length; i++)
++        v_out[i] = scalefactor * v_in[i];
++}
+Index: libavcodec/acelp_vectors.h
+===================================================================
+--- libavcodec/acelp_vectors.h	(revision 19401)
++++ libavcodec/acelp_vectors.h	(working copy)
+@@ -164,4 +164,22 @@
+ void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
+                              float weight_coeff_a, float weight_coeff_b, int length);
+ 
++/**
++ * Apply adaptive gain control by gain scaling.
++ *
++ * @param v_out output vector
++ * @param v_in gain-controlled vector
++ * @param v_ref vector to control gain of
++ * @param length vectors length
++ *
++ * @note If v_in is zero (or its energy underflows), the output is zero.
++ *       This is the behavior of the AMR reference decoder. The QCELP
++ *       reference decoder seems to have undefined behavior.
++ *
++ * TIA/EIA/IS-733 2.4.8.3-2/3/4/5, 2.4.8.6
++ * 3GPP TS 26.090 6.1 (6)
++ */
++void ff_apply_gain_ctrl(float *v_out, const float *v_ref, const float *v_in,
++                        const int length);
++
+ #endif /* AVCODEC_ACELP_VECTORS_H */
