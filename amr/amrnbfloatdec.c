@@ -1137,7 +1137,6 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
  */
 static void high_pass_filter(float *high_pass_mem, float *samples)
 {
-    int i;
     float tmp[AMR_BLOCK_SIZE + 2];
 
     memcpy(tmp, high_pass_mem, sizeof(float) * 2);
@@ -1146,11 +1145,6 @@ static void high_pass_filter(float *high_pass_mem, float *samples)
     memcpy(high_pass_mem, tmp + AMR_BLOCK_SIZE, sizeof(float) * 2);
     ff_celp_lp_zero_synthesis_filterf(samples, high_pass_n, tmp + 2,
                                       AMR_BLOCK_SIZE, 3);
-
-    for (i = 0; i < AMR_BLOCK_SIZE; i++)
-        // Post-processing up-scales by 2. It's convenient to
-        // scale from PCM values to [-1,1] here too.
-        samples[i] *= 2.0 * AMR_SAMPLE_SCALE;
 }
 
 /// @}
@@ -1255,6 +1249,11 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     }
 
     high_pass_filter(p->high_pass_mem, buf_out);
+
+    for (i = 0; i < AMR_BLOCK_SIZE; i++)
+        // Post-processing up-scales by 2. It's convenient to
+        // scale from PCM values to [-1,1] here too.
+        buf_out[i] *= 2.0 * AMR_SAMPLE_SCALE;
 
     /* Update averaged lsf vector (used for fixed gain smoothing).
      *
