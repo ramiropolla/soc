@@ -143,7 +143,7 @@ enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
     p->bad_frame_indicator = !get_bits1(&p->gb);
     skip_bits(&p->gb, 2);
 
-    if (MODE_475 <= mode && mode <= MODE_DTX) {
+    if (mode <= MODE_DTX) {
         uint16_t *data = (uint16_t *)&p->frame;
         const AMROrder *order = amr_unpacking_bitmaps_per_mode[mode];
         int i;
