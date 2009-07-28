@@ -78,9 +78,9 @@ typedef struct AMRContext {
     uint8_t         prev_ir_filter_strength; ///< previous impulse response filter strength; 0 - strong, 1 - medium, 2 - none
     uint8_t                 ir_filter_onset; ///< flag for impulse response filter strength
 
-    float              post_process_mem[10]; ///< previous intermediate values in the formant filter
+    float                postfilter_mem[10]; ///< previous intermediate values in the formant filter
     float                          tilt_mem; ///< previous input to tilt compensation filter
-    float                   post_filter_agc; ///< previous factor used for adaptive gain control
+    float                    postfilter_agc; ///< previous factor used for adaptive gain control
     float                  high_pass_mem[2]; ///< previous intermediate values in the high-pass filter
 
     float samples_in[LP_FILTER_ORDER + AMR_SUBFRAME_SIZE]; ///< floating point samples
@@ -1079,13 +1079,13 @@ static void tilt_compensation(float *mem, float tilt, float *samples)
  * @param lpc           interpolated LP coefficients for this subframe
  * @param buf_out       output of the filter
  */
-static void post_process(AMRContext *p, float *lpc, float *buf_out)
+static void postfilter(AMRContext *p, float *lpc, float *buf_out)
 {
     int i;
     float *samples = p->samples_in + LP_FILTER_ORDER;
     float gain_scale_factor = 1.0;
     float speech_gain = ff_dot_productf(samples, samples, AMR_SUBFRAME_SIZE);
-    float post_filter_gain;
+    float postfilter_gain;
     float tmp[AMR_SUBFRAME_SIZE + LP_FILTER_ORDER];
     const float *gamma_n, *gamma_d; // Formant filter factor table
     float lpc_n[LP_FILTER_ORDER + 1], // Transfer function coefficients
@@ -1106,10 +1106,10 @@ static void post_process(AMRContext *p, float *lpc, float *buf_out)
     }
 
     // Apply transfer function given by lpc_n and lpc_d
-    memcpy(tmp, p->post_process_mem, sizeof(float) * LP_FILTER_ORDER);
+    memcpy(tmp, p->postfilter_mem, sizeof(float) * LP_FILTER_ORDER);
     ff_celp_lp_synthesis_filterf(tmp + LP_FILTER_ORDER, lpc_d, samples,
                                  AMR_SUBFRAME_SIZE, LP_FILTER_ORDER);
-    memcpy(p->post_process_mem, tmp + AMR_SUBFRAME_SIZE,
+    memcpy(p->postfilter_mem, tmp + AMR_SUBFRAME_SIZE,
            sizeof(float) * LP_FILTER_ORDER);
     ff_celp_lp_zero_synthesis_filterf(buf_out, lpc_n, tmp + LP_FILTER_ORDER,
                                       AMR_SUBFRAME_SIZE, LP_FILTER_ORDER + 1);
@@ -1118,14 +1118,14 @@ static void post_process(AMRContext *p, float *lpc, float *buf_out)
     tilt_compensation(&p->tilt_mem, tilt_factor(lpc_n, lpc_d), buf_out);
 
     // Adaptive gain control
-    post_filter_gain = ff_dot_productf(buf_out, buf_out, AMR_SUBFRAME_SIZE);
-    if (post_filter_gain)
-        gain_scale_factor = sqrt(speech_gain / post_filter_gain);
+    postfilter_gain = ff_dot_productf(buf_out, buf_out, AMR_SUBFRAME_SIZE);
+    if (postfilter_gain)
+        gain_scale_factor = sqrt(speech_gain / postfilter_gain);
 
     for (i = 0; i < AMR_SUBFRAME_SIZE; i++) {
-        p->post_filter_agc = AMR_AGC_ALPHA * p->post_filter_agc +
+        p->postfilter_agc = AMR_AGC_ALPHA * p->postfilter_agc +
                              (1.0 - AMR_AGC_ALPHA) * gain_scale_factor;
-        buf_out[i] *= p->post_filter_agc;
+        buf_out[i] *= p->postfilter_agc;
     }
 }
 
@@ -1247,7 +1247,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
 /*** end of synthesis ***/
 
-        post_process(p, p->lpc[subframe], buf_out + subframe * AMR_SUBFRAME_SIZE);
+        postfilter(p, p->lpc[subframe], buf_out + subframe * AMR_SUBFRAME_SIZE);
         high_pass_filter(p->high_pass_mem, buf_out + subframe * AMR_SUBFRAME_SIZE);
 
         // update buffers and history
