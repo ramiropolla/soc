@@ -6,7 +6,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o lpc.o
-+OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbfloatdec.o qcelp_lsp.o celp_filters.o celp_math.o
++OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbfloatdec.o qcelp_lsp.o celp_filters.o celp_math.o acelp_filters.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
  OBJS-$(CONFIG_APE_DECODER)             += apedec.o
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
@@ -160,3 +160,42 @@ Index: libavcodec/celp_filters.h
   * Routine applies A(z) filter to given speech data.
   */
  void ff_celp_lp_zero_synthesis_filterf(
+Index: libavcodec/acelp_filters.c
+===================================================================
+--- libavcodec/acelp_filters.c	(revision 19401)
++++ libavcodec/acelp_filters.c	(working copy)
+@@ -93,3 +93,17 @@
+         hpf_f[0] = tmp;
+     }
+ }
++
++void ff_acelp_high_pass_filterf(float *buf, float *mem, int length)
++{
++    int i;
++    float tmp;
++
++    for (i = 0; i < length; i++) {
++         tmp = buf[i] + 1.933105469 * mem[0] - 0.935913085 * mem[1];
++         buf[i] = 0.939819335 * (tmp - 2 * mem[0] + mem[1]);
++
++         mem[1] = mem[0];
++         mem[0] = tmp;
++    }
++}
+Index: libavcodec/acelp_filters.h
+===================================================================
+--- libavcodec/acelp_filters.h	(revision 19401)
++++ libavcodec/acelp_filters.h	(working copy)
+@@ -81,4 +81,12 @@
+ void ff_acelp_high_pass_filter(int16_t* out, int hpf_f[2],
+                                const int16_t* in, int length);
+ 
++/**
++ * high-pass filtering (6.2.2 of 3GPP TS 26.090)
++ * @param samples [in/out]·
++ * @param mem intermediate values used by filter (should be 0 initially)
++ * @param length input data size
++ */
++void ff_acelp_high_pass_filterf(float *samples, float mem[2], int length);
++
+ #endif /* AVCODEC_ACELP_FILTERS_H */

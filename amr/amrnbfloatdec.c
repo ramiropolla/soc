@@ -37,6 +37,7 @@
 #include "internal.h"
 #include "celp_math.h"
 #include "celp_filters.h"
+#include "acelp_filters.h"
 #include "amrnbfloatdata.h"
 
 void ff_celp_lspf2lpc(const double *lspf, float *lpc);
@@ -1129,24 +1130,6 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     }
 }
 
-/**
- * High-pass filtering and up-scaling
- *
- * @param high_pass_mem Pointer to two floats for the filter state
- * @param samples AMR_SUBFRAME_SIZE buffer where the filter is applied
- */
-static void high_pass_filter(float *high_pass_mem, float *samples)
-{
-    float tmp[AMR_BLOCK_SIZE + 2];
-
-    memcpy(tmp, high_pass_mem, sizeof(float) * 2);
-    ff_celp_lp_synthesis_filterf(tmp + 2, high_pass_d, samples,
-                                 AMR_BLOCK_SIZE, 2);
-    memcpy(high_pass_mem, tmp + AMR_BLOCK_SIZE, sizeof(float) * 2);
-    ff_celp_lp_zero_synthesis_filterf(samples, high_pass_n, tmp + 2,
-                                      AMR_BLOCK_SIZE, 3);
-}
-
 /// @}
 
 static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
@@ -1248,7 +1231,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         update_state(p);
     }
 
-    high_pass_filter(p->high_pass_mem, buf_out);
+    ff_acelp_high_pass_filterf(buf_out, p->high_pass_mem, 160);
 
     for (i = 0; i < AMR_BLOCK_SIZE; i++)
         // Post-processing up-scales by 2. It's convenient to

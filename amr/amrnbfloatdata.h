@@ -2360,10 +2360,6 @@ static const float *formant_low_d = formant_high_n;
 // Adaptive gain control factor used in post-filter
 #define AMR_AGC_ALPHA 0.9
 
-// High-pass filter coefficients (section 6.2.2)
-static const float high_pass_n[] = {0.939819335, -1.879638672, 0.939819335};
-static const float high_pass_d[] = {             -1.933105469, 0.935913085};
-
 /**************************** end of tables *****************************/
 
 #endif /* AVCODEC_AMRNBFLOATDATA_H */
