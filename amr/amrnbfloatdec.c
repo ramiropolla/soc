@@ -1138,16 +1138,16 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
 static void high_pass_filter(float *high_pass_mem, float *samples)
 {
     int i;
-    float tmp[AMR_SUBFRAME_SIZE + 2];
+    float tmp[AMR_BLOCK_SIZE + 2];
 
     memcpy(tmp, high_pass_mem, sizeof(float) * 2);
     ff_celp_lp_synthesis_filterf(tmp + 2, high_pass_d, samples,
-                                 AMR_SUBFRAME_SIZE, 2);
-    memcpy(high_pass_mem, tmp + AMR_SUBFRAME_SIZE, sizeof(float) * 2);
+                                 AMR_BLOCK_SIZE, 2);
+    memcpy(high_pass_mem, tmp + AMR_BLOCK_SIZE, sizeof(float) * 2);
     ff_celp_lp_zero_synthesis_filterf(samples, high_pass_n, tmp + 2,
-                                      AMR_SUBFRAME_SIZE, 3);
+                                      AMR_BLOCK_SIZE, 3);
 
-    for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
+    for (i = 0; i < AMR_BLOCK_SIZE; i++)
         // Post-processing up-scales by 2. It's convenient to
         // scale from PCM values to [-1,1] here too.
         samples[i] *= 2.0 * AMR_SAMPLE_SCALE;
@@ -1248,12 +1248,13 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 /*** end of synthesis ***/
 
         postfilter(p, p->lpc[subframe], buf_out + subframe * AMR_SUBFRAME_SIZE);
-        high_pass_filter(p->high_pass_mem, buf_out + subframe * AMR_SUBFRAME_SIZE);
 
         // update buffers and history
         memcpy(p->excitation, exc_feedback, AMR_SUBFRAME_SIZE * sizeof(float));
         update_state(p);
     }
+
+    high_pass_filter(p->high_pass_mem, buf_out);
 
     /* Update averaged lsf vector (used for fixed gain smoothing).
      *
