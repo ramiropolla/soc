@@ -26,15 +26,11 @@
  */
 
 
-#include <math.h>
 #include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "avcodec.h"
 #include "get_bits.h"
 #include "libavutil/common.h"
-#include "internal.h"
 #include "celp_math.h"
 #include "celp_filters.h"
 #include "acelp_filters.h"
