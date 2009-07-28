@@ -1,6 +1,5 @@
 TODO (for narrow band decoder)
 ====
 
-- check for FIXMEs and fix them
 - add handling of MODE_DTX
 - when all this is complete, request a review from Michael
