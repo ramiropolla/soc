@@ -127,8 +127,8 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
  *
  * @return the frame mode
  */
-enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf, int buf_size,
-                           enum Mode *speech_mode)
+static enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf,
+                                  int buf_size, enum Mode *speech_mode)
 {
     enum Mode mode;
 
