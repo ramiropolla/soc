@@ -1,5 +1,5 @@
 /*
- * AMR narrowband decoder (floating point)
+ * AMR narrowband decoder
  * Copyright (c) 2006-2007 Robert Swain
  * Copyright (c) 2009 Colin McQuillan
  *
@@ -22,7 +22,7 @@
 
 
 /**
- * @file libavcodec/amrnbfloatdec.c
+ * @file libavcodec/amrnbdec.c
  * AMR narrowband decoder (floating point)
  */
 
@@ -37,7 +37,7 @@
 #include "celp_filters.h"
 #include "acelp_filters.h"
 #include "acelp_vectors.h"
-#include "amrnbfloatdata.h"
+#include "amrnbdata.h"
 
 void ff_celp_lspf2lpc(const double *lspf, float *lpc);
 

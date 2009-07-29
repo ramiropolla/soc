@@ -22,12 +22,12 @@
 
 
 /**
- * @file libavcodec/amrnbfloatdata.h
+ * @file libavcodec/amrnbdata.h
  * AMR narrowband data and definitions
  */
 
-#ifndef AVCODEC_AMRNBFLOATDATA_H
-#define AVCODEC_AMRNBFLOATDATA_H
+#ifndef AVCODEC_AMRNBDATA_H
+#define AVCODEC_AMRNBDATA_H
 
 #include <stdint.h>
 
@@ -2362,5 +2362,5 @@ static const float *formant_low_d = formant_high_n;
 
 /**************************** end of tables *****************************/
 
-#endif /* AVCODEC_AMRNBFLOATDATA_H */
+#endif /* AVCODEC_AMRNBDATA_H */
 
