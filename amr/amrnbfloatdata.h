@@ -1,6 +1,7 @@
 /*
  * AMR narrowband data and definitions
  * Copyright (c) 2006-2007 Robert Swain
+ * Copyright (c) 2009 Colin McQuillan
  *
  * This file is part of FFmpeg.
  *
