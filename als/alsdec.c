@@ -33,6 +33,7 @@
 #include "get_bits.h"
 #include "unary.h"
 
+#include "als_data.h"
 
 typedef struct {
     uint32_t als_id;                 ///< ALS identifier
@@ -77,6 +78,7 @@ typedef struct {
     unsigned int      frame_id;          ///< The frame id / number of the current frame.
     unsigned int      js_switch;         ///< If true, joint-stereo decoding is enforced.
     unsigned int      num_blocks;        ///< Number of blocks used in the current frame.
+    int64_t           *residuals;        ///< Decoded residuals of the current block.
     int64_t           **raw_samples;     ///< Decoded raw samples for each channel.
 } ALSDecContext;
 
@@ -324,6 +326,36 @@ static int64_t decode_rice(GetBitContext *gb, unsigned int k)
 }
 
 
+/** Converts PARCOR coefficient k to direct filter coefficient.
+ */
+static void parcor_to_lpc(unsigned int k, int64_t *par, int64_t *cof)
+{
+    int i;
+    int64_t tmp1, tmp2;
+
+    for (i = 0; i < ((k+1) >> 1); i++) {
+        tmp1 = cof[    i    ] + ((par[k] * cof[k - i - 1] + (1 << 19)) >> 20);
+        tmp2 = cof[k - i - 1] + ((par[k] * cof[    i    ] + (1 << 19)) >> 20);
+        cof[k - i - 1] = tmp2;
+        cof[    i    ] = tmp1;
+    }
+
+    cof[k] = par[k];
+}
+
+
+/** Converts all PARCOR coefficients to direct filter coefficients.
+ */
+static void all_parcor_to_lpc(unsigned int num, int64_t *par, int64_t *cof)
+{
+    int k;
+
+    for (k = 0; k < num; k++) {
+        parcor_to_lpc(k, par, cof);
+    }
+}
+
+
 /** Reads the block data.
  */
 static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
@@ -369,8 +401,10 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         unsigned int s[8];
         unsigned int sub_blocks, sb_length, shift_lsbs;
         unsigned int opt_order = 1;
+        int64_t      quant_cof[sconf->max_order];
+        int64_t      lpc_cof[sconf->max_order];
         unsigned int start = 0;
-        int64_t      res[block_length];
+        int64_t      *res = ctx->residuals;
         unsigned int sb, smp;
 
 
@@ -407,6 +441,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
 
 
         if (!sconf->RLSLMS) {
+            int64_t quant_index;
+
             if (sconf->adapt_order) {
                 int opt_order_length =
                         FFMIN(
@@ -418,8 +454,62 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                 opt_order = sconf->max_order;
             }
 
-            for (k = 0; k < opt_order; k++) {
-                // TODO: prediction
+            if (opt_order) {
+                if (sconf->coef_table == 3) {
+                    // read coefficient 0
+                    quant_index = get_bits(gb, 7) - 64;
+                    quant_cof[0] = parcor_scaled_values[quant_index + 64];
+
+                    // read coefficient 1
+                    quant_index = get_bits(gb, 7) - 64;
+                    quant_cof[1] = -parcor_scaled_values[quant_index + 64];
+
+                    // read coefficients 2 - opt_order
+                    for (k = 2; k < opt_order; k++) {
+                        quant_index = get_bits(gb, 7) - 64;
+                        quant_cof[k] = (quant_index << 14) + (1 << 13);
+                    }
+                } else {
+                    int offset, rice_param, k_max;
+
+                    // read coefficient 0
+                    offset       = parcor_rice_table[sconf->coef_table][0][0];
+                    rice_param   = parcor_rice_table[sconf->coef_table][0][1];
+                    quant_index  = decode_rice(gb, rice_param) + offset;
+                    quant_cof[0] = parcor_scaled_values[quant_index + 64];
+
+                    // read coefficient 1
+                    offset       = parcor_rice_table[sconf->coef_table][1][0];
+                    rice_param   = parcor_rice_table[sconf->coef_table][1][1];
+                    quant_index  = decode_rice(gb, rice_param) + offset;
+                    quant_cof[1] = -parcor_scaled_values[quant_index + 64];
+
+                    // read coefficients 2 - 20
+                    k_max = FFMIN(20, opt_order);
+                    for (k = 2; k < k_max; k++) {
+                        offset       = parcor_rice_table[sconf->coef_table][k][0];
+                        rice_param   = parcor_rice_table[sconf->coef_table][k][1];
+                        quant_index  = decode_rice(gb, rice_param) + offset;
+                        quant_cof[k] = (quant_index << 14) + (1 << 13);
+                    }
+
+                    // read coefficients 20 - 128
+                    k_max = FFMIN(127, opt_order);
+                    for (k = 20; k < k_max; k++) {
+                        offset       = k & 1;
+                        rice_param   = 2;
+                        quant_index  = decode_rice(gb, rice_param) + offset;
+                        quant_cof[k] = (quant_index << 14) + (1 << 13);
+                    }
+
+                    // read coefficients 128 - opt_order
+                    for (k = 127; k < opt_order; k++) {
+                        offset       = 0;
+                        rice_param   = 1;
+                        quant_index  = decode_rice(gb, rice_param) + offset;
+                        quant_cof[k] = (quant_index << 14) + (1 << 13);
+                    }
+                }
             }
         }
 
@@ -442,10 +532,12 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
 
             start = FFMIN(opt_order, 3);
         } else {
-            // TODO: Non random access blocks
+            // TODO: check if this has to be a function after features are implemented.
+            all_parcor_to_lpc(opt_order, quant_cof, lpc_cof);
         }
 
         // read all residuals
+        // TODO: decode directly into ctx->raw_samples[] instead of storing the residuals
         if (sconf->bgmc_mode) {
             // TODO: BGMC mode
         } else {
@@ -463,17 +555,27 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         // reconstruct all samples from residuals
         if (ra_block) {
             unsigned int progressive = FFMIN(block_length, opt_order);
+            int64_t y = 0;
 
             for (smp = 0; smp < progressive; smp++) {
-                // TODO: prediction
+                y = 1 << 19;
+
+                for (sb = 0; sb < smp; sb++) {
+                    y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
+                }
+
+                raw_samples[smp] = res[smp] - (y >> 20);
+                parcor_to_lpc(smp, quant_cof, lpc_cof);
             }
 
             for (; smp < block_length; smp++) {
+                y = 1 << 19;
+
                 for (sb = 0; sb < progressive; sb++) {
-                    // TODO: prediction
+                    y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
                 }
 
-                raw_samples[smp] = res[smp];
+                raw_samples[smp] = res[smp] - (y >> 20);
             }
         } else {
             // TODO: non random access blocks
@@ -651,6 +753,7 @@ static av_cold int decode_end(AVCodecContext *avctx)
     unsigned int c;
 
     av_freep(&ctx->sconf.chan_pos);
+    av_freep(&ctx->residuals);
 
     if (ctx->raw_samples)
         for (c = 0; c < sconf->channels; c++)
@@ -696,12 +799,21 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     avctx->frame_size = ctx->sconf.frame_length;
 
+    // allocate residual buffer
+    if (!(ctx->residuals = av_malloc(sizeof(int64_t) * ctx->sconf.frame_length))) {
+        av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
+        decode_end(avctx);
+        return AVERROR_NOMEM;
+    }
+
+    // allocate raw sample array buffer
     if (!(ctx->raw_samples = av_malloc(sizeof(int64_t*) * avctx->channels))) {
         av_log(avctx, AV_LOG_ERROR, "Allocating buffer array failed.\n");
         decode_end(avctx);
         return AVERROR_NOMEM;
     }
 
+    // allocate raw sample buffers
     for (c = 0; c < avctx->channels; c++) {
         if(!(ctx->raw_samples[c] = av_malloc(sizeof(int64_t)
                                              * ctx->sconf.frame_length))) {
