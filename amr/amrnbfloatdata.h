@@ -29,10 +29,9 @@
 #define AVCODEC_AMRNBFLOATDATA_H
 
 #include <stdint.h>
-#include <stddef.h>
-#include <math.h>
 
-#include "libavutil/common.h"
+#include "libavutil/common.h"      /* offsetof */
+#include "libavutil/mathematics.h" /* M_PI */
 
 // general definitions
 #define AMR_BLOCK_SIZE    160
