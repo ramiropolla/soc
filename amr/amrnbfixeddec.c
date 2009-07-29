@@ -1,5 +1,5 @@
 /*
- * AMR narrowband decoder
+ * AMR narrowband decoder (fixed point)
  * Copyright (c) 2006-2007 Robert Swain
  *
  * This file is part of FFmpeg.
@@ -21,7 +21,7 @@
 
 
 /**
- * @file libavcodec/amrnbdec.c
+ * @file libavcodec/amrnbfixeddec.c
  * AMR narrowband decoder
  */
 
@@ -34,7 +34,7 @@
 #include "avcodec.h"
 #include "get_bits.h"
 #include "common.h"
-#include "amrdata.h"
+#include "amrfixeddata.h"
 
 typedef struct AMRContext {
 
