@@ -33,10 +33,10 @@
 #ifndef AVFORMAT_PLAYLIST_H
 #define AVFORMAT_PLAYLIST_H
 
+#include <libgen.h>
 #include "avformat.h"
 #include "riff.h"
-#include <libgen.h>
-#include <libavutil/avstring.h>
+#include "libavutil/avstring.h"
 
 /** @struct PlaylistContext
  *  @brief Represents the playlist and contains PlayElem for each playlist item.
