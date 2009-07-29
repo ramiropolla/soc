@@ -350,9 +350,8 @@ static void all_parcor_to_lpc(unsigned int num, int64_t *par, int64_t *cof)
 {
     int k;
 
-    for (k = 0; k < num; k++) {
+    for (k = 0; k < num; k++)
         parcor_to_lpc(k, par, cof);
-    }
 }
 
 
@@ -560,9 +559,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
             for (smp = 0; smp < progressive; smp++) {
                 y = 1 << 19;
 
-                for (sb = 0; sb < smp; sb++) {
+                for (sb = 0; sb < smp; sb++)
                     y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
-                }
 
                 raw_samples[smp] = res[smp] - (y >> 20);
                 parcor_to_lpc(smp, quant_cof, lpc_cof);
@@ -571,9 +569,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
             for (; smp < block_length; smp++) {
                 y = 1 << 19;
 
-                for (sb = 0; sb < progressive; sb++) {
+                for (sb = 0; sb < progressive; sb++)
                     y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
-                }
 
                 raw_samples[smp] = res[smp] - (y >> 20);
             }

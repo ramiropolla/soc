@@ -30,11 +30,11 @@
 #define AVCODEC_ALS_DATA_H
 
 
-#include <inttypes.h>
+#include <stdint.h>
 
 /** Rice parameters and corresponding index offsets for decoding the
  *  indices of scaled PARCOR values. The table choosen is set globally
- *  by the encoder and.
+ *  by the encoder and stored in ALSSpecificConfig.
  */
 int8_t parcor_rice_table[3][20][2] = {
                         {
@@ -144,4 +144,4 @@ int32_t parcor_scaled_values[] = {-1048544, -1048288, -1047776, -1047008,
                                     935456,   967456,   999712,  1032224};
 
 
-#endif
+#endif AVCODEC_ALS_DATA_H
