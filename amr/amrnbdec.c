@@ -1034,8 +1034,8 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     float postfilter_gain;
     float tmp[AMR_SUBFRAME_SIZE + LP_FILTER_ORDER];
     const float *gamma_n, *gamma_d; // Formant filter factor table
-    float lpc_n[LP_FILTER_ORDER],     // Transfer function coefficients
-          lpc_d[LP_FILTER_ORDER];     //
+    float lpc_n[LP_FILTER_ORDER], // Transfer function coefficients
+          lpc_d[LP_FILTER_ORDER]; //
 
     if (p->cur_frame_mode == MODE_122 || p->cur_frame_mode == MODE_102) {
         gamma_n = formant_high_n;
@@ -1046,8 +1046,8 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     }
 
     for (i = 0; i < LP_FILTER_ORDER; i++) {
-         lpc_n[i]     = lpc[i] * gamma_n[i];
-         lpc_d[i]     = lpc[i] * gamma_d[i];
+         lpc_n[i] = lpc[i] * gamma_n[i];
+         lpc_d[i] = lpc[i] * gamma_d[i];
     }
 
     // Apply transfer function given by lpc_n and lpc_d
