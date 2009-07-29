@@ -973,7 +973,7 @@ static void update_state(AMRContext *p)
 /**
  * Get the tilt factor of a formant filter from its transfer function
  *
- * @param lpc_n LP_FILTER_ORDER + 1 coefficients of the numerator
+ * @param lpc_n LP_FILTER_ORDER coefficients of the numerator
  * @param lpc_d LP_FILTER_ORDER coefficients of the denominator
  */
 static float tilt_factor(float *lpc_n, float *lpc_d)
@@ -985,7 +985,8 @@ static float tilt_factor(float *lpc_n, float *lpc_d)
     float rh0 = 0.0, rh1 = 0.0;
 
     // Get impulse response of the transfer function given by lpc_n and lpc_d
-    memcpy(hf, lpc_n, sizeof(float) * (LP_FILTER_ORDER + 1));
+    hf[0] = 1.0;
+    memcpy(hf + 1, lpc_n, sizeof(float) * LP_FILTER_ORDER);
     ff_celp_lp_synthesis_filterf(hf, lpc_d, hf, AMR_TILT_RESPONSE,
                                  LP_FILTER_ORDER);
 
@@ -1033,7 +1034,7 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     float postfilter_gain;
     float tmp[AMR_SUBFRAME_SIZE + LP_FILTER_ORDER];
     const float *gamma_n, *gamma_d; // Formant filter factor table
-    float lpc_n[LP_FILTER_ORDER + 1], // Transfer function coefficients
+    float lpc_n[LP_FILTER_ORDER],     // Transfer function coefficients
           lpc_d[LP_FILTER_ORDER];     //
 
     if (p->cur_frame_mode == MODE_122 || p->cur_frame_mode == MODE_102) {
@@ -1044,9 +1045,8 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
         gamma_d = formant_low_d;
     }
 
-    lpc_n[0] = 1;
     for (i = 0; i < LP_FILTER_ORDER; i++) {
-         lpc_n[i + 1] = lpc[i] * gamma_n[i];
+         lpc_n[i]     = lpc[i] * gamma_n[i];
          lpc_d[i]     = lpc[i] * gamma_d[i];
     }
 
@@ -1057,7 +1057,7 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     memcpy(p->postfilter_mem, tmp + AMR_SUBFRAME_SIZE,
            sizeof(float) * LP_FILTER_ORDER);
     ff_celp_lp_zero_synthesis_filterf(buf_out, lpc_n, tmp + LP_FILTER_ORDER,
-                                      AMR_SUBFRAME_SIZE, LP_FILTER_ORDER + 1);
+                                      AMR_SUBFRAME_SIZE, LP_FILTER_ORDER);
 
     // Apply tilt compensation
     tilt_compensation(&p->tilt_mem, tilt_factor(lpc_n, lpc_d), buf_out);

@@ -85,81 +85,14 @@ Index: libavcodec/celp_filters.c
  void ff_celp_lp_synthesis_filterf(
          float *out,
          const float* filter_coeffs,
-@@ -113,13 +138,10 @@
- {
-     int i,n;
- 
--    // Avoids a +1 in the inner loop.
--    filter_length++;
--
-     for(n=0; n<buffer_length; n++)
+@@ -120,6 +145,6 @@
      {
--        out[n] = in[n];
--        for(i=1; i<filter_length; i++)
+         out[n] = in[n];
+         for(i=1; i<filter_length; i++)
 -            out[n] -= filter_coeffs[i-1] * in[n-i];
-+        out[n] = 0;
-+        for(i=0; i<filter_length; i++)
-+            out[n] += filter_coeffs[i] * in[n-i];
++            out[n] += filter_coeffs[i-1] * in[n-i];
      }
  }
-Index: libavcodec/celp_filters.h
-===================================================================
---- libavcodec/celp_filters.h	(revision 19401)
-+++ libavcodec/celp_filters.h	(working copy)
-@@ -70,14 +70,31 @@
-         int rounder);
- 
- /**
-+ * Circularly convolve fixed vector with a phase dispersion impulse
-+ *        response filter (D.6.2 of G.729 and 6.1.5 of AMR).
-+ * @param fc_out vector with filter applied
-+ * @param fc_in source vector
-+ * @param filter phase filter coefficients
-+ *
-+ *  fc_out[n] = sum(i,0,len-1){ fc_in[i] * filter[(len + n - i)%len] }
-+ *
-+ * \note fc_in and fc_out should not overlap!
-+ */
-+void ff_celp_convolve_circf(
-+        float* fc_out,
-+        const float* fc_in,
-+        const float* filter,
-+        int len);
-+
-+/**
-  * LP synthesis filter.
-  * @param out [out] pointer to output buffer
-  *        - the array out[-filter_length, -1] must
-  *        contain the previous result of this filter
-- * @param filter_coeffs filter coefficients.
-+ * @param filter_coeffs filter coefficients not including z^0
-  * @param in input signal
-  * @param buffer_length amount of data to process
-- * @param filter_length filter length (10 for 10th order LP filter)
-+ * @param filter_length filter_coeffs length (10 for 10th order LP filter)
-  *
-  * @note Output buffer must contain filter_length samples of past
-  *       speech data before pointer.
-@@ -94,16 +111,13 @@
- /**
-  * LP zero synthesis filter.
-  * @param out [out] pointer to output buffer
-- * @param filter_coeffs filter coefficients.
-+ * @param filter_coeffs filter coefficients including z^0 coefficient
-  * @param in input signal
-- *        - the array in[-filter_length, -1] must
-+ *        - the array in[-filter_length+1, -1] must
-  *        contain the previous input of this filter
-  * @param buffer_length amount of data to process
-- * @param filter_length filter length (10 for 10th order LP filter)
-+ * @param filter_length filter_coeffs length (11 for 10th order LP filter)
-  *
-- * @note Output buffer must contain filter_length samples of past
-- *       speech data before pointer.
-- *
-  * Routine applies A(z) filter to given speech data.
-  */
- void ff_celp_lp_zero_synthesis_filterf(
 Index: libavcodec/acelp_filters.c
 ===================================================================
 --- libavcodec/acelp_filters.c	(revision 19401)
