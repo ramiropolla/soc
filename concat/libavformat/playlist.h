@@ -46,7 +46,7 @@ typedef struct PlaylistContext {
     AVFormatContext **icl; /**< List of FormatContext for each playlist items */
     int pelist_size; /**< Number of PlayElem stored in pelist */
     int pe_curidx; /**< Index of the PlayElem that packets are being read from */
-    int64_t time_offset; /**< Time offset, in 10^-6 seconds, for all multimedia streams */
+    int64_t *durations; /**< Durations, in 10^-6 seconds, for each playlist item */
 } PlaylistContext;
 
 /** @fn int ff_playlist_alloc_playelem(PlayElem* pe)
@@ -59,7 +59,9 @@ AVFormatContext *ff_playlist_alloc_formatcontext(char *filename);
  *  @brief Opens the current PlayElem from the PlaylistContext.
  *  @param s AVFormatContext of the concat-type demuxer, which contains the PlaylistContext.
  */
-void ff_playlist_populate_context(AVFormatContext *s);
+void ff_playlist_populate_context(PlaylistContext *ctx, int pe_curidx);
+
+void ff_playlist_set_streams(AVFormatContext *s);
 
 /** @fn PlaylistContext* ff_playlist_get_context(AVFormatContext *ic)
  *  @brief Returns PlaylistContext continaed within a concat-type demuxer.
@@ -114,5 +116,9 @@ PlaylistContext *ff_playlist_from_encodedstring(char *s, char sep);
  *  @param Absolute path to item for which to add a playlist element.
  */
 void ff_playlist_add_path(PlaylistContext *ctx, char *itempath);
+
+int64_t ff_playlist_time_offset(int64_t *durations, int pe_curidx);
+
+int ff_playlist_stream_index_from_time(PlaylistContext *ctx, int64_t pts);
 
 #endif /* AVFORMAT_PLAYLIST_H */

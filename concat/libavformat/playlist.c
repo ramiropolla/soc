@@ -47,15 +47,19 @@ AVFormatContext *ff_playlist_alloc_formatcontext(char *filename)
     return ic;
 }
 
-void ff_playlist_populate_context(AVFormatContext *s)
+void ff_playlist_populate_context(PlaylistContext *ctx, int pe_curidx)
+{
+    ctx->icl = av_realloc(ctx->icl, sizeof(*(ctx->icl)) * (pe_curidx+2));
+    ctx->icl[pe_curidx+1] = NULL;
+    ctx->icl[pe_curidx] = ff_playlist_alloc_formatcontext(ctx->flist[pe_curidx]);
+}
+
+void ff_playlist_set_streams(AVFormatContext *s)
 {
     int i;
     AVFormatContext *ic;
     PlaylistContext *ctx = s->priv_data;
-    ctx->icl = av_realloc(ctx->icl, sizeof(*(ctx->icl)) * (ctx->pe_curidx+2));
-    ctx->icl[ctx->pe_curidx+1] = NULL;
-    ic = ctx->icl[ctx->pe_curidx] = ff_playlist_alloc_formatcontext(ctx->flist[ctx->pe_curidx]);
-    ic->iformat->read_header(ic, 0);
+    ic = ctx->icl[ctx->pe_curidx];
     s->nb_streams = ic->nb_streams;
     for (i = 0; i < ic->nb_streams; ++i)
         s->streams[i] = ic->streams[i];
@@ -137,6 +141,8 @@ void ff_playlist_add_path(PlaylistContext *ctx, char *itempath)
     ctx->flist = av_realloc(ctx->flist, sizeof(*(ctx->flist)) * (++ctx->pelist_size+1));
     ctx->flist[ctx->pelist_size] = NULL;
     ctx->flist[ctx->pelist_size-1] = itempath;
+    ctx->durations = av_realloc(ctx->durations, sizeof(*(ctx->durations)) * (ctx->pelist_size+1));
+    ctx->durations[ctx->pelist_size] = NULL;
 }
 
 // converts list of mixed absolute and relative paths into all absolute paths
@@ -155,4 +161,27 @@ void ff_playlist_relative_paths(char **flist, int len, const char *workingdir)
         if (url_exist(fullfpath))
             flist[i] = fullfpath;
     }
+}
+
+int64_t ff_playlist_time_offset(int64_t *durations, int pe_curidx)
+{
+    int i;
+    int64_t total = 0;
+    for (i = 0; i < pe_curidx; ++i) {
+        total += durations[i];
+    }
+    return total;
+}
+
+int ff_playlist_stream_index_from_time(PlaylistContext *ctx, int64_t pts)
+{
+    int i;
+    int64_t total;
+    i = total = 0;
+    while (pts >= total) {
+        if (i >= ctx->pelist_size)
+            break;
+        total += ctx->durations[i++];
+    }
+    return i;
 }
