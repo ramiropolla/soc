@@ -34,8 +34,7 @@
 int ff_concatgen_read_packet(AVFormatContext *s,
                              AVPacket *pkt)
 {
-    int ret;
-    int stream_index;
+    int ret, i, stream_index;
     PlaylistContext *ctx;
     AVFormatContext *ic;
     char have_switched_streams = 0;
@@ -68,6 +67,9 @@ int ff_concatgen_read_packet(AVFormatContext *s,
                 ff_playlist_populate_context(ctx, ctx->pe_curidx);
                 ff_playlist_set_streams(s);
                 have_switched_streams = 1;
+                s->duration = 0;
+                for (i = 0; i < ctx->pe_curidx; ++i)
+                    s->duration += ctx->durations[i];
                 continue;
             } else {
                 av_log(ic, AV_LOG_ERROR, "Packet read error %d\n", ret);

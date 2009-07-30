@@ -63,6 +63,7 @@ void ff_playlist_set_streams(AVFormatContext *s)
     s->nb_streams = ic->nb_streams;
     for (i = 0; i < ic->nb_streams; ++i)
         s->streams[i] = ic->streams[i];
+    s->cur_st = ic->cur_st;
     s->packet_buffer = ic->packet_buffer;
     s->packet_buffer_end = ic->packet_buffer_end;
 }
