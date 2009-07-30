@@ -144,4 +144,4 @@ int32_t parcor_scaled_values[] = {-1048544, -1048288, -1047776, -1047008,
                                     935456,   967456,   999712,  1032224};
 
 
-#endif AVCODEC_ALS_DATA_H
+#endif /* AVCODEC_ALS_DATA_H */
