@@ -376,7 +376,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         unsigned int const_block;
         int32_t      const_val = 0;
 
-        const_block = get_bits1(gb);    // 1 = constant value, 0 = zero block (silence)
+        const_block  = get_bits1(gb);    // 1 = constant value, 0 = zero block (silence)
         *js_blocks  |= get_bits1(gb);
 
         // skip 5 reserved bits
