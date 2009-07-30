@@ -494,7 +494,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                     }
 
                     // read coefficients 20 - 128
-                    k_max = FFMIN(127, opt_order);
+                    k_max = FFMIN(128, opt_order);
                     for (k = 20; k < k_max; k++) {
                         offset       = k & 1;
                         rice_param   = 2;
@@ -503,7 +503,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                     }
 
                     // read coefficients 128 - opt_order
-                    for (k = 127; k < opt_order; k++) {
+                    for (k = 128; k < opt_order; k++) {
                         offset       = 0;
                         rice_param   = 1;
                         quant_index  = decode_rice(gb, rice_param) + offset;
