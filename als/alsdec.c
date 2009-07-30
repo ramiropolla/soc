@@ -484,7 +484,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                     quant_index  = decode_rice(gb, rice_param) + offset;
                     quant_cof[1] = -parcor_scaled_values[quant_index + 64];
 
-                    // read coefficients 2 - 20
+                    // read coefficients 2 - 19
                     k_max = FFMIN(20, opt_order);
                     for (k = 2; k < k_max; k++) {
                         offset       = parcor_rice_table[sconf->coef_table][k][0];
@@ -493,8 +493,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                         quant_cof[k] = (quant_index << 14) + (1 << 13);
                     }
 
-                    // read coefficients 20 - 128
-                    k_max = FFMIN(128, opt_order);
+                    // read coefficients 20 - 126
+                    k_max = FFMIN(127, opt_order);
                     for (k = 20; k < k_max; k++) {
                         offset       = k & 1;
                         rice_param   = 2;
@@ -502,8 +502,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                         quant_cof[k] = (quant_index << 14) + (1 << 13);
                     }
 
-                    // read coefficients 128 - opt_order
-                    for (k = 128; k < opt_order; k++) {
+                    // read coefficients 127 - opt_order
+                    for (k = 127; k < opt_order; k++) {
                         offset       = 0;
                         rice_param   = 1;
                         quant_index  = decode_rice(gb, rice_param) + offset;
@@ -675,21 +675,21 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                     raw_samples_R = ctx->raw_samples[c    ] + sconf->frame_length;
 
                     while (js_blocks[0] || js_blocks[1]) {
-                        unsigned int LD, RD;
+                        unsigned int diff_l, diff_r;
                         block_length   = sconf->frame_length >> div_blocks[b];
                         raw_samples_L -= block_length;
                         raw_samples_R -= block_length;
 
-                        LD = js_blocks[0] & 1;
-                        RD = js_blocks[1] & 1;
+                        diff_l = js_blocks[0] & 1;
+                        diff_r = js_blocks[1] & 1;
 
-                        if (LD) {                     // L = R - D
-                            if (RD)
+                        if (diff_l) {                     // L = R - D
+                            if (diff_r)
                                 av_log(ctx->avctx, AV_LOG_WARNING, "Invalid channel pair!");
 
                             for (s = 0; s < block_length; s++)
                                 raw_samples_L[s] = raw_samples_R[s] - raw_samples_L[s];
-                        } else if (RD) {                // R = D + L
+                        } else if (diff_r) {                // R = D + L
                             for (s = 0; s < block_length; s++)
                                 raw_samples_R[s] = raw_samples_R[s] + raw_samples_L[s];
                         }
