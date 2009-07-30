@@ -358,14 +358,16 @@ static void all_parcor_to_lpc(unsigned int num, int64_t *par, int64_t *cof)
 /** Reads the block data.
  */
 static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
-                            int64_t *raw_samples, unsigned int block_length)
+                            int64_t *raw_samples, unsigned int block_length,
+                            uint32_t *js_blocks)
 {
     ALSSpecificConfig *sconf = &ctx->sconf;
     AVCodecContext *avctx    = ctx->avctx;
     GetBitContext *gb        = &ctx->gb;
     unsigned int block_type;
-    unsigned int js_block;
     unsigned int k;
+
+    *js_blocks <<= 1;
 
     // read block type
     block_type = get_bits1(gb);
@@ -375,7 +377,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         int32_t      const_val = 0;
 
         const_block = get_bits1(gb);    // 1 = constant value, 0 = zero block (silence)
-        js_block    = get_bits1(gb);
+        *js_blocks  |= get_bits1(gb);
 
         // skip 5 reserved bits
         skip_bits(gb, 5);
@@ -406,8 +408,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         int64_t      *res = ctx->residuals;
         unsigned int sb, smp;
 
-
-        js_block = get_bits1(gb);
+        *js_blocks |= get_bits1(gb);
 
         // Determine the number of sub blocks for entropy decoding
         if (!sconf->bgmc_mode && !sconf->sb_part)
@@ -600,6 +601,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
     unsigned int div_blocks[32];                ///< Block sizes.
     unsigned int c, b, ra_block, block_length;
     int64_t *raw_samples;
+    uint32_t js_blocks[2];
 
     uint32_t bs_info = 0;
     unsigned int *ptr_div_blocks = &div_blocks[0];
@@ -617,6 +619,9 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
         int independent_bs = !sconf->joint_stereo;
 
         for (c = 0; c < sconf->channels; c++) {
+            js_blocks[0] = 0;
+            js_blocks[1] = 0;
+
             if (sconf->block_switching) {
                 unsigned int bs_info_len = 1 << (sconf->block_switching + 2);
                 bs_info = get_bits_long(gb, bs_info_len);
@@ -641,7 +646,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                 for (b = 0; b < ctx->num_blocks; b++) {
                     ra_block = !b && ra_frame;
                     block_length = sconf->frame_length >> div_blocks[b];
-                    read_block_data(ctx, ra_block, raw_samples, block_length);
+                    read_block_data(ctx, ra_block, raw_samples, block_length, &js_blocks[0]);
                     raw_samples += block_length;
                 }
             } else {
@@ -652,14 +657,48 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                     block_length = sconf->frame_length >> div_blocks[b];
 
                     raw_samples = ctx->raw_samples[c] + offset;
-                    read_block_data(ctx, ra_block, raw_samples, block_length);
+                    read_block_data(ctx, ra_block, raw_samples, block_length, &js_blocks[0]);
 
                     raw_samples = ctx->raw_samples[c + 1] + offset;
-                    read_block_data(ctx, ra_block, raw_samples, block_length);
+                    read_block_data(ctx, ra_block, raw_samples, block_length, &js_blocks[1]);
 
                     offset += block_length;
                 }
                 c++;
+
+                if (js_blocks[0] || js_blocks[1]) {
+                    int64_t *raw_samples_L, *raw_samples_R;
+                    unsigned int s;
+                    b = ctx->num_blocks - 1;
+
+                    raw_samples_L = ctx->raw_samples[c - 1] + sconf->frame_length;
+                    raw_samples_R = ctx->raw_samples[c    ] + sconf->frame_length;
+
+                    while (js_blocks[0] || js_blocks[1]) {
+                        unsigned int LD, RD;
+                        block_length   = sconf->frame_length >> div_blocks[b];
+                        raw_samples_L -= block_length;
+                        raw_samples_R -= block_length;
+
+                        LD = js_blocks[0] & 1;
+                        RD = js_blocks[1] & 1;
+
+                        if (LD) {                     // L = R - D
+                            if (RD)
+                                av_log(ctx->avctx, AV_LOG_WARNING, "Invalid channel pair!");
+
+                            for (s = 0; s < block_length; s++)
+                                raw_samples_L[s] = raw_samples_R[s] - raw_samples_L[s];
+                        } else if (RD) {                // R = D + L
+                            for (s = 0; s < block_length; s++)
+                                raw_samples_R[s] = raw_samples_R[s] + raw_samples_L[s];
+                        }
+
+                        b--;
+                        js_blocks[0] >>= 1;
+                        js_blocks[1] >>= 1;
+                    }
+                }
             }
         }
     } else {
@@ -679,7 +718,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
         for (b = 0; b < ctx->num_blocks; b++) {
             ra_block = !b && ra_frame;
             block_length = sconf->frame_length >> div_blocks[b];
-            read_block_data(ctx, ra_block, raw_samples, block_length);
+            read_block_data(ctx, ra_block, raw_samples, block_length, &js_blocks[0]);
             raw_samples += block_length;
             // TODO: read_channel_data
         }
