@@ -486,12 +486,11 @@ static void decode_pitch_vector(AMRContext *p,
                                 const AMRNBSubframe *amr_subframe,
                                 const int subframe)
 {
-    int prev_pitch_lag_int = p->pitch_lag_int;
     int pitch_lag_frac;
     // decode integer and fractional parts of pitch lag from parsed pitch
     // index
     decode_pitch_lag(&p->pitch_lag_int, &pitch_lag_frac, amr_subframe->p_lag,
-                     prev_pitch_lag_int, subframe, p->cur_frame_mode);
+                     p->pitch_lag_int, subframe, p->cur_frame_mode);
 
     // interpolate the past excitation at the pitch lag to obtain the pitch
     // vector
