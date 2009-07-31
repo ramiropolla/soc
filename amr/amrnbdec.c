@@ -37,9 +37,9 @@
 #include "celp_filters.h"
 #include "acelp_filters.h"
 #include "acelp_vectors.h"
-#include "amrnbdata.h"
+#include "lsp.h"
 
-void ff_celp_lspf2lpc(const double *lspf, float *lpc);
+#include "amrnbdata.h"
 
 typedef struct AMRContext {
 
