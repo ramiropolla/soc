@@ -1117,7 +1117,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         av_log_missing_feature(avctx, "dtx mode", 1);
         return -1;
     }
-/*** LPC coefficient decoding ***/
 
     if (p->cur_frame_mode == MODE_122) {
         // decode split-matrix quantized lsf vector indexes to lsp vectors
@@ -1131,14 +1130,10 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     for (i = 0; i < 4; i++)
         lsp2lpc(p->lsp[i], p->lpc[i]);
 
-/*** end of LPC coefficient decoding ***/
-
     for (subframe = 0; subframe < 4; subframe++) {
         const AMRNBSubframe *amr_subframe = &p->frame.subframe[subframe];
-/*** adaptive code book (pitch) vector decoding ***/
-        decode_pitch_vector(p, amr_subframe, subframe);
 
-/*** end of adaptive code book (pitch) vector decoding ***/
+        decode_pitch_vector(p, amr_subframe, subframe);
 
         decode_fixed_vector(fixed_vector, amr_subframe->pulses,
                             p->cur_frame_mode, subframe);
@@ -1155,8 +1150,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         set_fixed_gain(p, p->cur_frame_mode, fixed_gain_factor,
                        fixed_vector);
 
-/*** pre-processing ***/
-
         // The excitation feedback is calculated without any processing such
         // as fixed gain smoothing. This isn't mentioned in the specification.
         ff_weighted_vector_sumf(exc_feedback, p->excitation, fixed_vector,
@@ -1172,10 +1165,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         synth_fixed_vector = anti_sparseness(p, fixed_vector, synth_fixed_gain,
                                              spare_vector);
 
-/*** end of pre-processing ***/
-
-/*** synthesis ***/
-
         if (synthesis(p, p->excitation, p->lpc[subframe], synth_fixed_gain,
                       synth_fixed_vector, &p->samples_in[LP_FILTER_ORDER], 0))
             // overflow detected -> rerun synthesis scaling pitch vector down
@@ -1183,8 +1172,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             // and adaptive gain control
             synthesis(p, p->excitation, p->lpc[subframe], synth_fixed_gain,
                       synth_fixed_vector, &p->samples_in[LP_FILTER_ORDER], 1);
-
-/*** end of synthesis ***/
 
         postfilter(p, p->lpc[subframe], buf_out + subframe * AMR_SUBFRAME_SIZE);
 
