@@ -2026,8 +2026,8 @@ static const float lsf_3_mean[LP_FILTER_ORDER] = {
 };
 
 static const float lsf_5_mean[LP_FILTER_ORDER] = {
- 337.891,  507.80 ,  834.961, 1247.7  , 1646.0  ,
-1982.91 , 2407.96 , 2708.1  , 3104.0  , 3344.97 ,
+ 337.891,  507.080,  834.961, 1247.07 , 1646.00 ,
+1982.91 , 2407.96 , 2708.01 , 3104.00 , 3344.97 ,
 };
 
 static const float pred_fac[LP_FILTER_ORDER] = {
