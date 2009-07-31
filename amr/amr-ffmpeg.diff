@@ -214,3 +214,16 @@ Index: libavcodec/acelp_vectors.h
 +                        const int length);
 +
  #endif /* AVCODEC_ACELP_VECTORS_H */
+Index: libavcodec/qcelp_lsp.c
+===================================================================
+--- libavcodec/qcelp_lsp.c	(revision 19401)
++++ libavcodec/qcelp_lsp.c	(working copy)
+@@ -27,8 +27,6 @@
+  * @remark Development mentored by Benjamin Larson
+  */
+ 
+-#include "libavutil/mathematics.h"
+-
+ /**
+  * Computes the Pa / (1 + z(-1)) or Qa / (1 - z(-1)) coefficients
+  * needed for LSP to LPC conversion.
