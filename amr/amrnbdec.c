@@ -1179,8 +1179,10 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
     for (i = 0; i < AMR_BLOCK_SIZE; i++)
         // Post-processing up-scales by 2. It's convenient to
-        // scale from PCM values to [-1,1] here too.
-        buf_out[i] *= 2.0 * AMR_SAMPLE_SCALE;
+        // scale from PCM values to [-1,1) here too.
+        // FIXME: merge with qcelpdec.c
+        buf_out[i] = av_clipf(buf_out[i] * 2.0 * AMR_SAMPLE_SCALE,
+                              -1.0, 32767.0/32768.0);
 
     /* Update averaged lsf vector (used for fixed gain smoothing).
      *
