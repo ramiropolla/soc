@@ -53,8 +53,8 @@ Index: libavcodec/celp_filters.c
 ===================================================================
 --- libavcodec/celp_filters.c	(revision 19401)
 +++ libavcodec/celp_filters.c	(working copy)
-@@ -84,6 +84,31 @@
-     return 0;
+@@ -50,6 +50,31 @@
+     }
  }
  
 +void ff_celp_convolve_circf(
@@ -82,9 +82,9 @@ Index: libavcodec/celp_filters.c
 +    }
 +}
 +
- void ff_celp_lp_synthesis_filterf(
-         float *out,
-         const float* filter_coeffs,
+ int ff_celp_lp_synthesis_filter(
+         int16_t *out,
+         const int16_t* filter_coeffs,
 @@ -120,6 +145,6 @@
      {
          out[n] = in[n];
