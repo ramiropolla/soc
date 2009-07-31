@@ -219,7 +219,7 @@ static void interpolate_lsf(float lsf_q[4][LP_FILTER_ORDER], float *lsf_new)
 static void adjust_lsf(float *m)
 {
     int i;
-    float tmp=0.0;
+    float tmp = 0.0;
     for (i = 0; i < LP_FILTER_ORDER; i++)
         tmp = m[i] = FFMAX(m[i], tmp + MIN_LSF_SPACING);
 }
@@ -522,7 +522,7 @@ static void reconstruct_fixed_vector(int *pulse_position, int sign,
     // reset the code
     memset(fixed_vector, 0, AMR_SUBFRAME_SIZE * sizeof(float));
 
-    for (i=0; i<nr_pulses; i++)
+    for (i = 0; i < nr_pulses; i++)
         fixed_vector[pulse_position[i]] = ((sign >> i) & 1) ? 1.0 : -1.0;
 }
 
@@ -679,7 +679,7 @@ static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode,
     // conduct pitch sharpening as appropriate (section 6.1.2)
     if (p->pitch_lag_int < AMR_SUBFRAME_SIZE)
         for (i = p->pitch_lag_int; i < AMR_SUBFRAME_SIZE; i++)
-            fixed_vector[i] += p->beta*fixed_vector[i-p->pitch_lag_int];
+            fixed_vector[i] += p->beta * fixed_vector[i-p->pitch_lag_int];
 
     // Save pitch sharpening factor for the next subframe
     // MODE_475 only updates on the 2nd and 4th subframes - this follows from
@@ -936,8 +936,9 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
     if (p->pitch_gain[4] > 0.5 && !overflow) {
         float excitation_temp[AMR_SUBFRAME_SIZE];
         float pitch_factor = (p->cur_frame_mode == MODE_122 ? 0.25 : 0.5)
-            *FFMIN(p->pitch_gain[4], p->cur_frame_mode == MODE_122 ? 1.0 : SHARP_MAX)
-            *p->pitch_gain[4];
+            * FFMIN(p->pitch_gain[4],
+                    p->cur_frame_mode == MODE_122 ? 1.0 : SHARP_MAX)
+            * p->pitch_gain[4];
 
         for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
             // emphasize pitch vector contribution
@@ -1095,7 +1096,7 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
 
     for (i = 0; i < AMR_SUBFRAME_SIZE; i++) {
         p->postfilter_agc = AMR_AGC_ALPHA * p->postfilter_agc +
-                             (1.0 - AMR_AGC_ALPHA) * gain_scale_factor;
+                            (1.0 - AMR_AGC_ALPHA) * gain_scale_factor;
         buf_out[i] *= p->postfilter_agc;
     }
 }
@@ -1195,7 +1196,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         // scale from PCM values to [-1,1) here too.
         // FIXME: merge with qcelpdec.c
         buf_out[i] = av_clipf(buf_out[i] * 2.0 * AMR_SAMPLE_SCALE,
-                              -1.0, 32767.0/32768.0);
+                              -1.0, 32767.0 / 32768.0);
 
     /* Update averaged lsf vector (used for fixed gain smoothing).
      *
