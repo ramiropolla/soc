@@ -136,12 +136,12 @@ static enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf,
 
     // initialize get_bits
     init_get_bits(&p->gb, buf, buf_size * 8);
-    skip_bits(&p->gb, 1);
-    // set the mode
-    mode = get_bits(&p->gb, 4);
-    // set the bad frame indicator based on the quality bit
-    p->bad_frame_indicator = !get_bits1(&p->gb);
-    skip_bits(&p->gb, 2);
+
+    // Decode the first octet.
+    skip_bits(&p->gb, 1);                        // padding bit
+    mode = get_bits(&p->gb, 4);                  // frame type
+    p->bad_frame_indicator = !get_bits1(&p->gb); // quality bit
+    skip_bits(&p->gb, 2);                        // two padding bits
 
     if (mode <= MODE_DTX) {
         uint16_t *data = (uint16_t *)&p->frame;
