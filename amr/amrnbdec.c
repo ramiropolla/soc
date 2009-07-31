@@ -209,7 +209,7 @@ static void interpolate_lsf(float lsf_q[4][LP_FILTER_ORDER], float *lsf_new)
  * Omitting this step creates audible distortion on the sinusoidal sweep
  * test vectors in 3GPP TS 26.074.
  */
-void adjust_lsfs(float *m) {
+static void adjust_lsfs(float *m) {
     int i;
     float tmp=0.0;
     for (i = 0; i < LP_FILTER_ORDER; i++)
