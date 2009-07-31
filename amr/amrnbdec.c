@@ -47,8 +47,8 @@ typedef struct AMRContext {
 
     AMRNBFrame                        frame; ///< decoded AMR parameters (lsf coefficients, codebook indexes, etc)
     int                 bad_frame_indicator; ///< bad frame ? 1 : 0
-    int                      cur_frame_mode; ///< current frame mode
-    int                      cur_frame_type; ///< current frame type
+    enum Mode                cur_frame_mode; ///< current frame mode
+    enum RXFrameType         cur_frame_type; ///< current frame type
 
     float       prev_lsf_r[LP_FILTER_ORDER]; ///< residual LSF vector from previous subframe
     float           lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
