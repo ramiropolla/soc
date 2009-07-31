@@ -118,7 +118,9 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
 
 
 /**
- * Decode the bitstream into the AMR parameters and discover the frame mode.
+ * Decode an RFC4867 speech frame into the AMR frame mode and parameters.
+ *
+ * The order of speech bits is specified by 3GPP TS 26.101.
  *
  * @param p the context
  * @param buf               pointer to the input buffer
@@ -155,7 +157,13 @@ static enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf,
             skip_bits(&p->gb, 4); // skip to the next byte
             if (get_bits1(&p->gb)) // use the update if there is one
                 p->cur_frame_type = RX_SID_UPDATE;
-            *speech_mode = get_bits(&p->gb, 3); // speech mode indicator
+            /* RFC4867 specifies AMR IF1 from 3GPP TS 26.101 which reverses
+             * the Mode Indication bits. This is also used by the reference
+             * decoder.
+             * But PacketVideo uses IF2 - it stores these bits the other way
+             * round. The sample "sound.amr" uses IF2.
+             */
+            *speech_mode = get_bits(&p->gb, 3); // IF2 speech mode indicator
         } else
             p->cur_frame_type = RX_SPEECH_GOOD;
     } else if (mode == NO_DATA) {
@@ -1103,7 +1111,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     int buf_size       = avpkt->size;
     float *buf_out = data;                   // pointer to the output data buffer
     int i, subframe;                         // counters
-    enum Mode speech_mode = MODE_475;        // ???
+    enum Mode speech_mode = MODE_475;        // mode indication for DTX frames
     float fixed_gain_factor;
     float exc_feedback[AMR_SUBFRAME_SIZE];
     float fixed_vector[AMR_SUBFRAME_SIZE];   // algebraic code book (fixed) vector

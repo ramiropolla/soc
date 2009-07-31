@@ -112,7 +112,7 @@ typedef struct {
 
 // The following order* tables are used to reorder the bitstream into the bit
 // allocation format as in the specification. The bits are grouped into three
-// classes of importance. See the specification for more information.
+// classes of importance. See 3GPP TS 26.101 for more information.
 
 #define AMR_LSF(variable, bit) {offsetof(AMRNBFrame, lsf[variable]) >> 1, bit}
 
