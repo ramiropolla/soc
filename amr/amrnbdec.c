@@ -927,9 +927,8 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
             p->pitch_vector[i] *= 0.25;
 
     // construct the excitation vector
-    for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
-        excitation[i] = p->pitch_gain[4] * p->pitch_vector[i] +
-                        fixed_gain * fixed_vector[i];
+    ff_weighted_vector_sumf(excitation, p->pitch_vector, fixed_vector,
+                            p->pitch_gain[4], fixed_gain, AMR_SUBFRAME_SIZE);
 
     // if an overflow has been detected, pitch vector contribution emphasis and
     // adaptive gain control are skipped
