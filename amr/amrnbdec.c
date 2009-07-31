@@ -203,6 +203,20 @@ static void interpolate_lsf(float lsf_q[4][LP_FILTER_ORDER], float *lsf_new)
 }
 
 /**
+ * Adjust the quantized LSFs so they are increasing and not too close.
+ *
+ * This step isn't mentioned in the spec but is in the reference C decoder.
+ * Omitting this step creates audible distortion on the sinusoidal sweep
+ * test vectors in 3GPP TS 26.074.
+ */
+void adjust_lsfs(float *m) {
+    int i;
+    float tmp=0.0;
+    for (i = 0; i < LP_FILTER_ORDER; i++)
+        tmp = m[i] = FFMAX(m[i], tmp + MIN_LSF_SPACING);
+}
+
+/**
  * Decode a set of 5 split-matrix quantized lsf indexes into an lsp vector.
  *
  * @param p the context
@@ -236,6 +250,8 @@ static void lsf2lsp_for_mode122(AMRContext *p, float lsp[LP_FILTER_ORDER],
 
     for (i = 0; i < LP_FILTER_ORDER; i++)
         lsf[i] += prev_lsf[i];
+
+    adjust_lsfs(lsf);
 
     // store LSF vector for fixed gain smoothing
     if (update_prev_lsf_r)
@@ -298,6 +314,8 @@ static void lsf2lsp_3(AMRContext *p)
     // calculate mean-removed LSF vector and add mean
     for (i = 0; i < LP_FILTER_ORDER; i++)
         lsf_q[i] = lsf_r[i] + p->prev_lsf_r[i] * pred_fac[i] + lsf_3_mean[i];
+
+    adjust_lsfs(lsf_q);
 
     // store LSF vector for fixed gain smoothing
     interpolate_lsf(p->lsf_q, lsf_q);
