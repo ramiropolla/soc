@@ -46,7 +46,7 @@ typedef struct AMRContext {
     GetBitContext                        gb;
 
     AMRNBFrame                        frame; ///< decoded AMR parameters (lsf coefficients, codebook indexes, etc)
-    int                 bad_frame_indicator; ///< bad frame ? 1 : 0
+    uint8_t             bad_frame_indicator; ///< bad frame ? 1 : 0
     enum Mode                cur_frame_mode; ///< current frame mode
     enum RXFrameType         cur_frame_type; ///< current frame type
 
@@ -59,7 +59,7 @@ typedef struct AMRContext {
 
     float           lpc[4][LP_FILTER_ORDER]; ///< lpc coefficient vectors for 4 subframes
 
-    int                       pitch_lag_int; ///< integer part of pitch lag from current subframe
+    uint8_t                   pitch_lag_int; ///< integer part of pitch lag from current subframe
 
     float excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1 + AMR_SUBFRAME_SIZE]; ///< excitation buffer
     float                       *excitation; ///< pointer to the current excitation vector in excitation_buf
@@ -71,8 +71,8 @@ typedef struct AMRContext {
     float                     fixed_gain[5]; ///< quantified fixed gains for the current and previous four subframes
 
     float                              beta; ///< beta = previous pitch_gain, bounded by [0.0,SHARP_MAX]
-    int                          diff_count; ///< the number of subframes for which diff has been above 0.65
-    int                          hang_count; ///< the number of subframes since a hangover period started
+    uint8_t                      diff_count; ///< the number of subframes for which diff has been above 0.65
+    uint8_t                      hang_count; ///< the number of subframes since a hangover period started
 
     float            prev_sparse_fixed_gain; ///< previous fixed gain; used by anti-sparseness processing to determine "onset"
     uint8_t         prev_ir_filter_strength; ///< previous impulse response filter strength; 0 - strong, 1 - medium, 2 - none
@@ -486,17 +486,18 @@ static void decode_pitch_vector(AMRContext *p,
                                 const AMRNBSubframe *amr_subframe,
                                 const int subframe)
 {
-    int pitch_lag_frac;
+    int pitch_lag_int, pitch_lag_frac;
     // decode integer and fractional parts of pitch lag from parsed pitch
     // index
-    decode_pitch_lag(&p->pitch_lag_int, &pitch_lag_frac, amr_subframe->p_lag,
+    decode_pitch_lag(&pitch_lag_int, &pitch_lag_frac, amr_subframe->p_lag,
                      p->pitch_lag_int, subframe, p->cur_frame_mode);
 
     // interpolate the past excitation at the pitch lag to obtain the pitch
     // vector
-    interp_pitch_vector(p->excitation, p->pitch_lag_int, pitch_lag_frac,
+    interp_pitch_vector(p->excitation, pitch_lag_int, pitch_lag_frac,
                         p->cur_frame_mode);
 
+    p->pitch_lag_int = pitch_lag_int; // store previous lag in a uint8_t
     memcpy(p->pitch_vector, p->excitation, AMR_SUBFRAME_SIZE * sizeof(float));
 }
 /// @}
