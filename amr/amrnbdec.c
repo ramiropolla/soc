@@ -916,7 +916,7 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
     // factor of 4
     if (overflow)
         for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
-            p->pitch_vector[i] /= 4.0;
+            p->pitch_vector[i] *= 0.25;
 
     // construct the excitation vector
     for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
