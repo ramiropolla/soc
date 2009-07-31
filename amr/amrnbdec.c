@@ -750,7 +750,7 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsf,
         p->hang_count++;
     } else if (mode < MODE_74 || mode == MODE_102) {
         // calculate the fixed gain smoothing factor (k_m)
-        const float smoothing_factor = FFMIN(1.0, FFMAX(0.0, 4.0*diff - 1.6));
+        const float smoothing_factor = av_clipf(4.0 * diff - 1.6, 0.0, 1.0);
         // calculate the mean fixed gain for the current subframe
         const float fixed_gain_mean = (p->fixed_gain[0] + p->fixed_gain[1] + p->fixed_gain[2] + p->fixed_gain[3] + p->fixed_gain[4])*0.2;
         // calculate the smoothed fixed gain
