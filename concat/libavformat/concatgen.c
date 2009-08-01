@@ -45,7 +45,6 @@ int ff_concatgen_read_packet(AVFormatContext *s,
         ret = ic->iformat->read_packet(ic, pkt);
         if (pkt) {
             stream_index = pkt->stream_index;
-            pkt->stream = ic->streams[pkt->stream_index];
         }
         if (ret >= 0) {
             if (pkt) {
