@@ -1,8 +1,8 @@
 diff --git a/ffplay.c b/ffplay.c
-index 5f88a46..b49b978 100644
+index 4d7abb3..826f320 100644
 --- a/ffplay.c
 +++ b/ffplay.c
-@@ -30,6 +30,8 @@
+@@ -29,6 +29,8 @@
  #include "libavcodec/colorspace.h"
  #include "libavcodec/opt.h"
  
@@ -11,7 +11,7 @@ index 5f88a46..b49b978 100644
  #include "cmdutils.h"
  
  #include <SDL.h>
-@@ -1336,28 +1338,65 @@ static int video_thread(void *arg)
+@@ -1335,28 +1337,65 @@ static int video_thread(void *arg)
      VideoState *is = arg;
      AVPacket pkt1, *pkt = &pkt1;
      int len1, got_picture;
@@ -80,7 +80,7 @@ index 5f88a46..b49b978 100644
          if(   (decoder_reorder_pts || pkt->dts == AV_NOPTS_VALUE)
             && frame->reordered_opaque != AV_NOPTS_VALUE)
              pts= frame->reordered_opaque;
-@@ -1366,9 +1405,6 @@ static int video_thread(void *arg)
+@@ -1365,9 +1404,6 @@ static int video_thread(void *arg)
          else
              pts= 0;
          pts *= av_q2d(is->video_st->time_base);
@@ -90,7 +90,7 @@ index 5f88a46..b49b978 100644
          if (got_picture) {
              if (output_picture2(is, frame, pts) < 0)
                  goto the_end;
-@@ -1561,50 +1597,76 @@ static int audio_decode_frame(VideoState *is, double *pts_ptr)
+@@ -1560,50 +1596,76 @@ static int audio_decode_frame(VideoState *is, double *pts_ptr)
  {
      AVPacket *pkt_temp = &is->audio_pkt_temp;
      AVPacket *pkt = &is->audio_pkt;
@@ -179,7 +179,7 @@ index 5f88a46..b49b978 100644
                      break;
                  }
                  is->audio_buf= is->audio_buf2;
-@@ -1618,9 +1680,9 @@ static int audio_decode_frame(VideoState *is, double *pts_ptr)
+@@ -1617,9 +1679,9 @@ static int audio_decode_frame(VideoState *is, double *pts_ptr)
              /* if no pts, then compute it */
              pts = is->audio_clock;
              *pts_ptr = pts;
@@ -191,7 +191,7 @@ index 5f88a46..b49b978 100644
  #if defined(DEBUG_SYNC)
              {
                  static double last_clock;
-@@ -1632,7 +1694,6 @@ static int audio_decode_frame(VideoState *is, double *pts_ptr)
+@@ -1631,7 +1693,6 @@ static int audio_decode_frame(VideoState *is, double *pts_ptr)
  #endif
              return data_size;
          }
@@ -199,7 +199,7 @@ index 5f88a46..b49b978 100644
          /* free the current packet */
          if (pkt->data)
              av_free_packet(pkt);
-@@ -1645,7 +1706,7 @@ static int audio_decode_frame(VideoState *is, double *pts_ptr)
+@@ -1644,7 +1705,7 @@ static int audio_decode_frame(VideoState *is, double *pts_ptr)
          if (packet_queue_get(&is->audioq, pkt, 1) < 0)
              return -1;
          if(pkt->data == flush_pkt.data){
