@@ -1396,10 +1396,6 @@ static int decode_frame(WMA3DecodeContext *s)
         s->channel[i].decoded_samples = 0;
         s->channel[i].cur_subframe = 0;
         s->channel[i].reuse_sf = 0;
-        s->channel[i].scale_factor_step = 1;
-        s->channel[i].max_scale_factor = 0;
-        memset(s->channel[i].scale_factors, 0,
-               sizeof(s->channel[i].scale_factors));
     }
 
     /** decode all subframes */
