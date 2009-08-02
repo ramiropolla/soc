@@ -1179,17 +1179,6 @@ static int decode_subframe(WMA3DecodeContext *s)
         s->channel[c].coeffs = &s->channel[c].out[(s->samples_per_frame>>1)
                                                   + offset];
         memset(s->channel[c].coeffs,0,sizeof(float) * subframe_len);
-
-        /** init some things if this is the first subframe */
-        if (!s->channel[c].cur_subframe) {
-              s->channel[c].scale_factor_step = 1;
-              s->channel[c].max_scale_factor = 0;
-              memset(s->channel[c].scale_factors, 0,
-                     sizeof(s->channel[c].scale_factors));
-              memset(s->channel[c].resampled_scale_factors, 0,
-                     sizeof(s->channel[c].resampled_scale_factors));
-        }
-
     }
 
     s->subframe_len = subframe_len;
@@ -1418,6 +1407,12 @@ static int decode_frame(WMA3DecodeContext *s)
         s->channel[i].decoded_samples = 0;
         s->channel[i].cur_subframe = 0;
         s->channel[i].reuse_sf = 0;
+        s->channel[i].scale_factor_step = 1;
+        s->channel[i].max_scale_factor = 0;
+        memset(s->channel[i].scale_factors, 0,
+               sizeof(s->channel[i].scale_factors));
+        memset(s->channel[i].resampled_scale_factors, 0,
+               sizeof(s->channel[i].resampled_scale_factors));
     }
 
     /** decode all subframes */
