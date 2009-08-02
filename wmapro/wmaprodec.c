@@ -462,7 +462,9 @@ static av_cold int decode_init(AVCodecContext *avctx)
     for (i=0;i<33;i++)
         sin64[i] = sin(i*M_PI / 64.0);
 
-    dump_context(s);
+    if (avctx->debug & FF_DEBUG_BITSTREAM)
+        dump_context(s);
+
     avctx->channel_layout = channel_mask;
     return 0;
 }
