@@ -226,7 +226,7 @@ typedef struct WMA3DecodeContext {
  */
 static void av_cold dump_context(WMA3DecodeContext *s)
 {
-#define PRINT(a,b) av_log(s->avctx,AV_LOG_DEBUG," %s = %d\n", a, b);
+#define PRINT(a,b)     av_log(s->avctx,AV_LOG_DEBUG," %s = %d\n", a, b);
 #define PRINT_HEX(a,b) av_log(s->avctx,AV_LOG_DEBUG," %s = %x\n", a, b);
 
     PRINT("ed sample bit depth",s->bits_per_sample);
@@ -280,8 +280,8 @@ static av_cold int decode_init(AVCodecContext *avctx)
     avctx->sample_fmt = SAMPLE_FMT_FLT;
 
     if (avctx->extradata_size >= 18) {
-        s->decode_flags     = AV_RL16(edata_ptr+14);
-        channel_mask    = AV_RL32(edata_ptr+2);
+        s->decode_flags    = AV_RL16(edata_ptr+14);
+        channel_mask       = AV_RL32(edata_ptr+2);
         s->bits_per_sample = AV_RL16(edata_ptr);
 #ifdef DEBUG
         /** dump the extradata */
@@ -317,10 +317,10 @@ static av_cold int decode_init(AVCodecContext *avctx)
         s->channel[i].prev_block_len = s->samples_per_frame;
 
     /** subframe info */
-    log2_num_subframes = ((s->decode_flags & 0x38) >> 3);
-    s->max_num_subframes = 1 << log2_num_subframes;
-    s->num_possible_block_sizes = log2_num_subframes + 1;
-    s->min_samples_per_subframe = s->samples_per_frame / s->max_num_subframes;
+    log2_num_subframes           = ((s->decode_flags & 0x38) >> 3);
+    s->max_num_subframes         = 1 << log2_num_subframes;
+    s->num_possible_block_sizes  = log2_num_subframes + 1;
+    s->min_samples_per_subframe  = s->samples_per_frame / s->max_num_subframes;
     s->dynamic_range_compression = (s->decode_flags & 0x80);
 
     if (s->max_num_subframes > MAX_SUBFRAMES) {
@@ -422,7 +422,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     for (i=0;i<s->num_possible_block_sizes;i++) {
         int b;
-        for (b=0;b< s->num_sfb[i];b++) {
+        for (b=0; b < s->num_sfb[i]; b++) {
             int x;
             int offset = ((s->sfb_offsets[MAX_BANDS * i + b]
                          + s->sfb_offsets[MAX_BANDS * i + b + 1] - 1)<<i) >> 1;
