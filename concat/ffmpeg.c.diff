@@ -1,5 +1,5 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index e899180..c7cea6e 100644
+index e899180..d9b2691 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -70,6 +70,8 @@
@@ -11,16 +11,7 @@ index e899180..c7cea6e 100644
  const char program_name[] = "FFmpeg";
  const int program_birth_year = 2000;
  
-@@ -223,6 +225,8 @@ static unsigned int sws_flags = SWS_BICUBIC;
- 
- static int64_t timer_start;
- 
-+PlaylistContext *playlist_ctx;
-+
- static uint8_t *audio_buf;
- static uint8_t *audio_out;
- static uint8_t *audio_out2;
-@@ -1237,7 +1241,8 @@ static void print_report(AVFormatContext **output_files,
+@@ -1237,7 +1239,8 @@ static void print_report(AVFormatContext **output_files,
  /* pkt = NULL means EOF (needed to flush decoder buffers) */
  static int output_packet(AVInputStream *ist, int ist_index,
                           AVOutputStream **ost_table, int nb_ostreams,
@@ -30,7 +21,7 @@ index e899180..c7cea6e 100644
  {
      AVFormatContext *os;
      AVOutputStream *ost;
-@@ -1250,7 +1255,24 @@ static int output_packet(AVInputStream *ist, int ist_index,
+@@ -1250,7 +1253,24 @@ static int output_packet(AVInputStream *ist, int ist_index,
      AVSubtitle subtitle, *subtitle_to_free;
      int got_subtitle;
      AVPacket avpkt;
@@ -56,7 +47,7 @@ index e899180..c7cea6e 100644
      if(ist->next_pts == AV_NOPTS_VALUE)
          ist->next_pts= ist->pts;
  
-@@ -2278,8 +2300,7 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2278,8 +2298,7 @@ static int av_encode(AVFormatContext **output_files,
          }
  
          //fprintf(stderr,"read #%d.%d size=%d\n", ist->file_index, ist->index, pkt.size);
@@ -66,7 +57,7 @@ index e899180..c7cea6e 100644
              if (verbose >= 0)
                  fprintf(stderr, "Error while decoding stream #%d.%d\n",
                          ist->file_index, ist->index);
-@@ -2300,7 +2321,7 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2300,7 +2319,7 @@ static int av_encode(AVFormatContext **output_files,
      for(i=0;i<nb_istreams;i++) {
          ist = ist_table[i];
          if (ist->decoding_needed) {
@@ -75,7 +66,15 @@ index e899180..c7cea6e 100644
          }
      }
  
-@@ -2886,12 +2907,24 @@ static void opt_input_file(const char *filename)
+@@ -2849,6 +2868,7 @@ static enum CodecID find_codec_or_die(const char *name, int type, int encoder)
+ static void opt_input_file(const char *filename)
+ {
+     AVFormatContext *ic;
++    PlaylistContext *playlist_ctx;
+     AVFormatParameters params, *ap = &params;
+     int err, i, ret, rfps, rfps_base;
+     int64_t timestamp;
+@@ -2886,12 +2906,24 @@ static void opt_input_file(const char *filename)
      ic->subtitle_codec_id= find_codec_or_die(subtitle_codec_name, CODEC_TYPE_SUBTITLE, 0);
      ic->flags |= AVFMT_FLAG_NONBLOCK;
  
