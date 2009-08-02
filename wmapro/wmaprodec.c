@@ -182,10 +182,10 @@ typedef struct WMA3DecodeContext {
     uint8_t          max_num_subframes;             ///< maximum number of subframes
     int8_t           num_possible_block_sizes;      ///< number of distinct block sizes that can be found in the file
     uint16_t         min_samples_per_subframe;      ///< minimum samples per subframe
-    int8_t*          num_sfb;                       ///< scale factor bands per block size
-    int16_t*         sfb_offsets;                   ///< scale factor band offsets (multiples of 4)
-    int16_t*         sf_offsets;                    ///< scale factor resample matrix
-    int16_t*         subwoofer_cutoffs;             ///< subwoofer cutoff values
+    int8_t           num_sfb[WMAPRO_BLOCK_SIZES];   ///< scale factor bands per block size
+    int16_t          sfb_offsets[WMAPRO_BLOCK_SIZES][MAX_BANDS];                    ///< scale factor band offsets (multiples of 4)
+    int16_t          sf_offsets[WMAPRO_BLOCK_SIZES][WMAPRO_BLOCK_SIZES][MAX_BANDS]; ///< scale factor resample matrix
+    int16_t          subwoofer_cutoffs[WMAPRO_BLOCK_SIZES]; ///< subwoofer cutoff values
 
     /* packet decode state */
     uint8_t          packet_sequence_number;        ///< current packet number
@@ -249,11 +249,6 @@ static av_cold int decode_end(AVCodecContext *avctx)
     WMA3DecodeContext *s = avctx->priv_data;
     int i;
 
-    av_freep(&s->num_sfb);
-    av_freep(&s->sfb_offsets);
-    av_freep(&s->subwoofer_cutoffs);
-    av_freep(&s->sf_offsets);
-
     for (i=0 ; i<WMAPRO_BLOCK_SIZES ; i++)
         ff_mdct_end(&s->mdct_ctx[i]);
 
@@ -269,7 +264,6 @@ static av_cold int decode_init(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
     uint8_t *edata_ptr = avctx->extradata;
-    int16_t* sfb_offsets;
     unsigned int channel_mask;
     int i;
     int log2_num_subframes;
@@ -375,43 +369,24 @@ static av_cold int decode_init(AVCodecContext *avctx)
                  vec1_huffbits, 1, 1,
                  vec1_huffcodes, 2, 2, 562);
 
-    s->num_sfb = av_mallocz(sizeof(int8_t)*s->num_possible_block_sizes);
-    s->sfb_offsets = av_mallocz(MAX_BANDS *
-                                sizeof(int16_t) * s->num_possible_block_sizes);
-    s->subwoofer_cutoffs = av_mallocz(sizeof(int16_t) *
-                                      s->num_possible_block_sizes);
-    s->sf_offsets = av_mallocz(MAX_BANDS * s->num_possible_block_sizes *
-                               s->num_possible_block_sizes * sizeof(int16_t));
-
-    if (!s->num_sfb ||
-       !s->sfb_offsets || !s->subwoofer_cutoffs || !s->sf_offsets) {
-        av_log(avctx, AV_LOG_ERROR,
-                      "failed to allocate scale factor offset tables\n");
-        decode_end(avctx);
-        return AVERROR_NOMEM;
-    }
-
     /** calculate number of scale factor bands and their offsets
         for every possible block size */
-    sfb_offsets = s->sfb_offsets;
-
     for (i=0;i<s->num_possible_block_sizes;i++) {
         int subframe_len = s->samples_per_frame >> i;
         int x;
         int band = 1;
 
-        sfb_offsets[0] = 0;
+        s->sfb_offsets[i][0] = 0;
 
-        for (x=0;x < MAX_BANDS-1 && sfb_offsets[band-1] < subframe_len;x++) {
+        for (x=0;x < MAX_BANDS-1 && s->sfb_offsets[i][band-1] < subframe_len;x++) {
             int offset = (subframe_len * 2 * critical_freq[x])
                           / s->avctx->sample_rate + 2;
             offset &= ~3;
-            if ( offset > sfb_offsets[band - 1] )
-                sfb_offsets[band++] = offset;
+            if ( offset > s->sfb_offsets[i][band - 1] )
+                s->sfb_offsets[i][band++] = offset;
         }
-        sfb_offsets[band - 1] = subframe_len;
+        s->sfb_offsets[i][band - 1] = subframe_len;
         s->num_sfb[i] = band - 1;
-        sfb_offsets += MAX_BANDS;
     }
 
 
@@ -424,14 +399,13 @@ static av_cold int decode_init(AVCodecContext *avctx)
         int b;
         for (b=0; b < s->num_sfb[i]; b++) {
             int x;
-            int offset = ((s->sfb_offsets[MAX_BANDS * i + b]
-                         + s->sfb_offsets[MAX_BANDS * i + b + 1] - 1)<<i) >> 1;
+            int offset = ((s->sfb_offsets[i][b]
+                         + s->sfb_offsets[i][b + 1] - 1)<<i) >> 1;
             for (x=0;x<s->num_possible_block_sizes;x++) {
                 int v = 0;
-                while (s->sfb_offsets[MAX_BANDS * x + v +1] << x < offset)
+                while (s->sfb_offsets[x][v +1] << x < offset)
                     ++v;
-                s->sf_offsets[  i * s->num_possible_block_sizes * MAX_BANDS
-                              + x * MAX_BANDS + b] = v;
+                s->sf_offsets[i][x][b] = v;
             }
         }
     }
@@ -921,9 +895,7 @@ static int decode_scale_factors(WMA3DecodeContext* s)
                                           s->channel[c].scale_factor_block_len;
             const int idx0 = av_log2(blocks_per_frame);
             const int idx1 = av_log2(res_blocks_per_frame);
-            const int16_t* sf_offsets =
-                               &s->sf_offsets[s->num_possible_block_sizes *
-                               MAX_BANDS  * idx0 + MAX_BANDS * idx1];
+            const int16_t* sf_offsets = s->sf_offsets[idx0][idx1];
             int b;
             for (b=0;b<s->num_bands;b++)
                 s->channel[c].scale_factors[b] =
@@ -1165,7 +1137,7 @@ static int decode_subframe(WMA3DecodeContext *s)
     /** calculate number of scale factor bands and their offsets */
     frame_offset = av_log2(s->samples_per_frame/subframe_len);
     s->num_bands = s->num_sfb[frame_offset];
-    s->cur_sfb_offsets = &s->sfb_offsets[MAX_BANDS * frame_offset];
+    s->cur_sfb_offsets = s->sfb_offsets[frame_offset];
     s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[frame_offset];
 
     /** configure the decoder for the current subframe */
