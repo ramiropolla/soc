@@ -856,12 +856,12 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
                     if (vals[i+1] == HUFF_VEC1_SIZE - 1)
                         vals[i+1] += ff_wma_get_large_val(&s->gb);
                 } else {
-                    vals[i] = (symbol_to_vec2[idx] >> 4) & 0xF;
+                    vals[i]   = symbol_to_vec2[idx] >> 4;
                     vals[i+1] = symbol_to_vec2[idx] & 0xF;
                 }
             }
         } else {
-             vals[0] = (symbol_to_vec4[idx] >> 8) >> 4;
+             vals[0] =  symbol_to_vec4[idx] >> 12;
              vals[1] = (symbol_to_vec4[idx] >> 8) & 0xF;
              vals[2] = (symbol_to_vec4[idx] >> 4) & 0xF;
              vals[3] =  symbol_to_vec4[idx] & 0xF;
