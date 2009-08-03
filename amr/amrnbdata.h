@@ -70,17 +70,6 @@ enum RXFrameType {
     RX_N_FRAMETYPES     // number of frame types
 };
 
-// number of parameters
-#define PRMS_MODE_475 17
-#define PRMS_MODE_515 19
-#define PRMS_MODE_59  19
-#define PRMS_MODE_67  19
-#define PRMS_MODE_74  19
-#define PRMS_MODE_795 23
-#define PRMS_MODE_102 39
-#define PRMS_MODE_122 57
-#define PRMS_MODE_DTX  5
-
 #define LP_FILTER_ORDER 10 // linear predictive coding filter order
 
 // typedef for bit order tables
