@@ -165,9 +165,8 @@ static enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf,
             p->cur_frame_type = RX_SPEECH_GOOD;
     } else if (mode == NO_DATA) {
         p->cur_frame_type = RX_NO_DATA;
-    } else {
+    } else
         p->cur_frame_type = RX_SPEECH_BAD;
-    }
 
     return mode;
 }
@@ -424,10 +423,10 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index,
             // decoding with 5 or 6 bit resolution, 1/3 fractional precision
             *lag_int  = ((pitch_index + 2) * 10923 >> 15) - 1;
             *lag_frac = pitch_index - *lag_int * 3 - 2;
-            if (mode == MODE_795)
+            if (mode == MODE_795) {
                 *lag_int += av_clip(prev_lag_int - 10, PITCH_LAG_MIN,
                                     PITCH_LAG_MAX - 19);
-            else
+            } else
                 *lag_int += av_clip(prev_lag_int - 5, PITCH_LAG_MIN,
                                     PITCH_LAG_MAX - 9);
         }
@@ -826,17 +825,17 @@ static float *anti_sparseness(AMRContext *p, float *fixed_vector,
 {
     int ir_filter_strength;
 
-    if (p->pitch_gain[4] < 0.6)
+    if (p->pitch_gain[4] < 0.6) {
         ir_filter_strength = 0;      // strong filtering
-    else if (p->pitch_gain[4] < 0.9)
+    } else if (p->pitch_gain[4] < 0.9) {
         ir_filter_strength = 1;      // medium filtering
-    else
+    } else
         ir_filter_strength = 2;      // no filtering
 
     // detect 'onset'
-    if (fixed_gain > 2.0 * p->prev_sparse_fixed_gain)
+    if (fixed_gain > 2.0 * p->prev_sparse_fixed_gain) {
         p->ir_filter_onset = 2;
-    else if (p->ir_filter_onset)
+    } else if (p->ir_filter_onset)
         p->ir_filter_onset--;
 
     if (!p->ir_filter_onset) {
@@ -1098,9 +1097,9 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         return -1;
     }
 
-    if (p->cur_frame_mode == MODE_122)
+    if (p->cur_frame_mode == MODE_122) {
         lsf2lsp_5(p);
-    else
+    } else
         lsf2lsp_3(p);
 
     for (i = 0; i < 4; i++)
