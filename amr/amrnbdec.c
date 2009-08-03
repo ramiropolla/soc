@@ -698,18 +698,14 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
     int i;
     float energy_pred = 0.0, energy_fixed_mean;
 
-    // Calculate the predicted energy
     for (i = 0; i < 4; i++)
         energy_pred += energy_pred_fac[i] * prev_pred_error[3-i];
 
-    // Calculate the mean fixed vector energy
     energy_fixed_mean = ff_dot_productf(fixed_vector, fixed_vector,
                                         AMR_SUBFRAME_SIZE);
     energy_fixed_mean = 10.0 * log10f(energy_fixed_mean /
                                       (float)AMR_SUBFRAME_SIZE);
 
-    // predicted fixed gain =
-    // 10^(0.05 * (predicted energy + desired mean energy - mean fixed vector energy))
     return powf(10.0, 0.05 * (energy_pred + energy_mean[mode] - energy_fixed_mean));
 }
 
@@ -868,7 +864,6 @@ static float *anti_sparseness(AMRContext *p, float *fixed_vector,
     if (p->cur_frame_mode != MODE_74 && p->cur_frame_mode < MODE_102 && ir_filter_strength < 2) {
         const float **filters = p->cur_frame_mode == MODE_795 ? ir_filters_lookup_MODE_795
                                                               : ir_filters_lookup;
-        // circularly convolve the fixed vector with the impulse response
         ff_celp_convolve_circf(spare_vector, fixed_vector,
                                filters[ir_filter_strength], AMR_SUBFRAME_SIZE);
         fixed_vector = spare_vector;
