@@ -78,10 +78,10 @@ static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt){
             samples = ((((pkt->data[4] & 0x07) << 4) | (pkt->data[7] & 0x3f)) >> 2) << 5;
             break;
         default:
-            av_log(NULL, AV_LOG_ERROR, "bad DTS syncword\n");
+            av_log(s, AV_LOG_ERROR, "bad DTS syncword\n");
             return -1;
     }
-    av_log(NULL, AV_LOG_DEBUG, "samples=%i\n", samples);
+    av_log(s, AV_LOG_DEBUG, "samples=%i\n", samples);
     switch(samples){
         case 512:
             ctx->data_type = IEC958_DTS1;
@@ -93,7 +93,7 @@ static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt){
             ctx->data_type = IEC958_DTS3;
             break;
         default:
-            av_log(NULL, AV_LOG_ERROR, "%i samples in DTS frame not supported\n", samples);
+            av_log(s, AV_LOG_ERROR, "%i samples in DTS frame not supported\n", samples);
             return -1;
     }
     ctx->pkt_offset = samples<<2;
@@ -118,7 +118,7 @@ static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt){
     int lsf = (pkt->data[1]>>3)&1;
     int layer = 3-((pkt->data[1]>>1)&3);
 
-    av_log(NULL, AV_LOG_DEBUG, "lsf: %i layer: %i\n", lsf, layer);
+    av_log(s, AV_LOG_DEBUG, "lsf: %i layer: %i\n", lsf, layer);
     ctx->data_type = mpeg_data_type[lsf][layer];
     ctx->pkt_offset = mpeg_pkt_offset[lsf][layer]<<2;
     // TODO Data type dependant info (normal/karaoke, dynamic range control)
@@ -132,10 +132,8 @@ static int spdif_header_aac(AVFormatContext *s, AVPacket *pkt){
     int ret;
 
     init_get_bits(&gbc, pkt->data, AAC_ADTS_HEADER_SIZE*8);
-    av_log(NULL, AV_LOG_INFO, "%02x %02x %02x %02x\n", pkt->data[0], pkt->data[1], pkt->data[2], pkt->data[3]);
     ret = ff_aac_parse_header(&gbc, &hdr);
 
-    av_log(NULL, AV_LOG_INFO, "ret=%i frames=%i samples=%i\n", ret, hdr.num_aac_frames, hdr.samples);
     ctx->pkt_offset = hdr.samples<<2;
     switch(hdr.num_aac_frames){
         case 1:
@@ -148,7 +146,7 @@ static int spdif_header_aac(AVFormatContext *s, AVPacket *pkt){
             ctx->data_type = IEC958_MPEG2_AAC_LSF_4096;
             break;
         default:
-            av_log(NULL, AV_LOG_ERROR, "%i samples in AAC frame not supported\n", hdr.samples);
+            av_log(s, AV_LOG_ERROR, "%i samples in AAC frame not supported\n", hdr.samples);
             return -1;
     }
     //TODO Data type dependent info (LC profile/SBR)
@@ -175,7 +173,7 @@ static int spdif_write_header(AVFormatContext *s){
             break;
 
         default:
-            av_log(NULL, AV_LOG_ERROR, "codec not supported\n");
+            av_log(s, AV_LOG_ERROR, "codec not supported\n");
             return -1;
     }
     put_le16(s->pb, 0);
@@ -209,14 +207,14 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt){
 
     i=(ctx->pkt_offset - BURST_HEADER_SIZE - pkt->size) >> 1;
     if(i < 0){
-        av_log(NULL, AV_LOG_ERROR, "bitrate is too high\n");
+        av_log(s, AV_LOG_ERROR, "bitrate is too high\n");
         return -1;
     }
 
     for(; i>0; i--)
         put_le16(s->pb, 0);
 
-    av_log(NULL, AV_LOG_DEBUG, "type=%x len=%i pkt_offset=%i\n", ctx->data_type, pkt->size, ctx->pkt_offset);
+    av_log(s, AV_LOG_DEBUG, "type=%x len=%i pkt_offset=%i\n", ctx->data_type, pkt->size, ctx->pkt_offset);
 
     put_flush_packet(s->pb);
     return 0;
