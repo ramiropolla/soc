@@ -58,6 +58,8 @@ enum Mode {
 };
 
 // declaration of received frame types
+// FIXME: are the values important? They seem to only be used by an obsolete
+// test vector format. But I haven't chased down all the references yet.
 enum RXFrameType {
     RX_SPEECH_GOOD = 0,
     RX_SPEECH_DEGRADED,
@@ -99,10 +101,9 @@ typedef struct {
     AMRNBSubframe subframe[4]; ///< unpacked data for each subframe
 } AMRNBFrame;
 
-// The following order* tables are used to reorder the bitstream into the bit
-// allocation format as in the specification. The bits are grouped into three
-// classes of importance. See 3GPP TS 26.101 for more information.
 
+// The following order* tables are used to convert AMR frame parameters to and
+// from a bitstream. See 3GPP TS 26.101 for more information.
 #define AMR_LSF(variable, bit) {offsetof(AMRNBFrame, lsf[variable]) >> 1, bit}
 
 #define AMR_OF(frame_num, variable, bit) {offsetof(AMRNBFrame, subframe[frame_num].variable)>>1, bit}
