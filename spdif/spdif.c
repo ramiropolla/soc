@@ -44,9 +44,9 @@
 //#define IEC958_EAC3               0x15
 
 typedef struct IEC958Context{
-    int data_type;
-    int pkt_size;
-    int pkt_offset; // bytes
+    int data_type;  ///< Burst info
+    int pkt_size;   ///< Length code (number of bits or bytes - according to data_type)
+    int pkt_offset; ///< Repetition period of a data burst in bytes
     int (*header_info)(AVFormatContext *s, AVPacket *pkt);
 } IEC958Context;
 
