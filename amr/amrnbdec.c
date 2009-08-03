@@ -237,7 +237,8 @@ static void adjust_lsf(float *lsf)
 static void lsf2lsp_for_mode122(AMRContext *p, float lsp[LP_FILTER_ORDER],
                                 const float lsf_no_r[LP_FILTER_ORDER],
                                 const float *lsf_quantizer[5],
-                                int quantizer_offset, int sign, int update)
+                                const int quantizer_offset,
+                                const int sign, const int update)
 {
     float lsf[LP_FILTER_ORDER]; // used for both the residual and total LSFs
     int i;
@@ -374,7 +375,8 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
  * @param mode                mode of the current frame
  */
 static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index,
-                             int prev_lag_int, int subframe, enum Mode mode)
+                             const int prev_lag_int, const int subframe,
+                             const enum Mode mode)
 {
     /* Note n * 10923 >> 15 is floor(x/3) for 0 <= n <= 32767 */
     if (subframe == 0 ||
@@ -476,7 +478,7 @@ static void interp_pitch_vector(float *pitch_vector, int lag_int,
 
 static void decode_pitch_vector(AMRContext *p,
                                 const AMRNBSubframe *amr_subframe,
-                                int subframe)
+                                const int subframe)
 {
     int pitch_lag_int, pitch_lag_frac;
 
@@ -555,9 +557,9 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index,
     memset(fixed_vector, 0, AMR_SUBFRAME_SIZE * sizeof(float));
 
     for (i = 0; i < TRACKS_MODE_102; i++) {
-        int pos1   = (pulse_position[i]     << 2) + i;
-        int pos2   = (pulse_position[i + 4] << 2) + i;
-        float sign = fixed_index[i] ? -1.0 : 1.0;
+        const int pos1   = (pulse_position[i]     << 2) + i;
+        const int pos2   = (pulse_position[i + 4] << 2) + i;
+        const float sign = fixed_index[i] ? -1.0 : 1.0;
         fixed_vector[pos1]  = sign;
         fixed_vector[pos2] += pos2 < pos1 ? -sign : sign;
     }
@@ -580,9 +582,9 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index,
     memset(fixed_vector, 0, AMR_SUBFRAME_SIZE * sizeof(float));
 
     for (i = 0; i < TRACKS; i++) {
-        int pos1   = gray_decode[fixed_index[i    ] & 7] * TRACKS + i;
-        int pos2   = gray_decode[fixed_index[i + 5] & 7] * TRACKS + i;
-        float sign = (fixed_index[i] & 8) ? -1.0 : 1.0;
+        const int pos1   = gray_decode[fixed_index[i    ] & 7] * TRACKS + i;
+        const int pos2   = gray_decode[fixed_index[i + 5] & 7] * TRACKS + i;
+        const float sign = (fixed_index[i] & 8) ? -1.0 : 1.0;
         fixed_vector[pos1]  = sign;
         fixed_vector[pos2] += pos2 < pos1 ? -sign : sign;
     }
@@ -604,7 +606,7 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index,
  * @param subframe     current subframe number
  */
 static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
-                                enum Mode mode, int subframe)
+                                const enum Mode mode, const int subframe)
 {
     assert(MODE_475 <= mode && mode <= MODE_122);
 
@@ -614,7 +616,7 @@ static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
         decode_8_pulses_31bits(pulses, fixed_vector);
     } else {
         int pulse_position[4], pulse_subset;
-        int fixed_index = pulses[0];
+        const int fixed_index = pulses[0];
 
         if (mode <= MODE_515) {
             pulse_subset      = ((fixed_index >> 3) & 8)     + (subframe << 1);
@@ -720,7 +722,7 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
  * @return fixed gain smoothed
  */
 static float fixed_gain_smooth(AMRContext *p , const float *lsf,
-                               const float *lsf_avg, enum Mode mode)
+                               const float *lsf_avg, const enum Mode mode)
 {
     float diff = 0.0;
     int i;
@@ -738,10 +740,10 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsf,
     if (p->hang_count < 40) {
         p->hang_count++;
     } else if (mode < MODE_74 || mode == MODE_102) {
-        float smoothing_factor = av_clipf(4.0 * diff - 1.6, 0.0, 1.0);
-        float fixed_gain_mean = (p->fixed_gain[0] + p->fixed_gain[1] +
-                                 p->fixed_gain[2] + p->fixed_gain[3] +
-                                 p->fixed_gain[4]) * 0.2;
+        const float smoothing_factor = av_clipf(4.0 * diff - 1.6, 0.0, 1.0);
+        const float fixed_gain_mean = (p->fixed_gain[0] + p->fixed_gain[1] +
+                                       p->fixed_gain[2] + p->fixed_gain[3] +
+                                       p->fixed_gain[4]) * 0.2;
         return smoothing_factor * p->fixed_gain[4] +
                (1.0 - smoothing_factor) * fixed_gain_mean;
     }
@@ -758,7 +760,7 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsf,
  * @param fixed_gain_factor decoded gain correction factor
  */
 static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
-                         enum Mode mode, int subframe,
+                         const enum Mode mode, const int subframe,
                          float *fixed_gain_factor)
 {
     if (mode == MODE_122 || mode == MODE_795) {
@@ -785,7 +787,7 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
  * @param fixed_gain_factor gain correction factor
  * @param fixed_vector algebraic codebook vector
  */
-static void set_fixed_gain(AMRContext *p, enum Mode mode,
+static void set_fixed_gain(AMRContext *p, const enum Mode mode,
                            float fixed_gain_factor, float *fixed_vector)
 {
     // ^g_c = ^gamma_gc * g_c' (equation 69)
