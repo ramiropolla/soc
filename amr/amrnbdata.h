@@ -34,25 +34,25 @@
 #include "libavutil/common.h"      /* offsetof */
 #include "libavutil/mathematics.h" /* M_PI */
 
-// general definitions
-#define AMR_BLOCK_SIZE    160
-#define AMR_SUBFRAME_SIZE  40
-#define AMR_SAMPLE_BOUND 32768.0
+#define AMR_BLOCK_SIZE              160   ///< Samples per frame
+#define AMR_SUBFRAME_SIZE            40   ///< Samples per subframe
+#define AMR_SAMPLE_BOUND        32768.0   ///< Threshold for synthesis overflow
 #define AMR_SAMPLE_SCALE  (1.0/32768.0)   ///< AMR is designed to produce 16-bit PCM samples (3GPP TS 26.090 4.2)
 
-// definition of modes for decoder
-#define NO_DATA 15
+
+#define NO_DATA 15                        ///< no transmission
+/** Frame type (Table 1a in 3GPP TS 26.101) */
 enum Mode {
-    MODE_475 = 0,
-    MODE_515,
-    MODE_59,
-    MODE_67,
-    MODE_74,
-    MODE_795,
-    MODE_102,
-    MODE_122,
+    MODE_475 = 0,                         ///< 4.75 kbit/s
+    MODE_515,                             ///< 5.15 kbit/s
+    MODE_59,                              ///< 5.90 kbit/s
+    MODE_67,                              ///< 6.70 kbit/s
+    MODE_74,                              ///< 7.40 kbit/s
+    MODE_795,                             ///< 7.95 kbit/s
+    MODE_102,                             ///< 10.2 kbit/s
+    MODE_122,                             ///< 12.2 kbit/s
     MODE_DTX,                             ///< silent frame
-    N_MODES                               ///< number of modes
+    N_MODES,                              ///< number of modes
 };
 
 /** Received frame types
@@ -72,14 +72,14 @@ enum RXFrameType {
     RX_N_FRAMETYPES     // number of frame types
 };
 
-#define LP_FILTER_ORDER 10 // linear predictive coding filter order
+#define LP_FILTER_ORDER 10        ///< linear predictive coding filter order
 
 /**
  * Bit-order table type
  */
 typedef struct AMROrder {
-    uint8_t index;
-    uint8_t bit;
+    uint8_t index;                ///< index in (uint16_t *)AMRNBFrame
+    uint8_t bit;                  ///< bit index, LSB=0, MSB=15
 } AMROrder;
 
 
@@ -105,12 +105,18 @@ typedef struct {
 
 // The following order* tables are used to convert AMR frame parameters to and
 // from a bitstream. See 3GPP TS 26.101 for more information.
-#define AMR_LSF(variable, bit) {offsetof(AMRNBFrame, lsf[variable]) >> 1, bit}
 
+/** Specify an LSF parameter bit */
+#define AMR_LSF(variable, bit) {offsetof(AMRNBFrame, lsf[variable]) >> 1, bit}
+/** Specify a subframe-specific bit */
 #define AMR_OF(frame_num, variable, bit) {offsetof(AMRNBFrame, subframe[frame_num].variable)>>1, bit}
+/** Specify a pitch gain bit */
 #define AMR_PGAIN(frame_num, bit)            AMR_OF(frame_num, p_gain, bit)
+/** Specify a fixed gain bit */
 #define AMR_FIXED_GAIN(frame_num, bit)       AMR_OF(frame_num, fixed_gain, bit)
+/** Specify a pitch lag bit */
 #define AMR_PLAG(frame_num, bit)             AMR_OF(frame_num, p_lag, bit)
+/** Specify a pulse bit */
 #define AMR_PULSES(frame_num, pulse_id, bit) AMR_OF(frame_num, pulses[pulse_id], bit)
 
 static const AMROrder order_MODE_475[95] = {
@@ -523,7 +529,7 @@ static const uint8_t mode_bits[N_MODES] = {
 
 
 /**
- * Initialize values for the lsp vector from the 4th subframe of the
+ * Values for the lsp vector from the 4th subframe of the
  * previous subframe values.
  *
  * @note: Taken from Decoder_amr_reset in Q15 using val/1000
@@ -531,7 +537,7 @@ static const uint8_t mode_bits[N_MODES] = {
 static const int8_t lsp_sub4_init[LP_FILTER_ORDER] = { 30, 26, 21, 15, 8, 0, -8, -15, -21, -26 };
 
 /**
- * Initialize mean lsp values.
+ * Mean lsp values.
  *
  * @note: Taken from Decoder_amr_reset in Q15
  */
@@ -2021,22 +2027,21 @@ static const float lsf_5_mean[LP_FILTER_ORDER] = {
 1982.91 , 2407.96 , 2708.01 , 3104.00 , 3344.97 ,
 };
 
+/** Prediction factor table for modes other than 12.2kbit/s */
 static const float pred_fac[LP_FILTER_ORDER] = {
 0.291626, 0.328644, 0.383636, 0.405640, 0.438873,
 0.355560, 0.323120, 0.298065, 0.262238, 0.197876,
 };
 
-#define PRED_FAC_MODE_122 0.65
-#define FREQ_LSP_FAC      (2.0*M_PI/8000.0)
-#define FREQ_LSF          (1/8000.0)
-#define MIN_LSF_SPACING   50.0488
+/** Prediction factor for 12.2kbit/s mode */
+#define PRED_FAC_MODE_122              0.65
 
-
-// pitch tables
-
-#define PITCH_LAG_MAX            143
-#define PITCH_LAG_MIN             20
-#define PITCH_LAG_MIN_MODE_122    18
+#define FREQ_LSP_FAC      (2.0*M_PI/8000.0) ///< LSF tables (Hertz) to radians
+#define FREQ_LSF                 (1/8000.0) ///< Scale from LSF table (Hertz) to lsf_avg_init values
+#define MIN_LSF_SPACING             50.0488 ///< Ensures stability of LPC filter
+#define PITCH_LAG_MAX                   143 ///< Upper bound on decoded lag search
+#define PITCH_LAG_MIN                    20 ///< Lower bound on decoded lag search
+#define PITCH_LAG_MIN_MODE_122           18 ///< Lower bound on decoded lag search in 12.2kbit/s mode
 
 /** b60 hamming windowed sinc function coefficients */
 static const float b60[61] = {
@@ -2053,7 +2058,9 @@ static const float b60[61] = {
 
 // fixed tables
 
+/** In 12.2kbit/s mode, positions are divided into TRACKS classes. */
 #define TRACKS          5
+/** In 10.2kbit/s mode, positions are divided into TRACKS_MODE_102 classes. */
 #define TRACKS_MODE_102 4
 
 /**
@@ -2070,6 +2077,7 @@ static const uint8_t gray_decode[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
 
 // gain tables
 
+/** Initial energy in dB. Also used for bad frames (unimplemented). */
 #define MIN_ENERGY -14.0
 
 /** scalar quantized pitch gain table for 7.95 and 12.2 kbps modes */
@@ -2336,19 +2344,22 @@ static const float *ir_filters_lookup_MODE_795[2] = { ir_filter_strong_MODE_795,
 
 // postfilter tables
 
-// Powers of formant factors (section 6.2.1)
+/** Powers of formant factor gamma_n=0.7 for modes 12.2 and 10.2kbit/s */
 static const float formant_high_n[10] = {
 0.700000, 0.490000, 0.343000, 0.240100, 0.168070,
 0.117649, 0.082354, 0.057648, 0.040354, 0.028248
 };
+/** Powers of formant factor gamma_d=0.75 for modes 12.2 and 10.2kbit/s */
 static const float formant_high_d[10] = {
 0.750000, 0.562500, 0.421875, 0.316406, 0.237305,
 0.177979, 0.133484, 0.100113, 0.075085, 0.056314
 };
+/** Powers of formant factor gamma_n=0.55 for modes less than 10.2kbit/s */
 static const float formant_low_n[10] = {
 0.550000, 0.302500, 0.166375, 0.091506, 0.050328,
 0.027681, 0.015224, 0.008373, 0.004605, 0.002533
 };
+/** Powers of formant factor gamma_d=0.7 for modes less than 10.2kbit/s */
 static const float *formant_low_d = formant_high_n;
 
 /** Number of impulse response coefficients used for tilt factor */
