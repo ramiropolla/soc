@@ -148,7 +148,7 @@ static enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf,
 
         memset(&p->frame, 0, sizeof(AMRNBFrame));
         for (i = 0; i < mode_bits[mode]; i++)
-            data[order[i].array_element] += get_bits1(&p->gb) * (1 << order[i].bit_mask);
+            data[order[i].index] += get_bits1(&p->gb) * (1 << order[i].bit);
 
         if (mode == MODE_DTX) {
             p->cur_frame_type = RX_SID_FIRST;

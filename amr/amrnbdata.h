@@ -85,8 +85,8 @@ enum RXFrameType {
 
 // typedef for bit order tables
 typedef struct AMROrder {
-    uint8_t array_element;
-    uint8_t bit_mask;
+    uint8_t index;
+    uint8_t bit;
 } AMROrder;
 
 
