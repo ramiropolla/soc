@@ -81,7 +81,6 @@ typedef struct AMROrder {
 } AMROrder;
 
 
-/**************************** tables *****************************/
 /**
  * AMRNB unpacked data subframe
  */
@@ -2351,7 +2350,6 @@ static const float *formant_low_d = formant_high_n;
 // Adaptive gain control factor used in post-filter
 #define AMR_AGC_ALPHA 0.9
 
-/**************************** end of tables *****************************/
 
 #endif /* AVCODEC_AMRNBDATA_H */
 
