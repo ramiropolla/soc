@@ -356,7 +356,7 @@ static void lsp2lpc(float *lsp, float *lpc_coeffs)
     for (i = 0; i < LP_FILTER_ORDER; i++)
         lsp_double[i] = lsp[i];
 
-    ff_celp_lspf2lpc(lsp_double, lpc_coeffs);
+    ff_acelp_lspd2lpc(lsp_double, lpc_coeffs);
 }
 
 /// @}
