@@ -1,6 +1,6 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 19562)
+--- libavcodec/Makefile	(revision 19571)
 +++ libavcodec/Makefile	(working copy)
 @@ -42,6 +42,7 @@
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
@@ -10,18 +10,9 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
  OBJS-$(CONFIG_APE_DECODER)             += apedec.o
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
-@@ -177,7 +178,7 @@
- OBJS-$(CONFIG_PPM_DECODER)             += pnmenc.o pnm.o
- OBJS-$(CONFIG_PPM_ENCODER)             += pnmenc.o
- OBJS-$(CONFIG_PTX_DECODER)             += ptx.o
--OBJS-$(CONFIG_QCELP_DECODER)           += qcelpdec.o qcelp_lsp.o celp_math.o celp_filters.o acelp_vectors.o
-+OBJS-$(CONFIG_QCELP_DECODER)           += qcelpdec.o celp_math.o celp_filters.o acelp_vectors.o lsp.o
- OBJS-$(CONFIG_QDM2_DECODER)            += qdm2.o mpegaudiodec.o mpegaudiodecheader.o mpegaudio.o mpegaudiodata.o
- OBJS-$(CONFIG_QDRAW_DECODER)           += qdrw.o
- OBJS-$(CONFIG_QPEG_DECODER)            += qpeg.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 19562)
+--- libavcodec/allcodecs.c	(revision 19571)
 +++ libavcodec/allcodecs.c	(working copy)
 @@ -198,6 +198,7 @@
      REGISTER_ENCDEC  (AAC, aac);
@@ -33,7 +24,7 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (COOK, cook);
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 19562)
+--- doc/general.texi	(revision 19571)
 +++ doc/general.texi	(working copy)
 @@ -522,8 +522,8 @@
  @item ADPCM Westwood Studios IMA @tab     @tab  X
@@ -48,7 +39,7 @@ Index: doc/general.texi
  @item Apple lossless audio   @tab  X  @tab  X
 Index: Changelog
 ===================================================================
---- Changelog	(revision 19562)
+--- Changelog	(revision 19571)
 +++ Changelog	(working copy)
 @@ -30,6 +30,7 @@
  - Experimental AAC encoder
@@ -60,7 +51,7 @@ Index: Changelog
  
 Index: libavcodec/celp_filters.c
 ===================================================================
---- libavcodec/celp_filters.c	(revision 19562)
+--- libavcodec/celp_filters.c	(revision 19571)
 +++ libavcodec/celp_filters.c	(working copy)
 @@ -47,6 +47,28 @@
      }
@@ -101,7 +92,7 @@ Index: libavcodec/celp_filters.c
  }
 Index: libavcodec/celp_filters.h
 ===================================================================
---- libavcodec/celp_filters.h	(revision 19562)
+--- libavcodec/celp_filters.h	(revision 19571)
 +++ libavcodec/celp_filters.h	(working copy)
 @@ -42,6 +42,22 @@
                             int len);
@@ -128,7 +119,7 @@ Index: libavcodec/celp_filters.h
   * @param filter_coeffs filter coefficients (-0x8000 <= (3.12) < 0x8000)
 Index: libavcodec/acelp_filters.c
 ===================================================================
---- libavcodec/acelp_filters.c	(revision 19562)
+--- libavcodec/acelp_filters.c	(revision 19571)
 +++ libavcodec/acelp_filters.c	(working copy)
 @@ -93,3 +93,17 @@
          hpf_f[0] = tmp;
@@ -150,7 +141,7 @@ Index: libavcodec/acelp_filters.c
 +}
 Index: libavcodec/acelp_filters.h
 ===================================================================
---- libavcodec/acelp_filters.h	(revision 19562)
+--- libavcodec/acelp_filters.h	(revision 19571)
 +++ libavcodec/acelp_filters.h	(working copy)
 @@ -81,4 +81,12 @@
  void ff_acelp_high_pass_filter(int16_t* out, int hpf_f[2],
@@ -167,7 +158,7 @@ Index: libavcodec/acelp_filters.h
  #endif /* AVCODEC_ACELP_FILTERS_H */
 Index: libavcodec/acelp_vectors.c
 ===================================================================
---- libavcodec/acelp_vectors.c	(revision 19562)
+--- libavcodec/acelp_vectors.c	(revision 19571)
 +++ libavcodec/acelp_vectors.c	(working copy)
 @@ -22,6 +22,7 @@
  
@@ -194,7 +185,7 @@ Index: libavcodec/acelp_vectors.c
 +}
 Index: libavcodec/acelp_vectors.h
 ===================================================================
---- libavcodec/acelp_vectors.h	(revision 19562)
+--- libavcodec/acelp_vectors.h	(revision 19571)
 +++ libavcodec/acelp_vectors.h	(working copy)
 @@ -164,4 +164,22 @@
  void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
@@ -219,195 +210,3 @@ Index: libavcodec/acelp_vectors.h
 +                        const int length);
 +
  #endif /* AVCODEC_ACELP_VECTORS_H */
-Index: libavcodec/qcelpdec.c
-===================================================================
---- libavcodec/qcelpdec.c	(revision 19562)
-+++ libavcodec/qcelpdec.c	(working copy)
-@@ -38,6 +38,7 @@
- #include "celp_math.h"
- #include "celp_filters.h"
- #include "acelp_vectors.h"
-+#include "lsp.h"
- 
- #undef NDEBUG
- #include <assert.h>
-@@ -76,13 +77,6 @@
- } QCELPContext;
- 
- /**
-- * Reconstructs LPC coefficients from the line spectral pair frequencies.
-- *
-- * TIA/EIA/IS-733 2.4.3.3.5
-- */
--void ff_celp_lspf2lpc(const double *lspf, float *lpc);
--
--/**
-  * Initialize the speech codec according to the specification.
-  *
-  * TIA/EIA/IS-733 2.4.9
-Index: libavcodec/qcelp_lsp.c
-===================================================================
---- libavcodec/qcelp_lsp.c	(revision 19562)
-+++ libavcodec/qcelp_lsp.c	(working copy)
-@@ -1,81 +0,0 @@
--/*
-- * QCELP decoder
-- * Copyright (c) 2007 Reynaldo H. Verdejo Pinochet
-- *
-- * This file is part of FFmpeg.
-- *
-- * FFmpeg is free software; you can redistribute it and/or
-- * modify it under the terms of the GNU Lesser General Public
-- * License as published by the Free Software Foundation; either
-- * version 2.1 of the License, or (at your option) any later version.
-- *
-- * FFmpeg is distributed in the hope that it will be useful,
-- * but WITHOUT ANY WARRANTY; without even the implied warranty of
-- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-- * Lesser General Public License for more details.
-- *
-- * You should have received a copy of the GNU Lesser General Public
-- * License along with FFmpeg; if not, write to the Free Software
-- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
-- */
--
--/**
-- * @file libavcodec/qcelp_lsp.c
-- * QCELP decoder
-- * @author Reynaldo H. Verdejo Pinochet
-- * @remark FFmpeg merging spearheaded by Kenan Gillet
-- * @remark Development mentored by Benjamin Larson
-- */
--
--#include "libavutil/mathematics.h"
--
--/**
-- * Computes the Pa / (1 + z(-1)) or Qa / (1 - z(-1)) coefficients
-- * needed for LSP to LPC conversion.
-- * We only need to calculate the 6 first elements of the polynomial.
-- *
-- * @param lspf line spectral pair frequencies
-- * @param f [out] polynomial input/output as a vector
-- *
-- * TIA/EIA/IS-733 2.4.3.3.5-1/2
-- */
--static void lsp2polyf(const double *lspf, double *f, int lp_half_order)
--{
--    int i, j;
--
--    f[0] = 1.0;
--    f[1] = -2 * lspf[0];
--    lspf -= 2;
--    for(i=2; i<=lp_half_order; i++)
--    {
--        double val = -2 * lspf[2*i];
--        f[i] = val * f[i-1] + 2*f[i-2];
--        for(j=i-1; j>1; j--)
--            f[j] += f[j-1] * val + f[j-2];
--        f[1] += val;
--    }
--}
--
--/**
-- * Reconstructs LPC coefficients from the line spectral pair frequencies.
-- *
-- * @param lspf line spectral pair frequencies
-- * @param lpc linear predictive coding coefficients
-- */
--void ff_celp_lspf2lpc(const double *lspf, float *lpc)
--{
--    double pa[6], qa[6];
--    int   i;
--
--    lsp2polyf(lspf,     pa, 5);
--    lsp2polyf(lspf + 1, qa, 5);
--
--    for (i=4; i>=0; i--)
--    {
--        double paf = pa[i+1] + pa[i];
--        double qaf = qa[i+1] - qa[i];
--
--        lpc[i  ] = 0.5*(paf+qaf);
--        lpc[9-i] = 0.5*(paf-qaf);
--    }
--}
-Index: libavcodec/lsp.c
-===================================================================
---- libavcodec/lsp.c	(revision 19562)
-+++ libavcodec/lsp.c	(working copy)
-@@ -1,6 +1,7 @@
- /*
-  * LSP routines for ACELP-based codecs
-  *
-+ * Copyright (c) 2007 Reynaldo H. Verdejo Pinochet (QCELP decoder)
-  * Copyright (c) 2008 Vladimir Voroshilov
-  *
-  * This file is part of FFmpeg.
-@@ -118,3 +119,48 @@
-     /* LSP values for second subframe (3.2.5 of G.729)*/
-     ff_acelp_lsp2lpc(lp_2nd, lsp_2nd, lp_order >> 1);
- }
-+
-+/**
-+ * Computes the Pa / (1 + z(-1)) or Qa / (1 - z(-1)) coefficients
-+ * needed for LSP to LPC conversion.
-+ * We only need to calculate the 6 first elements of the polynomial.
-+ *
-+ * @param lspf line spectral pair frequencies
-+ * @param f [out] polynomial input/output as a vector
-+ *
-+ * TIA/EIA/IS-733 2.4.3.3.5-1/2
-+ */
-+static void lsp2polyf(const double *lspf, double *f, int lp_half_order)
-+{
-+    int i, j;
-+
-+    f[0] = 1.0;
-+    f[1] = -2 * lspf[0];
-+    lspf -= 2;
-+    for(i=2; i<=lp_half_order; i++)
-+    {
-+        double val = -2 * lspf[2*i];
-+        f[i] = val * f[i-1] + 2*f[i-2];
-+        for(j=i-1; j>1; j--)
-+            f[j] += f[j-1] * val + f[j-2];
-+        f[1] += val;
-+    }
-+}
-+
-+void ff_celp_lspf2lpc(const double *lspf, float *lpc)
-+{
-+    double pa[6], qa[6];
-+    int   i;
-+
-+    lsp2polyf(lspf,     pa, 5);
-+    lsp2polyf(lspf + 1, qa, 5);
-+
-+    for (i=4; i>=0; i--)
-+    {
-+        double paf = pa[i+1] + pa[i];
-+        double qaf = qa[i+1] - qa[i];
-+
-+        lpc[i  ] = 0.5*(paf+qaf);
-+        lpc[9-i] = 0.5*(paf-qaf);
-+    }
-+}
-Index: libavcodec/lsp.h
-===================================================================
---- libavcodec/lsp.h	(revision 19562)
-+++ libavcodec/lsp.h	(working copy)
-@@ -67,4 +67,14 @@
-  */
- void ff_acelp_lp_decode(int16_t* lp_1st, int16_t* lp_2nd, const int16_t* lsp_2nd, const int16_t* lsp_prev, int lp_order);
- 
-+/**
-+ * Reconstructs LPC coefficients from the line spectral pair frequencies.
-+ *
-+ * TIA/EIA/IS-733 2.4.3.3.5
-+ *
-+ * @param lspf line spectral pair frequencies
-+ * @param lpc linear predictive coding coefficients
-+ */
-+void ff_celp_lspf2lpc(const double *lspf, float *lpc);
-+
- #endif /* AVCODEC_LSP_H */
