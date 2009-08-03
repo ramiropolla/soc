@@ -1,6 +1,6 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 19571)
+--- libavcodec/Makefile	(revision 19574)
 +++ libavcodec/Makefile	(working copy)
 @@ -42,6 +42,7 @@
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
@@ -12,7 +12,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 19571)
+--- libavcodec/allcodecs.c	(revision 19574)
 +++ libavcodec/allcodecs.c	(working copy)
 @@ -198,6 +198,7 @@
      REGISTER_ENCDEC  (AAC, aac);
@@ -24,7 +24,7 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (COOK, cook);
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 19571)
+--- doc/general.texi	(revision 19574)
 +++ doc/general.texi	(working copy)
 @@ -522,8 +522,8 @@
  @item ADPCM Westwood Studios IMA @tab     @tab  X
@@ -39,7 +39,7 @@ Index: doc/general.texi
  @item Apple lossless audio   @tab  X  @tab  X
 Index: Changelog
 ===================================================================
---- Changelog	(revision 19571)
+--- Changelog	(revision 19574)
 +++ Changelog	(working copy)
 @@ -30,6 +30,7 @@
  - Experimental AAC encoder
@@ -51,7 +51,7 @@ Index: Changelog
  
 Index: libavcodec/celp_filters.c
 ===================================================================
---- libavcodec/celp_filters.c	(revision 19571)
+--- libavcodec/celp_filters.c	(revision 19574)
 +++ libavcodec/celp_filters.c	(working copy)
 @@ -47,6 +47,28 @@
      }
@@ -82,17 +82,9 @@ Index: libavcodec/celp_filters.c
  int ff_celp_lp_synthesis_filter(int16_t *out,
                                  const int16_t* filter_coeffs,
                                  const int16_t* in,
-@@ -110,6 +132,6 @@
-     for (n = 0; n < buffer_length; n++) {
-         out[n] = in[n];
-         for (i = 1; i < filter_length; i++)
--            out[n] -= filter_coeffs[i-1] * in[n-i];
-+            out[n] += filter_coeffs[i-1] * in[n-i];
-     }
- }
 Index: libavcodec/celp_filters.h
 ===================================================================
---- libavcodec/celp_filters.h	(revision 19571)
+--- libavcodec/celp_filters.h	(revision 19574)
 +++ libavcodec/celp_filters.h	(working copy)
 @@ -42,6 +42,22 @@
                             int len);
@@ -119,7 +111,7 @@ Index: libavcodec/celp_filters.h
   * @param filter_coeffs filter coefficients (-0x8000 <= (3.12) < 0x8000)
 Index: libavcodec/acelp_filters.c
 ===================================================================
---- libavcodec/acelp_filters.c	(revision 19571)
+--- libavcodec/acelp_filters.c	(revision 19574)
 +++ libavcodec/acelp_filters.c	(working copy)
 @@ -93,3 +93,17 @@
          hpf_f[0] = tmp;
@@ -141,7 +133,7 @@ Index: libavcodec/acelp_filters.c
 +}
 Index: libavcodec/acelp_filters.h
 ===================================================================
---- libavcodec/acelp_filters.h	(revision 19571)
+--- libavcodec/acelp_filters.h	(revision 19574)
 +++ libavcodec/acelp_filters.h	(working copy)
 @@ -81,4 +81,12 @@
  void ff_acelp_high_pass_filter(int16_t* out, int hpf_f[2],
@@ -158,7 +150,7 @@ Index: libavcodec/acelp_filters.h
  #endif /* AVCODEC_ACELP_FILTERS_H */
 Index: libavcodec/acelp_vectors.c
 ===================================================================
---- libavcodec/acelp_vectors.c	(revision 19571)
+--- libavcodec/acelp_vectors.c	(revision 19574)
 +++ libavcodec/acelp_vectors.c	(working copy)
 @@ -22,6 +22,7 @@
  
@@ -185,7 +177,7 @@ Index: libavcodec/acelp_vectors.c
 +}
 Index: libavcodec/acelp_vectors.h
 ===================================================================
---- libavcodec/acelp_vectors.h	(revision 19571)
+--- libavcodec/acelp_vectors.h	(revision 19574)
 +++ libavcodec/acelp_vectors.h	(working copy)
 @@ -164,4 +164,22 @@
  void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
