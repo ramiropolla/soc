@@ -658,7 +658,7 @@ static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode,
 
     // The spec suggests the current pitch gain is always used, but in other
     // modes the pitch and codebook gains are joinly quantized (sec 5.8.2)
-    // so the codebook gain cannot depend on the quantised pitch gain.
+    // so the codebook gain cannot depend on the quantized pitch gain.
     if (mode == MODE_122)
         p->beta = FFMIN(p->pitch_gain[4], 1.0);
 
@@ -669,7 +669,7 @@ static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode,
 
     // Save pitch sharpening factor for the next subframe
     // MODE_475 only updates on the 2nd and 4th subframes - this follows from
-    // the fact that the gains for two subframes are jointly quantised.
+    // the fact that the gains for two subframes are jointly quantized.
     if (mode != MODE_475 || subframe & 1)
         p->beta = av_clipf(p->pitch_gain[4], 0.0, SHARP_MAX);
 }
