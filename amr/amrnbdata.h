@@ -2327,7 +2327,7 @@ static const float *ir_filters_lookup[2]          = { ir_filter_strong,         
 static const float *ir_filters_lookup_MODE_795[2] = { ir_filter_strong_MODE_795, ir_filter_medium };
 
 
-// post-processing tables
+// postfilter tables
 
 // Powers of formant factors (section 6.2.1)
 static const float formant_high_n[10] = {
