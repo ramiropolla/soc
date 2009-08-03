@@ -37,10 +37,8 @@
 // general definitions
 #define AMR_BLOCK_SIZE    160
 #define AMR_SUBFRAME_SIZE  40
-
-// AMR is designed to produce 16-bit PCM samples (3GPP TS 26.090 4.2)
 #define AMR_SAMPLE_BOUND 32768.0
-#define AMR_SAMPLE_SCALE (1.0/32768.0)
+#define AMR_SAMPLE_SCALE  (1.0/32768.0)   ///< AMR is designed to produce 16-bit PCM samples (3GPP TS 26.090 4.2)
 
 // definition of modes for decoder
 #define NO_DATA 15
@@ -53,13 +51,15 @@ enum Mode {
     MODE_795,
     MODE_102,
     MODE_122,
-    MODE_DTX,   // silent frame
-    N_MODES     // number of modes
+    MODE_DTX,                             ///< silent frame
+    N_MODES                               ///< number of modes
 };
 
-// declaration of received frame types
-// FIXME: are the values important? They seem to only be used by an obsolete
-// test vector format. But I haven't chased down all the references yet.
+/** Received frame types
+ *
+ * FIXME: are the values important? They seem to only be used by an obsolete
+ * test vector format. But I haven't chased down all the references yet.
+ */
 enum RXFrameType {
     RX_SPEECH_GOOD = 0,
     RX_SPEECH_DEGRADED,
@@ -74,7 +74,9 @@ enum RXFrameType {
 
 #define LP_FILTER_ORDER 10 // linear predictive coding filter order
 
-// typedef for bit order tables
+/**
+ * Bit-order table type
+ */
 typedef struct AMROrder {
     uint8_t index;
     uint8_t bit;
@@ -506,7 +508,7 @@ static const AMROrder * const amr_unpacking_bitmaps_per_mode[9] = {
     order_MODE_DTX,
 };
 
-// number of bits for each mode
+/** number of bits for each mode */
 static const uint8_t mode_bits[N_MODES] = {
     FF_ARRAY_ELEMS(order_MODE_475),
     FF_ARRAY_ELEMS(order_MODE_515),
@@ -2036,7 +2038,7 @@ static const float pred_fac[LP_FILTER_ORDER] = {
 #define PITCH_LAG_MIN             20
 #define PITCH_LAG_MIN_MODE_122    18
 
-// b60 hamming windowed sinc function coefficients
+/** b60 hamming windowed sinc function coefficients */
 static const float b60[61] = {
  0.898529  ,  0.865051  ,  0.769257  ,  0.624054  ,  0.448639  ,  0.265289   ,  0.0959167 , -0.0412598 ,
 -0.134338  , -0.178986  , -0.178528  , -0.142609  , -0.0849304 , -0.0205078  ,  0.0369568 ,  0.0773926 ,
@@ -2059,10 +2061,10 @@ static const float b60[61] = {
  */
 static const uint8_t pulses_nb_per_mode[] = {2, 2, 2, 3, 4, 4, 8, 10};
 
-// track start positions for algebraic code book routines
+/** track start positions for algebraic code book routines */
 static const uint8_t track_position[16] = { 0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 1, 4, 1, 4 };
 
-// 3-bit Gray code to binary lookup table
+/** 3-bit Gray code to binary lookup table */
 static const uint8_t gray_decode[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
 
 
@@ -2070,7 +2072,7 @@ static const uint8_t gray_decode[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
 
 #define MIN_ENERGY -14.0
 
-// scalar quantized pitch gain table for 7.95 and 12.2 kbps modes
+/** scalar quantized pitch gain table for 7.95 and 12.2 kbps modes */
 static const float qua_gain_pit[16] = {
 0.0             , 0.20001220703125, 0.400146484375  , 0.5             ,
 0.5999755859375 , 0.70001220703125, 0.75            , 0.79998779296875,
@@ -2078,11 +2080,12 @@ static const float qua_gain_pit[16] = {
 1.04998779296875, 1.0999755859375 , 1.1500244140625 , 1.20001220703125,
 };
 
-// scalar quantized fixed gain table for 7.95 and 12.2 kbps modes
-// NOTE: This table was generated from the integer qua_gain_code tables
-// in the reference source that store Q10 qua_ener = 20*log10(g_fac).
-// The table below stores g_fac as a float from
-// printf("%10.6f,\n", powf(10.0, qua_ener/(20.0*(1<<10)))).
+/** scalar quantized fixed gain table for 7.95 and 12.2 kbps modes
+ *
+ * \note This table was generated from the integer qua_gain_code tables
+ * in the reference source that store Q10 qua_ener = 20*log10(g_fac).
+ * The table below stores g_fac as a float from
+ * printf("%10.6f,\n", powf(10.0, qua_ener/(20.0*(1<<10)))). */
 static const float qua_gain_code[32] = {
  0.077640,  0.100586,  0.130857,  0.170410,  0.204592,  0.235358,  0.270507,  0.311044,
  0.357898,  0.411116,  0.473151,  0.543935,  0.625519,  0.719258,  0.827138,  0.951199,
@@ -2090,16 +2093,16 @@ static const float qua_gain_code[32] = {
  3.347019,  3.849033,  4.426342,  5.090240,  6.108541,  7.940604, 10.323297, 13.420948,
 };
 
-// desired mean innovation energy
-// index is an active mode
+/** desired mean innovation energy, indexed by active mode */
 static const float energy_mean[8] = { 33.0, 33.0, 33.0, 28.75, 30.0, 36.0, 33.0, 36.0 };
 
-// 4-tap moving average prediction coefficients
+/** 4-tap moving average prediction coefficients */
 static const float energy_pred_fac[4] = { 0.68, 0.58, 0.34, 0.19 };
 
-// gain table for 4.75 kbps mode
-// first index has even/odd indexes for subframes 0,2/1,3
-// second index is {pitch_gain, fixed_gain_factor}
+/** gain table for 4.75 kbps mode
+ *
+ * first index has even/odd indexes for subframes 0,2/1,3
+ * second index is {pitch_gain, fixed_gain_factor} */
 static const float gains_MODE_475[512][2] = {
 {0.049561, 0.031250}, {0.033081, 0.034180}, {0.175354, 0.277100}, {0.138306, 0.830566},
 {0.126160, 0.137451}, {0.773743, 0.157959}, {0.252197, 0.438965}, {0.341858, 1.290283},
@@ -2231,8 +2234,9 @@ static const float gains_MODE_475[512][2] = {
 {1.249695, 0.898926}, {1.196411, 0.825195}, {0.796143, 4.729736}, {0.642456, 5.645508},
 };
 
-// gain table for 6.70, 7.40 and 10.2 kbps modes
-// second index is {pitch_gain, fixed_gain_factor}
+/** gain table for 6.70, 7.40 and 10.2 kbps modes
+ *
+ * second index is {pitch_gain, fixed_gain_factor} */
 static const float gains_high[128][2] = {
 {0.0352173, 0.161621 }, {0.0491943, 0.448242 }, {0.189758 , 0.256836 }, {0.255188 , 0.338623 },
 {0.144836 , 0.347900 }, {0.198242 , 0.484619 }, {0.111511 , 0.566406 }, {0.0574341, 0.809082 },
@@ -2268,8 +2272,9 @@ static const float gains_high[128][2] = {
 {1.25226  , 2.77856  }, {1.10321  , 3.53638  }, {1.22064  , 4.36572  }, {1.15002  , 7.99902  },
 };
 
-// gain table for 5.15 and 5.90 kbps modes
-// second index is {pitch_gain, fixed_gain_factor}
+/** gain table for 5.15 and 5.90 kbps modes
+ *
+ * second index is {pitch_gain, fixed_gain_factor} */
 static const float gains_low[64][2] = {
 {0.659973 , 7.01978  }, {1.25000  , 0.679932 }, {1.14996  , 1.60986  }, {0.379944 , 1.80981  },
 {1.04999  , 2.54980  }, {1.31995  , 0.309814 }, {1.28998  , 1.07983  }, {0.689941 , 0.379883 },
@@ -2292,12 +2297,15 @@ static const float gains_low[64][2] = {
 
 // pre-processing tables
 
-// The specification says 0.8, which should be 13107, but the reference C code
-// uses 13017 instead. (Amusingly the same applies to SHARP_MAX in g729dec.c.)
+/** Maximum sharpening factor
+ *
+ * The specification says 0.8, which should be 13107, but the reference C code
+ * uses 13017 instead. (Amusingly the same applies to SHARP_MAX in g729dec.c.)
+ */
 #define SHARP_MAX 0.79449462890625
 
-// impulse response filter tables converted to float from Q15 int32_t used for
-// anti-sparseness processing
+/** impulse response filter tables converted to float from Q15 int32_t
+ * used for anti-sparseness processing */
 static const float ir_filter_strong_MODE_795[AMR_SUBFRAME_SIZE] = {
  0.817169,  0.024445,  0.076447, -0.020844, -0.042175,  0.017761,  0.018433, -0.038879,
  0.107147, -0.179871,  0.138367, -0.015228, -0.059204,  0.091888, -0.154358,  0.171326,
@@ -2343,11 +2351,11 @@ static const float formant_low_n[10] = {
 };
 static const float *formant_low_d = formant_high_n;
 
-// Number of impulse response coefficients used for tilt factor
+/** Number of impulse response coefficients used for tilt factor */
 #define AMR_TILT_RESPONSE 22
-// Tilt factor = 1st reflection coefficient * gamma_t
+/** Tilt factor = 1st reflection coefficient * gamma_t */
 #define AMR_TILT_GAMMA_T 0.8
-// Adaptive gain control factor used in post-filter
+/** Adaptive gain control factor used in post-filter */
 #define AMR_AGC_ALPHA 0.9
 
 
