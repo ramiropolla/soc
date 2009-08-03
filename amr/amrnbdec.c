@@ -414,9 +414,9 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index,
                 *lag_frac = 0;
             } else if (pitch_index < 12) {
                 // 1/3 fractional precision for [search_range_min+3 1/3, search_range_min+5 2/3]
-                *lag_int  = (((pitch_index - 5) * 10923) >> 15 ) - 1;
-                *lag_frac = pitch_index - *lag_int * 3 - 9;
-                *lag_int += search_range_min + 5;
+                *lag_int  = (pitch_index + 1) * 10923 >> 15;
+                *lag_frac = pitch_index - *lag_int * 3;
+                *lag_int += search_range_min + 2;
             } else {
                 // integer only precision for [search_range_min+6, search_range_min+9]
                 *lag_int  = pitch_index + search_range_min - 6;
