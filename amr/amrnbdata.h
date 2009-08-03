@@ -106,10 +106,11 @@ typedef struct {
 // The following order* tables are used to convert AMR frame parameters to and
 // from a bitstream. See 3GPP TS 26.101 for more information.
 
+#define AMR_BIT(field, bit)                  {offsetof(AMRNBFrame, field) >> 1, bit}
 /** Specify an LSF parameter bit */
-#define AMR_LSF(variable, bit) {offsetof(AMRNBFrame, lsf[variable]) >> 1, bit}
+#define AMR_LSF(variable, bit)               AMR_BIT(lsf[variable], bit)
 /** Specify a subframe-specific bit */
-#define AMR_OF(frame_num, variable, bit) {offsetof(AMRNBFrame, subframe[frame_num].variable)>>1, bit}
+#define AMR_OF(frame_num, variable, bit)     AMR_BIT(subframe[frame_num].variable, bit)
 /** Specify a pitch gain bit */
 #define AMR_PGAIN(frame_num, bit)            AMR_OF(frame_num, p_gain, bit)
 /** Specify a fixed gain bit */
