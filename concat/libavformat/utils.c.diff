@@ -1,5 +1,5 @@
 diff --git a/libavformat/utils.c b/libavformat/utils.c
-index 0c1a50d..be7a0fd 100644
+index 0c1a50d..ca69238 100644
 --- a/libavformat/utils.c
 +++ b/libavformat/utils.c
 @@ -27,6 +27,7 @@
@@ -18,25 +18,35 @@ index 0c1a50d..be7a0fd 100644
      AVProbeData probe_data, *pd = &probe_data;
      ByteIOContext *pb = NULL;
  
-@@ -442,6 +444,17 @@ int av_open_input_file(AVFormatContext **ic_ptr, const char *filename,
-     pd->buf = NULL;
-     pd->buf_size = 0;
+@@ -447,6 +449,27 @@ int av_open_input_file(AVFormatContext **ic_ptr, const char *filename,
+         fmt = av_probe_input_format(pd, 0);
+     }
  
 +    playlist_ctx = ff_playlist_from_encodedstring(filename, ',');
 +    if (playlist_ctx) {
-+        av_log((*ic_ptr), AV_LOG_DEBUG, "Generating playlist from %s\n", filename);
-+        av_strlcpy((*ic_ptr)->filename, filename, sizeof((*ic_ptr)->filename));
-+        (*ic_ptr)->iformat = ff_concat_alloc_demuxer();
-+        ff_playlist_set_context((*ic_ptr), playlist_ctx);
++        AVFormatContext *ic;
++        AVFormatParameters default_ap;
++        if(!ap){
++            ap=&default_ap;
++            memset(ap, 0, sizeof(default_ap));
++        }
++        if(!ap->prealloced_context)
++            ic = *ic_ptr = avformat_alloc_context();
++        else
++            ic = *ic_ptr;
++        av_log(ic, AV_LOG_DEBUG, "Generating playlist from %s\n", filename);
++        av_strlcpy(ic->filename, filename, sizeof(ic->filename));
++        ic->iformat = ff_concat_alloc_demuxer();
++        ff_playlist_set_context(ic, playlist_ctx);
 +        ff_playlist_populate_context(playlist_ctx, playlist_ctx->pe_curidx);
-+        ff_playlist_set_streams((*ic_ptr));
++        ff_playlist_set_streams(ic);
 +        return 0;
 +    }
 +
-     if (!fmt) {
-         /* guess format if no file can be opened */
-         fmt = av_probe_input_format(pd, 0);
-@@ -910,6 +923,10 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
+     /* Do not open file if the format does not need it. XXX: specific
+        hack needed to handle RTSP/TCP */
+     if (!fmt || !(fmt->flags & AVFMT_NOFILE)) {
+@@ -910,6 +933,10 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
  {
      AVStream *st;
      int len, ret, i;
@@ -47,7 +57,7 @@ index 0c1a50d..be7a0fd 100644
  
      av_init_packet(pkt);
  
-@@ -943,8 +960,14 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
+@@ -943,8 +970,14 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
                  /* return packet if any */
                  if (pkt->size) {
                  got_packet:
@@ -63,7 +73,7 @@ index 0c1a50d..be7a0fd 100644
                      pkt->pts = st->parser->pts;
                      pkt->dts = st->parser->dts;
                      pkt->pos = st->parser->pos;
-@@ -980,8 +1003,11 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
+@@ -980,8 +1013,11 @@ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
                                          NULL, 0,
                                          AV_NOPTS_VALUE, AV_NOPTS_VALUE,
                                          AV_NOPTS_VALUE);
