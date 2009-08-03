@@ -93,13 +93,23 @@ typedef struct {
     uint16_t pulses[10]; ///< pulses: 10 for MODE_122, 7 for MODE_102, and index and sign for others
 } AMRNBSubframe;
 
+/**
+ * AMRNB SID frame parameters
+ */
+typedef struct {
+    uint16_t ref_vector; ///< index of reference vector
+    uint16_t energy;     ///< index of logarithmic frame energy
+} AMRNBSIDFrame;
 
 /**
  * AMRNB unpacked data frame
  */
 typedef struct {
     uint16_t lsf[5];           ///< lsf parameters: 5 parameters for MODE_122, only 3 for other modes
-    AMRNBSubframe subframe[4]; ///< unpacked data for each subframe
+    union {
+        AMRNBSubframe subframe[4]; ///< unpacked data for each subframe
+        AMRNBSIDFrame sid;
+    } info;
 } AMRNBFrame;
 
 
@@ -110,7 +120,7 @@ typedef struct {
 /** Specify an LSF parameter bit */
 #define AMR_LSF(variable, bit)               AMR_BIT(lsf[variable], bit)
 /** Specify a subframe-specific bit */
-#define AMR_OF(frame_num, variable, bit)     AMR_BIT(subframe[frame_num].variable, bit)
+#define AMR_OF(frame_num, variable, bit)     AMR_BIT(info.subframe[frame_num].variable, bit)
 /** Specify a pitch gain bit */
 #define AMR_PGAIN(frame_num, bit)            AMR_OF(frame_num, p_gain, bit)
 /** Specify a fixed gain bit */
@@ -119,6 +129,10 @@ typedef struct {
 #define AMR_PLAG(frame_num, bit)             AMR_OF(frame_num, p_lag, bit)
 /** Specify a pulse bit */
 #define AMR_PULSES(frame_num, pulse_id, bit) AMR_OF(frame_num, pulses[pulse_id], bit)
+/** Specify an SID reference vector bit */
+#define AMR_SVECTOR(bit)                     AMR_BIT(info.sid.ref_vector, bit)
+/** Specify an SID energy index bit */
+#define AMR_SENERGY(bit)                     AMR_BIT(info.sid.energy, bit)
 
 static const AMROrder order_MODE_475[95] = {
 AMR_LSF(0, 7), AMR_LSF(0, 6), AMR_LSF(0, 5), AMR_LSF(0, 4),
@@ -490,13 +504,12 @@ AMR_PULSES(3, 9, 0), AMR_PULSES(3, 9, 1), AMR_PULSES(3, 9, 2),
 AMR_PLAG(1, 0), AMR_PLAG(3, 0)
 };
 
-//FIXME: This order array needs to be mapped to AMRNBFrame.
 static const AMROrder order_MODE_DTX[35] = {
-{ 0, 2}, { 0, 1}, { 0, 0}, { 1, 7}, { 1, 6}, { 1, 5}, { 1, 4}, { 1, 3},
-{ 1, 2}, { 1, 1}, { 1, 0}, { 2, 8}, { 2, 7}, { 2, 6}, { 2, 5}, { 2, 4},
-{ 2, 3}, { 2, 2}, { 2, 1}, { 2, 0}, { 3, 8}, { 3, 7}, { 3, 6}, { 3, 5},
-{ 3, 4}, { 3, 3}, { 3, 2}, { 3, 1}, { 3, 0}, { 4, 5}, { 4, 4}, { 4, 3},
-{ 4, 2}, { 4, 1}, { 4, 0}
+AMR_SVECTOR(2), AMR_SVECTOR(1), AMR_SVECTOR(0),
+AMR_LSF(1, 7), AMR_LSF(1, 6), AMR_LSF(1, 5), AMR_LSF(1, 4),
+AMR_LSF(1, 3), AMR_LSF(1, 2), AMR_LSF(1, 1), AMR_LSF(1, 0),
+AMR_SENERGY(5), AMR_SENERGY(4), AMR_SENERGY(3), AMR_SENERGY(2),
+AMR_SENERGY(1), AMR_SENERGY(0)
 };
 
 /**

@@ -771,7 +771,8 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
             mode >= MODE_67  ? gains_high[amr_subframe->p_gain] :
             mode >= MODE_515 ? gains_low [amr_subframe->p_gain] :
                 // gain index is only coded in subframes 0,2 for MODE_475
-                gains_MODE_475[(p->frame.subframe[subframe & 2].p_gain << 1) +
+                gains_MODE_475[(p->frame.info.subframe[subframe & 2].p_gain
+                                                                       << 1) +
                                (subframe & 1)];
 
         p->pitch_gain[4]  = gains[0];
@@ -1108,7 +1109,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         lsp2lpc(p->lsp[i], p->lpc[i]);
 
     for (subframe = 0; subframe < 4; subframe++) {
-        const AMRNBSubframe *amr_subframe = &p->frame.subframe[subframe];
+        const AMRNBSubframe *amr_subframe = &p->frame.info.subframe[subframe];
 
         decode_pitch_vector(p, amr_subframe, subframe);
 
