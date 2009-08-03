@@ -40,7 +40,6 @@
 #define AMR_SAMPLE_SCALE  (1.0/32768.0)   ///< AMR is designed to produce 16-bit PCM samples (3GPP TS 26.090 4.2)
 
 
-#define NO_DATA 15                        ///< no transmission
 /** Frame type (Table 1a in 3GPP TS 26.101) */
 enum Mode {
     MODE_475 = 0,                         ///< 4.75 kbit/s
@@ -53,6 +52,7 @@ enum Mode {
     MODE_122,                             ///< 12.2 kbit/s
     MODE_DTX,                             ///< silent frame
     N_MODES,                              ///< number of modes
+    NO_DATA = 15                          ///< no transmission
 };
 
 /** Received frame types
