@@ -2068,7 +2068,7 @@ static const uint8_t gray_decode[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
 
 // gain tables
 
-#define MIN_ENERGY (-14.0)
+#define MIN_ENERGY -14.0
 
 // scalar quantized pitch gain table for 7.95 and 12.2 kbps modes
 static const float qua_gain_pit[16] = {
