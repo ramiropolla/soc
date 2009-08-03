@@ -22,6 +22,7 @@
 #include "avformat.h"
 #include "libavcodec/ac3.h"
 #include "libavcodec/dca.h"
+#include "libavcodec/aac_parser.h"
 
 #define SYNCWORD1 0xF872
 #define SYNCWORD2 0x4E1F
@@ -31,13 +32,15 @@
 #define IEC958_MPEG1_LAYER1       0x04
 #define IEC958_MPEG1_LAYER23      0x05
 //#define IEC958_MPEG2_EXT          0x06 /* With extension */
-//#define IEC958_MPEG2_AAC          0x07
+#define IEC958_MPEG2_AAC          0x07
 #define IEC958_MPEG2_LAYER1_LSF   0x08 /* Low Sampling Frequency */
 #define IEC958_MPEG2_LAYER2_LSF   0x09 /* Low Sampling Frequency */
 #define IEC958_MPEG2_LAYER3_LSF   0x0A /* Low Sampling Frequency */
 #define IEC958_DTS1               0x0B
 #define IEC958_DTS2               0x0C
 #define IEC958_DTS3               0x0D
+#define IEC958_MPEG2_AAC_LSF_2048 0x13
+#define IEC958_MPEG2_AAC_LSF_4096 (0x13|0x20)
 //#define IEC958_EAC3               0x15
 
 typedef struct IEC958Context{
@@ -122,6 +125,36 @@ static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt){
     return 0;
 }
 
+static int spdif_header_aac(AVFormatContext *s, AVPacket *pkt){
+    IEC958Context *ctx = s->priv_data;
+    AACADTSHeaderInfo hdr;
+    GetBitContext gbc;
+    int ret;
+
+    init_get_bits(&gbc, pkt->data, AAC_ADTS_HEADER_SIZE*8);
+    av_log(NULL, AV_LOG_INFO, "%02x %02x %02x %02x\n", pkt->data[0], pkt->data[1], pkt->data[2], pkt->data[3]);
+    ret = ff_aac_parse_header(&gbc, &hdr);
+
+    av_log(NULL, AV_LOG_INFO, "ret=%i frames=%i samples=%i\n", ret, hdr.num_aac_frames, hdr.samples);
+    ctx->pkt_offset = hdr.samples<<2;
+    switch(hdr.num_aac_frames){
+        case 1:
+            ctx->data_type = IEC958_MPEG2_AAC;
+            break;
+        case 2:
+            ctx->data_type = IEC958_MPEG2_AAC_LSF_2048;
+            break;
+        case 4:
+            ctx->data_type = IEC958_MPEG2_AAC_LSF_4096;
+            break;
+        default:
+            av_log(NULL, AV_LOG_ERROR, "%i samples in AAC frame not supported\n", hdr.samples);
+            return -1;
+    }
+    //TODO Data type dependent info (LC profile/SBR)
+    return 0;
+}
+
 static int spdif_write_header(AVFormatContext *s){
     IEC958Context *ctx = s->priv_data;
 
@@ -136,6 +169,9 @@ static int spdif_write_header(AVFormatContext *s){
             break;
         case CODEC_ID_DTS:
             ctx->header_info = spdif_header_dts;
+            break;
+        case CODEC_ID_AAC:
+            ctx->header_info = spdif_header_aac;
             break;
 
         default:

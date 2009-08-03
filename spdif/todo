@@ -10,7 +10,7 @@
 -info about dynamic range control in mpeg
 
 -add support for wma
--add support for aac
+-add support for mpeg4 aac
 -add support for eac3
 
 -sending data stream direct to spdif
