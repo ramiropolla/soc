@@ -701,8 +701,7 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
     for (i = 0; i < 4; i++)
         energy_pred += energy_pred_fac[i] * prev_pred_error[3 - i];
 
-    energy_fixed_mean = ff_dot_productf(fixed_vector, fixed_vector,
-                                        AMR_SUBFRAME_SIZE);
+    energy_fixed_mean = ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE);
     energy_fixed_mean = 10.0 * log10f(energy_fixed_mean / AMR_SUBFRAME_SIZE);
 
     return powf(10.0, 0.05 * (energy_pred + energy_mean[mode] -
@@ -1030,8 +1029,7 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     float *samples          = p->samples_in + LP_FILTER_ORDER; // Start of input
 
     float gain_scale_factor = 1.0;
-    float speech_gain       = ff_dot_productf(samples, samples,
-                                              AMR_SUBFRAME_SIZE);
+    float speech_gain       = ff_energyf(samples, AMR_SUBFRAME_SIZE);
     float postfilter_gain;
 
     float pole_out[AMR_SUBFRAME_SIZE + LP_FILTER_ORDER];  // Output of pole filter
@@ -1064,7 +1062,7 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     tilt_compensation(&p->tilt_mem, tilt_factor(lpc_n, lpc_d), buf_out);
 
     // Adaptive gain control
-    postfilter_gain = ff_dot_productf(buf_out, buf_out, AMR_SUBFRAME_SIZE);
+    postfilter_gain = ff_energyf(buf_out, AMR_SUBFRAME_SIZE);
     if (postfilter_gain)
         gain_scale_factor = sqrt(speech_gain / postfilter_gain);
 
