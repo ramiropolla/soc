@@ -911,7 +911,6 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
 
     // emphasize pitch vector contribution
     if (p->pitch_gain[4] > 0.5 && !overflow) {
-        float exc_emph[AMR_SUBFRAME_SIZE]; // FIXME: unnecessary tmp buffer
         float energy = ff_energyf(excitation, AMR_SUBFRAME_SIZE);
         float pitch_factor = (p->cur_frame_mode == MODE_122 ? 0.25 : 0.5)
             * FFMIN(p->pitch_gain[4],
@@ -919,9 +918,9 @@ static int synthesis(AMRContext *p, float *excitation, float *lpc,
             * p->pitch_gain[4];
 
         for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
-            exc_emph[i] = excitation[i] + pitch_factor * p->pitch_vector[i];
+            excitation[i] += pitch_factor * p->pitch_vector[i];
 
-        ff_set_energyf(excitation, exc_emph, energy, AMR_SUBFRAME_SIZE);
+        ff_set_energyf(excitation, excitation, energy, AMR_SUBFRAME_SIZE);
     }
 
     ff_celp_lp_synthesis_filterf(samples, lpc, excitation, AMR_SUBFRAME_SIZE,
