@@ -546,7 +546,7 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index,
 
     // coded using 5+2 bits with the 2 LSBs being, individually, the LSB of 1 of
     // the 2 pulses and the upper 5 bits being coded in base 5
-    temp = ((fixed_index[6] >> 2) * 25) >> 5;
+    temp = ((fixed_index[6] >> 2) * 25 + 12) >> 5;
     pulse_position[3] = temp % 5;
     pulse_position[7] = temp / 5;
     if (pulse_position[7] & 1)
