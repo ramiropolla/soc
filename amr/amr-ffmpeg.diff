@@ -160,45 +160,65 @@ Index: libavcodec/acelp_vectors.c
  #include "acelp_vectors.h"
  
  const uint8_t ff_fc_2pulses_9bits_track1[16] =
-@@ -155,3 +156,14 @@
+@@ -155,3 +156,25 @@
          out[i] = weight_coeff_a * in_a[i]
                 + weight_coeff_b * in_b[i];
  }
 +
-+void ff_apply_gain_ctrl(float *v_out, const float *v_ref, const float *v_in,
-+                        const int length)
++float ff_energyf(const float *v, int length)
++{
++    float sum = 0;
++    int i;
++
++    for (i = 0; i < length; i++)
++        sum += v[i] * v[i];
++
++    return sum;
++}
++
++void ff_set_energyf(float *v_out, const float *v_in, float energy,
++                    const int length)
 +{
 +    int i;
-+    float scalefactor = ff_dot_productf(v_in, v_in, length);
++    float scalefactor = ff_energyf(v_in, length);
 +    if (scalefactor)
-+        scalefactor = sqrt(ff_dot_productf(v_ref, v_ref, length) / scalefactor);
++        scalefactor = sqrt(energy / scalefactor);
 +    for (i = 0; i < length; i++)
-+        v_out[i] = scalefactor * v_in[i];
++        v_out[i] = v_in[i] * scalefactor;
 +}
 Index: libavcodec/acelp_vectors.h
 ===================================================================
 --- libavcodec/acelp_vectors.h	(revision 19574)
 +++ libavcodec/acelp_vectors.h	(working copy)
-@@ -164,4 +164,22 @@
+@@ -164,4 +164,31 @@
  void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
                               float weight_coeff_a, float weight_coeff_b, int length);
  
 +/**
-+ * Apply adaptive gain control by gain scaling.
++ * returns the energy
++ * @param in input data array
++ * @param length number of elements
++ *
++ * @return energy = sum of squares
++ */
++float ff_energyf(const float *in, int length);
++
++/**
++ * Set the energy of a vector by scaling
 + *
 + * @param v_out output vector
-+ * @param v_in gain-controlled vector
-+ * @param v_ref vector to control gain of
++ * @param v_in vector to set energy of
++ * @param energy new energy
 + * @param length vectors length
 + *
-+ * @note If v_in is zero (or its energy underflows), the output is zero.
-+ *       This is the behavior of the AMR reference decoder. The QCELP
++ * @note If v is zero (or its energy underflows), the output is zero.
++ *       This is the behavior of AGC in the AMR reference decoder. The QCELP
 + *       reference decoder seems to have undefined behavior.
 + *
 + * TIA/EIA/IS-733 2.4.8.3-2/3/4/5, 2.4.8.6
 + * 3GPP TS 26.090 6.1 (6)
 + */
-+void ff_apply_gain_ctrl(float *v_out, const float *v_ref, const float *v_in,
-+                        const int length);
++void ff_set_energyf(float *v_out, const float *v_in, float energy,
++                    const int length);
 +
  #endif /* AVCODEC_ACELP_VECTORS_H */
