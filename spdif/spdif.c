@@ -188,7 +188,7 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt){
     uint16_t *data = (uint16_t *)pkt->data;
     int i;
 
-    ctx->pkt_size = ((pkt->size+1)>>1)<<4; //TODO simplify?
+    ctx->pkt_size = ((pkt->size+1)>>1)<<4;
 
     (*ctx->header_info)(s, pkt);
 
@@ -197,13 +197,12 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt){
     put_le16(s->pb, ctx->data_type); //Pc
     put_le16(s->pb, ctx->pkt_size);  //Pd
 
-    //put_buffer(s->pb, pkt->data, pkt->size);
     //XXX memcpy... ?
     for(i=0; i<pkt->size>>1; i++)
-        put_be16(s->pb, data[i]); //XXX be?
+        put_be16(s->pb, data[i]);
 
     if(pkt->size&1)
-        put_be16(s->pb, pkt->data[pkt->size-1]); //XXX be?
+        put_be16(s->pb, pkt->data[pkt->size-1]);
 
     i=(ctx->pkt_offset - BURST_HEADER_SIZE - pkt->size) >> 1;
     if(i < 0){
