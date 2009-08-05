@@ -1131,6 +1131,14 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
                                 p->pitch_gain[4], p->fixed_gain[4],
                                 AMR_SUBFRAME_SIZE);
 
+        // In the ref decoder, excitation is stored with no fractional bits.
+        // This step prevents buzz in silent periods. The ref encoder can
+        // emit long sequences with pitch factor greater than one. This
+        // creates unwanted feedback if the excitation vector is nonzero.
+        // (e.g. test sequence T19_795.COD in 3GPP TS 26.074)
+        for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
+            exc_feedback[i] = truncf(exc_feedback[i]);
+
         // Smooth fixed gain.
         // The specification is ambiguous, but in the reference source, the
         // smoothed value is NOT fed back into later fixed gain smoothing.
