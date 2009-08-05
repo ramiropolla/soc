@@ -748,7 +748,8 @@ static void set_fixed_gain(AMRContext *p, const enum Mode mode,
     // ^g_c = ^gamma_gc * g_c' (equation 69)
     p->fixed_gain[4] = fixed_gain_factor *
         // Eqn 67: gc' = 10^0.05 (predicted dB + mean dB - dB of fixed vector)
-        powf(10.0, 0.05 * (ff_dot_productf(energy_pred_fac,
+        exp2f(log2f(10.0) * 0.05
+                        * (ff_dot_productf(energy_pred_fac,
                                            p->prediction_error,
                                            4) + // predicted fixed energy
                            energy_mean[mode])) /
