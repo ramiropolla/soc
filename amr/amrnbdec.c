@@ -683,27 +683,6 @@ static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode,
 /// @{
 
 /**
- * Predict the fixed gain.
- *
- * @param fixed_vector         pointer to the algebraic codebook vector
- * @param prev_pred_error      pointer to the quantified prediction errors
- *                             from the previous four subframes
- * @param mode mode of the current frame
- *
- * @return the predicted fixed gain
- */
-static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
-                                   enum Mode mode)
-{
-    // Equation 67: gc' = 10^0.05 (predicted dB + mean dB - dB of fixed vector)
-    return powf(10.0, 0.05 * (ff_dot_productf(energy_pred_fac, prev_pred_error,
-                                              4) + // predicted fixed energy
-                              energy_mean[mode])) /
-        // 10^(0.05 * -10log(average x^2)) = 1/sqrt((average x^2))
-        sqrt(ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE) / AMR_SUBFRAME_SIZE);
-}
-
-/**
  * fixed gain smoothing
  * Note that where the spec specifies the "spectrum in the q domain"
  * in section 6.1.4, in fact frequencies should be used.
@@ -786,9 +765,14 @@ static void set_fixed_gain(AMRContext *p, const enum Mode mode,
                            float fixed_gain_factor, float *fixed_vector)
 {
     // ^g_c = ^gamma_gc * g_c' (equation 69)
-    p->fixed_gain[4] = fixed_gain_factor
-                     * fixed_gain_prediction(fixed_vector, p->prediction_error,
-                                             p->cur_frame_mode);
+    p->fixed_gain[4] = fixed_gain_factor *
+        // Eqn 69: gc' = 10^0.05 (predicted dB + mean dB - dB of fixed vector)
+        powf(10.0, 0.05 * (ff_dot_productf(energy_pred_fac,
+                                           p->prediction_error,
+                                           4) + // predicted fixed energy
+                           energy_mean[mode])) /
+        // 10^(0.05 * -10log(average x^2)) = 1/sqrt((average x^2))
+        sqrt(ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE) / AMR_SUBFRAME_SIZE);
 
     // update quantified prediction error energy history
     memmove(&p->prediction_error[0], &p->prediction_error[1],
