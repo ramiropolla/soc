@@ -695,7 +695,6 @@ static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode,
 static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
                                    enum Mode mode)
 {
-    int i;
     float energy_pred, energy_fixed_mean;
 
     energy_pred = ff_dot_productf(energy_pred_fac, prev_pred_error, 4);
