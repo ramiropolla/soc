@@ -696,10 +696,9 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
                                    enum Mode mode)
 {
     int i;
-    float energy_pred = 0.0, energy_fixed_mean;
+    float energy_pred, energy_fixed_mean;
 
-    for (i = 0; i < 4; i++)
-        energy_pred += energy_pred_fac[i] * prev_pred_error[3 - i];
+    energy_pred = ff_dot_productf(energy_pred_fac, prev_pred_error, 4);
 
     energy_fixed_mean = ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE);
     energy_fixed_mean = 10.0 * log10f(energy_fixed_mean / AMR_SUBFRAME_SIZE);

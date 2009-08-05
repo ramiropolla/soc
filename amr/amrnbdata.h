@@ -2128,8 +2128,8 @@ static const float qua_gain_code[32] = {
 /** desired mean innovation energy, indexed by active mode */
 static const float energy_mean[8] = { 33.0, 33.0, 33.0, 28.75, 30.0, 36.0, 33.0, 36.0 };
 
-/** 4-tap moving average prediction coefficients */
-static const float energy_pred_fac[4] = { 0.68, 0.58, 0.34, 0.19 };
+/** 4-tap moving average prediction coefficients in reverse order */
+static const float energy_pred_fac[4] = { 0.19, 0.34, 0.58, 0.68 };
 
 /** gain table for 4.75 kbps mode
  *
