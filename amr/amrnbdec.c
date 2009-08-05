@@ -700,11 +700,11 @@ static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
 
     energy_pred = ff_dot_productf(energy_pred_fac, prev_pred_error, 4);
 
-    energy_fixed_mean = ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE);
-    energy_fixed_mean = 10.0 * log10f(energy_fixed_mean / AMR_SUBFRAME_SIZE);
+    energy_fixed_mean = sqrt(ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE) /
+                             AMR_SUBFRAME_SIZE);
 
-    return powf(10.0, 0.05 * (energy_pred + energy_mean[mode] -
-                              energy_fixed_mean));
+    return powf(10.0, 0.05 * (energy_pred + energy_mean[mode])) /
+        energy_fixed_mean;
 }
 
 /**
