@@ -772,7 +772,7 @@ static void set_fixed_gain(AMRContext *p, const enum Mode mode,
                                            4) + // predicted fixed energy
                            energy_mean[mode])) /
         // 10^(0.05 * -10log(average x^2)) = 1/sqrt((average x^2))
-        sqrt(ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE) / AMR_SUBFRAME_SIZE);
+        sqrtf(ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE) / AMR_SUBFRAME_SIZE);
 
     // update quantified prediction error energy history
     memmove(&p->prediction_error[0], &p->prediction_error[1],
