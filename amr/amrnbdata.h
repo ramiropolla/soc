@@ -37,7 +37,17 @@
 #define AMR_BLOCK_SIZE              160   ///< Samples per frame
 #define AMR_SUBFRAME_SIZE            40   ///< Samples per subframe
 #define AMR_SAMPLE_BOUND        32768.0   ///< Threshold for synthesis overflow
-#define AMR_SAMPLE_SCALE  (1.0/32768.0)   ///< AMR is designed to produce 16-bit PCM samples (3GPP TS 26.090 4.2)
+
+/**
+ * Scale from constructed speech to [-1,1]
+ *
+ * AMR is designed to produce 16-bit PCM samples (3GPP TS 26.090 4.2) but
+ * upscales by two (section 6.2.2).
+ *
+ * Fundamentally, this scale is determined by energy_mean through
+ * the fixed vector contribution to the excitation vector.
+ */
+#define AMR_SAMPLE_SCALE  (2.0/32768.0)
 
 
 /** Frame type (Table 1a in 3GPP TS 26.101) */
