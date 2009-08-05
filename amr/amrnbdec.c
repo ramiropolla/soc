@@ -695,15 +695,12 @@ static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode,
 static float fixed_gain_prediction(float *fixed_vector, float *prev_pred_error,
                                    enum Mode mode)
 {
-    float energy_pred, energy_fixed_mean;
-
-    energy_pred = ff_dot_productf(energy_pred_fac, prev_pred_error, 4);
-
-    energy_fixed_mean = sqrt(ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE) /
-                             AMR_SUBFRAME_SIZE);
-
-    return powf(10.0, 0.05 * (energy_pred + energy_mean[mode])) /
-        energy_fixed_mean;
+    // Equation 67: gc' = 10^0.05 (predicted dB + mean dB - dB of fixed vector)
+    return powf(10.0, 0.05 * (ff_dot_productf(energy_pred_fac, prev_pred_error,
+                                              4) + // predicted fixed energy
+                              energy_mean[mode])) /
+        // 10^(0.05 * -10log(average x^2)) = 1/sqrt((average x^2))
+        sqrt(ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE) / AMR_SUBFRAME_SIZE);
 }
 
 /**
