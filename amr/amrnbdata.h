@@ -65,23 +65,6 @@ enum Mode {
     NO_DATA = 15                          ///< no transmission
 };
 
-/** Received frame types
- *
- * FIXME: are the values important? They seem to only be used by an obsolete
- * test vector format. But I haven't chased down all the references yet.
- */
-enum RXFrameType {
-    RX_SPEECH_GOOD = 0,
-    RX_SPEECH_DEGRADED,
-    RX_ONSET,
-    RX_SPEECH_BAD,
-    RX_SID_FIRST,
-    RX_SID_UPDATE,
-    RX_SID_BAD,
-    RX_NO_DATA,
-    RX_N_FRAMETYPES     // number of frame types
-};
-
 #define LP_FILTER_ORDER 10        ///< linear predictive coding filter order
 
 /**
