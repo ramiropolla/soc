@@ -1,5 +1,5 @@
 diff --git a/ffplay.c b/ffplay.c
-index 4d7abb3..826f320 100644
+index c976ac5..a505760 100644
 --- a/ffplay.c
 +++ b/ffplay.c
 @@ -29,6 +29,8 @@
