@@ -828,7 +828,7 @@ static int decode_frame(AVCodecContext *avctx,
  */
 static av_cold int decode_end(AVCodecContext *avctx)
 {
-    ALSDecContext *ctx       = avctx->priv_data;
+    ALSDecContext *ctx = avctx->priv_data;
 
     av_freep(&ctx->sconf.chan_pos);
     av_freep(&ctx->residuals);
