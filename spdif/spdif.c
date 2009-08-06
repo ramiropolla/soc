@@ -117,8 +117,8 @@ static const uint8_t mpeg_data_type[2][3] = {
 
 static const uint16_t mpeg_pkt_offset[2][3] = {
     //LAYER1  LAYER2  LAYER3
-    { 768,    2304,   1152 }, // MPEG2 LSF
-    { 384,    1152,   1152 }, // MPEG1
+    { 3072,    9216,   4608 }, // MPEG2 LSF
+    { 1536,    4608,   4608 }, // MPEG1
 };
 
 static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt)
@@ -133,7 +133,7 @@ static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt)
     }
     av_log(s, AV_LOG_DEBUG, "lsf: %i layer: %i\n", lsf, layer);
     ctx->data_type = mpeg_data_type[lsf][layer];
-    ctx->pkt_offset = mpeg_pkt_offset[lsf][layer] << 2;
+    ctx->pkt_offset = mpeg_pkt_offset[lsf][layer];
     // TODO Data type dependant info (normal/karaoke, dynamic range control)
     return 0;
 }
