@@ -80,6 +80,7 @@ typedef struct {
     unsigned int      num_blocks;        ///< Number of blocks used in the current frame.
     int64_t           *residuals;        ///< Decoded residuals of the current block.
     int64_t           **raw_samples;     ///< Decoded raw samples for each channel.
+    int64_t           *raw_buffer;       ///< Contains all decoded raw samples including carryover samples.
 } ALSDecContext;
 
 
@@ -359,7 +360,7 @@ static void all_parcor_to_lpc(unsigned int num, int64_t *par, int64_t *cof)
  */
 static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                             int64_t *raw_samples, unsigned int block_length,
-                            uint32_t *js_blocks)
+                            uint32_t *js_blocks, int64_t *raw_other)
 {
     ALSSpecificConfig *sconf = &ctx->sconf;
     AVCodecContext *avctx    = ctx->avctx;
@@ -407,6 +408,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         unsigned int start = 0;
         int64_t      *res = ctx->residuals;
         unsigned int sb, smp;
+        int64_t      y;
 
         *js_blocks |= get_bits1(gb);
 
@@ -555,7 +557,6 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         // reconstruct all samples from residuals
         if (ra_block) {
             unsigned int progressive = FFMIN(block_length, opt_order);
-            int64_t y = 0;
 
             for (smp = 0; smp < progressive; smp++) {
                 y = 1 << 19;
@@ -576,7 +577,27 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                 raw_samples[smp] = res[smp] - (y >> 20);
             }
         } else {
-            // TODO: non random access blocks
+            // reconstruct difference signal for prediction (joint-stereo)
+            if (*js_blocks & 1 && raw_other) {
+                int i;
+                if (raw_other > raw_samples) {          // L = R - D
+                    for (i = -1; i >= -sconf->max_order; i--)
+                        raw_samples[i] = raw_other[i] - raw_samples[i];
+                } else {                                // R = D + L
+                    for (i = -1; i >= -sconf->max_order; i--)
+                        raw_samples[i] = raw_samples[i] - raw_other[i];
+                }
+            }
+
+            // reconstruct raw samples
+            for (smp = 0; smp < block_length; smp++) {
+                y = 1 << 19;
+
+                for (sb = 0; sb < opt_order; sb++)
+                    y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
+
+                raw_samples[smp] = res[smp] - (y >> 20);
+            }
         }
     }
 
@@ -646,9 +667,14 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                 for (b = 0; b < ctx->num_blocks; b++) {
                     ra_block = !b && ra_frame;
                     block_length = sconf->frame_length >> div_blocks[b];
-                    read_block_data(ctx, ra_block, raw_samples, block_length, &js_blocks[0]);
+                    read_block_data(ctx, ra_block, raw_samples, block_length,
+                                    &js_blocks[0], NULL);
                     raw_samples += block_length;
                 }
+
+                memmove((ctx->raw_samples[c]) - sconf->max_order,
+                        (ctx->raw_samples[c]) - sconf->max_order + sconf->frame_length,
+                        sizeof(int64_t) * sconf->max_order);
             } else {
                 unsigned int offset = 0;
 
@@ -657,22 +683,23 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                     block_length = sconf->frame_length >> div_blocks[b];
 
                     raw_samples = ctx->raw_samples[c] + offset;
-                    read_block_data(ctx, ra_block, raw_samples, block_length, &js_blocks[0]);
+                    read_block_data(ctx, ra_block, raw_samples, block_length,
+                                    &js_blocks[0], ctx->raw_samples[c + 1] + offset);
 
                     raw_samples = ctx->raw_samples[c + 1] + offset;
-                    read_block_data(ctx, ra_block, raw_samples, block_length, &js_blocks[1]);
+                    read_block_data(ctx, ra_block, raw_samples, block_length,
+                                    &js_blocks[1], ctx->raw_samples[c] + offset);
 
                     offset += block_length;
                 }
-                c++;
 
                 if (js_blocks[0] || js_blocks[1]) {
                     int64_t *raw_samples_L, *raw_samples_R;
                     unsigned int s;
                     b = ctx->num_blocks - 1;
 
-                    raw_samples_L = ctx->raw_samples[c - 1] + sconf->frame_length;
-                    raw_samples_R = ctx->raw_samples[c    ] + sconf->frame_length;
+                    raw_samples_L = ctx->raw_samples[c    ] + sconf->frame_length;
+                    raw_samples_R = ctx->raw_samples[c + 1] + sconf->frame_length;
 
                     while (js_blocks[0] || js_blocks[1]) {
                         unsigned int diff_l, diff_r;
@@ -699,6 +726,17 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                         js_blocks[1] >>= 1;
                     }
                 }
+
+                // store carryover raw samples
+                memmove((ctx->raw_samples[c]) - sconf->max_order,
+                        (ctx->raw_samples[c]) - sconf->max_order + sconf->frame_length,
+                        sizeof(int64_t) * sconf->max_order);
+
+                memmove((ctx->raw_samples[c + 1]) - sconf->max_order,
+                        (ctx->raw_samples[c + 1]) - sconf->max_order + sconf->frame_length,
+                        sizeof(int64_t) * sconf->max_order);
+
+                c++;
             }
         }
     } else {
@@ -718,7 +756,8 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
         for (b = 0; b < ctx->num_blocks; b++) {
             ra_block = !b && ra_frame;
             block_length = sconf->frame_length >> div_blocks[b];
-            read_block_data(ctx, ra_block, raw_samples, block_length, &js_blocks[0]);
+            read_block_data(ctx, ra_block, raw_samples, block_length,
+                            &js_blocks[0], NULL);
             raw_samples += block_length;
             // TODO: read_channel_data
         }
@@ -744,7 +783,7 @@ static int decode_frame(AVCodecContext *avctx,
     const uint8_t *buffer    = avpkt->data;
     int buffer_size          = avpkt->size;
     int16_t *dest            = (int16_t*)data;
-    unsigned int c, sample, ra_frame;
+    unsigned int c, sample, ra_frame, bytes_read;
 
     init_get_bits(&ctx->gb, buffer, buffer_size * 8);
     ra_frame = !ctx->frame_id ||
@@ -776,7 +815,9 @@ static int decode_frame(AVCodecContext *avctx,
                                      * (avctx->sample_fmt == SAMPLE_FMT_S16 ?
                                         2 : 4);
 
-    return buffer_size;
+    bytes_read = (get_bits_count(&ctx->gb) + 7) >> 3;
+
+    return bytes_read;
 }
 
 
@@ -785,17 +826,12 @@ static int decode_frame(AVCodecContext *avctx,
 static av_cold int decode_end(AVCodecContext *avctx)
 {
     ALSDecContext *ctx       = avctx->priv_data;
-    ALSSpecificConfig *sconf = &ctx->sconf;
-    unsigned int c;
 
     av_freep(&ctx->sconf.chan_pos);
     av_freep(&ctx->residuals);
 
-    if (ctx->raw_samples)
-        for (c = 0; c < sconf->channels; c++)
-            av_freep(&ctx->raw_samples[c]);
-
     av_freep(&ctx->raw_samples);
+    av_freep(&ctx->raw_buffer);
 
     return 0;
 }
@@ -806,6 +842,7 @@ static av_cold int decode_end(AVCodecContext *avctx)
 static av_cold int decode_init(AVCodecContext *avctx)
 {
     unsigned int c;
+    unsigned int channel_size;
     ALSDecContext *ctx = avctx->priv_data;
     ctx->avctx = avctx;
 
@@ -834,9 +871,18 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     avctx->frame_size = ctx->sconf.frame_length;
+    channel_size      = ctx->sconf.frame_length + ctx->sconf.max_order;
 
     // allocate residual buffer
     if (!(ctx->residuals = av_malloc(sizeof(int64_t) * ctx->sconf.frame_length))) {
+        av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
+        decode_end(avctx);
+        return AVERROR_NOMEM;
+    }
+
+    // allocate raw and carried sample buffer
+    if (!(ctx->raw_buffer = av_malloc(sizeof(int64_t) *
+                                      avctx->channels * channel_size))) {
         av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
         decode_end(avctx);
         return AVERROR_NOMEM;
@@ -849,14 +895,10 @@ static av_cold int decode_init(AVCodecContext *avctx)
         return AVERROR_NOMEM;
     }
 
-    // allocate raw sample buffers
+    // allocate raw and carried samples buffers
     for (c = 0; c < avctx->channels; c++) {
-        if(!(ctx->raw_samples[c] = av_malloc(sizeof(int64_t)
-                                             * ctx->sconf.frame_length))) {
-            av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
-            decode_end(avctx);
-            return AVERROR_NOMEM;
-        }
+        ctx->raw_samples[c] = ctx->raw_buffer + ctx->sconf.max_order +
+                              c * channel_size;
     }
 
     return 0;
