@@ -672,12 +672,14 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                     raw_samples += block_length;
                 }
 
+                // store carryover raw samples
                 memmove((ctx->raw_samples[c]) - sconf->max_order,
                         (ctx->raw_samples[c]) - sconf->max_order + sconf->frame_length,
                         sizeof(int64_t) * sconf->max_order);
             } else {
                 unsigned int offset = 0;
 
+                // decode all blocks
                 for (b = 0; b < ctx->num_blocks; b++) {
                     ra_block = !b && ra_frame;
                     block_length = sconf->frame_length >> div_blocks[b];
@@ -693,6 +695,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                     offset += block_length;
                 }
 
+                // reconstruct joint-stereo blocks
                 if (js_blocks[0] || js_blocks[1]) {
                     int64_t *raw_samples_L, *raw_samples_R;
                     unsigned int s;
