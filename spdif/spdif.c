@@ -47,10 +47,10 @@ typedef struct IEC958Context {
     int data_type;              ///< Burst info
     int pkt_size;               ///< Length code (number of bits or bytes - according to data_type)
     int pkt_offset;             ///< Repetition period of a data burst in bytes
-    int (*header_info) (AVFormatContext * s, AVPacket * pkt);
+    int (*header_info) (AVFormatContext *s, AVPacket *pkt);
 } IEC958Context;
 
-static int spdif_header_ac3(AVFormatContext * s, AVPacket * pkt)
+static int spdif_header_ac3(AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
     int bitstream_mode = pkt->data[6] & 0x7;
@@ -60,35 +60,29 @@ static int spdif_header_ac3(AVFormatContext * s, AVPacket * pkt)
     return 0;
 }
 
-static int spdif_header_dts(AVFormatContext * s, AVPacket * pkt)
+static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
     uint32_t syncword_dts =
-        (pkt->data[0] << 24) | (pkt->data[1] << 16) | (pkt->
-                                                       data[2] << 8) |
-        pkt->data[3];
+        (pkt->data[0] << 24) | (pkt->data[1] << 16) | (pkt-> data[2] << 8) | pkt->data[3];
     int samples;
 
     switch (syncword_dts) {
     case DCA_MARKER_RAW_BE:
         samples =
-            ((((pkt->data[4] & 0x01) << 6) | (pkt->data[5] >> 2)) +
-                                              1) << 5;
+            ((((pkt->data[4] & 0x01) << 6) | (pkt->data[5] >> 2)) + 1) << 5;
         break;
     case DCA_MARKER_RAW_LE:
         samples =
-            ((((pkt->data[5] & 0x01) << 6) | (pkt->data[4] >> 2)) +
-                                              1) << 5;
+            ((((pkt->data[5] & 0x01) << 6) | (pkt->data[4] >> 2)) + 1) << 5;
         break;
     case DCA_MARKER_14B_BE:
         samples =
-            ((((pkt->data[5] & 0x07) << 4) | (pkt->
-                                              data[6] & 0x3f)) >> 2) << 5;
+            ((((pkt->data[5] & 0x07) << 4) | (pkt->data[6] & 0x3f)) >> 2) << 5;
         break;
     case DCA_MARKER_14B_LE:
         samples =
-            ((((pkt->data[4] & 0x07) << 4) | (pkt->
-                                              data[7] & 0x3f)) >> 2) << 5;
+            ((((pkt->data[4] & 0x07) << 4) | (pkt->data[7] & 0x3f)) >> 2) << 5;
         break;
     default:
         av_log(s, AV_LOG_ERROR, "bad DTS syncword\n");
@@ -127,7 +121,7 @@ static const uint16_t mpeg_pkt_offset[2][3] = {
     { 384,    1152,   1152 }, // MPEG1
 };
 
-static int spdif_header_mpeg(AVFormatContext * s, AVPacket * pkt)
+static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
     int lsf = (pkt->data[1] >> 3) & 1;
@@ -140,7 +134,7 @@ static int spdif_header_mpeg(AVFormatContext * s, AVPacket * pkt)
     return 0;
 }
 
-static int spdif_header_aac(AVFormatContext * s, AVPacket * pkt)
+static int spdif_header_aac(AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
     AACADTSHeaderInfo hdr;
@@ -170,7 +164,7 @@ static int spdif_header_aac(AVFormatContext * s, AVPacket * pkt)
     return 0;
 }
 
-static int spdif_write_header(AVFormatContext * s)
+static int spdif_write_header(AVFormatContext *s)
 {
     IEC958Context *ctx = s->priv_data;
 
@@ -189,7 +183,6 @@ static int spdif_write_header(AVFormatContext * s)
     case CODEC_ID_AAC:
         ctx->header_info = spdif_header_aac;
         break;
-
     default:
         av_log(s, AV_LOG_ERROR, "codec not supported\n");
         return -1;
@@ -201,14 +194,13 @@ static int spdif_write_header(AVFormatContext * s)
     return 0;
 }
 
-static int spdif_write_packet(struct AVFormatContext *s, AVPacket * pkt)
+static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
     uint16_t *data = (uint16_t *) pkt->data;
     int i;
 
     ctx->pkt_size = ((pkt->size + 1) >> 1) << 4;
-
     (*ctx->header_info) (s, pkt);
 
     put_le16(s->pb, SYNCWORD1);      //Pa
