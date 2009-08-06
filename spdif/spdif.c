@@ -127,6 +127,10 @@ static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt)
     int lsf = (pkt->data[1] >> 3) & 1;
     int layer = 3 - ((pkt->data[1] >> 1) & 3);
 
+    if (layer == 3) {
+        av_log(s, AV_LOG_ERROR, "Wrong MPEG file format\n");
+        return -1;
+    }
     av_log(s, AV_LOG_DEBUG, "lsf: %i layer: %i\n", lsf, layer);
     ctx->data_type = mpeg_data_type[lsf][layer];
     ctx->pkt_offset = mpeg_pkt_offset[lsf][layer] << 2;
@@ -143,6 +147,10 @@ static int spdif_header_aac(AVFormatContext *s, AVPacket *pkt)
 
     init_get_bits(&gbc, pkt->data, AAC_ADTS_HEADER_SIZE * 8);
     ret = ff_aac_parse_header(&gbc, &hdr);
+    if (ret < 0) {
+        av_log(s, AV_LOG_ERROR, "Wrong AAC file format\n");
+        return -1;
+    }
 
     ctx->pkt_offset = hdr.samples << 2;
     switch (hdr.num_aac_frames) {
@@ -198,10 +206,12 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
     uint16_t *data = (uint16_t *) pkt->data;
-    int i;
+    int i, ret;
 
     ctx->pkt_size = ((pkt->size + 1) >> 1) << 4;
-    (*ctx->header_info) (s, pkt);
+    ret = (*ctx->header_info) (s, pkt);
+    if (ret < 0)
+        return -1;
 
     put_le16(s->pb, SYNCWORD1);      //Pa
     put_le16(s->pb, SYNCWORD2);      //Pb
