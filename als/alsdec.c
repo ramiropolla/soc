@@ -847,6 +847,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     unsigned int c;
     unsigned int channel_size;
     ALSDecContext *ctx = avctx->priv_data;
+    ALSSpecificConfig *sconf = &ctx->sconf;
     ctx->avctx = avctx;
 
     if (!avctx->extradata) {
@@ -855,29 +856,29 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     if (read_specific_config(ctx, avctx->extradata + 6,
-                             avctx->extradata_size - 6, &ctx->sconf)) {
+                             avctx->extradata_size - 6, sconf)) {
         av_log(avctx, AV_LOG_ERROR, "Reading ALSSpecificConfig failed.\n");
         decode_end(avctx);
         return -1;
     }
 
-    avctx->sample_rate = ctx->sconf.samp_freq;
-    avctx->channels    = ctx->sconf.channels;
+    avctx->sample_rate = sconf->samp_freq;
+    avctx->channels    = sconf->channels;
 
-    if (ctx->sconf.floating) {
+    if (sconf->floating) {
         avctx->sample_fmt          = SAMPLE_FMT_FLT;
         avctx->bits_per_raw_sample = 32;
     } else {
-        avctx->sample_fmt          = ctx->sconf.resolution > 1
+        avctx->sample_fmt          = sconf->resolution > 1
                                      ? SAMPLE_FMT_S32 : SAMPLE_FMT_S16;
-        avctx->bits_per_raw_sample = (ctx->sconf.resolution + 1) * 8;
+        avctx->bits_per_raw_sample = (sconf->resolution + 1) * 8;
     }
 
-    avctx->frame_size = ctx->sconf.frame_length;
-    channel_size      = ctx->sconf.frame_length + ctx->sconf.max_order;
+    avctx->frame_size = sconf->frame_length;
+    channel_size      = sconf->frame_length + sconf->max_order;
 
     // allocate residual buffer
-    if (!(ctx->residuals = av_malloc(sizeof(int64_t) * ctx->sconf.frame_length))) {
+    if (!(ctx->residuals = av_malloc(sizeof(int64_t) * sconf->frame_length))) {
         av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
         decode_end(avctx);
         return AVERROR_NOMEM;
@@ -900,7 +901,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     // allocate raw and carried samples buffers
     for (c = 0; c < avctx->channels; c++) {
-        ctx->raw_samples[c] = ctx->raw_buffer + ctx->sconf.max_order +
+        ctx->raw_samples[c] = ctx->raw_buffer + sconf->max_order +
                               c * channel_size;
     }
 
