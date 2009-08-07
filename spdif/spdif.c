@@ -19,6 +19,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+/**
+ * @file libavformat/spdif.c
+ * IEC-61937 encapsulation of various formats, used at S/PDIF
+ * @author Bartlomiej Wolowiec
+ */
+
 #include "avformat.h"
 #include "libavcodec/ac3.h"
 #include "libavcodec/dca.h"
