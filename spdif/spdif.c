@@ -69,30 +69,29 @@ static int spdif_header_ac3(AVFormatContext *s, AVPacket *pkt)
 static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
-    uint32_t syncword_dts = be2me_32(*(uint32_t *) pkt->data);
+    uint32_t syncword_dts = AV_RB32(pkt->data);
     int blocks;
 
     switch (syncword_dts) {
     case DCA_MARKER_RAW_BE:
-        blocks =
-            (((pkt->data[4] & 0x01) << 6) | (pkt->data[5] >> 2)) + 1;
+        blocks = (AV_RB16(pkt->data + 4) >> 2) & 0x7f;
         break;
     case DCA_MARKER_RAW_LE:
-        blocks =
-            (((pkt->data[5] & 0x01) << 6) | (pkt->data[4] >> 2)) + 1;
+        blocks = (AV_RL16(pkt->data + 4) >> 2) & 0x7f;
         break;
     case DCA_MARKER_14B_BE:
         blocks =
-            (((pkt->data[5] & 0x07) << 4) | ((pkt->data[6] & 0x3f) >> 2)) + 1;
+            (((pkt->data[5] & 0x07) << 4) | ((pkt->data[6] & 0x3f) >> 2));
         break;
     case DCA_MARKER_14B_LE:
         blocks =
-            (((pkt->data[4] & 0x07) << 4) | ((pkt->data[7] & 0x3f) >> 2)) + 1;
+            (((pkt->data[4] & 0x07) << 4) | ((pkt->data[7] & 0x3f) >> 2)) ;
         break;
     default:
         av_log(s, AV_LOG_ERROR, "bad DTS syncword\n");
         return -1;
     }
+    blocks++;
     av_log(s, AV_LOG_DEBUG, "blocks=%i\n", blocks);
     switch (blocks) {
     case 512 >> 5:
