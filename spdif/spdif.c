@@ -204,7 +204,6 @@ static int spdif_write_header(AVFormatContext *s)
 static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
-    uint16_t *data = (uint16_t *) pkt->data;
     int i, ret;
 
     ctx->pkt_size = ((pkt->size + 1) >> 1) << 4;
@@ -217,9 +216,16 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
     put_le16(s->pb, ctx->data_type); //Pc
     put_le16(s->pb, ctx->pkt_size);  //Pd
 
-    //XXX memcpy... ?
-    for (i = 0; i < pkt->size >> 1; i++)
-        put_be16(s->pb, data[i]);
+#ifdef WORDS_BIGENDIAN
+    put_buffer(s->pb, pkt->data, pkt->size & (~1));
+#else
+    {
+        //XXX swab... ?
+        uint16_t *data = (uint16_t *) pkt->data;
+        for (i = 0; i < pkt->size >> 1; i++)
+            put_be16(s->pb, data[i]);
+    }
+#endif
 
     if (pkt->size & 1)
         put_be16(s->pb, pkt->data[pkt->size - 1]);
