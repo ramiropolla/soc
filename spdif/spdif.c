@@ -64,46 +64,46 @@ static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
     uint32_t syncword_dts = be2me_32(*(uint32_t *) pkt->data);
-    int samples;
+    int blocks;
 
     switch (syncword_dts) {
     case DCA_MARKER_RAW_BE:
-        samples =
-            ((((pkt->data[4] & 0x01) << 6) | (pkt->data[5] >> 2)) + 1) << 5;
+        blocks =
+            (((pkt->data[4] & 0x01) << 6) | (pkt->data[5] >> 2)) + 1;
         break;
     case DCA_MARKER_RAW_LE:
-        samples =
-            ((((pkt->data[5] & 0x01) << 6) | (pkt->data[4] >> 2)) + 1) << 5;
+        blocks =
+            (((pkt->data[5] & 0x01) << 6) | (pkt->data[4] >> 2)) + 1;
         break;
     case DCA_MARKER_14B_BE:
-        samples =
-            ((((pkt->data[5] & 0x07) << 4) | (pkt->data[6] & 0x3f)) >> 2) << 5;
+        blocks =
+            (((pkt->data[5] & 0x07) << 4) | ((pkt->data[6] & 0x3f) >> 2)) + 1;
         break;
     case DCA_MARKER_14B_LE:
-        samples =
-            ((((pkt->data[4] & 0x07) << 4) | (pkt->data[7] & 0x3f)) >> 2) << 5;
+        blocks =
+            (((pkt->data[4] & 0x07) << 4) | ((pkt->data[7] & 0x3f) >> 2)) + 1;
         break;
     default:
         av_log(s, AV_LOG_ERROR, "bad DTS syncword\n");
         return -1;
     }
-    av_log(s, AV_LOG_DEBUG, "samples=%i\n", samples);
-    switch (samples) {
-    case 512:
+    av_log(s, AV_LOG_DEBUG, "blocks=%i\n", blocks);
+    switch (blocks) {
+    case 512 >> 5:
         ctx->data_type = IEC958_DTS1;
         break;
-    case 1024:
+    case 1024 >> 5:
         ctx->data_type = IEC958_DTS2;
         break;
-    case 2048:
+    case 2048 >> 5:
         ctx->data_type = IEC958_DTS3;
         break;
     default:
         av_log(s, AV_LOG_ERROR, "%i samples in DTS frame not supported\n",
-               samples);
+               blocks << 5);
         return -1;
     }
-    ctx->pkt_offset = samples << 2;
+    ctx->pkt_offset = blocks << 7;
 
     return 0;
 }
