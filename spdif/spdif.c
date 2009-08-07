@@ -228,7 +228,7 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
     put_le16(s->pb, ctx->data_type); //Pc
     put_le16(s->pb, ctx->pkt_size);  //Pd
 
-#ifdef WORDS_BIGENDIAN
+#if HAVE_BIGENDIAN
     put_buffer(s->pb, pkt->data, pkt->size & (~1));
 #else
     {
