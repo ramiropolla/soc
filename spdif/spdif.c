@@ -63,8 +63,7 @@ static int spdif_header_ac3(AVFormatContext *s, AVPacket *pkt)
 static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
-    uint32_t syncword_dts =
-        (pkt->data[0] << 24) | (pkt->data[1] << 16) | (pkt-> data[2] << 8) | pkt->data[3];
+    uint32_t syncword_dts = be2me_32(*(uint32_t *) pkt->data);
     int samples;
 
     switch (syncword_dts) {
