@@ -1,5 +1,5 @@
 diff --git a/doc/ffmpeg-doc.texi b/doc/ffmpeg-doc.texi
-index ad0af07..777fec3 100644
+index ad0af07..960420e 100644
 --- a/doc/ffmpeg-doc.texi
 +++ b/doc/ffmpeg-doc.texi
 @@ -105,6 +105,12 @@ ffmpeg -i /tmp/a.wav -s 640x480 -i /tmp/a.yuv /tmp/a.mpg
@@ -15,12 +15,13 @@ index ad0af07..777fec3 100644
  * You can also do audio and video conversions at the same time:
  
  @example
-@@ -257,7 +263,7 @@ Codec can handle input truncated at random locations instead of only at frame bo
+@@ -257,7 +263,8 @@ Codec can handle input truncated at random locations instead of only at frame bo
  Force format.
  
  @item -i @var{filename}
 -input file name
-+Input file name, with either relative or absolute paths. Several files can be specified by separating them with commas; these will be concatenated.
++Input file name, with either relative or absolute paths.
++Several files can be specified by separating them with commas; these will be concatenated.
  
  @item -y
  Overwrite output files.
