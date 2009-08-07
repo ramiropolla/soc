@@ -204,12 +204,18 @@ static int spdif_write_header(AVFormatContext *s)
 static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
-    int i, ret;
+    int ret, padding;
 
     ctx->pkt_size = ((pkt->size + 1) >> 1) << 4;
     ret = (*ctx->header_info) (s, pkt);
     if (ret < 0)
         return -1;
+
+    padding = (ctx->pkt_offset - BURST_HEADER_SIZE - pkt->size) >> 1;
+    if (padding < 0) {
+        av_log(s, AV_LOG_ERROR, "bitrate is too high\n");
+        return -1;
+    }
 
     put_le16(s->pb, SYNCWORD1);      //Pa
     put_le16(s->pb, SYNCWORD2);      //Pb
@@ -222,6 +228,7 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
     {
         //XXX swab... ?
         uint16_t *data = (uint16_t *) pkt->data;
+        int i;
         for (i = 0; i < pkt->size >> 1; i++)
             put_be16(s->pb, data[i]);
     }
@@ -230,13 +237,7 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
     if (pkt->size & 1)
         put_be16(s->pb, pkt->data[pkt->size - 1]);
 
-    i = (ctx->pkt_offset - BURST_HEADER_SIZE - pkt->size) >> 1;
-    if (i < 0) {
-        av_log(s, AV_LOG_ERROR, "bitrate is too high\n");
-        return -1;
-    }
-
-    for (; i > 0; i--)
+    for (; padding > 0; padding--)
         put_le16(s->pb, 0);
 
     av_log(s, AV_LOG_DEBUG, "type=%x len=%i pkt_offset=%i\n",
