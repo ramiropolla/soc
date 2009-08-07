@@ -211,8 +211,8 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
     IEC958Context *ctx = s->priv_data;
     int ret, padding;
 
-    ctx->pkt_size = ((pkt->size + 1) >> 1) << 4;
-    ret = (*ctx->header_info) (s, pkt);
+    ctx->pkt_size = FFALIGN(pkt->size, 2) << 3;
+    ret = ctx->header_info(s, pkt);
     if (ret < 0)
         return -1;
 
@@ -228,7 +228,7 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
     put_le16(s->pb, ctx->pkt_size);  //Pd
 
 #if HAVE_BIGENDIAN
-    put_buffer(s->pb, pkt->data, pkt->size & (~1));
+    put_buffer(s->pb, pkt->data, pkt->size & ~1);
 #else
     {
         //XXX swab... ?
@@ -243,7 +243,7 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
         put_be16(s->pb, pkt->data[pkt->size - 1]);
 
     for (; padding > 0; padding--)
-        put_le16(s->pb, 0);
+        put_be16(s->pb, 0);
 
     av_log(s, AV_LOG_DEBUG, "type=%x len=%i pkt_offset=%i\n",
            ctx->data_type, pkt->size, ctx->pkt_offset);
@@ -262,6 +262,4 @@ AVOutputFormat spdif_muxer = {
     CODEC_ID_NONE,
     spdif_write_header,
     spdif_write_packet,
-    NULL,
-    //.flags=
 };
