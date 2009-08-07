@@ -1,13 +1,13 @@
 diff --git a/Changelog b/Changelog
-index 03599fd..9427caf 100644
+index 03599fd..6c5d394 100644
 --- a/Changelog
 +++ b/Changelog
 @@ -31,6 +31,8 @@ version <next>:
  - RTP depacketization of ASF and RTSP from WMS servers
  - RTMP support in libavformat
  - noX handling for OPT_BOOL X options
-+- Playlist API and concatenation support for FFmpeg
-+- Demuxers for M3U, PLS, and XSPF playlist formats
++- playlist API and concatenation support for ffmpeg
++- demuxers for M3U, PLS, and XSPF playlist formats
  
  
  
