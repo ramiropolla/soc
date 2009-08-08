@@ -716,7 +716,7 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
                          float *fixed_gain_factor)
 {
     if (mode == MODE_122 || mode == MODE_795) {
-        p->pitch_gain[4]  = qua_gain_pit [amr_subframe->p_gain];
+        p->pitch_gain[4]   = qua_gain_pit [amr_subframe->p_gain];
         *fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
     } else {
         const float *gains =
@@ -727,7 +727,7 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
                                                                        << 1) +
                                (subframe & 1)];
 
-        p->pitch_gain[4]  = gains[0];
+        p->pitch_gain[4]   = gains[0];
         *fixed_gain_factor = gains[1];
     }
 }
