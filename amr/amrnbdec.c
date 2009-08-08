@@ -721,18 +721,18 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
                          float *fixed_gain_factor)
 {
     if (mode == MODE_122 || mode == MODE_795) {
-        p->pitch_gain[4]   = qua_gain_pit [amr_subframe->p_gain];
-        *fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain];
+        p->pitch_gain[4]   = qua_gain_pit [amr_subframe->p_gain    ] / 16384.0;
+        *fixed_gain_factor = qua_gain_code[amr_subframe->fixed_gain] / 2048.0;
     } else {
-        const float *gains =
+        const uint16_t *gains =
             mode >= MODE_67  ? gains_high[amr_subframe->p_gain] :
             mode >= MODE_515 ? gains_low [amr_subframe->p_gain] :
                 // gain index is only coded in subframes 0,2 for MODE_475
                 gains_MODE_475[(p->frame.subframe[subframe & 2].p_gain << 1) +
                                (subframe & 1)];
 
-        p->pitch_gain[4]   = gains[0];
-        *fixed_gain_factor = gains[1];
+        p->pitch_gain[4]   = gains[0] / 16384.0;
+        *fixed_gain_factor = gains[1] / 4096.0;
     }
 }
 
