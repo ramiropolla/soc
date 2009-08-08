@@ -742,15 +742,14 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
 static void set_fixed_gain(AMRContext *p, const enum Mode mode,
                            float fixed_gain_factor, float fixed_energy)
 {
-    // ^g_c = ^gamma_gc * g_c' (equation 69)
-    p->fixed_gain[4] = fixed_gain_factor *
-        // Eqn 67: gc' = 10^0.05 (predicted dB + mean dB - dB of fixed vector)
-        exp2f(log2f(10.0) * 0.05
-                        * (ff_dot_productf(energy_pred_fac,
-                                           p->prediction_error,
-                                           4) + // predicted fixed energy
-                           energy_mean[mode])) /
-        // 10^(0.05 * -10log(average x^2)) = 1/sqrt((average x^2))
+    // Equations 66-69:
+    // ^g_c = ^gamma_gc * 10^0.05 (predicted dB + mean dB - dB of fixed vector)
+    // Note 10^(0.05 * -10log(average x^2)) = 1/sqrt((average x^2)).
+    p->fixed_gain[4] =
+        fixed_gain_factor *
+        exp2f(log2f(10.0) * 0.05 *
+              (ff_dot_productf(energy_pred_fac, p->prediction_error, 4) +
+               energy_mean[mode])) /
         sqrtf(fixed_energy / AMR_SUBFRAME_SIZE);
 
     // update quantified prediction error energy history
