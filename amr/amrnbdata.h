@@ -99,10 +99,8 @@ typedef struct {
  */
 typedef struct {
     uint16_t lsf[5];           ///< lsf parameters: 5 parameters for MODE_122, only 3 for other modes
-    union {
-        AMRNBSubframe subframe[4]; ///< unpacked data for each subframe
-        AMRNBSIDFrame sid;
-    } info;
+    AMRNBSubframe subframe[4]; ///< unpacked data for each subframe
+    AMRNBSIDFrame sid;
 } AMRNBFrame;
 
 
@@ -113,7 +111,7 @@ typedef struct {
 /** Specify an LSF parameter bit */
 #define AMR_LSF(variable, bit)               AMR_BIT(lsf[variable], bit)
 /** Specify a subframe-specific bit */
-#define AMR_OF(frame_num, variable, bit)     AMR_BIT(info.subframe[frame_num].variable, bit)
+#define AMR_OF(frame_num, variable, bit)     AMR_BIT(subframe[frame_num].variable, bit)
 /** Specify a pitch gain bit */
 #define AMR_PGAIN(frame_num, bit)            AMR_OF(frame_num, p_gain, bit)
 /** Specify a fixed gain bit */
@@ -123,9 +121,9 @@ typedef struct {
 /** Specify a pulse bit */
 #define AMR_PULSES(frame_num, pulse_id, bit) AMR_OF(frame_num, pulses[pulse_id], bit)
 /** Specify an SID reference vector bit */
-#define AMR_SVECTOR(bit)                     AMR_BIT(info.sid.ref_vector, bit)
+#define AMR_SVECTOR(bit)                     AMR_BIT(sid.ref_vector, bit)
 /** Specify an SID energy index bit */
-#define AMR_SENERGY(bit)                     AMR_BIT(info.sid.energy, bit)
+#define AMR_SENERGY(bit)                     AMR_BIT(sid.energy, bit)
 
 static const AMROrder order_MODE_475[95] = {
 AMR_LSF(0, 7), AMR_LSF(0, 6), AMR_LSF(0, 5), AMR_LSF(0, 4),
