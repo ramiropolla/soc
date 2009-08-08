@@ -42,9 +42,6 @@
 #include "amrnbdata.h"
 
 typedef struct AMRContext {
-
-    GetBitContext                        gb;
-
     AMRNBFrame                        frame; ///< decoded AMR parameters (lsf coefficients, codebook indexes, etc)
     uint8_t             bad_frame_indicator; ///< bad frame ? 1 : 0
     enum Mode                cur_frame_mode; ///< current frame mode
@@ -129,15 +126,16 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
 static enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf,
                                   int buf_size)
 {
+    GetBitContext gb;
     enum Mode mode;
 
-    init_get_bits(&p->gb, buf, buf_size * 8);
+    init_get_bits(&gb, buf, buf_size * 8);
 
     // Decode the first octet.
-    skip_bits(&p->gb, 1);                        // padding bit
-    mode = get_bits(&p->gb, 4);                  // frame type
-    p->bad_frame_indicator = !get_bits1(&p->gb); // quality bit
-    skip_bits(&p->gb, 2);                        // two padding bits
+    skip_bits(&gb, 1);                        // padding bit
+    mode = get_bits(&gb, 4);                  // frame type
+    p->bad_frame_indicator = !get_bits1(&gb); // quality bit
+    skip_bits(&gb, 2);                        // two padding bits
 
     if (mode <= MODE_DTX) {
         uint16_t *data = (uint16_t *)&p->frame;
@@ -146,7 +144,7 @@ static enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf,
 
         memset(&p->frame, 0, sizeof(AMRNBFrame));
         for (i = 0; i < mode_bits[mode]; i++)
-            data[order[i].index] += get_bits1(&p->gb) << order[i].bit;
+            data[order[i].index] += get_bits1(&gb) << order[i].bit;
     }
 
     return mode;
