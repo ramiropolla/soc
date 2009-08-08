@@ -46,7 +46,7 @@ typedef struct AMRContext {
     uint8_t             bad_frame_indicator; ///< bad frame ? 1 : 0
     enum Mode                cur_frame_mode;
 
-    float       prev_lsf_r[LP_FILTER_ORDER]; ///< residual LSF vector from previous subframe
+    int16_t     prev_lsf_r[LP_FILTER_ORDER]; ///< residual LSF vector from previous subframe
     float           lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
     float    prev_lsp_sub4[LP_FILTER_ORDER]; ///< lsp vector for the 4th subframe of the previous frame
 
@@ -215,34 +215,35 @@ static void adjust_lsf(float *lsf)
  */
 static void lsf2lsp_for_mode122(AMRContext *p, float lsp[LP_FILTER_ORDER],
                                 const float lsf_no_r[LP_FILTER_ORDER],
-                                const float *lsf_quantizer[5],
+                                const int16_t *lsf_quantizer[5],
                                 const int quantizer_offset,
                                 const int sign, const int update)
 {
-    float lsf[LP_FILTER_ORDER]; // used for both the residual and total LSFs
+    int16_t lsf_r[LP_FILTER_ORDER]; // residual LSF vector
+    float lsf_q[LP_FILTER_ORDER]; // quantified LSF vector
     int i;
 
     for (i = 0; i < LP_FILTER_ORDER >> 1; i++)
-        memcpy(&lsf[i << 1], &lsf_quantizer[i][quantizer_offset],
-               2 * sizeof(float));
+        memcpy(&lsf_r[i << 1], &lsf_quantizer[i][quantizer_offset],
+               2 * sizeof(*lsf_r));
 
     if (sign) {
-        lsf[4] *= -1;
-        lsf[5] *= -1;
+        lsf_r[4] *= -1;
+        lsf_r[5] *= -1;
     }
 
     if (update)
-        memcpy(p->prev_lsf_r, lsf, LP_FILTER_ORDER * sizeof(float));
+        memcpy(p->prev_lsf_r, lsf_r, LP_FILTER_ORDER * sizeof(float));
 
     for (i = 0; i < LP_FILTER_ORDER; i++)
-        lsf[i] += lsf_no_r[i];
+        lsf_q[i] = lsf_r[i] * LSF_R_FAC + lsf_no_r[i];
 
-    adjust_lsf(lsf);
+    adjust_lsf(lsf_q);
 
     if (update)
-        interpolate_lsf(p->lsf_q, lsf);
+        interpolate_lsf(p->lsf_q, lsf_q);
 
-    lsf2lsp(lsf, lsp);
+    lsf2lsp(lsf_q, lsp);
 }
 
 /**
@@ -254,7 +255,7 @@ static void lsf2lsp_5(AMRContext *p)
 {
     const uint16_t *lsf_param = p->frame.lsf;
     float lsf_no_r[LP_FILTER_ORDER]; // LSFs without the residual vector
-    const float *lsf_quantizer[5];
+    const int16_t *lsf_quantizer[5];
     int i;
 
     lsf_quantizer[0] = lsf_5_1[lsf_param[0]];
@@ -264,7 +265,7 @@ static void lsf2lsp_5(AMRContext *p)
     lsf_quantizer[4] = lsf_5_5[lsf_param[4]];
 
     for (i = 0; i < LP_FILTER_ORDER; i++)
-        lsf_no_r[i] = p->prev_lsf_r[i] * PRED_FAC_MODE_122 + lsf_5_mean[i];
+        lsf_no_r[i] = p->prev_lsf_r[i] * LSF_R_FAC * PRED_FAC_MODE_122 + lsf_5_mean[i];
 
     lsf2lsp_for_mode122(p, p->lsp[1], lsf_no_r, lsf_quantizer, 0, lsf_param[2] & 1, 0);
     lsf2lsp_for_mode122(p, p->lsp[3], lsf_no_r, lsf_quantizer, 2, lsf_param[2] & 1, 1);
@@ -282,9 +283,9 @@ static void lsf2lsp_5(AMRContext *p)
 static void lsf2lsp_3(AMRContext *p)
 {
     const uint16_t *lsf_param = p->frame.lsf;
-    float lsf_r[LP_FILTER_ORDER]; // residual LSF vector
+    int16_t lsf_r[LP_FILTER_ORDER]; // residual LSF vector
     float lsf_q[LP_FILTER_ORDER]; // quantified LSF vector
-    const float *lsf_quantizer;
+    const int16_t *lsf_quantizer;
     int i;
 
     lsf_quantizer = (p->cur_frame_mode == MODE_795 ? lsf_3_1_MODE_795 : lsf_3_1)[lsf_param[0]];
@@ -298,7 +299,7 @@ static void lsf2lsp_3(AMRContext *p)
 
     // calculate mean-removed LSF vector and add mean
     for (i = 0; i < LP_FILTER_ORDER; i++)
-        lsf_q[i] = lsf_r[i] + p->prev_lsf_r[i] * pred_fac[i] + lsf_3_mean[i];
+        lsf_q[i] = (lsf_r[i] + p->prev_lsf_r[i] * pred_fac[i]) * LSF_R_FAC + lsf_3_mean[i];
 
     adjust_lsf(lsf_q);
 
