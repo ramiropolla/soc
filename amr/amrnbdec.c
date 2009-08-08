@@ -684,7 +684,9 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsf,
 
     // If diff is large for ten subframes, disable smoothing for a 40-subframe
     // hangover period.
-    p->diff_count = diff > 0.65 ? p->diff_count + 1 : 0;
+    p->diff_count++;
+    if (diff <= 0.65)
+        p->diff_count = 0;
 
     if (p->diff_count > 10) {
         p->hang_count = 0;
