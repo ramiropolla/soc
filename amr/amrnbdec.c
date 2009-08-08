@@ -44,7 +44,7 @@
 typedef struct AMRContext {
     AMRNBFrame                        frame; ///< decoded AMR parameters (lsf coefficients, codebook indexes, etc)
     uint8_t             bad_frame_indicator; ///< bad frame ? 1 : 0
-    enum Mode                cur_frame_mode; ///< current frame mode
+    enum Mode                cur_frame_mode;
 
     float       prev_lsf_r[LP_FILTER_ORDER]; ///< residual LSF vector from previous subframe
     float           lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
@@ -57,7 +57,7 @@ typedef struct AMRContext {
 
     uint8_t                   pitch_lag_int; ///< integer part of pitch lag from current subframe
 
-    float excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1 + AMR_SUBFRAME_SIZE]; ///< excitation buffer
+    float excitation_buf[PITCH_LAG_MAX + LP_FILTER_ORDER + 1 + AMR_SUBFRAME_SIZE]; ///< current excitation and all necessary excitation history
     float                       *excitation; ///< pointer to the current excitation vector in excitation_buf
 
     float   pitch_vector[AMR_SUBFRAME_SIZE]; ///< adaptive code book (pitch) vector
