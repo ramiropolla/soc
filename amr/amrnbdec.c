@@ -1126,7 +1126,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     ff_acelp_high_pass_filterf(buf_out, p->high_pass_mem, AMR_BLOCK_SIZE);
 
     for (i = 0; i < AMR_BLOCK_SIZE; i++)
-        buf_out[i] = av_clipf(buf_out[i] * AMR_SAMPLE_SCALE, -1, 1);
+        buf_out[i] = av_clipf(buf_out[i] * AMR_SAMPLE_SCALE,
+                              -1.0, 32767.0/32768.0);
 
     /* Update averaged lsf vector (used for fixed gain smoothing).
      *
