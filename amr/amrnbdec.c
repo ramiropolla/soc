@@ -362,7 +362,7 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index,
         (subframe == 2 && mode != MODE_475 && mode != MODE_515)) {
         if (mode == MODE_122) {
             if (pitch_index < 463) {
-                *lag_int  = (pitch_index + 117) * 10923 >> 16;
+                *lag_int  = (pitch_index + 107) * 10923 >> 16;
                 *lag_frac = pitch_index - *lag_int * 6 + 105;
             } else {
                 *lag_int  = pitch_index - 368;
