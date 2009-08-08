@@ -113,7 +113,7 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
 
 
 /**
- * Decode an RFC4867 speech frame into the AMR frame mode and parameters.
+ * Unpack an RFC4867 speech frame into the AMR frame mode and parameters.
  *
  * The order of speech bits is specified by 3GPP TS 26.101.
  *
@@ -123,7 +123,7 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
  *
  * @return the frame mode
  */
-static enum Mode decode_bitstream(AMRContext *p, const uint8_t *buf,
+static enum Mode unpack_bitstream(AMRContext *p, const uint8_t *buf,
                                   int buf_size)
 {
     GetBitContext gb;
@@ -1048,7 +1048,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     float synth_fixed_gain;                  // the fixed gain that synthesis should use
     float *synth_fixed_vector;               // pointer to the fixed vector that synthesis should use
 
-    p->cur_frame_mode = decode_bitstream(p, buf, buf_size);
+    p->cur_frame_mode = unpack_bitstream(p, buf, buf_size);
     if (p->cur_frame_mode == MODE_DTX) {
         av_log_missing_feature(avctx, "dtx mode", 1);
         return -1;
