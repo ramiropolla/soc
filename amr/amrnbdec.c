@@ -686,8 +686,10 @@ static float fixed_gain_smooth(AMRContext *p , const float *lsf,
     // hangover period.
     p->diff_count = diff > 0.65 ? p->diff_count + 1 : 0;
 
-    if (p->diff_count > 10)
+    if (p->diff_count > 10) {
         p->hang_count = 0;
+        p->diff_count--; // don't let diff_count overflow
+    }
 
     if (p->hang_count < 40) {
         p->hang_count++;
