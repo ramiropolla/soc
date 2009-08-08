@@ -819,8 +819,12 @@ static float *anti_sparseness(AMRContext *p, float *fixed_vector,
 
     if (p->cur_frame_mode != MODE_74 && p->cur_frame_mode < MODE_102
          && ir_filter_strength < 2) {
-        const float **filters = p->cur_frame_mode == MODE_795 ?
-            ir_filters_lookup_MODE_795 : ir_filters_lookup;
+        const float **filters;
+
+        if (p->cur_frame_mode == MODE_795) {
+            filters = ir_filters_lookup_MODE_795;
+        } else
+            filters = ir_filters_lookup;
 
         ff_celp_convolve_circf(spare_vector, fixed_vector,
                                filters[ir_filter_strength], AMR_SUBFRAME_SIZE);
@@ -869,10 +873,12 @@ static int synthesis(AMRContext *p, float *lpc,
     // emphasize pitch vector contribution
     if (p->pitch_gain[4] > 0.5 && !overflow) {
         float energy = ff_energyf(excitation, AMR_SUBFRAME_SIZE);
-        float pitch_factor = (p->cur_frame_mode == MODE_122 ? 0.25 : 0.5)
-            * FFMIN(p->pitch_gain[4],
-                    p->cur_frame_mode == MODE_122 ? 1.0 : SHARP_MAX)
-            * p->pitch_gain[4];
+        float pitch_factor = p->pitch_gain[4];
+
+        if (p->cur_frame_mode == MODE_122) {
+            pitch_factor *= 0.25 * FFMIN(p->pitch_gain[4], 1.0);
+        } else
+            pitch_factor *= 0.5  * FFMIN(p->pitch_gain[4], SHARP_MAX);
 
         for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
             excitation[i] += pitch_factor * p->pitch_vector[i];
