@@ -737,10 +737,10 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
  * @param p the context
  * @param mode mode of the current frame
  * @param fixed_gain_factor gain correction factor
- * @param fixed_vector algebraic codebook vector
+ * @param fixed_energy decoded algebraic codebook vector energy
  */
 static void set_fixed_gain(AMRContext *p, const enum Mode mode,
-                           float fixed_gain_factor, float *fixed_vector)
+                           float fixed_gain_factor, float fixed_energy)
 {
     // ^g_c = ^gamma_gc * g_c' (equation 69)
     p->fixed_gain[4] = fixed_gain_factor *
@@ -751,7 +751,7 @@ static void set_fixed_gain(AMRContext *p, const enum Mode mode,
                                            4) + // predicted fixed energy
                            energy_mean[mode])) /
         // 10^(0.05 * -10log(average x^2)) = 1/sqrt((average x^2))
-        sqrtf(ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE) / AMR_SUBFRAME_SIZE);
+        sqrtf(fixed_energy / AMR_SUBFRAME_SIZE);
 
     // update quantified prediction error energy history
     memmove(&p->prediction_error[0], &p->prediction_error[1],
@@ -1079,7 +1079,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         pitch_sharpening(p, subframe, p->cur_frame_mode, fixed_vector);
 
         set_fixed_gain(p, p->cur_frame_mode, fixed_gain_factor,
-                       fixed_vector);
+                       ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE));
 
         // The excitation feedback is calculated without any processing such
         // as fixed gain smoothing. This isn't mentioned in the specification.
