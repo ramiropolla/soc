@@ -362,7 +362,7 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index,
         (subframe == 2 && mode != MODE_475 && mode != MODE_515)) {
         if (mode == MODE_122) {
             if (pitch_index < 463) {
-                *lag_int  = (pitch_index + 5) / 6 + 17;
+                *lag_int  = ((pitch_index + 5) * 10923 >> 16) + 17;
                 *lag_frac = pitch_index - *lag_int * 6 + 105;
             } else {
                 *lag_int  = pitch_index - 368;
@@ -377,7 +377,7 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index,
         }
     } else {
         if (mode == MODE_122) {
-            *lag_int  = (pitch_index + 5) / 6 - 1;
+            *lag_int  = ((pitch_index + 5) * 10923 >> 16) - 1;
             *lag_frac = pitch_index - *lag_int * 6 - 3;
             *lag_int += av_clip(prev_lag_int - 5, PITCH_LAG_MIN_MODE_122,
                                 PITCH_LAG_MAX - 9);
