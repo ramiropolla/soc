@@ -848,18 +848,18 @@ static float *anti_sparseness(AMRContext *p, float *fixed_vector,
  * Conduct 10th order linear predictive coding synthesis.
  *
  * @param p             pointer to the AMRContext
- * @param excitation    pointer to the excitation vector
  * @param lpc           pointer to the LPC coefficients
  * @param fixed_gain    fixed codebook gain for synthesis
  * @param fixed_vector  algebraic codebook vector
  * @param samples       pointer to the output speech samples
  * @param overflow      16-bit overflow flag
  */
-static int synthesis(AMRContext *p, float *excitation, float *lpc,
+static int synthesis(AMRContext *p, float *lpc,
                      float fixed_gain, float *fixed_vector, float *samples,
                      uint8_t overflow)
 {
     int i, overflow_temp = 0;
+    float excitation[AMR_SUBFRAME_SIZE];
 
     // if an overflow has been detected, the pitch vector is scaled down by a
     // factor of 4
@@ -1045,7 +1045,6 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     float *buf_out = data;                   // pointer to the output data buffer
     int i, subframe;
     float fixed_gain_factor;
-    float exc_feedback[AMR_SUBFRAME_SIZE];   // unfiltered excitation to feed into the next subframe
     float fixed_vector[AMR_SUBFRAME_SIZE];   // algebraic code book (fixed) vector
     float spare_vector[AMR_SUBFRAME_SIZE];   // extra stack space to hold result from anti-sparseness processing
     float synth_fixed_gain;                  // the fixed gain that synthesis should use
@@ -1087,7 +1086,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         // The excitation feedback is calculated without any processing such
         // as fixed gain smoothing. This isn't mentioned in the specification.
-        ff_weighted_vector_sumf(exc_feedback, p->excitation, fixed_vector,
+        ff_weighted_vector_sumf(p->excitation, p->excitation, fixed_vector,
                                 p->pitch_gain[4], p->fixed_gain[4],
                                 AMR_SUBFRAME_SIZE);
 
@@ -1097,7 +1096,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         // creates unwanted feedback if the excitation vector is nonzero.
         // (e.g. test sequence T19_795.COD in 3GPP TS 26.074)
         for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
-            exc_feedback[i] = truncf(exc_feedback[i]);
+            p->excitation[i] = truncf(p->excitation[i]);
 
         // Smooth fixed gain.
         // The specification is ambiguous, but in the reference source, the
@@ -1108,18 +1107,17 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         synth_fixed_vector = anti_sparseness(p, fixed_vector, synth_fixed_gain,
                                              spare_vector);
 
-        if (synthesis(p, p->excitation, p->lpc[subframe], synth_fixed_gain,
+        if (synthesis(p, p->lpc[subframe], synth_fixed_gain,
                       synth_fixed_vector, &p->samples_in[LP_FILTER_ORDER], 0))
             // overflow detected -> rerun synthesis scaling pitch vector down
             // by a factor of 4, skipping pitch vector contribution emphasis
             // and adaptive gain control
-            synthesis(p, p->excitation, p->lpc[subframe], synth_fixed_gain,
+            synthesis(p, p->lpc[subframe], synth_fixed_gain,
                       synth_fixed_vector, &p->samples_in[LP_FILTER_ORDER], 1);
 
         postfilter(p, p->lpc[subframe], buf_out + subframe * AMR_SUBFRAME_SIZE);
 
         // update buffers and history
-        memcpy(p->excitation, exc_feedback, AMR_SUBFRAME_SIZE * sizeof(float));
         update_state(p);
     }
 
