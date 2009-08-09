@@ -688,8 +688,10 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
 
             // if joint_stereo and block_switching is set, independent decoding
             // is signaled via the first bit of bs_info
-            if(sconf->joint_stereo && sconf->block_switching)
-                independent_bs = bs_info >> 31;
+            if(sconf->joint_stereo && sconf->block_switching) {
+                if (bs_info >> 31)
+                    independent_bs = 2;
+            }
 
             // if this is the last channel, it has to be decoded independently
             if (c == sconf->channels - 1)
@@ -709,6 +711,9 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                 memmove((ctx->raw_samples[c]) - sconf->max_order,
                         (ctx->raw_samples[c]) - sconf->max_order + sconf->frame_length,
                         sizeof(int64_t) * sconf->max_order);
+
+                if(independent_bs)
+                    independent_bs--;
             } else {
                 unsigned int offset = 0;
 
