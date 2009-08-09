@@ -1020,12 +1020,11 @@ static int synthesis(AMRContext *p, float *lpc,
     // emphasize pitch vector contribution
     if (p->pitch_gain[4] > 0.5 && !overflow) {
         float energy = ff_energyf(excitation, AMR_SUBFRAME_SIZE);
-        float pitch_factor = p->pitch_gain[4];
-
-        if (p->cur_frame_mode == MODE_122) {
-            pitch_factor *= 0.25 * FFMIN(p->pitch_gain[4], 1.0);
-        } else
-            pitch_factor *= 0.5  * FFMIN(p->pitch_gain[4], SHARP_MAX);
+        float pitch_factor =
+            p->pitch_gain[4] *
+            (p->cur_frame_mode == MODE_122 ?
+                0.25 * FFMIN(p->pitch_gain[4], 1.0) :
+                0.5  * FFMIN(p->pitch_gain[4], SHARP_MAX));
 
         for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
             excitation[i] += pitch_factor * p->pitch_vector[i];
