@@ -848,6 +848,28 @@ static void set_fixed_gain(AMRContext *p, const enum Mode mode,
 /// @{
 
 /**
+ * Add an array to a rotated array
+ *
+ * out[k] = in[k] + fac * lagged[k-lag] with wrap-around
+ *
+ * @param out result vector
+ * @param in samples to be added unfiltered
+ * @param lagged samples to be rotated, multiplied and added
+ * @param lag delay from 0 to n
+ * @param fac coefficient to applied to lagged samples
+ * @param n number of samples
+ */
+static void circ_add(float *out, const float *in, const float *lagged,
+                     int lag, float fac, int n)
+{
+    int k;
+    for (k = 0; k < lag; k++)
+        out[k] = in[k] + fac * lagged[n + k - lag];
+    for (; k < n; k++)
+        out[k] = in[k] + fac * lagged[    k - lag];
+}
+
+/**
  * Reduce fixed vector sparseness by smoothing with one of three IR filters.
  *
  * This implements 3GPP TS 26.090 section 6.1(5).
@@ -867,7 +889,7 @@ static const float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
                                     const float *fixed_vector,
                                     float fixed_gain, float *out)
 {
-    int i, k;
+    int i;
     int ir_filter_strength;
 
     if (p->pitch_gain[4] < 0.6) {
@@ -913,21 +935,12 @@ static const float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
         float fac = fixed_sparse->pitch_fac;
 
         if (fixed_sparse->pitch_lag < AMR_SUBFRAME_SIZE) {
-            for (k = 0; k < lag; k++)
-                filter1[k] =     filter[k]
-                                 + fac * filter [AMR_SUBFRAME_SIZE + k - lag];
-            for (; k < AMR_SUBFRAME_SIZE; k++)
-                filter1[k] =     filter[k]
-                                 + fac * filter [                    k - lag];
+            circ_add(filter1, filter, filter, lag, fac,
+                     AMR_SUBFRAME_SIZE);
 
-            if (fixed_sparse->pitch_lag < AMR_SUBFRAME_SIZE >> 1) {
-                for (k = 0; k < lag; k++)
-                    filter2[k] = filter[k]
-                                 + fac * filter1[AMR_SUBFRAME_SIZE + k - lag];
-                for (; k < AMR_SUBFRAME_SIZE; k++)
-                    filter2[k] = filter[k]
-                                 + fac * filter1[                    k - lag];
-            }
+            if (fixed_sparse->pitch_lag < AMR_SUBFRAME_SIZE >> 1)
+                circ_add(filter2, filter, filter1, lag, fac,
+                         AMR_SUBFRAME_SIZE);
         }
 
         memset(out, 0, sizeof(float) * AMR_SUBFRAME_SIZE);
@@ -943,11 +956,7 @@ static const float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
             } else
                 filterp = filter2;
 
-            for (k = 0; k < x; k++)
-                out[k] += y * filterp[AMR_SUBFRAME_SIZE + k - x];
-
-            for (; k < AMR_SUBFRAME_SIZE; k++)
-                out[k] += y * filterp[                    k - x];
+            circ_add(out, out, filterp, x, y, AMR_SUBFRAME_SIZE);
         }
         fixed_vector = out;
     }
