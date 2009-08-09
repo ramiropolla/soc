@@ -440,7 +440,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         int64_t      lpc_cof[sconf->max_order];
         unsigned int start = 0;
         int64_t      *res = ctx->residuals;
-        unsigned int sb, smp;
+        int          sb, smp;
         int64_t      y;
 
         *js_blocks |= get_bits1(gb);
