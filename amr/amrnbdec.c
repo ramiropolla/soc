@@ -175,7 +175,7 @@ static void lsf2lsp(float *lsf, float *lsp)
     int i;
 
     for (i = 0; i < LP_FILTER_ORDER; i++)
-        lsp[i] = cos(lsf[i] * FREQ_LSP_FAC); // FREQ_LSP_FAC = 2*M_PI / 8000.0
+        lsp[i] = cos(lsf[i] * 2.0 * M_PI / 8000.0);
 }
 
 /**
@@ -191,7 +191,7 @@ static void interpolate_lsf(float lsf_q[4][LP_FILTER_ORDER], float *lsf_new)
 
     for (i = 0; i < 4; i++)
         ff_weighted_vector_sumf(lsf_q[i], lsf_q[3], lsf_new,
-                                0.25 * (3 - i), 0.25 * (i + 1) * FREQ_LSF,
+                                0.25 * (3 - i), 0.25 * (i + 1) / 8000.0,
                                 LP_FILTER_ORDER);
 }
 
