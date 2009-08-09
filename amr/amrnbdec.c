@@ -1236,7 +1236,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         // The specification is ambiguous, but in the reference source, the
         // smoothed value is NOT fed back into later fixed gain smoothing.
         synth_fixed_gain = fixed_gain_smooth(p, p->lsf_q[subframe],
-                                              p->lsf_avg, p->cur_frame_mode);
+                                             p->lsf_avg, p->cur_frame_mode);
 
         synth_fixed_vector = anti_sparseness(p, &fixed_sparse, p->fixed_vector,
                                              synth_fixed_gain, spare_vector);
