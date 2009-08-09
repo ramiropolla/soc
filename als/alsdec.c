@@ -658,7 +658,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
     uint32_t js_blocks[2];
 
     uint32_t bs_info = 0;
-    unsigned int *ptr_div_blocks = &div_blocks[0];
+    unsigned int *ptr_div_blocks;
 
     // skip ra_unit_size if present
     if (sconf->ra_flag == 1 && ra_frame)
@@ -683,6 +683,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
             }
 
             ctx->num_blocks = 0;
+            ptr_div_blocks = &div_blocks[0];
             parse_bs_info(bs_info, 0, 0, &ptr_div_blocks, &ctx->num_blocks);
             reconstruct_block_sizes(ctx, div_blocks);
 
@@ -786,6 +787,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
         }
 
         ctx->num_blocks = 0;
+        ptr_div_blocks = &div_blocks[0];
         parse_bs_info(bs_info, 0, 0, &ptr_div_blocks, &ctx->num_blocks);
         reconstruct_block_sizes(ctx, div_blocks);
 
