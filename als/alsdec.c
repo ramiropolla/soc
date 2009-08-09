@@ -686,14 +686,14 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
             parse_bs_info(bs_info, 0, 0, &ptr_div_blocks, &ctx->num_blocks);
             reconstruct_block_sizes(ctx, div_blocks);
 
-            // if this is the last channel, it has to be decoded independently
-            if (c == sconf->channels - 1)
-                independent_bs = 1;
-
             // if joint_stereo and block_switching is set, independent decoding
             // is signaled via the first bit of bs_info
             if(sconf->joint_stereo && sconf->block_switching)
                 independent_bs = bs_info >> 31;
+
+            // if this is the last channel, it has to be decoded independently
+            if (c == sconf->channels - 1)
+                independent_bs = 1;
 
             if (independent_bs) {
                 raw_samples = ctx->raw_samples[c];
