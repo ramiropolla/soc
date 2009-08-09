@@ -99,6 +99,7 @@ static av_cold void dprint_specific_config(ALSDecContext *ctx)
     dprintf(avctx, "floating = %i\n",             sconf->floating);
     dprintf(avctx, "msb_first = %i\n",            sconf->msb_first);
     dprintf(avctx, "frame_length = %i\n",         sconf->frame_length);
+    dprintf(avctx, "random_access = %i\n",        sconf->random_access);
     dprintf(avctx, "ra_flag = %i\n",              sconf->ra_flag);
     dprintf(avctx, "adapt_order = %i\n",          sconf->adapt_order);
     dprintf(avctx, "coef_table = %i\n",           sconf->coef_table);
@@ -580,10 +581,10 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
             // reconstruct difference signal for prediction (joint-stereo)
             if (*js_blocks & 1 && raw_other) {
                 int i;
-                if (raw_other > raw_samples) {          // L = R - D
+                if (raw_other > raw_samples) {          // D = R - L
                     for (i = -1; i >= -sconf->max_order; i--)
                         raw_samples[i] = raw_other[i] - raw_samples[i];
-                } else {                                // R = D + L
+                } else {                                // D = R - L
                     for (i = -1; i >= -sconf->max_order; i--)
                         raw_samples[i] = raw_samples[i] - raw_other[i];
                 }
