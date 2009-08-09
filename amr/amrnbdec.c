@@ -83,6 +83,13 @@ typedef struct AMRContext {
 
 } AMRContext;
 
+/** Sparse representation for the algebraic codebook (fixed) vector */
+typedef struct {
+    int      n;
+    int      x[10];
+    float    y[10];
+} AMRFixed;
+
 static void reset_state(AMRContext *p)
 {
     int i;
@@ -479,33 +486,14 @@ static void decode_pitch_vector(AMRContext *p,
 /// @{
 
 /**
- * Reconstruct the algebraic codebook vector.
- *
- * @param pulse_position       vector of pulse positions
- * @param sign                 signs of the pulses
- * @param nr_pulses            number of pulses
- * @param fixed_vector         algebraic codebook vector
- */
-static void reconstruct_fixed_vector(int *pulse_position, int sign,
-                                     int nr_pulses, float *fixed_vector)
-{
-    int i;
-
-    memset(fixed_vector, 0, AMR_SUBFRAME_SIZE * sizeof(float));
-
-    for (i = 0; i < nr_pulses; i++)
-        fixed_vector[pulse_position[i]] = ((sign >> i) & 1) ? 1.0 : -1.0;
-}
-
-/**
  * Decode the algebraic codebook index to pulse positions and signs and
  * construct the algebraic codebook vector for MODE_102.
  *
  * @param fixed_index          positions of the eight pulses
- * @param fixed_vector         pointer to the algebraic codebook vector
+ * @param fixed_sparse         pointer to the algebraic codebook vector
  */
 static void decode_8_pulses_31bits(const int16_t *fixed_index,
-                                   float *fixed_vector)
+                                   AMRFixed *fixed_sparse)
 {
     int pulse_position[8];
     int i, temp;
@@ -534,14 +522,15 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index,
     pulse_position[3] = (pulse_position[3] << 1) + ( fixed_index[6]       & 1);
     pulse_position[7] = (pulse_position[7] << 1) + ((fixed_index[6] >> 1) & 1);
 
-    memset(fixed_vector, 0, AMR_SUBFRAME_SIZE * sizeof(float));
-
+    fixed_sparse->n = 8;
     for (i = 0; i < TRACKS_MODE_102; i++) {
         const int pos1   = (pulse_position[i]     << 2) + i;
         const int pos2   = (pulse_position[i + 4] << 2) + i;
         const float sign = fixed_index[i] ? -1.0 : 1.0;
-        fixed_vector[pos1]  = sign;
-        fixed_vector[pos2] += pos2 < pos1 ? -sign : sign;
+        fixed_sparse->x[i    ] = pos1;
+        fixed_sparse->x[i + 4] = pos2;
+        fixed_sparse->y[i    ] = sign;
+        fixed_sparse->y[i + 4] = pos2 < pos1 ? -sign : sign;
     }
 }
 
@@ -552,21 +541,22 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index,
  * @note: The positions and signs are explicitly coded in MODE_122.
  *
  * @param fixed_index          positions of the ten pulses
- * @param fixed_vector         pointer to the algebraic codebook vector
+ * @param fixed_sparse         pointer to the algebraic codebook vector
  */
 static void decode_10_pulses_35bits(const int16_t *fixed_index,
-                                    float *fixed_vector)
+                                    AMRFixed *fixed_sparse)
 {
     int i;
 
-    memset(fixed_vector, 0, AMR_SUBFRAME_SIZE * sizeof(float));
-
+    fixed_sparse->n = 10;
     for (i = 0; i < TRACKS; i++) {
         const int pos1   = gray_decode[fixed_index[i    ] & 7] * TRACKS + i;
         const int pos2   = gray_decode[fixed_index[i + 5] & 7] * TRACKS + i;
         const float sign = (fixed_index[i] & 8) ? -1.0 : 1.0;
-        fixed_vector[pos1]  = sign;
-        fixed_vector[pos2] += pos2 < pos1 ? -sign : sign;
+        fixed_sparse->x[i    ] = pos1;
+        fixed_sparse->x[i + 5] = pos2;
+        fixed_sparse->y[i    ] = sign;
+        fixed_sparse->y[i + 5] = pos2 < pos1 ? -sign : sign;
     }
 }
 
@@ -580,63 +570,71 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index,
  *                  MODE_67,            3 | 1-3, 4,   5-7, 8,  9-11
  *      MODE_74 or MODE_795,            4 | 1-3, 4-6, 7-9, 10, 11-13
  *
- * @param fixed_vector pointer to the algebraic codebook vector
+ * @param fixed_sparse pointer to the algebraic codebook vector
  * @param pulses       algebraic codebook indexes
  * @param mode         mode of the current frame
  * @param subframe     current subframe number
  */
-static void decode_fixed_vector(float *fixed_vector, const uint16_t *pulses,
+static void decode_fixed_sparse(AMRFixed *fixed_sparse, const uint16_t *pulses,
                                 const enum Mode mode, const int subframe)
 {
     assert(MODE_475 <= mode && mode <= MODE_122);
 
     if (mode == MODE_122) {
-        decode_10_pulses_35bits(pulses, fixed_vector);
+        decode_10_pulses_35bits(pulses, fixed_sparse);
     } else if (mode == MODE_102) {
-        decode_8_pulses_31bits(pulses, fixed_vector);
+        decode_8_pulses_31bits(pulses, fixed_sparse);
     } else {
-        int pulse_position[4], pulse_subset;
+        int *pulse_position = fixed_sparse->x;
+        int i, pulse_subset;
         const int fixed_index = pulses[0];
 
         if (mode <= MODE_515) {
             pulse_subset      = ((fixed_index >> 3) & 8)     + (subframe << 1);
             pulse_position[0] = ( fixed_index       & 7) * 5 + track_position[pulse_subset];
             pulse_position[1] = ((fixed_index >> 3) & 7) * 5 + track_position[pulse_subset + 1];
+            fixed_sparse->n = 2;
         } else if (mode == MODE_59) {
             pulse_subset      = ((fixed_index & 1) << 1) + 1;
             pulse_position[0] = ((fixed_index >> 1) & 7) * 5 + pulse_subset;
             pulse_subset      = (fixed_index  >> 4) & 3;
             pulse_position[1] = ((fixed_index >> 6) & 7) * 5 + pulse_subset + (pulse_subset == 3 ? 1 : 0);
+            fixed_sparse->n = pulse_position[0] == pulse_position[1] ? 1 : 2;
         } else if (mode == MODE_67) {
             pulse_position[0] = (fixed_index        & 7) * 5;
             pulse_subset      = (fixed_index  >> 2) & 2;
             pulse_position[1] = ((fixed_index >> 4) & 7) * 5 + pulse_subset + 1;
             pulse_subset      = (fixed_index  >> 6) & 2;
             pulse_position[2] = ((fixed_index >> 8) & 7) * 5 + pulse_subset + 2;
+            fixed_sparse->n = 3;
         } else { // mode <= MODE_795
             pulse_position[0] = gray_decode[ fixed_index        & 7] * 5;
             pulse_position[1] = gray_decode[(fixed_index >> 3)  & 7] * 5 + 1;
             pulse_position[2] = gray_decode[(fixed_index >> 6)  & 7] * 5 + 2;
             pulse_subset      = (fixed_index >> 9) & 1;
             pulse_position[3] = gray_decode[(fixed_index >> 10) & 7] * 5 + pulse_subset + 3;
+            fixed_sparse->n = 4;
         }
-        reconstruct_fixed_vector(pulse_position, pulses[1],
-                                 pulses_nb_per_mode[mode], fixed_vector);
+        for (i = 0; i < fixed_sparse->n; i++)
+            fixed_sparse->y[i] = (pulses[1] >> i) & 1 ? 1.0 : -1.0;
     }
 }
 
 /**
- * Apply pitch lag to the fixed vector (section 6.1.2)
+ * Apply pitch lag to obtain the sharpened fixed vector (section 6.1.2)
  *
  * @param p the context
  * @param subframe unpacked amr subframe
  * @param mode mode of the current frame
- * @param fixed_vector vector to be modified
+ * @param in sparse representation of algebraic codebook vector
+ * @param out sharpened fixed vector
  */
 static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode,
-                             float *fixed_vector)
+                             const AMRFixed *in, float *out)
 {
     int i;
+    int x;
+    float y;
 
     // The spec suggests the current pitch gain is always used, but in other
     // modes the pitch and codebook gains are joinly quantized (sec 5.8.2)
@@ -644,10 +642,40 @@ static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode,
     if (mode == MODE_122)
         p->beta = FFMIN(p->pitch_gain[4], 1.0);
 
-    // conduct pitch sharpening as appropriate (section 6.1.2)
-    if (p->pitch_lag_int < AMR_SUBFRAME_SIZE)
-        for (i = p->pitch_lag_int; i < AMR_SUBFRAME_SIZE; i++)
-            fixed_vector[i] += p->beta * fixed_vector[i - p->pitch_lag_int];
+    memset(out, 0, sizeof(float) * AMR_SUBFRAME_SIZE);
+    if (p->pitch_lag_int >= AMR_SUBFRAME_SIZE) {
+        for (i = 0; i < in->n; i++) {
+            x = in->x[i];
+            y = in->y[i];
+            out[x] += y;
+        }
+    } else if (p->pitch_lag_int >= AMR_SUBFRAME_SIZE >> 1) {
+        for (i = 0; i < in->n; i++) {
+            x = in->x[i];
+            y = in->y[i];
+            out[x] += y;
+
+            x += p->pitch_lag_int;
+            if (x < AMR_SUBFRAME_SIZE)
+                out[x] += y * p->beta;
+        }
+    } else {
+        for (i = 0; i < in->n; i++) {
+            x = in->x[i];
+            y = in->y[i];
+            out[x] += y;
+
+            x += p->pitch_lag_int;
+            if (x < AMR_SUBFRAME_SIZE) {
+                y *= p->beta;
+                out[x] += y;
+
+                x += p->pitch_lag_int;
+                if (x < AMR_SUBFRAME_SIZE)
+                    out[x] += y * p->beta;
+            }
+        }
+    }
 
     // Save pitch sharpening factor for the next subframe
     // MODE_475 only updates on the 2nd and 4th subframes - this follows from
@@ -1052,6 +1080,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     float *buf_out = data;                   // pointer to the output data buffer
     int i, subframe;
     float fixed_gain_factor;
+    AMRFixed fixed_sparse;
     float fixed_vector[AMR_SUBFRAME_SIZE];   // algebraic code book (fixed) vector
     float spare_vector[AMR_SUBFRAME_SIZE];   // extra stack space to hold result from anti-sparseness processing
     float synth_fixed_gain;                  // the fixed gain that synthesis should use
@@ -1076,7 +1105,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         decode_pitch_vector(p, amr_subframe, subframe);
 
-        decode_fixed_vector(fixed_vector, amr_subframe->pulses,
+        decode_fixed_sparse(&fixed_sparse, amr_subframe->pulses,
                             p->cur_frame_mode, subframe);
 
         // The fixed gain (section 6.1.3) depends on the fixed vector
@@ -1086,7 +1115,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         decode_gains(p, amr_subframe, p->cur_frame_mode, subframe,
                      &fixed_gain_factor);
 
-        pitch_sharpening(p, subframe, p->cur_frame_mode, fixed_vector);
+        pitch_sharpening(p, subframe, p->cur_frame_mode, &fixed_sparse,
+                         fixed_vector);
 
         set_fixed_gain(p, p->cur_frame_mode, fixed_gain_factor,
                        ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE));
