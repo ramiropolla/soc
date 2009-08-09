@@ -870,6 +870,51 @@ static void circ_add(float *out, const float *in, const float *lagged,
 }
 
 /**
+ * Circularly convolve a sparse fixed vector with a phase dispersion impulse
+ * response filter (D.6.2 of G.729 and 6.1.5 of AMR).
+ *
+ * @param out vector with filter applied
+ * @param in source vector
+ * @param filter phase filter coefficients
+ *
+ *  out[n] = sum(i,0,len-1){ in[i] * filter[(len + n - i)%len] }
+ */
+static void apply_ir_filter(float *out, const AMRFixed *in,
+                            const float *filter)
+{
+    float filter1[AMR_SUBFRAME_SIZE],     //!< filters at pitch lag*1 and *2
+          filter2[AMR_SUBFRAME_SIZE];
+    int   lag = in->pitch_lag;
+    float fac = in->pitch_fac;
+    int i;
+
+    if (lag < AMR_SUBFRAME_SIZE) {
+        circ_add(filter1, filter, filter, lag, fac,
+                 AMR_SUBFRAME_SIZE);
+
+        if (lag < AMR_SUBFRAME_SIZE >> 1)
+            circ_add(filter2, filter, filter1, lag, fac,
+                     AMR_SUBFRAME_SIZE);
+    }
+
+    memset(out, 0, sizeof(float) * AMR_SUBFRAME_SIZE);
+    for (i = 0; i < in->n; i++) {
+        int   x = in->x[i];
+        float y = in->y[i];
+        const float *filterp;
+
+        if (x >= AMR_SUBFRAME_SIZE - lag) {
+            filterp = filter;
+        } else if (x >= AMR_SUBFRAME_SIZE - (lag << 1)) {
+            filterp = filter1;
+        } else
+            filterp = filter2;
+
+        circ_add(out, out, filterp, x, y, AMR_SUBFRAME_SIZE);
+    }
+}
+
+/**
  * Reduce fixed vector sparseness by smoothing with one of three IR filters.
  *
  * This implements 3GPP TS 26.090 section 6.1(5).
@@ -889,7 +934,6 @@ static const float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
                                     const float *fixed_vector,
                                     float fixed_gain, float *out)
 {
-    int i;
     int ir_filter_strength;
 
     if (p->pitch_gain[4] < 0.6) {
@@ -927,37 +971,10 @@ static const float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
 
     if (p->cur_frame_mode != MODE_74 && p->cur_frame_mode < MODE_102
          && ir_filter_strength < 2) {
-        const float *filter = (p->cur_frame_mode == MODE_795 ?
-                                  ir_filters_lookup_MODE_795 :
-                                  ir_filters_lookup)[ir_filter_strength];
-        float filter1[40], filter2[40];
-        int   lag = fixed_sparse->pitch_lag;
-        float fac = fixed_sparse->pitch_fac;
-
-        if (fixed_sparse->pitch_lag < AMR_SUBFRAME_SIZE) {
-            circ_add(filter1, filter, filter, lag, fac,
-                     AMR_SUBFRAME_SIZE);
-
-            if (fixed_sparse->pitch_lag < AMR_SUBFRAME_SIZE >> 1)
-                circ_add(filter2, filter, filter1, lag, fac,
-                         AMR_SUBFRAME_SIZE);
-        }
-
-        memset(out, 0, sizeof(float) * AMR_SUBFRAME_SIZE);
-        for (i = 0; i < fixed_sparse->n; i++) {
-            int   x = fixed_sparse->x[i];
-            float y = fixed_sparse->y[i];
-            const float *filterp;
-
-            if (x >= AMR_SUBFRAME_SIZE - lag) {
-                filterp = filter;
-            } else if (x >= AMR_SUBFRAME_SIZE - (lag << 1)) {
-                filterp = filter1;
-            } else
-                filterp = filter2;
-
-            circ_add(out, out, filterp, x, y, AMR_SUBFRAME_SIZE);
-        }
+        apply_ir_filter(out, fixed_sparse,
+                        (p->cur_frame_mode == MODE_795 ?
+                             ir_filters_lookup_MODE_795 :
+                             ir_filters_lookup)[ir_filter_strength]);
         fixed_vector = out;
     }
 
