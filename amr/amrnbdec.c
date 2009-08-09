@@ -863,9 +863,9 @@ static void set_fixed_gain(AMRContext *p, const enum Mode mode,
  * @param fixed_gain smoothed gain
  * @param out space for modified vector if necessary
  */
-static float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
-                              const float *fixed_vector,
-                              float fixed_gain, float *out)
+static const float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
+                                    const float *fixed_vector,
+                                    float fixed_gain, float *out)
 {
     int i, k;
     int ir_filter_strength;
@@ -949,14 +949,14 @@ static float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
             for (; k < AMR_SUBFRAME_SIZE; k++)
                 out[k] += y * filterp[                    k - x];
         }
-    } else
-       out = fixed_vector;
+        fixed_vector = out;
+    }
 
     // update ir filter strength history
     p->prev_ir_filter_strength = ir_filter_strength;
     p->prev_sparse_fixed_gain  = fixed_gain;
 
-    return out;
+    return fixed_vector;
 }
 
 /// @}
@@ -976,8 +976,8 @@ static float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
  * @param overflow      16-bit overflow flag
  */
 static int synthesis(AMRContext *p, float *lpc,
-                     float fixed_gain, float *fixed_vector, float *samples,
-                     uint8_t overflow)
+                     float fixed_gain, const float *fixed_vector,
+                     float *samples, uint8_t overflow)
 {
     int i, overflow_temp = 0;
     float excitation[AMR_SUBFRAME_SIZE];
@@ -1171,7 +1171,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     AMRFixed fixed_sparse;                   // fixed vector up to anti-sparseness processing
     float spare_vector[AMR_SUBFRAME_SIZE];   // extra stack space to hold result from anti-sparseness processing
     float synth_fixed_gain;                  // the fixed gain that synthesis should use
-    float *synth_fixed_vector;               // pointer to the fixed vector that synthesis should use
+    const float *synth_fixed_vector;         // pointer to the fixed vector that synthesis should use
 
     p->cur_frame_mode = unpack_bitstream(p, buf, buf_size);
     if (p->cur_frame_mode == MODE_DTX) {
