@@ -846,8 +846,8 @@ static int decode_frame(AVCodecContext *avctx,
     }
 
     *data_size = ctx->cur_frame_length * sconf->channels
-                                     * (avctx->sample_fmt == SAMPLE_FMT_S16 ?
-                                        2 : 4);
+                                       * (avctx->sample_fmt == SAMPLE_FMT_S16 ?
+                                          2 : 4);
 
     bytes_read = (get_bits_count(&ctx->gb) + 7) >> 3;
 
