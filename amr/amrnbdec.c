@@ -61,6 +61,7 @@ typedef struct AMRContext {
     float                       *excitation; ///< pointer to the current excitation vector in excitation_buf
 
     float   pitch_vector[AMR_SUBFRAME_SIZE]; ///< adaptive code book (pitch) vector
+    float   fixed_vector[AMR_SUBFRAME_SIZE]; ///< algebraic codebook (fixed) vector (must be kept zero between frames)
 
     float               prediction_error[4]; ///< quantified prediction errors {20log10(^gamma_gc)} for previous four subframes
     float                     pitch_gain[5]; ///< quantified pitch gains for the current and previous four subframes
@@ -88,6 +89,8 @@ typedef struct {
     int      n;
     int      x[10];
     float    y[10];
+    int      pitch_lag;
+    float    pitch_fac;
 } AMRFixed;
 
 static void reset_state(AMRContext *p)
@@ -626,62 +629,109 @@ static void decode_fixed_sparse(AMRFixed *fixed_sparse, const uint16_t *pulses,
  * @param p the context
  * @param subframe unpacked amr subframe
  * @param mode mode of the current frame
- * @param in sparse representation of algebraic codebook vector
- * @param out sharpened fixed vector
+ * @param fixed_sparse sparse respresentation of the fixed vector
  */
 static void pitch_sharpening(AMRContext *p, int subframe, enum Mode mode,
-                             const AMRFixed *in, float *out)
+                             AMRFixed *fixed_sparse)
 {
-    int i;
-    int x;
-    float y;
-
     // The spec suggests the current pitch gain is always used, but in other
     // modes the pitch and codebook gains are joinly quantized (sec 5.8.2)
     // so the codebook gain cannot depend on the quantized pitch gain.
     if (mode == MODE_122)
         p->beta = FFMIN(p->pitch_gain[4], 1.0);
 
-    memset(out, 0, sizeof(float) * AMR_SUBFRAME_SIZE);
-    if (p->pitch_lag_int >= AMR_SUBFRAME_SIZE) {
-        for (i = 0; i < in->n; i++) {
-            x = in->x[i];
-            y = in->y[i];
-            out[x] += y;
-        }
-    } else if (p->pitch_lag_int >= AMR_SUBFRAME_SIZE >> 1) {
-        for (i = 0; i < in->n; i++) {
-            x = in->x[i];
-            y = in->y[i];
-            out[x] += y;
-
-            x += p->pitch_lag_int;
-            if (x < AMR_SUBFRAME_SIZE)
-                out[x] += y * p->beta;
-        }
-    } else {
-        for (i = 0; i < in->n; i++) {
-            x = in->x[i];
-            y = in->y[i];
-            out[x] += y;
-
-            x += p->pitch_lag_int;
-            if (x < AMR_SUBFRAME_SIZE) {
-                y *= p->beta;
-                out[x] += y;
-
-                x += p->pitch_lag_int;
-                if (x < AMR_SUBFRAME_SIZE)
-                    out[x] += y * p->beta;
-            }
-        }
-    }
+    fixed_sparse->pitch_lag  = p->pitch_lag_int;
+    fixed_sparse->pitch_fac  = p->beta;
 
     // Save pitch sharpening factor for the next subframe
     // MODE_475 only updates on the 2nd and 4th subframes - this follows from
     // the fact that the gains for two subframes are jointly quantized.
     if (mode != MODE_475 || subframe & 1)
         p->beta = av_clipf(p->pitch_gain[4], 0.0, SHARP_MAX);
+}
+
+/**
+ * Add fixed vector to an array from a sparse representation
+ *
+ * @param out fixed vector with pitch sharpening
+ * @param in sparse fixed vector
+ * @param scale number to multiply the fixed vector by
+ */
+static void set_fixed_vector(float *out, const AMRFixed *in, float scale) {
+    int i;
+    int x;
+    float y;
+    if (in->pitch_lag >= AMR_SUBFRAME_SIZE) {
+        for (i = 0; i < in->n; i++) {
+            x = in->x[i];
+            y = in->y[i] * scale;
+            out[x] += y;
+        }
+    } else if (in->pitch_lag >= AMR_SUBFRAME_SIZE >> 1) {
+        for (i = 0; i < in->n; i++) {
+            x = in->x[i];
+            y = in->y[i] * scale;
+            out[x] += y;
+
+            x += in->pitch_lag;
+            if (x < AMR_SUBFRAME_SIZE)
+                out[x] += y * in->pitch_fac;
+        }
+    } else {
+        for (i = 0; i < in->n; i++) {
+            x = in->x[i];
+            y = in->y[i] * scale;
+            out[x] += y;
+
+            x += in->pitch_lag;
+            if (x < AMR_SUBFRAME_SIZE) {
+                y *= in->pitch_fac;
+                out[x] += y;
+
+                x += in->pitch_lag;
+                if (x < AMR_SUBFRAME_SIZE)
+                    out[x] += y * in->pitch_fac;
+            }
+        }
+    }
+}
+
+/**
+ * Clear array values set by set_fixed_vector
+ *
+ * @param out fixed vector to be cleared
+ * @param in sparse fixed vector
+ */
+static void clear_fixed_vector(float *out, const AMRFixed *in) {
+    int i;
+    int x;
+    if (in->pitch_lag >= AMR_SUBFRAME_SIZE) {
+        for (i = 0; i < in->n; i++)
+            out[in->x[i]] = 0.0;
+    } else if (in->pitch_lag >= AMR_SUBFRAME_SIZE >> 1) {
+        for (i = 0; i < in->n; i++) {
+            x = in->x[i];
+            out[x] = 0.0;
+
+            x += in->pitch_lag;
+            if (x < AMR_SUBFRAME_SIZE)
+                out[x] = 0.0;
+        }
+    } else {
+        for (i = 0; i < in->n; i++) {
+            x = in->x[i];
+            out[x] = 0.0;
+
+            x += in->pitch_lag;
+            if (x < AMR_SUBFRAME_SIZE) {
+                out[x] = 0.0;
+
+                x += in->pitch_lag;
+                if (x < AMR_SUBFRAME_SIZE)
+                    out[x] = 0.0;
+            }
+        }
+    }
 }
 
 /// @}
@@ -808,13 +858,16 @@ static void set_fixed_gain(AMRContext *p, const enum Mode mode,
  * reference source, but not in the spec.
  *
  * @param p the context
- * @param fixed_vector algebraic codebook vector
+ * @param fixed_sparse algebraic codebook vector
+ * @param fixed_vector unfiltered fixed vector
  * @param fixed_gain smoothed gain
- * @param spare_vector space for modified vector if necessary
+ * @param out space for modified vector if necessary
  */
-static float *anti_sparseness(AMRContext *p, float *fixed_vector,
-                              float fixed_gain, float *spare_vector)
+static float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
+                              const float *fixed_vector,
+                              float fixed_gain, float *out)
 {
+    int i, k;
     int ir_filter_strength;
 
     if (p->pitch_gain[4] < 0.6) {
@@ -852,23 +905,58 @@ static float *anti_sparseness(AMRContext *p, float *fixed_vector,
 
     if (p->cur_frame_mode != MODE_74 && p->cur_frame_mode < MODE_102
          && ir_filter_strength < 2) {
-        const float **filters;
+        const float *filter = (p->cur_frame_mode == MODE_795 ?
+                                  ir_filters_lookup_MODE_795 :
+                                  ir_filters_lookup)[ir_filter_strength];
+        float filter1[40], filter2[40];
+        int   lag = fixed_sparse->pitch_lag;
+        float fac = fixed_sparse->pitch_fac;
 
-        if (p->cur_frame_mode == MODE_795) {
-            filters = ir_filters_lookup_MODE_795;
-        } else
-            filters = ir_filters_lookup;
+        if (fixed_sparse->pitch_lag < AMR_SUBFRAME_SIZE) {
+            for (k = 0; k < lag; k++)
+                filter1[k] =     filter[k]
+                                 + fac * filter [AMR_SUBFRAME_SIZE + k - lag];
+            for (; k < AMR_SUBFRAME_SIZE; k++)
+                filter1[k] =     filter[k]
+                                 + fac * filter [                    k - lag];
 
-        ff_celp_convolve_circf(spare_vector, fixed_vector,
-                               filters[ir_filter_strength], AMR_SUBFRAME_SIZE);
-        fixed_vector = spare_vector;
-    }
+            if (fixed_sparse->pitch_lag < AMR_SUBFRAME_SIZE >> 1) {
+                for (k = 0; k < lag; k++)
+                    filter2[k] = filter[k]
+                                 + fac * filter1[AMR_SUBFRAME_SIZE + k - lag];
+                for (; k < AMR_SUBFRAME_SIZE; k++)
+                    filter2[k] = filter[k]
+                                 + fac * filter1[                    k - lag];
+            }
+        }
+
+        memset(out, 0, sizeof(float) * AMR_SUBFRAME_SIZE);
+        for (i = 0; i < fixed_sparse->n; i++) {
+            int   x = fixed_sparse->x[i];
+            float y = fixed_sparse->y[i];
+            const float *filterp;
+
+            if (x >= AMR_SUBFRAME_SIZE - lag) {
+                filterp = filter;
+            } else if (x >= AMR_SUBFRAME_SIZE - (lag << 1)) {
+                filterp = filter1;
+            } else
+                filterp = filter2;
+
+            for (k = 0; k < x; k++)
+                out[k] += y * filterp[AMR_SUBFRAME_SIZE + k - x];
+
+            for (; k < AMR_SUBFRAME_SIZE; k++)
+                out[k] += y * filterp[                    k - x];
+        }
+    } else
+       out = fixed_vector;
 
     // update ir filter strength history
     p->prev_ir_filter_strength = ir_filter_strength;
     p->prev_sparse_fixed_gain  = fixed_gain;
 
-    return fixed_vector;
+    return out;
 }
 
 /// @}
@@ -1080,8 +1168,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     float *buf_out = data;                   // pointer to the output data buffer
     int i, subframe;
     float fixed_gain_factor;
-    AMRFixed fixed_sparse;
-    float fixed_vector[AMR_SUBFRAME_SIZE];   // algebraic code book (fixed) vector
+    AMRFixed fixed_sparse;                   // fixed vector up to anti-sparseness processing
     float spare_vector[AMR_SUBFRAME_SIZE];   // extra stack space to hold result from anti-sparseness processing
     float synth_fixed_gain;                  // the fixed gain that synthesis should use
     float *synth_fixed_vector;               // pointer to the fixed vector that synthesis should use
@@ -1115,17 +1202,18 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         decode_gains(p, amr_subframe, p->cur_frame_mode, subframe,
                      &fixed_gain_factor);
 
-        pitch_sharpening(p, subframe, p->cur_frame_mode, &fixed_sparse,
-                         fixed_vector);
+        pitch_sharpening(p, subframe, p->cur_frame_mode, &fixed_sparse);
+
+        set_fixed_vector(p->fixed_vector, &fixed_sparse, 1.0);
 
         set_fixed_gain(p, p->cur_frame_mode, fixed_gain_factor,
-                       ff_energyf(fixed_vector, AMR_SUBFRAME_SIZE));
+                       ff_energyf(p->fixed_vector, AMR_SUBFRAME_SIZE));
 
         // The excitation feedback is calculated without any processing such
         // as fixed gain smoothing. This isn't mentioned in the specification.
-        ff_weighted_vector_sumf(p->excitation, p->excitation, fixed_vector,
-                                p->pitch_gain[4], p->fixed_gain[4],
-                                AMR_SUBFRAME_SIZE);
+        for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
+            p->excitation[i] *= p->pitch_gain[4];
+        set_fixed_vector(p->excitation, &fixed_sparse, p->fixed_gain[4]);
 
         // In the ref decoder, excitation is stored with no fractional bits.
         // This step prevents buzz in silent periods. The ref encoder can
@@ -1141,8 +1229,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         synth_fixed_gain = fixed_gain_smooth(p, p->lsf_q[subframe],
                                               p->lsf_avg, p->cur_frame_mode);
 
-        synth_fixed_vector = anti_sparseness(p, fixed_vector, synth_fixed_gain,
-                                             spare_vector);
+        synth_fixed_vector = anti_sparseness(p, &fixed_sparse, p->fixed_vector,
+                                             synth_fixed_gain, spare_vector);
 
         if (synthesis(p, p->lpc[subframe], synth_fixed_gain,
                       synth_fixed_vector, &p->samples_in[LP_FILTER_ORDER], 0))
@@ -1155,6 +1243,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         postfilter(p, p->lpc[subframe], buf_out + subframe * AMR_SUBFRAME_SIZE);
 
         // update buffers and history
+        clear_fixed_vector(p->fixed_vector, &fixed_sparse);
         update_state(p);
     }
 
