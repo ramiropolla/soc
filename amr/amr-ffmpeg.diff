@@ -74,7 +74,7 @@ Index: libavcodec/celp_filters.h
 ===================================================================
 --- libavcodec/celp_filters.h	(revision 19613)
 +++ libavcodec/celp_filters.h	(working copy)
-@@ -42,6 +42,37 @@
+@@ -42,6 +42,21 @@
                             int len);
  
  /**
@@ -91,22 +91,6 @@ Index: libavcodec/celp_filters.h
 + */
 +void ff_celp_circ_addf(float *out, const float *in,
 +                       const float *lagged, int lag, float fac, int n);
-+
-+/**
-+ * Circularly convolve fixed vector with a phase dispersion impulse
-+ *        response filter (D.6.2 of G.729 and 6.1.5 of AMR).
-+ * @param fc_out vector with filter applied
-+ * @param fc_in source vector
-+ * @param filter phase filter coefficients
-+ *
-+ *  fc_out[n] = sum(i,0,len-1){ fc_in[i] * filter[(len + n - i)%len] }
-+ *
-+ * \note fc_in and fc_out should not overlap!
-+ */
-+void ff_celp_convolve_circf(float* fc_out,
-+                            const float* fc_in,
-+                            const float* filter,
-+                            int len);
 +
 +/**
   * LP synthesis filter.
