@@ -860,28 +860,6 @@ static void set_fixed_gain(AMRContext *p, const enum Mode mode,
 /// @{
 
 /**
- * Add an array to a rotated array
- *
- * out[k] = in[k] + fac * lagged[k-lag] with wrap-around
- *
- * @param out result vector
- * @param in samples to be added unfiltered
- * @param lagged samples to be rotated, multiplied and added
- * @param lag delay from 0 to n
- * @param fac coefficient to applied to lagged samples
- * @param n number of samples
- */
-static void circ_add(float *out, const float *in, const float *lagged,
-                     int lag, float fac, int n)
-{
-    int k;
-    for (k = 0; k < lag; k++)
-        out[k] = in[k] + fac * lagged[n + k - lag];
-    for (; k < n; k++)
-        out[k] = in[k] + fac * lagged[    k - lag];
-}
-
-/**
  * Circularly convolve a sparse fixed vector with a phase dispersion impulse
  * response filter (D.6.2 of G.729 and 6.1.5 of AMR).
  *
@@ -901,12 +879,12 @@ static void apply_ir_filter(float *out, const AMRFixed *in,
     int i;
 
     if (lag < AMR_SUBFRAME_SIZE) {
-        circ_add(filter1, filter, filter, lag, fac,
-                 AMR_SUBFRAME_SIZE);
+        ff_celp_circ_addf(filter1, filter, filter, lag, fac,
+                          AMR_SUBFRAME_SIZE);
 
         if (lag < AMR_SUBFRAME_SIZE >> 1)
-            circ_add(filter2, filter, filter1, lag, fac,
-                     AMR_SUBFRAME_SIZE);
+            ff_celp_circ_addf(filter2, filter, filter1, lag, fac,
+                              AMR_SUBFRAME_SIZE);
     }
 
     memset(out, 0, sizeof(float) * AMR_SUBFRAME_SIZE);
@@ -922,7 +900,7 @@ static void apply_ir_filter(float *out, const AMRFixed *in,
         } else
             filterp = filter2;
 
-        circ_add(out, out, filterp, x, y, AMR_SUBFRAME_SIZE);
+        ff_celp_circ_addf(out, out, filterp, x, y, AMR_SUBFRAME_SIZE);
     }
 }
 
