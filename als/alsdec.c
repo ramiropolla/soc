@@ -654,7 +654,8 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
     GetBitContext *gb = &ctx->gb;
     unsigned int div_blocks[32];                ///< Block sizes.
     unsigned int c, b, ra_block;
-    int64_t *raw_samples;
+    int64_t *raw_samples_L;
+    int64_t *raw_samples_R;
     uint32_t js_blocks[2];
 
     uint32_t bs_info = 0;
@@ -699,13 +700,13 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                 independent_bs = 1;
 
             if (independent_bs) {
-                raw_samples = ctx->raw_samples[c];
+                raw_samples_L = ctx->raw_samples[c];
 
                 for (b = 0; b < ctx->num_blocks; b++) {
                     ra_block = !b && ra_frame;
-                    read_block_data(ctx, ra_block, raw_samples, div_blocks[b],
+                    read_block_data(ctx, ra_block, raw_samples_L, div_blocks[b],
                                     &js_blocks[0], NULL);
-                    raw_samples += div_blocks[b];
+                    raw_samples_L += div_blocks[b];
                 }
 
                 // store carryover raw samples
@@ -720,51 +721,30 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
 
                 // decode all blocks
                 for (b = 0; b < ctx->num_blocks; b++) {
+                    unsigned int s;
+                    raw_samples_L = ctx->raw_samples[c    ] + offset;
+                    raw_samples_R = ctx->raw_samples[c + 1] + offset;
                     ra_block = !b && ra_frame;
+                    read_block_data(ctx, ra_block, raw_samples_L, div_blocks[b],
+                                    &js_blocks[0], raw_samples_R);
 
-                    raw_samples = ctx->raw_samples[c] + offset;
-                    read_block_data(ctx, ra_block, raw_samples, div_blocks[b],
-                                    &js_blocks[0], ctx->raw_samples[c + 1] + offset);
+                    read_block_data(ctx, ra_block, raw_samples_R, div_blocks[b],
+                                    &js_blocks[1], raw_samples_L);
 
-                    raw_samples = ctx->raw_samples[c + 1] + offset;
-                    read_block_data(ctx, ra_block, raw_samples, div_blocks[b],
-                                    &js_blocks[1], ctx->raw_samples[c] + offset);
+
+                    // reconstruct joint-stereo blocks
+                    if (js_blocks[0] & 1) {
+                        if (js_blocks[1] & 1)
+                            av_log(ctx->avctx, AV_LOG_WARNING, "Invalid channel pair!");
+
+                        for (s = 0; s < div_blocks[b]; s++)
+                            raw_samples_L[s] = raw_samples_R[s] - raw_samples_L[s];
+                    } else if (js_blocks[1] & 1) {
+                        for (s = 0; s < div_blocks[b]; s++)
+                            raw_samples_R[s] = raw_samples_R[s] + raw_samples_L[s];
+                    }
 
                     offset += div_blocks[b];
-                }
-
-                // reconstruct joint-stereo blocks
-                if (js_blocks[0] || js_blocks[1]) {
-                    int64_t *raw_samples_L, *raw_samples_R;
-                    unsigned int s;
-                    b = ctx->num_blocks - 1;
-
-                    raw_samples_L = ctx->raw_samples[c    ] + sconf->frame_length;
-                    raw_samples_R = ctx->raw_samples[c + 1] + sconf->frame_length;
-
-                    while (js_blocks[0] || js_blocks[1]) {
-                        unsigned int diff_l, diff_r;
-                        raw_samples_L -= div_blocks[b];
-                        raw_samples_R -= div_blocks[b];
-
-                        diff_l = js_blocks[0] & 1;
-                        diff_r = js_blocks[1] & 1;
-
-                        if (diff_l) {                     // L = R - D
-                            if (diff_r)
-                                av_log(ctx->avctx, AV_LOG_WARNING, "Invalid channel pair!");
-
-                            for (s = 0; s < div_blocks[b]; s++)
-                                raw_samples_L[s] = raw_samples_R[s] - raw_samples_L[s];
-                        } else if (diff_r) {                // R = D + L
-                            for (s = 0; s < div_blocks[b]; s++)
-                                raw_samples_R[s] = raw_samples_R[s] + raw_samples_L[s];
-                        }
-
-                        b--;
-                        js_blocks[0] >>= 1;
-                        js_blocks[1] >>= 1;
-                    }
                 }
 
                 // store carryover raw samples
@@ -793,13 +773,13 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
 
         // TODO: multi channel coding might use a temporary buffer instead as
         //       the actual channel is not known when read_block-data is called
-        raw_samples = ctx->raw_samples[0];
+        raw_samples_L = ctx->raw_samples[0];
 
         for (b = 0; b < ctx->num_blocks; b++) {
             ra_block = !b && ra_frame;
-            read_block_data(ctx, ra_block, raw_samples, div_blocks[b],
+            read_block_data(ctx, ra_block, raw_samples_L, div_blocks[b],
                             &js_blocks[0], NULL);
-            raw_samples += div_blocks[b];
+            raw_samples_L += div_blocks[b];
             // TODO: read_channel_data
         }
     }
