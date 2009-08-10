@@ -631,6 +631,20 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
 
                 raw_samples[smp] = res[smp] - (y >> 20);
             }
+
+            // reconstruct normal signal (joint-stereo)
+            if (*js_blocks & 1 && raw_other) {
+                int i;
+                if (raw_other > raw_samples) {          // L = R - D
+                    for (i = -1; i >= -sconf->max_order; i--) {
+                        raw_samples[i] = raw_other[i] - raw_samples[i];
+                    }
+                } else {                                // R = D + L
+                    for (i = -1; i >= -sconf->max_order; i--) {
+                        raw_samples[i] = raw_samples[i] + raw_other[i];
+                    }
+                }
+            }
         }
     }
 
