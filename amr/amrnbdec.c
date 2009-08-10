@@ -35,7 +35,8 @@
  *
  * - Comparing both decoders against their input, this decoder gives a similar
  *   PSNR. If the test sequence homing frames are removed (this decoder does
- *   not detect them), the PSNR is better on at least 50% of the tests.
+ *   not detect them), the PSNR is at least as good as the reference on 140
+ *   out of 169 tests.
  */
 
 
