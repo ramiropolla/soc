@@ -1010,7 +1010,8 @@ static int synthesis(AMRContext *p, float *lpc,
 
     // emphasize pitch vector contribution
     if (p->pitch_gain[4] > 0.5 && !overflow) {
-        float energy = ff_energyf(excitation, AMR_SUBFRAME_SIZE);
+        float energy = ff_dot_productf(excitation, excitation,
+                                       AMR_SUBFRAME_SIZE);
         float pitch_factor =
             p->pitch_gain[4] *
             (p->cur_frame_mode == MODE_122 ?
@@ -1020,7 +1021,7 @@ static int synthesis(AMRContext *p, float *lpc,
         for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
             excitation[i] += pitch_factor * p->pitch_vector[i];
 
-        ff_set_energyf(excitation, excitation, energy, AMR_SUBFRAME_SIZE);
+        ff_scale_to(excitation, excitation, energy, AMR_SUBFRAME_SIZE);
     }
 
     ff_celp_lp_synthesis_filterf(samples, lpc, excitation, AMR_SUBFRAME_SIZE,
@@ -1128,7 +1129,8 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     float *samples          = p->samples_in + LP_FILTER_ORDER; // Start of input
 
     float gain_scale_factor = 1.0;
-    float speech_gain       = ff_energyf(samples, AMR_SUBFRAME_SIZE);
+    float speech_gain       = ff_dot_productf(samples, samples,
+                                              AMR_SUBFRAME_SIZE);
     float postfilter_gain;
 
     float pole_out[AMR_SUBFRAME_SIZE + LP_FILTER_ORDER];  // Output of pole filter
@@ -1161,7 +1163,7 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     tilt_compensation(&p->tilt_mem, tilt_factor(lpc_n, lpc_d), buf_out);
 
     // Adaptive gain control
-    postfilter_gain = ff_energyf(buf_out, AMR_SUBFRAME_SIZE);
+    postfilter_gain = ff_dot_productf(buf_out, buf_out, AMR_SUBFRAME_SIZE);
     if (postfilter_gain)
         gain_scale_factor = sqrt(speech_gain / postfilter_gain);
 
@@ -1223,7 +1225,8 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         set_fixed_vector(p->fixed_vector, &fixed_sparse, 1.0);
 
         set_fixed_gain(p, p->cur_frame_mode, fixed_gain_factor,
-                       ff_energyf(p->fixed_vector, AMR_SUBFRAME_SIZE));
+                       ff_dot_productf(p->fixed_vector, p->fixed_vector,
+                                       AMR_SUBFRAME_SIZE));
 
         // The excitation feedback is calculated without any processing such
         // as fixed gain smoothing. This isn't mentioned in the specification.
