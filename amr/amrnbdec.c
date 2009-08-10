@@ -24,6 +24,18 @@
 /**
  * @file libavcodec/amrnbdec.c
  * AMR narrowband decoder
+ *
+ * This decoder uses floats for simplicity and so is not bit-exact. One
+ * difference is that differences in phase can accumulate. The test sequences
+ * in 3GPP TS 26.074 can still be useful.
+ *
+ * - Comparing this file's output to the output of the ref decoder gives a
+ *   PSNR of 30 to 80. Plotting the output samples shows a difference in
+ *   phase in some areas.
+ *
+ * - Comparing both decoders against their input, this decoder gives a similar
+ *   PSNR. If the test sequence homing frames are removed (this decoder does
+ *   not detect them), the PSNR is better on at least 50% of the tests.
  */
 
 
