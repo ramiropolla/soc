@@ -821,8 +821,8 @@ static int decode_frame(AVCodecContext *avctx,
     unsigned int c, sample, ra_frame, bytes_read;
 
     init_get_bits(&ctx->gb, buffer, buffer_size * 8);
-    ra_frame = !ctx->frame_id ||
-               (sconf->random_access && !(ctx->frame_id % sconf->random_access));
+    ra_frame = sconf->random_access && ((!ctx->frame_id) ||
+               !(ctx->frame_id % sconf->random_access));
 
     // the last frame to decode might have a different length
     if (ctx->num_frames && ctx->num_frames - 1 == ctx->frame_id) {
