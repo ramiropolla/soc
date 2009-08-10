@@ -128,7 +128,7 @@ Index: libavcodec/acelp_filters.h
  
 +/**
 + * high-pass filtering (6.2.2 of 3GPP TS 26.090)
-+ * @param samples [in/out]·
++ * @param samples [in/out]
 + * @param mem intermediate values used by filter (should be 0 initially)
 + * @param length input data size
 + */
