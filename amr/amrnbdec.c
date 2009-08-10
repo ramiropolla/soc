@@ -134,14 +134,6 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
-inline uint16_t reverse_bits(uint16_t x)
-{
-    x = (x & 0x00FF) << 8 | (x & 0x00FF << 8) >> 8;
-    x = (x & 0x0F0F) << 4 | (x & 0x0F0F << 4) >> 4;
-    x = (x & 0x3333) << 2 | (x & 0x3333 << 2) >> 2;
-    x = (x & 0x5555) << 1 | (x & 0x5555 << 1) >> 1;
-    return x;
-}
 
 /**
  * Unpack an RFC4867 speech frame into the AMR frame mode and parameters.
@@ -174,13 +166,8 @@ static enum Mode unpack_bitstream(AMRContext *p, const uint8_t *buf,
         int i;
 
         memset(&p->frame, 0, sizeof(AMRNBFrame));
-        for (i = 0; i < mode_runs[mode]; i++) {
-            uint16_t bits = get_bits(&gb, order[i].len);
-            if (order[i].rev) {
-                data[order[i].index] += reverse_bits(bits) >> order[i].shift;
-            } else
-                data[order[i].index] += bits << order[i].shift;
-        }
+        for (i = 0; i < mode_bits[mode]; i++)
+            data[order[i].index] += get_bits1(&gb) << order[i].bit;
     }
 
     return mode;
