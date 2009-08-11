@@ -1,16 +1,17 @@
 diff --git a/libavcodec/avcodec.h b/libavcodec/avcodec.h
-index 8eb7c3c..bc76988 100644
+index 8eb7c3c..a929a7f 100644
 --- a/libavcodec/avcodec.h
 +++ b/libavcodec/avcodec.h
-@@ -951,6 +951,7 @@ typedef struct AVPacket {
+@@ -951,6 +951,8 @@ typedef struct AVPacket {
       * subtitles are correctly displayed after seeking.
       */
      int64_t convergence_duration;
 +    struct AVStream *stream;  /**<  stream that packet was read from */
++    int index_offset;
  } AVPacket;
  #define AV_PKT_FLAG_KEY   0x0001
  #if LIBAVCODEC_VERSION_MAJOR < 53
-@@ -3714,6 +3715,7 @@ int av_parse_video_frame_rate(AVRational *frame_rate, const char *str);
+@@ -3714,6 +3716,7 @@ int av_parse_video_frame_rate(AVRational *frame_rate, const char *str);
  #define AVERROR_NOTSUPP     AVERROR(ENOSYS)  /**< Operation not supported. */
  #define AVERROR_NOENT       AVERROR(ENOENT)  /**< No such file or directory. */
  #define AVERROR_EOF         AVERROR(EPIPE)   /**< End of file. */
