@@ -1,5 +1,5 @@
 /*
- * WMA 9/3/PRO compatible decoder
+ * Wmapro compatible decoder
  * Copyright (c) 2007 Baptiste Coudurier, Benjamin Larsson, Ulion
  * Copyright (c) 2008 - 2009 Sascha Sommer, Benjamin Larsson
  *
@@ -24,9 +24,9 @@
  * @file  libavcodec/wmaprodec.c
  * @brief wmapro decoder implementation
  * Wmapro is an MDCT based codec comparable to wma standard or AAC.
- * The decoding therefore consist of the following steps:
+ * The decoding therefore consists of the following steps:
  * - bitstream decoding
- * - reconstruction of per channel data
+ * - reconstruction of per-channel data
  * - rescaling and inverse quantization
  * - IMDCT
  * - windowing and overlapp-add
@@ -64,19 +64,19 @@
  * to improve the compression ratio. These channel transformations do not
  * need to be applied to a whole subframe. Instead, they can also work on
  * individual scale factor bands (see below).
- * The coefficients that cary the audio signal in the frequency domain
- * are transmitted as huffman coded vectors with 4, 2 and 1 elements.
- * In addition to that, the encoder can switch to a run level coding scheme
- * by transmitting subframen_length / 128 zero coefficients.
+ * The coefficients that carry the audio signal in the frequency domain
+ * are transmitted as huffman-coded vectors with 4, 2 and 1 elements.
+ * In addition to that, the encoder can switch to a runlevel coding scheme
+ * by transmitting subframe_length / 128 zero coefficients.
  *
  * Before the audio signal can be converted to the time domain, the
  * coefficients have to be rescaled and inverse quantized.
  * A subframe is therefore split into several scale factor bands that get
  * scaled individually.
  * Scale factors are submitted for every frame but they might be shared
- * between the subframes of a channel. Scale factors are initially DPCM coded.
- * Once scale factors are shared, the differences are transmitted as run
- * level codes.
+ * between the subframes of a channel. Scale factors are initially DPCM-coded.
+ * Once scale factors are shared, the differences are transmitted as runlevel
+ * codes.
  * Every subframe length and offset combination in the frame layout shares a
  * common quantization factor that can be adjusted for every channel by a
  * modifier.
@@ -112,7 +112,7 @@
 #define SCALEMAXDEPTH   ((HUFF_SCALE_MAXBITS+SCALEVLCBITS-1)/SCALEVLCBITS)
 #define SCALERLMAXDEPTH ((HUFF_SCALE_RL_MAXBITS+VLCBITS-1)/VLCBITS)
 
-static VLC              sf_vlc;           ///< scale factor dpcm vlc
+static VLC              sf_vlc;           ///< scale factor DPCM vlc
 static VLC              sf_rl_vlc;        ///< scale factor run length vlc
 static VLC              vec4_vlc;         ///< 4 coefficients per symbol
 static VLC              vec2_vlc;         ///< 2 coefficients per symbol
@@ -131,10 +131,10 @@ typedef struct {
     uint16_t subframe_offset[MAX_SUBFRAMES];          ///< subframe positions in the current frame
     uint8_t  cur_subframe;                            ///< current subframe number
     uint16_t channel_len;                             ///< channel frame length in samples
-    uint16_t decoded_samples;                         ///< already processed samples
+    uint16_t decoded_samples;                         ///< number of already processed samples
     uint8_t  grouped;                                 ///< channel is part of a group
     int      quant_step;                              ///< quantization step for the current subframe
-    int8_t   transmit_sf;                             ///< transmit scale factors for the current subframe
+    int8_t   transmit_sf;                             ///< flag inidcating that scale factors are transmitted for the current subframe
     int8_t   reuse_sf;                                ///< share scale factors between subframes
     int8_t   scale_factor_step;                       ///< scaling step for the current subframe
     int      max_scale_factor;                        ///< maximum scale factor for the current subframe
@@ -162,11 +162,11 @@ typedef struct {
 typedef struct WMA3DecodeContext {
     /* generic decoder variables */
     AVCodecContext*  avctx;                         ///< codec context for av_log
-    DSPContext       dsp;                           ///< accelerated dsp functions
+    DSPContext       dsp;                           ///< accelerated DSP functions
     uint8_t          frame_data[MAX_FRAMESIZE +
                       FF_INPUT_BUFFER_PADDING_SIZE];///< compressed frame data
     MDCTContext      mdct_ctx[WMAPRO_BLOCK_SIZES];  ///< MDCT context per block size
-    DECLARE_ALIGNED_16(float, tmp[WMAPRO_BLOCK_MAX_SIZE]); ///< imdct output buffer
+    DECLARE_ALIGNED_16(float, tmp[WMAPRO_BLOCK_MAX_SIZE]); ///< IMDCT output buffer
     float*           windows[WMAPRO_BLOCK_SIZES];   ///< windows for the different block sizes
 
     /* frame size dependent frame information (set during initialization) */
@@ -174,14 +174,14 @@ typedef struct WMA3DecodeContext {
     uint32_t         decode_flags;                  ///< used compression features
     uint8_t          len_prefix;                    ///< frame is prefixed with its length
     uint8_t          dynamic_range_compression;     ///< frame contains DRC data
-    uint8_t          bits_per_sample;
+    uint8_t          bits_per_sample;               ///< integer audio sample size for the unscaled IMDCT output (used to scale to [-1.0, 1.0])
     uint16_t         samples_per_frame;             ///< number of samples to output
     uint16_t         log2_frame_size;
     int8_t           num_channels;
     int8_t           lfe_channel;                   ///< lfe channel index
-    uint8_t          max_num_subframes;             ///< maximum number of subframes
+    uint8_t          max_num_subframes;
     int8_t           num_possible_block_sizes;      ///< number of distinct block sizes that can be found in the file
-    uint16_t         min_samples_per_subframe;      ///< minimum samples per subframe
+    uint16_t         min_samples_per_subframe;
     int8_t           num_sfb[WMAPRO_BLOCK_SIZES];   ///< scale factor bands per block size
     int16_t          sfb_offsets[WMAPRO_BLOCK_SIZES][MAX_BANDS];                    ///< scale factor band offsets (multiples of 4)
     int16_t          sf_offsets[WMAPRO_BLOCK_SIZES][WMAPRO_BLOCK_SIZES][MAX_BANDS]; ///< scale factor resample matrix
@@ -467,9 +467,9 @@ static int decode_tilehdr(WMA3DecodeContext *s)
 {
     int c;
 
-    /* should never consume more than 3073 bits (256 iterations for the
+    /* Should never consume more than 3073 bits (256 iterations for the
      * while loop when always the minimum amount of 128 samples is substracted
-     * from missing samples in the 8 channel case)
+     * from missing samples in the 8 channel case).
      * 1 + BLOCK_MAX_SIZE * MAX_CHANNELS / BLOCK_MIN_SIZE * (MAX_CHANNELS  + 4)
      */
 
@@ -553,7 +553,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                 bitstream */
             if (min_samples != missing_samples) {
                 int log2_subframe_len = 0;
-                /* 1 bit indicates if the subframe length is zero */
+                /* 1 bit indicates if the subframe is of maximum length */
                 if (subframe_len_zero_bit) {
                     if (get_bits1(&s->gb)) {
                         log2_subframe_len = 1 +
