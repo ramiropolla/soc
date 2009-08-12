@@ -945,8 +945,8 @@ static int decode_scale_factors(WMA3DecodeContext* s)
                         av_log(s->avctx,AV_LOG_ERROR,
                                "invalid scale factor coding\n");
                         return AVERROR_INVALIDDATA;
-                    } else
-                        s->channel[c].scale_factors[i] += (val ^ sign) - sign;
+                    }
+                    s->channel[c].scale_factors[i] += (val ^ sign) - sign;
                 }
             }
 
