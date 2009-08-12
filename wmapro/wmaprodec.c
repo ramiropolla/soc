@@ -183,7 +183,7 @@ typedef struct WMA3DecodeContext {
     uint16_t         min_samples_per_subframe;
     int8_t           num_sfb[WMAPRO_BLOCK_SIZES];   ///< scale factor bands per block size
     int16_t          sfb_offsets[WMAPRO_BLOCK_SIZES][MAX_BANDS];                    ///< scale factor band offsets (multiples of 4)
-    int16_t          sf_offsets[WMAPRO_BLOCK_SIZES][WMAPRO_BLOCK_SIZES][MAX_BANDS]; ///< scale factor resample matrix
+    int8_t           sf_offsets[WMAPRO_BLOCK_SIZES][WMAPRO_BLOCK_SIZES][MAX_BANDS]; ///< scale factor resample matrix
     int16_t          subwoofer_cutoffs[WMAPRO_BLOCK_SIZES]; ///< subwoofer cutoff values
 
     /* packet decode state */
@@ -895,7 +895,7 @@ static int decode_scale_factors(WMA3DecodeContext* s)
                                           s->channel[c].scale_factor_block_len;
             const int idx0 = av_log2(blocks_per_frame);
             const int idx1 = av_log2(res_blocks_per_frame);
-            const int16_t* sf_offsets = s->sf_offsets[idx0][idx1];
+            const int8_t* sf_offsets = s->sf_offsets[idx0][idx1];
             int b;
             for (b=0;b<s->num_bands;b++)
                 s->channel[c].scale_factors[b] =
