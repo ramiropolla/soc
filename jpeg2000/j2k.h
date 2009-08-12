@@ -95,6 +95,10 @@ enum J2kQuantsty{ ///< quantization style
 #define JPC_CBLK_PREDTERM  0x10 // Predictable termination
 #define JPC_CBLK_SEGSYM    0x20 // Segmentation symbols present
 
+// Coding styles
+#define J2K_CSTY_SOP       0x02 // SOP marker present
+#define J2K_CSTY_EPH       0x04 // EPH marker present
+
 typedef struct {
     int data[J2K_MAX_CBLKW][J2K_MAX_CBLKH];
     int flags[J2K_MAX_CBLKW+2][J2K_MAX_CBLKH+2];
