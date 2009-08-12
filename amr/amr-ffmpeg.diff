@@ -61,12 +61,12 @@ Index: libavcodec/acelp_filters.c
 +void ff_acelp_high_pass_filterf(float *buf,
 +                                const float zero_coeffs[2],
 +                                const float pole_coeffs[2],
-+                                float gain, float mem[2], int length)
++                                float gain, float mem[2], int n)
 +{
 +    int i;
 +    float tmp;
 +
-+    for (i = 0; i < length; i++) {
++    for (i = 0; i < n; i++) {
 +         tmp = buf[i] - pole_coeffs[0] * mem[0] - pole_coeffs[1] * mem[1];
 +         buf[i] = tmp + zero_coeffs[0] * mem[0] + zero_coeffs[1] * mem[1];
 +         buf[i] *= gain;
@@ -87,17 +87,17 @@ Index: libavcodec/acelp_filters.h
 + * Apply an order 2 rational transfer function in-place.
 + *
 + * @param samples [in/out]
-+ * @param zero_coeffs 2 coefficients of the numerator
-+ * @param pole_coeffs 2 coefficients of the denominator
-+ * @param gain 
++ * @param zero_coeffs z^-1 and z^-2 coefficients of the numerator
++ * @param pole_coeffs z^-1 and z^-2 coefficients of the denominator
++ * @param gain scale factor for final output
 + * @param mem intermediate values used by filter (should be 0 initially)
-+ * @param length input data size
++ * @param n number of samples
 + */
 +void ff_acelp_high_pass_filterf(float *samples,
 +                                const float zero_coeffs[2],
 +                                const float pole_coeffs[2],
 +                                float gain,
-+                                float mem[2], int length);
++                                float mem[2], int n);
 +
  #endif /* AVCODEC_ACELP_FILTERS_H */
 Index: libavcodec/acelp_vectors.c
