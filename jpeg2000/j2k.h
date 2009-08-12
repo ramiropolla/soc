@@ -87,6 +87,14 @@ enum J2kQuantsty{ ///< quantization style
 
 #define J2K_T1_SGN    0x8000
 
+// Codeblock coding styles
+#define J2K_CBLK_BYPASS    0x01 // Selective arithmetic coding bypass
+#define JPC_CBLK_RESET     0x02 // Reset context probabilities
+#define JPC_CBLK_TERMALL   0x04 // Terminate after each coding pass
+#define JPC_CBLK_VSC       0x08 // Vertical stripe causal context formation
+#define JPC_CBLK_PREDTERM  0x10 // Predictable termination
+#define JPC_CBLK_SEGSYM    0x20 // Segmentation symbols present
+
 typedef struct {
     int data[J2K_MAX_CBLKW][J2K_MAX_CBLKH];
     int flags[J2K_MAX_CBLKW+2][J2K_MAX_CBLKH+2];
@@ -109,6 +117,7 @@ typedef struct {
             log2_prec_height; ///< precinct size
     uint8_t nlayers;          ///< number of layers
     uint8_t mct;              ///< multiple component transformation
+    uint8_t cblk_style;       ///< codeblock coding style
 } J2kCodingStyle;
 
 typedef struct {

@@ -283,7 +283,8 @@ static int get_cox(J2kDecoderContext *s, J2kCodingStyle *c)
      c->log2_cblk_width = bytestream_get_byte(&s->buf) + 2; // cblk width
     c->log2_cblk_height = bytestream_get_byte(&s->buf) + 2; // cblk height
 
-    if (bytestream_get_byte(&s->buf) != 0){ // cblk style
+    c->cblk_style = bytestream_get_byte(&s->buf);
+    if (c->cblk_style != 0){ // cblk style
         av_log(s->avctx, AV_LOG_ERROR, "no extra cblk styles supported\n");
         return -1;
     }
