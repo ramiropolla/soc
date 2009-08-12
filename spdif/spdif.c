@@ -34,23 +34,24 @@
 #define SYNCWORD2 0x4E1F
 #define BURST_HEADER_SIZE 0x8
 
-#define IEC958_AC3                0x01
-#define IEC958_MPEG1_LAYER1       0x04
-#define IEC958_MPEG1_LAYER23      0x05
-#define IEC958_MPEG2_EXT          0x06  /* With extension */
-#define IEC958_MPEG2_AAC          0x07
-#define IEC958_MPEG2_LAYER1_LSF   0x08  /* Low Sampling Frequency */
-#define IEC958_MPEG2_LAYER2_LSF   0x09  /* Low Sampling Frequency */
-#define IEC958_MPEG2_LAYER3_LSF   0x0A  /* Low Sampling Frequency */
-#define IEC958_DTS1               0x0B
-#define IEC958_DTS2               0x0C
-#define IEC958_DTS3               0x0D
-#define IEC958_MPEG2_AAC_LSF_2048 0x13
-#define IEC958_MPEG2_AAC_LSF_4096 (0x13|0x20)
-//#define IEC958_EAC3               0x15
+enum IEC958DataType {
+    IEC958_AC3                = 0x01,          ///< AC-3 data
+    IEC958_MPEG1_LAYER1       = 0x04,          ///< MPEG-1 layer 1
+    IEC958_MPEG1_LAYER23      = 0x05,          ///< MPEG-1 layer 2 or 3 data or MPEG-2 without extension
+    IEC958_MPEG2_EXT          = 0x06,          ///< MPEG-2 data with extension
+    IEC958_MPEG2_AAC          = 0x07,          ///< MPEG-2 AAC ADTS
+    IEC958_MPEG2_LAYER1_LSF   = 0x08,          ///< MPEG-2, layer-1 low sampling frequency
+    IEC958_MPEG2_LAYER2_LSF   = 0x09,          ///< MPEG-2, layer-2 low sampling frequency
+    IEC958_MPEG2_LAYER3_LSF   = 0x0A,          ///< MPEG-2, layer-3 low sampling frequency
+    IEC958_DTS1               = 0x0B,          ///< DTS type I   (512 samples)
+    IEC958_DTS2               = 0x0C,          ///< DTS type II  (1024 samples)
+    IEC958_DTS3               = 0x0D,          ///< DTS type III (2048 samples)
+    IEC958_MPEG2_AAC_LSF_2048 = 0x13,          ///< MPEG-2 AAC ADTS half-rate low sampling frequency
+    IEC958_MPEG2_AAC_LSF_4096 = 0x13 | 0x20,   ///< MPEG-2 AAC ADTS quarter-rate low sampling frequency
+};
 
 typedef struct IEC958Context {
-    int data_type;              ///< Burst info
+    enum IEC958DataType data_type;              ///< Burst info
     int pkt_size;               ///< Length code (number of bits or bytes - according to data_type)
     int pkt_offset;             ///< Repetition period of a data burst in bytes
     int (*header_info) (AVFormatContext *s, AVPacket *pkt);
@@ -113,7 +114,7 @@ static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt)
     return 0;
 }
 
-static const uint8_t mpeg_data_type[2][3] = {
+static const enum IEC958DataType mpeg_data_type[2][3] = {
     //     LAYER1                      LAYER2                  LAYER3
     { IEC958_MPEG2_LAYER1_LSF, IEC958_MPEG2_LAYER2_LSF, IEC958_MPEG2_LAYER3_LSF },  //MPEG2 LSF
     { IEC958_MPEG1_LAYER1,     IEC958_MPEG1_LAYER23,    IEC958_MPEG1_LAYER23 },     //MPEG1
