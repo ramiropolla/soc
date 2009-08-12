@@ -96,6 +96,7 @@ enum J2kQuantsty{ ///< quantization style
 #define J2K_CBLK_SEGSYM    0x20 // Segmentation symbols present
 
 // Coding styles
+#define J2K_CSTY_PREC      0x01 // Precincts defined in coding style
 #define J2K_CSTY_SOP       0x02 // SOP marker present
 #define J2K_CSTY_EPH       0x04 // EPH marker present
 
