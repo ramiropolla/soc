@@ -37,7 +37,7 @@
 #define IEC958_AC3                0x01
 #define IEC958_MPEG1_LAYER1       0x04
 #define IEC958_MPEG1_LAYER23      0x05
-//#define IEC958_MPEG2_EXT          0x06 /* With extension */
+#define IEC958_MPEG2_EXT          0x06  /* With extension */
 #define IEC958_MPEG2_AAC          0x07
 #define IEC958_MPEG2_LAYER1_LSF   0x08  /* Low Sampling Frequency */
 #define IEC958_MPEG2_LAYER2_LSF   0x09  /* Low Sampling Frequency */
@@ -128,16 +128,22 @@ static const uint16_t mpeg_pkt_offset[2][3] = {
 static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
-    int lsf = (pkt->data[1] >> 3) & 1;
+    int version = (pkt->data[1] >> 3) & 3;
     int layer = 3 - ((pkt->data[1] >> 1) & 3);
+    int extension = pkt->data[2] & 1;
 
-    if (layer == 3) {
+    if (layer == 3 || version == 1) {
         av_log(s, AV_LOG_ERROR, "Wrong MPEG file format\n");
         return -1;
     }
-    av_log(s, AV_LOG_DEBUG, "lsf: %i layer: %i\n", lsf, layer);
-    ctx->data_type = mpeg_data_type[lsf][layer];
-    ctx->pkt_offset = mpeg_pkt_offset[lsf][layer];
+    av_log(s, AV_LOG_DEBUG, "version: %i layer: %i extension: %i\n", version, layer, extension);
+    if(version == 2 && extension){
+        ctx->data_type = IEC958_MPEG2_EXT;
+        ctx->pkt_offset = 4608;
+    }else{
+        ctx->data_type = mpeg_data_type[version & 1][layer];
+        ctx->pkt_offset = mpeg_pkt_offset[version & 1][layer];
+    }
     // TODO Data type dependant info (normal/karaoke, dynamic range control)
     return 0;
 }
