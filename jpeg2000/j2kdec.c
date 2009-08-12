@@ -289,6 +289,11 @@ static int get_cox(J2kDecoderContext *s, J2kCodingStyle *c)
         return -1;
     }
     c->transform = bytestream_get_byte(&s->buf); // transformation
+    if (c->csty & J2K_CSTY_PREC) {
+        int i;
+        for (i = 0; i < c->nreslevels; i++)
+            bytestream_get_byte(&s->buf);
+    }
     return 0;
 }
 
