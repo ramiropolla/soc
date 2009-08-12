@@ -89,11 +89,11 @@ enum J2kQuantsty{ ///< quantization style
 
 // Codeblock coding styles
 #define J2K_CBLK_BYPASS    0x01 // Selective arithmetic coding bypass
-#define JPC_CBLK_RESET     0x02 // Reset context probabilities
-#define JPC_CBLK_TERMALL   0x04 // Terminate after each coding pass
-#define JPC_CBLK_VSC       0x08 // Vertical stripe causal context formation
-#define JPC_CBLK_PREDTERM  0x10 // Predictable termination
-#define JPC_CBLK_SEGSYM    0x20 // Segmentation symbols present
+#define J2K_CBLK_RESET     0x02 // Reset context probabilities
+#define J2K_CBLK_TERMALL   0x04 // Terminate after each coding pass
+#define J2K_CBLK_VSC       0x08 // Vertical stripe causal context formation
+#define J2K_CBLK_PREDTERM  0x10 // Predictable termination
+#define J2K_CBLK_SEGSYM    0x20 // Segmentation symbols present
 
 // Coding styles
 #define J2K_CSTY_SOP       0x02 // SOP marker present
