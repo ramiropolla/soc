@@ -59,9 +59,9 @@ Index: libavcodec/acelp_filters.c
  }
 +
 +void ff_acelp_high_pass_filterf(float *buf,
-+                                const float *zero_coeffs,
-+                                const float *pole_coeffs,
-+                                float gain, float *mem, int length)
++                                const float zero_coeffs[2],
++                                const float pole_coeffs[2],
++                                float gain, float mem[2], int length)
 +{
 +    int i;
 +    float tmp;
@@ -94,8 +94,8 @@ Index: libavcodec/acelp_filters.h
 + * @param length input data size
 + */
 +void ff_acelp_high_pass_filterf(float *samples,
-+                                const float *zero_coeffs,
-+                                const float *pole_coeffs,
++                                const float zero_coeffs[2],
++                                const float pole_coeffs[2],
 +                                float gain,
 +                                float mem[2], int length);
 +
