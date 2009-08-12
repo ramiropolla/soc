@@ -249,7 +249,7 @@ static av_cold int decode_end(AVCodecContext *avctx)
     WMA3DecodeContext *s = avctx->priv_data;
     int i;
 
-    for (i=0 ; i<WMAPRO_BLOCK_SIZES ; i++)
+    for (i = 0 ; i < WMAPRO_BLOCK_SIZES ; i++)
         ff_mdct_end(&s->mdct_ctx[i]);
 
     return 0;
@@ -628,8 +628,8 @@ static int decode_tilehdr(WMA3DecodeContext *s)
  *@param s codec context
  *@param chgroup channel group for which the matrix needs to be calculated
  */
-static void decode_decorrelation_matrix(WMA3DecodeContext* s,
-                                            WMA3ChannelGroup* chgroup)
+static void decode_decorrelation_matrix(WMA3DecodeContext *s,
+                                        WMA3ChannelGroup *chgroup)
 {
     int i;
     int offset = 0;
@@ -637,25 +637,25 @@ static void decode_decorrelation_matrix(WMA3DecodeContext* s,
     memset(chgroup->decorrelation_matrix,0,
            sizeof(float) *s->num_channels * s->num_channels);
 
-    for (i=0;i<chgroup->num_channels  * (chgroup->num_channels - 1) >> 1;i++)
+    for (i = 0; i < chgroup->num_channels * (chgroup->num_channels - 1) >> 1; i++)
         rotation_offset[i] = get_bits(&s->gb,6);
 
-    for (i=0;i<chgroup->num_channels;i++)
+    for (i = 0; i < chgroup->num_channels; i++)
         chgroup->decorrelation_matrix[chgroup->num_channels * i + i] =
                                                 get_bits1(&s->gb) ? 1.0 : -1.0;
 
-    for (i=1;i<chgroup->num_channels;i++) {
+    for (i = 1; i < chgroup->num_channels; i++) {
         int x;
-        for (x=0;x<i;x++) {
+        for (x = 0; x < i; x++) {
             int y;
-            for (y=0;y < i + 1 ; y++) {
+            for (y = 0; y < i + 1 ; y++) {
                 float v1 = chgroup->decorrelation_matrix[x * chgroup->num_channels + y];
                 float v2 = chgroup->decorrelation_matrix[i * chgroup->num_channels + y];
                 int n = rotation_offset[offset + x];
                 float sinv;
                 float cosv;
 
-                if (n<32) {
+                if (n < 32) {
                     sinv = sin64[n];
                     cosv = sin64[32-n];
                 } else {
@@ -980,7 +980,7 @@ static void inverse_channel_transform(WMA3DecodeContext *s)
 {
     int i;
 
-    for (i=0;i<s->num_chgroups;i++) {
+    for (i = 0; i < s->num_chgroups; i++) {
 
         if (s->chgroup[i].transform == 1) {
             /** M/S stereo decoding */
@@ -1022,10 +1022,10 @@ static void inverse_channel_transform(WMA3DecodeContext *s)
                 if (*tb++ == 1) {
                     int y;
                     /** multiply values with the decorrelation_matrix */
-                    for (y=sfb[0];y<FFMIN(sfb[1], s->subframe_len);y++) {
+                    for (y = sfb[0]; y < FFMIN(sfb[1], s->subframe_len); y++) {
                         const float* mat = s->chgroup[i].decorrelation_matrix;
-                        const float* data_end= data + num_channels;
-                        float* data_ptr= data;
+                        const float* data_end = data + num_channels;
+                        float* data_ptr = data;
                         float** ch;
 
                         for (ch = ch_data;ch < ch_end; ch++)
