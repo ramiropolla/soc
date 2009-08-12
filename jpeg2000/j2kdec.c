@@ -622,7 +622,7 @@ static void decode_clnpass(J2kT1Context *t1, int width, int height, int bpno, in
 {
     int mask = 3 << (bpno - 1), y0, x, y, runlen, dec;
 
-    for (y0 = 0; y0 < height; y0 += 4)
+    for (y0 = 0; y0 < height; y0 += 4) {
         for (x = 0; x < width; x++){
             if (y0 + 3 < height && !(
             (t1->flags[y0+1][x+1] & (J2K_T1_SIG_NB | J2K_T1_VIS | J2K_T1_SIG)) ||
@@ -653,6 +653,7 @@ static void decode_clnpass(J2kT1Context *t1, int width, int height, int bpno, in
                 t1->flags[y+1][x+1] &= ~J2K_T1_VIS;
             }
         }
+    }
 }
 
 static int decode_cblk(J2kDecoderContext *s, J2kT1Context *t1, J2kCblk *cblk, int width, int height, int bandpos)
