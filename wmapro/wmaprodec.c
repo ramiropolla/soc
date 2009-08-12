@@ -176,7 +176,7 @@ typedef struct WMA3DecodeContext {
     uint8_t          bits_per_sample;               ///< integer audio sample size for the unscaled IMDCT output (used to scale to [-1.0, 1.0])
     uint16_t         samples_per_frame;             ///< number of samples to output
     uint16_t         log2_frame_size;
-    int8_t           num_channels;
+    int8_t           num_channels;                  ///< number of channels in the stream (same as AVCodecContext.num_channels)
     int8_t           lfe_channel;                   ///< lfe channel index
     uint8_t          max_num_subframes;
     int8_t           num_possible_block_sizes;      ///< number of distinct block sizes that can be found in the file
