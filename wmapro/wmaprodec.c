@@ -265,7 +265,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     uint8_t *edata_ptr = avctx->extradata;
     unsigned int channel_mask;
     int i;
-    int log2_num_subframes;
+    int log2_max_num_subframes;
 
     s->avctx = avctx;
     dsputil_init(&s->dsp, avctx);
@@ -308,9 +308,9 @@ static av_cold int decode_init(AVCodecContext *avctx)
         s->channel[i].prev_block_len = s->samples_per_frame;
 
     /** subframe info */
-    log2_num_subframes           = ((s->decode_flags & 0x38) >> 3);
-    s->max_num_subframes         = 1 << log2_num_subframes;
-    s->num_possible_block_sizes  = log2_num_subframes + 1;
+    log2_max_num_subframes       = ((s->decode_flags & 0x38) >> 3);
+    s->max_num_subframes         = 1 << log2_max_num_subframes;
+    s->num_possible_block_sizes  = log2_max_num_subframes + 1;
     s->min_samples_per_subframe  = s->samples_per_frame / s->max_num_subframes;
     s->dynamic_range_compression = (s->decode_flags & 0x80);
 
