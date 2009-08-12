@@ -276,12 +276,10 @@ static av_cold int decode_init(AVCodecContext *avctx)
         s->decode_flags    = AV_RL16(edata_ptr+14);
         channel_mask       = AV_RL32(edata_ptr+2);
         s->bits_per_sample = AV_RL16(edata_ptr);
-#ifdef DEBUG
         /** dump the extradata */
         for (i=0 ; i<avctx->extradata_size ; i++)
-            av_log(avctx, AV_LOG_DEBUG, "[%x] ",avctx->extradata[i]);
-        av_log(avctx, AV_LOG_DEBUG, "\n");
-#endif
+            dprintf(avctx, "[%x] ",avctx->extradata[i]);
+        dprintf(avctx, "\n");
 
     } else {
         av_log_ask_for_sample(avctx, "Unknown extradata size\n");
