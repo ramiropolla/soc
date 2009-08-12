@@ -1,6 +1,6 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 19613)
+--- libavcodec/Makefile	(revision 19634)
 +++ libavcodec/Makefile	(working copy)
 @@ -42,6 +42,7 @@
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
@@ -12,7 +12,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 19613)
+--- libavcodec/allcodecs.c	(revision 19634)
 +++ libavcodec/allcodecs.c	(working copy)
 @@ -198,6 +198,7 @@
      REGISTER_ENCDEC  (AAC, aac);
@@ -24,9 +24,9 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (COOK, cook);
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 19613)
+--- doc/general.texi	(revision 19634)
 +++ doc/general.texi	(working copy)
-@@ -522,8 +522,8 @@
+@@ -523,8 +523,8 @@
  @item ADPCM Westwood Studios IMA @tab     @tab  X
      @tab Used in Westwood Studios games like Command and Conquer.
  @item ADPCM Yamaha           @tab  X  @tab  X
@@ -39,66 +39,19 @@ Index: doc/general.texi
  @item Apple lossless audio   @tab  X  @tab  X
 Index: Changelog
 ===================================================================
---- Changelog	(revision 19613)
+--- Changelog	(revision 19634)
 +++ Changelog	(working copy)
-@@ -31,6 +31,7 @@
- - RTP depacketization of ASF and RTSP from WMS servers
+@@ -32,6 +32,7 @@
  - RTMP support in libavformat
  - noX handling for OPT_BOOL X options
+ - Wave64 demuxer
 +- AMR-NB decoder
  
  
  
-Index: libavcodec/celp_filters.c
-===================================================================
---- libavcodec/celp_filters.c	(revision 19613)
-+++ libavcodec/celp_filters.c	(working copy)
-@@ -47,6 +47,16 @@
-     }
- }
- 
-+void ff_celp_circ_addf(float *out, const float *in,
-+                       const float *lagged, int lag, float fac, int n)
-+{
-+    int k;
-+    for (k = 0; k < lag; k++)
-+        out[k] = in[k] + fac * lagged[n + k - lag];
-+    for (; k < n; k++)
-+        out[k] = in[k] + fac * lagged[    k - lag];
-+}
-+
- int ff_celp_lp_synthesis_filter(int16_t *out,
-                                 const int16_t* filter_coeffs,
-                                 const int16_t* in,
-Index: libavcodec/celp_filters.h
-===================================================================
---- libavcodec/celp_filters.h	(revision 19613)
-+++ libavcodec/celp_filters.h	(working copy)
-@@ -42,6 +42,21 @@
-                            int len);
- 
- /**
-+ * Add an array to a rotated array.
-+ *
-+ * out[k] = in[k] + fac * lagged[k-lag] with wrap-around
-+ *
-+ * @param out result vector
-+ * @param in samples to be added unfiltered
-+ * @param lagged samples to be rotated, multiplied and added
-+ * @param lag delay from 0 to n
-+ * @param fac coefficient to applied to lagged samples
-+ * @param n number of samples
-+ */
-+void ff_celp_circ_addf(float *out, const float *in,
-+                       const float *lagged, int lag, float fac, int n);
-+
-+/**
-  * LP synthesis filter.
-  * @param out [out] pointer to output buffer
-  * @param filter_coeffs filter coefficients (-0x8000 <= (3.12) < 0x8000)
 Index: libavcodec/acelp_filters.c
 ===================================================================
---- libavcodec/acelp_filters.c	(revision 19613)
+--- libavcodec/acelp_filters.c	(revision 19634)
 +++ libavcodec/acelp_filters.c	(working copy)
 @@ -93,3 +93,17 @@
          hpf_f[0] = tmp;
@@ -120,7 +73,7 @@ Index: libavcodec/acelp_filters.c
 +}
 Index: libavcodec/acelp_filters.h
 ===================================================================
---- libavcodec/acelp_filters.h	(revision 19613)
+--- libavcodec/acelp_filters.h	(revision 19634)
 +++ libavcodec/acelp_filters.h	(working copy)
 @@ -81,4 +81,12 @@
  void ff_acelp_high_pass_filter(int16_t* out, int hpf_f[2],
@@ -137,7 +90,7 @@ Index: libavcodec/acelp_filters.h
  #endif /* AVCODEC_ACELP_FILTERS_H */
 Index: libavcodec/acelp_vectors.c
 ===================================================================
---- libavcodec/acelp_vectors.c	(revision 19613)
+--- libavcodec/acelp_vectors.c	(revision 19634)
 +++ libavcodec/acelp_vectors.c	(working copy)
 @@ -22,6 +22,7 @@
  
@@ -163,7 +116,7 @@ Index: libavcodec/acelp_vectors.c
 +}
 Index: libavcodec/acelp_vectors.h
 ===================================================================
---- libavcodec/acelp_vectors.h	(revision 19613)
+--- libavcodec/acelp_vectors.h	(revision 19634)
 +++ libavcodec/acelp_vectors.h	(working copy)
 @@ -164,4 +164,21 @@
  void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
@@ -189,7 +142,7 @@ Index: libavcodec/acelp_vectors.h
  #endif /* AVCODEC_ACELP_VECTORS_H */
 Index: libavcodec/qcelpdec.c
 ===================================================================
---- libavcodec/qcelpdec.c	(revision 19613)
+--- libavcodec/qcelpdec.c	(revision 19634)
 +++ libavcodec/qcelpdec.c	(working copy)
 @@ -406,31 +406,6 @@
  }
