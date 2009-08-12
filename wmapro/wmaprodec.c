@@ -130,7 +130,6 @@ typedef struct {
     uint16_t subframe_len[MAX_SUBFRAMES];             ///< subframe length in samples
     uint16_t subframe_offset[MAX_SUBFRAMES];          ///< subframe positions in the current frame
     uint8_t  cur_subframe;                            ///< current subframe number
-    uint16_t channel_len;                             ///< channel frame length in samples
     uint16_t decoded_samples;                         ///< number of already processed samples
     uint8_t  grouped;                                 ///< channel is part of a group
     int      quant_step;                              ///< quantization step for the current subframe
@@ -466,6 +465,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 static int decode_tilehdr(WMA3DecodeContext *s)
 {
     int c;
+    uint16_t num_samples[WMAPRO_MAX_CHANNELS];
 
     /* Should never consume more than 3073 bits (256 iterations for the
      * while loop when always the minimum amount of 128 samples is substracted
@@ -474,10 +474,10 @@ static int decode_tilehdr(WMA3DecodeContext *s)
      */
 
     /** reset tiling information */
-    for (c=0;c<s->num_channels;c++) {
+    for (c=0;c<s->num_channels;c++)
         s->channel[c].num_subframes = 0;
-        s->channel[c].channel_len = 0;
-    }
+
+    memset(num_samples, 0, sizeof(num_samples));
 
     /** handle the easy case with one constant-sized subframe per channel */
     if (s->max_num_subframes == 1) {
@@ -516,15 +516,15 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                 read_channel_mask = 0;
                 channels_for_cur_subframe = s->num_channels;
                 min_samples *= channels_for_cur_subframe;
-                min_channel_len = s->channel[0].channel_len;
+                min_channel_len = num_samples[0];
             } else {
                 min_channel_len = s->samples_per_frame;
                 /** find channels with the smallest overall length */
                 for (c=0;c<s->num_channels;c++) {
-                    if (s->channel[c].channel_len <= min_channel_len) {
-                        if (s->channel[c].channel_len < min_channel_len) {
+                    if (num_samples[c] <= min_channel_len) {
+                        if (num_samples[c] < min_channel_len) {
                             channels_for_cur_subframe = 0;
-                            min_channel_len = s->channel[c].channel_len;
+                            min_channel_len = num_samples[c];
                         }
                         ++channels_for_cur_subframe;
                     }
@@ -585,7 +585,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                 WMA3ChannelCtx* chan = &s->channel[c];
 
                 /** add subframes to the individual channels */
-                if (min_channel_len == chan->channel_len) {
+                if (min_channel_len == num_samples[c]) {
                     --channels_for_cur_subframe;
                     if (channel_mask & (1<<channels_for_cur_subframe)) {
                         if (chan->num_subframes >= MAX_SUBFRAMES) {
@@ -594,11 +594,11 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                             return AVERROR_INVALIDDATA;
                         }
                         chan->subframe_len[chan->num_subframes] = subframe_len;
-                        chan->channel_len += subframe_len;
+                        num_samples[c] += subframe_len;
                         missing_samples -= subframe_len;
                         ++chan->num_subframes;
                         if (missing_samples < 0
-                            || chan->channel_len > s->samples_per_frame) {
+                            || num_samples[c] > s->samples_per_frame) {
                             av_log(s->avctx, AV_LOG_ERROR,"broken frame: "
                                     "channel len > samples_per_frame\n");
                             return AVERROR_INVALIDDATA;
