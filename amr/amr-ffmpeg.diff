@@ -53,19 +53,23 @@ Index: libavcodec/acelp_filters.c
 ===================================================================
 --- libavcodec/acelp_filters.c	(revision 19634)
 +++ libavcodec/acelp_filters.c	(working copy)
-@@ -93,3 +93,17 @@
+@@ -93,3 +93,21 @@
          hpf_f[0] = tmp;
      }
  }
 +
-+void ff_acelp_high_pass_filterf(float *buf, float *mem, int length)
++void ff_acelp_high_pass_filterf(float *buf,
++                                const float *zero_coeffs,
++                                const float *pole_coeffs,
++                                float gain, float *mem, int length)
 +{
 +    int i;
 +    float tmp;
 +
 +    for (i = 0; i < length; i++) {
-+         tmp = buf[i] + 1.933105469 * mem[0] - 0.935913085 * mem[1];
-+         buf[i] = 0.939819335 * (tmp - 2 * mem[0] + mem[1]);
++         tmp = buf[i] - pole_coeffs[0] * mem[0] - pole_coeffs[1] * mem[1];
++         buf[i] = tmp + zero_coeffs[0] * mem[0] + zero_coeffs[1] * mem[1];
++         buf[i] *= gain;
 +
 +         mem[1] = mem[0];
 +         mem[0] = tmp;
@@ -75,17 +79,25 @@ Index: libavcodec/acelp_filters.h
 ===================================================================
 --- libavcodec/acelp_filters.h	(revision 19634)
 +++ libavcodec/acelp_filters.h	(working copy)
-@@ -81,4 +81,12 @@
+@@ -81,4 +81,20 @@
  void ff_acelp_high_pass_filter(int16_t* out, int hpf_f[2],
                                 const int16_t* in, int length);
  
 +/**
-+ * high-pass filtering (6.2.2 of 3GPP TS 26.090)
++ * Apply an order 2 rational transfer function in-place.
++ *
 + * @param samples [in/out]
++ * @param zero_coeffs 2 coefficients of the numerator
++ * @param pole_coeffs 2 coefficients of the denominator
++ * @param gain 
 + * @param mem intermediate values used by filter (should be 0 initially)
 + * @param length input data size
 + */
-+void ff_acelp_high_pass_filterf(float *samples, float mem[2], int length);
++void ff_acelp_high_pass_filterf(float *samples,
++                                const float *zero_coeffs,
++                                const float *pole_coeffs,
++                                float gain,
++                                float mem[2], int length);
 +
  #endif /* AVCODEC_ACELP_FILTERS_H */
 Index: libavcodec/acelp_vectors.c
