@@ -1832,9 +1832,9 @@ static const float *formant_low_d = formant_high_n;
 
 // High-pass coefficients
 
-const float highpass_zeros[2] = { -2.0, 1.0 };
-const float highpass_poles[2] = { -1.933105469, 0.935913085 };
-const float highpass_gain = 0.939819335;
+static const float highpass_zeros[2] = { -2.0, 1.0 };
+static const float highpass_poles[2] = { -1.933105469, 0.935913085 };
+static const float highpass_gain = 0.939819335;
 
 #endif /* AVCODEC_AMRNBDATA_H */
 
