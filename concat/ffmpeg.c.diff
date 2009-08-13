@@ -1,5 +1,5 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index e899180..fa08a45 100644
+index e899180..51f100e 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -1237,7 +1237,8 @@ static void print_report(AVFormatContext **output_files,
@@ -65,12 +65,15 @@ index e899180..fa08a45 100644
                      os = output_files[ost->file_index];
  
  #if 0
-@@ -2241,12 +2263,36 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2241,12 +2263,39 @@ static int av_encode(AVFormatContext **output_files,
          if (do_pkt_dump) {
              av_pkt_dump_log(NULL, AV_LOG_DEBUG, &pkt, do_hex_dump);
          }
 +
-+        if (pkt.stream_index >= nb_istreams && pkt.stream_index < is->nb_streams && pkt.stream_index > 0 && is->streams[pkt.stream_index]) {
++        if (pkt.stream_index >= nb_istreams &&
++            pkt.stream_index < is->nb_streams &&
++            pkt.stream_index > 0 &&
++            is->streams[pkt.stream_index]) {
 +            ist_table = av_realloc(ist_table, sizeof(*ist_table) * (pkt.stream_index + 1));
 +            for (i = nb_istreams; i < pkt.stream_index + 1; ++i)
 +                ist_table[i] = NULL;
@@ -103,7 +106,7 @@ index e899180..fa08a45 100644
          if (ist->discard)
              goto discard_packet;
  
-@@ -2278,8 +2324,7 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2278,8 +2327,7 @@ static int av_encode(AVFormatContext **output_files,
          }
  
          //fprintf(stderr,"read #%d.%d size=%d\n", ist->file_index, ist->index, pkt.size);
@@ -113,7 +116,7 @@ index e899180..fa08a45 100644
              if (verbose >= 0)
                  fprintf(stderr, "Error while decoding stream #%d.%d\n",
                          ist->file_index, ist->index);
-@@ -2300,7 +2345,7 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2300,7 +2348,7 @@ static int av_encode(AVFormatContext **output_files,
      for(i=0;i<nb_istreams;i++) {
          ist = ist_table[i];
          if (ist->decoding_needed) {
