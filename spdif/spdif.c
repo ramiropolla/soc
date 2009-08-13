@@ -144,10 +144,10 @@ static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt)
         return -1;
     }
     av_log(s, AV_LOG_DEBUG, "version: %i layer: %i extension: %i\n", version, layer, extension);
-    if(version == 2 && extension){
+    if (version == 2 && extension) {
         ctx->data_type = IEC958_MPEG2_EXT;
         ctx->pkt_offset = 4608;
-    }else{
+    } else {
         ctx->data_type = mpeg_data_type[version & 1][layer];
         ctx->pkt_offset = mpeg_pkt_offset[version & 1][layer];
     }
