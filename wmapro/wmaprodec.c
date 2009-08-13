@@ -504,16 +504,13 @@ static int decode_tilehdr(WMA3DecodeContext *s)
         while (missing_samples > 0) {
             unsigned int channel_mask = 0;
             int min_channel_len;
-            int read_channel_mask = 1;
             int channels_for_cur_subframe = 0;
             int subframe_len;
             /** minimum number of samples that need to be read */
             int min_samples = s->min_samples_per_subframe;
 
             if (fixed_channel_layout) {
-                read_channel_mask = 0;
                 channels_for_cur_subframe = s->num_channels;
-                min_samples *= channels_for_cur_subframe;
                 min_channel_len = num_samples[0];
             } else {
                 min_channel_len = s->samples_per_frame;
@@ -527,25 +524,23 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                         ++channels_for_cur_subframe;
                     }
                 }
-                min_samples *= channels_for_cur_subframe;
-
-                if (channels_for_cur_subframe == 1 ||
-                   min_samples == missing_samples)
-                    read_channel_mask = 0;
             }
+            min_samples *= channels_for_cur_subframe;
 
             /** For every channel with the minimum length, 1 bit
                 might be transmitted that informs us if the channel
                 contains a subframe with the next subframe_len. */
-            if (read_channel_mask) {
+            if (fixed_channel_layout || channels_for_cur_subframe == 1 ||
+                                             min_samples == missing_samples) {
+                channel_mask = -1;
+            } else {
                 channel_mask = get_bits(&s->gb,channels_for_cur_subframe);
                 if (!channel_mask) {
                     av_log(s->avctx, AV_LOG_ERROR,
                         "broken frame: zero frames for subframe_len\n");
                     return AVERROR_INVALIDDATA;
                 }
-            } else
-                channel_mask = -1;
+            }
 
             /** if we have the choice get next subframe length from the
                 bitstream */
