@@ -201,7 +201,7 @@ Index: libavcodec/qcelpdec.c
 -        for(len=j+40; j<len; j++)
 -            v_out[j] = scalefactor * v_in[j];
 -    }
-+    for(i = 0; i < 160; i += 40)
++    for (i = 0; i < 160; i += 40)
 +        ff_scale_to(v_out + i, v_in + i,
 +                    ff_dot_productf(v_ref + i, v_ref + i, 40), 40);
  }
