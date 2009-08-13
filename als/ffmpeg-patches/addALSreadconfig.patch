@@ -2,7 +2,7 @@ Index: libavcodec/mpeg4audio.c
 ===================================================================
 --- libavcodec/mpeg4audio.c	(revision 19634)
 +++ libavcodec/mpeg4audio.c	(working copy)
-@@ -24,6 +24,29 @@
+@@ -24,6 +24,30 @@
  #include "put_bits.h"
  #include "mpeg4audio.h"
 
@@ -10,6 +10,7 @@ Index: libavcodec/mpeg4audio.c
 + * Parse MPEG-4 audio configuration for ALS object type.
 + * @param[in] gb       Bit reader context.
 + * @param[in] c        MPEG4AudioConfig structure to fill.
++ * @param[in] buf_size Size of the bit reader context buffer.
 + * @return On error -1 is returned, on success 0 is returned.
 + */
 +static int parse_config_ALS(GetBitContext *gb, MPEG4AudioConfig *c, int buf_size)
@@ -32,7 +33,7 @@ Index: libavcodec/mpeg4audio.c
  const int ff_mpeg4audio_sample_rates[16] = {
      96000, 88200, 64000, 48000, 44100, 32000,
      24000, 22050, 16000, 12000, 11025, 8000, 7350
-@@ -71,8 +94,18 @@
+@@ -71,8 +95,18 @@
      }
      specific_config_bitindex = get_bits_count(&gb);
 
