@@ -580,8 +580,8 @@ static int decode_packets(J2kDecoderContext *s, J2kTile *tile)
                     J2kResLevel *rlevel = tile->comp[compno].reslevel + reslevelno;
                     ok_reslevel = 1;
                     for (precno = 0; precno < rlevel->num_precincts_x * rlevel->num_precincts_y; precno++){
-                        if (decode_packet(s, codsty, rlevel, precno, layno, qntsty->expn + (reslevelno ? 3*(reslevelno-1)+1 : 0),
-                                          qntsty->nguardbits))
+                        if (decode_packet(s, codsty, rlevel, precno, layno, qntsty->expn +
+                                          (reslevelno ? 3*(reslevelno-1)+1 : 0), qntsty->nguardbits))
                             return -1;
                     }
                 }
