@@ -29,6 +29,8 @@
 #include "libavcodec/ac3.h"
 #include "libavcodec/dca.h"
 #include "libavcodec/aac_parser.h"
+#define __USE_XOPEN
+#include <unistd.h>
 
 #define SYNCWORD1 0xF872
 #define SYNCWORD2 0x4E1F
@@ -55,6 +57,10 @@ typedef struct IEC958Context {
     int pkt_size;               ///< Length code (number of bits or bytes - according to data_type)
     int pkt_offset;             ///< Repetition period of a data burst in bytes
     int (*header_info) (AVFormatContext *s, AVPacket *pkt);
+#if !HAVE_BIGENDIAN
+    uint8_t *buffer;
+    int buffer_size;
+#endif
 } IEC958Context;
 
 static int spdif_header_ac3(AVFormatContext *s, AVPacket *pkt)
@@ -186,6 +192,10 @@ static int spdif_header_aac(AVFormatContext *s, AVPacket *pkt)
 static int spdif_write_header(AVFormatContext *s)
 {
     IEC958Context *ctx = s->priv_data;
+#if !HAVE_BIGENDIAN
+    ctx->buffer_size = 0;
+    ctx->buffer = NULL;
+#endif
 
     switch (s->streams[0]->codec->codec_id) {
     case CODEC_ID_AC3:
@@ -213,6 +223,15 @@ static int spdif_write_header(AVFormatContext *s)
     return 0;
 }
 
+static int spdif_write_trailer(AVFormatContext *s)
+{
+#if !HAVE_BIGENDIAN
+    IEC958Context *ctx = s->priv_data;
+    av_free(ctx->buffer);
+#endif
+    return 0;
+}
+
 static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
@@ -237,13 +256,13 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
 #if HAVE_BIGENDIAN
     put_buffer(s->pb, pkt->data, pkt->size & ~1);
 #else
-    {
-        //XXX swab... ?
-        uint16_t *data = (uint16_t *) pkt->data;
-        int i;
-        for (i = 0; i < pkt->size >> 1; i++)
-            put_be16(s->pb, data[i]);
+    if (ctx->buffer_size < pkt->size) {
+        av_fast_malloc(&ctx->buffer, &ctx->buffer_size, pkt->size + FF_INPUT_BUFFER_PADDING_SIZE);
+        if (!ctx->buffer)
+            return AVERROR(ENOMEM);
     }
+    swab(pkt->data, ctx->buffer, pkt->size & ~1);
+    put_buffer(s->pb, ctx->buffer, pkt->size & ~1);
 #endif
 
     if (pkt->size & 1)
@@ -269,4 +288,5 @@ AVOutputFormat spdif_muxer = {
     CODEC_ID_NONE,
     spdif_write_header,
     spdif_write_packet,
+    spdif_write_trailer,
 };
