@@ -1021,7 +1021,8 @@ static int synthesis(AMRContext *p, float *lpc,
         for (i = 0; i < AMR_SUBFRAME_SIZE; i++)
             excitation[i] += pitch_factor * p->pitch_vector[i];
 
-        ff_scale_to(excitation, excitation, energy, AMR_SUBFRAME_SIZE);
+        ff_scale_vector_to_given_sum_of_squares(excitation, excitation, energy,
+                                                AMR_SUBFRAME_SIZE);
     }
 
     ff_celp_lp_synthesis_filterf(samples, lpc, excitation, AMR_SUBFRAME_SIZE,

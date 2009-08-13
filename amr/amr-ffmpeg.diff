@@ -111,17 +111,18 @@ Index: libavcodec/acelp_vectors.c
  #include "acelp_vectors.h"
  
  const uint8_t ff_fc_2pulses_9bits_track1[16] =
-@@ -155,3 +156,13 @@
+@@ -155,3 +156,14 @@
          out[i] = weight_coeff_a * in_a[i]
                 + weight_coeff_b * in_b[i];
  }
 +
-+void ff_scale_to(float *out, const float *in, float norm_squared, const int n)
++void ff_scale_vector_to_given_sum_of_squares(float *out, const float *in,
++                                             float sum_of_squares, const int n)
 +{
 +    int i;
 +    float scalefactor = ff_dot_productf(in, in, n);
 +    if (scalefactor)
-+        scalefactor = sqrt(norm_squared / scalefactor);
++        scalefactor = sqrt(sum_of_squares / scalefactor);
 +    for (i = 0; i < n; i++)
 +        out[i] = in[i] * scalefactor;
 +}
@@ -129,7 +130,7 @@ Index: libavcodec/acelp_vectors.h
 ===================================================================
 --- libavcodec/acelp_vectors.h	(revision 19634)
 +++ libavcodec/acelp_vectors.h	(working copy)
-@@ -164,4 +164,21 @@
+@@ -164,4 +164,22 @@
  void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
                               float weight_coeff_a, float weight_coeff_b, int length);
  
@@ -138,7 +139,7 @@ Index: libavcodec/acelp_vectors.h
 + *
 + * @param out output samples
 + * @param in input samples
-+ * @param norm_squared new sum of squares
++ * @param sum_of_squares new sum of squares
 + * @param n number of samples
 + *
 + * @note If the input is zero (or its energy underflows), the output is zero.
@@ -148,7 +149,8 @@ Index: libavcodec/acelp_vectors.h
 + * TIA/EIA/IS-733 2.4.8.3-2/3/4/5, 2.4.8.6
 + * 3GPP TS 26.090 6.1 (6)
 + */
-+void ff_scale_to(float *out, const float *in, float norm_squared, const int n);
++void ff_scale_vector_to_given_sum_of_squares(float *out, const float *in,
++                                             float sum_of_squares, const int n);
 +
  #endif /* AVCODEC_ACELP_VECTORS_H */
 Index: libavcodec/qcelpdec.c
@@ -187,7 +189,7 @@ Index: libavcodec/qcelpdec.c
   * Apply generic gain control.
   *
   * @param v_out output vector
-@@ -442,15 +417,11 @@
+@@ -442,15 +417,13 @@
  static void apply_gain_ctrl(float *v_out, const float *v_ref,
                              const float *v_in)
  {
@@ -202,8 +204,10 @@ Index: libavcodec/qcelpdec.c
 -            v_out[j] = scalefactor * v_in[j];
 -    }
 +    for (i = 0; i < 160; i += 40)
-+        ff_scale_to(v_out + i, v_in + i,
-+                    ff_dot_productf(v_ref + i, v_ref + i, 40), 40);
++        ff_scale_vector_to_given_sum_of_squares(v_out + i, v_in + i,
++                                                ff_dot_productf(v_ref + i,
++                                                                v_ref + i, 40),
++                                                40);
  }
  
  /**
