@@ -53,7 +53,7 @@ Index: libavcodec/acelp_filters.c
 ===================================================================
 --- libavcodec/acelp_filters.c	(revision 19634)
 +++ libavcodec/acelp_filters.c	(working copy)
-@@ -93,3 +93,21 @@
+@@ -93,3 +93,20 @@
          hpf_f[0] = tmp;
      }
  }
@@ -67,9 +67,8 @@ Index: libavcodec/acelp_filters.c
 +    float tmp;
 +
 +    for (i = 0; i < n; i++) {
-+        tmp = buf[i] - pole_coeffs[0] * mem[0] - pole_coeffs[1] * mem[1];
-+        buf[i] = tmp + zero_coeffs[0] * mem[0] + zero_coeffs[1] * mem[1];
-+        buf[i] *= gain;
++        tmp = gain * buf[i] - pole_coeffs[0] * mem[0] - pole_coeffs[1] * mem[1];
++        buf[i] =        tmp + zero_coeffs[0] * mem[0] + zero_coeffs[1] * mem[1];
 +
 +        mem[1] = mem[0];
 +        mem[0] = tmp;
