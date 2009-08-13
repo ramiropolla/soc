@@ -68,7 +68,7 @@ static int spdif_header_ac3(AVFormatContext *s, AVPacket *pkt)
     IEC958Context *ctx = s->priv_data;
     int bitstream_mode = pkt->data[6] & 0x7;
 
-    ctx->data_type = IEC958_AC3 | (bitstream_mode << 8);
+    ctx->data_type  = IEC958_AC3 | (bitstream_mode << 8);
     ctx->pkt_offset = AC3_FRAME_SIZE << 2;
     return 0;
 }
@@ -92,7 +92,7 @@ static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt)
         break;
     case DCA_MARKER_14B_LE:
         blocks =
-            (((pkt->data[4] & 0x07) << 4) | ((pkt->data[7] & 0x3f) >> 2)) ;
+            (((pkt->data[4] & 0x07) << 4) | ((pkt->data[7] & 0x3f) >> 2));
         break;
     default:
         av_log(s, AV_LOG_ERROR, "bad DTS syncword\n");
@@ -145,10 +145,10 @@ static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt)
     }
     av_log(s, AV_LOG_DEBUG, "version: %i layer: %i extension: %i\n", version, layer, extension);
     if (version == 2 && extension) {
-        ctx->data_type = IEC958_MPEG2_EXT;
+        ctx->data_type  = IEC958_MPEG2_EXT;
         ctx->pkt_offset = 4608;
     } else {
-        ctx->data_type = mpeg_data_type[version & 1][layer];
+        ctx->data_type  = mpeg_data_type [version & 1][layer];
         ctx->pkt_offset = mpeg_pkt_offset[version & 1][layer];
     }
     // TODO Data type dependant info (normal/karaoke, dynamic range control)
