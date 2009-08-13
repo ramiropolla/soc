@@ -1,5 +1,5 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index e899180..87a23a0 100644
+index e899180..0a51a39 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -40,6 +40,7 @@
@@ -16,7 +16,7 @@ index e899180..87a23a0 100644
                           AVOutputStream **ost_table, int nb_ostreams,
 -                         const AVPacket *pkt)
 +                         AVPacket *pkt,
-+                         AVFormatContext *is)
++                         AVFormatContext *ic)
  {
      AVFormatContext *os;
      AVOutputStream *ost;
@@ -26,10 +26,10 @@ index e899180..87a23a0 100644
      int got_subtitle;
 +    int stream_offset = 0;
      AVPacket avpkt;
-+    PlaylistContext *pl_ctx = ff_playlist_get_context(is);
++    PlaylistContext *pl_ctx = ff_playlist_get_context(ic);
  
 +    if (pl_ctx && pkt) {
-+        ist->st = is->streams[pkt->stream_index];
++        ist->st = ic->streams[pkt->stream_index];
 +        stream_offset = pkt->stream_index - ff_playlist_localstidx_from_streamidx(pl_ctx, pkt->stream_index);
 +    }
 +     
