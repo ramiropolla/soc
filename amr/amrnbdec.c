@@ -1266,9 +1266,9 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         update_state(p);
     }
 
-    ff_acelp_high_pass_filterf(buf_out,
-                               highpass_zeros, highpass_poles, highpass_gain,
-                               p->high_pass_mem, AMR_BLOCK_SIZE);
+    ff_acelp_apply_order_2_transfer_function(buf_out, highpass_zeros,
+                                             highpass_poles, highpass_gain,
+                                             p->high_pass_mem, AMR_BLOCK_SIZE);
 
     for (i = 0; i < AMR_BLOCK_SIZE; i++)
         buf_out[i] = av_clipf(buf_out[i] * AMR_SAMPLE_SCALE,

@@ -58,10 +58,10 @@ Index: libavcodec/acelp_filters.c
      }
  }
 +
-+void ff_acelp_high_pass_filterf(float *buf,
-+                                const float zero_coeffs[2],
-+                                const float pole_coeffs[2],
-+                                float gain, float mem[2], int n)
++void ff_acelp_apply_order_2_transfer_function(float *buf,
++                                              const float zero_coeffs[2],
++                                              const float pole_coeffs[2],
++                                              float gain, float mem[2], int n)
 +{
 +    int i;
 +    float tmp;
@@ -93,11 +93,11 @@ Index: libavcodec/acelp_filters.h
 + * @param mem intermediate values used by filter (should be 0 initially)
 + * @param n number of samples
 + */
-+void ff_acelp_high_pass_filterf(float *samples,
-+                                const float zero_coeffs[2],
-+                                const float pole_coeffs[2],
-+                                float gain,
-+                                float mem[2], int n);
++void ff_acelp_apply_order_2_transfer_function(float *samples,
++                                              const float zero_coeffs[2],
++                                              const float pole_coeffs[2],
++                                              float gain,
++                                              float mem[2], int n);
 +
  #endif /* AVCODEC_ACELP_FILTERS_H */
 Index: libavcodec/acelp_vectors.c
