@@ -67,12 +67,12 @@ Index: libavcodec/acelp_filters.c
 +    float tmp;
 +
 +    for (i = 0; i < n; i++) {
-+         tmp = buf[i] - pole_coeffs[0] * mem[0] - pole_coeffs[1] * mem[1];
-+         buf[i] = tmp + zero_coeffs[0] * mem[0] + zero_coeffs[1] * mem[1];
-+         buf[i] *= gain;
++        tmp = buf[i] - pole_coeffs[0] * mem[0] - pole_coeffs[1] * mem[1];
++        buf[i] = tmp + zero_coeffs[0] * mem[0] + zero_coeffs[1] * mem[1];
++        buf[i] *= gain;
 +
-+         mem[1] = mem[0];
-+         mem[0] = tmp;
++        mem[1] = mem[0];
++        mem[0] = tmp;
 +    }
 +}
 Index: libavcodec/acelp_filters.h
