@@ -633,7 +633,8 @@ static void decode_refpass(J2kT1Context *t1, int width, int height, int bpno)
             }
 }
 
-static void decode_clnpass(J2kT1Context *t1, int width, int height, int bpno, int bandno)
+static void decode_clnpass(J2kDecoderContext *s, J2kT1Context *t1, int width, int height,
+                           int bpno, int bandno, int seg_symbols)
 {
     int mask = 3 << (bpno - 1), y0, x, y, runlen, dec;
 
@@ -669,9 +670,20 @@ static void decode_clnpass(J2kT1Context *t1, int width, int height, int bpno, in
             }
         }
     }
+    if (seg_symbols) {
+        int val;
+        val = ff_mqc_decode(&t1->mqc, t1->mqc.cx_states + MQC_CX_UNI);
+        val = (val << 1) + ff_mqc_decode(&t1->mqc, t1->mqc.cx_states + MQC_CX_UNI);
+        val = (val << 1) + ff_mqc_decode(&t1->mqc, t1->mqc.cx_states + MQC_CX_UNI);
+        val = (val << 1) + ff_mqc_decode(&t1->mqc, t1->mqc.cx_states + MQC_CX_UNI);
+        if (val != 0xa) {
+            av_log(s->avctx, AV_LOG_ERROR,"Segmentation symbol value incorrect");
+        }
+    }
 }
 
-static int decode_cblk(J2kDecoderContext *s, J2kT1Context *t1, J2kCblk *cblk, int width, int height, int bandpos)
+static int decode_cblk(J2kDecoderContext *s, J2kCodingStyle *codsty, J2kT1Context *t1, J2kCblk *cblk,
+                       int width, int height, int bandpos)
 {
     int passno = cblk->npasses, pass_t = 2, bpno = cblk->nonzerobits - 1, y;
 
@@ -691,7 +703,8 @@ static int decode_cblk(J2kDecoderContext *s, J2kT1Context *t1, J2kCblk *cblk, in
                     break;
             case 1: decode_refpass(t1, width, height, bpno+1);
                     break;
-            case 2: decode_clnpass(t1, width, height, bpno+1, bandpos);
+            case 2: decode_clnpass(s, t1, width, height, bpno+1, bandpos,
+                                   codsty->cblk_style & J2K_CBLK_SEGSYM);
                     break;
         }
 
@@ -773,7 +786,7 @@ static int decode_tile(J2kDecoderContext *s, J2kTile *tile)
 
                     for (cblkx = 0; cblkx < band->cblknx; cblkx++, cblkno++){
                         int y, x;
-                        decode_cblk(s, &t1, band->cblk + cblkno, xx1 - xx0, yy1 - yy0, bandpos);
+                        decode_cblk(s, codsty, &t1, band->cblk + cblkno, xx1 - xx0, yy1 - yy0, bandpos);
                         if (codsty->transform == FF_DWT53){
                             for (y = yy0; y < yy1; y+=s->cdy[compno]){
                                 int *ptr = t1.data[y-yy0];
