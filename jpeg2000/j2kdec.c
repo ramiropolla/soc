@@ -490,7 +490,8 @@ static int getlblockinc(J2kDecoderContext *s)
     return res;
 }
 
-static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, int layno, uint8_t *expn, int numgbits)
+static int decode_packet(J2kDecoderContext *s, J2kCodingStyle *codsty, J2kResLevel *rlevel, int precno,
+                         int layno, uint8_t *expn, int numgbits)
 {
     int bandno, cblkny, cblknx, cblkno, ret;
 
@@ -537,6 +538,15 @@ static int decode_packet(J2kDecoderContext *s, J2kResLevel *rlevel, int precno, 
             }
     }
     j2k_flush(s);
+
+    if (codsty->csty & J2K_CSTY_EPH) {
+        if (AV_RB16(s->buf) == J2K_EPH) {
+            s->buf += 2;
+        } else {
+            av_log(s->avctx, AV_LOG_ERROR, "EPH marker not found.\n");
+        }
+    }
+
     for (bandno = 0; bandno < rlevel->nbands; bandno++){
         J2kBand *band = rlevel->band + bandno;
         int yi, cblknw = band->prec[precno].xi1 - band->prec[precno].xi0;
@@ -570,7 +580,7 @@ static int decode_packets(J2kDecoderContext *s, J2kTile *tile)
                     J2kResLevel *rlevel = tile->comp[compno].reslevel + reslevelno;
                     ok_reslevel = 1;
                     for (precno = 0; precno < rlevel->num_precincts_x * rlevel->num_precincts_y; precno++){
-                        if (decode_packet(s, rlevel, precno, layno, qntsty->expn + (reslevelno ? 3*(reslevelno-1)+1 : 0),
+                        if (decode_packet(s, codsty, rlevel, precno, layno, qntsty->expn + (reslevelno ? 3*(reslevelno-1)+1 : 0),
                                           qntsty->nguardbits))
                             return -1;
                     }
