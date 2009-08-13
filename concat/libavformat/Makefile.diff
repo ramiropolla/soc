@@ -1,5 +1,5 @@
 diff --git a/libavformat/Makefile b/libavformat/Makefile
-index 7838efe..351b80b 100644
+index 86dc03f..8a6ecd9 100644
 --- a/libavformat/Makefile
 +++ b/libavformat/Makefile
 @@ -33,6 +33,7 @@ OBJS-$(CONFIG_BETHSOFTVID_DEMUXER)       += bethsoftvid.o
@@ -26,7 +26,7 @@ index 7838efe..351b80b 100644
  OBJS-$(CONFIG_PVA_DEMUXER)               += pva.o
  OBJS-$(CONFIG_QCP_DEMUXER)               += qcp.o
  OBJS-$(CONFIG_R3D_DEMUXER)               += r3d.o
-@@ -223,6 +226,7 @@ OBJS-$(CONFIG_WSAUD_DEMUXER)             += westwood.o
+@@ -224,6 +227,7 @@ OBJS-$(CONFIG_WSAUD_DEMUXER)             += westwood.o
  OBJS-$(CONFIG_WSVQA_DEMUXER)             += westwood.o
  OBJS-$(CONFIG_WV_DEMUXER)                += wv.o
  OBJS-$(CONFIG_XA_DEMUXER)                += xa.o

@@ -1,5 +1,5 @@
 diff --git a/libavformat/utils.c b/libavformat/utils.c
-index 0c1a50d..01824dd 100644
+index b9f6c00..3b652a0 100644
 --- a/libavformat/utils.c
 +++ b/libavformat/utils.c
 @@ -27,6 +27,7 @@

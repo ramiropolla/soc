@@ -1,5 +1,5 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index e899180..0a51a39 100644
+index e5512c2..4b1fbdc 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -40,6 +40,7 @@
@@ -10,7 +10,7 @@ index e899180..0a51a39 100644
  
  #if HAVE_SYS_RESOURCE_H
  #include <sys/types.h>
-@@ -1237,7 +1238,8 @@ static void print_report(AVFormatContext **output_files,
+@@ -1232,7 +1233,8 @@ static void print_report(AVFormatContext **output_files,
  /* pkt = NULL means EOF (needed to flush decoder buffers) */
  static int output_packet(AVInputStream *ist, int ist_index,
                           AVOutputStream **ost_table, int nb_ostreams,
@@ -20,7 +20,7 @@ index e899180..0a51a39 100644
  {
      AVFormatContext *os;
      AVOutputStream *ost;
-@@ -1249,8 +1251,15 @@ static int output_packet(AVInputStream *ist, int ist_index,
+@@ -1244,8 +1246,15 @@ static int output_packet(AVInputStream *ist, int ist_index,
      static unsigned int samples_size= 0;
      AVSubtitle subtitle, *subtitle_to_free;
      int got_subtitle;
@@ -36,7 +36,7 @@ index e899180..0a51a39 100644
      if(ist->next_pts == AV_NOPTS_VALUE)
          ist->next_pts= ist->pts;
  
-@@ -1292,6 +1301,7 @@ static int output_packet(AVInputStream *ist, int ist_index,
+@@ -1287,6 +1296,7 @@ static int output_packet(AVInputStream *ist, int ist_index,
                         endianness as CPU */
                  ret = avcodec_decode_audio3(ist->st->codec, samples, &data_size,
                                              &avpkt);
@@ -44,7 +44,7 @@ index e899180..0a51a39 100644
                  if (ret < 0)
                      goto fail_decode;
                  avpkt.data += ret;
-@@ -1398,7 +1408,7 @@ static int output_packet(AVInputStream *ist, int ist_index,
+@@ -1393,7 +1403,7 @@ static int output_packet(AVInputStream *ist, int ist_index,
                  int frame_size;
  
                  ost = ost_table[i];
@@ -52,8 +52,8 @@ index e899180..0a51a39 100644
 +                if (ost->source_index == ist_index - stream_offset) {
                      os = output_files[ost->file_index];
  
- #if 0
-@@ -2156,6 +2166,8 @@ static int av_encode(AVFormatContext **output_files,
+                     /* set the input output pts pairs */
+@@ -2145,6 +2155,8 @@ static int av_encode(AVFormatContext **output_files,
          AVPacket pkt;
          double ipts_min;
          double opts_min;
@@ -62,7 +62,7 @@ index e899180..0a51a39 100644
  
      redo:
          ipts_min= 1e100;
-@@ -2241,12 +2253,44 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2230,12 +2242,44 @@ static int av_encode(AVFormatContext **output_files,
          if (do_pkt_dump) {
              av_pkt_dump_log(NULL, AV_LOG_DEBUG, &pkt, do_hex_dump);
          }
@@ -108,7 +108,7 @@ index e899180..0a51a39 100644
          if (ist->discard)
              goto discard_packet;
  
-@@ -2278,8 +2322,7 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2267,8 +2311,7 @@ static int av_encode(AVFormatContext **output_files,
          }
  
          //fprintf(stderr,"read #%d.%d size=%d\n", ist->file_index, ist->index, pkt.size);
@@ -118,7 +118,7 @@ index e899180..0a51a39 100644
              if (verbose >= 0)
                  fprintf(stderr, "Error while decoding stream #%d.%d\n",
                          ist->file_index, ist->index);
-@@ -2300,7 +2343,7 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2289,7 +2332,7 @@ static int av_encode(AVFormatContext **output_files,
      for(i=0;i<nb_istreams;i++) {
          ist = ist_table[i];
          if (ist->decoding_needed) {
