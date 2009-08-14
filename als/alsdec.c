@@ -272,7 +272,7 @@ static av_cold int read_specific_config(ALSDecContext *ctx,
         ht_size -= len;
     }
 
-    buffer_size -= ht_size;
+    buffer_size -= ht_size >> 3;
 
 
     // read the crc data
