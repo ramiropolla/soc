@@ -32,6 +32,7 @@
 #include "avcodec.h"
 #include "get_bits.h"
 #include "unary.h"
+#include "mpeg4audio.h"
 
 #include "als_data.h"
 
@@ -144,18 +145,29 @@ static av_cold int read_specific_config(ALSDecContext *ctx,
 {
     GetBitContext gb;
     uint64_t ht_size;
-    int i;
+    int i, config_offset;
+    MPEG4AudioConfig m4ac;
+
+    init_get_bits(&gb, buffer, buffer_size * 8);
+
+    config_offset = ff_mpeg4audio_get_config(&m4ac, buffer, buffer_size);
+
+    if (config_offset < 0)
+        return -1;
+
+    skip_bits_long(&gb, config_offset);
+    buffer_size -= config_offset >> 3;
 
     if (buffer_size < 22)
         return -1;
 
-    init_get_bits(&gb, buffer, buffer_size * 8);
-
     // read the fixed items
     sconf->als_id               = get_bits_long(&gb, 32);
-    sconf->samp_freq            = get_bits_long(&gb, 32);
+    sconf->samp_freq            = m4ac.sample_rate;
+    skip_bits_long(&gb, 32);
     sconf->samples              = get_bits_long(&gb, 32);
-    sconf->channels             = get_bits(&gb, 16) + 1;
+    sconf->channels             = m4ac.channels;
+    skip_bits(&gb, 16);
     sconf->file_type            = get_bits(&gb, 3);
     sconf->resolution           = get_bits(&gb, 3);
     sconf->floating             = get_bits1(&gb);
@@ -928,8 +940,8 @@ static av_cold int decode_init(AVCodecContext *avctx)
         return -1;
     }
 
-    if (read_specific_config(ctx, avctx->extradata + 6,
-                             avctx->extradata_size - 6, sconf)) {
+    if (read_specific_config(ctx, avctx->extradata,
+                             avctx->extradata_size, sconf)) {
         av_log(avctx, AV_LOG_ERROR, "Reading ALSSpecificConfig failed.\n");
         decode_end(avctx);
         return -1;
