@@ -280,6 +280,47 @@ static av_cold int read_specific_config(ALSDecContext *ctx,
 }
 
 
+/** Checks the ALSSpecificConfig for unsupported features.
+ */
+static int check_specific_config(ALSDecContext *ctx)
+{
+    ALSSpecificConfig *sconf = &ctx->sconf;
+    int error = 0;
+
+    if (sconf->floating) {
+        av_log_missing_feature(ctx->avctx, "Floating point decoding", 0);
+        error = -1;
+    }
+
+    if (sconf->resolution > 1) {
+        av_log_missing_feature(ctx->avctx, "Higher resolution than 16 bits per sample", 0);
+        error = -1;
+    }
+
+    if (sconf->long_term_prediction) {
+        av_log_missing_feature(ctx->avctx, "Long-term prediction", 0);
+        error = -1;
+    }
+
+    if (sconf->bgmc_mode) {
+        av_log_missing_feature(ctx->avctx, "BGMC entropy decoding", 0);
+        error = -1;
+    }
+
+    if (sconf->mc_coding) {
+        av_log_missing_feature(ctx->avctx, "Multi-channel decoding", 0);
+        error = -1;
+    }
+
+    if (sconf->RLSLMS) {
+        av_log_missing_feature(ctx->avctx, "Adaptive RLS-LMS prediction", 0);
+        error = -1;
+    }
+
+    return error;
+}
+
+
 /** Parses the bs_info item to extract the block partitioning.
  */
 static void parse_bs_info(uint32_t bs_info, unsigned int n, unsigned int div,
@@ -890,6 +931,11 @@ static av_cold int decode_init(AVCodecContext *avctx)
     if (read_specific_config(ctx, avctx->extradata + 6,
                              avctx->extradata_size - 6, sconf)) {
         av_log(avctx, AV_LOG_ERROR, "Reading ALSSpecificConfig failed.\n");
+        decode_end(avctx);
+        return -1;
+    }
+
+    if (check_specific_config(ctx)) {
         decode_end(avctx);
         return -1;
     }
