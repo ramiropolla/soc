@@ -192,10 +192,6 @@ static int spdif_header_aac(AVFormatContext *s, AVPacket *pkt)
 static int spdif_write_header(AVFormatContext *s)
 {
     IEC958Context *ctx = s->priv_data;
-#if !HAVE_BIGENDIAN
-    ctx->buffer_size = 0;
-    ctx->buffer = NULL;
-#endif
 
     switch (s->streams[0]->codec->codec_id) {
     case CODEC_ID_AC3:
