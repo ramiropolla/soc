@@ -308,7 +308,7 @@ static int check_specific_config(ALSDecContext *ctx)
     }
 
     if (sconf->mc_coding) {
-        av_log_missing_feature(ctx->avctx, "Multi-channel decoding", 0);
+        av_log_missing_feature(ctx->avctx, "Multi-channel correlation", 0);
         error = -1;
     }
 
