@@ -264,7 +264,7 @@ static av_cold int read_specific_config(ALSDecContext *ctx,
     if (buffer_size < ht_size)
         return -1;
 
-    ht_size *= 8;
+    ht_size <<= 3;
 
     while (ht_size > 0) {
         int len = FFMIN(ht_size, INT32_MAX);
