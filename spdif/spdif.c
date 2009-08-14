@@ -223,7 +223,7 @@ static int spdif_write_trailer(AVFormatContext *s)
 {
 #if !HAVE_BIGENDIAN
     IEC958Context *ctx = s->priv_data;
-    av_free(ctx->buffer);
+    av_freep(&ctx->buffer);
 #endif
     return 0;
 }
