@@ -463,7 +463,7 @@ static void reconstruct_block_sizes(ALSDecContext *ctx, uint32_t *div_blocks)
  */
 static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                             int64_t *raw_samples, unsigned int block_length,
-                            uint32_t *js_blocks, int64_t *raw_other)
+                            unsigned int *js_blocks, int64_t *raw_other)
 {
     ALSSpecificConfig *sconf = &ctx->sconf;
     AVCodecContext *avctx    = ctx->avctx;
@@ -738,7 +738,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
     unsigned int c, b, ra_block;
     int64_t *raw_samples_L;
     int64_t *raw_samples_R;
-    uint32_t js_blocks[2];
+    unsigned int js_blocks[2];
 
     uint32_t bs_info = 0;
     unsigned int *ptr_div_blocks;
