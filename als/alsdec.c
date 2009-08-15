@@ -518,7 +518,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         else
             sub_blocks = get_bits1(gb) ? 4 : 1;
 
-        // Do not continue in case of a damaged stream
+        // do not continue in case of a damaged stream since
+        // block_length must be evenly divisible by sub_blocks
         if (block_length % sub_blocks)
             return -1;
 
