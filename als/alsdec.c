@@ -324,6 +324,11 @@ static int check_specific_config(ALSDecContext *ctx)
         error = -1;
     }
 
+    if (sconf->chan_sort) {
+        av_log_missing_feature(ctx->avctx, "Channel sorting", 0);
+        error = -1;
+    }
+
     if (sconf->rlslms) {
         av_log_missing_feature(ctx->avctx, "Adaptive RLS-LMS prediction", 0);
         error = -1;
