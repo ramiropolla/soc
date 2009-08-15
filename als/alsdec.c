@@ -506,8 +506,11 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
 
         // do not continue in case of a damaged stream since
         // block_length must be evenly divisible by sub_blocks
-        if (block_length % sub_blocks)
+        if (block_length % sub_blocks) {
+            av_log(avctx, AV_LOG_WARNING,
+                   "Block length is not evenly divisible by the number of sub blocks.");
             return -1;
+        }
 
         sb_length = block_length / sub_blocks;
 
@@ -768,8 +771,16 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
 
                 for (b = 0; b < ctx->num_blocks; b++) {
                     ra_block = !b && ra_frame;
-                    read_block_data(ctx, ra_block, raw_samples_L, div_blocks[b],
-                                    &js_blocks[0], NULL);
+                    if (read_block_data(ctx, ra_block, raw_samples_L,
+                                        div_blocks[b], &js_blocks[0], NULL)) {
+                        // damaged block, write zero for the rest of the frame
+                        while (b < ctx->num_blocks) {
+                            memset(raw_samples_L, 0, div_blocks[b]);
+                            raw_samples_L += div_blocks[b];
+                            b++;
+                        }
+                        return -1;
+                    }
                     raw_samples_L += div_blocks[b];
                 }
 
@@ -789,12 +800,20 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                     raw_samples_L = ctx->raw_samples[c    ] + offset;
                     raw_samples_R = ctx->raw_samples[c + 1] + offset;
                     ra_block = !b && ra_frame;
-                    read_block_data(ctx, ra_block, raw_samples_L, div_blocks[b],
-                                    &js_blocks[0], raw_samples_R);
-
-                    read_block_data(ctx, ra_block, raw_samples_R, div_blocks[b],
-                                    &js_blocks[1], raw_samples_L);
-
+                    if (read_block_data(ctx, ra_block, raw_samples_L, div_blocks[b],
+                                        &js_blocks[0], raw_samples_R) ||
+                        read_block_data(ctx, ra_block, raw_samples_R, div_blocks[b],
+                                        &js_blocks[1], raw_samples_L)) {
+                        // damaged block, write zero for the rest of the frame
+                        while (b < ctx->num_blocks) {
+                            memset(raw_samples_L, 0, div_blocks[b]);
+                            memset(raw_samples_R, 0, div_blocks[b]);
+                            raw_samples_L += div_blocks[b];
+                            raw_samples_R += div_blocks[b];
+                            b++;
+                        }
+                        return -1;
+                    }
 
                     // reconstruct joint-stereo blocks
                     if (js_blocks[0] & 1) {
@@ -841,8 +860,16 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
 
         for (b = 0; b < ctx->num_blocks; b++) {
             ra_block = !b && ra_frame;
-            read_block_data(ctx, ra_block, raw_samples_L, div_blocks[b],
-                            &js_blocks[0], NULL);
+            if (read_block_data(ctx, ra_block, raw_samples_L,
+                                div_blocks[b], &js_blocks[0], NULL)) {
+                // damaged block, write zero for the rest of the frame
+                while (b < ctx->num_blocks) {
+                    memset(raw_samples_L, 0, div_blocks[b]);
+                    raw_samples_L += div_blocks[b];
+                    b++;
+                }
+                return -1;
+            }
             raw_samples_L += div_blocks[b];
             // TODO: read_channel_data
         }
@@ -867,6 +894,7 @@ static int decode_frame(AVCodecContext *avctx,
     const uint8_t *buffer    = avpkt->data;
     int buffer_size          = avpkt->size;
     int16_t *dest            = (int16_t*)data;
+    int invalid_frame        = 0;
     unsigned int c, sample, ra_frame, bytes_read;
 
     init_get_bits(&ctx->gb, buffer, buffer_size * 8);
@@ -879,9 +907,9 @@ static int decode_frame(AVCodecContext *avctx,
     }
 
     // decode the frame data
-    if (read_frame_data(ctx, ra_frame)) {
-        av_log(ctx->avctx, AV_LOG_ERROR, "Reading frame data failed.\n");
-        return -1;
+    if ((invalid_frame = read_frame_data(ctx, ra_frame))) {
+        av_log(ctx->avctx, AV_LOG_WARNING,
+               "Reading frame data failed. Skipping RA unit.\n");
     }
 
     // increment the frame counter
@@ -898,7 +926,8 @@ static int decode_frame(AVCodecContext *avctx,
     *data_size = ctx->cur_frame_length * sconf->channels
                  * (av_get_bits_per_sample_format(avctx->sample_fmt) >> 3);
 
-    bytes_read = (get_bits_count(&ctx->gb) + 7) >> 3;
+    bytes_read = invalid_frame ? buffer_size :
+                                 (get_bits_count(&ctx->gb) + 7) >> 3;
 
     return bytes_read;
 }
