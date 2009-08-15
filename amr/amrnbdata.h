@@ -52,14 +52,14 @@
 
 /** Frame type (Table 1a in 3GPP TS 26.101) */
 enum Mode {
-    MODE_475 = 0,                         ///< 4.75 kbit/s
-    MODE_515,                             ///< 5.15 kbit/s
-    MODE_59,                              ///< 5.90 kbit/s
-    MODE_67,                              ///< 6.70 kbit/s
-    MODE_74,                              ///< 7.40 kbit/s
-    MODE_795,                             ///< 7.95 kbit/s
-    MODE_102,                             ///< 10.2 kbit/s
-    MODE_122,                             ///< 12.2 kbit/s
+    MODE_4k75 = 0,                         ///< 4.75 kbit/s
+    MODE_5k15,                             ///< 5.15 kbit/s
+    MODE_5k9,                              ///< 5.90 kbit/s
+    MODE_6k7,                              ///< 6.70 kbit/s
+    MODE_7k4,                              ///< 7.40 kbit/s
+    MODE_7k95,                             ///< 7.95 kbit/s
+    MODE_10k2,                             ///< 10.2 kbit/s
+    MODE_12k2,                             ///< 12.2 kbit/s
     MODE_DTX,                             ///< silent frame
     N_MODES,                              ///< number of modes
     NO_DATA = 15                          ///< no transmission
@@ -82,15 +82,15 @@ typedef struct AMROrder {
 typedef struct {
     uint16_t p_lag;      ///< index to decode the pitch lag
     uint16_t p_gain;     ///< index to decode the pitch gain
-    uint16_t fixed_gain; ///< index to decode the fixed gain factor, for MODE_122 and MODE_795
-    uint16_t pulses[10]; ///< pulses: 10 for MODE_122, 7 for MODE_102, and index and sign for others
+    uint16_t fixed_gain; ///< index to decode the fixed gain factor, for MODE_12k2 and MODE_7k95
+    uint16_t pulses[10]; ///< pulses: 10 for MODE_12k2, 7 for MODE_10k2, and index and sign for others
 } AMRNBSubframe;
 
 /**
  * AMRNB unpacked data frame
  */
 typedef struct {
-    uint16_t lsf[5];           ///< lsf parameters: 5 parameters for MODE_122, only 3 for other modes
+    uint16_t lsf[5];           ///< lsf parameters: 5 parameters for MODE_12k2, only 3 for other modes
     AMRNBSubframe subframe[4]; ///< unpacked data for each subframe
     uint16_t sid_vector;       ///< index of SID LSF reference vector
     uint16_t sid_energy;       ///< SID frame energy
@@ -118,7 +118,7 @@ typedef struct {
 /** Specify an SID energy index bit */
 #define AMR_SENERGY(bit)                     AMR_BIT(sid_energy, bit)
 
-static const AMROrder order_MODE_475[95] = {
+static const AMROrder order_MODE_4k75[95] = {
  AMR_LSF  (  0, 7), AMR_LSF  (  0, 6), AMR_LSF  (  0, 5), AMR_LSF  (  0, 4),
  AMR_LSF  (  0, 3), AMR_LSF  (  0, 2), AMR_LSF  (  0, 1), AMR_LSF  (  0, 0),
  AMR_LSF  (  1, 7), AMR_LSF  (  1, 6), AMR_LSF  (  1, 5), AMR_LSF  (  1, 4),
@@ -145,7 +145,7 @@ static const AMROrder order_MODE_475[95] = {
  AMR_PULSE(1,0, 6), AMR_PULSE(2,0, 6), AMR_PULSE(3,0, 6)
 };
 
-static const AMROrder order_MODE_515[103] = {
+static const AMROrder order_MODE_5k15[103] = {
  AMR_LSF  (  0, 0), AMR_LSF  (  0, 1), AMR_LSF  (  0, 2), AMR_LSF  (  0, 3),
  AMR_LSF  (  0, 4), AMR_LSF  (  0, 5), AMR_LSF  (  0, 6), AMR_LSF  (  0, 7),
  AMR_LSF  (  1, 0), AMR_LSF  (  1, 1), AMR_LSF  (  1, 2), AMR_LSF  (  1, 3),
@@ -174,7 +174,7 @@ static const AMROrder order_MODE_515[103] = {
  AMR_PULSE(1,0, 3), AMR_PULSE(2,0, 3), AMR_PULSE(3,0, 3)
 };
 
-static const AMROrder order_MODE_59[118] = {
+static const AMROrder order_MODE_5k9[118] = {
  AMR_LSF  (  0, 7), AMR_LSF  (  0, 6), AMR_LSF  (  0, 3), AMR_LSF  (  0, 2),
  AMR_LSF  (  0, 4), AMR_LSF  (  0, 1), AMR_LSF  (  0, 0), AMR_LSF  (  0, 5),
  AMR_LSF  (  1, 3), AMR_LSF  (  1, 1), AMR_LSF  (  1, 8), AMR_LSF  (  1, 7),
@@ -207,7 +207,7 @@ static const AMROrder order_MODE_59[118] = {
  AMR_PULSE(2,0, 5), AMR_PULSE(3,0, 5)
 };
 
-static const AMROrder order_MODE_67[134] = {
+static const AMROrder order_MODE_6k7[134] = {
  AMR_LSF  (  0, 7), AMR_LSF  (  0, 6), AMR_LSF  (  0, 3), AMR_LSF  (  0, 4),
  AMR_LSF  (  0, 2), AMR_LSF  (  0, 1), AMR_LSF  (  1, 3), AMR_LSF  (  0, 0),
  AMR_LSF  (  0, 5), AMR_LSF  (  1, 8), AMR_LSF  (  1, 7), AMR_LSF  (  1, 5),
@@ -244,7 +244,7 @@ static const AMROrder order_MODE_67[134] = {
  AMR_PULSE(2,0, 8), AMR_PULSE(3,0, 8)
 };
 
-static const AMROrder order_MODE_74[148] = {
+static const AMROrder order_MODE_7k4[148] = {
  AMR_LSF  (  0, 7), AMR_LSF  (  0, 6), AMR_LSF  (  0, 5), AMR_LSF  (  0, 4),
  AMR_LSF  (  0, 3), AMR_LSF  (  0, 2), AMR_LSF  (  0, 1), AMR_LSF  (  0, 0),
  AMR_LSF  (  1, 8), AMR_LSF  (  1, 7), AMR_LSF  (  1, 6), AMR_LSF  (  1, 5),
@@ -284,7 +284,7 @@ static const AMROrder order_MODE_74[148] = {
  AMR_PULSE(0,0, 6), AMR_PULSE(1,0, 6), AMR_PULSE(2,0, 6), AMR_PULSE(3,0, 6)
 };
 
-static const AMROrder order_MODE_795[159] = {
+static const AMROrder order_MODE_7k95[159] = {
  AMR_LSF  (  0, 0), AMR_LSF  (  0, 1), AMR_LSF  (  0, 2), AMR_LSF  (  0, 3),
  AMR_LSF  (  0, 4), AMR_LSF  (  0, 5), AMR_LSF  (  0, 6), AMR_LSF  (  1, 3),
  AMR_LSF  (  1, 1), AMR_LSF  (  1, 8), AMR_LSF  (  1, 7), AMR_LSF  (  1, 5),
@@ -327,7 +327,7 @@ static const AMROrder order_MODE_795[159] = {
  AMR_PULSE(1,0, 9), AMR_PULSE(2,0, 9), AMR_PULSE(3,0, 9)
 };
 
-static const AMROrder order_MODE_102[204] = {
+static const AMROrder order_MODE_10k2[204] = {
  AMR_LSF  (  0, 0), AMR_LSF  (  0, 1), AMR_LSF  (  0, 2), AMR_LSF  (  0, 3),
  AMR_LSF  (  0, 4), AMR_LSF  (  0, 5), AMR_LSF  (  0, 6), AMR_LSF  (  0, 7),
  AMR_LSF  (  1, 0), AMR_LSF  (  1, 1), AMR_LSF  (  1, 2), AMR_LSF  (  1, 3),
@@ -381,7 +381,7 @@ static const AMROrder order_MODE_102[204] = {
  AMR_PULSE(0,6, 1), AMR_PULSE(0,4, 1), AMR_PULSE(0,5, 2), AMR_PULSE(0,5, 1)
 };
 
-static const AMROrder order_MODE_122[244] = {
+static const AMROrder order_MODE_12k2[244] = {
  AMR_LSF  (  0, 6), AMR_LSF  (  0, 5), AMR_LSF  (  0, 4), AMR_LSF  (  0, 3),
  AMR_LSF  (  0, 2), AMR_LSF  (  0, 1), AMR_LSF  (  0, 0), AMR_LSF  (  1, 7),
  AMR_LSF  (  1, 6), AMR_LSF  (  1, 5), AMR_LSF  (  1, 4), AMR_LSF  (  1, 3),
@@ -463,27 +463,27 @@ static const AMROrder order_MODE_DTX[35] = {
  * the AMRNBFrame
  */
 static const AMROrder * const amr_unpacking_bitmaps_per_mode[9] = {
-    order_MODE_475,
-    order_MODE_515,
-    order_MODE_59,
-    order_MODE_67,
-    order_MODE_74,
-    order_MODE_795,
-    order_MODE_102,
-    order_MODE_122,
+    order_MODE_4k75,
+    order_MODE_5k15,
+    order_MODE_5k9,
+    order_MODE_6k7,
+    order_MODE_7k4,
+    order_MODE_7k95,
+    order_MODE_10k2,
+    order_MODE_12k2,
     order_MODE_DTX,
 };
 
 /** number of bits for each mode */
 static const uint8_t mode_bits[N_MODES] = {
-    FF_ARRAY_ELEMS(order_MODE_475),
-    FF_ARRAY_ELEMS(order_MODE_515),
-    FF_ARRAY_ELEMS(order_MODE_59),
-    FF_ARRAY_ELEMS(order_MODE_67),
-    FF_ARRAY_ELEMS(order_MODE_74),
-    FF_ARRAY_ELEMS(order_MODE_795),
-    FF_ARRAY_ELEMS(order_MODE_102),
-    FF_ARRAY_ELEMS(order_MODE_122),
+    FF_ARRAY_ELEMS(order_MODE_4k75),
+    FF_ARRAY_ELEMS(order_MODE_5k15),
+    FF_ARRAY_ELEMS(order_MODE_5k9),
+    FF_ARRAY_ELEMS(order_MODE_6k7),
+    FF_ARRAY_ELEMS(order_MODE_7k4),
+    FF_ARRAY_ELEMS(order_MODE_7k95),
+    FF_ARRAY_ELEMS(order_MODE_10k2),
+    FF_ARRAY_ELEMS(order_MODE_12k2),
     FF_ARRAY_ELEMS(order_MODE_DTX)
 };
 
@@ -510,7 +510,7 @@ static const int16_t lsp_avg_init[LP_FILTER_ORDER] = {
 // These are stored as integers to save space. The values are taken from
 // q_plsf_3.tab and q_plsf_5.tab in 3GPP TS 26.090.
 
-static const int16_t lsf_3_3_MODE_515[128][4] = {
+static const int16_t lsf_3_3_MODE_5k15[128][4] = {
 {  419,  163,  -30, -262},{ -455, -789,-1430, -721},{ 1006,  664,  269,   25},
 {  619,  260,  183,   96},{ -968,-1358, -388,  135},{ -693,  835,  456,  154},
 { 1105,  703,  569,  363},{ 1625, 1326,  985,  748},{ -220,  219,   76, -208},
@@ -556,7 +556,7 @@ static const int16_t lsf_3_3_MODE_515[128][4] = {
 {  191,  -17, -544, -231},{-1540, -544, -901, -886}
 };
 
-static const int16_t lsf_3_1_MODE_795[512][3] = {
+static const int16_t lsf_3_1_MODE_7k95[512][3] = {
 { -890,-1550,-2541},{ -819, -970,  175},{ -826,-1234, -762},
 { -599,  -22,  634},{ -811, -987, -902},{ -323,  203,   26},
 { -383, -235, -781},{ -399, 1262,  906},{ -932,-1399,-1380},
@@ -1523,13 +1523,13 @@ static const float pred_fac[LP_FILTER_ORDER] = {
 };
 
 /** Prediction factor for 12.2kbit/s mode */
-#define PRED_FAC_MODE_122              0.65
+#define PRED_FAC_MODE_12k2              0.65
 
 #define LSF_R_FAC          (8000.0/32768.0) ///< LSF residual tables to Hertz
 #define MIN_LSF_SPACING             50.0488 ///< Ensures stability of LPC filter
 #define PITCH_LAG_MAX                   143 ///< Upper bound on decoded lag search
 #define PITCH_LAG_MIN                    20 ///< Lower bound on decoded lag search
-#define PITCH_LAG_MIN_MODE_122           18 ///< Lower bound on decoded lag search in 12.2kbit/s mode
+#define PITCH_LAG_MIN_MODE_12k2           18 ///< Lower bound on decoded lag search in 12.2kbit/s mode
 
 /** b60 hamming windowed sinc function coefficients */
 static const float b60[61] = {
@@ -1590,7 +1590,7 @@ static const float energy_pred_fac[4] = { 0.19, 0.34, 0.58, 0.68 };
  *
  * first index has even/odd indexes for subframes 0,2/1,3
  * second index is {pitch_gain, fixed_gain_factor} */
-static const uint16_t gains_MODE_475[512][2] = {
+static const uint16_t gains_MODE_4k75[512][2] = {
 {  812,  128}, {  542,  140}, { 2873, 1135}, { 2266, 3402}, { 2067,  563},
 {12677,  647}, { 4132, 1798}, { 5601, 5285}, { 7689,  374}, { 3735,  441},
 {10912, 2638}, {11807, 2494}, {20490,  797}, { 5218,  675}, { 6724, 8354},
@@ -1759,7 +1759,7 @@ static const uint16_t gains_low[64][2] = {
 
 /** impulse response filter tables converted to float from Q15 int32_t
  * used for anti-sparseness processing */
-static const float ir_filter_strong_MODE_795[AMR_SUBFRAME_SIZE] = {
+static const float ir_filter_strong_MODE_7k95[AMR_SUBFRAME_SIZE] = {
  0.817169,  0.024445,  0.076447, -0.020844, -0.042175,  0.017761,  0.018433,
 -0.038879,  0.107147, -0.179871,  0.138367, -0.015228, -0.059204,  0.091888,
 -0.154358,  0.171326, -0.060730, -0.032379, -0.044525,  0.135559, -0.021362,
@@ -1787,7 +1787,7 @@ static const float ir_filter_medium[AMR_SUBFRAME_SIZE] = {
 };
 
 static const float *ir_filters_lookup[2]          = { ir_filter_strong,          ir_filter_medium };
-static const float *ir_filters_lookup_MODE_795[2] = { ir_filter_strong_MODE_795, ir_filter_medium };
+static const float *ir_filters_lookup_MODE_7k95[2] = { ir_filter_strong_MODE_7k95, ir_filter_medium };
 
 
 // postfilter tables
