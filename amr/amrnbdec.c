@@ -236,7 +236,7 @@ static void make_increasing(float *lsf)
  * @param sign for the 3 dictionary table
  * @param update store data for computing the next frame's LSFs
  */
-static void lsf2lsp_for_mode122(AMRContext *p, float lsp[LP_FILTER_ORDER],
+static void lsf2lsp_for_mode12k2(AMRContext *p, float lsp[LP_FILTER_ORDER],
                                 const float lsf_no_r[LP_FILTER_ORDER],
                                 const int16_t *lsf_quantizer[5],
                                 const int quantizer_offset,
@@ -290,8 +290,8 @@ static void lsf2lsp_5(AMRContext *p)
     for (i = 0; i < LP_FILTER_ORDER; i++)
         lsf_no_r[i] = p->prev_lsf_r[i] * LSF_R_FAC * PRED_FAC_MODE_12k2 + lsf_5_mean[i];
 
-    lsf2lsp_for_mode122(p, p->lsp[1], lsf_no_r, lsf_quantizer, 0, lsf_param[2] & 1, 0);
-    lsf2lsp_for_mode122(p, p->lsp[3], lsf_no_r, lsf_quantizer, 2, lsf_param[2] & 1, 1);
+    lsf2lsp_for_mode12k2(p, p->lsp[1], lsf_no_r, lsf_quantizer, 0, lsf_param[2] & 1, 0);
+    lsf2lsp_for_mode12k2(p, p->lsp[3], lsf_no_r, lsf_quantizer, 2, lsf_param[2] & 1, 1);
 
     // interpolate LSP vectors at subframes 1 and 3
     ff_weighted_vector_sumf(p->lsp[0], p->prev_lsp_sub4, p->lsp[1], 0.5, 0.5, LP_FILTER_ORDER);
