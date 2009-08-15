@@ -60,21 +60,22 @@ typedef struct IEC958Context {
 } IEC958Context;
 
 //TODO move to DSP
-static void bswap_buf16(uint16_t *dst, const uint16_t *src, int w){
+static void bswap_buf16(uint16_t *dst, const uint16_t *src, int w)
+{
     int i;
 
-    for(i=0; i+8<=w; i+=8){
-        dst[i+0]= bswap_16(src[i+0]);
-        dst[i+1]= bswap_16(src[i+1]);
-        dst[i+2]= bswap_16(src[i+2]);
-        dst[i+3]= bswap_16(src[i+3]);
-        dst[i+4]= bswap_16(src[i+4]);
-        dst[i+5]= bswap_16(src[i+5]);
-        dst[i+6]= bswap_16(src[i+6]);
-        dst[i+7]= bswap_16(src[i+7]);
+    for (i = 0; i + 8 <= w; i += 8) {
+        dst[i + 0] = bswap_16(src[i + 0]);
+        dst[i + 1] = bswap_16(src[i + 1]);
+        dst[i + 2] = bswap_16(src[i + 2]);
+        dst[i + 3] = bswap_16(src[i + 3]);
+        dst[i + 4] = bswap_16(src[i + 4]);
+        dst[i + 5] = bswap_16(src[i + 5]);
+        dst[i + 6] = bswap_16(src[i + 6]);
+        dst[i + 7] = bswap_16(src[i + 7]);
     }
-    for(;i<w; i++){
-        dst[i+0]= bswap_16(src[i+0]);
+    for (; i < w; i++) {
+        dst[i + 0] = bswap_16(src[i + 0]);
     }
 }
 
