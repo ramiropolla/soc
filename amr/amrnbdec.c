@@ -183,7 +183,7 @@ static enum Mode unpack_bitstream(AMRContext *p, const uint8_t *buf,
  * @param lsf               input lsf vector
  * @param lsp               output lsp vector
  */
-static void lsf2lsp(float *lsf, float *lsp)
+static void lsf2lsp(const float *lsf, float *lsp)
 {
     int i;
 
