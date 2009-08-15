@@ -565,7 +565,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                     quant_index = get_bits(gb, 7) - 64;
                     quant_cof[1] = -parcor_scaled_values[quant_index + 64];
 
-                    // read coefficients 2 - opt_order
+                    // read coefficients 2 to opt_order
                     for (k = 2; k < opt_order; k++) {
                         quant_index = get_bits(gb, 7) - 64;
                         quant_cof[k] = (quant_index << 14) + (1 << 13);
@@ -585,7 +585,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                     quant_index  = decode_rice(gb, rice_param) + offset;
                     quant_cof[1] = -parcor_scaled_values[quant_index + 64];
 
-                    // read coefficients 2 - 19
+                    // read coefficients 2 to 19
                     k_max = FFMIN(20, opt_order);
                     for (k = 2; k < k_max; k++) {
                         offset       = parcor_rice_table[sconf->coef_table][k][0];
@@ -594,7 +594,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                         quant_cof[k] = (quant_index << 14) + (1 << 13);
                     }
 
-                    // read coefficients 20 - 126
+                    // read coefficients 20 to 126
                     k_max = FFMIN(127, opt_order);
                     for (k = 20; k < k_max; k++) {
                         offset       = k & 1;
@@ -603,7 +603,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                         quant_cof[k] = (quant_index << 14) + (1 << 13);
                     }
 
-                    // read coefficients 127 - opt_order
+                    // read coefficients 127 to opt_order
                     for (k = 127; k < opt_order; k++) {
                         offset       = 0;
                         rice_param   = 1;
