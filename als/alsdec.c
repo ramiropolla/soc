@@ -642,23 +642,25 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         if (ra_block) {
             unsigned int progressive = FFMIN(block_length, opt_order);
 
-            for (smp = 0; smp < progressive; smp++) {
+            for (smp = 0; smp < block_length; smp++) {
+                unsigned int max, convert;
+
+                if (smp < progressive) {
+                    max     = smp;
+                    convert = 1;
+                } else {
+                    max     = progressive;
+                    convert = 0;
+                }
+
                 y = 1 << 19;
 
-                for (sb = 0; sb < smp; sb++)
+                for (sb = 0; sb < max; sb++)
                     y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
 
                 raw_samples[smp] -= y >> 20;
-                parcor_to_lpc(smp, quant_cof, lpc_cof);
-            }
-
-            for (; smp < block_length; smp++) {
-                y = 1 << 19;
-
-                for (sb = 0; sb < progressive; sb++)
-                    y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
-
-                raw_samples[smp] -= y >> 20;
+                if (convert)
+                    parcor_to_lpc(smp, quant_cof, lpc_cof);
             }
         } else {
             // reconstruct difference signal for prediction (joint-stereo)
