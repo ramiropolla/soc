@@ -539,7 +539,7 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index,
     pulse_position[7] = (pulse_position[7] << 1) + ((fixed_index[6] >> 1) & 1);
 
     fixed_sparse->n = 8;
-    for (i = 0; i < TRACKS_MODE_102; i++) {
+    for (i = 0; i < 4; i++) {
         const int pos1   = (pulse_position[i]     << 2) + i;
         const int pos2   = (pulse_position[i + 4] << 2) + i;
         const float sign = fixed_index[i] ? -1.0 : 1.0;
@@ -565,9 +565,9 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index,
     int i;
 
     fixed_sparse->n = 10;
-    for (i = 0; i < TRACKS; i++) {
-        const int pos1   = gray_decode[fixed_index[i    ] & 7] * TRACKS + i;
-        const int pos2   = gray_decode[fixed_index[i + 5] & 7] * TRACKS + i;
+    for (i = 0; i < 5; i++) {
+        const int pos1   = gray_decode[fixed_index[i    ] & 7] * 5 + i;
+        const int pos2   = gray_decode[fixed_index[i + 5] & 7] * 5 + i;
         const float sign = (fixed_index[i] & 8) ? -1.0 : 1.0;
         fixed_sparse->x[i    ] = pos1;
         fixed_sparse->x[i + 5] = pos2;

@@ -1549,11 +1549,6 @@ static const float b60[61] = {
 
 // fixed tables
 
-/** In 12.2kbit/s mode, positions are divided into TRACKS classes. */
-#define TRACKS          5
-/** In 10.2kbit/s mode, positions are divided into TRACKS_MODE_102 classes. */
-#define TRACKS_MODE_102 4
-
 /**
  * number of pulses per mode
  */
