@@ -87,20 +87,13 @@ typedef struct {
 } AMRNBSubframe;
 
 /**
- * AMRNB SID frame parameters
- */
-typedef struct {
-    uint16_t ref_vector; ///< index of reference vector
-    uint16_t energy;     ///< index of logarithmic frame energy
-} AMRNBSIDFrame;
-
-/**
  * AMRNB unpacked data frame
  */
 typedef struct {
     uint16_t lsf[5];           ///< lsf parameters: 5 parameters for MODE_122, only 3 for other modes
     AMRNBSubframe subframe[4]; ///< unpacked data for each subframe
-    AMRNBSIDFrame sid;
+    uint16_t sid_vector;       ///< index of SID LSF reference vector
+    uint16_t sid_energy;       ///< SID frame energy
 } AMRNBFrame;
 
 
@@ -121,9 +114,9 @@ typedef struct {
 /** Specify a pulse bit */
 #define AMR_PULSE(frame_num, pulse_id, bit) AMR_OF(frame_num, pulses[pulse_id], bit)
 /** Specify an SID reference vector bit */
-#define AMR_SVECTOR(bit)                     AMR_BIT(sid.ref_vector, bit)
+#define AMR_SVECTOR(bit)                     AMR_BIT(sid_vector, bit)
 /** Specify an SID energy index bit */
-#define AMR_SENERGY(bit)                     AMR_BIT(sid.energy, bit)
+#define AMR_SENERGY(bit)                     AMR_BIT(sid_energy, bit)
 
 static const AMROrder order_MODE_475[95] = {
  AMR_LSF  (  0, 7), AMR_LSF  (  0, 6), AMR_LSF  (  0, 5), AMR_LSF  (  0, 4),
