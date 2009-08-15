@@ -425,7 +425,19 @@ static void reconstruct_block_sizes(ALSDecContext *ctx, uint32_t *div_blocks)
     unsigned int b;
 
     // The last frame may have an overdetermined block structure given in
-    // the bitstream which can not be filled with samples completely
+    // the bitstream. In that case the defined block structure would need
+    // more samples than available to be consistent.
+    // The block structure is actually used but the block sizes are adapted
+    // to fit the actual number of available samples.
+    // Example: 5 samples, 2nd level block sizes: 2 2 2 2.
+    // This results in the actual block sizes:    2 2 1 0.
+    // This is not specified in 14496-3 but actually done by the reference
+    // codec RM22 revision 2.
+    // This appears to happen in case of an odd number of samples in the last
+    // frame which is actually not allowed by the block length switching part
+    // of 14496-3.
+    // The ALS conformance files feature an odd number of samples in the last
+    // frame.
     if (ctx->cur_frame_length == ctx->last_frame_length) {
         unsigned int remaining = ctx->cur_frame_length;
 
