@@ -346,7 +346,7 @@ static void lsf2lsp_3(AMRContext *p)
  * @param lsp                 input lsp vector
  * @param lpc_coeffs          output lpc coefficients
  */
-static void lsp2lpc(float *lsp, float *lpc_coeffs)
+static void lsp2lpc(const float *lsp, float *lpc_coeffs)
 {
     double lsp_double[LP_FILTER_ORDER];
     int i;
