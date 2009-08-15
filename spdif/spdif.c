@@ -51,12 +51,13 @@ enum IEC958DataType {
 };
 
 typedef struct IEC958Context {
-    enum IEC958DataType data_type;              ///< Burst info
-    int pkt_size;               ///< Length code (number of bits or bytes - according to data_type)
-    int pkt_offset;             ///< Repetition period of a data burst in bytes
+    enum IEC958DataType data_type;  ///< Burst info - reference to type of payload of the data-burst
+    int pkt_size;                   ///< Length code (number of bits or bytes - according to data_type)
+    int pkt_offset;                 ///< Repetition period of data burst in bytes
+    uint8_t *buffer;                ///< Allocated buffer, used for swap bytes
+    int buffer_size;                ///< Size of allocated buffer
+    /// Function, which generates codec dependent header information
     int (*header_info) (AVFormatContext *s, AVPacket *pkt);
-    uint8_t *buffer;
-    int buffer_size;
 } IEC958Context;
 
 //TODO move to DSP
