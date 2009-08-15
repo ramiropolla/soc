@@ -609,9 +609,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
 
         // read first value and residuals in case of a random access block
         if (ra_block) {
-            if (opt_order) {
+            if (opt_order)
                 raw_samples[0] = decode_rice(gb, avctx->bits_per_raw_sample - 4);
-            }
             if (opt_order > 1)
                 raw_samples[1] = decode_rice(gb, s[0] + 3);
             if (opt_order > 2)
