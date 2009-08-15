@@ -55,10 +55,8 @@ typedef struct IEC958Context {
     int pkt_size;               ///< Length code (number of bits or bytes - according to data_type)
     int pkt_offset;             ///< Repetition period of a data burst in bytes
     int (*header_info) (AVFormatContext *s, AVPacket *pkt);
-#if !HAVE_BIGENDIAN
     uint8_t *buffer;
     int buffer_size;
-#endif
 } IEC958Context;
 
 //TODO move to DSP
@@ -238,10 +236,8 @@ static int spdif_write_header(AVFormatContext *s)
 
 static int spdif_write_trailer(AVFormatContext *s)
 {
-#if !HAVE_BIGENDIAN
     IEC958Context *ctx = s->priv_data;
     av_freep(&ctx->buffer);
-#endif
     return 0;
 }
 
