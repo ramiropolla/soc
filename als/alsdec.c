@@ -849,7 +849,6 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
     }
 
     if (sconf->floating) {
-        unsigned int num_bytes_diff_float = get_bits_long(gb, 32);
         // TODO: read_diff_float_data
     }
 
