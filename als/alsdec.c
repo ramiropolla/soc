@@ -471,7 +471,6 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
     unsigned int block_type;
     unsigned int k;
 
-    // read block type
     block_type = get_bits1(gb);
 
     if (block_type == 0) {
