@@ -395,7 +395,7 @@ static void parcor_to_lpc(unsigned int k, int64_t *par, int64_t *cof)
     int i;
     int64_t tmp1, tmp2;
 
-    for (i = 0; i < ((k+1) >> 1); i++) {
+    for (i = 0; i < (k+1) >> 1; i++) {
         tmp1 = cof[    i    ] + ((par[k] * cof[k - i - 1] + (1 << 19)) >> 20);
         tmp2 = cof[k - i - 1] + ((par[k] * cof[    i    ] + (1 << 19)) >> 20);
         cof[k - i - 1] = tmp2;
