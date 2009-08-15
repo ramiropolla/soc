@@ -325,7 +325,6 @@ static int check_specific_config(ALSDecContext *ctx)
 
     if (sconf->chan_sort) {
         av_log_missing_feature(ctx->avctx, "Channel sorting", 0);
-        error = -1;
     }
 
     if (sconf->rlslms) {
