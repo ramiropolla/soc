@@ -417,8 +417,8 @@ static void all_parcor_to_lpc(unsigned int num, int64_t *par, int64_t *cof)
 }
 
 
-/** Convert block sizes from log2 format into direct form with respect to
- *  the actual number of samples in the frame.
+/** Reformat block sizes from log2 format to direct form. Also assure that the
+ *  block sizes of the last frame correspond to the actual number of samples.
  */
 static void reconstruct_block_sizes(ALSDecContext *ctx, uint32_t *div_blocks)
 {
