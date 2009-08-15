@@ -52,14 +52,14 @@
 
 /** Frame type (Table 1a in 3GPP TS 26.101) */
 enum Mode {
-    MODE_4k75 = 0,                         ///< 4.75 kbit/s
-    MODE_5k15,                             ///< 5.15 kbit/s
-    MODE_5k9,                              ///< 5.90 kbit/s
-    MODE_6k7,                              ///< 6.70 kbit/s
-    MODE_7k4,                              ///< 7.40 kbit/s
-    MODE_7k95,                             ///< 7.95 kbit/s
-    MODE_10k2,                             ///< 10.2 kbit/s
-    MODE_12k2,                             ///< 12.2 kbit/s
+    MODE_4k75 = 0,                        ///< 4.75 kbit/s
+    MODE_5k15,                            ///< 5.15 kbit/s
+    MODE_5k9,                             ///< 5.90 kbit/s
+    MODE_6k7,                             ///< 6.70 kbit/s
+    MODE_7k4,                             ///< 7.40 kbit/s
+    MODE_7k95,                            ///< 7.95 kbit/s
+    MODE_10k2,                            ///< 10.2 kbit/s
+    MODE_12k2,                            ///< 12.2 kbit/s
     MODE_DTX,                             ///< silent frame
     N_MODES,                              ///< number of modes
     NO_DATA = 15                          ///< no transmission
@@ -108,11 +108,11 @@ typedef struct {
 /** Specify a pitch gain bit */
 #define AMR_PGAIN(frame_num, bit)            AMR_OF(frame_num, p_gain, bit)
 /** Specify a fixed gain bit */
-#define AMR_FGAIN(frame_num, bit)       AMR_OF(frame_num, fixed_gain, bit)
+#define AMR_FGAIN(frame_num, bit)            AMR_OF(frame_num, fixed_gain, bit)
 /** Specify a pitch lag bit */
 #define AMR_PLAG(frame_num, bit)             AMR_OF(frame_num, p_lag, bit)
 /** Specify a pulse bit */
-#define AMR_PULSE(frame_num, pulse_id, bit) AMR_OF(frame_num, pulses[pulse_id], bit)
+#define AMR_PULSE(frame_num, pulse_id, bit)  AMR_OF(frame_num, pulses[pulse_id], bit)
 /** Specify an SID reference vector bit */
 #define AMR_SVECTOR(bit)                     AMR_BIT(sid_vector, bit)
 /** Specify an SID energy index bit */
@@ -1523,13 +1523,13 @@ static const float pred_fac[LP_FILTER_ORDER] = {
 };
 
 /** Prediction factor for 12.2kbit/s mode */
-#define PRED_FAC_MODE_12k2              0.65
+#define PRED_FAC_MODE_12k2             0.65
 
 #define LSF_R_FAC          (8000.0/32768.0) ///< LSF residual tables to Hertz
 #define MIN_LSF_SPACING             50.0488 ///< Ensures stability of LPC filter
 #define PITCH_LAG_MAX                   143 ///< Upper bound on decoded lag search
 #define PITCH_LAG_MIN                    20 ///< Lower bound on decoded lag search
-#define PITCH_LAG_MIN_MODE_12k2           18 ///< Lower bound on decoded lag search in 12.2kbit/s mode
+#define PITCH_LAG_MIN_MODE_12k2          18 ///< Lower bound on decoded lag search in 12.2kbit/s mode
 
 /** b60 hamming windowed sinc function coefficients */
 static const float b60[61] = {
@@ -1786,7 +1786,7 @@ static const float ir_filter_medium[AMR_SUBFRAME_SIZE] = {
  0.016998,  0.023804, -0.041779,  0.025696,  0.019989,
 };
 
-static const float *ir_filters_lookup[2]          = { ir_filter_strong,          ir_filter_medium };
+static const float *ir_filters_lookup[2]           = { ir_filter_strong,           ir_filter_medium };
 static const float *ir_filters_lookup_MODE_7k95[2] = { ir_filter_strong_MODE_7k95, ir_filter_medium };
 
 
@@ -1811,18 +1811,18 @@ static const float formant_low_n[10] = {
 static const float *formant_low_d = formant_high_n;
 
 /** Number of impulse response coefficients used for tilt factor */
-#define AMR_TILT_RESPONSE 22
+#define AMR_TILT_RESPONSE   22
 /** Tilt factor = 1st reflection coefficient * gamma_t */
-#define AMR_TILT_GAMMA_T 0.8
+#define AMR_TILT_GAMMA_T   0.8
 /** Adaptive gain control factor used in post-filter */
-#define AMR_AGC_ALPHA 0.9
+#define AMR_AGC_ALPHA      0.9
 
 
 // High-pass coefficients
 
 static const float highpass_zeros[2] = { -2.0, 1.0 };
 static const float highpass_poles[2] = { -1.933105469, 0.935913085 };
-static const float highpass_gain = 0.939819335;
+static const float highpass_gain     = 0.939819335;
 
 #endif /* AVCODEC_AMRNBDATA_H */
 

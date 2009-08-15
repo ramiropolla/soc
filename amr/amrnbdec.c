@@ -237,10 +237,10 @@ static void make_increasing(float *lsf)
  * @param update store data for computing the next frame's LSFs
  */
 static void lsf2lsp_for_mode12k2(AMRContext *p, float lsp[LP_FILTER_ORDER],
-                                const float lsf_no_r[LP_FILTER_ORDER],
-                                const int16_t *lsf_quantizer[5],
-                                const int quantizer_offset,
-                                const int sign, const int update)
+                                 const float lsf_no_r[LP_FILTER_ORDER],
+                                 const int16_t *lsf_quantizer[5],
+                                 const int quantizer_offset,
+                                 const int sign, const int update)
 {
     int16_t lsf_r[LP_FILTER_ORDER]; // residual LSF vector
     float lsf_q[LP_FILTER_ORDER]; // quantified LSF vector
@@ -580,11 +580,11 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index,
  * Decode the algebraic codebook index to pulse positions and signs,
  * then construct the algebraic codebook vector.
  *
- *                           nb of pulses | bits encoding pulses
- * For MODE_4k75 or MODE_5k15,            2 | 1-3, 4-6, 7
- *                  MODE_5k9,            2 | 1,   2-4, 5-6, 7-9
- *                  MODE_6k7,            3 | 1-3, 4,   5-7, 8,  9-11
- *      MODE_7k4 or MODE_7k95,            4 | 1-3, 4-6, 7-9, 10, 11-13
+ *                              nb of pulses | bits encoding pulses
+ * For MODE_4k75 or MODE_5k15,             2 | 1-3, 4-6, 7
+ *                  MODE_5k9,              2 | 1,   2-4, 5-6, 7-9
+ *                  MODE_6k7,              3 | 1-3, 4,   5-7, 8,  9-11
+ *      MODE_7k4 or MODE_7k95,             4 | 1-3, 4-6, 7-9, 10, 11-13
  *
  * @param fixed_sparse pointer to the algebraic codebook vector
  * @param pulses       algebraic codebook indexes
@@ -823,8 +823,7 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
             gains = gains_low [amr_subframe->p_gain];
         } else {
             // gain index is only coded in subframes 0,2 for MODE_4k75
-            gains = gains_MODE_4k75[(p->frame.subframe[subframe & 2].p_gain << 1)
-                                   + (subframe & 1)];
+            gains = gains_MODE_4k75[(p->frame.subframe[subframe & 2].p_gain << 1) + (subframe & 1)];
         }
 
         p->pitch_gain[4]   = gains[0] / 16384.0;
