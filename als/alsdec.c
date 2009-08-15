@@ -994,6 +994,6 @@ AVCodec als_decoder = {
     NULL,
     decode_end,
     decode_frame,
-    .long_name = NULL_IF_CONFIG_SMALL("MPEG-4 Audio Lossless Coding"),
+    .long_name = NULL_IF_CONFIG_SMALL("MPEG-4 Audio Lossless Coding (ALS)"),
 };
 
