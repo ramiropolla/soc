@@ -495,9 +495,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         }
 
         // write raw samples into buffer
-        for (k = 0; k < block_length; k++) {
+        for (k = 0; k < block_length; k++)
             raw_samples[k] = const_val;
-        }
     } else {
         unsigned int s[8];
         unsigned int sub_blocks, sb_length, shift_lsbs;
