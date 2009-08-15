@@ -976,9 +976,9 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     // allocate raw and carried samples buffers
-    for (c = 0; c < avctx->channels; c++) {
-        ctx->raw_samples[c] = ctx->raw_buffer + sconf->max_order +
-                              c * channel_size;
+    ctx->raw_samples[0] = ctx->raw_buffer + sconf->max_order;
+    for (c = 1; c < avctx->channels; c++) {
+        ctx->raw_samples[c] = ctx->raw_samples[c - 1] + channel_size;
     }
 
     return 0;
