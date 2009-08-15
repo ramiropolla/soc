@@ -85,7 +85,7 @@ typedef struct AMRContext {
     uint8_t                      hang_count; ///< the number of subframes since a hangover period started
 
     float            prev_sparse_fixed_gain; ///< previous fixed gain; used by anti-sparseness processing to determine "onset"
-    uint8_t         prev_ir_filter_strength; ///< previous impulse response filter strength; 0 - strong, 1 - medium, 2 - none
+    uint8_t               prev_ir_filter_nr; ///< previous impulse response filter "impNr": 0 - strong, 1 - medium, 2 - none
     uint8_t                 ir_filter_onset; ///< flag for impulse response filter strength
 
     float                postfilter_mem[10]; ///< previous intermediate values in the formant filter
@@ -925,14 +925,14 @@ static const float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
                                     const float *fixed_vector,
                                     float fixed_gain, float *out)
 {
-    int ir_filter_strength;
+    int ir_filter_nr;
 
     if (p->pitch_gain[4] < 0.6) {
-        ir_filter_strength = 0;      // strong filtering
+        ir_filter_nr = 0;      // strong filtering
     } else if (p->pitch_gain[4] < 0.9) {
-        ir_filter_strength = 1;      // medium filtering
+        ir_filter_nr = 1;      // medium filtering
     } else
-        ir_filter_strength = 2;      // no filtering
+        ir_filter_nr = 2;      // no filtering
 
     // detect 'onset'
     if (fixed_gain > 2.0 * p->prev_sparse_fixed_gain) {
@@ -947,30 +947,30 @@ static const float *anti_sparseness(AMRContext *p, AMRFixed *fixed_sparse,
             if (p->pitch_gain[i] < 0.6)
                 count++;
         if (count > 2)
-            ir_filter_strength = 0;
+            ir_filter_nr = 0;
 
-        if (ir_filter_strength > p->prev_ir_filter_strength + 1)
-            ir_filter_strength--;
-    } else if (ir_filter_strength < 2)
-        ir_filter_strength++;
+        if (ir_filter_nr > p->prev_ir_filter_nr + 1)
+            ir_filter_nr--;
+    } else if (ir_filter_nr < 2)
+        ir_filter_nr++;
 
     // Disable filtering for very low level of fixed_gain.
     // Note this step is not specified in the technical description but is in
     // the reference source in the function Ph_disp.
     if (fixed_gain < 5.0)
-        ir_filter_strength = 2;
+        ir_filter_nr = 2;
 
     if (p->cur_frame_mode != MODE_74 && p->cur_frame_mode < MODE_102
-         && ir_filter_strength < 2) {
+         && ir_filter_nr < 2) {
         apply_ir_filter(out, fixed_sparse,
                         (p->cur_frame_mode == MODE_795 ?
                              ir_filters_lookup_MODE_795 :
-                             ir_filters_lookup)[ir_filter_strength]);
+                             ir_filters_lookup)[ir_filter_nr]);
         fixed_vector = out;
     }
 
     // update ir filter strength history
-    p->prev_ir_filter_strength = ir_filter_strength;
+    p->prev_ir_filter_nr       = ir_filter_nr;
     p->prev_sparse_fixed_gain  = fixed_gain;
 
     return fixed_vector;
