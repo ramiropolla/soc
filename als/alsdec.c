@@ -131,9 +131,7 @@ static av_cold void dprint_specific_config(ALSDecContext *ctx)
 /** Computes ceil(log2(x)) using av_log2.
  */
 static inline int ceil_log2(int x) {
-    if (x <= 0)
-        return 0;
-    return av_log2((x - 1) << 1);
+    return x > 0 ? av_log2((x - 1) << 1) : 0;
 }
 
 
