@@ -80,7 +80,6 @@ typedef struct {
     unsigned int      frame_id;          ///< The frame id / number of the current frame.
     unsigned int      js_switch;         ///< If true, joint-stereo decoding is enforced.
     unsigned int      num_blocks;        ///< Number of blocks used in the current frame.
-    int64_t           *residuals;        ///< Decoded residuals of the current block.
     int64_t           **raw_samples;     ///< Decoded raw samples for each channel.
     int64_t           *raw_buffer;       ///< Contains all decoded raw samples including carryover samples.
 } ALSDecContext;
@@ -493,7 +492,6 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         int64_t      quant_cof[sconf->max_order];
         int64_t      lpc_cof[sconf->max_order];
         unsigned int start = 0;
-        int64_t      *res = ctx->residuals;
         int          sb, smp;
         int64_t      y;
 
@@ -613,12 +611,11 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         if (ra_block) {
             if (opt_order) {
                 raw_samples[0] = decode_rice(gb, avctx->bits_per_raw_sample - 4);
-                res[0] = raw_samples[0];
             }
             if (opt_order > 1)
-                res[1] = decode_rice(gb, s[0] + 3);
+                raw_samples[1] = decode_rice(gb, s[0] + 3);
             if (opt_order > 2)
-                res[2] = decode_rice(gb, s[0] + 1);
+                raw_samples[2] = decode_rice(gb, s[0] + 1);
 
             start = FFMIN(opt_order, 3);
         } else {
@@ -631,7 +628,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         if (sconf->bgmc_mode) {
             // TODO: BGMC mode
         } else {
-            int64_t *current_res = res;
+            int64_t *current_res = raw_samples;
 
             for (sb = 0; sb < sub_blocks; sb++) {
                 for (k = start; k < sb_length; k++) {
@@ -652,7 +649,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                 for (sb = 0; sb < smp; sb++)
                     y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
 
-                raw_samples[smp] = res[smp] - (y >> 20);
+                raw_samples[smp] -= y >> 20;
                 parcor_to_lpc(smp, quant_cof, lpc_cof);
             }
 
@@ -662,7 +659,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                 for (sb = 0; sb < progressive; sb++)
                     y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
 
-                raw_samples[smp] = res[smp] - (y >> 20);
+                raw_samples[smp] -= y >> 20;
             }
         } else {
             // reconstruct difference signal for prediction (joint-stereo)
@@ -684,7 +681,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                 for (sb = 0; sb < opt_order; sb++)
                     y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
 
-                raw_samples[smp] = res[smp] - (y >> 20);
+                raw_samples[smp] -= y >> 20;
             }
 
             // reconstruct normal signal (joint-stereo)
@@ -918,7 +915,6 @@ static av_cold int decode_end(AVCodecContext *avctx)
     ALSDecContext *ctx = avctx->priv_data;
 
     av_freep(&ctx->sconf.chan_pos);
-    av_freep(&ctx->residuals);
 
     av_freep(&ctx->raw_samples);
     av_freep(&ctx->raw_buffer);
@@ -967,13 +963,6 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     avctx->frame_size = sconf->frame_length;
     channel_size      = sconf->frame_length + sconf->max_order;
-
-    // allocate residual buffer
-    if (!(ctx->residuals = av_malloc(sizeof(int64_t) * sconf->frame_length))) {
-        av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
-        decode_end(avctx);
-        return AVERROR_NOMEM;
-    }
 
     // allocate raw and carried sample buffer
     if (!(ctx->raw_buffer = av_malloc(sizeof(int64_t) *
