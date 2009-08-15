@@ -824,7 +824,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                 c++;
             }
         }
-    } else {
+    } else { // multi-channel coding
         if (sconf->block_switching) {
             unsigned int bs_info_len = 1 << (sconf->block_switching + 2);
             bs_info = get_bits_long(gb, bs_info_len);
