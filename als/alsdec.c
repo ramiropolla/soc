@@ -60,7 +60,7 @@ typedef struct {
     int      chan_config;            ///< Indicates that a chan_config_info field is present
     int      chan_sort;              ///< Channel rearrangement: 1 = on, 0 = off
     int      crc_enabled;            ///< Indicates that the crc field is present
-    int      RLSLMS;                 ///< Use RLS-LMS predictor: 1 = on, 0 = off
+    int      rlslms;                 ///< Use RLS-LMS predictor: 1 = on, 0 = off
     int      aux_data_enabled;       ///< Indicates that auxiliary data is present
     int      chan_config_info;       ///< Mapping of channels to loudspeaker locations
     int      *chan_pos;              ///< Original channel positions
@@ -115,7 +115,7 @@ static av_cold void dprint_specific_config(ALSDecContext *ctx)
     dprintf(avctx, "chan_config = %i\n",          sconf->chan_config);
     dprintf(avctx, "chan_sort = %i\n",            sconf->chan_sort);
     dprintf(avctx, "crc_enabled = %i\n",          sconf->crc_enabled);
-    dprintf(avctx, "RLSLMS = %i\n",               sconf->RLSLMS);
+    dprintf(avctx, "RLSLMS = %i\n",               sconf->rlslms);
     dprintf(avctx, "aux_data_enabled = %i\n",     sconf->aux_data_enabled);
     dprintf(avctx, "chan_config_info = %i\n",     sconf->chan_config_info);
     dprintf(avctx, "header_size = %i\n",          sconf->header_size);
@@ -187,7 +187,7 @@ static av_cold int read_specific_config(ALSDecContext *ctx,
     sconf->chan_config          = get_bits1(&gb);
     sconf->chan_sort            = get_bits1(&gb);
     sconf->crc_enabled          = get_bits1(&gb);
-    sconf->RLSLMS               = get_bits1(&gb);
+    sconf->rlslms               = get_bits1(&gb);
     skip_bits(&gb, 5);                                      // skip 5 reserved bits
     sconf->aux_data_enabled     = get_bits1(&gb);
     buffer_size -= 22;
@@ -324,7 +324,7 @@ static int check_specific_config(ALSDecContext *ctx)
         error = -1;
     }
 
-    if (sconf->RLSLMS) {
+    if (sconf->rlslms) {
         av_log_missing_feature(ctx->avctx, "Adaptive RLS-LMS prediction", 0);
         error = -1;
     }
@@ -528,7 +528,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         }
 
 
-        if (!sconf->RLSLMS) {
+        if (!sconf->rlslms) {
             int64_t quant_index;
 
             if (sconf->adapt_order) {
@@ -701,7 +701,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         }
     }
 
-    if (sconf->RLSLMS) {
+    if (sconf->rlslms) {
         // TODO: read RLSLMS extension data
     }
 
