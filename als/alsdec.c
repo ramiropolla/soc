@@ -137,14 +137,15 @@ static inline int ceil_log2(int x) {
 
 /** Reads an ALSSpecificConfig from a buffer into the output struct.
  */
-static av_cold int read_specific_config(ALSDecContext *ctx,
-                                        const uint8_t *buffer, int buffer_size,
-                                        ALSSpecificConfig *sconf)
+static av_cold int read_specific_config(ALSDecContext *ctx)
 {
     GetBitContext gb;
     uint64_t ht_size;
     int i, config_offset;
     MPEG4AudioConfig m4ac;
+    ALSSpecificConfig *sconf = &ctx->sconf;
+    const uint8_t *buffer    = ctx->avctx->extradata;
+    int buffer_size          = ctx->avctx->extradata_size;
 
     init_get_bits(&gb, buffer, buffer_size * 8);
 
@@ -938,8 +939,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
         return -1;
     }
 
-    if (read_specific_config(ctx, avctx->extradata,
-                             avctx->extradata_size, sconf)) {
+    if (read_specific_config(ctx)) {
         av_log(avctx, AV_LOG_ERROR, "Reading ALSSpecificConfig failed.\n");
         decode_end(avctx);
         return -1;
