@@ -406,17 +406,6 @@ static void parcor_to_lpc(unsigned int k, int64_t *par, int64_t *cof)
 }
 
 
-/** Converts all PARCOR coefficients to direct filter coefficients.
- */
-static void all_parcor_to_lpc(unsigned int num, int64_t *par, int64_t *cof)
-{
-    int k;
-
-    for (k = 0; k < num; k++)
-        parcor_to_lpc(k, par, cof);
-}
-
-
 /** Reformat block sizes from log2 format to direct form. Also assure that the
  *  block sizes of the last frame correspond to the actual number of samples.
  */
@@ -633,8 +622,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
 
             start = FFMIN(opt_order, 3);
         } else {
-            // TODO: check if this has to be a function after features are implemented.
-            all_parcor_to_lpc(opt_order, quant_cof, lpc_cof);
+            for (k = 0; k < opt_order; k++)
+                parcor_to_lpc(k, quant_cof, lpc_cof);
         }
 
         // read all residuals
