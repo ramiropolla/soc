@@ -217,7 +217,7 @@ static void interpolate_lsf(float lsf_q[4][LP_FILTER_ORDER], float *lsf_new)
  *
  * @param[in,out] lsf    LSFs in Hertz
  */
-static void adjust_lsf(float *lsf)
+static void make_increasing(float *lsf)
 {
     int i;
     float prev = 0.0;
@@ -261,7 +261,7 @@ static void lsf2lsp_for_mode122(AMRContext *p, float lsp[LP_FILTER_ORDER],
     for (i = 0; i < LP_FILTER_ORDER; i++)
         lsf_q[i] = lsf_r[i] * LSF_R_FAC + lsf_no_r[i];
 
-    adjust_lsf(lsf_q);
+    make_increasing(lsf_q);
 
     if (update)
         interpolate_lsf(p->lsf_q, lsf_q);
@@ -324,7 +324,7 @@ static void lsf2lsp_3(AMRContext *p)
     for (i = 0; i < LP_FILTER_ORDER; i++)
         lsf_q[i] = (lsf_r[i] + p->prev_lsf_r[i] * pred_fac[i]) * LSF_R_FAC + lsf_3_mean[i];
 
-    adjust_lsf(lsf_q);
+    make_increasing(lsf_q);
 
     // store data for computing the next frame's LSFs
     interpolate_lsf(p->lsf_q, lsf_q);
