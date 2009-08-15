@@ -1,6 +1,6 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 19634)
+--- libavcodec/Makefile	(revision 19653)
 +++ libavcodec/Makefile	(working copy)
 @@ -42,6 +42,7 @@
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
@@ -12,7 +12,7 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 19634)
+--- libavcodec/allcodecs.c	(revision 19653)
 +++ libavcodec/allcodecs.c	(working copy)
 @@ -198,6 +198,7 @@
      REGISTER_ENCDEC  (AAC, aac);
@@ -24,7 +24,7 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (COOK, cook);
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 19634)
+--- doc/general.texi	(revision 19653)
 +++ doc/general.texi	(working copy)
 @@ -523,8 +523,8 @@
  @item ADPCM Westwood Studios IMA @tab     @tab  X
@@ -39,7 +39,7 @@ Index: doc/general.texi
  @item Apple lossless audio   @tab  X  @tab  X
 Index: Changelog
 ===================================================================
---- Changelog	(revision 19634)
+--- Changelog	(revision 19653)
 +++ Changelog	(working copy)
 @@ -32,6 +32,7 @@
  - RTMP support in libavformat
@@ -49,59 +49,9 @@ Index: Changelog
  
  
  
-Index: libavcodec/acelp_filters.c
-===================================================================
---- libavcodec/acelp_filters.c	(revision 19634)
-+++ libavcodec/acelp_filters.c	(working copy)
-@@ -93,3 +93,20 @@
-         hpf_f[0] = tmp;
-     }
- }
-+
-+void ff_acelp_apply_order_2_transfer_function(float *buf,
-+                                              const float zero_coeffs[2],
-+                                              const float pole_coeffs[2],
-+                                              float gain, float mem[2], int n)
-+{
-+    int i;
-+    float tmp;
-+
-+    for (i = 0; i < n; i++) {
-+        tmp = gain * buf[i] - pole_coeffs[0] * mem[0] - pole_coeffs[1] * mem[1];
-+        buf[i] =        tmp + zero_coeffs[0] * mem[0] + zero_coeffs[1] * mem[1];
-+
-+        mem[1] = mem[0];
-+        mem[0] = tmp;
-+    }
-+}
-Index: libavcodec/acelp_filters.h
-===================================================================
---- libavcodec/acelp_filters.h	(revision 19634)
-+++ libavcodec/acelp_filters.h	(working copy)
-@@ -81,4 +81,20 @@
- void ff_acelp_high_pass_filter(int16_t* out, int hpf_f[2],
-                                const int16_t* in, int length);
- 
-+/**
-+ * Apply an order 2 rational transfer function in-place.
-+ *
-+ * @param samples [in/out]
-+ * @param zero_coeffs z^-1 and z^-2 coefficients of the numerator
-+ * @param pole_coeffs z^-1 and z^-2 coefficients of the denominator
-+ * @param gain scale factor for final output
-+ * @param mem intermediate values used by filter (should be 0 initially)
-+ * @param n number of samples
-+ */
-+void ff_acelp_apply_order_2_transfer_function(float *samples,
-+                                              const float zero_coeffs[2],
-+                                              const float pole_coeffs[2],
-+                                              float gain,
-+                                              float mem[2], int n);
-+
- #endif /* AVCODEC_ACELP_FILTERS_H */
 Index: libavcodec/acelp_vectors.c
 ===================================================================
---- libavcodec/acelp_vectors.c	(revision 19634)
+--- libavcodec/acelp_vectors.c	(revision 19653)
 +++ libavcodec/acelp_vectors.c	(working copy)
 @@ -22,6 +22,7 @@
  
@@ -128,7 +78,7 @@ Index: libavcodec/acelp_vectors.c
 +}
 Index: libavcodec/acelp_vectors.h
 ===================================================================
---- libavcodec/acelp_vectors.h	(revision 19634)
+--- libavcodec/acelp_vectors.h	(revision 19653)
 +++ libavcodec/acelp_vectors.h	(working copy)
 @@ -164,4 +164,22 @@
  void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
@@ -155,7 +105,7 @@ Index: libavcodec/acelp_vectors.h
  #endif /* AVCODEC_ACELP_VECTORS_H */
 Index: libavcodec/qcelpdec.c
 ===================================================================
---- libavcodec/qcelpdec.c	(revision 19634)
+--- libavcodec/qcelpdec.c	(revision 19653)
 +++ libavcodec/qcelpdec.c	(working copy)
 @@ -406,31 +406,6 @@
  }
