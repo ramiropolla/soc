@@ -486,11 +486,10 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         if (const_block) {
             unsigned int const_val_bits;
 
-            if (sconf->resolution == 2 || sconf->floating) {
+            if (sconf->resolution == 2 || sconf->floating)
                 const_val_bits = 24;
-            } else {
+            else
                 const_val_bits = avctx->bits_per_raw_sample;
-            }
 
             const_val = get_bits_long(gb, const_val_bits);
         }
