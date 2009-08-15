@@ -238,6 +238,7 @@ static av_cold int read_specific_config(ALSDecContext *ctx)
 
         align_get_bits(&gb);
         buffer_size -= bytes_needed;
+        // TODO: use this to actually do channel sorting
     } else {
         sconf->chan_sort = 0;
     }
