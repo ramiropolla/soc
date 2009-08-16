@@ -680,7 +680,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
             }
         } else {
             // reconstruct difference signal for prediction (joint-stereo)
-            if (*js_blocks & 1 && raw_other) {
+            if (*js_blocks && raw_other) {
                 int i;
                 if (raw_other > raw_samples) {          // D = R - L
                     for (i = -1; i >= -sconf->max_order; i--)
@@ -702,7 +702,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
             }
 
             // reconstruct normal signal (joint-stereo)
-            if (*js_blocks & 1 && raw_other) {
+            if (*js_blocks && raw_other) {
                 int i;
                 if (raw_other > raw_samples) {          // L = R - D
                     for (i = -1; i >= -sconf->max_order; i--)
