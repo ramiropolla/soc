@@ -909,7 +909,7 @@ static int decode_frame(AVCodecContext *avctx,
     // decode the frame data
     if ((invalid_frame = read_frame_data(ctx, ra_frame))) {
         av_log(ctx->avctx, AV_LOG_WARNING,
-               "Reading frame data failed. Skipping RA unit.\n");
+               "Reading frame data failed. Skipping frame.\n");
     }
 
     // increment the frame counter
