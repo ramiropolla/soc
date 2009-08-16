@@ -80,6 +80,8 @@ typedef struct {
     unsigned int      frame_id;          ///< The frame id / number of the current frame.
     unsigned int      js_switch;         ///< If true, joint-stereo decoding is enforced.
     unsigned int      num_blocks;        ///< Number of blocks used in the current frame.
+    int64_t           *quant_cof;        ///< Quantized parcor coefficients.
+    int64_t           *lpc_cof;          ///< Coefficients of the direct form prediction filter.
     int64_t           **raw_samples;     ///< Decoded raw samples for each channel.
     int64_t           *raw_buffer;       ///< Contains all decoded raw samples including carryover samples.
 } ALSDecContext;
@@ -196,6 +198,18 @@ static av_cold int read_specific_config(ALSDecContext *ctx)
         return -1;
 
     ctx->cur_frame_length = sconf->frame_length;
+
+    // allocate quantized parcor coefficient buffer
+    if (!(ctx->quant_cof = av_malloc(sizeof(int64_t) * sconf->max_order))) {
+        av_log(ctx->avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
+        return AVERROR_NOMEM;
+    }
+
+    // allocate LPC coefficients
+    if (!(ctx->lpc_cof = av_malloc(sizeof(int64_t) * sconf->max_order))) {
+        av_log(ctx->avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
+        return AVERROR_NOMEM;
+    }
 
     // calculate total number of frames to decode if possible
     if (sconf->samples != 0xFFFFFFFF) {
@@ -488,8 +502,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         unsigned int s[8];
         unsigned int sub_blocks, sb_length, shift_lsbs;
         unsigned int opt_order = 1;
-        int64_t      quant_cof[sconf->max_order];
-        int64_t      lpc_cof[sconf->max_order];
+        int64_t      *quant_cof = ctx->quant_cof;
+        int64_t      *lpc_cof   = ctx->lpc_cof;
         unsigned int start = 0;
         int          sb, smp;
         int64_t      y;
@@ -941,6 +955,8 @@ static av_cold int decode_end(AVCodecContext *avctx)
 
     av_freep(&ctx->sconf.chan_pos);
 
+    av_freep(&ctx->quant_cof);
+    av_freep(&ctx->lpc_cof);
     av_freep(&ctx->raw_samples);
     av_freep(&ctx->raw_buffer);
 
