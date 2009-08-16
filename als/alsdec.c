@@ -522,7 +522,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
         // block_length must be evenly divisible by sub_blocks
         if (block_length % sub_blocks) {
             av_log(avctx, AV_LOG_WARNING,
-                   "Block length is not evenly divisible by the number of sub blocks.");
+                   "Block length is not evenly divisible by the number of sub blocks.\n");
             return -1;
         }
 
@@ -832,7 +832,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                     // reconstruct joint-stereo blocks
                     if (js_blocks[0] & 1) {
                         if (js_blocks[1] & 1)
-                            av_log(ctx->avctx, AV_LOG_WARNING, "Invalid channel pair!");
+                            av_log(ctx->avctx, AV_LOG_WARNING, "Invalid channel pair!\n");
 
                         for (s = 0; s < div_blocks[b]; s++)
                             raw_samples_L[s] = raw_samples_R[s] - raw_samples_L[s];
