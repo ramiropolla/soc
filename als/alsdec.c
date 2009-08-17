@@ -659,10 +659,10 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
             unsigned int progressive = FFMIN(block_length, opt_order);
 
             for (smp = 0; smp < block_length; smp++) {
-                unsigned int max, convert;
+                unsigned int max, dequant;
 
-                convert = smp < progressive;
-                max     = convert ? smp : progressive;
+                dequant = smp < progressive;
+                max     = dequant ? smp : progressive;
 
                 y = 1 << 19;
 
@@ -670,7 +670,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                     y += lpc_cof[sb] * raw_samples[smp - (sb + 1)];
 
                 raw_samples[smp] -= y >> 20;
-                if (convert)
+                if (dequant)
                     parcor_to_lpc(smp, quant_cof, lpc_cof);
             }
         } else {
