@@ -661,13 +661,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
             for (smp = 0; smp < block_length; smp++) {
                 unsigned int max, convert;
 
-                if (smp < progressive) {
-                    max     = smp;
-                    convert = 1;
-                } else {
-                    max     = progressive;
-                    convert = 0;
-                }
+                convert = smp < progressive;
+                max     = convert ? smp : progressive;
 
                 y = 1 << 19;
 
