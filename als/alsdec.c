@@ -36,6 +36,13 @@
 
 #include "als_data.h"
 
+enum RA_Flag {
+    RA_FLAG_NONE,
+    RA_FLAG_FRAMES,
+    RA_FLAG_HEADER
+};
+
+
 typedef struct {
     uint32_t als_id;                 ///< ALS identifier
     uint32_t samp_freq;              ///< Sampling frequency in Hz
@@ -47,7 +54,7 @@ typedef struct {
     int      msb_first;              ///< Original byte order of the input audio data
     int      frame_length;           ///< Frame Length
     int      random_access;          ///< Distance between RA frames (in frames, 0...255)
-    int      ra_flag;                ///< Indicates where the size of ra units is stored.
+    enum RA_Flag ra_flag;                ///< Indicates where the size of ra units is stored.
     int      adapt_order;            ///< Adaptive order: 1 = on, 0 = off
     int      coef_table;             ///< Table index of Rice code parameters
     int      long_term_prediction;   ///< Long term prediction (LTP): 1 = on, 0 = off
@@ -738,7 +745,7 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
     unsigned int *ptr_div_blocks;
 
     // skip ra_unit_size if present
-    if (sconf->ra_flag == 1 && ra_frame)
+    if (sconf->ra_flag == RA_FLAG_FRAMES && ra_frame)
         skip_bits_long(gb, 32);
 
     if (sconf->mc_coding && sconf->joint_stereo) {
