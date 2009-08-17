@@ -827,13 +827,13 @@ static int read_frame_data(ALSDecContext *ctx, unsigned int ra_frame)
                     }
 
                     // reconstruct joint-stereo blocks
-                    if (js_blocks[0] & 1) {
-                        if (js_blocks[1] & 1)
+                    if (js_blocks[0]) {
+                        if (js_blocks[1])
                             av_log(ctx->avctx, AV_LOG_WARNING, "Invalid channel pair!\n");
 
                         for (s = 0; s < div_blocks[b]; s++)
                             raw_samples_L[s] = raw_samples_R[s] - raw_samples_L[s];
-                    } else if (js_blocks[1] & 1) {
+                    } else if (js_blocks[1]) {
                         for (s = 0; s < div_blocks[b]; s++)
                             raw_samples_R[s] = raw_samples_R[s] + raw_samples_L[s];
                     }
