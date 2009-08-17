@@ -1,5 +1,5 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index 2686e1d..6548a8e 100644
+index 2686e1d..60164f5 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -40,6 +40,7 @@
@@ -15,7 +15,7 @@ index 2686e1d..6548a8e 100644
  static int output_packet(AVInputStream *ist, int ist_index,
                           AVOutputStream **ost_table, int nb_ostreams,
 -                         const AVPacket *pkt)
-+                         AVPacket *pkt,
++                         const AVPacket *pkt,
 +                         AVFormatContext *ic)
  {
      AVFormatContext *os;
