@@ -324,11 +324,6 @@ static int check_specific_config(ALSDecContext *ctx)
         error = -1;
     }
 
-    if (sconf->resolution > 1) {
-        av_log_missing_feature(ctx->avctx, "Higher resolution than 16 bits per sample", 0);
-        error = -1;
-    }
-
     if (sconf->long_term_prediction) {
         av_log_missing_feature(ctx->avctx, "Long-term prediction", 0);
         error = -1;
@@ -909,9 +904,8 @@ static int decode_frame(AVCodecContext *avctx,
     ALSSpecificConfig *sconf = &ctx->sconf;
     const uint8_t *buffer    = avpkt->data;
     int buffer_size          = avpkt->size;
-    int16_t *dest            = (int16_t*)data;
     int invalid_frame        = 0;
-    unsigned int c, sample, ra_frame, bytes_read;
+    unsigned int c, sample, ra_frame, bytes_read, shift;
 
     init_get_bits(&ctx->gb, buffer, buffer_size * 8);
     ra_frame = sconf->random_access && ((!ctx->frame_id) ||
@@ -932,11 +926,21 @@ static int decode_frame(AVCodecContext *avctx,
     ctx->frame_id++;
 
     // transform decoded frame into output format
-    // TODO: Support other resolutions than 16 bit
-    for (sample = 0; sample < ctx->cur_frame_length; sample++) {
-        for (c = 0; c < sconf->channels; c++) {
-            *(dest++) = (int16_t) (ctx->raw_samples[c][sample]);
-        }
+    #define INTERLEAVE_OUTPUT(bps)                                                 \
+    {                                                                              \
+        int##bps##_t *dest = (int##bps##_t*) data;                                 \
+        shift = bps - ctx->avctx->bits_per_raw_sample;                             \
+        for (sample = 0; sample < ctx->cur_frame_length; sample++) {               \
+            for (c = 0; c < sconf->channels; c++) {                                \
+                *(dest++) = (int##bps##_t) (ctx->raw_samples[c][sample] << shift); \
+            }                                                                      \
+        }                                                                          \
+    }
+
+    if (ctx->avctx->bits_per_raw_sample <= 16) {
+        INTERLEAVE_OUTPUT(16)
+    } else {
+        INTERLEAVE_OUTPUT(32)
     }
 
     *data_size = ctx->cur_frame_length * sconf->channels
