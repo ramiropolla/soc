@@ -44,36 +44,36 @@ enum RA_Flag {
 
 
 typedef struct {
-    uint32_t als_id;                 ///< ALS identifier
-    uint32_t samp_freq;              ///< Sampling frequency in Hz
-    uint32_t samples;                ///< Number of samples (per channel). = 0xFFFFFFFF if unknown.
-    int      channels;               ///< Number of channels
-    int      file_type;              ///< Not used. Provided for debugging.
-    int      resolution;             ///< 000 = 8-bit; 001 = 16-bit; 010 = 24-bit; 011 = 32-bit
-    int      floating;               ///< 1 = IEEE 32-bit floating-point, 0 = integer
-    int      msb_first;              ///< Original byte order of the input audio data
-    int      frame_length;           ///< Frame Length
-    int      random_access;          ///< Distance between RA frames (in frames, 0...255)
+    uint32_t     als_id;                 ///< ALS identifier
+    uint32_t     samp_freq;              ///< Sampling frequency in Hz
+    uint32_t     samples;                ///< Number of samples (per channel). = 0xFFFFFFFF if unknown.
+    int          channels;               ///< Number of channels
+    int          file_type;              ///< Not used. Provided for debugging.
+    int          resolution;             ///< 000 = 8-bit; 001 = 16-bit; 010 = 24-bit; 011 = 32-bit
+    int          floating;               ///< 1 = IEEE 32-bit floating-point, 0 = integer
+    int          msb_first;              ///< Original byte order of the input audio data
+    int          frame_length;           ///< Frame Length
+    int          random_access;          ///< Distance between RA frames (in frames, 0...255)
     enum RA_Flag ra_flag;                ///< Indicates where the size of ra units is stored.
-    int      adapt_order;            ///< Adaptive order: 1 = on, 0 = off
-    int      coef_table;             ///< Table index of Rice code parameters
-    int      long_term_prediction;   ///< Long term prediction (LTP): 1 = on, 0 = off
-    int      max_order;              ///< Maximum prediction order (0..1023)
-    int      block_switching;        ///< Number of block switching levels
-    int      bgmc_mode;              ///< BGMC Mode: 1 = on, 0 = off (Rice coding only)
-    int      sb_part;                ///< Sub-block partition
-    int      joint_stereo;           ///< Joint Stereo: 1 = on, 0 = off
-    int      mc_coding;              ///< Extended inter-channel coding: 1 = on, 0 = off
-    int      chan_config;            ///< Indicates that a chan_config_info field is present
-    int      chan_sort;              ///< Channel rearrangement: 1 = on, 0 = off
-    int      crc_enabled;            ///< Indicates that the crc field is present
-    int      rlslms;                 ///< Use RLS-LMS predictor: 1 = on, 0 = off
-    int      aux_data_enabled;       ///< Indicates that auxiliary data is present
-    int      chan_config_info;       ///< Mapping of channels to loudspeaker locations
-    int      *chan_pos;              ///< Original channel positions
-    uint32_t header_size;            ///< Header size of original audio file in bytes. Provided for debugging.
-    uint32_t trailer_size;           ///< Trailer size of original audio file in bytes. Provided for debugging.
-    uint32_t crc;                    ///< 32-bit CCITT-32 CRC checksum
+    int          adapt_order;            ///< Adaptive order: 1 = on, 0 = off
+    int          coef_table;             ///< Table index of Rice code parameters
+    int          long_term_prediction;   ///< Long term prediction (LTP): 1 = on, 0 = off
+    int          max_order;              ///< Maximum prediction order (0..1023)
+    int          block_switching;        ///< Number of block switching levels
+    int          bgmc_mode;              ///< BGMC Mode: 1 = on, 0 = off (Rice coding only)
+    int          sb_part;                ///< Sub-block partition
+    int          joint_stereo;           ///< Joint Stereo: 1 = on, 0 = off
+    int          mc_coding;              ///< Extended inter-channel coding: 1 = on, 0 = off
+    int          chan_config;            ///< Indicates that a chan_config_info field is present
+    int          chan_sort;              ///< Channel rearrangement: 1 = on, 0 = off
+    int          crc_enabled;            ///< Indicates that the crc field is present
+    int          rlslms;                 ///< Use RLS-LMS predictor: 1 = on, 0 = off
+    int          aux_data_enabled;       ///< Indicates that auxiliary data is present
+    int          chan_config_info;       ///< Mapping of channels to loudspeaker locations
+    int          *chan_pos;              ///< Original channel positions
+    uint32_t     header_size;            ///< Header size of original audio file in bytes. Provided for debugging.
+    uint32_t     trailer_size;           ///< Trailer size of original audio file in bytes. Provided for debugging.
+    uint32_t     crc;                    ///< 32-bit CCITT-32 CRC checksum
 } ALSSpecificConfig;
 
 
