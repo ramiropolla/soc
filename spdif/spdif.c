@@ -117,15 +117,9 @@ static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt)
     }
     blocks++;
     switch (blocks) {
-    case 512 >> 5:
-        ctx->data_type = IEC958_DTS1;
-        break;
-    case 1024 >> 5:
-        ctx->data_type = IEC958_DTS2;
-        break;
-    case 2048 >> 5:
-        ctx->data_type = IEC958_DTS3;
-        break;
+    case  512 >> 5: ctx->data_type = IEC958_DTS1; break;
+    case 1024 >> 5: ctx->data_type = IEC958_DTS2; break;
+    case 2048 >> 5: ctx->data_type = IEC958_DTS3; break;
     default:
         av_log(s, AV_LOG_ERROR, "%i samples in DTS frame not supported\n",
                blocks << 5);
