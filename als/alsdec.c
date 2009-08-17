@@ -45,34 +45,34 @@ enum RA_Flag {
 
 typedef struct {
     uint32_t     als_id;                 ///< ALS identifier
-    uint32_t     samp_freq;              ///< Sampling frequency in Hz
-    uint32_t     samples;                ///< Number of samples (per channel). = 0xFFFFFFFF if unknown.
-    int          channels;               ///< Number of channels
-    int          file_type;              ///< Not used. Provided for debugging.
+    uint32_t     samp_freq;              ///< sampling frequency in Hz
+    uint32_t     samples;                ///< number of samples (per channel), 0xFFFFFFFF if unknown
+    int          channels;               ///< number of channels
+    int          file_type;              ///< not used, provided for debugging
     int          resolution;             ///< 000 = 8-bit; 001 = 16-bit; 010 = 24-bit; 011 = 32-bit
     int          floating;               ///< 1 = IEEE 32-bit floating-point, 0 = integer
-    int          msb_first;              ///< Original byte order of the input audio data
-    int          frame_length;           ///< Frame Length
-    int          random_access;          ///< Distance between RA frames (in frames, 0...255)
-    enum RA_Flag ra_flag;                ///< Indicates where the size of ra units is stored.
-    int          adapt_order;            ///< Adaptive order: 1 = on, 0 = off
-    int          coef_table;             ///< Table index of Rice code parameters
-    int          long_term_prediction;   ///< Long term prediction (LTP): 1 = on, 0 = off
-    int          max_order;              ///< Maximum prediction order (0..1023)
-    int          block_switching;        ///< Number of block switching levels
+    int          msb_first;              ///< original byte order of the input audio data
+    int          frame_length;           ///< frame Length
+    int          random_access;          ///< distance between RA frames (in frames, 0...255)
+    enum RA_Flag ra_flag;                ///< indicates where the size of ra units is stored
+    int          adapt_order;            ///< adaptive order: 1 = on, 0 = off
+    int          coef_table;             ///< table index of Rice code parameters
+    int          long_term_prediction;   ///< long term prediction (LTP): 1 = on, 0 = off
+    int          max_order;              ///< maximum prediction order (0..1023)
+    int          block_switching;        ///< number of block switching levels
     int          bgmc_mode;              ///< BGMC Mode: 1 = on, 0 = off (Rice coding only)
-    int          sb_part;                ///< Sub-block partition
-    int          joint_stereo;           ///< Joint Stereo: 1 = on, 0 = off
-    int          mc_coding;              ///< Extended inter-channel coding: 1 = on, 0 = off
-    int          chan_config;            ///< Indicates that a chan_config_info field is present
-    int          chan_sort;              ///< Channel rearrangement: 1 = on, 0 = off
-    int          crc_enabled;            ///< Indicates that the crc field is present
-    int          rlslms;                 ///< Use RLS-LMS predictor: 1 = on, 0 = off
-    int          aux_data_enabled;       ///< Indicates that auxiliary data is present
-    int          chan_config_info;       ///< Mapping of channels to loudspeaker locations
-    int          *chan_pos;              ///< Original channel positions
-    uint32_t     header_size;            ///< Header size of original audio file in bytes. Provided for debugging.
-    uint32_t     trailer_size;           ///< Trailer size of original audio file in bytes. Provided for debugging.
+    int          sb_part;                ///< sub-block partition
+    int          joint_stereo;           ///< joint Stereo: 1 = on, 0 = off
+    int          mc_coding;              ///< extended inter-channel coding: 1 = on, 0 = off
+    int          chan_config;            ///< indicates that a chan_config_info field is present
+    int          chan_sort;              ///< channel rearrangement: 1 = on, 0 = off
+    int          crc_enabled;            ///< indicates that the crc field is present
+    int          rlslms;                 ///< use RLS-LMS predictor: 1 = on, 0 = off
+    int          aux_data_enabled;       ///< indicates that auxiliary data is present
+    int          chan_config_info;       ///< mapping of channels to loudspeaker locations
+    int          *chan_pos;              ///< original channel positions
+    uint32_t     header_size;            ///< header size of original audio file in bytes, provided for debugging
+    uint32_t     trailer_size;           ///< Trailer size of original audio file in bytes, provided for debugging
     uint32_t     crc;                    ///< 32-bit CCITT-32 CRC checksum
 } ALSSpecificConfig;
 
@@ -80,17 +80,17 @@ typedef struct {
 typedef struct {
     AVCodecContext    *avctx;
     ALSSpecificConfig sconf;
-    GetBitContext     gb;                ///< A bit reader context.
-    unsigned int      num_frames;        ///< Number of frames to decode. 0 if unknown.
-    unsigned int      cur_frame_length;  ///< Length of the current frame to decode.
-    unsigned int      last_frame_length; ///< Length of the last frame to decode. 0 if unknown.
-    unsigned int      frame_id;          ///< The frame id / number of the current frame.
-    unsigned int      js_switch;         ///< If true, joint-stereo decoding is enforced.
-    unsigned int      num_blocks;        ///< Number of blocks used in the current frame.
-    int64_t           *quant_cof;        ///< Quantized parcor coefficients.
-    int64_t           *lpc_cof;          ///< Coefficients of the direct form prediction filter.
-    int64_t           **raw_samples;     ///< Decoded raw samples for each channel.
-    int64_t           *raw_buffer;       ///< Contains all decoded raw samples including carryover samples.
+    GetBitContext     gb;                ///< a bit reader context
+    unsigned int      num_frames;        ///< number of frames to decode, 0 if unknown
+    unsigned int      cur_frame_length;  ///< length of the current frame to decode
+    unsigned int      last_frame_length; ///< length of the last frame to decode, 0 if unknown
+    unsigned int      frame_id;          ///< the frame id / number of the current frame
+    unsigned int      js_switch;         ///< if true, joint-stereo decoding is enforced
+    unsigned int      num_blocks;        ///< number of blocks used in the current frame
+    int64_t           *quant_cof;        ///< quantized parcor coefficients
+    int64_t           *lpc_cof;          ///< coefficients of the direct form prediction filter
+    int64_t           **raw_samples;     ///< decoded raw samples for each channel
+    int64_t           *raw_buffer;       ///< contains all decoded raw samples including carryover samples
 } ALSDecContext;
 
 
@@ -512,7 +512,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
 
         *js_blocks  = get_bits1(gb);
 
-        // Determine the number of sub blocks for entropy decoding
+        // determine the number of sub blocks for entropy decoding
         if (!sconf->bgmc_mode && !sconf->sb_part)
             sub_blocks = 1;
         else if (sconf->bgmc_mode && sconf->sb_part)
