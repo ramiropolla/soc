@@ -112,11 +112,10 @@ static int spdif_header_dts(AVFormatContext *s, AVPacket *pkt)
             (((pkt->data[4] & 0x07) << 4) | ((pkt->data[7] & 0x3f) >> 2));
         break;
     default:
-        av_log(s, AV_LOG_ERROR, "bad DTS syncword\n");
+        av_log(s, AV_LOG_ERROR, "bad DTS syncword 0x%x\n", syncword_dts);
         return -1;
     }
     blocks++;
-    av_log(s, AV_LOG_DEBUG, "blocks=%i\n", blocks);
     switch (blocks) {
     case 512 >> 5:
         ctx->data_type = IEC958_DTS1;
