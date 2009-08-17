@@ -260,11 +260,9 @@ static int spdif_write_packet(struct AVFormatContext *s, AVPacket *pkt)
 #if HAVE_BIGENDIAN
     put_buffer(s->pb, pkt->data, pkt->size & ~1);
 #else
-    if (ctx->buffer_size < pkt->size) {
         av_fast_malloc(&ctx->buffer, &ctx->buffer_size, pkt->size + FF_INPUT_BUFFER_PADDING_SIZE);
         if (!ctx->buffer)
             return AVERROR(ENOMEM);
-    }
     bswap_buf16((uint16_t *)ctx->buffer, (uint16_t *)pkt->data, pkt->size >> 1);
     put_buffer(s->pb, ctx->buffer, pkt->size & ~1);
 #endif
