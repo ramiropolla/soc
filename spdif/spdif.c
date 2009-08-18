@@ -21,7 +21,7 @@
 
 /**
  * @file libavformat/spdif.c
- * IEC-61937 encapsulation of various formats, used at S/PDIF
+ * IEC-61937 encapsulation of various formats, used by S/PDIF
  * @author Bartlomiej Wolowiec
  */
 
@@ -66,13 +66,14 @@ enum IEC958DataType {
 };
 
 typedef struct IEC958Context {
-    enum IEC958DataType data_type;  ///< Burst info - reference to type of payload of the data-burst
-    int pkt_size;                   ///< Length code in bits
-    int pkt_offset;                 ///< Repetition period of data burst in bytes
-    uint8_t *buffer;                ///< Allocated buffer, used for swap bytes
-    int buffer_size;                ///< Size of allocated buffer
+    enum IEC958DataType data_type;  ///< burst info - reference to type of payload of the data-burst
+    int pkt_size;                   ///< length code in bits
+    int pkt_offset;                 ///< data burst repetition period in bytes
+    uint8_t *buffer;                ///< allocated buffer, used for swap bytes
+    int buffer_size;                ///< size of allocated buffer
 
-    /// Function, which generates codec dependent header information (sets data_type and data_offset)
+    /// function, which generates codec dependent header information.
+    /// Sets data_type and data_offset
     int (*header_info) (AVFormatContext *s, AVPacket *pkt);
 } IEC958Context;
 
