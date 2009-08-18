@@ -161,8 +161,8 @@ static const uint16_t mpeg_pkt_offset[2][3] = {
 static int spdif_header_mpeg(AVFormatContext *s, AVPacket *pkt)
 {
     IEC958Context *ctx = s->priv_data;
-    int version = (pkt->data[1] >> 3) & 3;
-    int layer = 3 - ((pkt->data[1] >> 1) & 3);
+    int version =      (pkt->data[1] >> 3) & 3;
+    int layer   = 3 - ((pkt->data[1] >> 1) & 3);
     int extension = pkt->data[2] & 1;
 
     if (layer == 3 || version == 1) {
