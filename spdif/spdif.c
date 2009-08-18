@@ -25,6 +25,21 @@
  * @author Bartlomiej Wolowiec
  */
 
+/*
+ * Terminology used in specification:
+ * data-burst - IEC958 frame, contains header and encapsuled frame
+ * burst-preambule - IEC958 frame header, contains 16-bits words named Pa, Pb, Pc and Pd
+ * burst-payload - encapsuled frame
+ * Pa, Pb - syncword - 0xF872, 0x4E1F
+ * Pc - burst-info, contains data-type (bits 0-6), error flag (bit 7), data-type-dependent info (bits 8-12)
+ *      and bitstream number (bits 13-15)
+ * data-type - determines type of encapsuled frames
+ * Pd - length code (number of bits or bytes of encapsuled frame - according to data_type)
+ *
+ * IEC958 frames at normal usage start every specific count of bytes,
+ *      dependent from data-type (spaces between packets are filled by zeros)
+ */
+
 #include "avformat.h"
 #include "libavcodec/ac3.h"
 #include "libavcodec/dca.h"
@@ -52,11 +67,12 @@ enum IEC958DataType {
 
 typedef struct IEC958Context {
     enum IEC958DataType data_type;  ///< Burst info - reference to type of payload of the data-burst
-    int pkt_size;                   ///< Length code (number of bits or bytes - according to data_type)
+    int pkt_size;                   ///< Length code in bits
     int pkt_offset;                 ///< Repetition period of data burst in bytes
     uint8_t *buffer;                ///< Allocated buffer, used for swap bytes
     int buffer_size;                ///< Size of allocated buffer
-    /// Function, which generates codec dependent header information
+
+    /// Function, which generates codec dependent header information (sets data_type and data_offset)
     int (*header_info) (AVFormatContext *s, AVPacket *pkt);
 } IEC958Context;
 
