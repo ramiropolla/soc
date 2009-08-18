@@ -92,9 +92,8 @@ static void bswap_buf16(uint16_t *dst, const uint16_t *src, int w)
         dst[i + 6] = bswap_16(src[i + 6]);
         dst[i + 7] = bswap_16(src[i + 7]);
     }
-    for (; i < w; i++) {
+    for (; i < w; i++)
         dst[i + 0] = bswap_16(src[i + 0]);
-    }
 }
 
 static int spdif_header_ac3(AVFormatContext *s, AVPacket *pkt)
