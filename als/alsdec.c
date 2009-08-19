@@ -496,7 +496,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
             else
                 const_val_bits = avctx->bits_per_raw_sample;
 
-            const_val = get_bits_long(gb, const_val_bits);
+            const_val = get_sbits_long(gb, const_val_bits);
         }
 
         // write raw samples into buffer
