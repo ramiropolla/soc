@@ -1,6 +1,6 @@
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 19634)
+--- libavcodec/allcodecs.c	(revision 19668)
 +++ libavcodec/allcodecs.c	(working copy)
 @@ -198,6 +198,7 @@
      REGISTER_ENCDEC  (AAC, aac);
@@ -12,7 +12,7 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (COOK, cook);
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 19634)
+--- libavcodec/Makefile	(revision 19668)
 +++ libavcodec/Makefile	(working copy)
 @@ -42,6 +42,7 @@
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
