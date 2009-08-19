@@ -1,6 +1,6 @@
 Index: libavcodec/mpeg4audio.c
 ===================================================================
---- libavcodec/mpeg4audio.c	(revision 19634)
+--- libavcodec/mpeg4audio.c	(revision 19668)
 +++ libavcodec/mpeg4audio.c	(working copy)
 @@ -24,6 +24,34 @@
  #include "put_bits.h"
@@ -8,9 +8,9 @@ Index: libavcodec/mpeg4audio.c
 
 +/**
 + * Parse MPEG-4 audio configuration for ALS object type.
-+ * @param[in] gb       Bit reader context.
-+ * @param[in] c        MPEG4AudioConfig structure to fill.
-+ * @return On error -1 is returned, on success 0 is returned.
++ * @param[in] gb       bit reader context
++ * @param[in] c        MPEG4AudioConfig structure to fill
++ * @return on error -1 is returned, on success 0 is returned
 + */
 +static int parse_config_ALS(GetBitContext *gb, MPEG4AudioConfig *c)
 +{
@@ -60,7 +60,7 @@ Index: libavcodec/mpeg4audio.c
                  get_bits(&gb, 11);
 Index: libavcodec/mpeg4audio.h
 ===================================================================
---- libavcodec/mpeg4audio.h	(revision 19634)
+--- libavcodec/mpeg4audio.h	(revision 19668)
 +++ libavcodec/mpeg4audio.h	(working copy)
 @@ -36,6 +36,7 @@
      int ext_sampling_index;
@@ -72,7 +72,7 @@ Index: libavcodec/mpeg4audio.h
  extern const int ff_mpeg4audio_sample_rates[16];
 Index: libavformat/mov.c
 ===================================================================
---- libavformat/mov.c	(revision 19634)
+--- libavformat/mov.c	(revision 19668)
 +++ libavformat/mov.c	(working copy)
 @@ -434,9 +434,13 @@
                  MPEG4AudioConfig cfg;
