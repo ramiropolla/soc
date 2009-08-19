@@ -1031,8 +1031,8 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     // allocate raw and carried sample buffer
-    if (!(ctx->raw_buffer = av_malloc(sizeof(int64_t) *
-                                      avctx->channels * channel_size))) {
+    if (!(ctx->raw_buffer = av_mallocz(sizeof(int64_t) *
+                                       avctx->channels * channel_size))) {
         av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
         decode_end(avctx);
         return AVERROR_NOMEM;
