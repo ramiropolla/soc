@@ -358,7 +358,7 @@ static int check_specific_config(ALSDecContext *ctx)
 static void parse_bs_info(uint32_t bs_info, unsigned int n, unsigned int div,
                           unsigned int **div_blocks, unsigned int *num_blocks)
 {
-    if (n < 32 && ((bs_info >> (30 - n)) & 1)) {
+    if (n < 31 && ((bs_info >> (30 - n)) & 1)) {
         // if the level is valid and the investigated bit n is set
         // then recursively check both children at bits (2n+1) and (2n+2)
         n   *= 2;
