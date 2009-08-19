@@ -89,6 +89,7 @@ typedef struct {
     unsigned int      num_blocks;        ///< number of blocks used in the current frame
     int64_t           *quant_cof;        ///< quantized parcor coefficients
     int64_t           *lpc_cof;          ///< coefficients of the direct form prediction filter
+    int64_t           *prev_raw_samples; ///< contains unshifted raw samples from the previous block
     int64_t           **raw_samples;     ///< decoded raw samples for each channel
     int64_t           *raw_buffer;       ///< contains all decoded raw samples including carryover samples
 } ALSDecContext;
@@ -471,6 +472,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
     ALSSpecificConfig *sconf = &ctx->sconf;
     AVCodecContext *avctx    = ctx->avctx;
     GetBitContext *gb        = &ctx->gb;
+    unsigned int shift_lsbs  = 0;
     unsigned int block_type;
     unsigned int k;
 
@@ -502,7 +504,7 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
             raw_samples[k] = const_val;
     } else {
         unsigned int s[8];
-        unsigned int sub_blocks, sb_length, shift_lsbs;
+        unsigned int sub_blocks, sb_length;
         unsigned int opt_order = 1;
         int64_t      *quant_cof = ctx->quant_cof;
         int64_t      *lpc_cof   = ctx->lpc_cof;
@@ -539,10 +541,8 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
             // TODO: BGMC mode
         }
 
-        shift_lsbs = get_bits1(gb);
-
-        if (shift_lsbs) {
-            // TODO: LSBS shifts
+        if (get_bits1(gb)) {
+            shift_lsbs = get_bits(gb, 4) + 1;
         }
 
 
@@ -676,6 +676,13 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                     parcor_to_lpc(smp, quant_cof, lpc_cof);
             }
         } else {
+            int store_prev_samples = (*js_blocks && raw_other) || shift_lsbs;
+
+            // store previous smaples in case that they have to be altered
+            if (store_prev_samples)
+                memcpy(ctx->prev_raw_samples, raw_samples - sconf->max_order,
+                       sizeof(int64_t) * sconf->max_order);
+
             // reconstruct difference signal for prediction (joint-stereo)
             if (*js_blocks && raw_other) {
                 int i;
@@ -688,6 +695,12 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                 }
             }
 
+            // reconstruct shifted signal
+            if (shift_lsbs) {
+                for (smp = -1; smp >= -sconf->max_order; smp--)
+                    raw_samples[smp] >>= shift_lsbs;
+            }
+
             // reconstruct raw samples
             for (smp = 0; smp < block_length; smp++) {
                 y = 1 << 19;
@@ -698,17 +711,10 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
                 raw_samples[smp] -= y >> 20;
             }
 
-            // reconstruct normal signal (joint-stereo)
-            if (*js_blocks && raw_other) {
-                int i;
-                if (raw_other > raw_samples) {          // L = R - D
-                    for (i = -1; i >= -sconf->max_order; i--)
-                        raw_samples[i] = raw_other[i] - raw_samples[i];
-                } else {                                // R = D + L
-                    for (i = -1; i >= -sconf->max_order; i--)
-                        raw_samples[i] = raw_samples[i] + raw_other[i];
-                }
-            }
+            // restore previous samples in case that they have been altered
+            if (store_prev_samples)
+                memcpy(raw_samples - sconf->max_order, ctx->prev_raw_samples,
+                       sizeof(int64_t) * sconf->max_order);
         }
     }
 
@@ -718,6 +724,11 @@ static int read_block_data(ALSDecContext *ctx, unsigned int ra_block,
 
     if (!sconf->mc_coding || ctx->js_switch) {
         align_get_bits(gb);
+    }
+
+    if (shift_lsbs) {
+        for (k = 0; k < block_length; k++)
+            raw_samples[k] <<= shift_lsbs;
     }
 
     return 0;
@@ -963,6 +974,7 @@ static av_cold int decode_end(AVCodecContext *avctx)
 
     av_freep(&ctx->quant_cof);
     av_freep(&ctx->lpc_cof);
+    av_freep(&ctx->prev_raw_samples);
     av_freep(&ctx->raw_samples);
     av_freep(&ctx->raw_buffer);
 
@@ -1010,6 +1022,13 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     avctx->frame_size = sconf->frame_length;
     channel_size      = sconf->frame_length + sconf->max_order;
+
+    // allocate previous raw sample buffer
+    if (!(ctx->prev_raw_samples = av_malloc(sizeof(int64_t) * sconf->max_order))) {
+        av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
+        decode_end(avctx);
+        return AVERROR_NOMEM;
+    }
 
     // allocate raw and carried sample buffer
     if (!(ctx->raw_buffer = av_malloc(sizeof(int64_t) *
