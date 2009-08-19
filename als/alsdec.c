@@ -210,13 +210,13 @@ static av_cold int read_specific_config(ALSDecContext *ctx)
     // allocate quantized parcor coefficient buffer
     if (!(ctx->quant_cof = av_malloc(sizeof(int64_t) * sconf->max_order))) {
         av_log(ctx->avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
-        return AVERROR_NOMEM;
+        return AVERROR(ENOMEM);
     }
 
     // allocate LPC coefficients
     if (!(ctx->lpc_cof = av_malloc(sizeof(int64_t) * sconf->max_order))) {
         av_log(ctx->avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
-        return AVERROR_NOMEM;
+        return AVERROR(ENOMEM);
     }
 
     // calculate total number of frames to decode if possible
@@ -1027,7 +1027,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     if (!(ctx->prev_raw_samples = av_malloc(sizeof(int64_t) * sconf->max_order))) {
         av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
         decode_end(avctx);
-        return AVERROR_NOMEM;
+        return AVERROR(ENOMEM);
     }
 
     // allocate raw and carried sample buffer
@@ -1035,14 +1035,14 @@ static av_cold int decode_init(AVCodecContext *avctx)
                                        avctx->channels * channel_size))) {
         av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
         decode_end(avctx);
-        return AVERROR_NOMEM;
+        return AVERROR(ENOMEM);
     }
 
     // allocate raw sample array buffer
     if (!(ctx->raw_samples = av_malloc(sizeof(int64_t*) * avctx->channels))) {
         av_log(avctx, AV_LOG_ERROR, "Allocating buffer array failed.\n");
         decode_end(avctx);
-        return AVERROR_NOMEM;
+        return AVERROR(ENOMEM);
     }
 
     // allocate raw and carried samples buffers
