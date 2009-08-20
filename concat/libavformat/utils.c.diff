@@ -1,12 +1,12 @@
 diff --git a/libavformat/utils.c b/libavformat/utils.c
-index b9f6c00..7f03651 100644
+index b9f6c00..74e2f71 100644
 --- a/libavformat/utils.c
 +++ b/libavformat/utils.c
 @@ -27,6 +27,7 @@
  #include <sys/time.h>
  #include <time.h>
  #include <strings.h>
-+#include "playlist.h"
++#include "libavformat/avplaylist.h"
  
  #undef NDEBUG
  #include <assert.h>

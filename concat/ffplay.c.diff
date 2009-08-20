@@ -1,12 +1,12 @@
 diff --git a/ffplay.c b/ffplay.c
-index 814efc5..5e917ac 100644
+index 814efc5..f5766a0 100644
 --- a/ffplay.c
 +++ b/ffplay.c
 @@ -29,6 +29,8 @@
  #include "libavcodec/colorspace.h"
  #include "libavcodec/opt.h"
  
-+#include "libavformat/playlist.h"
++#include "libavformat/avplaylist.h"
 +
  #include "cmdutils.h"
  
