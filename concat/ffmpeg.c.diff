@@ -1,5 +1,5 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index 2686e1d..28b025e 100644
+index 2686e1d..28569ea 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -40,6 +40,7 @@
@@ -54,7 +54,7 @@ index 2686e1d..28b025e 100644
  
      redo:
          ipts_min= 1e100;
-@@ -2234,12 +2245,44 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2234,12 +2245,43 @@ static int av_encode(AVFormatContext **output_files,
          if (do_pkt_dump) {
              av_pkt_dump_log(NULL, AV_LOG_DEBUG, &pkt, do_hex_dump);
          }
@@ -69,7 +69,6 @@ index 2686e1d..28b025e 100644
 +                for (i = nb_istreams; i < pkt.stream_index + 1; ++i)
 +                    ist_table[i] = NULL;
 +                file_table[file_index].nb_streams = file_table[file_index].ist_index + pkt.stream_index + 1;
-+                nb_istreams = file_table[file_index].ist_index + pkt.stream_index + 1;
 +            }
 +            if (!ist_table[pkt.stream_index]) {
 +                ist = ist_table[pkt.stream_index] = av_mallocz(sizeof(AVInputStream));
@@ -100,7 +99,7 @@ index 2686e1d..28b025e 100644
          if (ist->discard)
              goto discard_packet;
  
-@@ -2271,8 +2314,7 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2271,8 +2313,7 @@ static int av_encode(AVFormatContext **output_files,
          }
  
          //fprintf(stderr,"read #%d.%d size=%d\n", ist->file_index, ist->index, pkt.size);
@@ -110,7 +109,7 @@ index 2686e1d..28b025e 100644
              if (verbose >= 0)
                  fprintf(stderr, "Error while decoding stream #%d.%d\n",
                          ist->file_index, ist->index);
-@@ -2293,7 +2335,7 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2293,7 +2334,7 @@ static int av_encode(AVFormatContext **output_files,
      for(i=0;i<nb_istreams;i++) {
          ist = ist_table[i];
          if (ist->decoding_needed) {
