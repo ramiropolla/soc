@@ -1,5 +1,5 @@
 diff --git a/libavformat/Makefile b/libavformat/Makefile
-index 86dc03f..5629202 100644
+index 86dc03f..0a3afed 100644
 --- a/libavformat/Makefile
 +++ b/libavformat/Makefile
 @@ -3,7 +3,7 @@ include $(SUBDIR)../config.mak
@@ -15,7 +15,7 @@ index 86dc03f..5629202 100644
  OBJS-$(CONFIG_BFI_DEMUXER)               += bfi.o
  OBJS-$(CONFIG_C93_DEMUXER)               += c93.o vocdec.o voc.o
  OBJS-$(CONFIG_CAVSVIDEO_DEMUXER)         += raw.o
-+OBJS-$(CONFIG_CONCAT_DEMUXER)            += avplaylist.o concat.o concatgen.o
++OBJS-$(CONFIG_CONCAT_DEMUXER)            += concat.o avplaylist.o concatgen.o
  OBJS-$(CONFIG_CRC_MUXER)                 += crcenc.o
  OBJS-$(CONFIG_DAUD_DEMUXER)              += daud.o
  OBJS-$(CONFIG_DAUD_MUXER)                += daud.o
