@@ -1,12 +1,12 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index 2686e1d..60164f5 100644
+index 2686e1d..cf47611 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -40,6 +40,7 @@
  #include "libavutil/fifo.h"
  #include "libavutil/avstring.h"
  #include "libavformat/os_support.h"
-+#include "libavformat/concat.h"
++#include "libavformat/playlist.h"
  
  #if HAVE_SYS_RESOURCE_H
  #include <sys/types.h>
