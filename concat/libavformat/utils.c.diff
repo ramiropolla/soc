@@ -1,5 +1,5 @@
 diff --git a/libavformat/utils.c b/libavformat/utils.c
-index b9f6c00..3b652a0 100644
+index b9f6c00..86a710c 100644
 --- a/libavformat/utils.c
 +++ b/libavformat/utils.c
 @@ -27,6 +27,7 @@
@@ -37,7 +37,7 @@ index b9f6c00..3b652a0 100644
 +        av_log(ic, AV_LOG_DEBUG, "Generating playlist from %s\n", filename);
 +        av_strlcpy(ic->filename, filename, sizeof(ic->filename));
 +        ic->iformat = ff_concat_alloc_demuxer();
-+        ff_playlist_set_context(ic, playlist_ctx);
++        ic->priv_data = playlist_ctx;
 +        ff_playlist_populate_context(playlist_ctx, playlist_ctx->pe_curidx);
 +        ff_playlist_set_streams(ic);
 +        return 0;
