@@ -149,7 +149,7 @@ typedef struct {
  */
 typedef struct {
     uint8_t num_channels;                                     ///< number of channels in the group
-    int8_t  transform;                                        ///< controls the type of the transform
+    int8_t  transform;                                        ///< transform on / off
     int8_t  transform_band[MAX_BANDS];                        ///< controls if the transform is enabled for a certain band
     float   decorrelation_matrix[WMAPRO_MAX_CHANNELS*WMAPRO_MAX_CHANNELS];
     float*  channel_data[WMAPRO_MAX_CHANNELS];                ///< transformation coefficients
@@ -726,10 +726,13 @@ static int decode_channel_transform(WMA3DecodeContext* s)
                                "unsupported channel transform type\n");
                     }
                 } else {
+                    chgroup->transform = 1;
                     if (s->num_channels == 2) {
-                        chgroup->transform = 1;
+                        chgroup->decorrelation_matrix[0] =  1.0;
+                        chgroup->decorrelation_matrix[1] = -1.0;
+                        chgroup->decorrelation_matrix[2] =  1.0;
+                        chgroup->decorrelation_matrix[3] =  1.0;
                     } else {
-                        chgroup->transform = 2;
                         /** cos(pi/4) */
                         chgroup->decorrelation_matrix[0] = 0.70703125;
                         chgroup->decorrelation_matrix[1] = -0.70703125;
@@ -739,7 +742,7 @@ static int decode_channel_transform(WMA3DecodeContext* s)
                 }
             } else if (chgroup->num_channels > 2) {
                 if (get_bits1(&s->gb)) {
-                    chgroup->transform = 2;
+                    chgroup->transform = 1;
                     if (get_bits1(&s->gb)) {
                         decode_decorrelation_matrix(s, chgroup);
                     } else {
@@ -974,34 +977,7 @@ static void inverse_channel_transform(WMA3DecodeContext *s)
     int i;
 
     for (i = 0; i < s->num_chgroups; i++) {
-
-        if (s->chgroup[i].transform == 1) {
-            /** M/S stereo decoding */
-            int16_t* sfb_offsets = s->cur_sfb_offsets;
-            float* ch0 = *sfb_offsets + s->channel[0].coeffs;
-            float* ch1 = *sfb_offsets++ + s->channel[1].coeffs;
-            const char* tb = s->chgroup[i].transform_band;
-            const char* tb_end = tb + s->num_bands;
-
-            while (tb < tb_end) {
-                const float* ch0_end = s->channel[0].coeffs +
-                                       FFMIN(*sfb_offsets,s->subframe_len);
-                if (*tb++ == 1) {
-                    while (ch0 < ch0_end) {
-                        const float v1 = *ch0;
-                        const float v2 = *ch1;
-                        *ch0++ = v1 - v2;
-                        *ch1++ = v1 + v2;
-                    }
-                } else {
-                    while (ch0 < ch0_end) {
-                        *ch0++ *= 181.0 / 128;
-                        *ch1++ *= 181.0 / 128;
-                    }
-                }
-                ++sfb_offsets;
-            }
-        } else if (s->chgroup[i].transform) {
+        if (s->chgroup[i].transform) {
             float data[WMAPRO_MAX_CHANNELS];
             const int num_channels = s->chgroup[i].num_channels;
             float** ch_data = s->chgroup[i].channel_data;
@@ -1012,8 +988,8 @@ static void inverse_channel_transform(WMA3DecodeContext *s)
             /** multichannel decorrelation */
             for (sfb = s->cur_sfb_offsets ;
                 sfb < s->cur_sfb_offsets + s->num_bands;sfb++) {
+                int y;
                 if (*tb++ == 1) {
-                    int y;
                     /** multiply values with the decorrelation_matrix */
                     for (y = sfb[0]; y < FFMIN(sfb[1], s->subframe_len); y++) {
                         const float* mat = s->chgroup[i].decorrelation_matrix;
@@ -1032,6 +1008,11 @@ static void inverse_channel_transform(WMA3DecodeContext *s)
 
                             (*ch)[y] = sum;
                         }
+                    }
+                } else if (s->num_channels == 2) {
+                    for (y = sfb[0]; y < FFMIN(sfb[1], s->subframe_len); y++) {
+                        ch_data[0][y] *= 181.0 / 128;
+                        ch_data[1][y] *= 181.0 / 128;
                     }
                 }
             }
