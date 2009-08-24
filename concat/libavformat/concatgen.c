@@ -58,7 +58,7 @@ int ff_concatgen_read_packet(AVFormatContext *s,
                 pkt->stream_index = stream_index + streams_offset;
                 if (!ic->streams[stream_index]->codec->has_b_frames ||
                     ic->streams[stream_index]->codec->codec->id == CODEC_ID_MPEG1VIDEO) {
-                    int64_t time_offset_localbase = av_rescale_q(av_playlist_time_offset(ctx->durations, streams_offset),
+                    int64_t time_offset_localbase = av_rescale_q(ctx->durations[ctx->pe_curidx],
                                                                  AV_TIME_BASE_Q,
                                                                  ic->streams[stream_index]->time_base);
                     pkt->dts += time_offset_localbase;
@@ -75,10 +75,10 @@ int ff_concatgen_read_packet(AVFormatContext *s,
             // -32 AVERROR_EOF for avi, -51 for ogg
 
                 av_log(ic, AV_LOG_DEBUG, "Switching stream %d to %d\n", stream_index, ctx->pe_curidx+1);
-                ctx->durations[ctx->pe_curidx] = ic->duration;
-                ctx->pe_curidx = av_playlist_stream_index_from_time(ctx,
-                                                                    av_playlist_time_offset(ctx->durations, ctx->pe_curidx),
-                                                                    NULL);
+                ctx->pe_curidx++;
+                //ctx->pe_curidx = av_playlist_stream_index_from_time(ctx,
+                                                                    //av_playlist_time_offset(ctx->durations, ctx->pe_curidx),
+                                                                    //NULL);
                 if (av_playlist_populate_context(ctx, ctx->pe_curidx) < 0) {
                     av_log(NULL, AV_LOG_ERROR, "Failed to switch to AVFormatContext %d\n", ctx->pe_curidx);
                     break;
@@ -112,7 +112,6 @@ int ff_concatgen_read_seek(AVFormatContext *s,
     int64_t localpts_avtimebase, localpts, pts_avtimebase;
     AVPlaylistContext *ctx = s->priv_data;
     AVFormatContext *ic = ctx->formatcontext_list[ctx->pe_curidx];
-    ctx->durations[ctx->pe_curidx] = ic->duration;
     pts_avtimebase = av_rescale_q(pts,
                                   ic->streams[stream_index]->time_base,
                                   AV_TIME_BASE_Q);
