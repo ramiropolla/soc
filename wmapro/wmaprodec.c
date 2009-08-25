@@ -230,12 +230,12 @@ static void av_cold dump_context(WMA3DecodeContext *s)
 
     PRINT("ed sample bit depth", s->bits_per_sample);
     PRINT_HEX("ed decode flags", s->decode_flags);
-    PRINT("samples per frame", s->samples_per_frame);
-    PRINT("log2 frame size", s->log2_frame_size);
-    PRINT("max num subframes", s->max_num_subframes);
-    PRINT("len prefix", s->len_prefix);
-    PRINT("num channels", s->num_channels);
-    PRINT("lossless", s->lossless);
+    PRINT("samples per frame",   s->samples_per_frame);
+    PRINT("log2 frame size",     s->log2_frame_size);
+    PRINT("max num subframes",   s->max_num_subframes);
+    PRINT("len prefix",          s->len_prefix);
+    PRINT("num channels",        s->num_channels);
+    PRINT("lossless",            s->lossless);
 }
 
 /**
@@ -248,7 +248,7 @@ static av_cold int decode_end(AVCodecContext *avctx)
     WMA3DecodeContext *s = avctx->priv_data;
     int i;
 
-    for (i = 0 ; i < WMAPRO_BLOCK_SIZES ; i++)
+    for (i = 0; i < WMAPRO_BLOCK_SIZES; i++)
         ff_mdct_end(&s->mdct_ctx[i]);
 
     return 0;
@@ -262,7 +262,7 @@ static av_cold int decode_end(AVCodecContext *avctx)
 static av_cold int decode_init(AVCodecContext *avctx)
 {
     WMA3DecodeContext *s = avctx->priv_data;
-    uint8_t *edata_ptr = avctx->extradata;
+    uint8_t *edata_ptr   = avctx->extradata;
     unsigned int channel_mask;
     int i;
     int log2_max_num_subframes;
@@ -316,7 +316,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     if (s->max_num_subframes > MAX_SUBFRAMES) {
         av_log(avctx, AV_LOG_ERROR, "invalid number of subframes %i\n",
-            s->max_num_subframes);
+               s->max_num_subframes);
         return AVERROR_INVALIDDATA;
     }
 
@@ -339,32 +339,32 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     INIT_VLC_STATIC(&sf_vlc, SCALEVLCBITS, HUFF_SCALE_SIZE,
-        scale_huffbits, 1, 1,
-        scale_huffcodes, 2, 2, 616);
+                    scale_huffbits, 1, 1,
+                    scale_huffcodes, 2, 2, 616);
 
     INIT_VLC_STATIC(&sf_rl_vlc, VLCBITS, HUFF_SCALE_RL_SIZE,
-        scale_rl_huffbits, 1, 1,
-        scale_rl_huffcodes, 4, 4, 1406);
+                    scale_rl_huffbits, 1, 1,
+                    scale_rl_huffcodes, 4, 4, 1406);
 
     INIT_VLC_STATIC(&coef_vlc[0], VLCBITS, HUFF_COEF0_SIZE,
-        coef0_huffbits, 1, 1,
-        coef0_huffcodes, 4, 4, 2108);
+                    coef0_huffbits, 1, 1,
+                    coef0_huffcodes, 4, 4, 2108);
 
     INIT_VLC_STATIC(&coef_vlc[1], VLCBITS, HUFF_COEF1_SIZE,
-        coef1_huffbits, 1, 1,
-        coef1_huffcodes, 4, 4, 3912);
+                    coef1_huffbits, 1, 1,
+                    coef1_huffcodes, 4, 4, 3912);
 
     INIT_VLC_STATIC(&vec4_vlc, VLCBITS, HUFF_VEC4_SIZE,
-        vec4_huffbits, 1, 1,
-        vec4_huffcodes, 2, 2, 604);
+                    vec4_huffbits, 1, 1,
+                    vec4_huffcodes, 2, 2, 604);
 
     INIT_VLC_STATIC(&vec2_vlc, VLCBITS, HUFF_VEC2_SIZE,
-        vec2_huffbits, 1, 1,
-        vec2_huffcodes, 2, 2, 562);
+                    vec2_huffbits, 1, 1,
+                    vec2_huffcodes, 2, 2, 562);
 
     INIT_VLC_STATIC(&vec1_vlc, VLCBITS, HUFF_VEC1_SIZE,
-        vec1_huffbits, 1, 1,
-        vec1_huffcodes, 2, 2, 562);
+                    vec1_huffbits, 1, 1,
+                    vec1_huffcodes, 2, 2, 562);
 
     /** calculate number of scale factor bands and their offsets
         for every possible block size */
@@ -414,7 +414,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
                      / (1 << (s->bits_per_sample - 1)));
 
     /** init MDCT windows: simple sinus window */
-    for (i=0 ; i < WMAPRO_BLOCK_SIZES; i++) {
+    for (i = 0; i < WMAPRO_BLOCK_SIZES; i++) {
         const int n       = 1 << (WMAPRO_BLOCK_MAX_BITS - i);
         const int win_idx = WMAPRO_BLOCK_MAX_BITS - i - 7;
         ff_sine_window_init(ff_sine_windows[win_idx], n);
@@ -686,7 +686,7 @@ static int decode_channel_transform(WMA3DecodeContext* s)
 
         if (get_bits1(&s->gb)) {
             av_log_ask_for_sample(s->avctx,
-                "unsupported channel transform bit\n");
+                                  "unsupported channel transform bit\n");
             return AVERROR_INVALIDDATA;
         }
 
@@ -818,7 +818,7 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
         idx = get_vlc2(&s->gb, vec4_vlc.table, VLCBITS, VEC4MAXDEPTH);
 
         if ( idx == HUFF_VEC4_SIZE - 1 ) {
-            for (i = 0 ; i < 4 ; i += 2) {
+            for (i = 0; i < 4; i += 2) {
                 idx = get_vlc2(&s->gb, vec2_vlc.table, VLCBITS, VEC2MAXDEPTH);
                 if ( idx == HUFF_VEC2_SIZE - 1 ) {
                     vals[i] = get_vlc2(&s->gb, vec1_vlc.table, VLCBITS, VEC1MAXDEPTH);
@@ -986,7 +986,7 @@ static void inverse_channel_transform(WMA3DecodeContext *s)
             int16_t* sfb;
 
             /** multichannel decorrelation */
-            for (sfb = s->cur_sfb_offsets ;
+            for (sfb = s->cur_sfb_offsets;
                 sfb < s->cur_sfb_offsets + s->num_bands;sfb++) {
                 int y;
                 if (*tb++ == 1) {
@@ -1226,7 +1226,7 @@ static int decode_subframe(WMA3DecodeContext *s)
     if (transmit_coeffs) {
         /** reconstruct the per channel data */
         inverse_channel_transform(s);
-        for (i =0; i < s->channels_for_cur_subframe; i++) {
+        for (i = 0; i < s->channels_for_cur_subframe; i++) {
             int c = s->channel_indexes_for_cur_subframe[i];
             const int* sf = s->channel[c].scale_factors;
             int b;
