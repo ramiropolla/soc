@@ -1,5 +1,5 @@
 diff --git a/libavformat/utils.c b/libavformat/utils.c
-index 4cec286..ceae77d 100644
+index 4cec286..71475e5 100644
 --- a/libavformat/utils.c
 +++ b/libavformat/utils.c
 @@ -27,6 +27,8 @@
@@ -35,7 +35,7 @@ index 4cec286..ceae77d 100644
 +                av_playlist_add_filelist(playlist_ctx, flist, flist_len);
 +                av_strlcpy(ic->filename, filename, sizeof(ic->filename));
 +                ff_playlist_populate_context(playlist_ctx, playlist_ctx->pe_curidx);
-+                ff_playlist_set_streams(ic);
++                ff_playlist_set_streams(playlist_ctx);
 +                *ic_ptr = ic;
 +                return 0;
 +            }
