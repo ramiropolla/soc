@@ -1,16 +1,17 @@
 diff --git a/libavformat/utils.c b/libavformat/utils.c
-index 4cec286..2a13b4c 100644
+index 4cec286..c5d2347 100644
 --- a/libavformat/utils.c
 +++ b/libavformat/utils.c
-@@ -27,6 +27,7 @@
+@@ -27,6 +27,8 @@
  #include <sys/time.h>
  #include <time.h>
  #include <strings.h>
 +#include "libavformat/avplaylist.h"
++#include "libavformat/playlist.h"
  
  #undef NDEBUG
  #include <assert.h>
-@@ -432,7 +433,8 @@ int av_open_input_file(AVFormatContext **ic_ptr, const char *filename,
+@@ -432,7 +434,8 @@ int av_open_input_file(AVFormatContext **ic_ptr, const char *filename,
                         int buf_size,
                         AVFormatParameters *ap)
  {
@@ -20,7 +21,7 @@ index 4cec286..2a13b4c 100644
      AVProbeData probe_data, *pd = &probe_data;
      ByteIOContext *pb = NULL;
  
-@@ -447,6 +449,23 @@ int av_open_input_file(AVFormatContext **ic_ptr, const char *filename,
+@@ -447,6 +450,23 @@ int av_open_input_file(AVFormatContext **ic_ptr, const char *filename,
          fmt = av_probe_input_format(pd, 0);
      }
  
@@ -33,7 +34,7 @@ index 4cec286..2a13b4c 100644
 +                av_log(ic, AV_LOG_DEBUG, "Generating playlist from %s\n", filename);
 +                av_playlist_add_filelist(playlist_ctx, flist, flist_len);
 +                av_strlcpy(ic->filename, filename, sizeof(ic->filename));
-+                av_playlist_populate_context(playlist_ctx, playlist_ctx->pe_curidx);
++                ff_playlist_populate_context(playlist_ctx, playlist_ctx->pe_curidx);
 +                av_playlist_set_streams(ic);
 +                *ic_ptr = ic;
 +                return 0;
