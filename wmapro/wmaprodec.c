@@ -614,8 +614,8 @@ static void decode_decorrelation_matrix(WMA3DecodeContext *s,
     int i;
     int offset = 0;
     int8_t rotation_offset[WMAPRO_MAX_CHANNELS * WMAPRO_MAX_CHANNELS];
-    memset(chgroup->decorrelation_matrix, 0,
-           sizeof(float) *s->num_channels * s->num_channels);
+    memset(chgroup->decorrelation_matrix, 0, s->num_channels *
+           s->num_channels * sizeof(*chgroup->decorrelation_matrix));
 
     for (i = 0; i < chgroup->num_channels * (chgroup->num_channels - 1) >> 1; i++)
         rotation_offset[i] = get_bits(&s->gb, 6);
@@ -740,8 +740,8 @@ static int decode_channel_transform(WMA3DecodeContext* s)
                         } else {
                             memcpy(chgroup->decorrelation_matrix,
                               default_decorrelation[chgroup->num_channels],
-                              sizeof(float) * chgroup->num_channels *
-                              chgroup->num_channels);
+                              chgroup->num_channels * chgroup->num_channels *
+                              sizeof(*chgroup->decorrelation_matrix));
                         }
                     }
                 }
@@ -938,8 +938,8 @@ static int decode_scale_factors(WMA3DecodeContext* s)
             /** save transmitted scale factors so that they can be reused for
                 the next subframe */
             memcpy(s->channel[c].saved_scale_factors,
-                   s->channel[c].scale_factors,
-                   sizeof(int) * s->num_bands);
+                   s->channel[c].scale_factors, s->num_bands *
+                   sizeof(*s->channel[c].saved_scale_factors));
             s->channel[c].scale_factor_block_len = s->subframe_len;
             s->channel[c].reuse_sf               = 1;
         }
@@ -1107,7 +1107,8 @@ static int decode_subframe(WMA3DecodeContext *s)
 
         s->channel[c].coeffs = &s->channel[c].out[(s->samples_per_frame>>1)
                                                   + offset];
-        memset(s->channel[c].coeffs, 0, sizeof(float) * subframe_len);
+        memset(s->channel[c].coeffs, 0,
+               sizeof(*s->channel[c].coeffs) * subframe_len);
     }
 
     s->subframe_len = subframe_len;
@@ -1219,8 +1220,8 @@ static int decode_subframe(WMA3DecodeContext *s)
             int b;
 
             if (c == s->lfe_channel)
-                memset(&s->tmp[s->cur_subwoofer_cutoff], 0,
-                     sizeof(float) * (subframe_len - s->cur_subwoofer_cutoff));
+                memset(&s->tmp[s->cur_subwoofer_cutoff], 0, sizeof(*s->tmp) *
+                       (subframe_len - s->cur_subwoofer_cutoff));
 
             /** inverse quantization and rescaling */
             for (b = 0; b < s->num_bands; b++) {
@@ -1358,7 +1359,7 @@ static int decode_frame(WMA3DecodeContext *s)
         /** reuse second half of the IMDCT output for the next frame */
         memmove(&s->channel[i].out[0],
                 &s->channel[i].out[s->samples_per_frame],
-                s->samples_per_frame * sizeof(float));
+                s->samples_per_frame * sizeof(*s->channel[i].out));
     }
 
     if (s->skip_frame) {
@@ -1566,7 +1567,8 @@ static void flush(AVCodecContext *avctx)
     /** reset output buffer as a part of it is used during the windowing of a
         new frame */
     for (i = 0; i < s->num_channels; i++)
-        memset(s->channel[i].out, 0, s->samples_per_frame * sizeof(float));
+        memset(s->channel[i].out, 0, s->samples_per_frame *
+               sizeof(*s->channel[i].out));
     s->packet_loss = 1;
 }
 
