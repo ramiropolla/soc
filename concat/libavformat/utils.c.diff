@@ -1,5 +1,5 @@
 diff --git a/libavformat/utils.c b/libavformat/utils.c
-index 4cec286..71475e5 100644
+index 4cec286..67186ac 100644
 --- a/libavformat/utils.c
 +++ b/libavformat/utils.c
 @@ -27,6 +27,8 @@
@@ -27,7 +27,7 @@ index 4cec286..71475e5 100644
  
 +    av_playlist_split_encodedstring(filename, ',', &flist, &flist_len);
 +    if (flist && flist_len > 1) {
-+        AVFormatContext *ic = av_playlist_alloc_concat_formatcontext();
++        AVFormatContext *ic = ff_playlist_alloc_concat_formatcontext();
 +        if (ic) {
 +            AVPlaylistContext *playlist_ctx = av_playlist_get_context(ic);
 +            if (playlist_ctx) {
