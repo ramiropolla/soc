@@ -1357,9 +1357,9 @@ static int decode_frame(WMA3DecodeContext *s)
         }
 
         /** reuse second half of the IMDCT output for the next frame */
-        memmove(&s->channel[i].out[0],
-                &s->channel[i].out[s->samples_per_frame],
-                s->samples_per_frame * sizeof(*s->channel[i].out));
+        memcpy(&s->channel[i].out[0],
+               &s->channel[i].out[s->samples_per_frame],
+               s->samples_per_frame * sizeof(*s->channel[i].out));
     }
 
     if (s->skip_frame) {
