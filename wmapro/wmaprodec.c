@@ -169,7 +169,6 @@ typedef struct WMA3DecodeContext {
     float*           windows[WMAPRO_BLOCK_SIZES];   ///< windows for the different block sizes
 
     /* frame size dependent frame information (set during initialization) */
-    uint8_t          lossless;                      ///< lossless mode
     uint32_t         decode_flags;                  ///< used compression features
     uint8_t          len_prefix;                    ///< frame is prefixed with its length
     uint8_t          dynamic_range_compression;     ///< frame contains DRC data
@@ -235,7 +234,6 @@ static void av_cold dump_context(WMA3DecodeContext *s)
     PRINT("max num subframes",   s->max_num_subframes);
     PRINT("len prefix",          s->len_prefix);
     PRINT("num channels",        s->num_channels);
-    PRINT("lossless",            s->lossless);
 }
 
 /**
@@ -492,13 +490,9 @@ static int decode_tilehdr(WMA3DecodeContext *s)
         fixed_channel_layout = get_bits1(&s->gb);
 
         /** calculate subframe len bits */
-        if (s->lossless) {
-            subframe_len_bits = av_log2(s->max_num_subframes - 1) + 1;
-        } else {
             if (s->max_num_subframes == 16)
                 subframe_len_zero_bit = 1;
             subframe_len_bits = av_log2(av_log2(s->max_num_subframes)) + 1;
-        }
 
         /** loop until the frame data is split between the subframes */
         while (missing_samples > 0) {
@@ -555,14 +549,8 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                 } else
                     log2_subframe_len = get_bits(&s->gb, subframe_len_bits);
 
-                if (s->lossless) {
-                    subframe_len =
-                        s->samples_per_frame / s->max_num_subframes;
-                    subframe_len *= log2_subframe_len + 1;
-                } else {
                     subframe_len =
                         s->samples_per_frame / (1 << log2_subframe_len);
-                }
 
                 /** sanity check the length */
                 if (subframe_len < s->min_samples_per_subframe
