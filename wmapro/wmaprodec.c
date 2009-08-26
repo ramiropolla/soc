@@ -133,7 +133,6 @@ typedef struct {
     uint16_t decoded_samples;                         ///< number of already processed samples
     uint8_t  grouped;                                 ///< channel is part of a group
     int      quant_step;                              ///< quantization step for the current subframe
-    int8_t   transmit_sf;                             ///< flag inidcating that scale factors are transmitted for the current subframe
     int8_t   reuse_sf;                                ///< share scale factors between subframes
     int8_t   scale_factor_step;                       ///< scaling step for the current subframe
     int      max_scale_factor;                        ///< maximum scale factor for the current subframe
@@ -885,12 +884,7 @@ static int decode_scale_factors(WMA3DecodeContext* s)
                                    s->channel[c].saved_scale_factors[*sf_offsets++];
         }
 
-        if (s->channel[c].cur_subframe > 0) {
-            s->channel[c].transmit_sf = get_bits1(&s->gb);
-        } else
-            s->channel[c].transmit_sf = 1;
-
-        if (s->channel[c].transmit_sf) {
+        if (!s->channel[c].cur_subframe || get_bits1(&s->gb)) {
 
             if (!s->channel[c].reuse_sf) {
                 int val;
