@@ -947,8 +947,8 @@ static int decode_scale_factors(WMA3DecodeContext* s)
         /** calculate new scale factor maximum */
         s->channel[c].max_scale_factor = s->channel[c].scale_factors[0];
         for (sf = s->channel[c].scale_factors + 1; sf < sf_end; sf++) {
-            if (s->channel[c].max_scale_factor < *sf)
-                s->channel[c].max_scale_factor = *sf;
+            s->channel[c].max_scale_factor =
+                FFMAX(s->channel[c].max_scale_factor, *sf);
         }
 
     }
