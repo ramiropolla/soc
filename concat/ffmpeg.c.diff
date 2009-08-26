@@ -1,5 +1,5 @@
 diff --git a/ffmpeg.c b/ffmpeg.c
-index 2686e1d..18b556b 100644
+index 2686e1d..b2bbcd6 100644
 --- a/ffmpeg.c
 +++ b/ffmpeg.c
 @@ -40,6 +40,7 @@
@@ -20,14 +20,17 @@ index 2686e1d..18b556b 100644
  {
      AVFormatContext *os;
      AVOutputStream *ost;
-@@ -1248,8 +1250,13 @@ static int output_packet(AVInputStream *ist, int ist_index,
+@@ -1248,8 +1250,16 @@ static int output_packet(AVInputStream *ist, int ist_index,
      static unsigned int samples_size= 0;
      AVSubtitle subtitle, *subtitle_to_free;
      int got_subtitle;
 +    int stream_offset = 0;
      AVPacket avpkt;
 -
-+    AVPlaylistContext *pl_ctx = av_playlist_get_context(ic);
++    AVPlaylistContext *pl_ctx = NULL;
++    if (ic && ic->iformat && ic->iformat->long_name && ic->priv_data &&
++        !strncmp(ic->iformat->long_name, "CONCAT", 6))
++        pl_ctx = ic->priv_data;
 +    if (pl_ctx && pkt) {
 +        ist->st = ic->streams[pkt->stream_index];
 +        stream_offset = pkt->stream_index - av_playlist_localstidx_from_streamidx(pl_ctx, pkt->stream_index);
@@ -35,7 +38,7 @@ index 2686e1d..18b556b 100644
      if(ist->next_pts == AV_NOPTS_VALUE)
          ist->next_pts= ist->pts;
  
-@@ -1397,7 +1404,7 @@ static int output_packet(AVInputStream *ist, int ist_index,
+@@ -1397,7 +1407,7 @@ static int output_packet(AVInputStream *ist, int ist_index,
                  int frame_size;
  
                  ost = ost_table[i];
@@ -44,7 +47,7 @@ index 2686e1d..18b556b 100644
                      os = output_files[ost->file_index];
  
                      /* set the input output pts pairs */
-@@ -2149,6 +2156,8 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2149,6 +2159,8 @@ static int av_encode(AVFormatContext **output_files,
          AVPacket pkt;
          double ipts_min;
          double opts_min;
@@ -53,12 +56,15 @@ index 2686e1d..18b556b 100644
  
      redo:
          ipts_min= 1e100;
-@@ -2234,12 +2243,43 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2234,12 +2246,46 @@ static int av_encode(AVFormatContext **output_files,
          if (do_pkt_dump) {
              av_pkt_dump_log(NULL, AV_LOG_DEBUG, &pkt, do_hex_dump);
          }
 +
-+        pl_ctx = av_playlist_get_context(is);
++        pl_ctx = NULL;
++        if (is && is->iformat && is->iformat->long_name && is->priv_data &&
++        !strncmp(is->iformat->long_name, "CONCAT", 6))
++            pl_ctx = is->priv_data;
 +        if (pl_ctx) {
 +            if (pkt.stream_index >= nb_istreams &&
 +                pkt.stream_index < is->nb_streams &&
@@ -98,7 +104,7 @@ index 2686e1d..18b556b 100644
          if (ist->discard)
              goto discard_packet;
  
-@@ -2271,8 +2311,7 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2271,8 +2317,7 @@ static int av_encode(AVFormatContext **output_files,
          }
  
          //fprintf(stderr,"read #%d.%d size=%d\n", ist->file_index, ist->index, pkt.size);
@@ -108,7 +114,7 @@ index 2686e1d..18b556b 100644
              if (verbose >= 0)
                  fprintf(stderr, "Error while decoding stream #%d.%d\n",
                          ist->file_index, ist->index);
-@@ -2293,7 +2332,7 @@ static int av_encode(AVFormatContext **output_files,
+@@ -2293,7 +2338,7 @@ static int av_encode(AVFormatContext **output_files,
      for(i=0;i<nb_istreams;i++) {
          ist = ist_table[i];
          if (ist->decoding_needed) {
