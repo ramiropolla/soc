@@ -1272,7 +1272,7 @@ static int decode_frame(WMA3DecodeContext *s)
     int i;
 
     /** check for potential output buffer overflow */
-    if (s->samples + s->num_channels * s->samples_per_frame > s->samples_end) {
+    if (s->num_channels * s->samples_per_frame > s->samples_end - s->samples) {
         av_log(s->avctx,AV_LOG_ERROR,
                "not enough space for the output samples\n");
         s->packet_loss = 1;
