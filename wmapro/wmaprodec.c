@@ -179,6 +179,8 @@ typedef struct WMA3DecodeContext {
     int8_t           num_channels;                  ///< number of channels in the stream (same as AVCodecContext.num_channels)
     int8_t           lfe_channel;                   ///< lfe channel index
     uint8_t          max_num_subframes;
+    uint8_t          subframe_len_bits;             ///< number of bits used for the subframe length
+    uint8_t          max_subframe_len_bit;          ///< flag indicating that the subframe is of maximum size when the first subframe length bit is 1
     int8_t           num_possible_block_sizes;      ///< number of distinct block sizes that can be found in the file
     uint16_t         min_samples_per_subframe;
     int8_t           num_sfb[WMAPRO_BLOCK_SIZES];   ///< scale factor bands per block size
@@ -310,6 +312,10 @@ static av_cold int decode_init(AVCodecContext *avctx)
     /** subframe info */
     log2_max_num_subframes       = ((s->decode_flags & 0x38) >> 3);
     s->max_num_subframes         = 1 << log2_max_num_subframes;
+    if (s->max_num_subframes == 16)
+        s->max_subframe_len_bit = 1;
+    s->subframe_len_bits = av_log2(log2_max_num_subframes) + 1;
+
     s->num_possible_block_sizes  = log2_max_num_subframes + 1;
     s->min_samples_per_subframe  = s->samples_per_frame / s->max_num_subframes;
     s->dynamic_range_compression = (s->decode_flags & 0x80);
@@ -485,16 +491,9 @@ static int decode_tilehdr(WMA3DecodeContext *s)
         }
     } else { /** subframe length and number of subframes is not constant */
         int missing_samples = s->num_channels * s->samples_per_frame;
-        int subframe_len_bits = 0;     /** bits needed for the subframe length */
-        int subframe_len_zero_bit = 0; /** first bit indicates if length is zero */
         int fixed_channel_layout;      /** all channels have the same subframe layout */
 
         fixed_channel_layout = get_bits1(&s->gb);
-
-        /** calculate subframe len bits */
-        if (s->max_num_subframes == 16)
-            subframe_len_zero_bit = 1;
-        subframe_len_bits = av_log2(av_log2(s->max_num_subframes)) + 1;
 
         /** loop until the frame data is split between the subframes */
         while (missing_samples > 0) {
@@ -543,13 +542,13 @@ static int decode_tilehdr(WMA3DecodeContext *s)
             if (min_samples != missing_samples) {
                 int log2_subframe_len = 0;
                 /* 1 bit indicates if the subframe is of maximum length */
-                if (subframe_len_zero_bit) {
+                if (s->max_subframe_len_bit) {
                     if (get_bits1(&s->gb)) {
                         log2_subframe_len = 1 +
-                            get_bits(&s->gb, subframe_len_bits-1);
+                            get_bits(&s->gb, s->subframe_len_bits-1);
                     }
                 } else
-                    log2_subframe_len = get_bits(&s->gb, subframe_len_bits);
+                    log2_subframe_len = get_bits(&s->gb, s->subframe_len_bits);
 
                 subframe_len = s->samples_per_frame / (1 << log2_subframe_len);
 
