@@ -447,9 +447,9 @@ static av_cold int decode_init(AVCodecContext *avctx)
 }
 
 /**
- *@brief Decode the subframe length
+ *@brief Decode the subframe length.
  *@param s context
- *@return decoded subframe length
+ *@return decoded subframe length on success, 0 in case of an error
  */
 static int decode_subframe_length(WMA3DecodeContext *s)
 {
