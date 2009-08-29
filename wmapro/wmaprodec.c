@@ -527,6 +527,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
         }
     } else { /** different channels have different subframe layouts */
         uint16_t num_samples[WMAPRO_MAX_CHANNELS];
+        uint8_t  decode_channel[WMAPRO_MAX_CHANNELS];
         int channels_for_cur_subframe = s->num_channels;
         int min_channel_len = 0;
 
@@ -534,33 +535,29 @@ static int decode_tilehdr(WMA3DecodeContext *s)
 
         /** loop until the frame data is split between the subframes */
         do {
-            unsigned int channel_mask = 0;
             int subframe_len;
 
-            /** For every channel with the minimum length, 1 bit
-                might be transmitted that informs us if the channel
-                contains a subframe with the next subframe_len. */
-            if (channels_for_cur_subframe == 1 || (min_channel_len == s->samples_per_frame - s->min_samples_per_subframe)) {
-                channel_mask = -1;
-            } else {
-                channel_mask = get_bits(&s->gb, channels_for_cur_subframe);
-                if (!channel_mask) {
-                    av_log(s->avctx, AV_LOG_ERROR,
-                        "broken frame: zero frames for subframe_len\n");
-                    return AVERROR_INVALIDDATA;
-                }
+            /** check which channels contain the subframe */
+            for (c = 0; c < s->num_channels; c++) {
+                if (num_samples[c] == min_channel_len) {
+                    if (channels_for_cur_subframe == 1 || (min_channel_len == s->samples_per_frame - s->min_samples_per_subframe))
+                        decode_channel[c] = 1;
+                    else
+                        decode_channel[c] = get_bits1(&s->gb);
+                } else
+                    decode_channel[c] = 0;
             }
 
+            /** get subframe length */
             if (!(subframe_len = decode_subframe_length(s, min_channel_len)))
                 return AVERROR_INVALIDDATA;
 
+            /** add subframes to the individual channels and find new min_channel_len */
+            min_channel_len += subframe_len;
             for (c = 0; c < s->num_channels; c++) {
                 WMA3ChannelCtx* chan = &s->channel[c];
 
-                /** add subframes to the individual channels */
-                if (min_channel_len == num_samples[c]) {
-                    --channels_for_cur_subframe;
-                    if (channel_mask & (1 << channels_for_cur_subframe)) {
+                if (decode_channel[c]) {
                         if (chan->num_subframes >= MAX_SUBFRAMES) {
                             av_log(s->avctx, AV_LOG_ERROR,
                                     "broken frame: num subframes > 31\n");
@@ -574,14 +571,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                                     "channel len > samples_per_frame\n");
                             return AVERROR_INVALIDDATA;
                         }
-                    }
-                }
-            }
-
-            min_channel_len = s->samples_per_frame;
-            /** find channels with the smallest overall length */
-            for (c = 0; c < s->num_channels; c++) {
-                if (num_samples[c] <= min_channel_len) {
+                } else if(num_samples[c] <= min_channel_len) {
                     if (num_samples[c] < min_channel_len) {
                         channels_for_cur_subframe = 0;
                         min_channel_len = num_samples[c];
