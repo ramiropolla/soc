@@ -208,7 +208,6 @@ typedef struct WMA3DecodeContext {
     int16_t          subframe_len;                  ///< current subframe length
     int8_t           channels_for_cur_subframe;     ///< number of channels that contain the subframe
     int8_t           channel_indexes_for_cur_subframe[WMAPRO_MAX_CHANNELS];
-    int16_t          cur_subwoofer_cutoff;          ///< subwoofer cutoff value
     int8_t           num_bands;                     ///< number of scale factor bands
     int16_t*         cur_sfb_offsets;               ///< sfb offsets for the current block
     int8_t           esc_len;                       ///< length of escaped coefficients
@@ -1027,6 +1026,7 @@ static int decode_subframe(WMA3DecodeContext *s)
     int i;
     int total_samples   = s->samples_per_frame * s->num_channels;
     int transmit_coeffs = 0;
+    int cur_subwoofer_cutoff;
     int frame_offset;
 
     s->subframe_offset = get_bits_count(&s->gb);
@@ -1078,7 +1078,7 @@ static int decode_subframe(WMA3DecodeContext *s)
     frame_offset            = av_log2(s->samples_per_frame/subframe_len);
     s->num_bands            = s->num_sfb[frame_offset];
     s->cur_sfb_offsets      = s->sfb_offsets[frame_offset];
-    s->cur_subwoofer_cutoff = s->subwoofer_cutoffs[frame_offset];
+    cur_subwoofer_cutoff    = s->subwoofer_cutoffs[frame_offset];
 
     /** configure the decoder for the current subframe */
     for (i = 0; i < s->channels_for_cur_subframe; i++) {
@@ -1199,8 +1199,8 @@ static int decode_subframe(WMA3DecodeContext *s)
             int b;
 
             if (c == s->lfe_channel)
-                memset(&s->tmp[s->cur_subwoofer_cutoff], 0, sizeof(*s->tmp) *
-                       (subframe_len - s->cur_subwoofer_cutoff));
+                memset(&s->tmp[cur_subwoofer_cutoff], 0, sizeof(*s->tmp) *
+                       (subframe_len - cur_subwoofer_cutoff));
 
             /** inverse quantization and rescaling */
             for (b = 0; b < s->num_bands; b++) {
