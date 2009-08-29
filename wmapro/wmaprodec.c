@@ -556,7 +556,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
             /** For every channel with the minimum length, 1 bit
                 might be transmitted that informs us if the channel
                 contains a subframe with the next subframe_len. */
-            if (channels_for_cur_subframe == 1 || min_samples == missing_samples) {
+            if (channels_for_cur_subframe == 1 || (min_channel_len == s->samples_per_frame - s->min_samples_per_subframe)) {
                 channel_mask = -1;
             } else {
                 channel_mask = get_bits(&s->gb, channels_for_cur_subframe);
