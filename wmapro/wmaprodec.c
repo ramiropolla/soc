@@ -527,7 +527,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
         }
     } else { /** different channels have different subframe layouts */
         uint16_t num_samples[WMAPRO_MAX_CHANNELS];
-        uint8_t  decode_channel[WMAPRO_MAX_CHANNELS];
+        uint8_t  contains_subframe[WMAPRO_MAX_CHANNELS];
         int channels_for_cur_subframe = s->num_channels;
         int min_channel_len = 0;
 
@@ -541,11 +541,11 @@ static int decode_tilehdr(WMA3DecodeContext *s)
             for (c = 0; c < s->num_channels; c++) {
                 if (num_samples[c] == min_channel_len) {
                     if (channels_for_cur_subframe == 1 || (min_channel_len == s->samples_per_frame - s->min_samples_per_subframe))
-                        decode_channel[c] = 1;
+                        contains_subframe[c] = 1;
                     else
-                        decode_channel[c] = get_bits1(&s->gb);
+                        contains_subframe[c] = get_bits1(&s->gb);
                 } else
-                    decode_channel[c] = 0;
+                    contains_subframe[c] = 0;
             }
 
             /** get subframe length */
@@ -557,7 +557,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
             for (c = 0; c < s->num_channels; c++) {
                 WMA3ChannelCtx* chan = &s->channel[c];
 
-                if (decode_channel[c]) {
+                if (contains_subframe[c]) {
                     if (chan->num_subframes >= MAX_SUBFRAMES) {
                         av_log(s->avctx, AV_LOG_ERROR,
                                "broken frame: num subframes > 31\n");
