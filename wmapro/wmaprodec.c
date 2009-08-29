@@ -89,6 +89,7 @@
 #include "avcodec.h"
 #include "internal.h"
 #include "get_bits.h"
+#include "put_bits.h"
 #include "wmaprodata.h"
 #include "dsputil.h"
 #include "wma.h"
@@ -163,6 +164,7 @@ typedef struct WMA3DecodeContext {
     DSPContext       dsp;                           ///< accelerated DSP functions
     uint8_t          frame_data[MAX_FRAMESIZE +
                       FF_INPUT_BUFFER_PADDING_SIZE];///< compressed frame data
+    PutBitContext    pb;                            ///< context for filling the frame_data buffer
     MDCTContext      mdct_ctx[WMAPRO_BLOCK_SIZES];  ///< MDCT context per block size
     DECLARE_ALIGNED_16(float, tmp[WMAPRO_BLOCK_MAX_SIZE]); ///< IMDCT output buffer
     float*           windows[WMAPRO_BLOCK_SIZES];   ///< windows for the different block sizes
@@ -266,6 +268,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     s->avctx = avctx;
     dsputil_init(&s->dsp, avctx);
+    init_put_bits(&s->pb, s->frame_data, MAX_FRAMESIZE);
 
     avctx->sample_fmt = SAMPLE_FMT_FLT;
 
@@ -1401,12 +1404,15 @@ static void save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len,
                           int append)
 {
     int buflen;
-    int bit_offset;
-    int pos;
+
+    /** when the frame data does not need to be concatenated, the input buffer
+        is resetted and additional bits from the previous frame are copyed
+        and skipped later so that a fast byte copy is possible */
 
     if (!append) {
         s->frame_offset = get_bits_count(gb) & 7;
         s->num_saved_bits = s->frame_offset;
+        init_put_bits(&s->pb, s->frame_data, MAX_FRAMESIZE);
     }
 
     buflen = (s->num_saved_bits + len + 8) >> 3;
@@ -1417,36 +1423,21 @@ static void save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len,
          return;
     }
 
+    s->num_saved_bits += len;
     if (!append) {
-        s->num_saved_bits += len;
-        memcpy(s->frame_data, gb->buffer + (get_bits_count(gb) >> 3),
-              (s->num_saved_bits  + 8)>> 3);
-        skip_bits_long(gb, len);
+        ff_copy_bits(&s->pb, gb->buffer + (get_bits_count(gb) >> 3), s->num_saved_bits);
     } else {
-        bit_offset = s->num_saved_bits & 7;
-        pos = (s->num_saved_bits - bit_offset) >> 3;
+        int align = 8 - (get_bits_count(gb) & 7);
+        align = FFMIN(align, len);
+        put_bits(&s->pb, align, get_bits(gb, align));
+        len -= align;
+        ff_copy_bits(&s->pb, gb->buffer + (get_bits_count(gb) >> 3), len);
+    }
+    skip_bits_long(gb, len);
 
-        s->num_saved_bits += len;
-
-        /** byte align prev_frame buffer */
-        if (bit_offset) {
-            int missing = 8 - bit_offset;
-            missing = FFMIN(len, missing);
-            s->frame_data[pos++] |=
-                get_bits(gb, missing) << (8 - bit_offset - missing);
-            len -= missing;
-        }
-
-        /** copy full bytes */
-        while (len > 7) {
-            s->frame_data[pos++] = get_bits(gb, 8);
-            len -= 8;
-        }
-
-        /** copy remaining bits */
-        if (len > 0)
-            s->frame_data[pos++] = get_bits(gb, len) << (8 - len);
-
+    {
+    PutBitContext tmp = s->pb;
+    flush_put_bits(&tmp);
     }
 
     init_get_bits(&s->gb, s->frame_data, s->num_saved_bits);
