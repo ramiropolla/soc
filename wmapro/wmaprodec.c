@@ -915,7 +915,7 @@ static int decode_scale_factors(WMA3DecodeContext* s)
                    s->channel[c].scale_factors, s->num_bands *
                    sizeof(*s->channel[c].saved_scale_factors));
             s->channel[c].table_idx = s->table_idx;
-            s->channel[c].reuse_sf               = 1;
+            s->channel[c].reuse_sf  = 1;
         }
 
         /** calculate new scale factor maximum */
@@ -1070,10 +1070,10 @@ static int decode_subframe(WMA3DecodeContext *s)
            s->channels_for_cur_subframe);
 
     /** calculate number of scale factor bands and their offsets */
-    s->table_idx            = av_log2(s->samples_per_frame/subframe_len);
-    s->num_bands            = s->num_sfb[s->table_idx];
-    s->cur_sfb_offsets      = s->sfb_offsets[s->table_idx];
-    cur_subwoofer_cutoff    = s->subwoofer_cutoffs[s->table_idx];
+    s->table_idx         = av_log2(s->samples_per_frame/subframe_len);
+    s->num_bands         = s->num_sfb[s->table_idx];
+    s->cur_sfb_offsets   = s->sfb_offsets[s->table_idx];
+    cur_subwoofer_cutoff = s->subwoofer_cutoffs[s->table_idx];
 
     /** configure the decoder for the current subframe */
     for (i = 0; i < s->channels_for_cur_subframe; i++) {
