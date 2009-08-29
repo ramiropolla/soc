@@ -449,13 +449,19 @@ static av_cold int decode_init(AVCodecContext *avctx)
 /**
  *@brief Decode the subframe length.
  *@param s context
+ *@param offset sample offset in the frame
  *@return decoded subframe length on success, 0 in case of an error
  */
-static int decode_subframe_length(WMA3DecodeContext *s)
+static int decode_subframe_length(WMA3DecodeContext *s, int offset)
 {
     int log2_subframe_len = 0;
     int subframe_len;
-    /* 1 bit indicates if the subframe is of maximum length */
+
+    /** no need to read from the bitstream when only one length is possible */
+    if (offset == s->samples_per_frame - s->min_samples_per_subframe)
+        return s->min_samples_per_subframe;
+
+    /** 1 bit indicates if the subframe is of maximum length */
     if (s->max_subframe_len_bit) {
         if (get_bits1(&s->gb))
             log2_subframe_len = 1 + get_bits(&s->gb, s->subframe_len_bits-1);
@@ -512,11 +518,9 @@ static int decode_tilehdr(WMA3DecodeContext *s)
     if (s->max_num_subframes == 1 || get_bits1(&s->gb)) {
         int num_samples = 0;
         while (num_samples < s->samples_per_frame) {
-            int subframe_len = s->min_samples_per_subframe;
-            if (num_samples < s->samples_per_frame - s->min_samples_per_subframe) {
-                if (!(subframe_len = decode_subframe_length(s)))
-                    return AVERROR_INVALIDDATA;
-            }
+            int subframe_len;
+            if (!(subframe_len = decode_subframe_length(s, num_samples)))
+                return AVERROR_INVALIDDATA;
             for (c = 0; c < s->num_channels; c++)
                 s->channel[c].subframe_len[s->channel[c].num_subframes++] = subframe_len;
             num_samples += subframe_len;
@@ -563,12 +567,8 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                 }
             }
 
-            /** if we have the choice get next subframe length from the
-                bitstream */
-            if (min_samples != missing_samples) {
-                if (!(subframe_len = decode_subframe_length(s)))
-                    return AVERROR_INVALIDDATA;
-            }
+            if (!(subframe_len = decode_subframe_length(s, min_channel_len)))
+                return AVERROR_INVALIDDATA;
 
             for (c = 0; c < s->num_channels; c++) {
                 WMA3ChannelCtx* chan = &s->channel[c];
