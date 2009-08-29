@@ -527,7 +527,6 @@ static int decode_tilehdr(WMA3DecodeContext *s)
         }
     } else { /** different channels have different subframe layouts */
         uint16_t num_samples[WMAPRO_MAX_CHANNELS];
-        int missing_samples = s->num_channels * s->samples_per_frame;
         int channels_for_cur_subframe = s->num_channels;
         int min_channel_len = 0;
 
@@ -569,10 +568,8 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                         }
                         chan->subframe_len[chan->num_subframes] = subframe_len;
                         num_samples[c] += subframe_len;
-                        missing_samples -= subframe_len;
                         ++chan->num_subframes;
-                        if (missing_samples < 0
-                            || num_samples[c] > s->samples_per_frame) {
+                        if (num_samples[c] > s->samples_per_frame) {
                             av_log(s->avctx, AV_LOG_ERROR,"broken frame: "
                                     "channel len > samples_per_frame\n");
                             return AVERROR_INVALIDDATA;
