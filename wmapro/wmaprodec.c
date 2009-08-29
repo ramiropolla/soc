@@ -447,6 +447,34 @@ static av_cold int decode_init(AVCodecContext *avctx)
 }
 
 /**
+ *@brief Decode the subframe length
+ *@param s context
+ *@return decoded subframe length
+ */
+static int decode_subframe_length(WMA3DecodeContext *s)
+{
+    int log2_subframe_len = 0;
+    int subframe_len;
+    /* 1 bit indicates if the subframe is of maximum length */
+    if (s->max_subframe_len_bit) {
+        if (get_bits1(&s->gb))
+            log2_subframe_len = 1 + get_bits(&s->gb, s->subframe_len_bits-1);
+    } else
+        log2_subframe_len = get_bits(&s->gb, s->subframe_len_bits);
+
+    subframe_len = s->samples_per_frame / (1 << log2_subframe_len);
+
+    /** sanity check the length */
+    if (subframe_len < s->min_samples_per_subframe
+              || subframe_len > s->samples_per_frame) {
+        av_log(s->avctx, AV_LOG_ERROR, "broken frame: subframe_len %i\n",
+               subframe_len);
+        return 0;
+    }
+    return subframe_len;
+}
+
+/**
  *@brief Decode how the data in the frame is split into subframes.
  *       Every WMA frame contains the encoded data for a fixed number of
  *       samples per channel. The data for every channel might be split
@@ -500,7 +528,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
             unsigned int channel_mask = 0;
             int min_channel_len;
             int channels_for_cur_subframe = 0;
-            int subframe_len;
+            int subframe_len = s->min_samples_per_subframe;
             /** minimum number of samples that need to be read */
             int min_samples = s->min_samples_per_subframe;
 
@@ -540,27 +568,9 @@ static int decode_tilehdr(WMA3DecodeContext *s)
             /** if we have the choice get next subframe length from the
                 bitstream */
             if (min_samples != missing_samples) {
-                int log2_subframe_len = 0;
-                /* 1 bit indicates if the subframe is of maximum length */
-                if (s->max_subframe_len_bit) {
-                    if (get_bits1(&s->gb)) {
-                        log2_subframe_len = 1 +
-                            get_bits(&s->gb, s->subframe_len_bits-1);
-                    }
-                } else
-                    log2_subframe_len = get_bits(&s->gb, s->subframe_len_bits);
-
-                subframe_len = s->samples_per_frame / (1 << log2_subframe_len);
-
-                /** sanity check the length */
-                if (subframe_len < s->min_samples_per_subframe
-                    || subframe_len > s->samples_per_frame) {
-                    av_log(s->avctx, AV_LOG_ERROR,
-                        "broken frame: subframe_len %i\n", subframe_len);
+                if (!(subframe_len = decode_subframe_length(s)))
                     return AVERROR_INVALIDDATA;
-                }
-            } else
-                subframe_len = s->min_samples_per_subframe;
+            }
 
             for (c = 0; c < s->num_channels; c++) {
                 WMA3ChannelCtx* chan = &s->channel[c];
