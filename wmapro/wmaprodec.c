@@ -536,17 +536,17 @@ static int decode_tilehdr(WMA3DecodeContext *s)
             /** minimum number of samples that need to be read */
             int min_samples = s->min_samples_per_subframe;
 
-                min_channel_len = s->samples_per_frame;
-                /** find channels with the smallest overall length */
-                for (c = 0; c < s->num_channels; c++) {
-                    if (num_samples[c] <= min_channel_len) {
-                        if (num_samples[c] < min_channel_len) {
-                            channels_for_cur_subframe = 0;
-                            min_channel_len = num_samples[c];
-                        }
-                        ++channels_for_cur_subframe;
+            min_channel_len = s->samples_per_frame;
+            /** find channels with the smallest overall length */
+            for (c = 0; c < s->num_channels; c++) {
+                if (num_samples[c] <= min_channel_len) {
+                    if (num_samples[c] < min_channel_len) {
+                        channels_for_cur_subframe = 0;
+                        min_channel_len = num_samples[c];
                     }
+                    ++channels_for_cur_subframe;
                 }
+            }
             min_samples *= channels_for_cur_subframe;
 
             /** For every channel with the minimum length, 1 bit
