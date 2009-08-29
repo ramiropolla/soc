@@ -558,19 +558,19 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                 WMA3ChannelCtx* chan = &s->channel[c];
 
                 if (decode_channel[c]) {
-                        if (chan->num_subframes >= MAX_SUBFRAMES) {
-                            av_log(s->avctx, AV_LOG_ERROR,
-                                    "broken frame: num subframes > 31\n");
-                            return AVERROR_INVALIDDATA;
-                        }
-                        chan->subframe_len[chan->num_subframes] = subframe_len;
-                        num_samples[c] += subframe_len;
-                        ++chan->num_subframes;
-                        if (num_samples[c] > s->samples_per_frame) {
-                            av_log(s->avctx, AV_LOG_ERROR,"broken frame: "
-                                    "channel len > samples_per_frame\n");
-                            return AVERROR_INVALIDDATA;
-                        }
+                    if (chan->num_subframes >= MAX_SUBFRAMES) {
+                        av_log(s->avctx, AV_LOG_ERROR,
+                               "broken frame: num subframes > 31\n");
+                        return AVERROR_INVALIDDATA;
+                    }
+                    chan->subframe_len[chan->num_subframes] = subframe_len;
+                    num_samples[c] += subframe_len;
+                    ++chan->num_subframes;
+                    if (num_samples[c] > s->samples_per_frame) {
+                        av_log(s->avctx, AV_LOG_ERROR,"broken frame: "
+                               "channel len > samples_per_frame\n");
+                        return AVERROR_INVALIDDATA;
+                    }
                 } else if(num_samples[c] <= min_channel_len) {
                     if (num_samples[c] < min_channel_len) {
                         channels_for_cur_subframe = 0;
