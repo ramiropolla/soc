@@ -528,30 +528,15 @@ static int decode_tilehdr(WMA3DecodeContext *s)
     } else { /** different channels have different subframe layouts */
         uint16_t num_samples[WMAPRO_MAX_CHANNELS];
         int missing_samples = s->num_channels * s->samples_per_frame;
+        int channels_for_cur_subframe = s->num_channels;
+        int min_channel_len = 0;
 
         memset(num_samples, 0, sizeof(num_samples));
 
         /** loop until the frame data is split between the subframes */
-        while (missing_samples > 0) {
+        do {
             unsigned int channel_mask = 0;
-            int min_channel_len;
-            int channels_for_cur_subframe = 0;
-            int subframe_len = s->min_samples_per_subframe;
-            /** minimum number of samples that need to be read */
-            int min_samples = s->min_samples_per_subframe;
-
-            min_channel_len = s->samples_per_frame;
-            /** find channels with the smallest overall length */
-            for (c = 0; c < s->num_channels; c++) {
-                if (num_samples[c] <= min_channel_len) {
-                    if (num_samples[c] < min_channel_len) {
-                        channels_for_cur_subframe = 0;
-                        min_channel_len = num_samples[c];
-                    }
-                    ++channels_for_cur_subframe;
-                }
-            }
-            min_samples *= channels_for_cur_subframe;
+            int subframe_len;
 
             /** For every channel with the minimum length, 1 bit
                 might be transmitted that informs us if the channel
@@ -595,7 +580,19 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                     }
                 }
             }
-        }
+
+            min_channel_len = s->samples_per_frame;
+            /** find channels with the smallest overall length */
+            for (c = 0; c < s->num_channels; c++) {
+                if (num_samples[c] <= min_channel_len) {
+                    if (num_samples[c] < min_channel_len) {
+                        channels_for_cur_subframe = 0;
+                        min_channel_len = num_samples[c];
+                    }
+                    ++channels_for_cur_subframe;
+                }
+            }
+        } while (min_channel_len < s->samples_per_frame);
     }
 
     for (c = 0; c < s->num_channels; c++) {
