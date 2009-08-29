@@ -141,7 +141,7 @@ typedef struct {
     int      saved_scale_factors[MAX_BANDS];          ///< scale factors from a previous subframe
     uint8_t  table_idx;                               ///< index in sf_offsets for the scale factor reference block
     float*   coeffs;                                  ///< pointer to the subframe decode buffer
-    DECLARE_ALIGNED_16(float, out[2*WMAPRO_BLOCK_MAX_SIZE]); ///< output buffer
+    DECLARE_ALIGNED_16(float, out[WMAPRO_BLOCK_MAX_SIZE + WMAPRO_BLOCK_MAX_SIZE / 2]); ///< output buffer
 } WMA3ChannelCtx;
 
 /**
@@ -1333,7 +1333,7 @@ static int decode_frame(WMA3DecodeContext *s)
         /** reuse second half of the IMDCT output for the next frame */
         memcpy(&s->channel[i].out[0],
                &s->channel[i].out[s->samples_per_frame],
-               s->samples_per_frame * sizeof(*s->channel[i].out));
+               s->samples_per_frame * sizeof(*s->channel[i].out) >> 1);
     }
 
     if (s->skip_frame) {
