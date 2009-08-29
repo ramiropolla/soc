@@ -181,7 +181,6 @@ typedef struct WMA3DecodeContext {
     uint8_t          max_num_subframes;
     uint8_t          subframe_len_bits;             ///< number of bits used for the subframe length
     uint8_t          max_subframe_len_bit;          ///< flag indicating that the subframe is of maximum size when the first subframe length bit is 1
-    int8_t           num_possible_block_sizes;      ///< number of distinct block sizes that can be found in the file
     uint16_t         min_samples_per_subframe;
     int8_t           num_sfb[WMAPRO_BLOCK_SIZES];   ///< scale factor bands per block size
     int16_t          sfb_offsets[WMAPRO_BLOCK_SIZES][MAX_BANDS];                    ///< scale factor band offsets (multiples of 4)
@@ -267,6 +266,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     unsigned int channel_mask;
     int i;
     int log2_max_num_subframes;
+    int num_possible_block_sizes;
 
     s->avctx = avctx;
     dsputil_init(&s->dsp, avctx);
@@ -316,7 +316,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
         s->max_subframe_len_bit = 1;
     s->subframe_len_bits = av_log2(log2_max_num_subframes) + 1;
 
-    s->num_possible_block_sizes  = log2_max_num_subframes + 1;
+    num_possible_block_sizes     = log2_max_num_subframes + 1;
     s->min_samples_per_subframe  = s->samples_per_frame / s->max_num_subframes;
     s->dynamic_range_compression = (s->decode_flags & 0x80);
 
@@ -374,7 +374,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     /** calculate number of scale factor bands and their offsets
         for every possible block size */
-    for (i = 0; i < s->num_possible_block_sizes; i++) {
+    for (i = 0; i < num_possible_block_sizes; i++) {
         int subframe_len = s->samples_per_frame >> i;
         int x;
         int band = 1;
@@ -398,13 +398,13 @@ static av_cold int decode_init(AVCodecContext *avctx)
         The matrix sf_offsets is needed to find the correct scale factor.
      */
 
-    for (i = 0; i < s->num_possible_block_sizes; i++) {
+    for (i = 0; i < num_possible_block_sizes; i++) {
         int b;
         for (b = 0; b < s->num_sfb[i]; b++) {
             int x;
             int offset = ((s->sfb_offsets[i][b]
                          + s->sfb_offsets[i][b + 1] - 1)<<i) >> 1;
-            for (x = 0; x < s->num_possible_block_sizes; x++) {
+            for (x = 0; x < num_possible_block_sizes; x++) {
                 int v = 0;
                 while (s->sfb_offsets[x][v + 1] << x < offset)
                     ++v;
@@ -428,7 +428,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     /** calculate subwoofer cutoff values */
-    for (i = 0; i < s->num_possible_block_sizes; i++) {
+    for (i = 0; i < num_possible_block_sizes; i++) {
         int block_size = s->samples_per_frame >> i;
         int cutoff = (440*block_size + 3 * (s->avctx->sample_rate >> 1) - 1)
                      / s->avctx->sample_rate;
