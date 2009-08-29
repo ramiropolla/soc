@@ -502,6 +502,11 @@ static int decode_subframe_length(WMA3DecodeContext *s, int offset)
  */
 static int decode_tilehdr(WMA3DecodeContext *s)
 {
+    uint16_t num_samples[WMAPRO_MAX_CHANNELS];
+    uint8_t  contains_subframe[WMAPRO_MAX_CHANNELS];
+    int channels_for_cur_subframe = s->num_channels;
+    int fixed_channel_layout = 0;
+    int min_channel_len = 0;
     int c;
 
     /* Should never consume more than 3073 bits (256 iterations for the
@@ -514,24 +519,10 @@ static int decode_tilehdr(WMA3DecodeContext *s)
     for (c = 0; c < s->num_channels; c++)
         s->channel[c].num_subframes = 0;
 
-    /** all channels have the same subframe layout */
-    if (s->max_num_subframes == 1 || get_bits1(&s->gb)) {
-        int num_samples = 0;
-        while (num_samples < s->samples_per_frame) {
-            int subframe_len;
-            if (!(subframe_len = decode_subframe_length(s, num_samples)))
-                return AVERROR_INVALIDDATA;
-            for (c = 0; c < s->num_channels; c++)
-                s->channel[c].subframe_len[s->channel[c].num_subframes++] = subframe_len;
-            num_samples += subframe_len;
-        }
-    } else { /** different channels have different subframe layouts */
-        uint16_t num_samples[WMAPRO_MAX_CHANNELS];
-        uint8_t  contains_subframe[WMAPRO_MAX_CHANNELS];
-        int channels_for_cur_subframe = s->num_channels;
-        int min_channel_len = 0;
+    memset(num_samples, 0, sizeof(num_samples));
 
-        memset(num_samples, 0, sizeof(num_samples));
+    if (s->max_num_subframes == 1 || get_bits1(&s->gb))
+        fixed_channel_layout = 1;
 
         /** loop until the frame data is split between the subframes */
         do {
@@ -540,7 +531,8 @@ static int decode_tilehdr(WMA3DecodeContext *s)
             /** check which channels contain the subframe */
             for (c = 0; c < s->num_channels; c++) {
                 if (num_samples[c] == min_channel_len) {
-                    if (channels_for_cur_subframe == 1 || (min_channel_len == s->samples_per_frame - s->min_samples_per_subframe))
+                    if (fixed_channel_layout || channels_for_cur_subframe == 1 ||
+                       (min_channel_len == s->samples_per_frame - s->min_samples_per_subframe))
                         contains_subframe[c] = 1;
                     else
                         contains_subframe[c] = get_bits1(&s->gb);
@@ -580,7 +572,6 @@ static int decode_tilehdr(WMA3DecodeContext *s)
                 }
             }
         } while (min_channel_len < s->samples_per_frame);
-    }
 
     for (c = 0; c < s->num_channels; c++) {
         int i;
