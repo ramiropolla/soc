@@ -450,7 +450,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
  *@brief Decode the subframe length.
  *@param s context
  *@param offset sample offset in the frame
- *@return decoded subframe length on success, 0 in case of an error
+ *@return decoded subframe length on success, < 0 in case of an error
  */
 static int decode_subframe_length(WMA3DecodeContext *s, int offset)
 {
@@ -475,7 +475,7 @@ static int decode_subframe_length(WMA3DecodeContext *s, int offset)
               || subframe_len > s->samples_per_frame) {
         av_log(s->avctx, AV_LOG_ERROR, "broken frame: subframe_len %i\n",
                subframe_len);
-        return 0;
+        return AVERROR_INVALIDDATA;
     }
     return subframe_len;
 }
@@ -541,7 +541,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
         }
 
         /** get subframe length */
-        if (!(subframe_len = decode_subframe_length(s, min_channel_len)))
+        if ((subframe_len = decode_subframe_length(s, min_channel_len)) <= 0)
             return AVERROR_INVALIDDATA;
 
         /** add subframes to the individual channels and find new min_channel_len */
