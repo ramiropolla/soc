@@ -454,7 +454,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
  */
 static int decode_subframe_length(WMA3DecodeContext *s, int offset)
 {
-    int log2_subframe_len = 0;
+    int frame_len_shift = 0;
     int subframe_len;
 
     /** no need to read from the bitstream when only one length is possible */
@@ -464,11 +464,11 @@ static int decode_subframe_length(WMA3DecodeContext *s, int offset)
     /** 1 bit indicates if the subframe is of maximum length */
     if (s->max_subframe_len_bit) {
         if (get_bits1(&s->gb))
-            log2_subframe_len = 1 + get_bits(&s->gb, s->subframe_len_bits-1);
+            frame_len_shift = 1 + get_bits(&s->gb, s->subframe_len_bits-1);
     } else
-        log2_subframe_len = get_bits(&s->gb, s->subframe_len_bits);
+        frame_len_shift = get_bits(&s->gb, s->subframe_len_bits);
 
-    subframe_len = s->samples_per_frame >> log2_subframe_len;
+    subframe_len = s->samples_per_frame >> frame_len_shift;
 
     /** sanity check the length */
     if (subframe_len < s->min_samples_per_subframe
