@@ -468,7 +468,7 @@ static int decode_subframe_length(WMA3DecodeContext *s, int offset)
     } else
         log2_subframe_len = get_bits(&s->gb, s->subframe_len_bits);
 
-    subframe_len = s->samples_per_frame / (1 << log2_subframe_len);
+    subframe_len = s->samples_per_frame >> log2_subframe_len;
 
     /** sanity check the length */
     if (subframe_len < s->min_samples_per_subframe
