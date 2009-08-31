@@ -142,7 +142,7 @@ typedef struct {
     uint8_t  table_idx;                               ///< index in sf_offsets for the scale factor reference block
     float*   coeffs;                                  ///< pointer to the subframe decode buffer
     DECLARE_ALIGNED_16(float, out[WMAPRO_BLOCK_MAX_SIZE + WMAPRO_BLOCK_MAX_SIZE / 2]); ///< output buffer
-} WMA3ChannelCtx;
+} WMAProChannelCtx;
 
 /**
  * @brief channel group for channel transformations
@@ -153,12 +153,12 @@ typedef struct {
     int8_t  transform_band[MAX_BANDS];                        ///< controls if the transform is enabled for a certain band
     float   decorrelation_matrix[WMAPRO_MAX_CHANNELS*WMAPRO_MAX_CHANNELS];
     float*  channel_data[WMAPRO_MAX_CHANNELS];                ///< transformation coefficients
-} WMA3ChannelGroup;
+} WMAProChannelGrp;
 
 /**
  * @brief main decoder context
  */
-typedef struct WMA3DecodeContext {
+typedef struct WMAProDecodeCtx {
     /* generic decoder variables */
     AVCodecContext*  avctx;                         ///< codec context for av_log
     DSPContext       dsp;                           ///< accelerated DSP functions
@@ -214,17 +214,17 @@ typedef struct WMA3DecodeContext {
     int8_t           esc_len;                       ///< length of escaped coefficients
 
     uint8_t          num_chgroups;                  ///< number of channel groups
-    WMA3ChannelGroup chgroup[WMAPRO_MAX_CHANNELS];  ///< channel group information
+    WMAProChannelGrp chgroup[WMAPRO_MAX_CHANNELS];  ///< channel group information
 
-    WMA3ChannelCtx   channel[WMAPRO_MAX_CHANNELS];  ///< per channel data
-} WMA3DecodeContext;
+    WMAProChannelCtx channel[WMAPRO_MAX_CHANNELS];  ///< per channel data
+} WMAProDecodeCtx;
 
 
 /**
  *@brief helper function to print the most important members of the context
  *@param s context
  */
-static void av_cold dump_context(WMA3DecodeContext *s)
+static void av_cold dump_context(WMAProDecodeCtx *s)
 {
 #define PRINT(a, b)     av_log(s->avctx, AV_LOG_DEBUG, " %s = %d\n", a, b);
 #define PRINT_HEX(a, b) av_log(s->avctx, AV_LOG_DEBUG, " %s = %x\n", a, b);
@@ -245,7 +245,7 @@ static void av_cold dump_context(WMA3DecodeContext *s)
  */
 static av_cold int decode_end(AVCodecContext *avctx)
 {
-    WMA3DecodeContext *s = avctx->priv_data;
+    WMAProDecodeCtx *s = avctx->priv_data;
     int i;
 
     for (i = 0; i < WMAPRO_BLOCK_SIZES; i++)
@@ -261,7 +261,7 @@ static av_cold int decode_end(AVCodecContext *avctx)
  */
 static av_cold int decode_init(AVCodecContext *avctx)
 {
-    WMA3DecodeContext *s = avctx->priv_data;
+    WMAProDecodeCtx *s = avctx->priv_data;
     uint8_t *edata_ptr   = avctx->extradata;
     unsigned int channel_mask;
     int i;
@@ -452,7 +452,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
  *@param offset sample offset in the frame
  *@return decoded subframe length on success, < 0 in case of an error
  */
-static int decode_subframe_length(WMA3DecodeContext *s, int offset)
+static int decode_subframe_length(WMAProDecodeCtx *s, int offset)
 {
     int frame_len_shift = 0;
     int subframe_len;
@@ -500,7 +500,7 @@ static int decode_subframe_length(WMA3DecodeContext *s, int offset)
  *@param s context
  *@return 0 on success, < 0 in case of an error
  */
-static int decode_tilehdr(WMA3DecodeContext *s)
+static int decode_tilehdr(WMAProDecodeCtx *s)
 {
     uint16_t num_samples[WMAPRO_MAX_CHANNELS];        /** sum of samples for all currently known subframes of a channel */
     uint8_t  contains_subframe[WMAPRO_MAX_CHANNELS];  /** flag indicating if a channel contains the current subframe */
@@ -547,7 +547,7 @@ static int decode_tilehdr(WMA3DecodeContext *s)
         /** add subframes to the individual channels and find new min_channel_len */
         min_channel_len += subframe_len;
         for (c = 0; c < s->num_channels; c++) {
-            WMA3ChannelCtx* chan = &s->channel[c];
+            WMAProChannelCtx* chan = &s->channel[c];
 
             if (contains_subframe[c]) {
                 if (chan->num_subframes >= MAX_SUBFRAMES) {
@@ -592,8 +592,8 @@ static int decode_tilehdr(WMA3DecodeContext *s)
  *@param s codec context
  *@param chgroup channel group for which the matrix needs to be calculated
  */
-static void decode_decorrelation_matrix(WMA3DecodeContext *s,
-                                        WMA3ChannelGroup *chgroup)
+static void decode_decorrelation_matrix(WMAProDecodeCtx *s,
+                                        WMAProChannelGrp *chgroup)
 {
     int i;
     int offset = 0;
@@ -642,7 +642,7 @@ static void decode_decorrelation_matrix(WMA3DecodeContext *s,
  *@param s codec context
  *@return 0 in case of success, < 0 in case of bitstream errors
  */
-static int decode_channel_transform(WMA3DecodeContext* s)
+static int decode_channel_transform(WMAProDecodeCtx* s)
 {
     int i;
     /* should never consume more than 1921 bits for the 8 channel case
@@ -663,7 +663,7 @@ static int decode_channel_transform(WMA3DecodeContext* s)
 
         for (s->num_chgroups = 0; remaining_channels &&
             s->num_chgroups < s->channels_for_cur_subframe; s->num_chgroups++) {
-            WMA3ChannelGroup* chgroup = &s->chgroup[s->num_chgroups];
+            WMAProChannelGrp* chgroup = &s->chgroup[s->num_chgroups];
             float** channel_data = chgroup->channel_data;
             chgroup->num_channels = 0;
             chgroup->transform = 0;
@@ -755,11 +755,11 @@ static int decode_channel_transform(WMA3DecodeContext* s)
  *@param c current channel number
  *@return 0 on success, < 0 in case of bitstream errors
  */
-static int decode_coeffs(WMA3DecodeContext *s, int c)
+static int decode_coeffs(WMAProDecodeCtx *s, int c)
 {
     int vlctable;
     VLC* vlc;
-    WMA3ChannelCtx* ci = &s->channel[c];
+    WMAProChannelCtx* ci = &s->channel[c];
     int rl_mode = 0;
     int cur_coeff = 0;
     int num_zeros = 0;
@@ -845,7 +845,7 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
  *@param s codec context
  *@return 0 on success, < 0 in case of bitstream errors
  */
-static int decode_scale_factors(WMA3DecodeContext* s)
+static int decode_scale_factors(WMAProDecodeCtx* s)
 {
     int i;
 
@@ -936,7 +936,7 @@ static int decode_scale_factors(WMA3DecodeContext* s)
  *@brief Reconstruct the individual channel data.
  *@param s codec context
  */
-static void inverse_channel_transform(WMA3DecodeContext *s)
+static void inverse_channel_transform(WMAProDecodeCtx *s)
 {
     int i;
 
@@ -988,7 +988,7 @@ static void inverse_channel_transform(WMA3DecodeContext *s)
  *@brief Apply sine window and reconstruct the output buffer.
  *@param s codec context
  */
-static void wmapro_window(WMA3DecodeContext *s)
+static void wmapro_window(WMAProDecodeCtx *s)
 {
     int i;
     for (i = 0; i< s->channels_for_cur_subframe; i++) {
@@ -1018,7 +1018,7 @@ static void wmapro_window(WMA3DecodeContext *s)
  *@param s codec context
  *@return 0 on success, < 0 when decoding failed
  */
-static int decode_subframe(WMA3DecodeContext *s)
+static int decode_subframe(WMAProDecodeCtx *s)
 {
     int offset = s->samples_per_frame;
     int subframe_len = s->samples_per_frame;
@@ -1242,7 +1242,7 @@ static int decode_subframe(WMA3DecodeContext *s)
  *@return 0 if the trailer bit indicates that this is the last frame,
  *        1 if there are additional frames
  */
-static int decode_frame(WMA3DecodeContext *s)
+static int decode_frame(WMAProDecodeCtx *s)
 {
     GetBitContext* gb = &s->gb;
     int more_frames = 0;
@@ -1369,7 +1369,7 @@ static int decode_frame(WMA3DecodeContext *s)
  *@param gb bitstream reader context
  *@return remaining size in bits
  */
-static int remaining_bits(WMA3DecodeContext *s, GetBitContext* gb)
+static int remaining_bits(WMAProDecodeCtx *s, GetBitContext* gb)
 {
     return s->buf_bit_size - get_bits_count(gb);
 }
@@ -1381,7 +1381,7 @@ static int remaining_bits(WMA3DecodeContext *s, GetBitContext* gb)
  *@param len length of the partial frame
  *@param append decides wether to reset the buffer or not
  */
-static void save_bits(WMA3DecodeContext *s, GetBitContext* gb, int len,
+static void save_bits(WMAProDecodeCtx *s, GetBitContext* gb, int len,
                           int append)
 {
     int buflen;
@@ -1437,7 +1437,7 @@ static int decode_packet(AVCodecContext *avctx,
                              void *data, int *data_size, AVPacket* avpkt)
 {
     GetBitContext gb;
-    WMA3DecodeContext *s = avctx->priv_data;
+    WMAProDecodeCtx *s = avctx->priv_data;
     const uint8_t* buf   = avpkt->data;
     int buf_size         = avpkt->size;
     int more_frames      = 1;
@@ -1528,7 +1528,7 @@ static int decode_packet(AVCodecContext *avctx,
  */
 static void flush(AVCodecContext *avctx)
 {
-    WMA3DecodeContext *s = avctx->priv_data;
+    WMAProDecodeCtx *s = avctx->priv_data;
     int i;
     /** reset output buffer as a part of it is used during the windowing of a
         new frame */
@@ -1546,7 +1546,7 @@ AVCodec wmapro_decoder = {
     "wmapro",
     CODEC_TYPE_AUDIO,
     CODEC_ID_WMAPRO,
-    sizeof(WMA3DecodeContext),
+    sizeof(WMAProDecodeCtx),
     decode_init,
     NULL,
     decode_end,
