@@ -1540,7 +1540,7 @@ static void flush(AVCodecContext *avctx)
 
 
 /**
- *@brief WMA9 decoder
+ *@brief wmapro decoder
  */
 AVCodec wmapro_decoder = {
     "wmapro",
