@@ -817,6 +817,7 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
                 ci->coeffs[cur_coeff] = (vals[i]^sign) - sign;
                 num_zeros = 0;
             } else {
+                ci->coeffs[cur_coeff] = 0;
                 /** switch to run level mode when subframe_len / 128 zeros
                    were found in a row */
                 rl_mode |= (++num_zeros > s->subframe_len>>8);
@@ -827,6 +828,8 @@ static int decode_coeffs(WMA3DecodeContext *s, int c)
 
     /** decode run level coded coefficients */
     if (rl_mode) {
+        memset(&ci->coeffs[cur_coeff], 0,
+               sizeof(*ci->coeffs) * (s->subframe_len - cur_coeff));
         if (ff_wma_run_level_decode(s->avctx, &s->gb, vlc,
                                     level, run, 1, ci->coeffs,
                                     cur_coeff, s->subframe_len,
@@ -1081,8 +1084,6 @@ static int decode_subframe(WMA3DecodeContext *s)
 
         s->channel[c].coeffs = &s->channel[c].out[(s->samples_per_frame>>1)
                                                   + offset];
-        memset(s->channel[c].coeffs, 0,
-               sizeof(*s->channel[c].coeffs) * subframe_len);
     }
 
     s->subframe_len = subframe_len;
@@ -1178,8 +1179,11 @@ static int decode_subframe(WMA3DecodeContext *s)
     for (i = 0; i < s->channels_for_cur_subframe; i++) {
         int c = s->channel_indexes_for_cur_subframe[i];
         if (s->channel[c].transmit_coefs &&
-           get_bits_count(&s->gb) < s->num_saved_bits)
+           get_bits_count(&s->gb) < s->num_saved_bits) {
                 decode_coeffs(s, c);
+        } else
+            memset(s->channel[c].coeffs, 0,
+                   sizeof(*s->channel[c].coeffs) * subframe_len);
     }
 
     dprintf(s->avctx, "BITSTREAM: subframe length was %i\n",
