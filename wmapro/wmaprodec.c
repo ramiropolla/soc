@@ -195,7 +195,7 @@ typedef struct WMAProDecodeCtx {
     uint8_t          packet_loss;                   ///< set in case of bitstream error
 
     /* frame decode state */
-    uint32_t         frame_num;                     ///< current frame number
+    uint32_t         frame_num;                     ///< current frame number (not used for decoding)
     GetBitContext    gb;                            ///< bitstream reader context
     int              buf_bit_size;                  ///< buffer size in bits
     float*           samples;                       ///< current samplebuffer pointer
