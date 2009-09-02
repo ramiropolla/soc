@@ -858,7 +858,11 @@ static int decode_scale_factors(WMAProDecodeCtx* s)
         int* sf;
         int* sf_end = s->channel[c].scale_factors + s->num_bands;
 
-        /** resample scale factors for the new block size */
+        /** resample scale factors for the new block size
+         *  as the scale factors might need to be resampled several times
+         *  before some  new values are transmitted, a backup of the last
+         *  transmitted scale factors is kept in saved_scale_factors
+         */
         if (s->channel[c].reuse_sf) {
             const int8_t* sf_offsets = s->sf_offsets[s->table_idx][s->channel[c].table_idx];
             int b;
