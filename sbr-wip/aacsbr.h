@@ -31,10 +31,10 @@
 #include <stdint.h>
 
 #define SBR_INIT_VLC_STATIC(num, size) \
-    INIT_VLC_STATIC(&vlc_sbr[num], 9, sbr_tmp[num].table_size/sbr_tmp[num].elem_size, \
-        sbr_tmp[num].sbr_bits ,                      1,                      1, \
-        sbr_tmp[num].sbr_codes, sbr_tmp[num].elem_size, sbr_tmp[num].elem_size, \
-        size);
+    INIT_VLC_STATIC(&vlc_sbr[num], 9, sbr_tmp[num].table_size / sbr_tmp[num].elem_size,     \
+                    sbr_tmp[num].sbr_bits ,                      1,                      1, \
+                    sbr_tmp[num].sbr_codes, sbr_tmp[num].elem_size, sbr_tmp[num].elem_size, \
+                    size);
 
 #define NOISE_FLOOR_OFFSET 6.0f
 #define T_HFADJ 2
@@ -75,7 +75,7 @@ typedef struct {
     uint8_t bs_stop_freq;
     uint8_t bs_xover_band;
 
-    // if(bs_header_extra_1)
+    // if (bs_header_extra_1)
     uint8_t bs_freq_scale;
     uint8_t bs_alter_scale;
     uint8_t bs_noise_bands;
@@ -109,7 +109,7 @@ typedef struct {
     // SBR header bitstream variables
     uint8_t            bs_amp_res;
     SpectrumParameters spectrum_params[2];
-    // if(bs_header_extra_2)
+    // if (bs_header_extra_2)
     uint8_t            bs_limiter_bands;
     uint8_t            bs_limiter_gains;
     uint8_t            bs_interpol_freq;
