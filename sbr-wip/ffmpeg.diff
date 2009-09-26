@@ -1,0 +1,157 @@
+Index: libavcodec/aac.c
+===================================================================
+--- libavcodec/aac.c	(revision 20025)
++++ libavcodec/aac.c	(working copy)
+@@ -62,7 +62,7 @@
+  * N                    MIDI
+  * N                    Harmonic and Individual Lines plus Noise
+  * N                    Text-To-Speech Interface
+- * N (in progress)      Spectral Band Replication
++ * N (code in SoC repo) Spectral Band Replication
+  * Y (not in this code) Layer-1
+  * Y (not in this code) Layer-2
+  * Y (not in this code) Layer-3
+@@ -85,6 +85,8 @@
+ #include "aac.h"
+ #include "aactab.h"
+ #include "aacdectab.h"
++#include "aacsbr.h"
++#include "aacsbrdata.h"
+ #include "mpeg4audio.h"
+ #include "aac_parser.h"
+ 
+@@ -101,7 +103,11 @@
+ static VLC vlc_scalefactors;
+ static VLC vlc_spectral[11];
+ 
++extern av_cold void ff_aac_sbr_init();
++extern int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
++                                GetBitContext *gb, int crc, int cnt, int id_aac);
+ 
++
+ static ChannelElement *get_che(AACContext *ac, int type, int elem_id)
+ {
+     static const int8_t tags_per_config[16] = { 0, 1, 1, 2, 3, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0 };
+@@ -474,6 +480,7 @@
+     avccontext->sample_fmt = SAMPLE_FMT_S16;
+     avccontext->frame_size = 1024;
+ 
++    // main AAC VLC table initialization
+     AAC_INIT_VLC_STATIC( 0, 144);
+     AAC_INIT_VLC_STATIC( 1, 114);
+     AAC_INIT_VLC_STATIC( 2, 188);
+@@ -486,6 +493,8 @@
+     AAC_INIT_VLC_STATIC( 9, 248);
+     AAC_INIT_VLC_STATIC(10, 384);
+ 
++    ff_aac_sbr_init();
++
+     dsputil_init(&ac->dsp, avccontext);
+ 
+     ac->random_state = 0x1f2e3d4c;
+@@ -1281,23 +1290,6 @@
+ }
+ 
+ /**
+- * Decode Spectral Band Replication extension data; reference: table 4.55.
+- *
+- * @param   crc flag indicating the presence of CRC checksum
+- * @param   cnt length of TYPE_FIL syntactic element in bytes
+- *
+- * @return  Returns number of bytes consumed from the TYPE_FIL element.
+- */
+-static int decode_sbr_extension(AACContext *ac, GetBitContext *gb,
+-                                int crc, int cnt)
+-{
+-    // TODO : sbr_extension implementation
+-    av_log_missing_feature(ac->avccontext, "SBR", 0);
+-    skip_bits_long(gb, 8 * cnt - 4); // -4 due to reading extension type
+-    return cnt;
+-}
+-
+-/**
+  * Parse whether channels are to be excluded from Dynamic Range Compression; reference: table 4.53.
+  *
+  * @return  Returns number of bytes consumed.
+@@ -1377,7 +1369,8 @@
+  *
+  * @return Returns number of bytes consumed
+  */
+-static int decode_extension_payload(AACContext *ac, GetBitContext *gb, int cnt)
++static int decode_extension_payload(AACContext * ac, GetBitContext * gb,
++                                    int cnt, int id, int tag)
+ {
+     int crc_flag = 0;
+     int res = cnt;
+@@ -1385,7 +1378,7 @@
+     case EXT_SBR_DATA_CRC:
+         crc_flag++;
+     case EXT_SBR_DATA:
+-        res = decode_sbr_extension(ac, gb, crc_flag, cnt);
++        res = ff_decode_sbr_extension(ac, &ac->che[id][tag]->sbr, gb, crc_flag, cnt, id);
+         break;
+     case EXT_DYNAMIC_RANGE:
+         res = decode_dynamic_range(&ac->che_drc, gb, cnt);
+@@ -1674,8 +1667,8 @@
+     AACContext *ac = avccontext->priv_data;
+     ChannelElement *che = NULL;
+     GetBitContext gb;
+-    enum RawDataBlockType elem_type;
+-    int err, elem_id, data_size_tmp;
++    enum RawDataBlockType elem_type, elem_type_prev = 0;
++    int err, elem_id, elem_id_prev = 0, data_size_tmp;
+ 
+     init_get_bits(&gb, buf, buf_size * 8);
+ 
+@@ -1739,7 +1732,7 @@
+             if (elem_id == 15)
+                 elem_id += get_bits(&gb, 8) - 1;
+             while (elem_id > 0)
+-                elem_id -= decode_extension_payload(ac, &gb, elem_id);
++                elem_id -= decode_extension_payload(ac, &gb, elem_id, elem_type_prev, elem_id_prev);
+             err = 0; /* FIXME */
+             break;
+ 
+@@ -1748,6 +1741,9 @@
+             break;
+         }
+ 
++        elem_type_prev = elem_type;
++        elem_id_prev   = elem_id;
++
+         if (err)
+             return err;
+     }
+Index: libavcodec/aac.h
+===================================================================
+--- libavcodec/aac.h	(revision 20025)
++++ libavcodec/aac.h	(working copy)
+@@ -33,6 +33,7 @@
+ #include "avcodec.h"
+ #include "dsputil.h"
+ #include "mpeg4audio.h"
++#include "aacsbr.h"
+ 
+ #include <stdint.h>
+ 
+@@ -221,6 +222,7 @@
+     SingleChannelElement ch[2];
+     // CCE specific
+     ChannelCoupling coup;
++    SpectralBandReplication sbr;
+ } ChannelElement;
+ 
+ /**
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(revision 20025)
++++ libavcodec/Makefile	(working copy)
+@@ -35,7 +35,7 @@
+ OBJS-$(CONFIG_VDPAU)                   += vdpau.o
+ 
+ # decoders/encoders/hardware accelerators
+-OBJS-$(CONFIG_AAC_DECODER)             += aac.o aactab.o mpeg4audio.o aac_parser.o aac_ac3_parser.o
++OBJS-$(CONFIG_AAC_DECODER)             += aac.o aactab.o aacsbr.o mpeg4audio.o aac_parser.o aac_ac3_parser.o
+ OBJS-$(CONFIG_AAC_ENCODER)             += aacenc.o aaccoder.o aacpsy.o aactab.o psymodel.o iirfilter.o mpeg4audio.o
+ OBJS-$(CONFIG_AASC_DECODER)            += aasc.o msrledec.o
+ OBJS-$(CONFIG_AC3_DECODER)             += ac3dec.o ac3tab.o ac3dec_data.o ac3.o ac3_parser.o aac_ac3_parser.o

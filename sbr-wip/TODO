@@ -1,0 +1,10 @@
+This AAC SBR code is currently not functional and is merely a work-in-progress.
+This document will be updated when it is functional. At the moment, the
+following things need doing:
+
+- Write single channel and channel pair sbr application functions as well as an
+  apply_sbr() function
+- Move variables to appropriate contexts and code blocks
+- Use FFmpeg's dsputils for FFTs and other operations as appropriate
+- Clean up the code
+- More
