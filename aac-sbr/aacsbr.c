@@ -208,7 +208,7 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
                 k    = sbr->n_master;
             }
 
-            while (k2diff != 0) {
+            while (k2diff) {
                 sbr->f_master[k] -= incr;
                 k                += incr;
                 k2diff           += incr;
