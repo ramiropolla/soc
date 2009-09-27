@@ -122,9 +122,9 @@ int array_min_int(int *array, int nel)
     return min;
 }
 
-int qsort_comparison_function(const int *a, const int *b)
+int qsort_comparison_function(const void *a, const void *b)
 {
-    return *a - *b;
+    return *(const int *)a - *(const int *)b;
 }
 
 // Master Frequency Band Table (14496-3 sp04 p194)
