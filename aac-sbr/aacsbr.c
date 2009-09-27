@@ -122,7 +122,7 @@ int array_min_int(int *array, int nel)
     return min;
 }
 
-int qsort_compare(const int *a, const int *b)
+int qsort_comparison_function(const int *a, const int *b)
 {
     return *a - *b;
 }
@@ -254,7 +254,7 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
                          lrintf(sbr->k[0] * powf(sbr->k[1] / (float)sbr->k[0],  k      / (float)num_bands_0));
         }
 
-        qsort(vk0 + 1, num_bands_0, sizeof(vk0[1]), qsort_compare);
+        qsort(vk0 + 1, num_bands_0, sizeof(vk0[1]), qsort_comparison_function);
         vdk0_max = vk0[num_bands_0];
 
         vk0[0] = sbr->k[0];
@@ -282,13 +282,13 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
 
             if (vdk1_min < vdk0_max) {
                 int change;
-                qsort(vk1 + 1, num_bands_1, sizeof(vk1[1]), qsort_compare);
+                qsort(vk1 + 1, num_bands_1, sizeof(vk1[1]), qsort_comparison_function);
                 change = FFMIN(vdk0_max - vk1[1], (vk1[num_bands_1] - vk1[1]) >> 1);
                 vk1[1]           += change;
                 vk1[num_bands_1] -= change;
             }
 
-            qsort(vk1 + 1, num_bands_1, sizeof(vk1[1]), qsort_compare);
+            qsort(vk1 + 1, num_bands_1, sizeof(vk1[1]), qsort_comparison_function);
 
             vk1[0] = sbr->k[1];
             for (k = 1; k <= num_bands_1; k++) {
@@ -453,7 +453,7 @@ static int sbr_make_f_derived(AACContext *ac, SpectralBandReplication *sbr)
         memcpy( sbr->f_tablelim,                  sbr->f_tablelow, (sbr->n[0]        + 1) * sizeof(sbr->f_tablelow[0]));
         memcpy(&sbr->f_tablelim[sbr->n[0] + 1], &patch_borders[1], (sbr->num_patches - 1) * sizeof(patch_borders[0]));
 
-        qsort(sbr->f_tablelim, sbr->num_patches + sbr->n[0], sizeof(sbr->f_tablelim[0]), qsort_compare);
+        qsort(sbr->f_tablelim, sbr->num_patches + sbr->n[0], sizeof(sbr->f_tablelim[0]), qsort_comparison_function);
 
         k = 1;
         sbr->n_lim = sbr->n[0] + sbr->num_patches - 1;
