@@ -67,8 +67,8 @@ Index: libavcodec/aac.c
   * @return Returns number of bytes consumed
   */
 -static int decode_extension_payload(AACContext *ac, GetBitContext *gb, int cnt)
-+static int decode_extension_payload(AACContext *ac, GetBitContext *gb,
-+                                    int cnt, int id, int tag)
++static int decode_extension_payload(AACContext *ac, GetBitContext *gb, int cnt,
++                                    int id, int tag)
  {
      int crc_flag = 0;
      int res = cnt;
