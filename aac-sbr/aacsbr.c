@@ -1036,8 +1036,8 @@ static void sbr_hf_inverse_filter(float **alpha0, float **alpha1,
 
         for (i = 0; i < 3; i++) {
             for (j = 0; j < 2; j++) {
-                unsigned int idxtmp1 = T_HFADJ - i;
-                unsigned int idxtmp2 = T_HFADJ - j;
+                unsigned int idxtmp1 = ENVELOPE_ADJUSTMENT_OFFSET - i;
+                unsigned int idxtmp2 = ENVELOPE_ADJUSTMENT_OFFSET - j;
 
                 phi[i][j][0] = 0.0f;
                 phi[i][j][1] = 0.0f;
@@ -1175,7 +1175,7 @@ static int sbr_hf_gen(AACContext *ac, SpectralBandReplication *sbr,
             }
 
             for (l = t_env[0] << 1; l < t_env[bs_num_env] << 1; l++) {
-                const int idx = l + T_HFADJ;
+                const int idx = l + ENVELOPE_ADJUSTMENT_OFFSET;
                 x_high[k][idx][0] =
                     (x_low[p][idx - 2][0] * alpha1[p][0] -
                      x_low[p][idx - 2][1] * alpha1[p][1]) * bw_array[0][g] * bw_array[0][g] +
@@ -1259,8 +1259,8 @@ static void sbr_env_estimate(float **e_curr, float ***x_high,
                              int ch)
 {
     int i, l, m;
-    int ilb = sbr->t_env[ch][l]     * 2 + T_HFADJ;
-    int iub = sbr->t_env[ch][l + 1] * 2 + T_HFADJ;
+    int ilb = sbr->t_env[ch][l]     * 2 + ENVELOPE_ADJUSTMENT_OFFSET;
+    int iub = sbr->t_env[ch][l + 1] * 2 + ENVELOPE_ADJUSTMENT_OFFSET;
 
     if (sbr->bs_interpol_freq) {
         for (l = 0; l < ch_data->bs_num_env[1]; l++) {
@@ -1440,7 +1440,7 @@ static void sbr_hf_assemble(float **y[2], float **x_high[2],
     }
 
     for (i = sbr->t_env[ch][0] << 1; i < sbr->t_env[ch][ch_data->bs_num_env[1]] << 1; i++) {
-        const int idx1 = i + T_HFADJ;
+        const int idx1 = i + ENVELOPE_ADJUSTMENT_OFFSET;
         for (m = 0; m < sbr->m; m++) {
             const int idx2 = m + sbr->k[3];
             w_temp[i][m][0] = x_high[idx1][idx2][0] * g_filt[i][m];
@@ -1483,9 +1483,9 @@ static void sbr_hf_assemble(float **y[2], float **x_high[2],
         for (i = sbr->t_env[ch][l] << 1; i < sbr->t_env[ch][l + 1] << 1; i++) {
             sbr->f_indexsine[i][0] = (((sbr->f_indexsine[i][1] + 1) & 3) + i - (sbr->t_env[ch][0] << 1)) & 3;
             for (m = 0; m < sbr->m; m++) {
-                y[i + T_HFADJ][m + sbr->k[3]][0] =
+                y[i + ENVELOPE_ADJUSTMENT_OFFSET][m + sbr->k[3]][0] =
                     w_temp[i][m][0] + sbr->s_m_boost[i][m] * phi[0][sbr->f_indexsine[i][0]];
-                y[i + T_HFADJ][m + sbr->k[3]][1] =
+                y[i + ENVELOPE_ADJUSTMENT_OFFSET][m + sbr->k[3]][1] =
                     w_temp[i][m][1] + sbr->s_m_boost[i][m] * phi[1][sbr->f_indexsine[i][0]] * (1 - 2*((m + sbr->k[3]) & 1));
             }
         }

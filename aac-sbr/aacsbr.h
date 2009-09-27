@@ -37,7 +37,7 @@
                     size);
 
 #define NOISE_FLOOR_OFFSET 6.0f
-#define T_HFADJ 2
+#define ENVELOPE_ADJUSTMENT_OFFSET 2
 // constant to avoid division by zero, e.g. 96 dB below maximum signal input
 #define EPS0 0.000000000001
 
