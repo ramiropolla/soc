@@ -1492,7 +1492,7 @@ static void sbr_hf_assemble(float **y[2], float **x_high[2],
     }
 }
 
-static void apply_sbr()
+static void apply_sbr(void)
 {
 #if 0
     /* decode channel */
