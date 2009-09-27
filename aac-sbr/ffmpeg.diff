@@ -11,28 +11,17 @@ Index: libavcodec/aac.c
   * Y (not in this code) Layer-1
   * Y (not in this code) Layer-2
   * Y (not in this code) Layer-3
-@@ -85,6 +85,8 @@
+@@ -85,6 +85,9 @@
  #include "aac.h"
  #include "aactab.h"
  #include "aacdectab.h"
 +#include "aacsbr.h"
++#include "aacsbr_internal.h"
 +#include "aacsbrdata.h"
  #include "mpeg4audio.h"
  #include "aac_parser.h"
  
-@@ -101,7 +103,11 @@
- static VLC vlc_scalefactors;
- static VLC vlc_spectral[11];
- 
-+extern av_cold void ff_aac_sbr_init(void);
-+extern int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
-+                                GetBitContext *gb, int crc, int cnt, int id_aac);
- 
-+
- static ChannelElement *get_che(AACContext *ac, int type, int elem_id)
- {
-     static const int8_t tags_per_config[16] = { 0, 1, 1, 2, 3, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0 };
-@@ -474,6 +480,7 @@
+@@ -474,6 +477,7 @@
      avccontext->sample_fmt = SAMPLE_FMT_S16;
      avccontext->frame_size = 1024;
  
@@ -40,7 +29,7 @@ Index: libavcodec/aac.c
      AAC_INIT_VLC_STATIC( 0, 144);
      AAC_INIT_VLC_STATIC( 1, 114);
      AAC_INIT_VLC_STATIC( 2, 188);
-@@ -486,6 +493,8 @@
+@@ -486,6 +490,8 @@
      AAC_INIT_VLC_STATIC( 9, 248);
      AAC_INIT_VLC_STATIC(10, 384);
  
@@ -49,7 +38,7 @@ Index: libavcodec/aac.c
      dsputil_init(&ac->dsp, avccontext);
  
      ac->random_state = 0x1f2e3d4c;
-@@ -1281,23 +1290,6 @@
+@@ -1281,23 +1287,6 @@
  }
  
  /**
@@ -73,7 +62,7 @@ Index: libavcodec/aac.c
   * Parse whether channels are to be excluded from Dynamic Range Compression; reference: table 4.53.
   *
   * @return  Returns number of bytes consumed.
-@@ -1377,7 +1369,8 @@
+@@ -1377,7 +1366,8 @@
   *
   * @return Returns number of bytes consumed
   */
@@ -83,7 +72,7 @@ Index: libavcodec/aac.c
  {
      int crc_flag = 0;
      int res = cnt;
-@@ -1385,7 +1378,7 @@
+@@ -1385,7 +1375,7 @@
      case EXT_SBR_DATA_CRC:
          crc_flag++;
      case EXT_SBR_DATA:
@@ -92,7 +81,7 @@ Index: libavcodec/aac.c
          break;
      case EXT_DYNAMIC_RANGE:
          res = decode_dynamic_range(&ac->che_drc, gb, cnt);
-@@ -1674,8 +1667,8 @@
+@@ -1674,8 +1664,8 @@
      AACContext *ac = avccontext->priv_data;
      ChannelElement *che = NULL;
      GetBitContext gb;
@@ -103,7 +92,7 @@ Index: libavcodec/aac.c
  
      init_get_bits(&gb, buf, buf_size * 8);
  
-@@ -1739,7 +1732,7 @@
+@@ -1739,7 +1729,7 @@
              if (elem_id == 15)
                  elem_id += get_bits(&gb, 8) - 1;
              while (elem_id > 0)
@@ -112,7 +101,7 @@ Index: libavcodec/aac.c
              err = 0; /* FIXME */
              break;
  
-@@ -1748,6 +1741,9 @@
+@@ -1748,6 +1738,9 @@
              break;
          }
  
