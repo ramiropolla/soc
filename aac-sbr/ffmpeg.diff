@@ -24,7 +24,7 @@ Index: libavcodec/aac.c
  static VLC vlc_scalefactors;
  static VLC vlc_spectral[11];
  
-+extern av_cold void ff_aac_sbr_init();
++extern av_cold void ff_aac_sbr_init(void);
 +extern int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
 +                                GetBitContext *gb, int crc, int cnt, int id_aac);
  

@@ -33,7 +33,7 @@
 
 static VLC vlc_sbr[10];
 
-av_cold void ff_aac_sbr_init()
+av_cold void ff_aac_sbr_init(void)
 {
     static const struct {
         const void *sbr_codes, *sbr_bits;
