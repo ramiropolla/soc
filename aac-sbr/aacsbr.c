@@ -181,11 +181,11 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
     }
     sbr->k[2] = FFMIN(64, sbr->k[2]);
 
-    if (spectrum->bs_freq_scale == 0) {
+    if (!spectrum->bs_freq_scale) {
         unsigned int dk;
         int k2diff;
 
-        if (spectrum->bs_alter_scale == 0) {
+        if (!spectrum->bs_alter_scale) {
             dk = 1;
             sbr->n_master = ((unsigned int)((sbr->k[2] - sbr->k[0]) / (float)(dk << 1))) << 1;
         } else {
@@ -854,7 +854,7 @@ static int sbr_time_freq_grid(AACContext *ac, SpectralBandReplication *sbr,
         } else if (ch_data->bs_frame_class & 1) { // FIXVAR or VARVAR
             idx = ch_data->bs_num_env[1] - FFMAX(ch_data->bs_pointer - 1, 1);
         } else { // VARFIX
-            if (ch_data->bs_pointer == 0)
+            if (!ch_data->bs_pointer)
                 idx = 1;
             else if (ch_data->bs_pointer == 1)
                 idx = ch_data->bs_num_env[1] - 1;
@@ -1059,7 +1059,7 @@ static void sbr_hf_inverse_filter(float **alpha0, float **alpha1,
         dk[1] = phi[2][1][0] * phi[1][0][1] + phi[2][1][1] * phi[1][0][0];
 
         mod_var_sq = dk[0] * dk[0] + dk[1] * dk[1];
-        if (mod_var_sq == 0) {
+        if (!mod_var_sq) {
             alpha1[k][0] = 0;
             alpha1[k][1] = 0;
         } else {
@@ -1078,7 +1078,7 @@ static void sbr_hf_inverse_filter(float **alpha0, float **alpha1,
         }
 
         mod_var_sq = phi[1][0][0] * phi[1][0][0] + phi[1][0][1] * phi[1][0][1];
-        if (mod_var_sq == 0) {
+        if (!mod_var_sq) {
             alpha0[k][0] = 0;
             alpha0[k][1] = 0;
         } else {
@@ -1117,7 +1117,7 @@ static void sbr_chirp(SpectralBandReplication *sbr, SBRData *ch_data)
                 new_bw = 0.0f;
             break;
         case 1:
-            if (ch_data->bs_invf_mode[1][i] == 0) {
+            if (!ch_data->bs_invf_mode[1][i]) {
                 new_bw = 0.6f;
             } else
                 new_bw = 0.75f;
@@ -1423,7 +1423,7 @@ static void sbr_hf_assemble(float **y[2], float **x_high[2],
     }
 
     for (l = 0; l < ch_data->bs_num_env[1]; l++) {
-        if (h_SL == 0 && l != l_a[0] && l != l_a[1]) {
+        if (!h_SL && l != l_a[0] && l != l_a[1]) {
             for (i = sbr->t_env[ch][l] << 1; i < sbr->t_env[ch][l + 1] << 1; i++) {
                 for (m = 0; m < sbr->m; m++) {
                     const int idx1 = i + h_SL;
