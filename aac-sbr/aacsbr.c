@@ -113,7 +113,7 @@ static unsigned int sbr_header(SpectralBandReplication *sbr, GetBitContext *gb)
     return get_bits_count(gb) - cnt;
 }
 
-int array_min_int(int *array, int nel)
+static int array_min_int(int *array, int nel)
 {
     int i, min = array[0];
     for (i = 1; i < nel; i++)
@@ -122,7 +122,7 @@ int array_min_int(int *array, int nel)
     return min;
 }
 
-int qsort_comparison_function(const void *a, const void *b)
+static int qsort_comparison_function(const void *a, const void *b)
 {
     return *(const int *)a - *(const int *)b;
 }
