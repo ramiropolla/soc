@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 echo "Checking out FFmpeg..."
 svn co svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg -r 20025
