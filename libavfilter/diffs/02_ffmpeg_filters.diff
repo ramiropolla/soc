@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 19868)
+--- ffmpeg.c	(revision 20057)
 +++ ffmpeg.c	(working copy)
 @@ -41,6 +41,13 @@
  #include "libavutil/avstring.h"
@@ -291,9 +291,9 @@ Index: ffmpeg.c
 +#endif
 +
      AVPacket avpkt;
+     int bps = av_get_bits_per_sample_format(ist->st->codec->sample_fmt)>>3;
  
-     if(ist->next_pts == AV_NOPTS_VALUE)
-@@ -1376,6 +1589,15 @@
+@@ -1378,6 +1591,15 @@
                                      &buffer_to_free);
          }
  
@@ -309,7 +309,7 @@ Index: ffmpeg.c
          // preprocess audio (volume)
          if (ist->st->codec->codec_type == CODEC_TYPE_AUDIO) {
              if (audio_volume != 256) {
-@@ -1397,10 +1619,18 @@
+@@ -1399,10 +1621,18 @@
              if (pts > now)
                  usleep(pts - now);
          }
@@ -329,7 +329,7 @@ Index: ffmpeg.c
              for(i=0;i<nb_ostreams;i++) {
                  int frame_size;
  
-@@ -1417,6 +1647,9 @@
+@@ -1419,6 +1649,9 @@
                              do_audio_out(os, ost, ist, data_buf, data_size);
                              break;
                          case CODEC_TYPE_VIDEO:
@@ -339,7 +339,7 @@ Index: ffmpeg.c
                              do_video_out(os, ost, ist, &picture, &frame_size);
                              if (vstats_filename && frame_size)
                                  do_video_stats(os, ost, frame_size);
-@@ -1482,7 +1715,17 @@
+@@ -1484,7 +1717,17 @@
                          av_free_packet(&opkt);
                      }
                  }
@@ -357,7 +357,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1936,16 +2179,27 @@
+@@ -1938,16 +2181,27 @@
                          av_exit(1);
                      }
  
@@ -385,7 +385,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -2332,6 +2586,12 @@
+@@ -2334,6 +2588,12 @@
              avcodec_close(ist->st->codec);
          }
      }
@@ -398,7 +398,7 @@ Index: ffmpeg.c
  
      /* finished ! */
      ret = 0;
-@@ -3895,6 +4155,9 @@
+@@ -3897,6 +4157,9 @@
      { "psnr", OPT_BOOL | OPT_EXPERT | OPT_VIDEO, {(void*)&do_psnr}, "calculate PSNR of compressed frames" },
      { "vstats", OPT_EXPERT | OPT_VIDEO, {(void*)&opt_vstats}, "dump video coding statistics to file" },
      { "vstats_file", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_vstats_file}, "dump video coding statistics to file", "file" },

@@ -1,6 +1,6 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 19868)
+--- ffplay.c	(revision 20057)
 +++ ffplay.c	(working copy)
 @@ -29,6 +29,12 @@
  #include "libavcodec/colorspace.h"
@@ -551,9 +551,9 @@ Index: ffplay.c
 +    { "vfilters", OPT_STRING | HAS_ARG, {(void*)&vfilters}, "video filters", "filter list" },
 +#endif
      { "default", OPT_FUNC2 | HAS_ARG | OPT_AUDIO | OPT_VIDEO | OPT_EXPERT, {(void*)opt_default}, "generic catch all option", "" },
+     { "loglevel", HAS_ARG | OPT_FUNC2, {(void*)opt_loglevel}, "set libav* logging level", "logging level number or string" },
      { NULL, },
- };
-@@ -2534,7 +2834,9 @@
+@@ -2535,7 +2835,9 @@
          avcodec_opts[i]= avcodec_alloc_context2(i);
      }
      avformat_opts = avformat_alloc_context();
