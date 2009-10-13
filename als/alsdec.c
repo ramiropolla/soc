@@ -79,6 +79,7 @@ typedef struct {
     unsigned int frame_id;          ///< the frame ID / number of the current frame
     unsigned int js_switch;         ///< if true, joint-stereo decoding is enforced
     unsigned int num_blocks;        ///< number of blocks used in the current frame
+    int ltp_lag_length;             ///< number of bits used for ltp lag value
     int32_t *quant_cof;             ///< quantized parcor coefficients
     int32_t *lpc_cof;               ///< coefficients of the direct form prediction filter
     int32_t *prev_raw_samples;      ///< contains unshifted raw samples from the previous block
@@ -290,7 +291,6 @@ static int check_specific_config(ALSDecContext *ctx)
     }
 
     MISSING_ERR(sconf->floating,             "Floating point decoding",     -1);
-    MISSING_ERR(sconf->long_term_prediction, "Long-term prediction",        -1);
     MISSING_ERR(sconf->bgmc,                 "BGMC entropy decoding",       -1);
     MISSING_ERR(sconf->mc_coding,            "Multi-channel correlation",   -1);
     MISSING_ERR(sconf->rlslms,               "Adaptive RLS-LMS prediction", -1);
@@ -470,6 +470,9 @@ static int read_var_block(ALSDecContext *ctx, unsigned int ra_block,
     int          smp        = 0;
     int          sb, store_prev_samples;
     int64_t      y;
+    int          use_ltp    = 0;
+    int          lag        = 0;
+    int          gain[5];
 
     *js_blocks  = get_bits1(gb);
 
@@ -568,7 +571,26 @@ static int read_var_block(ALSDecContext *ctx, unsigned int ra_block,
         }
     }
 
-    // TODO: LTP mode
+    // read LTP gain and lag values
+    if (sconf->long_term_prediction) {
+        use_ltp = get_bits1(gb);
+
+        if (use_ltp) {
+            gain[0]   = decode_rice(gb, 1) << 3;
+            gain[1]   = decode_rice(gb, 2) << 3;
+
+            gain[2]   = get_unary(gb, 0, 4);
+            gain[2] <<= 2;
+            gain[2]  += get_bits(gb, 2);
+            gain[2]   = ltp_gain[gain[2]];
+
+            gain[3]   = decode_rice(gb, 2) << 3;
+            gain[4]   = decode_rice(gb, 1) << 3;
+
+            lag       = get_bits(gb, ctx->ltp_lag_length);
+            lag      += FFMAX(4, opt_order + 1);
+        }
+    }
 
     // read first value and residuals in case of a random access block
     if (ra_block) {
@@ -592,6 +614,26 @@ static int read_var_block(ALSDecContext *ctx, unsigned int ra_block,
             for (; start < sb_length; start++)
                 *current_res++ = decode_rice(gb, s[sb]);
      }
+
+    // revert long-term prediction
+    if (use_ltp) {
+        int ltp_smp;
+
+        for (ltp_smp = 0; ltp_smp < block_length; ltp_smp++) {
+            int center = ltp_smp - lag;
+            int begin  = FFMAX(0, center - 2);
+            int end    = center + 3;
+            int tab    = 5 - (end - begin);
+            int base;
+
+            y = 1 << 6;
+
+            for (base = begin; base < end; base++, tab++)
+                y += MUL64(gain[tab], raw_samples[base]);
+
+            raw_samples[ltp_smp] += y >> 7;
+        }
+    }
 
     // reconstruct all samples from residuals
     if (ra_block) {
@@ -973,6 +1015,14 @@ static av_cold int decode_init(AVCodecContext *avctx)
                                      ? SAMPLE_FMT_S32 : SAMPLE_FMT_S16;
         avctx->bits_per_raw_sample = (sconf->resolution + 1) * 8;
     }
+
+    // set lag value for long-term prediction
+    if      (avctx->sample_rate >= 192000)
+        ctx->ltp_lag_length = 10;
+    else if (avctx->sample_rate >=  96000)
+        ctx->ltp_lag_length = 9;
+    else
+        ctx->ltp_lag_length = 8;
 
     avctx->frame_size = sconf->frame_length;
     channel_size      = sconf->frame_length + sconf->max_order;
