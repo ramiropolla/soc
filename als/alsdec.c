@@ -471,8 +471,8 @@ static int read_var_block(ALSDecContext *ctx, unsigned int ra_block,
     int          sb, store_prev_samples;
     int64_t      y;
     int          use_ltp    = 0;
-    int          lag        = 0;
-    int          gain[5];
+    int          ltp_lag    = 0;
+    int          ltp_gain[5];
 
     *js_blocks  = get_bits1(gb);
 
@@ -576,19 +576,19 @@ static int read_var_block(ALSDecContext *ctx, unsigned int ra_block,
         use_ltp = get_bits1(gb);
 
         if (use_ltp) {
-            gain[0]   = decode_rice(gb, 1) << 3;
-            gain[1]   = decode_rice(gb, 2) << 3;
+            ltp_gain[0]   = decode_rice(gb, 1) << 3;
+            ltp_gain[1]   = decode_rice(gb, 2) << 3;
 
-            gain[2]   = get_unary(gb, 0, 4);
-            gain[2] <<= 2;
-            gain[2]  += get_bits(gb, 2);
-            gain[2]   = ltp_gain[gain[2]];
+            ltp_gain[2]   = get_unary(gb, 0, 4);
+            ltp_gain[2] <<= 2;
+            ltp_gain[2]  += get_bits(gb, 2);
+            ltp_gain[2]   = ltp_gain_values[ltp_gain[2]];
 
-            gain[3]   = decode_rice(gb, 2) << 3;
-            gain[4]   = decode_rice(gb, 1) << 3;
+            ltp_gain[3]   = decode_rice(gb, 2) << 3;
+            ltp_gain[4]   = decode_rice(gb, 1) << 3;
 
-            lag       = get_bits(gb, ctx->ltp_lag_length);
-            lag      += FFMAX(4, opt_order + 1);
+            ltp_lag       = get_bits(gb, ctx->ltp_lag_length);
+            ltp_lag      += FFMAX(4, opt_order + 1);
         }
     }
 
@@ -615,12 +615,12 @@ static int read_var_block(ALSDecContext *ctx, unsigned int ra_block,
                 *current_res++ = decode_rice(gb, s[sb]);
      }
 
-    // revert long-term prediction
+    // reverse long-term prediction
     if (use_ltp) {
         int ltp_smp;
 
         for (ltp_smp = 0; ltp_smp < block_length; ltp_smp++) {
-            int center = ltp_smp - lag;
+            int center = ltp_smp - ltp_lag;
             int begin  = FFMAX(0, center - 2);
             int end    = center + 3;
             int tab    = 5 - (end - begin);
@@ -629,7 +629,7 @@ static int read_var_block(ALSDecContext *ctx, unsigned int ra_block,
             y = 1 << 6;
 
             for (base = begin; base < end; base++, tab++)
-                y += MUL64(gain[tab], raw_samples[base]);
+                y += MUL64(ltp_gain[tab], raw_samples[base]);
 
             raw_samples[ltp_smp] += y >> 7;
         }
