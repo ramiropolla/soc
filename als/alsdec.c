@@ -619,7 +619,7 @@ static int read_var_block(ALSDecContext *ctx, unsigned int ra_block,
     if (use_ltp) {
         int ltp_smp;
 
-        for (ltp_smp = 0; ltp_smp < block_length; ltp_smp++) {
+        for (ltp_smp = FFMAX(ltp_lag - 2, 0); ltp_smp < block_length; ltp_smp++) {
             int center = ltp_smp - ltp_lag;
             int begin  = FFMAX(0, center - 2);
             int end    = center + 3;
