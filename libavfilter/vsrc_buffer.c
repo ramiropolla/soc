@@ -96,15 +96,16 @@ static int request_frame(AVFilterLink *link)
     /* This picture will be needed unmodified later for decoding the next
      * frame */
     picref = avfilter_get_video_buffer(link, AV_PERM_WRITE | AV_PERM_PRESERVE |
-                                             AV_PERM_REUSE2);
+                                       AV_PERM_REUSE2,
+                                       link->w, link->h);
 
-    memcpy(picref->data    , c->frame.data    , sizeof(c->frame.data    ));
-    memcpy(picref->linesize, c->frame.linesize, sizeof(c->frame.linesize));
+    av_picture_copy((AVPicture *)&picref->data, (AVPicture *)&c->frame,
+                    picref->pic->format, link->w, link->h);
 
     picref->pts = c->pts;
     picref->pixel_aspect = c->pixel_aspect;
     avfilter_start_frame(link, avfilter_ref_pic(picref, ~0));
-    avfilter_draw_slice(link, 0, picref->h);
+    avfilter_draw_slice(link, 0, link->h);
     avfilter_end_frame(link);
     avfilter_unref_pic(picref);
 

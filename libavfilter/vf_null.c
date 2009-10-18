@@ -29,6 +29,11 @@ static void start_frame(AVFilterLink *in_link, AVFilterPicRef *picref)
     avfilter_start_frame(in_link->dst->outputs[0], picref);
 }
 
+static AVFilterPicRef *get_video_buffer(AVFilterLink *link, int perms, int w, int h)
+{
+    return avfilter_get_video_buffer(link->dst->outputs[0], perms, w, h);
+}
+
 static void end_frame(AVFilterLink *in_link)
 {
     avfilter_end_frame(in_link->dst->outputs[0]);
@@ -42,6 +47,7 @@ AVFilter avfilter_vf_null =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
+                                    .get_video_buffer= get_video_buffer,
                                     .start_frame     = start_frame,
                                     .end_frame       = end_frame },
                                   { .name = NULL}},

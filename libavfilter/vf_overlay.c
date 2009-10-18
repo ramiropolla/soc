@@ -249,7 +249,7 @@ static int request_frame(AVFilterLink *link)
     }
 
     /* we draw the output frame */
-    pic = avfilter_get_video_buffer(link, AV_PERM_WRITE);
+    pic = avfilter_get_video_buffer(link, AV_PERM_WRITE, link->w, link->h);
     if(over->pics[0][0]) {
         pic->pixel_aspect = over->pics[0][0]->pixel_aspect;
         copy_image(pic, 0, 0, over->pics[0][0], link->w, link->h,

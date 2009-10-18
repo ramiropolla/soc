@@ -177,7 +177,8 @@ int movie_get_frame(AVFilterLink *link)
     if(!mv->pic)
         mv->pic = avfilter_get_video_buffer(link, AV_PERM_WRITE |
                                                   AV_PERM_PRESERVE |
-                                                  AV_PERM_REUSE2);
+                                                  AV_PERM_REUSE2,
+                                            link->w, link->h);
     //av_log(link->src, AV_LOG_INFO, "movie_get_frame() w:%d h:%d\n", mv->w, mv->h);
 
     // Get frame
