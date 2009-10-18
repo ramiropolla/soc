@@ -1,8 +1,8 @@
 Index: doc/vfilters.texi
 ===================================================================
---- doc/vfilters.texi	(revision 20272)
+--- doc/vfilters.texi	(revision 20275)
 +++ doc/vfilters.texi	(working copy)
-@@ -78,4 +78,186 @@
+@@ -78,8 +78,190 @@
  
  Below is a description of the currently available video filters.
  
@@ -62,6 +62,10 @@ Index: doc/vfilters.texi
 +
 +Convert a video to its negative.
 +
+ @section null
+ 
+ Pass the source unchanged to the output.
+ 
 +@section noformat
 +
 +@example
