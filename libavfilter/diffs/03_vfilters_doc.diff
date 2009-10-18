@@ -1,6 +1,6 @@
 Index: doc/vfilters.texi
 ===================================================================
---- doc/vfilters.texi	(revision 20299)
+--- doc/vfilters.texi	(revision 20303)
 +++ doc/vfilters.texi	(working copy)
 @@ -80,8 +80,190 @@
  
