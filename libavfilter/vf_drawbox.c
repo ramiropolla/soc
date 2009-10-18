@@ -70,13 +70,15 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 
 static int query_formats(AVFilterContext *ctx)
 {
-    avfilter_set_common_formats(ctx,
-                                avfilter_make_format_list(10,
-                PIX_FMT_YUV444P,  PIX_FMT_YUV422P,  PIX_FMT_YUV420P,
-                PIX_FMT_YUV411P,  PIX_FMT_YUV410P,
-                PIX_FMT_YUVJ444P, PIX_FMT_YUVJ422P, PIX_FMT_YUVJ420P,
-                PIX_FMT_YUV440P,  PIX_FMT_YUVJ440P)
-        );
+    enum PixelFormat pix_fmts[] = {
+        PIX_FMT_YUV444P,  PIX_FMT_YUV422P,  PIX_FMT_YUV420P,
+        PIX_FMT_YUV411P,  PIX_FMT_YUV410P,
+        PIX_FMT_YUVJ444P, PIX_FMT_YUVJ422P, PIX_FMT_YUVJ420P,
+        PIX_FMT_YUV440P,  PIX_FMT_YUVJ440P,
+        PIX_FMT_NONE
+    };
+
+    avfilter_set_common_formats(ctx, avfilter_make_format_list2(pix_fmts));
     return 0;
 }
 

@@ -149,9 +149,9 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 static int query_formats(AVFilterContext *ctx)
 {
     MovieContext *mv = ctx->priv;
+    enum PixelFormat pix_fmts[] = { mv->codec_ctx->pix_fmt, PIX_FMT_NONE };
 
-    avfilter_set_common_formats(ctx,
-        avfilter_make_format_list(1, mv->codec_ctx->pix_fmt));
+    avfilter_set_common_formats(ctx, avfilter_make_format_list2(pix_fmts));
     return 0;
 }
 
