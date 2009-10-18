@@ -1,57 +1,76 @@
 Index: Changelog
 ===================================================================
---- Changelog	(revision 14483)
+--- Changelog	(revision 20294)
 +++ Changelog	(working copy)
-@@ -127,6 +127,7 @@
- - Motion Pixels Video decoder
- - Motion Pixels MVI demuxer
- - removed animated GIF decoder/demuxer
+@@ -41,9 +41,11 @@
+ - Atrac1 decoder
+ - MD STUDIO audio demuxer
+ - RF64 support in WAV demuxer
 +- JPEG2000 encoder and decoder
  
- version 0.4.9-pre1:
  
-Index: libavcodec/Makefile
-===================================================================
---- libavcodec/Makefile	(revision 14483)
-+++ libavcodec/Makefile	(working copy)
-@@ -99,6 +99,8 @@
- OBJS-$(CONFIG_INTERPLAY_VIDEO_DECODER) += interplayvideo.o
- OBJS-$(CONFIG_JPEGLS_DECODER)          += jpeglsdec.o jpegls.o mjpegdec.o mjpeg.o golomb.o
- OBJS-$(CONFIG_JPEGLS_ENCODER)          += jpeglsenc.o jpegls.o golomb.o
-+OBJS-$(CONFIG_JPEG2000_DECODER)        += j2kdec.o mqcdec.o mqc.o j2k.o dwt.o
-+OBJS-$(CONFIG_JPEG2000_ENCODER)        += j2kenc.o mqcenc.o mqc.o j2k.o dwt.o
- OBJS-$(CONFIG_KMVC_DECODER)            += kmvc.o
- OBJS-$(CONFIG_LJPEG_ENCODER)           += ljpegenc.o mjpegenc.o mjpeg.o mpegvideo_enc.o motion_est.o ratecontrol.o mpeg12data.o mpegvideo.o
- OBJS-$(CONFIG_LOCO_DECODER)            += loco.o golomb.o
+ 
++
+ version 0.5:
+ 
+ - DV50 AKA DVCPRO50 encoder, decoder, muxer and demuxer
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 14483)
+--- libavcodec/allcodecs.c	(revision 20294)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -101,6 +101,7 @@
+@@ -109,6 +109,7 @@
      REGISTER_DECODER (INDEO2, indeo2);
      REGISTER_DECODER (INDEO3, indeo3);
      REGISTER_DECODER (INTERPLAY_VIDEO, interplay_video);
-+    REGISTER_ENCDEC  (JPEG2000, jpeg2000);
++    REGISTER_DECODER (JPEG2000, jpeg2000);
      REGISTER_ENCDEC  (JPEGLS, jpegls);
      REGISTER_DECODER (KMVC, kmvc);
      REGISTER_ENCODER (LJPEG, ljpeg);
+Index: libavcodec/Makefile
+===================================================================
+--- libavcodec/Makefile	(revision 20294)
++++ libavcodec/Makefile	(working copy)
+@@ -144,6 +144,8 @@
+ OBJS-$(CONFIG_INDEO3_DECODER)          += indeo3.o
+ OBJS-$(CONFIG_INTERPLAY_DPCM_DECODER)  += dpcm.o
+ OBJS-$(CONFIG_INTERPLAY_VIDEO_DECODER) += interplayvideo.o
++OBJS-$(CONFIG_JPEG2000_DECODER)        += j2kdec.o mqcdec.o mqc.o j2k.o dwt.o
++#OBJS-$(CONFIG_JPEG2000_ENCODER)        += j2kenc.o mqcenc.o mqc.o j2k.o dwt.o
+ OBJS-$(CONFIG_JPEGLS_DECODER)          += jpeglsdec.o jpegls.o \
+                                           mjpegdec.o mjpeg.o
+ OBJS-$(CONFIG_JPEGLS_ENCODER)          += jpeglsenc.o jpegls.o
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 14483)
+--- doc/general.texi	(revision 20294)
 +++ doc/general.texi	(working copy)
-@@ -253,6 +253,7 @@
-     @tab Used in Interplay .MVE files.
- @item JPEG-LS                @tab  X  @tab  X
-     @tab fourcc: MJLS, lossless and near-lossless is supported.
-+@item JPEG2000               @tab  X  @tab  X
- @item KMVC                   @tab     @tab  X
-     @tab Codec used in Worms games.
- @item LOCO                   @tab     @tab  X
+@@ -253,8 +253,7 @@
+     @tab Digital Picture Exchange
+ @item JPEG         @tab X @tab X
+     @tab Progressive JPEG is not supported.
+-@item JPEG 2000    @tab   @tab E
+-    @tab decoding supported through external library libopenjpeg
++@item JPEG 2000    @tab X @tab X
+ @item JPEG-LS      @tab X @tab X
+ @item LJPEG        @tab X @tab
+     @tab Lossless JPEG
+Index: libavformat/img2.c
+===================================================================
+--- libavformat/img2.c	(revision 20294)
++++ libavformat/img2.c	(working copy)
+@@ -72,6 +72,8 @@
+     { CODEC_ID_SUNRAST   , "im24"},
+     { CODEC_ID_SUNRAST   , "sunras"},
+     { CODEC_ID_JPEG2000  , "jp2"},
++    { CODEC_ID_JPEG2000  , "jpc"},
++    { CODEC_ID_JPEG2000  , "j2k"},
+     { CODEC_ID_DPX       , "dpx"},
+     { CODEC_ID_NONE      , NULL}
+ };
 Index: libavformat/riff.c
 ===================================================================
---- libavformat/riff.c	(revision 14483)
+--- libavformat/riff.c	(revision 20294)
 +++ libavformat/riff.c	(working copy)
-@@ -156,6 +156,7 @@
+@@ -204,6 +204,7 @@
      { CODEC_ID_ZMBV,         MKTAG('Z', 'M', 'B', 'V') },
      { CODEC_ID_KMVC,         MKTAG('K', 'M', 'V', 'C') },
      { CODEC_ID_CAVS,         MKTAG('C', 'A', 'V', 'S') },
