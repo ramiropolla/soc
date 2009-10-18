@@ -1028,6 +1028,16 @@ static av_cold int j2kdec_init(AVCodecContext *avctx)
     return 0;
 }
 
+static av_cold int decode_end(AVCodecContext *avctx)
+{
+    J2kDecoderContext *s = avctx->priv_data;
+
+    if (s->picture.data[0])
+        avctx->release_buffer(avctx, &s->picture);
+
+    return 0;
+}
+
 AVCodec jpeg2000_decoder = {
     "j2k",
     CODEC_TYPE_VIDEO,
@@ -1035,7 +1045,7 @@ AVCodec jpeg2000_decoder = {
     sizeof(J2kDecoderContext),
     j2kdec_init,
     NULL,
-    NULL,
+    decode_end,
     decode_frame,
     0,
     .pix_fmts =
