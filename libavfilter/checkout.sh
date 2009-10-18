@@ -1,7 +1,7 @@
 #! /bin/sh
 
 echo "checking out pristine ffmpeg"
-svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r20275
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r20299
 
 echo "downloading the corresponding version of swscale"
 cd ffmpeg/libswscale
