@@ -91,7 +91,7 @@ static int get_bits(J2kDecoderContext *s, int n)
     return res;
 }
 
-void j2k_flush(J2kDecoderContext *s)
+static void j2k_flush(J2kDecoderContext *s)
 {
     if (*s->buf == 0xff)
         s->buf++;
