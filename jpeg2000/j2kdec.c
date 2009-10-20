@@ -677,7 +677,7 @@ static void decode_clnpass(J2kDecoderContext *s, J2kT1Context *t1, int width, in
         val = (val << 1) + ff_mqc_decode(&t1->mqc, t1->mqc.cx_states + MQC_CX_UNI);
         val = (val << 1) + ff_mqc_decode(&t1->mqc, t1->mqc.cx_states + MQC_CX_UNI);
         if (val != 0xa) {
-            av_log(s->avctx, AV_LOG_ERROR,"Segmentation symbol value incorrect");
+            av_log(s->avctx, AV_LOG_ERROR,"Segmentation symbol value incorrect\n");
         }
     }
 }
