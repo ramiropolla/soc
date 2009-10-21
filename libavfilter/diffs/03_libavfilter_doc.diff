@@ -1,20 +1,11 @@
-Index: doc/vfilters.texi
+Index: doc/libavfilter.texi
 ===================================================================
---- doc/vfilters.texi	(revision 20303)
-+++ doc/vfilters.texi	(working copy)
-@@ -80,8 +80,190 @@
+--- doc/libavfilter.texi	(revision 20344)
++++ doc/libavfilter.texi	(working copy)
+@@ -111,8 +111,185 @@
  
- Below is a description of the currently available video filters.
+ The default value of ``w'' and ``h'' is 0.
  
-+@section crop
-+
-+@example
-+./ffmpeg -i in.avi -vfilters "crop=0:0:-1:240" out.avi
-+@end example
-+
-+Crop the input video to x:y:width:height.
-+The -1 in width or height means that dimension in the input video.
-+
 +@section drawbox
 +
 +@example
@@ -62,10 +53,10 @@ Index: doc/vfilters.texi
 +
 +Convert a video to its negative.
 +
- @section null
- 
- Pass the source unchanged to the output.
- 
++  @section null
++  
++  Pass the source unchanged to the output.
++  
 +@section noformat
 +
 +@example
@@ -75,6 +66,10 @@ Index: doc/vfilters.texi
 +Force libavfilter not to send any of the specified pixel formats to the
 +next filter.
 +
+ @section null
+ 
+ Pass the source unchanged to the output.
+ 
 +@section overlay
 +
 +Overlay one video on top of another (see the example in the introduction
