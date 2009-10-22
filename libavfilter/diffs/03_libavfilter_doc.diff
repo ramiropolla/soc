@@ -1,10 +1,10 @@
 Index: doc/libavfilter.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 20344)
+--- doc/libavfilter.texi	(revision 20353)
 +++ doc/libavfilter.texi	(working copy)
-@@ -111,8 +111,185 @@
+@@ -111,10 +111,149 @@
  
- The default value of ``w'' and ``h'' is 0.
+ The default value of ``width'' and ``height'' is 0.
  
 +@section drawbox
 +
@@ -52,10 +52,6 @@ Index: doc/libavfilter.texi
 +@end example
 +
 +Convert a video to its negative.
-+
-+  @section null
-+  
-+  Pass the source unchanged to the output.
 +  
 +@section noformat
 +
@@ -153,14 +149,13 @@ Index: doc/libavfilter.texi
 +
 +Transpose (line => column) input video to next video filter.
 +
-+@section vflip
-+
-+@example
-+./ffmpeg -i in.avi -vfilters "vflip" out.avi
-+@end example
-+
-+Flip the video vertically.
-+
+ @section vflip
+ 
+ Flip the input video vertically.
+@@ -123,4 +262,30 @@
+ ./ffmpeg -i in.avi -vfilters "vflip" out.avi
+ @end example
+ 
 +@section buffer
 +
 +This input filter is used by the client application to feed pictures to
