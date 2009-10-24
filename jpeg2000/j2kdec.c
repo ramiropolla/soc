@@ -402,7 +402,7 @@ static int get_qcd(J2kDecoderContext *s, int n, J2kQuantStyle *q, uint8_t *prope
     return 0;
 }
 
-/** get quantization paramteres for a component in the whole image on in a particular tile */
+/** get quantization parameters for a component in the whole image on in a particular tile */
 static int get_qcc(J2kDecoderContext *s, int n, J2kQuantStyle *q, uint8_t *properties)
 {
     int compno;
