@@ -1,8 +1,8 @@
 Index: doc/libavfilter.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 20353)
+--- doc/libavfilter.texi	(revision 20390)
 +++ doc/libavfilter.texi	(working copy)
-@@ -111,10 +111,149 @@
+@@ -111,6 +111,20 @@
  
  The default value of ``width'' and ``height'' is 0.
  
@@ -20,15 +20,13 @@ Index: doc/libavfilter.texi
 +./ffmpeg -i in.avi -vfilters "fifo" out.avi
 +@end example
 +
-+@section format
-+
-+@example
-+./ffmpeg -i in.avi -vfilters "format=yuv420p" out.avi
-+@end example
-+
-+Convert video to one of the specified filters formats (libavfilter will
-+try to pick one that is supported as an input to the next filter).
-+
+ @section format
+ 
+ Convert the input video to one of the specified pixel formats.
+@@ -128,6 +142,30 @@
+ 
+ will convert the input video to the format ``yuv420p''.
+ 
 +@section fps
 +
 +@example
@@ -53,16 +51,10 @@ Index: doc/libavfilter.texi
 +
 +Convert a video to its negative.
 +  
-+@section noformat
-+
-+@example
-+./ffmpeg -i in.avi -vfilters "noformat=yuv420p" out.avi
-+@end example
-+
-+Force libavfilter not to send any of the specified pixel formats to the
-+next filter.
-+
- @section null
+ @section noformat
+ 
+ Force libavfilter not to use any of the specified pixel formats as the
+@@ -149,6 +187,89 @@
  
  Pass the source unchanged to the output.
  
@@ -152,7 +144,7 @@ Index: doc/libavfilter.texi
  @section vflip
  
  Flip the input video vertically.
-@@ -123,4 +262,30 @@
+@@ -157,4 +278,30 @@
  ./ffmpeg -i in.avi -vfilters "vflip" out.avi
  @end example
  
