@@ -1,6 +1,6 @@
 Index: doc/libavfilter.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 20444)
+--- doc/libavfilter.texi	(revision 20447)
 +++ doc/libavfilter.texi	(working copy)
 @@ -111,6 +111,20 @@
  
@@ -54,7 +54,7 @@ Index: doc/libavfilter.texi
  @section noformat
  
  Force libavfilter not to use any of the specified pixel formats for the
-@@ -149,6 +187,89 @@
+@@ -149,6 +187,65 @@
  
  Pass the source unchanged to the output.
  
@@ -117,17 +117,13 @@ Index: doc/libavfilter.texi
 +
 +Modifies the presentation timestamp (PTS) of the input video.
 +
-+@section slicify
-+
-+@example
-+./ffmpeg -i in.avi -vfilters "slicify=32" out.avi
-+@end example
-+
-+Pass on input video to next video filter as multiple slices.
-+The parameter is the slice height (16 if not specified).
-+Adding this in the beginning of filter chains should make filtering
-+faster due to the better use of the memory cache.
-+
+ @section slicify
+ 
+ Pass the images of input video on to next video filter as multiple
+@@ -164,6 +261,19 @@
+ Adding this in the beginning of filter chains should make filtering
+ faster due to better use of the memory cache.
+ 
 +@section split
 +
 +See the example in the introduction section.
@@ -144,7 +140,7 @@ Index: doc/libavfilter.texi
  @section vflip
  
  Flip the input video vertically.
-@@ -157,4 +278,30 @@
+@@ -172,4 +282,30 @@
  ./ffmpeg -i in.avi -vfilters "vflip" out.avi
  @end example
  
