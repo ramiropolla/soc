@@ -93,7 +93,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     AVFilterLink *out = link->dst->outputs[0];
 
-    out->outpic      = avfilter_get_video_buffer(out, AV_PERM_WRITE, link->w, link->h);
+    out->outpic      = avfilter_get_video_buffer(out, AV_PERM_WRITE, out->w, out->h);
     out->outpic->pts = picref->pts;
 
     out->outpic->pixel_aspect.num = picref->pixel_aspect.den;
