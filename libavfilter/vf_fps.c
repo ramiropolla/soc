@@ -54,6 +54,12 @@ static av_cold void uninit(AVFilterContext *ctx)
     if(fps->pic) avfilter_unref_pic(fps->pic);
 }
 
+static AVFilterPicRef *get_video_buffer(AVFilterLink *link, int perms,
+                                        int w, int h)
+{
+    return avfilter_get_video_buffer(link->dst->outputs[0], perms, w, h);
+}
+
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     FPSContext *fps = link->dst->priv;
@@ -118,6 +124,7 @@ AVFilter avfilter_vf_fps =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
+                                    .get_video_buffer= get_video_buffer,
                                     .start_frame     = start_frame,
                                     .end_frame       = end_frame, },
                                   { .name = NULL}},

@@ -1,6 +1,6 @@
 Index: doc/libavfilter.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 20390)
+--- doc/libavfilter.texi	(revision 20444)
 +++ doc/libavfilter.texi	(working copy)
 @@ -111,6 +111,20 @@
  
@@ -53,7 +53,7 @@ Index: doc/libavfilter.texi
 +  
  @section noformat
  
- Force libavfilter not to use any of the specified pixel formats as the
+ Force libavfilter not to use any of the specified pixel formats for the
 @@ -149,6 +187,89 @@
  
  Pass the source unchanged to the output.

@@ -53,6 +53,12 @@ static av_cold void uninit(AVFilterContext *ctx)
     }
 }
 
+static AVFilterPicRef *get_video_buffer(AVFilterLink *link, int perms,
+                                        int w, int h)
+{
+    return avfilter_get_video_buffer(link->dst->outputs[0], perms, w, h);
+}
+
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     BufferContext *buf = link->dst->priv;
@@ -107,6 +113,7 @@ AVFilter avfilter_vf_fifo =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
+                                    .get_video_buffer= get_video_buffer,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .end_frame       = end_frame,

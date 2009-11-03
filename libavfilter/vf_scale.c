@@ -99,11 +99,6 @@ static int query_formats(AVFilterContext *ctx)
     return 0;
 }
 
-static AVFilterPicRef *get_video_buffer(AVFilterLink *link, int perms, int w, int h)
-{
-    return avfilter_default_get_video_buffer(link, perms, w, h);
-}
-
 static int config_props(AVFilterLink *link)
 {
     ScaleContext *scale = link->src->priv;
@@ -193,7 +188,6 @@ AVFilter avfilter_vf_scale =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
-                                    .get_video_buffer= get_video_buffer,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .min_perms       = AV_PERM_READ, },

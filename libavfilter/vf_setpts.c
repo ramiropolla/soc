@@ -88,6 +88,12 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
     return !setpts->expr;
 }
 
+static AVFilterPicRef *get_video_buffer(AVFilterLink *link, int perms,
+                                        int w, int h)
+{
+    return avfilter_get_video_buffer(link->dst->outputs[0], perms, w, h);
+}
+
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     SetPTSContext *setpts = link->dst->priv;
@@ -126,6 +132,7 @@ AVFilter avfilter_vf_setpts =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
+                                    .get_video_buffer= get_video_buffer,
                                     .start_frame     = start_frame,},
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
