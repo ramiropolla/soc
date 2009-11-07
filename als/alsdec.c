@@ -637,6 +637,9 @@ static int read_var_block_data(ALSDecContext *ctx, ALSBlockData *bd)
                 *current_res++ = decode_rice(gb, s[sb]);
     }
 
+    if (!sconf->mc_coding || ctx->js_switch)
+        align_get_bits(gb);
+
     return 0;
 }
 
@@ -753,8 +756,6 @@ static int read_block(ALSDecContext *ctx, ALSBlockData *bd)
  */
 static int decode_block(ALSDecContext *ctx, ALSBlockData *bd)
 {
-    ALSSpecificConfig *sconf = &ctx->sconf;
-    GetBitContext *gb        = &ctx->gb;
     unsigned int smp;
 
     // read block type flag and read the samples accordingly
@@ -764,9 +765,6 @@ static int decode_block(ALSDecContext *ctx, ALSBlockData *bd)
         return -1;
 
     // TODO: read RLSLMS extension data
-
-    if (!sconf->mc_coding || ctx->js_switch)
-        align_get_bits(gb);
 
     if (bd->shift_lsbs)
         for (smp = 0; smp < bd->block_length; smp++)
