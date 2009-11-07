@@ -99,4 +99,14 @@ static const uint8_t ltp_gain_values [] = {
     0, 8, 16, 24, 32, 40, 48, 56, 64, 70, 76, 82, 88, 92, 96, 100
 };
 
+
+/** Inter-channel weighting factors for multi-channel correlation.
+ *  To be indexed by the Rice coded indices.
+ */
+static const int mcc_weightings[] = {
+    204,  192,  179,  166,  153,  140,  128,  115,
+    102,   89,   76,   64,   51,   38,   25,   12,
+      0,  -12,  -25,  -38,  -51,  -64,  -76,  -89,
+   -102, -115, -128, -140, -153, -166, -179, -192
+};
 #endif /* AVCODEC_ALS_DATA_H */
