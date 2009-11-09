@@ -103,7 +103,7 @@ static const uint8_t ltp_gain_values [] = {
 /** Inter-channel weighting factors for multi-channel correlation.
  *  To be indexed by the Rice coded indices.
  */
-static const int mcc_weightings[] = {
+static const int16_t mcc_weightings[] = {
     204,  192,  179,  166,  153,  140,  128,  115,
     102,   89,   76,   64,   51,   38,   25,   12,
       0,  -12,  -25,  -38,  -51,  -64,  -76,  -89,
