@@ -422,47 +422,6 @@ static void decode_pitch_lag(int *lag_int, int *lag_frac, int pitch_index,
     }
 }
 
-/**
- * Calculate the pitch vector by interpolating the past excitation at the pitch
- * lag using a b60 hamming windowed sinc function.
- *
- * @param pitch_vector buffer that must hold for the previous state of the filter in
- *                     pitch_vector[-PITCH_LAG_MAX-LP_FILTER_ORDER-1, -1]
- * @param lag_int             integer part of pitch lag
- * @param lag_frac            fractional part of pitch lag
- * @param mode                current frame mode
- */
-static void interp_pitch_vector(float *pitch_vector, int lag_int,
-                                int lag_frac, enum Mode mode)
-{
-    int n, i;
-    const float *b60_idx1, *b60_idx2;
-    float *exc_idx;
-
-    lag_frac *= -1;
-    if (mode != MODE_12k2) {
-        lag_frac <<= 1;
-    }
-
-    if (lag_frac < 0) {
-        lag_frac += 6;
-        lag_int++;
-    }
-
-    b60_idx1 = &b60[    lag_frac];
-    b60_idx2 = &b60[6 - lag_frac];
-    exc_idx  = &pitch_vector[-lag_int];
-
-    for (n = 0; n < AMR_SUBFRAME_SIZE; n++) {
-        pitch_vector[n] = 0.0;
-        for (i = 0; i < 10; i++)
-            pitch_vector[n] += b60_idx1[6 * i] * exc_idx[-i];
-        exc_idx++;
-        for (i = 0; i < 10; i++)
-            pitch_vector[n] += b60_idx2[6 * i] * exc_idx[ i];
-    }
-}
-
 static void decode_pitch_vector(AMRContext *p,
                                 const AMRNBSubframe *amr_subframe,
                                 const int subframe)
@@ -472,10 +431,18 @@ static void decode_pitch_vector(AMRContext *p,
     decode_pitch_lag(&pitch_lag_int, &pitch_lag_frac, amr_subframe->p_lag,
                      p->pitch_lag_int, subframe, p->cur_frame_mode);
 
-    interp_pitch_vector(p->excitation, pitch_lag_int, pitch_lag_frac,
-                        p->cur_frame_mode);
-
     p->pitch_lag_int = pitch_lag_int; // store previous lag in a uint8_t
+
+    pitch_lag_frac <<= (p->cur_frame_mode != MODE_12k2);
+
+    pitch_lag_int += pitch_lag_frac > 0;
+
+    /* Calculate the pitch vector by interpolating the past excitation at the
+       pitch lag using a b60 hamming windowed sinc function.   */
+    ff_acelp_interpolatef(p->excitation, p->excitation + 1 - pitch_lag_int,
+                          b60, 6, pitch_lag_frac + 6 - 6*(pitch_lag_frac > 0),
+                          10, AMR_SUBFRAME_SIZE);
+
     memcpy(p->pitch_vector, p->excitation, AMR_SUBFRAME_SIZE * sizeof(float));
 }
 
