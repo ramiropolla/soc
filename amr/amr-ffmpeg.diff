@@ -1,32 +1,32 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 19653)
+--- libavcodec/Makefile	(revision 20451)
 +++ libavcodec/Makefile	(working copy)
-@@ -42,6 +42,7 @@
+@@ -51,6 +51,7 @@
  OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
- OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o lpc.o
-+OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbdec.o celp_filters.o celp_math.o acelp_filters.o acelp_vectors.o lsp.o
+ OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o
++OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbdec.o celp_filters.o celp_math.o acelp_filters.o acelp_vectors.o lsp.o acelp_pitch_delay.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
  OBJS-$(CONFIG_APE_DECODER)             += apedec.o
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 19653)
+--- libavcodec/allcodecs.c	(revision 20451)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -198,6 +198,7 @@
+@@ -199,6 +199,7 @@
      REGISTER_ENCDEC  (AAC, aac);
      REGISTER_ENCDEC  (AC3, ac3);
      REGISTER_ENCDEC  (ALAC, alac);
 +    REGISTER_DECODER (AMRNB, amrnb);
      REGISTER_DECODER (APE, ape);
+     REGISTER_DECODER (ATRAC1, atrac1);
      REGISTER_DECODER (ATRAC3, atrac3);
-     REGISTER_DECODER (COOK, cook);
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 19653)
+--- doc/general.texi	(revision 20451)
 +++ doc/general.texi	(working copy)
-@@ -523,8 +523,8 @@
+@@ -527,8 +527,8 @@
  @item ADPCM Westwood Studios IMA @tab     @tab  X
      @tab Used in Westwood Studios games like Command and Conquer.
  @item ADPCM Yamaha           @tab  X  @tab  X
@@ -39,125 +39,13 @@ Index: doc/general.texi
  @item Apple lossless audio   @tab  X  @tab  X
 Index: Changelog
 ===================================================================
---- Changelog	(revision 19653)
+--- Changelog	(revision 20451)
 +++ Changelog	(working copy)
-@@ -32,6 +32,7 @@
- - RTMP support in libavformat
- - noX handling for OPT_BOOL X options
- - Wave64 demuxer
+@@ -41,6 +41,7 @@
+ - Atrac1 decoder
+ - MD STUDIO audio demuxer
+ - RF64 support in WAV demuxer
 +- AMR-NB decoder
  
  
  
-Index: libavcodec/acelp_vectors.c
-===================================================================
---- libavcodec/acelp_vectors.c	(revision 19653)
-+++ libavcodec/acelp_vectors.c	(working copy)
-@@ -22,6 +22,7 @@
- 
- #include <inttypes.h>
- #include "avcodec.h"
-+#include "celp_math.h"
- #include "acelp_vectors.h"
- 
- const uint8_t ff_fc_2pulses_9bits_track1[16] =
-@@ -155,3 +156,14 @@
-         out[i] = weight_coeff_a * in_a[i]
-                + weight_coeff_b * in_b[i];
- }
-+
-+void ff_scale_vector_to_given_sum_of_squares(float *out, const float *in,
-+                                             float sum_of_squares, const int n)
-+{
-+    int i;
-+    float scalefactor = ff_dot_productf(in, in, n);
-+    if (scalefactor)
-+        scalefactor = sqrt(sum_of_squares / scalefactor);
-+    for (i = 0; i < n; i++)
-+        out[i] = in[i] * scalefactor;
-+}
-Index: libavcodec/acelp_vectors.h
-===================================================================
---- libavcodec/acelp_vectors.h	(revision 19653)
-+++ libavcodec/acelp_vectors.h	(working copy)
-@@ -164,4 +164,22 @@
- void ff_weighted_vector_sumf(float *out, const float *in_a, const float *in_b,
-                              float weight_coeff_a, float weight_coeff_b, int length);
- 
-+/**
-+ * Set the sum of squares of a signal by scaling
-+ *
-+ * @param out output samples
-+ * @param in input samples
-+ * @param sum_of_squares new sum of squares
-+ * @param n number of samples
-+ *
-+ * @note If the input is zero (or its energy underflows), the output is zero.
-+ *       This is the behavior of AGC in the AMR reference decoder. The QCELP
-+ *       reference decoder seems to have undefined behavior.
-+ *
-+ * TIA/EIA/IS-733 2.4.8.3-2/3/4/5, 2.4.8.6
-+ * 3GPP TS 26.090 6.1 (6)
-+ */
-+void ff_scale_vector_to_given_sum_of_squares(float *out, const float *in,
-+                                             float sum_of_squares, const int n);
-+
- #endif /* AVCODEC_ACELP_VECTORS_H */
-Index: libavcodec/qcelpdec.c
-===================================================================
---- libavcodec/qcelpdec.c	(revision 19653)
-+++ libavcodec/qcelpdec.c	(working copy)
-@@ -406,31 +406,6 @@
- }
- 
- /**
-- * Compute the gain control
-- *
-- * @param v_in gain-controlled vector
-- * @param v_ref vector to control gain of
-- *
-- * @return gain control
-- *
-- * FIXME: If v_ref is a zero vector, it energy is zero
-- *        and the behavior of the gain control is
-- *        undefined in the specs.
-- *
-- * TIA/EIA/IS-733 2.4.8.3-2/3/4/5, 2.4.8.6
-- */
--static float compute_gain_ctrl(const float *v_ref, const float *v_in, const int len)
--{
--    float scalefactor = ff_dot_productf(v_in, v_in, len);
--
--    if(scalefactor)
--        scalefactor = sqrt(ff_dot_productf(v_ref, v_ref, len) / scalefactor);
--    else
--        av_log_missing_feature(NULL, "Zero energy for gain control", 1);
--    return scalefactor;
--}
--
--/**
-  * Apply generic gain control.
-  *
-  * @param v_out output vector
-@@ -442,15 +417,13 @@
- static void apply_gain_ctrl(float *v_out, const float *v_ref,
-                             const float *v_in)
- {
--    int   i, j, len;
--    float scalefactor;
-+    int i;
- 
--    for(i=0, j=0; i<4; i++)
--    {
--        scalefactor = compute_gain_ctrl(v_ref + j, v_in + j, 40);
--        for(len=j+40; j<len; j++)
--            v_out[j] = scalefactor * v_in[j];
--    }
-+    for (i = 0; i < 160; i += 40)
-+        ff_scale_vector_to_given_sum_of_squares(v_out + i, v_in + i,
-+                                                ff_dot_productf(v_ref + i,
-+                                                                v_ref + i, 40),
-+                                                40);
- }
- 
- /**
