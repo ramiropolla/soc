@@ -1059,25 +1059,6 @@ static float tilt_factor(float *lpc_n, float *lpc_d)
 }
 
 /**
- * Apply tilt compensation filter, 1 - tilt * z^-1
- *
- * @param mem Pointer to one float to keep the filter's state
- * @param tilt Tilt factor
- * @param samples AMR_SUBFRAME_SIZE array where the filter is applied
- */
-static void tilt_compensation(float *mem, float tilt, float *samples)
-{
-    float new_tilt_mem = samples[AMR_SUBFRAME_SIZE - 1];
-    int i;
-
-    for (i = AMR_SUBFRAME_SIZE - 1; i > 0; i--)
-         samples[i] -= tilt * samples[i - 1];
-
-    samples[0] -= tilt * *mem;
-    *mem = new_tilt_mem;
-}
-
-/**
  * Perform adaptive post-filtering to enhance the quality of the speech.
  * See section 6.2.1.
  *
@@ -1122,7 +1103,8 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
                                       pole_out + LP_FILTER_ORDER,
                                       AMR_SUBFRAME_SIZE, LP_FILTER_ORDER);
 
-    tilt_compensation(&p->tilt_mem, tilt_factor(lpc_n, lpc_d), buf_out);
+    ff_tilt_compensation(&p->tilt_mem, tilt_factor(lpc_n, lpc_d), buf_out,
+                         AMR_SUBFRAME_SIZE);
 
     // Adaptive gain control
     postfilter_gain = ff_dot_productf(buf_out, buf_out, AMR_SUBFRAME_SIZE);
