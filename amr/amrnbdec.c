@@ -1071,10 +1071,8 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     int i;
     float *samples          = p->samples_in + LP_FILTER_ORDER; // Start of input
 
-    float gain_scale_factor = 1.0;
     float speech_gain       = ff_dot_productf(samples, samples,
                                               AMR_SUBFRAME_SIZE);
-    float postfilter_gain;
 
     float pole_out[AMR_SUBFRAME_SIZE + LP_FILTER_ORDER];  // Output of pole filter
     const float *gamma_n, *gamma_d;                       // Formant filter factor table
@@ -1106,16 +1104,8 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     ff_tilt_compensation(&p->tilt_mem, tilt_factor(lpc_n, lpc_d), buf_out,
                          AMR_SUBFRAME_SIZE);
 
-    // Adaptive gain control
-    postfilter_gain = ff_dot_productf(buf_out, buf_out, AMR_SUBFRAME_SIZE);
-    if (postfilter_gain)
-        gain_scale_factor = sqrt(speech_gain / postfilter_gain);
-
-    for (i = 0; i < AMR_SUBFRAME_SIZE; i++) {
-        p->postfilter_agc = AMR_AGC_ALPHA * p->postfilter_agc +
-                            (1.0 - AMR_AGC_ALPHA) * gain_scale_factor;
-        buf_out[i] *= p->postfilter_agc;
-    }
+    ff_adaptative_gain_control(buf_out, speech_gain, AMR_SUBFRAME_SIZE,
+                               AMR_AGC_ALPHA, &p->postfilter_agc);
 }
 
 /// @}
