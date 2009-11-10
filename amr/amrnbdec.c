@@ -50,6 +50,7 @@
 #include "celp_filters.h"
 #include "acelp_filters.h"
 #include "acelp_vectors.h"
+#include "acelp_pitch_delay.h"
 #include "lsp.h"
 
 #include "amrnbdata.h"
@@ -814,33 +815,6 @@ static void decode_gains(AMRContext *p, const AMRNBSubframe *amr_subframe,
     }
 }
 
-/**
- * Calculate fixed gain (part of section 6.1.3)
- *
- * @param p the context
- * @param mode mode of the current frame
- * @param fixed_gain_factor gain correction factor
- * @param fixed_energy decoded algebraic codebook vector energy
- */
-static void set_fixed_gain(AMRContext *p, const enum Mode mode,
-                           float fixed_gain_factor, float fixed_energy)
-{
-    // Equations 66-69:
-    // ^g_c = ^gamma_gc * 10^0.05 (predicted dB + mean dB - dB of fixed vector)
-    // Note 10^(0.05 * -10log(average x^2)) = 1/sqrt((average x^2)).
-    p->fixed_gain[4] =
-        fixed_gain_factor *
-        exp2f(log2f(10.0) * 0.05 *
-              (ff_dot_productf(energy_pred_fac, p->prediction_error, 4) +
-               energy_mean[mode])) /
-        sqrtf(fixed_energy / AMR_SUBFRAME_SIZE);
-
-    // update quantified prediction error energy history
-    memmove(&p->prediction_error[0], &p->prediction_error[1],
-            3 * sizeof(p->prediction_error[0]));
-    p->prediction_error[3] = 20.0 * log10f(fixed_gain_factor);
-}
-
 /// @}
 
 
@@ -1212,9 +1186,12 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
         set_fixed_vector(p->fixed_vector, &fixed_sparse, 1.0);
 
-        set_fixed_gain(p, p->cur_frame_mode, fixed_gain_factor,
+        p->fixed_gain[4] =
+            ff_amr_set_fixed_gain(fixed_gain_factor,
                        ff_dot_productf(p->fixed_vector, p->fixed_vector,
-                                       AMR_SUBFRAME_SIZE));
+                                       AMR_SUBFRAME_SIZE)/AMR_SUBFRAME_SIZE,
+                       p->prediction_error,
+                       energy_mean[p->cur_frame_mode], energy_pred_fac);
 
         // The excitation feedback is calculated without any processing such
         // as fixed gain smoothing. This isn't mentioned in the specification.
