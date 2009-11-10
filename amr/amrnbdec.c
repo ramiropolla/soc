@@ -209,23 +209,6 @@ static void interpolate_lsf(float lsf_q[4][LP_FILTER_ORDER], float *lsf_new)
 }
 
 /**
- * Adjust the quantized LSFs so they are increasing and not too close.
- *
- * This step isn't mentioned in the spec but is in the reference C decoder.
- * Omitting this step creates audible distortion on the sinusoidal sweep
- * test vectors in 3GPP TS 26.074.
- *
- * @param[in,out] lsf    LSFs in Hertz
- */
-static void make_increasing(float *lsf)
-{
-    int i;
-    float prev = 0.0;
-    for (i = 0; i < LP_FILTER_ORDER; i++)
-        prev = lsf[i] = FFMAX(lsf[i], prev + MIN_LSF_SPACING);
-}
-
-/**
  * Decode a set of 5 split-matrix quantized lsf indexes into an lsp vector.
  *
  * @param p the context
@@ -261,7 +244,7 @@ static void lsf2lsp_for_mode12k2(AMRContext *p, float lsp[LP_FILTER_ORDER],
     for (i = 0; i < LP_FILTER_ORDER; i++)
         lsf_q[i] = lsf_r[i] * LSF_R_FAC + lsf_no_r[i];
 
-    make_increasing(lsf_q);
+    ff_set_min_dist_lsf(lsf_q, MIN_LSF_SPACING, LP_FILTER_ORDER);
 
     if (update)
         interpolate_lsf(p->lsf_q, lsf_q);
@@ -324,7 +307,7 @@ static void lsf2lsp_3(AMRContext *p)
     for (i = 0; i < LP_FILTER_ORDER; i++)
         lsf_q[i] = (lsf_r[i] + p->prev_lsf_r[i] * pred_fac[i]) * LSF_R_FAC + lsf_3_mean[i];
 
-    make_increasing(lsf_q);
+    ff_set_min_dist_lsf(lsf_q, MIN_LSF_SPACING, LP_FILTER_ORDER);
 
     // store data for computing the next frame's LSFs
     interpolate_lsf(p->lsf_q, lsf_q);
