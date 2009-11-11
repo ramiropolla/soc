@@ -1291,8 +1291,8 @@ static av_cold int decode_init(AVCodecContext *avctx)
     // allocate quantized parcor coefficient buffer
     num_lpc_buffers = sconf->mc_coding ? avctx->channels : 1;
 
-    ctx->quant_cof        = av_malloc(sizeof(*ctx->quant_cof) * avctx->channels);
-    ctx->lpc_cof          = av_malloc(sizeof(*ctx->lpc_cof)   * avctx->channels);
+    ctx->quant_cof        = av_malloc(sizeof(*ctx->quant_cof) * num_lpc_buffers);
+    ctx->lpc_cof          = av_malloc(sizeof(*ctx->lpc_cof)   * num_lpc_buffers);
     ctx->quant_cof_buffer = av_malloc(sizeof(*ctx->quant_cof_buffer) *
                                       num_lpc_buffers * sconf->max_order);
     ctx->lpc_cof_buffer   = av_malloc(sizeof(*ctx->lpc_cof_buffer) *
@@ -1311,11 +1311,11 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     // allocate and assign lag and gain data buffer for ltp mode
-    ctx->use_ltp         = av_mallocz(sizeof(*ctx->use_ltp)  * avctx->channels);
-    ctx->ltp_lag         = av_malloc (sizeof(*ctx->ltp_lag)  * avctx->channels);
-    ctx->ltp_gain        = av_malloc (sizeof(*ctx->ltp_gain) * avctx->channels);
+    ctx->use_ltp         = av_mallocz(sizeof(*ctx->use_ltp)  * num_lpc_buffers);
+    ctx->ltp_lag         = av_malloc (sizeof(*ctx->ltp_lag)  * num_lpc_buffers);
+    ctx->ltp_gain        = av_malloc (sizeof(*ctx->ltp_gain) * num_lpc_buffers);
     ctx->ltp_gain_buffer = av_malloc (sizeof(*ctx->ltp_gain_buffer) *
-                                      avctx->channels * 5);
+                                      num_lpc_buffers * 5);
 
     if (!ctx->use_ltp  || !ctx->ltp_lag ||
         !ctx->ltp_gain || !ctx->ltp_gain_buffer) {
@@ -1324,15 +1324,15 @@ static av_cold int decode_init(AVCodecContext *avctx)
         return AVERROR(ENOMEM);
     }
 
-    for (c = 0; c < avctx->channels; c++)
+    for (c = 0; c < num_lpc_buffers; c++)
         ctx->ltp_gain[c] = ctx->ltp_gain_buffer + c * 5;
 
     // allocate and assign channel data buffer for mcc mode
     if (sconf->mc_coding) {
         ctx->chan_data_buffer = av_malloc(sizeof(*ctx->chan_data_buffer) *
-                                          avctx->channels);
+                                          num_lpc_buffers);
         ctx->chan_data        = av_malloc(sizeof(ALSChannelData) *
-                                          avctx->channels);
+                                          num_lpc_buffers);
 
         if (!ctx->chan_data_buffer || !ctx->chan_data) {
             av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
@@ -1340,7 +1340,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
             return AVERROR(ENOMEM);
         }
 
-        for (c = 0; c < avctx->channels; c++)
+        for (c = 0; c < num_lpc_buffers; c++)
             ctx->chan_data[c] = ctx->chan_data_buffer + c;
     } else {
         ctx->chan_data        = NULL;
