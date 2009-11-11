@@ -173,7 +173,7 @@ static av_cold int read_specific_config(ALSDecContext *ctx)
 {
     GetBitContext gb;
     uint64_t ht_size;
-    int i, config_offset, crc_enabled, num_lpc_buffers;
+    int i, config_offset, crc_enabled;
     MPEG4AudioConfig m4ac;
     ALSSpecificConfig *sconf = &ctx->sconf;
     AVCodecContext *avctx    = ctx->avctx;
@@ -228,29 +228,6 @@ static av_cold int read_specific_config(ALSDecContext *ctx)
         return -1;
 
     ctx->cur_frame_length = sconf->frame_length;
-
-    // allocate quantized parcor coefficient buffer
-    num_lpc_buffers = sconf->mc_coding ? avctx->channels : 1;
-    i = num_lpc_buffers * sconf->max_order;
-
-    ctx->quant_cof        = av_malloc(sizeof(*ctx->quant_cof) * avctx->channels);
-    ctx->lpc_cof          = av_malloc(sizeof(*ctx->lpc_cof)   * avctx->channels);
-    ctx->quant_cof_buffer = av_malloc(sizeof(*ctx->quant_cof_buffer) *
-                                      num_lpc_buffers * sconf->max_order);
-    ctx->lpc_cof_buffer   = av_malloc(sizeof(*ctx->lpc_cof_buffer) *
-                                      num_lpc_buffers * sconf->max_order);
-
-    if (!ctx->quant_cof        || !ctx->lpc_cof       ||
-        !ctx->quant_cof_buffer || !ctx->lpc_cof_buffer) {
-        av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
-        return AVERROR(ENOMEM);
-    }
-
-    // assign quantized parcor coefficient buffers
-    for (i = 0; i < num_lpc_buffers; i++) {
-        ctx->quant_cof[i] = ctx->quant_cof_buffer + i * sconf->max_order;
-        ctx->lpc_cof[i]   = ctx->lpc_cof_buffer   + i * sconf->max_order;
-    }
 
     // calculate total number of frames to decode if possible
     if (samples != 0xFFFFFFFF) {
@@ -1273,6 +1250,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 {
     unsigned int c;
     unsigned int channel_size;
+    int num_lpc_buffers;
     ALSDecContext *ctx = avctx->priv_data;
     ALSSpecificConfig *sconf = &ctx->sconf;
     ctx->avctx = avctx;
@@ -1309,6 +1287,28 @@ static av_cold int decode_init(AVCodecContext *avctx)
         ctx->ltp_lag_length = 9;
     else
         ctx->ltp_lag_length = 8;
+
+    // allocate quantized parcor coefficient buffer
+    num_lpc_buffers = sconf->mc_coding ? avctx->channels : 1;
+
+    ctx->quant_cof        = av_malloc(sizeof(*ctx->quant_cof) * avctx->channels);
+    ctx->lpc_cof          = av_malloc(sizeof(*ctx->lpc_cof)   * avctx->channels);
+    ctx->quant_cof_buffer = av_malloc(sizeof(*ctx->quant_cof_buffer) *
+                                      num_lpc_buffers * sconf->max_order);
+    ctx->lpc_cof_buffer   = av_malloc(sizeof(*ctx->lpc_cof_buffer) *
+                                      num_lpc_buffers * sconf->max_order);
+
+    if (!ctx->quant_cof        || !ctx->lpc_cof       ||
+        !ctx->quant_cof_buffer || !ctx->lpc_cof_buffer) {
+        av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
+        return AVERROR(ENOMEM);
+    }
+
+    // assign quantized parcor coefficient buffers
+    for (c = 0; c < num_lpc_buffers; c++) {
+        ctx->quant_cof[c] = ctx->quant_cof_buffer + c * sconf->max_order;
+        ctx->lpc_cof[c]   = ctx->lpc_cof_buffer   + c * sconf->max_order;
+    }
 
     // allocate and assign lag and gain data buffer for ltp mode
     ctx->use_ltp         = av_mallocz(sizeof(*ctx->use_ltp)  * avctx->channels);
