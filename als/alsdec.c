@@ -1341,8 +1341,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
         }
 
         for (c = 0; c < avctx->channels; c++)
-            ctx->chan_data[c] = ctx->chan_data_buffer +
-                                c * sizeof(ALSChannelData);
+            ctx->chan_data[c] = ctx->chan_data_buffer + c;
     } else {
         ctx->chan_data        = NULL;
         ctx->chan_data_buffer = NULL;
