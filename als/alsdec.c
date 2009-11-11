@@ -1250,7 +1250,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 {
     unsigned int c;
     unsigned int channel_size;
-    int num_lpc_buffers;
+    int num_buffers;
     ALSDecContext *ctx = avctx->priv_data;
     ALSSpecificConfig *sconf = &ctx->sconf;
     ctx->avctx = avctx;
@@ -1289,14 +1289,14 @@ static av_cold int decode_init(AVCodecContext *avctx)
         ctx->ltp_lag_length = 8;
 
     // allocate quantized parcor coefficient buffer
-    num_lpc_buffers = sconf->mc_coding ? avctx->channels : 1;
+    num_buffers = sconf->mc_coding ? avctx->channels : 1;
 
-    ctx->quant_cof        = av_malloc(sizeof(*ctx->quant_cof) * num_lpc_buffers);
-    ctx->lpc_cof          = av_malloc(sizeof(*ctx->lpc_cof)   * num_lpc_buffers);
+    ctx->quant_cof        = av_malloc(sizeof(*ctx->quant_cof) * num_buffers);
+    ctx->lpc_cof          = av_malloc(sizeof(*ctx->lpc_cof)   * num_buffers);
     ctx->quant_cof_buffer = av_malloc(sizeof(*ctx->quant_cof_buffer) *
-                                      num_lpc_buffers * sconf->max_order);
+                                      num_buffers * sconf->max_order);
     ctx->lpc_cof_buffer   = av_malloc(sizeof(*ctx->lpc_cof_buffer) *
-                                      num_lpc_buffers * sconf->max_order);
+                                      num_buffers * sconf->max_order);
 
     if (!ctx->quant_cof        || !ctx->lpc_cof       ||
         !ctx->quant_cof_buffer || !ctx->lpc_cof_buffer) {
@@ -1305,17 +1305,17 @@ static av_cold int decode_init(AVCodecContext *avctx)
     }
 
     // assign quantized parcor coefficient buffers
-    for (c = 0; c < num_lpc_buffers; c++) {
+    for (c = 0; c < num_buffers; c++) {
         ctx->quant_cof[c] = ctx->quant_cof_buffer + c * sconf->max_order;
         ctx->lpc_cof[c]   = ctx->lpc_cof_buffer   + c * sconf->max_order;
     }
 
     // allocate and assign lag and gain data buffer for ltp mode
-    ctx->use_ltp         = av_mallocz(sizeof(*ctx->use_ltp)  * num_lpc_buffers);
-    ctx->ltp_lag         = av_malloc (sizeof(*ctx->ltp_lag)  * num_lpc_buffers);
-    ctx->ltp_gain        = av_malloc (sizeof(*ctx->ltp_gain) * num_lpc_buffers);
+    ctx->use_ltp         = av_mallocz(sizeof(*ctx->use_ltp)  * num_buffers);
+    ctx->ltp_lag         = av_malloc (sizeof(*ctx->ltp_lag)  * num_buffers);
+    ctx->ltp_gain        = av_malloc (sizeof(*ctx->ltp_gain) * num_buffers);
     ctx->ltp_gain_buffer = av_malloc (sizeof(*ctx->ltp_gain_buffer) *
-                                      num_lpc_buffers * 5);
+                                      num_buffers * 5);
 
     if (!ctx->use_ltp  || !ctx->ltp_lag ||
         !ctx->ltp_gain || !ctx->ltp_gain_buffer) {
@@ -1324,15 +1324,15 @@ static av_cold int decode_init(AVCodecContext *avctx)
         return AVERROR(ENOMEM);
     }
 
-    for (c = 0; c < num_lpc_buffers; c++)
+    for (c = 0; c < num_buffers; c++)
         ctx->ltp_gain[c] = ctx->ltp_gain_buffer + c * 5;
 
     // allocate and assign channel data buffer for mcc mode
     if (sconf->mc_coding) {
         ctx->chan_data_buffer = av_malloc(sizeof(*ctx->chan_data_buffer) *
-                                          num_lpc_buffers);
+                                          num_buffers);
         ctx->chan_data        = av_malloc(sizeof(ALSChannelData) *
-                                          num_lpc_buffers);
+                                          num_buffers);
 
         if (!ctx->chan_data_buffer || !ctx->chan_data) {
             av_log(avctx, AV_LOG_ERROR, "Allocating buffer memory failed.\n");
@@ -1340,7 +1340,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
             return AVERROR(ENOMEM);
         }
 
-        for (c = 0; c < num_lpc_buffers; c++)
+        for (c = 0; c < num_buffers; c++)
             ctx->chan_data[c] = ctx->chan_data_buffer + c;
     } else {
         ctx->chan_data        = NULL;
