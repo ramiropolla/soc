@@ -159,14 +159,6 @@ static av_cold void dprint_specific_config(ALSDecContext *ctx)
 }
 
 
-/** Returns the bits left for reading.
- */
-static inline int get_bits_left(GetBitContext *gb)
-{
-    return gb->size_in_bits - get_bits_count(gb);
-}
-
-
 /** Reads an ALSSpecificConfig from a buffer into the output struct.
  */
 static av_cold int read_specific_config(ALSDecContext *ctx)
