@@ -137,10 +137,14 @@ Index: doc/libavfilter.texi
  @section vflip
  
  Flip the input video vertically.
-@@ -197,4 +297,30 @@
+@@ -197,4 +297,34 @@
  ./ffmpeg -i in.avi -vfilters "vflip" out.avi
  @end example
  
++@chapter Available video sources
++
++Below is a description of the currently available video sources.
++
 +@section buffer
 +
 +This input filter is used by the client application to feed pictures to
