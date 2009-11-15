@@ -1527,8 +1527,6 @@ static const float pred_fac[LP_FILTER_ORDER] = {
 
 #define LSF_R_FAC          (8000.0/32768.0) ///< LSF residual tables to Hertz
 #define MIN_LSF_SPACING             50.0488 ///< Ensures stability of LPC filter
-#define PITCH_LAG_MAX                   143 ///< Upper bound on decoded lag search
-#define PITCH_LAG_MIN                    20 ///< Lower bound on decoded lag search
 #define PITCH_LAG_MIN_MODE_12k2          18 ///< Lower bound on decoded lag search in 12.2kbit/s mode
 
 /** b60 hamming windowed sinc function coefficients */
