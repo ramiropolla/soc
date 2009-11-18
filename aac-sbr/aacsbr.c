@@ -96,6 +96,10 @@ static unsigned int sbr_header(SpectralBandReplication *sbr, GetBitContext *gb)
         sbr->spectrum_params[1].bs_freq_scale  = get_bits(gb, 2);
         sbr->spectrum_params[1].bs_alter_scale = get_bits1(gb);
         sbr->spectrum_params[1].bs_noise_bands = get_bits(gb, 2);
+    } else {
+        sbr->spectrum_params[1].bs_freq_scale  = 2;
+        sbr->spectrum_params[1].bs_alter_scale = 1;
+        sbr->spectrum_params[1].bs_noise_bands = 2;
     }
 
     // Check if spectrum parameters changed
@@ -108,6 +112,11 @@ static unsigned int sbr_header(SpectralBandReplication *sbr, GetBitContext *gb)
         sbr->bs_limiter_gains  = get_bits(gb, 2);
         sbr->bs_interpol_freq  = get_bits1(gb);
         sbr->bs_smoothing_mode = get_bits1(gb);
+    } else {
+        sbr->bs_limiter_bands  = 2;
+        sbr->bs_limiter_gains  = 2;
+        sbr->bs_interpol_freq  = 1;
+        sbr->bs_smoothing_mode = 1;
     }
 
     return get_bits_count(gb) - cnt;
