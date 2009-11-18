@@ -1259,12 +1259,12 @@ static void sbr_env_estimate(float **e_curr, float ***x_high,
                              int ch)
 {
     int i, l, m;
-    int ilb = sbr->t_env[ch][l]     * 2 + ENVELOPE_ADJUSTMENT_OFFSET;
-    int iub = sbr->t_env[ch][l + 1] * 2 + ENVELOPE_ADJUSTMENT_OFFSET;
 
     if (sbr->bs_interpol_freq) {
         for (l = 0; l < ch_data->bs_num_env[1]; l++) {
             const int env_size = (sbr->t_env[ch][l + 1] - sbr->t_env[ch][l]) << 1;
+            int ilb = sbr->t_env[ch][l]     * 2 + ENVELOPE_ADJUSTMENT_OFFSET;
+            int iub = sbr->t_env[ch][l + 1] * 2 + ENVELOPE_ADJUSTMENT_OFFSET;
 
             for (m = 0; m < sbr->m; m++) {
                 float sum = 0.0f;
@@ -1281,6 +1281,8 @@ static void sbr_env_estimate(float **e_curr, float ***x_high,
 
         for (l = 0; l < ch_data->bs_num_env[1]; l++) {
             const int env_size = (sbr->t_env[ch][l + 1] - sbr->t_env[ch][l]) << 1;
+            int ilb = sbr->t_env[ch][l]     * 2 + ENVELOPE_ADJUSTMENT_OFFSET;
+            int iub = sbr->t_env[ch][l + 1] * 2 + ENVELOPE_ADJUSTMENT_OFFSET;
             const uint16_t *table = ch_data->bs_freq_res[l + 1] ? sbr->f_tablehigh : sbr->f_tablelow;
 
             for (p = 0; p < sbr->n[ch_data->bs_freq_res[l + 1]]; p++) {
