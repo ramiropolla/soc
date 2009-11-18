@@ -390,18 +390,18 @@ static int sbr_hf_calc_npatches(AACContext *ac, SpectralBandReplication *sbr)
     return 0;
 }
 
-static inline void remove_table_element(void *table, uint8_t *nel, int el_size,
+static inline void remove_table_element(void *table, uint8_t *last_el, int el_size,
                                         int el)
 {
-    memmove((uint8_t *)table + el_size*el, (uint8_t *)table + el_size*(el + 1), (*nel - el - 1)*el_size);
-    (*nel)--;
+    memmove((uint8_t *)table + el_size*el, (uint8_t *)table + el_size*(el + 1), (*last_el - el)*el_size);
+    (*last_el)--;
 }
 
-static inline int in_table(void *table, int nel, int el_size, void *needle)
+static inline int in_table(void *table, int last_el, int el_size, void *needle)
 {
     int i;
     uint8_t *table_ptr = table; // avoids a warning with void * ptr arith
-    for (i = 0; i < nel; i++, table_ptr += el_size)
+    for (i = 0; i <= last_el; i++, table_ptr += el_size)
         if (!memcmp(table_ptr, needle, el_size))
             return 1;
     return 0;
