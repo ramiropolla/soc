@@ -80,6 +80,8 @@ static unsigned int sbr_header(SpectralBandReplication *sbr, GetBitContext *gb)
     uint8_t bs_header_extra_1;
     uint8_t bs_header_extra_2;
 
+    sbr->start = 1;
+
     // Save last spectrum parameters variables to compare to new ones
     memcpy(&sbr->spectrum_params[0], &sbr->spectrum_params[1], sizeof(SpectrumParameters));
 
@@ -805,6 +807,7 @@ int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
     if (sbr->reset)
         sbr_reset(ac, sbr);
 
+    if (sbr->start)
     num_sbr_bits  += sbr_data(ac, sbr, gb, id_aac);
     num_align_bits = ((cnt << 3) - 4 - num_sbr_bits) & 7;
 

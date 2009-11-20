@@ -106,6 +106,7 @@ typedef struct {
  * Spectral Band Replication
  */
 typedef struct {
+    uint8_t            start;
     // SBR header bitstream variables
     uint8_t            bs_amp_res;
     SpectrumParameters spectrum_params[2];
