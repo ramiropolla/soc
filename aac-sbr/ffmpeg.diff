@@ -1,6 +1,6 @@
 Index: libavcodec/aac.c
 ===================================================================
---- libavcodec/aac.c	(revision 20025)
+--- libavcodec/aac.c	(revision 20564)
 +++ libavcodec/aac.c	(working copy)
 @@ -62,7 +62,7 @@
   * N                    MIDI
@@ -21,7 +21,7 @@ Index: libavcodec/aac.c
  #include "mpeg4audio.h"
  #include "aac_parser.h"
  
-@@ -474,6 +477,7 @@
+@@ -507,6 +510,7 @@
      avccontext->sample_fmt = SAMPLE_FMT_S16;
      avccontext->frame_size = 1024;
  
@@ -29,7 +29,7 @@ Index: libavcodec/aac.c
      AAC_INIT_VLC_STATIC( 0, 144);
      AAC_INIT_VLC_STATIC( 1, 114);
      AAC_INIT_VLC_STATIC( 2, 188);
-@@ -486,6 +490,8 @@
+@@ -519,6 +523,8 @@
      AAC_INIT_VLC_STATIC( 9, 248);
      AAC_INIT_VLC_STATIC(10, 384);
  
@@ -38,7 +38,7 @@ Index: libavcodec/aac.c
      dsputil_init(&ac->dsp, avccontext);
  
      ac->random_state = 0x1f2e3d4c;
-@@ -1281,23 +1287,6 @@
+@@ -1314,23 +1320,6 @@
  }
  
  /**
@@ -62,7 +62,7 @@ Index: libavcodec/aac.c
   * Parse whether channels are to be excluded from Dynamic Range Compression; reference: table 4.53.
   *
   * @return  Returns number of bytes consumed.
-@@ -1377,7 +1366,8 @@
+@@ -1410,7 +1399,8 @@
   *
   * @return Returns number of bytes consumed
   */
@@ -72,7 +72,7 @@ Index: libavcodec/aac.c
  {
      int crc_flag = 0;
      int res = cnt;
-@@ -1385,7 +1375,7 @@
+@@ -1418,7 +1408,7 @@
      case EXT_SBR_DATA_CRC:
          crc_flag++;
      case EXT_SBR_DATA:
@@ -81,7 +81,7 @@ Index: libavcodec/aac.c
          break;
      case EXT_DYNAMIC_RANGE:
          res = decode_dynamic_range(&ac->che_drc, gb, cnt);
-@@ -1674,8 +1664,8 @@
+@@ -1709,8 +1699,8 @@
      AACContext *ac = avccontext->priv_data;
      ChannelElement *che = NULL;
      GetBitContext gb;
@@ -92,7 +92,7 @@ Index: libavcodec/aac.c
  
      init_get_bits(&gb, buf, buf_size * 8);
  
-@@ -1739,7 +1729,7 @@
+@@ -1774,7 +1764,7 @@
              if (elem_id == 15)
                  elem_id += get_bits(&gb, 8) - 1;
              while (elem_id > 0)
@@ -101,7 +101,7 @@ Index: libavcodec/aac.c
              err = 0; /* FIXME */
              break;
  
-@@ -1748,6 +1738,9 @@
+@@ -1783,6 +1773,9 @@
              break;
          }
  
@@ -113,7 +113,7 @@ Index: libavcodec/aac.c
      }
 Index: libavcodec/aac.h
 ===================================================================
---- libavcodec/aac.h	(revision 20025)
+--- libavcodec/aac.h	(revision 20564)
 +++ libavcodec/aac.h	(working copy)
 @@ -33,6 +33,7 @@
  #include "avcodec.h"
@@ -123,7 +123,7 @@ Index: libavcodec/aac.h
  
  #include <stdint.h>
  
-@@ -221,6 +222,7 @@
+@@ -231,6 +232,7 @@
      SingleChannelElement ch[2];
      // CCE specific
      ChannelCoupling coup;
@@ -133,14 +133,14 @@ Index: libavcodec/aac.h
  /**
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 20025)
+--- libavcodec/Makefile	(revision 20564)
 +++ libavcodec/Makefile	(working copy)
-@@ -35,7 +35,7 @@
+@@ -38,7 +38,7 @@
  OBJS-$(CONFIG_VDPAU)                   += vdpau.o
  
  # decoders/encoders/hardware accelerators
--OBJS-$(CONFIG_AAC_DECODER)             += aac.o aactab.o mpeg4audio.o aac_parser.o aac_ac3_parser.o
-+OBJS-$(CONFIG_AAC_DECODER)             += aac.o aactab.o aacsbr.o mpeg4audio.o aac_parser.o aac_ac3_parser.o
- OBJS-$(CONFIG_AAC_ENCODER)             += aacenc.o aaccoder.o aacpsy.o aactab.o psymodel.o iirfilter.o mpeg4audio.o
- OBJS-$(CONFIG_AASC_DECODER)            += aasc.o msrledec.o
- OBJS-$(CONFIG_AC3_DECODER)             += ac3dec.o ac3tab.o ac3dec_data.o ac3.o ac3_parser.o aac_ac3_parser.o
+-OBJS-$(CONFIG_AAC_DECODER)             += aac.o aactab.o mpeg4audio.o \
++OBJS-$(CONFIG_AAC_DECODER)             += aac.o aactab.o aacsbr.o mpeg4audio.o \
+                                           aac_parser.o aac_ac3_parser.o
+ OBJS-$(CONFIG_AAC_ENCODER)             += aacenc.o aaccoder.o    \
+                                           aacpsy.o aactab.o      \
