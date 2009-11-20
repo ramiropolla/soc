@@ -656,7 +656,6 @@ static void sbr_noise(SpectralBandReplication *sbr, GetBitContext *gb,
 
     for (i = 0; i < ch_data->bs_num_noise; i++) {
         if (!ch_data->bs_df_noise[i]) {
-            if (sbr->bs_coupling && ch)
                 ch_data->bs_data_noise[i][0] = get_bits(gb, 5); // bs_noise_start_value_balance or bs_noise_start_value_level
             for (j = 1; j < sbr->n_q; j++)
                 ch_data->bs_data_noise[i][j] = get_vlc2(gb, f_huff, 9, max_depth + 1);
