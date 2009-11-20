@@ -85,7 +85,7 @@ static unsigned int sbr_header(SpectralBandReplication *sbr, GetBitContext *gb)
     // Save last spectrum parameters variables to compare to new ones
     memcpy(&sbr->spectrum_params[0], &sbr->spectrum_params[1], sizeof(SpectrumParameters));
 
-    sbr->bs_amp_res                        = get_bits1(gb);
+    sbr->bs_amp_res_header                 = get_bits1(gb);
     sbr->spectrum_params[1].bs_start_freq  = get_bits(gb, 4);
     sbr->spectrum_params[1].bs_stop_freq   = get_bits(gb, 4);
     sbr->spectrum_params[1].bs_xover_band  = get_bits(gb, 3);
@@ -501,6 +501,7 @@ static int sbr_grid(AACContext *ac, SpectralBandReplication *sbr,
     int i;
 
     ch_data->bs_num_env[0] = ch_data->bs_num_env[1];
+    sbr->bs_amp_res = sbr->bs_amp_res_header;
 
     switch (ch_data->bs_frame_class = get_bits(gb, 2)) {
     case FIXFIX:

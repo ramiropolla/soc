@@ -109,6 +109,7 @@ typedef struct {
     uint8_t            start;
     // SBR header bitstream variables
     uint8_t            bs_amp_res;
+    uint8_t            bs_amp_res_header;
     SpectrumParameters spectrum_params[2];
     // if (bs_header_extra_2)
     uint8_t            bs_limiter_bands;
