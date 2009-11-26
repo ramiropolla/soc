@@ -792,9 +792,13 @@ static void sbr_reset(AACContext *ac, SpectralBandReplication *sbr)
  * @return  Returns number of bytes consumed from the TYPE_FIL element.
  */
 int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
-                            GetBitContext *gb, int crc, int cnt, int id_aac)
+                            GetBitContext *gb_host, int crc, int cnt, int id_aac)
 {
     unsigned int num_sbr_bits = 0, num_align_bits;
+    unsigned bytes_read;
+    GetBitContext gbc = *gb_host;
+    GetBitContext *gb = &gbc;
+    skip_bits_long(gb_host, cnt*8 - 4);
 
     if (crc) {
         skip_bits(gb, 10); // bs_sbr_crc_bits; FIXME - implement CRC check
@@ -812,9 +816,11 @@ int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
     num_sbr_bits  += sbr_data(ac, sbr, gb, id_aac);
     num_align_bits = ((cnt << 3) - 4 - num_sbr_bits) & 7;
 
-    skip_bits(gb, num_align_bits); // bs_fill_bits
-
-    return (num_sbr_bits + num_align_bits + 4) >> 3;
+    bytes_read = ((num_sbr_bits + num_align_bits + 4) / 8);
+    if (bytes_read > cnt) {
+        av_log(ac->avccontext, AV_LOG_ERROR, "Expected to read %d SBR bytes actually read %d.\n", cnt, bytes_read);
+    }
+    return cnt;
 }
 
 // Time/frequency Grid (14496-3 sp04 p200)
