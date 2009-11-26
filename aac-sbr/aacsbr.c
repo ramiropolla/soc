@@ -351,7 +351,6 @@ static int sbr_hf_calc_npatches(AACContext *ac, SpectralBandReplication *sbr)
 
     if (goal_sb < sbr->k[3] + sbr->m) {
         for (k = 0; sbr->f_master[k] < goal_sb; k++);
-        k++;
     } else
         k = sbr->n_master;
 
