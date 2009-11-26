@@ -356,7 +356,7 @@ static int sbr_hf_calc_npatches(AACContext *ac, SpectralBandReplication *sbr)
 
     do {
         int odd = 0;
-        for (i = k; sb <= (sbr->k[0] - 1 + msb - odd); i--) {
+        for (i = k; i == k || sb > (sbr->k[0] - 1 + msb - odd); i--) {
             sb = sbr->f_master[i];
             odd = (sb - 2 + sbr->k[0]) & 1;
         }
