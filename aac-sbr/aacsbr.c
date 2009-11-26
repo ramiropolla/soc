@@ -806,6 +806,9 @@ int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
     GetBitContext *gb = &gbc;
     skip_bits_long(gb_host, cnt*8 - 4);
 
+    if (!ac->m4ac.ext_sample_rate)
+        ac->m4ac.ext_sample_rate = 2 * ac->m4ac.sample_rate;
+
     if (crc) {
         skip_bits(gb, 10); // bs_sbr_crc_bits; FIXME - implement CRC check
         num_sbr_bits += 10;
