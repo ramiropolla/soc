@@ -240,7 +240,7 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
         float warp = spectrum->bs_alter_scale ? 1.3 : 1.0;        // bs_alter_scale = {0,1}
         unsigned int two_regions, num_bands_0;
         int vdk0_max, vdk1_min;
-        int vk0[49];
+        int16_t vk0[49];
 
         if (sbr->k[2] / (float)sbr->k[0] > 2.2449) {
             two_regions = 1;
@@ -277,7 +277,7 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
         }
 
         if (two_regions) {
-            int vk1[49];
+            int16_t vk1[49];
             unsigned int num_bands_1 = lroundf(bands * logf(sbr->k[2] / (float)sbr->k[1]) /
                                               (2.0f * logf(2.0f) * warp)) << 1;
 
