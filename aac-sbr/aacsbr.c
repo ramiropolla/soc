@@ -779,7 +779,7 @@ static unsigned int sbr_data(AACContext *ac, SpectralBandReplication *sbr,
 static void sbr_reset(AACContext *ac, SpectralBandReplication *sbr)
 {
     int err;
-    err = sbr_make_f_master(ac, sbr, sbr->spectrum_params);
+    err = sbr_make_f_master(ac, sbr, &sbr->spectrum_params[1]);
     if (err >= 0)
         err = sbr_make_f_derived(ac, sbr);
     sbr->reset = 0;
