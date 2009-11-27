@@ -146,6 +146,7 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
     unsigned int start_min, stop_min;
     int k;
     const uint8_t *sbr_offset_ptr;
+    int stop_dk[13];
 
     if (ac->m4ac.ext_sample_rate < 32000) {
         temp = 3000;
@@ -179,10 +180,13 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
 
     if (spectrum->bs_stop_freq < 14) {
         sbr->k[2] = stop_min;
-        for (k = 0; k < spectrum->bs_stop_freq; k++) {
-            sbr->k[2] += lroundf(stop_min * powf(64.0f / (float)stop_min, (k + 1) / 13.0f))  -
+        for (k = 0; k < 13; k++) {
+            stop_dk[k] = lroundf(stop_min * powf(64.0f / (float)stop_min, (k + 1) / 13.0f))  -
                          lroundf(stop_min * powf(64.0f / (float)stop_min,  k      / 13.0f));
         }
+        qsort(stop_dk, 13, sizeof(stop_dk[0]), qsort_comparison_function);
+        for (k = 0; k < spectrum->bs_stop_freq; k++)
+            sbr->k[2] += stop_dk[k];
     } else if (spectrum->bs_stop_freq == 14) {
         sbr->k[2] = 2*sbr->k[0];
     } else if (spectrum->bs_stop_freq == 15) {
