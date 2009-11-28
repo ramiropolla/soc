@@ -719,9 +719,11 @@ static void sbr_channel_pair_element(AACContext *ac,
 
     if ((sbr->bs_coupling = get_bits1(gb))) {
         sbr_grid(ac, sbr, gb, &sbr->data[0]);
+        memcpy(&sbr->data[1], &sbr->data[0], sizeof(sbr->data[1]));
         sbr_dtdf(sbr, gb, &sbr->data[0]);
         sbr_dtdf(sbr, gb, &sbr->data[1]);
         sbr_invf(sbr, gb, &sbr->data[0]);
+        memcpy(sbr->data[1].bs_invf_mode, sbr->data[0].bs_invf_mode, sizeof(sbr->data[1].bs_invf_mode));
         sbr_envelope(sbr, gb, &sbr->data[0], 0);
         sbr_noise(sbr, gb, &sbr->data[0], 0);
         sbr_envelope(sbr, gb, &sbr->data[1], 1);
