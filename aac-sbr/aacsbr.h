@@ -100,6 +100,7 @@ typedef struct {
     uint32_t           bs_data_env[7][32];
     uint32_t           bs_data_noise[2][5];
     uint8_t            bs_add_harmonic[32];
+    uint8_t            bs_amp_res;
 } SBRData;
 
 /**
@@ -109,7 +110,6 @@ typedef struct {
     uint8_t            start;
     int32_t            sample_rate;
     // SBR header bitstream variables
-    uint8_t            bs_amp_res;
     uint8_t            bs_amp_res_header;
     SpectrumParameters spectrum_params[2];
     // if (bs_header_extra_2)

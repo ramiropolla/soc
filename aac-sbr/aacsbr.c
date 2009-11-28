@@ -504,13 +504,13 @@ static int sbr_grid(AACContext *ac, SpectralBandReplication *sbr,
     int i;
 
     ch_data->bs_num_env[0] = ch_data->bs_num_env[1];
-    sbr->bs_amp_res = sbr->bs_amp_res_header;
+    ch_data->bs_amp_res = sbr->bs_amp_res_header;
 
     switch (ch_data->bs_frame_class = get_bits(gb, 2)) {
     case FIXFIX:
         ch_data->bs_num_env[1] = 1 << get_bits(gb, 2);
         if (ch_data->bs_num_env[1] == 1)
-            sbr->bs_amp_res = 0;
+            ch_data->bs_amp_res = 0;
 
         ch_data->bs_freq_res[0] = get_bits1(gb);
         for (i = 1; i < ch_data->bs_num_env[1]; i++)
@@ -609,7 +609,7 @@ static void sbr_envelope(SpectralBandReplication *sbr, GetBitContext *gb,
 
     if (sbr->bs_coupling && ch) {
         max_depth = 2;
-        if (sbr->bs_amp_res) {
+        if (ch_data->bs_amp_res) {
             bits = 5;
             t_huff = vlc_sbr[T_HUFFMAN_ENV_BAL_3_0DB].table;
             f_huff = vlc_sbr[F_HUFFMAN_ENV_BAL_3_0DB].table;
@@ -620,7 +620,7 @@ static void sbr_envelope(SpectralBandReplication *sbr, GetBitContext *gb,
         }
     } else {
         max_depth = 3;
-        if (sbr->bs_amp_res) {
+        if (ch_data->bs_amp_res) {
             bits = 6;
             t_huff = vlc_sbr[T_HUFFMAN_ENV_3_0DB].table;
             f_huff = vlc_sbr[F_HUFFMAN_ENV_3_0DB].table;
@@ -966,10 +966,10 @@ static void sbr_env_noise_floors(SpectralBandReplication *sbr, SBRData *ch_data,
 static void sbr_dequant(SpectralBandReplication *sbr, int id_aac, int ch)
 {
     int k, l;
-    float alpha = sbr->bs_amp_res ? 1.0f : 0.5f;
+    float alpha = sbr->data[ch].bs_amp_res ? 1.0f : 0.5f;
 
     if (id_aac == TYPE_CCE && sbr->bs_coupling) {
-        float pan_offset = sbr->bs_amp_res ? 12.0f : 24.0f;
+        float pan_offset = sbr->data[ch].bs_amp_res ? 12.0f : 24.0f;
         for (l = 1; l <= sbr->data[ch].bs_num_env[1]; l++) {
             for (k = 0; k < sbr->n[sbr->data[ch].bs_freq_res[l + 1]]; k++) {
                 float temp1 = powf(2.0f, sbr->env_facs[0][l][k] * alpha + 7.0f);
