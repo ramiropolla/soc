@@ -133,9 +133,14 @@ static int array_min_int(int *array, int nel)
     return min;
 }
 
-static int qsort_comparison_function(const void *a, const void *b)
+static int qsort_comparison_function_int(const void *a, const void *b)
 {
     return *(const int *)a - *(const int *)b;
+}
+
+static int qsort_comparison_function_int16(const void *a, const void *b)
+{
+    return *(const int16_t *)a - *(const int16_t *)b;
 }
 
 // Master Frequency Band Table (14496-3 sp04 p194)
@@ -184,7 +189,7 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
             stop_dk[k] = lroundf(stop_min * powf(64.0f / (float)stop_min, (k + 1) / 13.0f))  -
                          lroundf(stop_min * powf(64.0f / (float)stop_min,  k      / 13.0f));
         }
-        qsort(stop_dk, 13, sizeof(stop_dk[0]), qsort_comparison_function);
+        qsort(stop_dk, 13, sizeof(stop_dk[0]), qsort_comparison_function_int);
         for (k = 0; k < spectrum->bs_stop_freq; k++)
             sbr->k[2] += stop_dk[k];
     } else if (spectrum->bs_stop_freq == 14) {
@@ -268,7 +273,7 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
                          lroundf(sbr->k[0] * powf(sbr->k[1] / (float)sbr->k[0],  k      / (float)num_bands_0));
         }
 
-        qsort(vk0 + 1, num_bands_0, sizeof(vk0[1]), qsort_comparison_function);
+        qsort(vk0 + 1, num_bands_0, sizeof(vk0[1]), qsort_comparison_function_int16);
         vdk0_max = vk0[num_bands_0];
 
         vk0[0] = sbr->k[0];
@@ -294,13 +299,13 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
 
             if (vdk1_min < vdk0_max) {
                 int change;
-                qsort(vk1 + 1, num_bands_1, sizeof(vk1[1]), qsort_comparison_function);
+                qsort(vk1 + 1, num_bands_1, sizeof(vk1[1]), qsort_comparison_function_int16);
                 change = FFMIN(vdk0_max - vk1[1], (vk1[num_bands_1] - vk1[1]) >> 1);
                 vk1[1]           += change;
                 vk1[num_bands_1] -= change;
             }
 
-            qsort(vk1 + 1, num_bands_1, sizeof(vk1[1]), qsort_comparison_function);
+            qsort(vk1 + 1, num_bands_1, sizeof(vk1[1]), qsort_comparison_function_int16);
 
             vk1[0] = sbr->k[1];
             for (k = 1; k <= num_bands_1; k++) {
@@ -462,7 +467,7 @@ static int sbr_make_f_derived(AACContext *ac, SpectralBandReplication *sbr)
         memcpy( sbr->f_tablelim,                  sbr->f_tablelow, (sbr->n[0]        + 1) * sizeof(sbr->f_tablelow[0]));
         memcpy(&sbr->f_tablelim[sbr->n[0] + 1], &patch_borders[1], (sbr->num_patches - 1) * sizeof(patch_borders[0]));
 
-        qsort(sbr->f_tablelim, sbr->num_patches + sbr->n[0], sizeof(sbr->f_tablelim[0]), qsort_comparison_function);
+        qsort(sbr->f_tablelim, sbr->num_patches + sbr->n[0], sizeof(sbr->f_tablelim[0]), qsort_comparison_function_int16);
 
         k = 1;
         sbr->n_lim = sbr->n[0] + sbr->num_patches - 1;
