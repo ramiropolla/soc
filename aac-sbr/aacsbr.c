@@ -148,31 +148,31 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
     const uint8_t *sbr_offset_ptr;
     int stop_dk[13];
 
-    if (ac->m4ac.ext_sample_rate < 32000) {
+    if (sbr->sample_rate < 32000) {
         temp = 3000;
-    } else if (ac->m4ac.ext_sample_rate < 64000) {
+    } else if (sbr->sample_rate < 64000) {
         temp = 4000;
     } else
         temp = 5000;
 
-    start_min = (unsigned int)lroundf((temp << 7) / (float)ac->m4ac.ext_sample_rate);
-    stop_min  = (unsigned int)lroundf((temp << 8) / (float)ac->m4ac.ext_sample_rate);
+    start_min = (unsigned int)lroundf((temp << 7) / (float)sbr->sample_rate);
+    stop_min  = (unsigned int)lroundf((temp << 8) / (float)sbr->sample_rate);
 
-    if (ac->m4ac.ext_sample_rate == 16000) {
+    if (sbr->sample_rate == 16000) {
         sbr_offset_ptr = sbr_offset[0];
-    } else if (ac->m4ac.ext_sample_rate == 22050) {
+    } else if (sbr->sample_rate == 22050) {
         sbr_offset_ptr = sbr_offset[1];
-    } else if (ac->m4ac.ext_sample_rate == 24000) {
+    } else if (sbr->sample_rate == 24000) {
         sbr_offset_ptr = sbr_offset[2];
-    } else if (ac->m4ac.ext_sample_rate == 32000) {
+    } else if (sbr->sample_rate == 32000) {
         sbr_offset_ptr = sbr_offset[3];
-    } else if ((ac->m4ac.ext_sample_rate >= 44100) &&
-               (ac->m4ac.ext_sample_rate <= 64000)) {
+    } else if ((sbr->sample_rate >= 44100) &&
+               (sbr->sample_rate <= 64000)) {
         sbr_offset_ptr = sbr_offset[4];
-    } else if (ac->m4ac.ext_sample_rate > 64000) {
+    } else if (sbr->sample_rate > 64000) {
         sbr_offset_ptr = sbr_offset[5];
     } else {
-        av_log(ac->avccontext, AV_LOG_ERROR, "Unsupported sample rate for SBR: %d\n", ac->m4ac.ext_sample_rate);
+        av_log(ac->avccontext, AV_LOG_ERROR, "Unsupported sample rate for SBR: %d\n", sbr->sample_rate);
         return -1;
     }
 
@@ -328,11 +328,11 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
         return -1;
     }
     // temp == max number of QMF subbands
-    if (ac->m4ac.ext_sample_rate <= 32000) {
+    if (sbr->sample_rate <= 32000) {
         temp = 48;
-    } else if (ac->m4ac.ext_sample_rate == 44100) {
+    } else if (sbr->sample_rate == 44100) {
         temp = 35;
-    } else if (ac->m4ac.ext_sample_rate >= 48000)
+    } else if (sbr->sample_rate >= 48000)
         temp = 32;
 
     if (sbr->k[2] - sbr->k[0] > temp) {
@@ -349,7 +349,7 @@ static int sbr_hf_calc_npatches(AACContext *ac, SpectralBandReplication *sbr)
     int i, k, sb = 0;
     int msb = sbr->k[0];
     int usb = sbr->k[3];
-    int goal_sb = lroundf((1 << 11) * 1000 / (float)ac->m4ac.sample_rate);
+    int goal_sb = lroundf((1 << 11) * 1000 / (float)sbr->sample_rate);
 
     sbr->num_patches = 0;
 
@@ -804,8 +804,8 @@ int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
     GetBitContext *gb = &gbc;
     skip_bits_long(gb_host, cnt*8 - 4);
 
-    if (!ac->m4ac.ext_sample_rate)
-        ac->m4ac.ext_sample_rate = 2 * ac->m4ac.sample_rate;
+    if (!sbr->sample_rate)
+        sbr->sample_rate = 2 * ac->m4ac.sample_rate; //TODO use the nominal sample rate for arbitrary sample rate support
 
     if (crc) {
         skip_bits(gb, 10); // bs_sbr_crc_bits; FIXME - implement CRC check

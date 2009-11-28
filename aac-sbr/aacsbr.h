@@ -107,6 +107,7 @@ typedef struct {
  */
 typedef struct {
     uint8_t            start;
+    int32_t            sample_rate;
     // SBR header bitstream variables
     uint8_t            bs_amp_res;
     uint8_t            bs_amp_res_header;
