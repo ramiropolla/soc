@@ -1,6 +1,6 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 20520)
+--- ffplay.c	(revision 20660)
 +++ ffplay.c	(working copy)
 @@ -30,6 +30,12 @@
  #include "libavcodec/colorspace.h"
@@ -547,7 +547,7 @@ Index: ffplay.c
      if (show_status)
          printf("\n");
      SDL_Quit();
-@@ -2487,6 +2788,9 @@
+@@ -2490,6 +2791,9 @@
      { "ec", OPT_INT | HAS_ARG | OPT_EXPERT, {(void*)&error_concealment}, "set error concealment options",  "bit_mask" },
      { "sync", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_sync}, "set audio-video sync. type (type=audio/video/ext)", "type" },
      { "threads", HAS_ARG | OPT_FUNC2 | OPT_EXPERT, {(void*)opt_thread_count}, "thread count", "count" },
@@ -557,7 +557,7 @@ Index: ffplay.c
      { "default", OPT_FUNC2 | HAS_ARG | OPT_AUDIO | OPT_VIDEO | OPT_EXPERT, {(void*)opt_default}, "generic catch all option", "" },
      { "loglevel", HAS_ARG | OPT_FUNC2, {(void*)opt_loglevel}, "set libav* logging level", "loglevel" },
      { NULL, },
-@@ -2536,7 +2840,9 @@
+@@ -2539,7 +2843,9 @@
          avcodec_opts[i]= avcodec_alloc_context2(i);
      }
      avformat_opts = avformat_alloc_context();
