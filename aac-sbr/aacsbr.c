@@ -902,6 +902,8 @@ static int sbr_time_freq_grid(AACContext *ac, SpectralBandReplication *sbr,
         sbr->t_q[ch][2] = sbr->t_env[ch][ch_data->bs_num_env[1]];
     } else
         sbr->t_q[ch][1] = sbr->t_env[ch][ch_data->bs_num_env[1]];
+
+    return 0;
 }
 
 // SBR Envelope and Noise Floor Decoding (14496-3 sp04 p201)
