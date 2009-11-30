@@ -124,7 +124,7 @@ static unsigned int sbr_header(SpectralBandReplication *sbr, GetBitContext *gb)
     return get_bits_count(gb) - cnt;
 }
 
-static int array_min_int(int *array, int nel)
+static int array_min_int16(int16_t *array, int nel)
 {
     int i, min = array[0];
     for (i = 1; i < nel; i++)
@@ -295,7 +295,7 @@ static int sbr_make_f_master(AACContext *ac, SpectralBandReplication *sbr,
                              lroundf(sbr->k[1] * powf(sbr->k[2] / (float)sbr->k[1],  k      / (float)num_bands_1));
             }
 
-            vdk1_min = array_min_int(vk1 + 1, num_bands_1);
+            vdk1_min = array_min_int16(vk1 + 1, num_bands_1);
 
             if (vdk1_min < vdk0_max) {
                 int change;
