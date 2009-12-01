@@ -841,10 +841,10 @@ int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
 static int sbr_time_freq_grid(AACContext *ac, SpectralBandReplication *sbr,
                               SBRData *ch_data, int ch)
 {
-    unsigned int abs_bord_lead  =  ch_data->bs_frame_class >= 2 ? ch_data->bs_var_bord[0] : 0;
+    int abs_bord_lead  =  ch_data->bs_frame_class >= 2 ? ch_data->bs_var_bord[0] : 0;
     // frameLengthFlag ? 15 : 16; 960 sample length frames unsupported; this value is numTimeSlots
-    unsigned int abs_bord_trail = (ch_data->bs_frame_class & 1 ? ch_data->bs_var_bord[1] : 0) + 16;
-    unsigned int n_rel_lead, n_rel_trail;
+    int abs_bord_trail = (ch_data->bs_frame_class & 1 ? ch_data->bs_var_bord[1] : 0) + 16;
+    int n_rel_lead, n_rel_trail;
     int i;
 
     if (ch_data->bs_frame_class == FIXFIX) {
