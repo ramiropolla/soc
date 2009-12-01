@@ -1046,7 +1046,7 @@ static void sbr_qmf_synthesis(float *out, const float **X,
             for (k = 1; k < 64 / div; k++) {
                 v[n] += X[k][l] * cosf((k + 0.5f) * (2.0f * n - 255.0f / div) * M_PI / (128.0f / div));
             }
-            v[n] /= 64.0f * 64 / div;
+            v[n] /= 64.0f / div;
         }
         for (n = 0; n <= 4; n++) {
             int temp1 = 128 / div * n, temp2 = temp1 << 1;
