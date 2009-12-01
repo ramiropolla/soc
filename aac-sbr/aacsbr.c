@@ -1004,9 +1004,11 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac, int ch)
  * @param   x       pointer to the beginning of the first sample window
  * @param   W       array of complex-valued samples split into subbands
  */
-static void sbr_qmf_analysis(const float *x, float W[32][32][2])
+static void sbr_qmf_analysis(const float *in, float *x, float W[32][32][2])
 {
     int i, k, l, n;
+    memcpy(x    , x+1024, (320-32)*sizeof(x[0]));
+    memcpy(x+288, in    ,     1024*sizeof(x[0]));
     x += 319;
     for (l = 0; l < 32; l++) { // 32 = numTimeSlots*RATE = 16*2 as 960 sample frames are not supported
         float z[320], u[64];
