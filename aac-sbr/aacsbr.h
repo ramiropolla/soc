@@ -101,6 +101,7 @@ typedef struct {
     uint32_t           bs_data_noise[2][5];
     uint8_t            bs_add_harmonic[32];
     uint8_t            bs_amp_res;
+    float              synthesis_filterbank_samples[1280];
 } SBRData;
 
 /**

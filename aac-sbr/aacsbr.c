@@ -1033,10 +1033,10 @@ static void sbr_qmf_analysis(const float *x, float W[32][32][2])
 // Synthesis QMF Bank (14496-3 sp04 p206)
 // Downsampled Synthesis QMF Bank (14496-3 sp04 p206)
 static void sbr_qmf_synthesis(float *out, const float **X,
-                              const unsigned int div)
+                              float *v, const unsigned int div)
 {
     int k, l, n;
-    float v[1280], w[640];
+    float w[640];
     for (l = 0; l < 32; l++) {
         memmove(&v[128 / div], v, (1280 - 128) / div * sizeof(float));
         for (n = 0; n < 128 / div; n++) {
