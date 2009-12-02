@@ -1,8 +1,8 @@
 #!/bin/sh
 
 echo "Checking out FFmpeg..."
-svn co svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg -r 20564 --ignore-externals
-(cd ffmpeg && svn co svn://svn.ffmpeg.org/mplayer/trunk/libswscale libswscale -r 29932)
+svn co svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg -r 20710 --ignore-externals
+(cd ffmpeg && svn co svn://svn.ffmpeg.org/mplayer/trunk/libswscale libswscale -r 29968)
 echo "Copying SBR files into FFmpeg tree..."
 cp aacsbr*.[ch] ffmpeg/libavcodec
 echo "Applying SBR and build system patch"
