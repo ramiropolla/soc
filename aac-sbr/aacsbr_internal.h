@@ -35,5 +35,6 @@
 av_cold void ff_aac_sbr_init(void);
 int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
                             GetBitContext *gb, int crc, int cnt, int id_aac);
+void ff_sbr_apply(AACContext *ac, SpectralBandReplication *sbr, int id_aac, int ch, float* in, float* out);
 
 #endif /* AVCODEC_AACSBR_INTERNAL_H */

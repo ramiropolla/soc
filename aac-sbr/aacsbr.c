@@ -1199,6 +1199,28 @@ static inline int find_freq_subband(uint16_t *table, int nel, int needle)
     return -1;
 }
 
+// Generate the subband filtered lowband
+static int sbr_lf_gen(AACContext *ac, SpectralBandReplication *sbr,
+                      float x_low[32][40][2], float W[2][32][32][2]) {
+    int k, l;
+    const int t_HFGen = 8;
+    const int l_f = 32;
+    memset(x_low, 0, sizeof(x_low));
+    for (k = 0; k < sbr->k[3]; k++) {
+        for (l = t_HFGen; l < l_f + t_HFGen; l++) {
+            x_low[k][l][0] = W[0][k][l - t_HFGen][0];
+            x_low[k][l][1] = W[0][k][l - t_HFGen][1];
+        }
+    }
+    for (k = 0; k < sbr->k[4]; k++) {
+        for (l = 0; l < t_HFGen; l++) {
+            x_low[k][l][0] = W[1][k][l + l_f - t_HFGen][0];
+            x_low[k][l][1] = W[1][k][l + l_f - t_HFGen][1];
+        }
+    }
+    return 0;
+}
+
 // High Frequency Generator (14496-3 sp04 p215)
 static int sbr_hf_gen(AACContext *ac, SpectralBandReplication *sbr,
                       float x_high[32][40][2], float x_low[32][40][2], float (*alpha0)[2],
@@ -1238,6 +1260,42 @@ static int sbr_hf_gen(AACContext *ac, SpectralBandReplication *sbr,
         }
     }
 
+    return 0;
+}
+
+// Generate the subband filtered lowband
+static int sbr_x_gen(SpectralBandReplication *sbr,
+                      float x[64][40][2], float x_low[32][40][2], float Y[2][64][40][2], int ch) {
+    int k, l;
+    const int t_HFAdj = ENVELOPE_ADJUSTMENT_OFFSET;
+    const int l_f = 32;
+    const int l_Temp = FFMAX(sbr->t_env_num_env_old[ch] - l_f, 0); //FIXME hack to make l_Temp initialize to zero
+    memset(x, 0, sizeof(x));
+    for (k = 0; k < sbr->k[4]; k++) {
+        for (l = 0; l < l_Temp; l++) {
+            x[k][l][0] = x_low[k][l + t_HFAdj][0];
+            x[k][l][1] = x_low[k][l + t_HFAdj][1];
+        }
+    }
+    for (; k < sbr->k[4] + sbr->mold; k++) {
+        for (l = 0; l < l_Temp; l++) {
+            x[k][l][0] = Y[1][k][l + t_HFAdj + l_f][0];
+            x[k][l][1] = Y[1][k][l + t_HFAdj + l_f][1];
+        }
+    }
+
+    for (k = 0; k < sbr->k[3]; k++) {
+        for (l = l_Temp; l < l_f; l++) {
+            x[k][l][0] = x_low[k][l + t_HFAdj][0];
+            x[k][l][1] = x_low[k][l + t_HFAdj][1];
+        }
+    }
+    for (; k < sbr->k[4] + sbr->m; k++) {
+        for (l = l_Temp; l < l_f; l++) {
+            x[k][l][0] = Y[0][k][l + t_HFAdj][0];
+            x[k][l][1] = Y[0][k][l + t_HFAdj][1];
+        }
+    }
     return 0;
 }
 
@@ -1541,21 +1599,34 @@ static void sbr_hf_assemble(float y[2][64][40][2], float x_high[32][40][2],
     }
 }
 
-static void apply_sbr(void)
+void ff_sbr_apply(AACContext *ac, SpectralBandReplication *sbr, int id_aac, int ch, float* in, float* out)
 {
-#if 0
+    int l_a[2];
+
+    if (sbr->start) {
+        sbr_time_freq_grid(ac, sbr, &sbr->data[ch], ch);
+        sbr_env_noise_floors(sbr, &sbr->data[ch], ch);
+        sbr_dequant(sbr, id_aac, ch);
+    }
+
     /* decode channel */
-    sbr_qmf_analysis();
-    sbr_hf_gen();
+    sbr_qmf_analysis(in, sbr->data[ch].analysis_filterbank_samples, sbr->W);
+    sbr_lf_gen(ac, sbr, sbr->x_low, sbr->W);
+    if (sbr->start) {
+        sbr_hf_inverse_filter(sbr->alpha0, sbr->alpha1, sbr->x_low, sbr->k[0]);
+        sbr_chirp(sbr, &sbr->data[ch]);
+        sbr_hf_gen(ac, sbr, sbr->x_low, sbr->x_high, sbr->alpha0, sbr->alpha1,
+                   sbr->bw_array, sbr->t_env[ch], sbr->data[ch].bs_num_env[1]);
 
     // hf_adj
-    sbr_mapping();
-    sbr_env_estimate();
-    sbr_hf_additional_levels();
-    sbr_gain_calc();
-    sbr_hf_assemble();
+        sbr_mapping(ac, sbr, &sbr->data[ch], ch, l_a);
+        sbr_env_estimate(sbr->e_curr, sbr->x_high, sbr, &sbr->data[ch], ch);
+        sbr_hf_additional_levels(sbr, &sbr->data[ch]);
+        sbr_gain_calc(ac, sbr, &sbr->data[ch], l_a);
+        sbr_hf_assemble(sbr->y, sbr->x_high, sbr, &sbr->data[ch], ch, l_a);
+    }
 
     /* synthesis */
-    sbr_qmf_synthesis();
-#endif
+    sbr_x_gen(sbr, sbr->X, sbr->x_low, sbr->y, ch);
+    sbr_qmf_synthesis(out, sbr->X, sbr->data[ch].synthesis_filterbank_samples, 1);
 }
