@@ -1046,9 +1046,11 @@ static void sbr_qmf_synthesis(float *out, float X[64][40][2],
     for (l = 0; l < 32; l++) {
         memmove(&v[128 / div], v, (1280 - 128) / div * sizeof(float));
         for (n = 0; n < 128 / div; n++) {
-            v[n] = X[0][l][0] * cosf((2.0f * n - 255.0f / div) * M_PI / (256.0f / div));
+            v[n] = X[0][l][0] * cosf((2.0f * n - 255.0f / div) * M_PI / (256.0f / div)) -
+                   X[0][l][1] * sinf((2.0f * n - 255.0f / div) * M_PI / (256.0f / div));
             for (k = 1; k < 64 / div; k++) {
-                v[n] += X[k][l][0] * cosf((k + 0.5f) * (2.0f * n - 255.0f / div) * M_PI / (128.0f / div));
+                v[n] += X[k][l][0] * cosf((k + 0.5f) * (2.0f * n - 255.0f / div) * M_PI / (128.0f / div)) -
+                        X[k][l][1] * sinf((k + 0.5f) * (2.0f * n - 255.0f / div) * M_PI / (128.0f / div));
             }
             v[n] /= 64.0f / div;
         }
