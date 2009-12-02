@@ -422,7 +422,9 @@ static int sbr_make_f_derived(AACContext *ac, SpectralBandReplication *sbr)
 
     memcpy(sbr->f_tablehigh, &sbr->f_master[sbr->spectrum_params[1].bs_xover_band],
            (sbr->n[1] + 1) * sizeof(sbr->f_master[0]));
+    sbr->mold = sbr->m;
     sbr->m    = sbr->f_tablehigh[sbr->n[1]] - sbr->f_tablehigh[0];
+    sbr->k[4] = sbr->k[3];
     sbr->k[3] = sbr->f_tablehigh[0];
 
     // Requirements (14496-3 sp04 p205)
@@ -860,6 +862,7 @@ static int sbr_time_freq_grid(AACContext *ac, SpectralBandReplication *sbr,
 
     n_rel_trail = ch_data->bs_frame_class & 1 ? ch_data->bs_num_rel[1] : 0;
 
+    sbr->t_env_num_env_old[ch] = sbr->t_env[ch][ch_data->bs_num_env[0]]; //FIXME move me into a setup next frame area
     sbr->t_env[ch][0]                      = abs_bord_lead;
     sbr->t_env[ch][ch_data->bs_num_env[1]] = abs_bord_trail;
 
@@ -1007,6 +1010,7 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac, int ch)
 static void sbr_qmf_analysis(const float *in, float *x, float W[2][32][32][2])
 {
     int i, k, l, n;
+    memcpy(W[1], W[0], sizeof(W[0]));
     memcpy(x    , x+1024, (320-32)*sizeof(x[0]));
     memcpy(x+288, in    ,     1024*sizeof(x[0]));
     x += 319;
@@ -1457,6 +1461,7 @@ static void sbr_hf_assemble(float y[2][64][40][2], float x_high[32][40][2],
         {  0,  1,  0, -1}, // imaginary
     };
     float g_temp[42][48], g_filt[42][48], q_temp[42][48], q_filt[42][48], w_temp[42][48][2];
+    memcpy(y[1], y[0], sizeof(y[0]));
 
     for (l = 0; l < ch_data->bs_num_env[1]; l++) {
         for (i = sbr->t_env[ch][l] << 1; i < sbr->t_env[ch][l + 1] << 1; i++) {
