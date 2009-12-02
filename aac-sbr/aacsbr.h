@@ -124,8 +124,9 @@ typedef struct {
     SBRData            data[2];
     // SBR tool variables
     uint8_t            reset;
-    uint8_t            k[4]; // k0, k1, k2 and kx respectively
+    uint8_t            k[5]; // k0, k1, k2, kx, and kx' respectively
     uint8_t            m;
+    uint8_t            mold;
     uint8_t            n_master;
     uint8_t            n[2]; // n_low and n_high respectively
     uint8_t            n_q;
@@ -139,10 +140,17 @@ typedef struct {
     uint8_t            patch_num_subbands[5];
     uint8_t            patch_start_subband[5];
     uint8_t            t_env[2][8];
+    uint8_t            t_env_num_env_old[2];
     uint8_t            t_q[2][3];
     float              env_facs[2][7][48];
     float              noise_facs[2][2][5];
-    float              W[32][32][2];
+    float              W[2][32][32][2];
+    float              x_low[32][40][2];
+    float              x_high[32][40][2];
+    float              y[2][64][40][2];
+    float              X[64][40][2];
+    float              alpha0[64][2];
+    float              alpha1[64][2];
     float              bw_array[2][5];
     float              e_origmapped[7][48];
     float              q_mapped[7][48];
