@@ -74,6 +74,11 @@ av_cold void ff_aac_sbr_init(void)
     SBR_INIT_VLC_STATIC(9, 512);
 }
 
+av_cold void ff_aac_sbr_ctx_init(SpectralBandReplication *sbr)
+{
+    sbr->k[4] = sbr->k[3] = 32; //Typo in spec, kx' inits to 32
+}
+
 static unsigned int sbr_header(SpectralBandReplication *sbr, GetBitContext *gb)
 {
     unsigned int cnt = get_bits_count(gb);
