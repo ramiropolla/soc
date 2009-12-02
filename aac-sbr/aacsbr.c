@@ -1004,7 +1004,7 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac, int ch)
  * @param   x       pointer to the beginning of the first sample window
  * @param   W       array of complex-valued samples split into subbands
  */
-static void sbr_qmf_analysis(const float *in, float *x, float W[32][32][2])
+static void sbr_qmf_analysis(const float *in, float *x, float W[2][32][32][2])
 {
     int i, k, l, n;
     memcpy(x    , x+1024, (320-32)*sizeof(x[0]));
@@ -1019,13 +1019,13 @@ static void sbr_qmf_analysis(const float *in, float *x, float W[32][32][2])
         for (k = 0; k < 32; k++) {
             float temp1 = u[0] * 2.0f;
             float temp2 = -(k + 0.5f) * M_PI / 128.0f;
-            W[k][l][0] = temp1 * cosf(temp2);
-            W[k][l][1] = temp1 * sinf(temp2);
+            W[0][k][l][0] = temp1 * cosf(temp2);
+            W[0][k][l][1] = temp1 * sinf(temp2);
             for (n = 1; n < 64; n++) {
                 temp1 = u[n] * 2.0f;
                 temp2 = (n - 0.25f) * (k + 0.5f) * M_PI / 32.0f;
-                W[k][l][0] += temp1 * cosf(temp2);
-                W[k][l][1] += temp1 * sinf(temp2);
+                W[0][k][l][0] += temp1 * cosf(temp2);
+                W[0][k][l][1] += temp1 * sinf(temp2);
             }
         }
         x += 32;
@@ -1034,7 +1034,7 @@ static void sbr_qmf_analysis(const float *in, float *x, float W[32][32][2])
 
 // Synthesis QMF Bank (14496-3 sp04 p206)
 // Downsampled Synthesis QMF Bank (14496-3 sp04 p206)
-static void sbr_qmf_synthesis(float *out, const float **X,
+static void sbr_qmf_synthesis(float *out, float X[64][40][2],
                               float *v, const unsigned int div)
 {
     int k, l, n;
@@ -1042,9 +1042,9 @@ static void sbr_qmf_synthesis(float *out, const float **X,
     for (l = 0; l < 32; l++) {
         memmove(&v[128 / div], v, (1280 - 128) / div * sizeof(float));
         for (n = 0; n < 128 / div; n++) {
-            v[n] = X[0][l] * cosf((2.0f * n - 255.0f / div) * M_PI / (256.0f / div));
+            v[n] = X[0][l][0] * cosf((2.0f * n - 255.0f / div) * M_PI / (256.0f / div));
             for (k = 1; k < 64 / div; k++) {
-                v[n] += X[k][l] * cosf((k + 0.5f) * (2.0f * n - 255.0f / div) * M_PI / (128.0f / div));
+                v[n] += X[k][l][0] * cosf((k + 0.5f) * (2.0f * n - 255.0f / div) * M_PI / (128.0f / div));
             }
             v[n] /= 64.0f / div;
         }
@@ -1066,8 +1066,8 @@ static void sbr_qmf_synthesis(float *out, const float **X,
 // High Frequency Generation (14496-3 sp04 p214+)
 
 // Inverse Filtering (14496-3 sp04 p214)
-static void sbr_hf_inverse_filter(float **alpha0, float **alpha1,
-                                  const float ***x_low, int k0)
+static void sbr_hf_inverse_filter(float (*alpha0)[2], float (*alpha1)[2],
+                                  float x_low[32][40][2], int k0)
 {
     int i, j, k, n;
     for (k = 0; k < k0; k++) {
@@ -1195,8 +1195,8 @@ static inline int find_freq_subband(uint16_t *table, int nel, int needle)
 
 // High Frequency Generator (14496-3 sp04 p215)
 static int sbr_hf_gen(AACContext *ac, SpectralBandReplication *sbr,
-                      float **x_high[2], float **x_low[2], float *alpha0[2],
-                      float *alpha1[2], float **bw_array, uint8_t *t_env,
+                      float x_high[32][40][2], float x_low[32][40][2], float (*alpha0)[2],
+                      float (*alpha1)[2], float bw_array[2][5], uint8_t *t_env,
                       int bs_num_env)
 {
     int i, x, l;
@@ -1294,7 +1294,7 @@ static void sbr_mapping(AACContext *ac, SpectralBandReplication *sbr,
 }
 
 // Estimation of current envelope (14496-3 sp04 p218)
-static void sbr_env_estimate(float **e_curr, float ***x_high,
+static void sbr_env_estimate(float (*e_curr)[48], float x_high[32][40][2],
                              SpectralBandReplication *sbr, SBRData *ch_data,
                              int ch)
 {
@@ -1439,7 +1439,7 @@ static void sbr_gain_calc(AACContext * ac, SpectralBandReplication *sbr,
 }
 
 // Assembling HF Signals (14496-3 sp04 p220)
-static void sbr_hf_assemble(float **y[2], float **x_high[2],
+static void sbr_hf_assemble(float y[2][64][40][2], float x_high[32][40][2],
                             SpectralBandReplication *sbr, SBRData *ch_data,
                             int ch, int l_a[2])
 {
@@ -1525,9 +1525,9 @@ static void sbr_hf_assemble(float **y[2], float **x_high[2],
         for (i = sbr->t_env[ch][l] << 1; i < sbr->t_env[ch][l + 1] << 1; i++) {
             sbr->f_indexsine[i][0] = (((sbr->f_indexsine[i][1] + 1) & 3) + i - (sbr->t_env[ch][0] << 1)) & 3;
             for (m = 0; m < sbr->m; m++) {
-                y[i + ENVELOPE_ADJUSTMENT_OFFSET][m + sbr->k[3]][0] =
+                y[0][i + ENVELOPE_ADJUSTMENT_OFFSET][m + sbr->k[3]][0] =
                     w_temp[i][m][0] + sbr->s_m_boost[i][m] * phi[0][sbr->f_indexsine[i][0]];
-                y[i + ENVELOPE_ADJUSTMENT_OFFSET][m + sbr->k[3]][1] =
+                y[0][i + ENVELOPE_ADJUSTMENT_OFFSET][m + sbr->k[3]][1] =
                     w_temp[i][m][1] + sbr->s_m_boost[i][m] * phi[1][sbr->f_indexsine[i][0]] * (1 - 2*((m + sbr->k[3]) & 1));
             }
         }
