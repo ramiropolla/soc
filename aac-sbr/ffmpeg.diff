@@ -1,6 +1,6 @@
 Index: libavcodec/aac.c
 ===================================================================
---- libavcodec/aac.c	(revision 20564)
+--- libavcodec/aac.c	(revision 20710)
 +++ libavcodec/aac.c	(working copy)
 @@ -62,7 +62,7 @@
   * N                    MIDI
@@ -81,7 +81,7 @@ Index: libavcodec/aac.c
          break;
      case EXT_DYNAMIC_RANGE:
          res = decode_dynamic_range(&ac->che_drc, gb, cnt);
-@@ -1709,8 +1699,8 @@
+@@ -1711,8 +1701,8 @@
      AACContext *ac = avccontext->priv_data;
      ChannelElement *che = NULL;
      GetBitContext gb;
@@ -92,7 +92,7 @@ Index: libavcodec/aac.c
  
      init_get_bits(&gb, buf, buf_size * 8);
  
-@@ -1774,7 +1764,7 @@
+@@ -1776,7 +1766,7 @@
              if (elem_id == 15)
                  elem_id += get_bits(&gb, 8) - 1;
              while (elem_id > 0)
@@ -101,7 +101,7 @@ Index: libavcodec/aac.c
              err = 0; /* FIXME */
              break;
  
-@@ -1783,6 +1773,9 @@
+@@ -1785,6 +1775,9 @@
              break;
          }
  
@@ -113,7 +113,7 @@ Index: libavcodec/aac.c
      }
 Index: libavcodec/aac.h
 ===================================================================
---- libavcodec/aac.h	(revision 20564)
+--- libavcodec/aac.h	(revision 20710)
 +++ libavcodec/aac.h	(working copy)
 @@ -33,6 +33,7 @@
  #include "avcodec.h"
@@ -123,7 +123,7 @@ Index: libavcodec/aac.h
  
  #include <stdint.h>
  
-@@ -231,6 +232,7 @@
+@@ -232,6 +233,7 @@
      SingleChannelElement ch[2];
      // CCE specific
      ChannelCoupling coup;
@@ -133,7 +133,7 @@ Index: libavcodec/aac.h
  /**
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 20564)
+--- libavcodec/Makefile	(revision 20710)
 +++ libavcodec/Makefile	(working copy)
 @@ -38,7 +38,7 @@
  OBJS-$(CONFIG_VDPAU)                   += vdpau.o
