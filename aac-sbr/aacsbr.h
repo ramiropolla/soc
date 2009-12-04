@@ -103,6 +103,7 @@ typedef struct {
     uint8_t            bs_amp_res;
     float              synthesis_filterbank_samples[1280];
     float              analysis_filterbank_samples [1312];
+    int                l_a[2];
 } SBRData;
 
 /**

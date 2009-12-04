@@ -1607,7 +1607,7 @@ static void sbr_hf_assemble(float y[2][64][40][2], float x_high[32][40][2],
 
 void ff_sbr_apply(AACContext *ac, SpectralBandReplication *sbr, int id_aac, int ch, float* in, float* out)
 {
-    int l_a[2];
+    int* l_a = sbr->data[ch].l_a;
 
     if (sbr->start) {
         sbr_time_freq_grid(ac, sbr, &sbr->data[ch], ch);
