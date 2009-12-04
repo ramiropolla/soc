@@ -979,7 +979,7 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac, int ch)
     int k, l;
     float alpha = sbr->data[ch].bs_amp_res ? 1.0f : 0.5f;
 
-    if (id_aac == TYPE_CCE && sbr->bs_coupling) {
+    if (id_aac == TYPE_CPE && sbr->bs_coupling) {
         float pan_offset = sbr->data[ch].bs_amp_res ? 12.0f : 24.0f;
         for (l = 1; l <= sbr->data[ch].bs_num_env[1]; l++) {
             for (k = 0; k < sbr->n[sbr->data[ch].bs_freq_res[l + 1]]; k++) {
