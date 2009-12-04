@@ -1296,7 +1296,7 @@ static int sbr_x_gen(SpectralBandReplication *sbr,
             x[k][l][1] = x_low[k][l + t_HFAdj][1];
         }
     }
-    for (; k < sbr->k[4] + sbr->m; k++) {
+    for (; k < sbr->k[3] + sbr->m; k++) {
         for (l = l_Temp; l < l_f; l++) {
             x[k][l][0] = Y[0][k][l + t_HFAdj][0];
             x[k][l][1] = Y[0][k][l + t_HFAdj][1];
