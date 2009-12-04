@@ -1597,9 +1597,9 @@ static void sbr_hf_assemble(float y[2][64][40][2], float x_high[32][40][2],
             sbr->f_indexsine[i][0] = (((sbr->f_indexsine[i][1] + 1) & 3) + i - (sbr->t_env[ch][0] << 1)) & 3;
             for (m = 0; m < sbr->m; m++) {
                 y[0][i + ENVELOPE_ADJUSTMENT_OFFSET][m + sbr->k[3]][0] =
-                    w_temp[i][m][0] + sbr->s_m_boost[i][m] * phi[0][sbr->f_indexsine[i][0]];
+                    w_temp[i][m][0] + sbr->s_m_boost[l][m] * phi[0][sbr->f_indexsine[i][0]];
                 y[0][i + ENVELOPE_ADJUSTMENT_OFFSET][m + sbr->k[3]][1] =
-                    w_temp[i][m][1] + sbr->s_m_boost[i][m] * phi[1][sbr->f_indexsine[i][0]] * (1 - 2*((m + sbr->k[3]) & 1));
+                    w_temp[i][m][1] + sbr->s_m_boost[l][m] * phi[1][sbr->f_indexsine[i][0]] * (1 - 2*((m + sbr->k[3]) & 1));
             }
         }
     }
