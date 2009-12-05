@@ -74,7 +74,7 @@ static void end_frame(AVFilterLink *link)
 
 /* TODO: support forwarding slices as they come if the next filter has
  * requested a frame and we had none buffered */
-static void draw_slice(AVFilterLink *link, int y, int h)
+static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
 {
 }
 
@@ -90,7 +90,7 @@ static int request_frame(AVFilterLink *link)
     /* by doing this, we give ownership of the reference to the next filter,
      * so we don't have to worry about dereferencing it ourselves. */
     avfilter_start_frame(link, buf->root.next->pic);
-    avfilter_draw_slice(link, 0, buf->root.next->pic->h);
+    avfilter_draw_slice(link, 0, buf->root.next->pic->h, 1);
     avfilter_end_frame(link);
 
     if(buf->last == buf->root.next)

@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 20660)
+--- ffmpeg.c	(revision 20735)
 +++ ffmpeg.c	(working copy)
 @@ -41,6 +41,13 @@
  #include "libavutil/avstring.h"
@@ -267,15 +267,15 @@ Index: ffmpeg.c
  
      final_picture = formatted_picture;
      padding_src = formatted_picture;
-@@ -941,6 +1149,7 @@
-         }
+@@ -950,6 +1158,7 @@
+             av_exit(1);
      }
  
 +#if !CONFIG_AVFILTER
      if (ost->video_resample) {
          padding_src = NULL;
          final_picture = &ost->pict_tmp;
-@@ -989,6 +1198,7 @@
+@@ -997,6 +1206,7 @@
          sws_scale(ost->img_resample_ctx, formatted_picture->data, formatted_picture->linesize,
                0, ost->resample_height, resampling_dst->data, resampling_dst->linesize);
      }
@@ -283,7 +283,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1255,6 +1465,10 @@
+@@ -1263,6 +1473,10 @@
      static unsigned int samples_size= 0;
      AVSubtitle subtitle, *subtitle_to_free;
      int got_subtitle;
@@ -294,7 +294,7 @@ Index: ffmpeg.c
      AVPacket avpkt;
      int bps = av_get_bits_per_sample_format(ist->st->codec->sample_fmt)>>3;
  
-@@ -1377,6 +1591,15 @@
+@@ -1385,6 +1599,15 @@
                                      &buffer_to_free);
          }
  
@@ -310,7 +310,7 @@ Index: ffmpeg.c
          // preprocess audio (volume)
          if (ist->st->codec->codec_type == CODEC_TYPE_AUDIO) {
              if (audio_volume != 256) {
-@@ -1398,10 +1621,18 @@
+@@ -1406,10 +1629,18 @@
              if (pts > now)
                  usleep(pts - now);
          }
@@ -330,7 +330,7 @@ Index: ffmpeg.c
              for(i=0;i<nb_ostreams;i++) {
                  int frame_size;
  
-@@ -1418,6 +1649,9 @@
+@@ -1426,6 +1657,9 @@
                              do_audio_out(os, ost, ist, data_buf, data_size);
                              break;
                          case CODEC_TYPE_VIDEO:
@@ -340,7 +340,7 @@ Index: ffmpeg.c
                              do_video_out(os, ost, ist, &picture, &frame_size);
                              if (vstats_filename && frame_size)
                                  do_video_stats(os, ost, frame_size);
-@@ -1483,7 +1717,17 @@
+@@ -1491,7 +1725,17 @@
                          av_free_packet(&opkt);
                      }
                  }
@@ -358,22 +358,20 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1937,16 +2181,27 @@
+@@ -1945,9 +2189,10 @@
                          av_exit(1);
                      }
  
-+#if CONFIG_AVFILTER
-+                    ost->resample_height = icodec->height;
-+#else
++#if !CONFIG_AVFILTER
                      ost->original_height = icodec->height;
                      ost->original_width  = icodec->width;
- 
-                     ost->resample_height = icodec->height - (frame_topBand  + frame_bottomBand);
-                     ost->resample_width  = icodec->width  - (frame_leftBand + frame_rightBand);
-                     ost->resample_pix_fmt= icodec->pix_fmt;
+-
 +#endif
                      codec->bits_per_raw_sample= 0;
                  }
+                 ost->resample_height = icodec->height - (frame_topBand  + frame_bottomBand);
+@@ -1955,6 +2200,13 @@
+                 ost->resample_pix_fmt= icodec->pix_fmt;
                  ost->encoding_needed = 1;
                  ist->decoding_needed = 1;
 +
@@ -386,7 +384,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -2333,6 +2588,12 @@
+@@ -2341,6 +2593,12 @@
              avcodec_close(ist->st->codec);
          }
      }
@@ -399,7 +397,7 @@ Index: ffmpeg.c
  
      /* finished ! */
      ret = 0;
-@@ -3898,6 +4159,9 @@
+@@ -3899,6 +4157,9 @@
      { "psnr", OPT_BOOL | OPT_EXPERT | OPT_VIDEO, {(void*)&do_psnr}, "calculate PSNR of compressed frames" },
      { "vstats", OPT_EXPERT | OPT_VIDEO, {(void*)&opt_vstats}, "dump video coding statistics to file" },
      { "vstats_file", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_vstats_file}, "dump video coding statistics to file", "file" },

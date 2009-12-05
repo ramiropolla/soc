@@ -137,7 +137,7 @@ static void end_frame(AVFilterLink *link)
 
     draw_box(pic,context,context->color);
 
-    avfilter_draw_slice(output, 0, pic->h);
+    avfilter_draw_slice(output, 0, pic->h, 1);
     avfilter_end_frame(output);
 }
 

@@ -268,7 +268,7 @@ static int request_frame(AVFilterLink *link)
 
     /* and send it to the next filter */
     avfilter_start_frame(link, avfilter_ref_pic(pic, ~0));
-    avfilter_draw_slice (link, 0, pic->h);
+    avfilter_draw_slice (link, 0, pic->h, 1);
     avfilter_end_frame  (link);
     avfilter_unref_pic(pic);
 

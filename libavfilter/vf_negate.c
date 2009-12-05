@@ -64,7 +64,7 @@ static int config_props(AVFilterLink *link)
     return 0;
 }
 
-static void draw_slice(AVFilterLink *link, int y, int h)
+static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
 {
     NegContext *neg = link->dst->priv;
     AVFilterPicRef *in  = link->cur_pic;
@@ -106,7 +106,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
         }
     }
 
-    avfilter_draw_slice(link->dst->outputs[0], y, h);
+    avfilter_draw_slice(link->dst->outputs[0], y, h, slice_dir);
 }
 
 AVFilter avfilter_vf_negate =

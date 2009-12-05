@@ -102,7 +102,7 @@ static int request_frame(AVFilterLink *link)
 
     fps->has_frame=0;
     avfilter_start_frame(link, avfilter_ref_pic(fps->pic, ~AV_PERM_WRITE));
-    avfilter_draw_slice (link, 0, fps->pic->h);
+    avfilter_draw_slice (link, 0, fps->pic->h, 1);
     avfilter_end_frame  (link);
 
     avfilter_unref_pic(fps->pic);

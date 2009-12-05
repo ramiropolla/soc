@@ -64,7 +64,7 @@ static int config_props_output(AVFilterLink *link)
     return 0;
 }
 
-static void draw_slice(AVFilterLink *link, int y, int h)
+static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
 {
     TransContext *trans = link->dst->priv;
     AVFilterPicRef *in  = link->cur_pic;
@@ -86,7 +86,7 @@ static void draw_slice(AVFilterLink *link, int y, int h)
         }
     }
 
-    avfilter_draw_slice(link->dst->outputs[0], y, h);
+    avfilter_draw_slice(link->dst->outputs[0], y, h, slice_dir);
 }
 
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
