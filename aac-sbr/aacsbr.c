@@ -951,7 +951,7 @@ static void sbr_env_noise_floors(SpectralBandReplication *sbr, SBRData *ch_data,
                         if (sbr->f_tablelow[i]     <= sbr->f_tablehigh[k] &&
                             sbr->f_tablelow[i + 1] >  sbr->f_tablehigh[k])
                             break;
-                    sbr->env_facs[ch][l + 1][k] = sbr->env_facs[ch][i][k] + delta * ch_data->bs_data_env[l][k];
+                    sbr->env_facs[ch][l + 1][k] = sbr->env_facs[ch][l][i] + delta * ch_data->bs_data_env[l][k];
                 }
             } else {
                 i = 0; // optimisation : f_* are ascending freq bands so start at last i for each search
@@ -960,7 +960,7 @@ static void sbr_env_noise_floors(SpectralBandReplication *sbr, SBRData *ch_data,
                     for (; i < sbr->n[1]; i++)
                         if (sbr->f_tablehigh[i] == sbr->f_tablelow[k])
                             break;
-                    sbr->env_facs[ch][l + 1][k] = sbr->env_facs[ch][i][k] + delta * ch_data->bs_data_env[l][k];
+                    sbr->env_facs[ch][l + 1][k] = sbr->env_facs[ch][l][i] + delta * ch_data->bs_data_env[l][k];
                 }
             }
         } else {
