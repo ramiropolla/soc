@@ -446,7 +446,7 @@ static int sbr_make_f_derived(AACContext *ac, SpectralBandReplication *sbr)
     }
 
     sbr->f_tablelow[0] = sbr->f_tablehigh[0];
-    temp = (1 - (sbr->n[1] & 1 ? -1 : 1)) >> 1;
+    temp = sbr->n[1] & 1;
     for (k = 1; k <= sbr->n[0]; k++)
         sbr->f_tablelow[k] = sbr->f_tablehigh[(k << 1) - temp];
 
