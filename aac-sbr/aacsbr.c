@@ -937,6 +937,7 @@ static void sbr_env_noise_floors(SpectralBandReplication *sbr, SBRData *ch_data,
 {
     int delta = (ch == 1 && sbr->bs_coupling == 1) ? 2 : 1;
     int i, k, l;
+    const int temp = sbr->n[1] & 1;
     for (l = 0; l < ch_data->bs_num_env[1]; l++) {
         if (ch_data->bs_df_env[l]) {
             // bs_freq_res[0] == bs_freq_res[bs_num_env[1]] from prev frame
@@ -944,22 +945,13 @@ static void sbr_env_noise_floors(SpectralBandReplication *sbr, SBRData *ch_data,
                 for (k = 0; k < sbr->n[ch_data->bs_freq_res[l + 1]]; k++)
                     sbr->env_facs[ch][l + 1][k] = sbr->env_facs[ch][l][k] + delta * ch_data->bs_data_env[l][k];
             } else if (ch_data->bs_freq_res[l + 1]) {
-                i = 0; // optimisation : f_* are ascending freq bands so start at last i for each search
                 for (k = 0; k < sbr->n[ch_data->bs_freq_res[l + 1]]; k++) {
-                    // find i such that f_tablelow[i] <= f_tablehigh[k] < f_tablelow[i + 1]
-                    for (; i < sbr->n[0]; i++)
-                        if (sbr->f_tablelow[i]     <= sbr->f_tablehigh[k] &&
-                            sbr->f_tablelow[i + 1] >  sbr->f_tablehigh[k])
-                            break;
+                    i = (k + temp) >> 1; // find i such that f_tablelow[i] <= f_tablehigh[k] < f_tablelow[i + 1]
                     sbr->env_facs[ch][l + 1][k] = sbr->env_facs[ch][l][i] + delta * ch_data->bs_data_env[l][k];
                 }
             } else {
-                i = 0; // optimisation : f_* are ascending freq bands so start at last i for each search
                 for (k = 0; k < sbr->n[ch_data->bs_freq_res[l + 1]]; k++) {
-                    // find i such that f_tablehigh[i] == f_tablelow[k]
-                    for (; i < sbr->n[1]; i++)
-                        if (sbr->f_tablehigh[i] == sbr->f_tablelow[k])
-                            break;
+                    i = k ? 2*k - temp : 0; // find i such that f_tablehigh[i] == f_tablelow[k]
                     sbr->env_facs[ch][l + 1][k] = sbr->env_facs[ch][l][i] + delta * ch_data->bs_data_env[l][k];
                 }
             }
