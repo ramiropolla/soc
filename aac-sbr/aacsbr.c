@@ -1242,7 +1242,7 @@ static int sbr_hf_gen(AACContext *ac, SpectralBandReplication *sbr,
     int ktmp = sbr->k[3];
     for (i = 0; i < sbr->num_patches; i++) {
         if (i >= 1)
-            ktmp += sbr->patch_num_subbands[i];
+            ktmp += sbr->patch_num_subbands[i-1];
         for (x = 0; x < sbr->patch_num_subbands[i]; x++) {
             const int k = ktmp + x;
             const int g = find_freq_subband(sbr->f_tablenoise, sbr->n_q + 1, k);
