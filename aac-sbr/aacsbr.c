@@ -1098,6 +1098,7 @@ static void sbr_hf_inverse_filter(float (*alpha0)[2], float (*alpha1)[2],
                 phi[i][j][0] = 0.0f;
                 phi[i][j][1] = 0.0f;
 
+                if (i <= j + 1)
                 for (n = 0; n < 16 * 2 + 6; n++) {
                     unsigned int idx1 = n + idxtmp1;
                     unsigned int idx2 = n + idxtmp2;
