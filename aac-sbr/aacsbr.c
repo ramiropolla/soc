@@ -1088,8 +1088,7 @@ static void sbr_hf_inverse_filter(float (*alpha0)[2], float (*alpha1)[2],
 {
     int i, j, k, n;
     for (k = 0; k < k0; k++) {
-        float mod_var_sq;
-        float phi[3][2][2], dk[2];
+        float phi[3][2][2], dk;
 
         for (i = 0; i < 3; i++) {
             for (j = 0; j < 2; j++) {
@@ -1112,31 +1111,26 @@ static void sbr_hf_inverse_filter(float (*alpha0)[2], float (*alpha1)[2],
             }
         }
 
-        dk[0] = phi[2][1][0] * phi[1][0][0] - phi[2][1][1] * phi[1][0][1] -
+        dk = phi[2][1][0] * phi[1][0][0] -
                (phi[1][1][0] * phi[1][1][0] + phi[1][1][1] * phi[1][1][1]) / 1.000001f;
-        dk[1] = phi[2][1][0] * phi[1][0][1] + phi[2][1][1] * phi[1][0][0];
 
-        mod_var_sq = dk[0] * dk[0] + dk[1] * dk[1];
-        if (!mod_var_sq) {
+        if (!dk) {
             alpha1[k][0] = 0;
             alpha1[k][1] = 0;
         } else {
             float temp_real, temp_im;
             temp_real = phi[0][0][0] * phi[1][1][0] -
                         phi[0][0][1] * phi[1][1][1] -
-                        phi[0][1][0] * phi[1][0][0] +
-                        phi[0][1][1] * phi[1][0][1];
+                        phi[0][1][0] * phi[1][0][0];
             temp_im   = phi[0][0][0] * phi[1][1][1] +
                         phi[0][0][1] * phi[1][1][0] -
-                        phi[0][1][0] * phi[1][0][1] -
                         phi[0][1][1] * phi[1][0][0];
 
-            alpha1[k][0] = (dk[0] * temp_real + dk[1] * temp_im  ) / mod_var_sq;
-            alpha1[k][1] = (dk[0] * temp_im   - dk[1] * temp_real) / mod_var_sq;
+            alpha1[k][0] = temp_real / dk;
+            alpha1[k][1] = temp_im   / dk;
         }
 
-        mod_var_sq = phi[1][0][0] * phi[1][0][0] + phi[1][0][1] * phi[1][0][1];
-        if (!mod_var_sq) {
+        if (!phi[1][0][0]) {
             alpha0[k][0] = 0;
             alpha0[k][1] = 0;
         } else {
@@ -1146,8 +1140,8 @@ static void sbr_hf_inverse_filter(float (*alpha0)[2], float (*alpha1)[2],
             temp_im   = phi[0][0][1] + alpha1[k][1] * phi[1][1][0] -
                                        alpha1[k][0] * phi[1][1][1];
 
-            alpha0[k][0] = -(phi[1][0][0] * temp_real + phi[1][0][1] * temp_im  ) / mod_var_sq;
-            alpha0[k][0] = -(phi[1][0][0] * temp_im   - phi[1][0][1] * temp_real) / mod_var_sq;
+            alpha0[k][0] = -temp_real / phi[1][0][0];
+            alpha0[k][0] = -temp_im   / phi[1][0][0];
         }
 
         if (alpha1[k][0] * alpha1[k][0] + alpha1[k][1] * alpha1[k][1] >= 16.0f ||
