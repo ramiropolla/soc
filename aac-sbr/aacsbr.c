@@ -1094,7 +1094,7 @@ static void sbr_hf_inverse_filter(float (*alpha0)[2], float (*alpha1)[2],
         for (i = 0; i < 3; i++) {
             for (j = 0; j < 2; j++) {
                 unsigned int idxtmp1 = ENVELOPE_ADJUSTMENT_OFFSET - i;
-                unsigned int idxtmp2 = ENVELOPE_ADJUSTMENT_OFFSET - j;
+                unsigned int idxtmp2 = ENVELOPE_ADJUSTMENT_OFFSET - (j + 1);
 
                 phi[i][j][0] = 0.0f;
                 phi[i][j][1] = 0.0f;
