@@ -1280,7 +1280,7 @@ static int sbr_x_gen(SpectralBandReplication *sbr,
     int k, l;
     const int t_HFAdj = ENVELOPE_ADJUSTMENT_OFFSET;
     const int l_f = 32;
-    const int l_Temp = FFMAX(sbr->t_env_num_env_old[ch] - l_f, 0); //FIXME hack to make l_Temp initialize to zero
+    const int l_Temp = FFMAX(2*sbr->t_env_num_env_old[ch] - l_f, 0); //FIXME hack to make l_Temp initialize to zero
     memset(x, 0, sizeof(x));
     for (k = 0; k < sbr->k[4]; k++) {
         for (l = 0; l < l_Temp; l++) {
