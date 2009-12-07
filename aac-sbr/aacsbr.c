@@ -1211,7 +1211,7 @@ static int sbr_lf_gen(AACContext *ac, SpectralBandReplication *sbr,
     int k, l;
     const int t_HFGen = 8;
     const int l_f = 32;
-    memset(x_low, 0, sizeof(x_low));
+    memset(x_low, 0, 32*sizeof(*x_low));
     for (k = 0; k < sbr->k[3]; k++) {
         for (l = t_HFGen; l < l_f + t_HFGen; l++) {
             x_low[k][l][0] = W[0][k][l - t_HFGen][0];
@@ -1276,7 +1276,7 @@ static int sbr_x_gen(SpectralBandReplication *sbr,
     const int t_HFAdj = ENVELOPE_ADJUSTMENT_OFFSET;
     const int l_f = 32;
     const int l_Temp = FFMAX(2*sbr->t_env_num_env_old[ch] - l_f, 0); //FIXME hack to make l_Temp initialize to zero
-    memset(x, 0, sizeof(x));
+    memset(x, 0, 64*sizeof(*x));
     for (k = 0; k < sbr->k[4]; k++) {
         for (l = 0; l < l_Temp; l++) {
             x[k][l][0] = x_low[k][l + t_HFAdj][0];
