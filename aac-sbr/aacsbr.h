@@ -147,7 +147,7 @@ typedef struct {
     float              noise_facs[2][2][5];
     float              W[2][32][32][2];
     float              x_low[32][40][2];
-    float              x_high[32][40][2];
+    float              x_high[64][40][2];
     float              y[2][64][40][2];
     float              X[64][40][2];
     float              alpha0[64][2];

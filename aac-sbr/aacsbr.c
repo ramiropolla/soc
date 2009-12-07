@@ -1229,7 +1229,7 @@ static int sbr_lf_gen(AACContext *ac, SpectralBandReplication *sbr,
 
 // High Frequency Generator (14496-3 sp04 p215)
 static int sbr_hf_gen(AACContext *ac, SpectralBandReplication *sbr,
-                      float x_high[32][40][2], float x_low[32][40][2], float (*alpha0)[2],
+                      float x_high[64][40][2], float x_low[32][40][2], float (*alpha0)[2],
                       float (*alpha1)[2], float bw_array[2][5], uint8_t *t_env,
                       int bs_num_env)
 {
@@ -1364,7 +1364,7 @@ static void sbr_mapping(AACContext *ac, SpectralBandReplication *sbr,
 }
 
 // Estimation of current envelope (14496-3 sp04 p218)
-static void sbr_env_estimate(float (*e_curr)[48], float x_high[32][40][2],
+static void sbr_env_estimate(float (*e_curr)[48], float x_high[64][40][2],
                              SpectralBandReplication *sbr, SBRData *ch_data,
                              int ch)
 {
@@ -1509,7 +1509,7 @@ static void sbr_gain_calc(AACContext * ac, SpectralBandReplication *sbr,
 }
 
 // Assembling HF Signals (14496-3 sp04 p220)
-static void sbr_hf_assemble(float y[2][64][40][2], float x_high[32][40][2],
+static void sbr_hf_assemble(float y[2][64][40][2], float x_high[64][40][2],
                             SpectralBandReplication *sbr, SBRData *ch_data,
                             int ch, int l_a[2])
 {
