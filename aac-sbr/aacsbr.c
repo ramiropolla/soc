@@ -1160,6 +1160,7 @@ static void sbr_chirp(SpectralBandReplication *sbr, SBRData *ch_data)
 {
     int i;
     float new_bw;
+    float temp_bw;
 
     for (i = 0; i < sbr->n_q; i++) {
         switch (ch_data->bs_invf_mode[0][i]) {
@@ -1186,9 +1187,10 @@ static void sbr_chirp(SpectralBandReplication *sbr, SBRData *ch_data)
         }
 
         if (new_bw < sbr->bw_array[1][i]) {
-            sbr->bw_array[0][i] = 0.75f    * new_bw + 0.25f    * sbr->bw_array[1][i];
+            temp_bw = 0.75f    * new_bw + 0.25f    * sbr->bw_array[1][i];
         } else
-            sbr->bw_array[0][i] = 0.90625f * new_bw + 0.09375f * sbr->bw_array[1][i];
+            temp_bw = 0.90625f * new_bw + 0.09375f * sbr->bw_array[1][i];
+        sbr->bw_array[0][i] = temp_bw < 0.015625f ? 0.0f : temp_bw;
     }
 
     // update previous bw_array values
