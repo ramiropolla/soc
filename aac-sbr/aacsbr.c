@@ -1553,9 +1553,9 @@ static void sbr_hf_assemble(float y[2][64][40][2], float x_high[64][40][2],
     }
 
     for (i = sbr->t_env[ch][0] << 1; i < sbr->t_env[ch][ch_data->bs_num_env[1]] << 1; i++) {
-        const int idx1 = i + ENVELOPE_ADJUSTMENT_OFFSET;
+        const int idx2 = i + ENVELOPE_ADJUSTMENT_OFFSET;
         for (m = 0; m < sbr->m; m++) {
-            const int idx2 = m + sbr->k[3];
+            const int idx1 = m + sbr->k[3];
             w_temp[i][m][0] = x_high[idx1][idx2][0] * g_filt[i][m];
             w_temp[i][m][1] = x_high[idx1][idx2][1] * g_filt[i][m];
         }
