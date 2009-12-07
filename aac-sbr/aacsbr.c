@@ -1621,7 +1621,7 @@ void ff_sbr_apply(AACContext *ac, SpectralBandReplication *sbr, int id_aac, int 
     if (sbr->start) {
         sbr_hf_inverse_filter(sbr->alpha0, sbr->alpha1, sbr->x_low, sbr->k[0]);
         sbr_chirp(sbr, &sbr->data[ch]);
-        sbr_hf_gen(ac, sbr, sbr->x_low, sbr->x_high, sbr->alpha0, sbr->alpha1,
+        sbr_hf_gen(ac, sbr, sbr->x_high, sbr->x_low, sbr->alpha0, sbr->alpha1,
                    sbr->bw_array, sbr->t_env[ch], sbr->data[ch].bs_num_env[1]);
 
     // hf_adj
