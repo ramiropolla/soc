@@ -1333,13 +1333,13 @@ static void sbr_mapping(AACContext *ac, SpectralBandReplication *sbr,
 
         for (i = 0; i < ilim; i++)
             for (m = table[i]; m < table[i + 1]; m++)
-                sbr->e_origmapped[l][m - sbr->k[3]] = sbr->env_facs[ch][l][i];
+                sbr->e_origmapped[l][m - sbr->k[3]] = sbr->env_facs[ch][l+1][i];
 
         // ch_data->bs_num_noise > 1 => 2 noise floors
         k = (ch_data->bs_num_noise > 1) && (sbr->t_env[ch][l] >= sbr->t_q[ch][1]);
         for (i = 0; i < sbr->n_q; i++)
             for (m = table[i]; m < table[i + 1]; m++)
-                sbr->q_mapped[l][m - sbr->k[3]] = sbr->noise_facs[ch][k][i];
+                sbr->q_mapped[l][m - sbr->k[3]] = sbr->noise_facs[ch][k+1][i];
 
         for (i = 0; i < sbr->n[1]; i++) {
             memset(&sbr->s_indexmapped[l + 1][sbr->f_tablehigh[i] - sbr->k[3]], 0,
