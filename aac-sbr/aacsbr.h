@@ -144,7 +144,7 @@ typedef struct {
     uint8_t            t_env_num_env_old[2];
     uint8_t            t_q[2][3];
     float              env_facs[2][7][48];
-    float              noise_facs[2][2][5];
+    float              noise_facs[2][3][5];
     float              W[2][32][32][2];
     float              x_low[32][40][2];
     float              x_high[64][40][2];
