@@ -168,7 +168,7 @@ typedef struct {
     float              q_m_lim[7][48];
     float              q_m_limboost[7][48];
     float              s_m_boost[7][48];
-    uint8_t            f_indexnoise[42][48][2];
+    uint16_t           f_indexnoise[2];
     uint8_t            f_indexsine[42][2];
 } SpectralBandReplication;
 

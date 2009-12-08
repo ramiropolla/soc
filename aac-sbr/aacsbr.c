@@ -501,6 +501,9 @@ static int sbr_make_f_derived(AACContext *ac, SpectralBandReplication *sbr)
         sbr->n_lim = 1;
     }
 
+    sbr->f_indexnoise[0] = 0;
+    sbr->f_indexnoise[1] = 0;
+
     return 0;
 }
 
@@ -1584,14 +1587,12 @@ static void sbr_hf_assemble(float y[2][64][40][2], float x_high[64][40][2],
         }
     }
 
-    // FIXME - reset f_indexnoise[][][1] as appropriate
     for (l = 0; l < ch_data->bs_num_env[1]; l++) {
         for (i = sbr->t_env[ch][l] << 1; i < sbr->t_env[ch][l + 1] << 1; i++) {
             for (m = 0; m < sbr->m; m++) {
-                sbr->f_indexnoise[i][m][0] = (sbr->f_indexnoise[i][m][1] +
-                                              (i - (sbr->t_env[ch][0] << 1)) * sbr->m + m + 1) & 0x1ff;
-                w_temp[i][m][0] += q_filt[i][m] * sbr_noise_table[sbr->f_indexnoise[i][m][0]][0];
-                w_temp[i][m][1] += q_filt[i][m] * sbr_noise_table[sbr->f_indexnoise[i][m][0]][1];
+                sbr->f_indexnoise[ch] = (sbr->f_indexnoise[ch] + 1) & 0x1ff;
+                w_temp[i][m][0] += q_filt[i][m] * sbr_noise_table[sbr->f_indexnoise[ch]][0];
+                w_temp[i][m][1] += q_filt[i][m] * sbr_noise_table[sbr->f_indexnoise[ch]][1];
             }
         }
     }
