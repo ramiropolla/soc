@@ -978,7 +978,10 @@ static void sbr_env_noise_floors(SpectralBandReplication *sbr, SBRData *ch_data,
             }
         }
     }
-    //FIXME : assign 0th elements of (env|noise)_facs from last elements
+
+    //assign 0th elements of (env|noise)_facs from last elements
+    memcpy(  sbr->env_facs[ch][0],   sbr->env_facs[ch][ch_data->bs_num_env[1]], sizeof(  sbr->env_facs[ch][0]));
+    memcpy(sbr->noise_facs[ch][0], sbr->noise_facs[ch][ch_data->bs_num_noise ], sizeof(sbr->noise_facs[ch][0]));
 }
 
 // Dequantisation and stereo decoding (14496-3 sp04 p203)
