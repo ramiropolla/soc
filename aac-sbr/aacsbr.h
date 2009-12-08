@@ -94,7 +94,7 @@ typedef struct {
     uint8_t            bs_rel_bord[2][3];
     uint8_t            bs_pointer;
     uint8_t            bs_num_noise;
-    uint8_t            bs_df_env[7];
+    uint8_t            bs_df_env[5];
     uint8_t            bs_df_noise[2];
     uint8_t            bs_invf_mode[2][5];
     uint32_t           bs_data_env[7][32];
@@ -143,7 +143,7 @@ typedef struct {
     uint8_t            t_env[2][8];
     uint8_t            t_env_num_env_old[2];
     uint8_t            t_q[2][3];
-    float              env_facs[2][7][48];
+    float              env_facs[2][6][48];
     float              noise_facs[2][3][5];
     float              W[2][32][32][2];
     float              x_low[32][40][2];
