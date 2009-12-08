@@ -1567,7 +1567,9 @@ static void sbr_hf_assemble(float y[2][64][40][2], float x_high[64][40][2],
         if (l != l_a[0] && l != l_a[1]) {
             for (i = sbr->t_env[ch][l] << 1; i < sbr->t_env[ch][l + 1] << 1; i++) {
                 for (m = 0; m < sbr->m; m++) {
-                    if (sbr->s_m_boost[l][m] && h_SL) {
+                    if (sbr->s_m_boost[l][m])
+                        q_filt[i][m] = 0.0f;
+                    else if (h_SL) {
                         const int idx1 = i + h_SL;
                         q_filt[i][m] = 0.0f;
                         for (j = 0; j <= h_SL; j++)
