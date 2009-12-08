@@ -970,12 +970,9 @@ static void sbr_env_noise_floors(SpectralBandReplication *sbr, SBRData *ch_data,
             for (k = 0; k < sbr->n_q; k++)
                 sbr->noise_facs[ch][l + 1][k] = sbr->noise_facs[ch][l][k] + delta * ch_data->bs_data_noise[l][k];
         else {
-            for (k = 0; k < sbr->n_q; k++) {
-                sbr->noise_facs[ch][l + 1][k] = ch_data->bs_data_noise[l][0];
-                for (i = 1; i <= k; i++)
-                    sbr->noise_facs[ch][l + 1][k] += ch_data->bs_data_noise[l][i];
-                sbr->noise_facs[ch][l + 1][k] *= delta;
-            }
+            sbr->noise_facs[ch][l + 1][0] = delta * ch_data->bs_data_noise[l][0];
+            for (k = 1; k < sbr->n_q; k++)
+                sbr->noise_facs[ch][l + 1][k] = sbr->noise_facs[ch][l + 1][k - 1] + delta * ch_data->bs_data_noise[l][i];
         }
     }
 
