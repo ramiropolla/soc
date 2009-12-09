@@ -1458,7 +1458,7 @@ static void sbr_gain_calc(AACContext * ac, SpectralBandReplication *sbr,
     }
 
     for (l = 0; l < ch_data->bs_num_env[1]; l++) {
-        for (k = 0; k < sbr->n[0]; k++) {
+        for (k = 0; k < sbr->n_lim; k++) {
             float sum[2] = { 0.0f, 0.0f };
             for (i = sbr->f_tablelim[k] - sbr->k[3]; i < sbr->f_tablelim[k + 1] - sbr->k[3]; i++) {
                 sum[0] += sbr->e_origmapped[l][i];
@@ -1483,7 +1483,7 @@ static void sbr_gain_calc(AACContext * ac, SpectralBandReplication *sbr,
 
     for (l = 0; l < ch_data->bs_num_env[1]; l++) {
         int delta = !((l == l_a[1]) || (l == -(l_a[0] != ch_data->bs_num_env[0])));
-        for (k = 0; k < sbr->n[0]; k++) {
+        for (k = 0; k < sbr->n_lim; k++) {
             float sum[2] = { 0.0f, 0.0f };
             for (i = sbr->f_tablelim[k] - sbr->k[3]; i < sbr->f_tablelim[k + 1] - sbr->k[3]; i++) {
                 sum[0] += sbr->e_origmapped[l][i];
