@@ -516,6 +516,7 @@ static int sbr_grid(AACContext *ac, SpectralBandReplication *sbr,
 {
     int i;
 
+    ch_data->bs_freq_res[0] = ch_data->bs_freq_res[ch_data->bs_num_env[1]];
     ch_data->bs_num_env[0] = ch_data->bs_num_env[1];
     ch_data->bs_amp_res = sbr->bs_amp_res_header;
 
@@ -525,9 +526,9 @@ static int sbr_grid(AACContext *ac, SpectralBandReplication *sbr,
         if (ch_data->bs_num_env[1] == 1)
             ch_data->bs_amp_res = 0;
 
-        ch_data->bs_freq_res[0] = get_bits1(gb);
+        ch_data->bs_freq_res[1] = get_bits1(gb);
         for (i = 1; i < ch_data->bs_num_env[1]; i++)
-            ch_data->bs_freq_res[i] = ch_data->bs_freq_res[0];
+            ch_data->bs_freq_res[i + 1] = ch_data->bs_freq_res[1];
         break;
     case FIXVAR:
         ch_data->bs_var_bord[1] = get_bits(gb, 2);
@@ -540,7 +541,7 @@ static int sbr_grid(AACContext *ac, SpectralBandReplication *sbr,
         ch_data->bs_pointer = get_bits(gb, ceil_log2[ch_data->bs_num_env[1] + 1]);
 
         for (i = 0; i < ch_data->bs_num_env[1]; i++)
-            ch_data->bs_freq_res[ch_data->bs_num_env[1] - 1 - i] = get_bits1(gb);
+            ch_data->bs_freq_res[ch_data->bs_num_env[1] - i] = get_bits1(gb);
         break;
     case VARFIX:
         ch_data->bs_var_bord[0] = get_bits(gb, 2);
@@ -553,7 +554,7 @@ static int sbr_grid(AACContext *ac, SpectralBandReplication *sbr,
         ch_data->bs_pointer = get_bits(gb, ceil_log2[ch_data->bs_num_env[1] + 1]);
 
         for (i = 0; i < ch_data->bs_num_env[1]; i++)
-            ch_data->bs_freq_res[i] = get_bits1(gb);
+            ch_data->bs_freq_res[i + 1] = get_bits1(gb);
         break;
     case VARVAR:
         ch_data->bs_var_bord[0] = get_bits(gb, 2);
@@ -570,7 +571,7 @@ static int sbr_grid(AACContext *ac, SpectralBandReplication *sbr,
         ch_data->bs_pointer = get_bits(gb, ceil_log2[ch_data->bs_num_env[1] + 1]);
 
         for (i = 0; i < ch_data->bs_num_env[1]; i++)
-            ch_data->bs_freq_res[i] = get_bits1(gb);
+            ch_data->bs_freq_res[i + 1] = get_bits1(gb);
         break;
     default:
         break;
@@ -656,10 +657,10 @@ static void sbr_envelope(SpectralBandReplication *sbr, GetBitContext *gb,
     for (i = 0; i < ch_data->bs_num_env[1]; i++) {
         if (!ch_data->bs_df_env[i]) {
             ch_data->bs_data_env[i][0] = get_bits(gb, bits); // bs_env_start_value_balance
-            for (j = 1; j < sbr->n[ch_data->bs_freq_res[i]]; j++)
+            for (j = 1; j < sbr->n[ch_data->bs_freq_res[i + 1]]; j++)
                 ch_data->bs_data_env[i][j] = get_vlc2(gb, f_huff, 9, max_depth) - f_lav;
         } else {
-            for (j = 0; j < sbr->n[ch_data->bs_freq_res[i]]; j++)
+            for (j = 0; j < sbr->n[ch_data->bs_freq_res[i + 1]]; j++)
                 ch_data->bs_data_env[i][j] = get_vlc2(gb, t_huff, 9, max_depth) - t_lav;
         }
     }
@@ -990,7 +991,7 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac, int ch)
     if (id_aac == TYPE_CPE && sbr->bs_coupling) {
         float pan_offset = sbr->data[ch].bs_amp_res ? 12.0f : 24.0f;
         for (l = 1; l <= sbr->data[ch].bs_num_env[1]; l++) {
-            for (k = 0; k < sbr->n[sbr->data[ch].bs_freq_res[l + 1]]; k++) {
+            for (k = 0; k < sbr->n[sbr->data[ch].bs_freq_res[l]]; k++) {
                 float temp1 = powf(2.0f, sbr->env_facs[0][l][k] * alpha + 7.0f);
                 float temp2 = (pan_offset - sbr->env_facs[1][l][k]) * alpha;
                 sbr->env_facs[0][l][k] = temp1 / (1.0f + powf(2.0f,  temp2));
@@ -1007,7 +1008,7 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac, int ch)
         }
     } else { // SCE or one non-coupled CPE
         for (l = 1; l <= sbr->data[ch].bs_num_env[1]; l++)
-            for (k = 0; k < sbr->n[sbr->data[ch].bs_freq_res[l + 1]]; k++)
+            for (k = 0; k < sbr->n[sbr->data[ch].bs_freq_res[l]]; k++)
                 sbr->env_facs[ch][l][k] = powf(2.0f, alpha * sbr->env_facs[ch][l][k] + 6.0f);
         for (l = 1; l <= sbr->data[ch].bs_num_noise; l++)
             for (k = 0; k < sbr->n_q; k++)
