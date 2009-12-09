@@ -1338,7 +1338,7 @@ static void sbr_mapping(AACContext *ac, SpectralBandReplication *sbr,
         // ch_data->bs_num_noise > 1 => 2 noise floors
         k = (ch_data->bs_num_noise > 1) && (sbr->t_env[ch][l] >= sbr->t_q[ch][1]);
         for (i = 0; i < sbr->n_q; i++)
-            for (m = table[i]; m < table[i + 1]; m++)
+            for (m = sbr->f_tablenoise[i]; m < sbr->f_tablenoise[i + 1]; m++)
                 sbr->q_mapped[l][m - sbr->k[3]] = sbr->noise_facs[ch][k+1][i];
 
         for (i = 0; i < sbr->n[1]; i++) {
