@@ -1489,7 +1489,7 @@ static void sbr_gain_calc(AACContext * ac, SpectralBandReplication *sbr,
                 sum[0] += sbr->e_origmapped[l][i];
                 sum[1] += sbr->e_curr[l][i] * sbr->gain_lim[l][i] * sbr->gain_lim[l][i]
                           + sbr->s_m[l][i] * sbr->s_m[l][i]
-                          + (delta || !sbr->s_m[l][i]) * sbr->q_m_lim[l][i] * sbr->q_m_lim[l][i];
+                          + (delta && !sbr->s_m[l][i]) * sbr->q_m_lim[l][i] * sbr->q_m_lim[l][i];
             }
             gain_boost_temp[l][k] = FFMIN(1.584893192, sqrtf((EPS0 + sum[0]) / (EPS0 + sum[1])));
         }
