@@ -1410,7 +1410,10 @@ static void sbr_env_estimate(float (*e_curr)[48], float x_high[64][40][2],
                         sum += x_high[k][i][0] * x_high[k][i][0] +
                                x_high[k][i][1] * x_high[k][i][1];
                     }
-                    e_curr[l][k - sbr->k[3]] = sum / den;
+                }
+                sum /= den;
+                for (k = table[p]; k < table[p + 1]; k++) {
+                    e_curr[l][k - sbr->k[3]] = sum;
                 }
             }
         }
