@@ -1556,7 +1556,7 @@ static const uint8_t pulses_nb_per_mode[] = {2, 2, 2, 3, 4, 4, 8, 10};
 static const uint8_t track_position[16] = { 0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 1, 4, 1, 4 };
 
 /** 3-bit Gray code to binary lookup table */
-static const uint8_t gray_decode[8] = { 0, 1, 3, 2, 5, 6, 4, 7 };
+static const uint8_t gray_decode[8] = { 0, 5, 15, 10, 25, 30, 20, 35 };
 
 
 // gain tables

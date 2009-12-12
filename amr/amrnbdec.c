@@ -473,8 +473,8 @@ static void decode_10_pulses_35bits(const int16_t *fixed_index,
 
     fixed_sparse->n = 10;
     for (i = 0; i < 5; i++) {
-        const int pos1   = gray_decode[fixed_index[2*i + 1] & 7] * 5 + i;
-        const int pos2   = gray_decode[fixed_index[2*i    ] & 7] * 5 + i;
+        const int pos1   = gray_decode[fixed_index[2*i + 1] & 7] + i;
+        const int pos2   = gray_decode[fixed_index[2*i    ] & 7] + i;
         const float sign = (fixed_index[2*i + 1] & 8) ? -1.0 : 1.0;
         fixed_sparse->x[2*i + 1] = pos1;
         fixed_sparse->x[2*i    ] = pos2;
@@ -531,11 +531,11 @@ static void decode_fixed_sparse(AMRFixed *fixed_sparse, const uint16_t *pulses,
             pulse_position[2] = ((fixed_index >> 8) & 7) * 5 + pulse_subset + 2;
             fixed_sparse->n = 3;
         } else { // mode <= MODE_7k95
-            pulse_position[0] = gray_decode[ fixed_index        & 7] * 5;
-            pulse_position[1] = gray_decode[(fixed_index >> 3)  & 7] * 5 + 1;
-            pulse_position[2] = gray_decode[(fixed_index >> 6)  & 7] * 5 + 2;
+            pulse_position[0] = gray_decode[ fixed_index        & 7];
+            pulse_position[1] = gray_decode[(fixed_index >> 3)  & 7] + 1;
+            pulse_position[2] = gray_decode[(fixed_index >> 6)  & 7] + 2;
             pulse_subset      = (fixed_index >> 9) & 1;
-            pulse_position[3] = gray_decode[(fixed_index >> 10) & 7] * 5 + pulse_subset + 3;
+            pulse_position[3] = gray_decode[(fixed_index >> 10) & 7] + pulse_subset + 3;
             fixed_sparse->n = 4;
         }
         for (i = 0; i < fixed_sparse->n; i++)
