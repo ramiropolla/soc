@@ -1,32 +1,32 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 20451)
+--- libavcodec/Makefile	(revision 20803)
 +++ libavcodec/Makefile	(working copy)
-@@ -51,6 +51,7 @@
- OBJS-$(CONFIG_AC3_ENCODER)             += ac3enc.o ac3tab.o ac3.o
+@@ -52,6 +52,7 @@
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o
+ OBJS-$(CONFIG_ALS_DECODER)             += alsdec.o
 +OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbdec.o celp_filters.o celp_math.o acelp_filters.o acelp_vectors.o lsp.o acelp_pitch_delay.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
  OBJS-$(CONFIG_APE_DECODER)             += apedec.o
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 20451)
+--- libavcodec/allcodecs.c	(revision 20803)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -199,6 +199,7 @@
-     REGISTER_ENCDEC  (AAC, aac);
+@@ -201,6 +201,7 @@
      REGISTER_ENCDEC  (AC3, ac3);
      REGISTER_ENCDEC  (ALAC, alac);
+     REGISTER_DECODER (ALS, als);
 +    REGISTER_DECODER (AMRNB, amrnb);
      REGISTER_DECODER (APE, ape);
      REGISTER_DECODER (ATRAC1, atrac1);
      REGISTER_DECODER (ATRAC3, atrac3);
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 20451)
+--- doc/general.texi	(revision 20803)
 +++ doc/general.texi	(working copy)
-@@ -527,8 +527,8 @@
+@@ -530,8 +530,8 @@
  @item ADPCM Westwood Studios IMA @tab     @tab  X
      @tab Used in Westwood Studios games like Command and Conquer.
  @item ADPCM Yamaha           @tab  X  @tab  X
@@ -39,12 +39,12 @@ Index: doc/general.texi
  @item Apple lossless audio   @tab  X  @tab  X
 Index: Changelog
 ===================================================================
---- Changelog	(revision 20451)
+--- Changelog	(revision 20803)
 +++ Changelog	(working copy)
-@@ -41,6 +41,7 @@
- - Atrac1 decoder
- - MD STUDIO audio demuxer
- - RF64 support in WAV demuxer
+@@ -44,6 +44,7 @@
+ - MPEG-4 Audio Lossless Coding (ALS) decoder
+ - -formats option split into -formats, -codecs, -bsfs, and -protocols
+ - IV8 demuxer
 +- AMR-NB decoder
  
  
