@@ -1,5 +1,9 @@
 Please read my comments named "description" BEFORE doing anything! Thanks!
 
-Some small steps needed to be completed in order to make FFmpeg able to decode indeo5 videos:
+Some small steps needed to be completed in order to make FFmpeg able to
+decode indeo5 videos:
 
-* split the 5/3 wavelet synthesis filter out of the snow source (see snow.c:spatial_compose53i) and adapt it to indeo5. The indeo5's high-pass coefficients must be upscaled by -2 in this case before those can be passed to that filter.
+* split the 5/3 wavelet synthesis filter out of the snow source (see
+  snow.c:spatial_compose53i) and adapt it to indeo5. The indeo5's
+  high-pass coefficients must be upscaled by -2 in this case before
+  those can be passed to that filter.
