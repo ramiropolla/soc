@@ -22,7 +22,8 @@
 
 /**
  * @file libavcodec/ivi_common.c
- * This file contains functions and data shared by both Indeo4 and Indeo5 decoders.
+ * This file contains functions and data shared by both Indeo4 and
+ * Indeo5 decoders.
  */
 
 #define ALT_BITSTREAM_READER_LE
@@ -32,7 +33,8 @@
 #include "ivi_mc.h"
 
 /**
- *  Reverse "nbits" bits of the value "val" and return the result right-justified.
+ *  Reverse "nbits" bits of the value "val" and return the result
+ *  right-justified.
  */
 static uint16_t inv_bits(const uint16_t val, const int nbits)
 {
@@ -56,7 +58,8 @@ static uint16_t inv_bits(const uint16_t val, const int nbits)
  *  @param flag [in]  flag: 1 - for static or 0 for dynamic tables
  *  @return     result code: 0 - OK, -1 = error (invalid codebook descriptor)
  */
-int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *pOut, const int flag)
+int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *pOut,
+                                 const int flag)
 {
     int         pos, i, j, codes_per_row, prefix, last_row;
     uint16_t    codewords[256]; /* FIXME: move this temporal storage out here? */
@@ -173,8 +176,9 @@ int av_cold ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg)
         planes[p].bands      = av_mallocz(planes[p].num_bands * sizeof(IVIBandDesc));
         planes[p].buf_switch = 0; /* use primary buffer */
 
-        /* select band dimensions: if there is only one band then it has the full size */
-        /* if there are several bands each of them has only a half size */
+        /* select band dimensions: if there is only one band then it
+         *  has the full size, if there are several bands each of them
+         *  has only a half size */
         b_width  = planes[p].num_bands == 1 ? planes[p].width  : planes[p].width  >> 1;
         b_height = planes[p].num_bands == 1 ? planes[p].height : planes[p].height >> 1;
 
@@ -234,7 +238,8 @@ void av_cold ff_ivi_free_buffers(IVIPlaneDesc *planes)
  *  @param tile_height  [in]     tile height
  *  @return             result code: 0 - OK
  */
-int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width, const int tile_height)
+int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width,
+                              const int tile_height)
 {
     int         p, b, x, y, x_tiles, y_tiles, t_width, t_height;
     IVIBandDesc *band;
@@ -255,7 +260,8 @@ int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width, const 
 
             tile = band->tiles;
 
-            /* use the first luma band as reference for motion vectors and quant */
+            /* use the first luma band as reference for motion vectors
+             * and quant */
             ref_tile = planes[0].bands[0].tiles;
 
             for (y = 0; y < band->height; y += t_height) {
@@ -291,7 +297,8 @@ int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width, const 
 /**
  *  Copies the pixels into the frame buffer.
  */
-void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags)
+void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch,
+                           uint8_t *flags)
 {
     int     x, y;
 
@@ -305,7 +312,8 @@ void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *f
 /**
  *  Copies the DC coefficient into the first pixel of the block and zero all others.
  */
-void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
+void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch,
+                             int blk_size)
 {
     int     y;
 
@@ -347,8 +355,9 @@ int ff_ivi_dec_tile_data_size(GetBitContext *gb)
 
 /**
  *  Decode block data:
- *  extract huffman-coded transform coefficients from the bitstream, dequantize them,
- *  apply inverse transform and motion compensation in order to reconstruct picture.
+ *  extract huffman-coded transform coefficients from the bitstream,
+ *  dequantize them, apply inverse transform and motion compensation
+ *  in order to reconstruct picture.
  *
  *  @param gb   [in,out] the GetBit context
  *  @param band [in]     pointer to the band descriptor
@@ -465,19 +474,25 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
                 }
 
                 /* apply inverse transform */
-                band->inv_transform(trvec, band->buf + buf_offs, band->pitch, col_flags);
+                band->inv_transform(trvec, band->buf + buf_offs,
+                                    band->pitch, col_flags);
 
                 /* apply motion compensation */
                 if (!is_intra)
-                    mc_with_delta_func(band->buf + buf_offs, band->ref_buf + buf_offs + mv_y * band->pitch + mv_x, band->pitch, mc_type);
+                    mc_with_delta_func(band->buf + buf_offs,
+                                       band->ref_buf + buf_offs + mv_y * band->pitch + mv_x,
+                                       band->pitch, mc_type);
             } else {
                 /* block not coded */
                 /* for intra blocks apply the dc slant transform */
                 /* for inter - perform the motion compensation without delta */
                 if (is_intra && band->dc_transform) {
-                    band->dc_transform(&prev_dc, band->buf + buf_offs, band->pitch, blk_size);
+                    band->dc_transform(&prev_dc, band->buf + buf_offs,
+                                       band->pitch, blk_size);
                 } else
-                    mc_no_delta_func(band->buf + buf_offs, band->ref_buf + buf_offs + mv_y * band->pitch + mv_x, band->pitch, mc_type);
+                    mc_no_delta_func(band->buf + buf_offs,
+                                     band->ref_buf + buf_offs + mv_y * band->pitch + mv_x,
+                                     band->pitch, mc_type);
             }
 
             cbp >>= 1;
@@ -491,21 +506,24 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
 
 
 /**
- *  Handles empty tiles by performing data copying and motion compensation resp.
+ *  Handles empty tiles by performing data copying and motion
+ *  compensation resp.
  *
  *  @param avctx    [in] ptr to the AVCodecContext
  *  @param band     [in] pointer to the band descriptor
  *  @param tile     [in] pointer to the tile descriptor
  *  @param mv_scale [in] scaling factor for motion vectors
  */
-void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band, IVITile *tile, int32_t mv_scale)
+void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band,
+                               IVITile *tile, int32_t mv_scale)
 {
     int             x, y, need_mc, mbn, blk, num_blocks, mv_x, mv_y, mc_type;
     int             offs, mb_offset, row_offset;
     IVIMbInfo       *mb, *ref_mb;
     const int16_t   *src;
     int16_t         *dst;
-    void (*mc_no_delta_func)(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type);
+    void (*mc_no_delta_func)(int16_t *buf, int16_t *ref_buf, uint32_t pitch,
+                             int mc_type);
 
     offs       = tile->ypos * band->pitch + tile->xpos;
     mb         = tile->mbs;
@@ -562,7 +580,8 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band, IVITile
 
     if (band->inherit_mv && need_mc) { /* apply motion compensation if there is at least one non-zero motion vector */
         num_blocks = (band->mb_size != band->blk_size) ? 4 : 1; /* number of blocks per mb */
-        mc_no_delta_func = (band->blk_size == 8) ? ff_ivi_mc_8x8_no_delta : ff_ivi_mc_4x4_no_delta;
+        mc_no_delta_func = (band->blk_size == 8) ? ff_ivi_mc_8x8_no_delta
+                                                 : ff_ivi_mc_4x4_no_delta;
 
         for (mbn = 0, mb = tile->mbs; mbn < tile->num_MBs; mb++, mbn++) {
             mv_x = mb->mv_x;
@@ -584,7 +603,9 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band, IVITile
                     offs -= band->blk_size;
                     offs += band->blk_size * band->pitch;
                 }
-                mc_no_delta_func(band->buf + offs, band->ref_buf + offs + mv_y * band->pitch + mv_x, band->pitch, mc_type);
+                mc_no_delta_func(band->buf + offs,
+                                 band->ref_buf + offs + mv_y * band->pitch + mv_x,
+                                 band->pitch, mc_type);
             }
         }
     } else {
@@ -638,7 +659,8 @@ int ivi_check_band (IVIBandDesc *band, uint8_t *ref, int pitch)
             t1 = av_clip(src[x] + 128, 0, 255);
             t2 = ref[x];
             if (t1 != t2) {
-                av_log(NULL,AV_LOG_ERROR,"Data mismatch: row %d, column %d\n", y/band->blk_size, x/band->blk_size);
+                av_log(NULL,AV_LOG_ERROR,"Data mismatch: row %d, column %d\n",
+                       y / band->blk_size, x / band->blk_size);
                 result = -1;
             }
         }
@@ -675,9 +697,10 @@ void ff_ivi_output_plane(IVIPlaneDesc *plane, uint8_t *dst, int dst_pitch)
 
 
 /**
- *  These are 2x8 predefined Huffman codebooks for coding macroblock/block signals.
- *  They are specified using "huffman descriptors" in order to avoid huge static tables.
- *  The decoding tables will be generated at startup from these descriptors.
+ * These are 2x8 predefined Huffman codebooks for coding macroblock/block
+ * signals. They are specified using "huffman descriptors" in order to
+ * avoid huge static tables. The decoding tables will be generated at
+ * startup from these descriptors.
  */
 const IVIHuffDesc ff_ivi_mb_huff_desc[8] = {
     {8,  {0, 4, 5, 4, 4, 4, 6, 6}},
