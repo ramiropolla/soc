@@ -1327,6 +1327,7 @@ static void sbr_mapping(AACContext *ac, SpectralBandReplication *sbr,
     } else if ((ch_data->bs_frame_class == 2) && (ch_data->bs_pointer > 1)) // VARFIX and bs_pointer > 1
         l_a[1] = ch_data->bs_pointer - 1;
 
+    memset(sbr->s_indexmapped[1], 0, 7*sizeof(sbr->s_indexmapped[1]));
     for (l = 0; l < ch_data->bs_num_env[1]; l++) {
         const unsigned int ilim = sbr->n[ch_data->bs_freq_res[l + 1]];
         uint16_t *table = ch_data->bs_freq_res[l + 1] ? sbr->f_tablehigh : sbr->f_tablelow;
@@ -1343,9 +1344,6 @@ static void sbr_mapping(AACContext *ac, SpectralBandReplication *sbr,
                 sbr->q_mapped[l][m - sbr->k[3]] = sbr->noise_facs[ch][k+1][i];
 
         for (i = 0; i < sbr->n[1]; i++) {
-            memset(&sbr->s_indexmapped[l + 1][sbr->f_tablehigh[i] - sbr->k[3]], 0,
-                   (sbr->f_tablehigh[i + 1] - sbr->f_tablehigh[i]) * sizeof(sbr->s_indexmapped[l + 1][0]));
-
             if (ch_data->bs_add_harmonic_flag) {
                 const unsigned int m_midpoint =
                     (sbr->f_tablehigh[i] + sbr->f_tablehigh[i + 1]) >> 1;
@@ -1367,6 +1365,8 @@ static void sbr_mapping(AACContext *ac, SpectralBandReplication *sbr,
                    (table[i + 1] - table[i]) * sizeof(sbr->s_mapped[l][0]));
         }
     }
+
+    memcpy(sbr->s_indexmapped[0], sbr->s_indexmapped[ch_data->bs_num_env[1]], sizeof(sbr->s_indexmapped[0]));
 }
 
 // Estimation of current envelope (14496-3 sp04 p218)
@@ -1430,7 +1430,7 @@ static void sbr_hf_additional_levels(SpectralBandReplication *sbr,
         for (m = 0; m < sbr->m; m++) {
             const float temp = sbr->e_origmapped[l][m] / (1.0f + sbr->q_mapped[l][m]);
             sbr->q_m[l][m] = sqrtf(temp * sbr->q_mapped[l][m]);
-            sbr->s_m[l][m] = sqrtf(temp * sbr->s_indexmapped[l][m]);
+            sbr->s_m[l][m] = sqrtf(temp * sbr->s_indexmapped[l + 1][m]);
         }
     }
 }

@@ -155,8 +155,8 @@ typedef struct {
     float              bw_array[2][5];
     float              e_origmapped[7][48];
     float              q_mapped[7][48];
-    float              s_indexmapped[8][48];
-    float              s_mapped[7][48];
+    uint8_t            s_indexmapped[8][48];
+    uint8_t            s_mapped[7][48];
     float              e_curr[7][48];
     float              q_m[7][48];
     float              s_m[7][48];
