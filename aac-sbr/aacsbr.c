@@ -1403,7 +1403,7 @@ static void sbr_env_estimate(float (*e_curr)[48], float x_high[64][40][2],
 
             for (p = 0; p < sbr->n[ch_data->bs_freq_res[l + 1]]; p++) {
                 float sum = 0.0f;
-                const int den = env_size * (table[p + 1] - table[p] + 1);
+                const int den = env_size * (table[p + 1] - table[p]);
 
                 for (k = table[p]; k < table[p + 1]; k++) {
                     for (i = ilb; i < iub; i++) {
