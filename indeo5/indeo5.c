@@ -180,35 +180,35 @@ static int decode_gop_header(IVI5DecContext *ctx, AVCodecContext *avctx)
 
             /* select transform function and scan pattern according with plane and band number */
             switch ((p << 2) + i) {
-                case 0:
-                    band->inv_transform = ff_ivi_inverse_slant_8x8;
-                    band->dc_transform  = ff_ivi_dc_slant_2d;
-                    band->scan          = ivi5_scans8x8[0];
-                    break;
+            case 0:
+                band->inv_transform = ff_ivi_inverse_slant_8x8;
+                band->dc_transform  = ff_ivi_dc_slant_2d;
+                band->scan          = ivi5_scans8x8[0];
+                break;
 
-                case 1:
-                    band->inv_transform = ff_ivi_row_slant8;
-                    band->dc_transform  = ff_ivi_dc_row_slant;
-                    band->scan          = ivi5_scans8x8[1];
-                    break;
+            case 1:
+                band->inv_transform = ff_ivi_row_slant8;
+                band->dc_transform  = ff_ivi_dc_row_slant;
+                band->scan          = ivi5_scans8x8[1];
+                break;
 
-                case 2:
-                    band->inv_transform = ff_ivi_col_slant8;
-                    band->dc_transform  = ff_ivi_dc_col_slant;
-                    band->scan          = ivi5_scans8x8[2];
-                    break;
+            case 2:
+                band->inv_transform = ff_ivi_col_slant8;
+                band->dc_transform  = ff_ivi_dc_col_slant;
+                band->scan          = ivi5_scans8x8[2];
+                break;
 
-                case 3:
-                    band->inv_transform = ff_ivi_put_pixels_8x8;
-                    band->dc_transform  = ff_ivi_put_dc_pixel_8x8;
-                    band->scan          = ivi5_scans8x8[2];
-                    break;
+            case 3:
+                band->inv_transform = ff_ivi_put_pixels_8x8;
+                band->dc_transform  = ff_ivi_put_dc_pixel_8x8;
+                band->scan          = ivi5_scans8x8[2];
+                break;
 
-                case 4:
-                    band->inv_transform = ff_ivi_inverse_slant_4x4;
-                    band->dc_transform  = ff_ivi_dc_slant_2d;
-                    band->scan          = ivi5_scan4x4;
-                    break;
+            case 4:
+                band->inv_transform = ff_ivi_inverse_slant_4x4;
+                band->dc_transform  = ff_ivi_dc_slant_2d;
+                band->scan          = ivi5_scan4x4;
+                break;
             }
 
             band->is_2d_trans = band->inv_transform == ff_ivi_inverse_slant_8x8 ||
@@ -530,18 +530,18 @@ static int decode_mb_info(IVI5DecContext *ctx, IVIBandDesc *band,
                 if (band->inherit_mv){
                     /* motion vector inheritance */
                     switch (mv_scale) {
-                        case 0:
-                            mb->mv_x = ref_mb->mv_x;
-                            mb->mv_y = ref_mb->mv_y;
-                            break;
-                        case 1:
-                            mb->mv_x = IVI_MV_DIV2(ref_mb->mv_x);
-                            mb->mv_y = IVI_MV_DIV2(ref_mb->mv_y);
-                            break;
-                        case 2:
-                            mb->mv_x = IVI_MV_DIV4(ref_mb->mv_x);
-                            mb->mv_y = IVI_MV_DIV4(ref_mb->mv_y);
-                            break;
+                    case 0:
+                        mb->mv_x = ref_mb->mv_x;
+                        mb->mv_y = ref_mb->mv_y;
+                        break;
+                    case 1:
+                        mb->mv_x = IVI_MV_DIV2(ref_mb->mv_x);
+                        mb->mv_y = IVI_MV_DIV2(ref_mb->mv_y);
+                        break;
+                    case 2:
+                        mb->mv_x = IVI_MV_DIV4(ref_mb->mv_x);
+                        mb->mv_y = IVI_MV_DIV4(ref_mb->mv_y);
+                        break;
                     }
                 }
             } else {
@@ -576,18 +576,18 @@ static int decode_mb_info(IVI5DecContext *ctx, IVIBandDesc *band,
                     if (band->inherit_mv){
                         /* motion vector inheritance */
                         switch (mv_scale) {
-                            case 0:
-                                mb->mv_x = ref_mb->mv_x;
-                                mb->mv_y = ref_mb->mv_y;
-                                break;
-                            case 1:
-                                mb->mv_x = IVI_MV_DIV2(ref_mb->mv_x);
-                                mb->mv_y = IVI_MV_DIV2(ref_mb->mv_y);
-                                break;
-                            case 2:
-                                mb->mv_x = IVI_MV_DIV4(ref_mb->mv_x);
-                                mb->mv_y = IVI_MV_DIV4(ref_mb->mv_y);
-                                break;
+                        case 0:
+                            mb->mv_x = ref_mb->mv_x;
+                            mb->mv_y = ref_mb->mv_y;
+                            break;
+                        case 1:
+                            mb->mv_x = IVI_MV_DIV2(ref_mb->mv_x);
+                            mb->mv_y = IVI_MV_DIV2(ref_mb->mv_y);
+                            break;
+                        case 2:
+                            mb->mv_x = IVI_MV_DIV4(ref_mb->mv_x);
+                            mb->mv_y = IVI_MV_DIV4(ref_mb->mv_y);
+                            break;
                         }
                     } else {
                         /* decode motion vector deltas */
@@ -744,23 +744,23 @@ static void switch_buffers(IVI5DecContext *ctx, AVCodecContext *avctx)
         plane = &ctx->planes[p];
 
         switch (ctx->frame_type) {
-            case IVI5_FRAMETYPE_INTRA:
-                plane->buf_switch = 0;
-                break;
-            case 1:
-                if (ctx->prev_frame_type != 3)
-                    plane->buf_switch ^= 1; /* swap buffers only if there is no frame of the type 3 */
-                break;
-            case 2:
-                plane->buf_switch ^= 1;
-                break;
-            case 3:
-                plane->buf_switch ^= 1;
-                break;
-            case IVI5_FRAMETYPE_NULL:
-                return;
-            default:
-                av_log(avctx, AV_LOG_ERROR, "unsupported frame type: %d\n", ctx->frame_type);
+        case IVI5_FRAMETYPE_INTRA:
+            plane->buf_switch = 0;
+            break;
+        case 1:
+            if (ctx->prev_frame_type != 3)
+                plane->buf_switch ^= 1; /* swap buffers only if there is no frame of the type 3 */
+            break;
+        case 2:
+            plane->buf_switch ^= 1;
+            break;
+        case 3:
+            plane->buf_switch ^= 1;
+            break;
+        case IVI5_FRAMETYPE_NULL:
+            return;
+        default:
+            av_log(avctx, AV_LOG_ERROR, "unsupported frame type: %d\n", ctx->frame_type);
         }
 
         //if (plane->num_bands == 1) {

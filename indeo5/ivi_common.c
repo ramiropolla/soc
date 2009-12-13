@@ -554,18 +554,18 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band,
             if (band->inherit_mv) {
                 /* motion vector inheritance */
                 switch (mv_scale) {
-                    case 0:
-                        mb->mv_x = ref_mb->mv_x;
-                        mb->mv_y = ref_mb->mv_y;
-                        break;
-                    case 1:
-                        mb->mv_x = IVI_MV_DIV2(ref_mb->mv_x);
-                        mb->mv_y = IVI_MV_DIV2(ref_mb->mv_y);
-                        break;
-                    case 2:
-                        mb->mv_x = IVI_MV_DIV4(ref_mb->mv_x);
-                        mb->mv_y = IVI_MV_DIV4(ref_mb->mv_y);
-                        break;
+                case 0:
+                    mb->mv_x = ref_mb->mv_x;
+                    mb->mv_y = ref_mb->mv_y;
+                    break;
+                case 1:
+                    mb->mv_x = IVI_MV_DIV2(ref_mb->mv_x);
+                    mb->mv_y = IVI_MV_DIV2(ref_mb->mv_y);
+                    break;
+                case 2:
+                    mb->mv_x = IVI_MV_DIV4(ref_mb->mv_x);
+                    mb->mv_y = IVI_MV_DIV4(ref_mb->mv_y);
+                    break;
                 }
                 need_mc |= mb->mv_x || mb->mv_y; /* tracking non-zero motion vectors */
             }
