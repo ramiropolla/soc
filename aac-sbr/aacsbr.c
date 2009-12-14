@@ -483,7 +483,7 @@ static int sbr_make_f_derived(AACContext *ac, SpectralBandReplication *sbr)
         sbr->n_lim = sbr->n[0] + sbr->num_patches - 1;
         while (k <= sbr->n_lim) {
             // if ( nOctaves * limBands >= 0.49) ...
-            if (log2(sbr->f_tablelim[k] / sbr->f_tablelim[k-1]) * lim_bands_per_octave[sbr->bs_limiter_bands - 1] >= 0.49) {
+            if (log2(sbr->f_tablelim[k] / (float)sbr->f_tablelim[k-1]) * lim_bands_per_octave[sbr->bs_limiter_bands - 1] >= 0.49) {
                 k++;
                 continue;
             }
