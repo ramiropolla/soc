@@ -66,9 +66,10 @@ static const uint8_t ivi5_scan4x4[16] = {
 
 
 /**
- *  indeo5 dequantization matrixes consist of two tables: base table and scale table.
- *  The base table defines the dequantization matrix itself and the scale table tells how
- *  this matrix should be scaled for a particular quant level (0...24).
+ *  indeo5 dequantization matrixes consist of two tables: base table
+ *  and scale table. The base table defines the dequantization matrix
+ *  itself and the scale table tells how this matrix should be scaled
+ *  for a particular quant level (0...24).
  *
  *  ivi5_base_quant_bbb_ttt  - base  tables for block size 'bbb' of type 'ttt'
  *  ivi5_scale_quant_bbb_ttt - scale tables for block size 'bbb' of type 'ttt'
