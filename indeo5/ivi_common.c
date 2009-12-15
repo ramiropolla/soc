@@ -51,7 +51,7 @@ static uint16_t inv_bits(const uint16_t val, const int nbits)
 
 /**
  *  Generates a huffman codebook from the given descriptor
- *  and convert it into the ffmpeg vlc table.
+ *  and converts it into the FFmpeg VLC table.
  *
  *  @param cb   [in]  pointer to codebook descriptor
  *  @param pOut [out] where to place the generated VLC table
@@ -62,7 +62,7 @@ int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *pOut,
                                  const int flag)
 {
     int         pos, i, j, codes_per_row, prefix, last_row;
-    uint16_t    codewords[256]; /* FIXME: move this temporal storage out here? */
+    uint16_t    codewords[256]; /* FIXME: move this temporal storage out? */
     uint8_t     bits[256];
 
     pos = 0; /* current position = 0 */
@@ -73,8 +73,8 @@ int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *pOut,
         prefix        = ((1 << i) - 1) << (cb->xbits[i] + last_row);
 
         for (j = 0; j < codes_per_row; j++) {
-            if (pos >= 256) /* some indeo5 codebooks can have more as 256 elements */
-                break;      /* but only 256 codes are allowed! */
+            if (pos >= 256) /* Some indeo5 codebooks can have more than 256 */
+                break;      /* elements, but only 256 codes are allowed! */
 
             bits[pos] = i + cb->xbits[i] + last_row;
             if (bits[pos] > IVI_VLC_BITS)
@@ -178,7 +178,7 @@ int av_cold ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg)
 
         /* select band dimensions: if there is only one band then it
          *  has the full size, if there are several bands each of them
-         *  has only a half size */
+         *  has only half size */
         b_width  = planes[p].num_bands == 1 ? planes[p].width  : planes[p].width  >> 1;
         b_height = planes[p].num_bands == 1 ? planes[p].height : planes[p].height >> 1;
 
@@ -310,7 +310,8 @@ void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch,
 
 
 /**
- *  Copies the DC coefficient into the first pixel of the block and zero all others.
+ *  Copies the DC coefficient into the first pixel of the block and
+ *  zeroes all others.
  */
 void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch,
                              int blk_size)
@@ -327,7 +328,7 @@ void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch,
 
 /**
  *  Decode size of the tile data.
- *  it's stored as a variable-length field having the following format:
+ *  The size is stored as a variable-length field having the following format:
  *  if (tile_data_size < 255) than this field is only one byte long
  *  if (tile_data_size >= 255) than this field four is byte long: 0xFF X1 X2 X3
  *  where X1-X3 is size of the tile data
@@ -357,7 +358,7 @@ int ff_ivi_dec_tile_data_size(GetBitContext *gb)
  *  Decode block data:
  *  extract huffman-coded transform coefficients from the bitstream,
  *  dequantize them, apply inverse transform and motion compensation
- *  in order to reconstruct picture.
+ *  in order to reconstruct the picture.
  *
  *  @param gb   [in,out] the GetBit context
  *  @param band [in]     pointer to the band descriptor
@@ -414,7 +415,7 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
         }
 
         for (blk = 0; blk < num_blocks; blk++) {
-            /* adjust block position in the buffer according with its number */
+            /* adjust block position in the buffer according to its number */
             if (blk & 1) {
                 buf_offs += blk_size;
             } else if (blk == 2) {
@@ -507,7 +508,7 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
 
 /**
  *  Handles empty tiles by performing data copying and motion
- *  compensation resp.
+ *  compensation respectively.
  *
  *  @param avctx    [in] ptr to the AVCodecContext
  *  @param band     [in] pointer to the band descriptor
