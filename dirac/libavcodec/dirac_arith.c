@@ -124,7 +124,7 @@ static void dirac_arith_init_common(dirac_arith_state *arith)
  * @param length amount of bytes to decode
  */
 void dirac_init_arith_decoder(dirac_arith_state *arith,
-                      GetBitContext *gb, int length)
+                              GetBitContext *gb, int length)
 {
     align_get_bits(gb);
     arith->pb        = NULL;
@@ -279,10 +279,10 @@ unsigned int dirac_get_arith_uint(dirac_arith_state *arith,
  */
 void dirac_put_arith_uint(dirac_arith_state *arith,
                           int follow_ctx, int data_ctx,
-                            unsigned int i)
+                          unsigned int i)
 {
     int log = av_log2(++i);
-    while(log) {
+    while (log) {
         log--;
         dirac_put_arith_bit(arith, follow_ctx, 0);
         dirac_put_arith_bit(arith, data_ctx, (i >> log)&1);
@@ -314,8 +314,7 @@ int dirac_get_arith_int(dirac_arith_state *arith, int follow_ctx,
  * @param i            value to write
  */
 void dirac_put_arith_int(dirac_arith_state *arith,
-                         int follow_ctx, int data_ctx, int sign_ctx,
-                           int i)
+                         int follow_ctx, int data_ctx, int sign_ctx, int i)
 {
     dirac_put_arith_uint(arith, follow_ctx, data_ctx, FFABS(i));
     if (i)
@@ -376,7 +375,8 @@ void dirac_put_arith_terminate(dirac_arith_state *arith)
 }
 
 #if 0
-void dirac_arith_test(void) {
+void dirac_arith_test(void)
+{
     struct dirac_arith_state arith;
     char in[] = "**** Test arithmetic coding and decoding ****";
     char out[100];
