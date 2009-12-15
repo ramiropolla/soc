@@ -1448,7 +1448,7 @@ static void sbr_gain_calc(AACContext * ac, SpectralBandReplication *sbr,
     for (l = 0; l < ch_data->bs_num_env[1]; l++) {
         int delta = !((l == l_a[1]) || (l == -(l_a[0] != ch_data->bs_num_env[0])));
         for (m = 0; m < sbr->m; m++) {
-            if (sbr->s_mapped[l][m]) {
+            if (!sbr->s_mapped[l][m]) {
                 sbr->gain[l][m] = sqrtf(sbr->e_origmapped[l][m] /
                                         ((1.0f + sbr->e_curr[l][m]) *
                                          (1.0f + sbr->q_mapped[l][m] * delta)));
