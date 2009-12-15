@@ -6,8 +6,7 @@ Description of the files:
 Indeo5 docs:
 -------------
 
-There is a basic indeo5 documentation being currently in progress. It
-can be found here:
+Basic indeo5 documentation is in the process of being produced at:
 http://wiki.multimedia.cx/index.php?title=Indeo_5
 
 Please be aware of the following important design specifics of the indeo5 codec:
@@ -29,13 +28,13 @@ Please be aware of the following important design specifics of the indeo5 codec:
    used in this case!!!
 
 3. The 5/3 wavelet filter of indeo5 differs from the standard one in that it
-   scales the high-pass coefficients by the value of -1/2. It should be
-   possible to reuse the Snow's code (see snow.c:spatial_compose53i) which
-   implements the same wavelet but upscale the indeo5 coefficients by -2
-   before calling this function. Maybe it will be possible to integrate the
-   upscale step directly into this function...
+   scales the high-pass coefficients by the value -1/2. It should be possible
+   to reuse Snow code (see snow.c:spatial_compose53i) which implements the
+   same wavelet but upscale the indeo5 coefficients by -2 before calling this
+   function. Maybe it will be possible to integrate the upscale step directly
+   into this function...
 
 4. Please work with debugging features (see "IVI_DEBUG" in my code)
    enabled in order to ensure you don't break anything!
 
-For the further description please read the source or ask me...
+For further details please read the source or ask me...
