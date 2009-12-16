@@ -815,7 +815,6 @@ static void sbr_reset(AACContext *ac, SpectralBandReplication *sbr)
     err = sbr_make_f_master(ac, sbr, &sbr->spectrum_params[1]);
     if (err >= 0)
         err = sbr_make_f_derived(ac, sbr);
-    sbr->reset = 0;
     if (err < 0) {
         av_log(ac->avccontext, AV_LOG_ERROR, "SBR reset failed. Switching SBR to pure upsampling mode.\n");
         sbr->start = 0;
@@ -838,6 +837,8 @@ int ff_decode_sbr_extension(AACContext *ac, SpectralBandReplication *sbr,
     GetBitContext gbc = *gb_host;
     GetBitContext *gb = &gbc;
     skip_bits_long(gb_host, cnt*8 - 4);
+
+    sbr->reset = 0;
 
     if (!sbr->sample_rate)
         sbr->sample_rate = 2 * ac->m4ac.sample_rate; //TODO use the nominal sample rate for arbitrary sample rate support
