@@ -1536,8 +1536,16 @@ static void sbr_hf_assemble(float y[2][64][40][2], float x_high[64][40][2],
         {  1,  0, -1,  0}, // real
         {  0,  1,  0, -1}, // imaginary
     };
-    float g_temp[42][48], g_filt[42][48], q_temp[42][48], q_filt[42][48], w_temp[42][48][2];
+    float g_filt[42][48], q_filt[42][48], w_temp[42][48][2];
+    float (*g_temp)[48] = sbr->g_temp, (*q_temp)[48] = sbr->q_temp;
     memcpy(y[1], y[0], sizeof(y[0]));
+
+    if (sbr->reset) {
+        for (i = 0; i < h_SL; i++) {
+            memcpy(g_temp[i], sbr->gain_limboost[0], sbr->m * sizeof(sbr->gain_limboost[0][0]));
+            memcpy(q_temp[i], sbr->q_m_limboost[0],  sbr->m * sizeof(sbr->q_m_limboost[0][0]));
+        }
+    }
 
     for (l = 0; l < ch_data->bs_num_env[1]; l++) {
         for (i = sbr->t_env[ch][l] << 1; i < sbr->t_env[ch][l + 1] << 1; i++) {
@@ -1613,6 +1621,9 @@ static void sbr_hf_assemble(float y[2][64][40][2], float x_high[64][40][2],
             }
         }
     }
+
+   memcpy(g_temp[0], g_temp[2*sbr->t_env[ch][ch_data->bs_num_env[1]] - 4], 4*sizeof(g_temp[0]));
+   memcpy(q_temp[0], q_temp[2*sbr->t_env[ch][ch_data->bs_num_env[1]] - 4], 4*sizeof(q_temp[0]));
 }
 
 void ff_sbr_apply(AACContext *ac, SpectralBandReplication *sbr, int id_aac, int ch, float* in, float* out)
