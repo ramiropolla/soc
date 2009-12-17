@@ -1002,7 +1002,7 @@ static void sbr_dequant(SpectralBandReplication *sbr, int id_aac, int ch)
         for (l = 1; l <= sbr->data[ch].bs_num_noise; l++) {
             for (k = 0; k < sbr->n_q; k++) {
                 float temp1 = powf(2.0f, NOISE_FLOOR_OFFSET - sbr->noise_facs[0][l][k] + 1);
-                float temp2 = pan_offset - sbr->noise_facs[0][l][k];
+                float temp2 = 12 - sbr->noise_facs[1][l][k];
                 sbr->noise_facs[0][l][k] = temp1 / (1.0f + powf(2.0f,  temp2));
                 sbr->noise_facs[1][l][k] = temp1 / (1.0f + powf(2.0f, -temp2));
             }
