@@ -387,7 +387,8 @@ static void decode_pitch_vector(AMRContext *p,
     /* Calculate the pitch vector by interpolating the past excitation at the
        pitch lag using a b60 hamming windowed sinc function.   */
     ff_acelp_interpolatef(p->excitation, p->excitation + 1 - pitch_lag_int,
-                          b60, 6, pitch_lag_frac + 6 - 6*(pitch_lag_frac > 0),
+                          ff_b60_sinc, 6,
+                          pitch_lag_frac + 6 - 6*(pitch_lag_frac > 0),
                           10, AMR_SUBFRAME_SIZE);
 
     memcpy(p->pitch_vector, p->excitation, AMR_SUBFRAME_SIZE * sizeof(float));
@@ -882,11 +883,11 @@ static void postfilter(AMRContext *p, float *lpc, float *buf_out)
     float lpc_n[LP_FILTER_ORDER], lpc_d[LP_FILTER_ORDER]; // Transfer function coefficients
 
     if (p->cur_frame_mode == MODE_12k2 || p->cur_frame_mode == MODE_10k2) {
-        gamma_n = formant_high_n;
-        gamma_d = formant_high_d;
+        gamma_n = ff_pow_0_7;
+        gamma_d = ff_pow_0_75;
     } else {
-        gamma_n = formant_low_n;
-        gamma_d = formant_low_d;
+        gamma_n = ff_pow_0_55;
+        gamma_d = ff_pow_0_7;
     }
 
     for (i = 0; i < LP_FILTER_ORDER; i++) {
