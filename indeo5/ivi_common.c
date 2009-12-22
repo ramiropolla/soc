@@ -90,7 +90,7 @@ int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *pOut,
 
     /* number of codewords = pos */
     return init_vlc(pOut, IVI_VLC_BITS, pos, bits, 1, 1, codewords, 2, 2,
-                   (flag & 1) | INIT_VLC_LE);
+                    (flag & 1) | INIT_VLC_LE);
 }
 
 
@@ -128,7 +128,8 @@ int ff_ivi_dec_huff_desc(GetBitContext *gb, IVIHuffDesc *desc)
  */
 int ff_ivi_huff_desc_cmp(const IVIHuffDesc *desc1, const IVIHuffDesc *desc2)
 {
-    if (desc1->num_rows != desc2->num_rows || memcmp(desc1->xbits, desc2->xbits, desc1->num_rows))
+    if (desc1->num_rows != desc2->num_rows ||
+                           memcmp(desc1->xbits, desc2->xbits, desc1->num_rows))
         return 1;
     return 0;
 }
@@ -272,7 +273,8 @@ int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width,
                     tile->height   = FFMIN(band->height - y, t_height);
                     tile->is_empty = tile->data_size = 0;
                     /* calculate number of macroblocks */
-                    tile->num_MBs  = IVI_MBs_PER_TILE(tile->width, tile->height, band->mb_size);
+                    tile->num_MBs  = IVI_MBs_PER_TILE(tile->width, tile->height,
+                                                      band->mb_size);
 
                     av_freep(&tile->mbs);
                     tile->mbs = av_malloc(tile->num_MBs * sizeof(IVIMbInfo));
@@ -302,10 +304,9 @@ void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch,
 {
     int     x, y;
 
-    for (y = 0; y < 8; out += pitch, in += 8, y++) {
+    for (y = 0; y < 8; out += pitch, in += 8, y++)
         for (x = 0; x < 8; x++)
             out[x] = in[x];
-    }
 }
 
 
@@ -397,7 +398,7 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
         cbp      = mb->cbp;
         buf_offs = mb->buf_offs;
 
-        quant       = av_clip(band->glob_quant + mb->q_delta, 0, 23);
+        quant = av_clip(band->glob_quant + mb->q_delta, 0, 23);
 
         base_tab  = (is_intra) ? band->intra_base  : band->inter_base;
         scale_tab = (is_intra) ? band->intra_scale : band->inter_scale;
@@ -428,7 +429,7 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
                 memset(trvec, 0, num_coeffs*sizeof(int32_t)); /* zero transform vector */
                 memset(col_flags, 0, sizeof(col_flags));      /* zero column flags */
 
-                while(scan_pos <= num_coeffs) {
+                while (scan_pos <= num_coeffs) {
                     sym = get_vlc2(gb, band->blk_vlc->table, IVI_VLC_BITS, 1);
                     if (sym == rvmap->eob_sym)
                         break; /* End of block */
@@ -449,7 +450,7 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
 
                 #ifdef IVI_DEBUG
                     if (!val)
-                        av_log(NULL,AV_LOG_ERROR,"Val = 0 encountered!\n");
+                        av_log(NULL, AV_LOG_ERROR, "Val = 0 encountered!\n");
                 #endif
 
                     q = (base_tab[pos] * scale_tab[quant]) >> 8;
@@ -634,10 +635,9 @@ uint16_t ivi_calc_band_checksum (IVIBandDesc *band)
     src = band->buf;
     checksum = 0;
 
-    for (y = 0; y < band->height; src += band->pitch,y++) {
+    for (y = 0; y < band->height; src += band->pitch, y++)
         for (x = 0; x < band->width; x++)
             checksum += src[x];
-    }
 
     return checksum;
 }
@@ -655,12 +655,12 @@ int ivi_check_band (IVIBandDesc *band, uint8_t *ref, int pitch)
     src = band->buf;
     result = 0;
 
-    for (y = 0; y < band->height; src += band->pitch,y++) {
+    for (y = 0; y < band->height; src += band->pitch, y++) {
         for (x = 0; x < band->width; x++) {
             t1 = av_clip(src[x] + 128, 0, 255);
             t2 = ref[x];
             if (t1 != t2) {
-                av_log(NULL,AV_LOG_ERROR,"Data mismatch: row %d, column %d\n",
+                av_log(NULL, AV_LOG_ERROR, "Data mismatch: row %d, column %d\n",
                        y / band->blk_size, x / band->blk_size);
                 result = -1;
             }

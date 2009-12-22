@@ -253,9 +253,11 @@ static int decode_gop_header(IVI5DecContext *ctx, AVCodecContext *avctx)
 
     /* reallocate internal structures if needed */
     if (blk_size_changed) {
-        result = ff_ivi_init_tiles(ctx->planes, pic_conf.tile_width, pic_conf.tile_height);
+        result = ff_ivi_init_tiles(ctx->planes, pic_conf.tile_width,
+                                   pic_conf.tile_height);
         if (result) {
-            av_log(avctx, AV_LOG_ERROR, "Couldn't reallocate internal structures!\n");
+            av_log(avctx, AV_LOG_ERROR,
+                   "Couldn't reallocate internal structures!\n");
             return -1;
         }
     }
@@ -360,7 +362,8 @@ static int decode_pic_hdr(IVI5DecContext *ctx, AVCodecContext *avctx)
 
                     if (ctx->mb_vlc_cust.table)
                         free_vlc(&ctx->mb_vlc_cust);
-                    result = ff_ivi_create_huff_from_desc(&ctx->mb_huff_desc, &ctx->mb_vlc_cust, 0);
+                    result = ff_ivi_create_huff_from_desc(&ctx->mb_huff_desc,
+                                                          &ctx->mb_vlc_cust, 0);
                     if (result) {
                         av_log(avctx, AV_LOG_ERROR, "Error while initializing custom macroblock vlc table!\n");
                         return -1;
@@ -719,7 +722,8 @@ static int decode_band(IVI5DecContext *ctx, int plane_num,
     if (band->checksum_present) {
         chksum = ivi_calc_band_checksum(band);
         if (chksum != band->checksum) {
-            av_log(avctx,AV_LOG_ERROR,"Band checksum mismatch! Plane %d, band %d, received: %x, calculated: %x\n",
+            av_log(avctx, AV_LOG_ERROR,
+                   "Band checksum mismatch! Plane %d, band %d, received: %x, calculated: %x\n",
                    band->plane, band->band_num, band->checksum, chksum);
         }
     }
