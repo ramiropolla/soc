@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 20880)
+--- ffmpeg.c	(revision 20995)
 +++ ffmpeg.c	(working copy)
 @@ -41,6 +41,13 @@
  #include "libavutil/avstring.h"
@@ -395,7 +395,7 @@ Index: ffmpeg.c
  
      /* finished ! */
      ret = 0;
-@@ -3912,6 +4168,9 @@
+@@ -3914,6 +4170,9 @@
      { "psnr", OPT_BOOL | OPT_EXPERT | OPT_VIDEO, {(void*)&do_psnr}, "calculate PSNR of compressed frames" },
      { "vstats", OPT_EXPERT | OPT_VIDEO, {(void*)&opt_vstats}, "dump video coding statistics to file" },
      { "vstats_file", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_vstats_file}, "dump video coding statistics to file", "file" },
@@ -405,7 +405,7 @@ Index: ffmpeg.c
      { "intra_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_intra_matrix}, "specify intra matrix coeffs", "matrix" },
      { "inter_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_inter_matrix}, "specify inter matrix coeffs", "matrix" },
      { "top", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_top_field_first}, "top=1/bottom=0/auto=-1 field first", "" },
-@@ -3972,6 +4231,9 @@
+@@ -3974,6 +4233,9 @@
  
      avcodec_register_all();
      avdevice_register_all();
