@@ -61,8 +61,8 @@ typedef struct AMRContext {
     enum Mode                cur_frame_mode;
 
     int16_t     prev_lsf_r[LP_FILTER_ORDER]; ///< residual LSF vector from previous subframe
-    float           lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
-    float    prev_lsp_sub4[LP_FILTER_ORDER]; ///< lsp vector for the 4th subframe of the previous frame
+    double          lsp[4][LP_FILTER_ORDER]; ///< lsp vectors from current frame
+    double   prev_lsp_sub4[LP_FILTER_ORDER]; ///< lsp vector for the 4th subframe of the previous frame
 
     float         lsf_q[4][LP_FILTER_ORDER]; ///< Interpolated LSF vector for fixed gain smoothing
     float          lsf_avg[LP_FILTER_ORDER]; ///< vector of averaged lsf vector
@@ -97,6 +97,18 @@ typedef struct AMRContext {
     float samples_in[LP_FILTER_ORDER + AMR_SUBFRAME_SIZE]; ///< floating point samples
 
 } AMRContext;
+
+/** Double version of ff_weighted_vector_sumf() */
+void weighted_vector_sumd(double *out, const double *in_a, const double *in_b,
+                          double weight_coeff_a, double weight_coeff_b,
+                          int length)
+{
+    int i;
+
+    for(i=0; i<length; i++)
+        out[i] = weight_coeff_a * in_a[i]
+               + weight_coeff_b * in_b[i];
+}
 
 static void reset_state(AMRContext *p)
 {
@@ -175,7 +187,7 @@ static enum Mode unpack_bitstream(AMRContext *p, const uint8_t *buf,
  * @param lsf               input lsf vector
  * @param lsp               output lsp vector
  */
-static void lsf2lsp(const float *lsf, float *lsp)
+static void lsf2lsp(const float *lsf, double *lsp)
 {
     int i;
 
@@ -211,7 +223,7 @@ static void interpolate_lsf(float lsf_q[4][LP_FILTER_ORDER], float *lsf_new)
  * @param sign for the 3 dictionary table
  * @param update store data for computing the next frame's LSFs
  */
-static void lsf2lsp_for_mode12k2(AMRContext *p, float lsp[LP_FILTER_ORDER],
+static void lsf2lsp_for_mode12k2(AMRContext *p, double lsp[LP_FILTER_ORDER],
                                  const float lsf_no_r[LP_FILTER_ORDER],
                                  const int16_t *lsf_quantizer[5],
                                  const int quantizer_offset,
@@ -269,8 +281,8 @@ static void lsf2lsp_5(AMRContext *p)
     lsf2lsp_for_mode12k2(p, p->lsp[3], lsf_no_r, lsf_quantizer, 2, lsf_param[2] & 1, 1);
 
     // interpolate LSP vectors at subframes 1 and 3
-    ff_weighted_vector_sumf(p->lsp[0], p->prev_lsp_sub4, p->lsp[1], 0.5, 0.5, LP_FILTER_ORDER);
-    ff_weighted_vector_sumf(p->lsp[2], p->lsp[1]       , p->lsp[3], 0.5, 0.5, LP_FILTER_ORDER);
+    weighted_vector_sumd(p->lsp[0], p->prev_lsp_sub4, p->lsp[1], 0.5, 0.5, LP_FILTER_ORDER);
+    weighted_vector_sumd(p->lsp[2], p->lsp[1]       , p->lsp[3], 0.5, 0.5, LP_FILTER_ORDER);
 }
 
 /**
@@ -309,27 +321,9 @@ static void lsf2lsp_3(AMRContext *p)
 
     // interpolate LSP vectors at subframes 1, 2 and 3
     for (i = 0; i < 3; i++)
-        ff_weighted_vector_sumf(p->lsp[i], p->prev_lsp_sub4, p->lsp[3],
+        weighted_vector_sumd(p->lsp[i], p->prev_lsp_sub4, p->lsp[3],
                                 0.25 * (3 - i), 0.25 * (i + 1),
                                 LP_FILTER_ORDER);
-}
-
-
-/**
- * Convert an lsp vector to lpc coefficients.
- *
- * @param lsp                 input lsp vector
- * @param lpc_coeffs          output lpc coefficients
- */
-static void lsp2lpc(const float *lsp, float *lpc_coeffs)
-{
-    double lsp_double[LP_FILTER_ORDER];
-    int i;
-
-    for (i = 0; i < LP_FILTER_ORDER; i++)
-        lsp_double[i] = lsp[i];
-
-    ff_acelp_lspd2lpc(lsp_double, lpc_coeffs, 5);
 }
 
 /// @}
@@ -819,7 +813,7 @@ static int synthesis(AMRContext *p, float *lpc,
  */
 static void update_state(AMRContext *p)
 {
-    memcpy(p->prev_lsp_sub4, p->lsp[3], LP_FILTER_ORDER * sizeof(float));
+    memcpy(p->prev_lsp_sub4, p->lsp[3], LP_FILTER_ORDER * sizeof(p->lsp[3][0]));
 
     memmove(&p->excitation_buf[0], &p->excitation_buf[AMR_SUBFRAME_SIZE],
             (PITCH_DELAY_MAX + LP_FILTER_ORDER + 1) * sizeof(float));
@@ -943,7 +937,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         lsf2lsp_3(p);
 
     for (i = 0; i < 4; i++)
-        lsp2lpc(p->lsp[i], p->lpc[i]);
+        ff_acelp_lspd2lpc(p->lsp[i], p->lpc[i], 5);
 
     for (subframe = 0; subframe < 4; subframe++) {
         const AMRNBSubframe *amr_subframe = &p->frame.subframe[subframe];
