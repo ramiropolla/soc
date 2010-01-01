@@ -494,7 +494,9 @@ static const uint8_t mode_bits[N_MODES] = {
  *
  * @note: Taken from Decoder_amr_reset in Q15 using val/1000
  */
-static const int8_t lsp_sub4_init[LP_FILTER_ORDER] = { 30, 26, 21, 15, 8, 0, -8, -15, -21, -26 };
+static const int8_t lsp_sub4_init[LP_FILTER_ORDER] = {
+    30, 26, 21, 15, 8, 0, -8, -15, -21, -26
+};
 
 /**
  * Mean lsp values.
@@ -1507,19 +1509,19 @@ static const int16_t lsf_5_5[64][4] = {
 };
 
 static const float lsf_3_mean[LP_FILTER_ORDER] = {
- 377.441,  554.688,  922.363, 1339.84 , 1702.15 ,
-2046.39 , 2452.88 , 2741.46 , 3116.70 , 3348.14 ,
+     377.441,  554.688,  922.363, 1339.84, 1702.15,
+    2046.390, 2452.880, 2741.460, 3116.70, 3348.14
 };
 
 static const float lsf_5_mean[LP_FILTER_ORDER] = {
- 337.891,  507.080,  834.961, 1247.07 , 1646.00 ,
-1982.91 , 2407.96 , 2708.01 , 3104.00 , 3344.97 ,
+     337.891,  507.080,  834.961, 1247.07, 1646.00,
+    1982.910, 2407.960, 2708.010, 3104.00, 3344.97
 };
 
 /** Prediction factor table for modes other than 12.2kbit/s */
 static const float pred_fac[LP_FILTER_ORDER] = {
-0.291626, 0.328644, 0.383636, 0.405640, 0.438873,
-0.355560, 0.323120, 0.298065, 0.262238, 0.197876,
+    0.291626, 0.328644, 0.383636, 0.405640, 0.438873,
+    0.355560, 0.323120, 0.298065, 0.262238, 0.197876,
 };
 
 /** Prediction factor for 12.2kbit/s mode */
@@ -1538,7 +1540,9 @@ static const float pred_fac[LP_FILTER_ORDER] = {
 static const uint8_t pulses_nb_per_mode[] = {2, 2, 2, 3, 4, 4, 8, 10};
 
 /** track start positions for algebraic code book routines */
-static const uint8_t track_position[16] = { 0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 1, 4, 1, 4 };
+static const uint8_t track_position[16] = {
+    0, 2, 0, 3, 0, 2, 0, 3, 1, 3, 2, 4, 1, 4, 1, 4
+};
 
 /** 3-bit Gray code to binary lookup table */
 static const uint8_t gray_decode[8] = { 0, 5, 15, 10, 25, 30, 20, 35 };
@@ -1564,7 +1568,9 @@ static const uint16_t qua_gain_code[32] = {
 };
 
 /** desired mean innovation energy, indexed by active mode */
-static const float energy_mean[8] = { 33.0, 33.0, 33.0, 28.75, 30.0, 36.0, 33.0, 36.0 };
+static const float energy_mean[8] = {
+    33.0, 33.0, 33.0, 28.75, 30.0, 36.0, 33.0, 36.0
+};
 
 /** 4-tap moving average prediction coefficients in reverse order */
 static const float energy_pred_fac[4] = { 0.19, 0.34, 0.58, 0.68 };
@@ -1769,8 +1775,12 @@ static const float ir_filter_medium[AMR_SUBFRAME_SIZE] = {
  0.016998,  0.023804, -0.041779,  0.025696,  0.019989,
 };
 
-static const float *ir_filters_lookup[2]           = { ir_filter_strong,           ir_filter_medium };
-static const float *ir_filters_lookup_MODE_7k95[2] = { ir_filter_strong_MODE_7k95, ir_filter_medium };
+static const float *ir_filters_lookup[2]           = {
+    ir_filter_strong,           ir_filter_medium
+};
+static const float *ir_filters_lookup_MODE_7k95[2] = {
+    ir_filter_strong_MODE_7k95, ir_filter_medium
+};
 
 
 /** Number of impulse response coefficients used for tilt factor */
