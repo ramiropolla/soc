@@ -110,9 +110,15 @@ void weighted_vector_sumd(double *out, const double *in_a, const double *in_b,
                + weight_coeff_b * in_b[i];
 }
 
-static void reset_state(AMRContext *p)
+static av_cold int amrnb_decode_init(AVCodecContext *avctx)
 {
+    AMRContext *p = avctx->priv_data;
     int i;
+
+    avctx->sample_fmt = SAMPLE_FMT_FLT;
+
+    // p->excitation always points to the same position in p->excitation_buf
+    p->excitation = &p->excitation_buf[PITCH_DELAY_MAX + LP_FILTER_ORDER + 1];
 
     for (i = 0; i < LP_FILTER_ORDER; i++) {
         p->prev_lsp_sub4[i] = lsp_sub4_init[i] * 1000 / (float)(1 << 15);
@@ -122,18 +128,6 @@ static void reset_state(AMRContext *p)
 
     for (i = 0; i < 4; i++)
         p->prediction_error[i] = MIN_ENERGY;
-}
-
-static av_cold int amrnb_decode_init(AVCodecContext *avctx)
-{
-    AMRContext *p = avctx->priv_data;
-
-    avctx->sample_fmt = SAMPLE_FMT_FLT;
-
-    // p->excitation always points to the same position in p->excitation_buf
-    p->excitation = &p->excitation_buf[PITCH_DELAY_MAX + LP_FILTER_ORDER + 1];
-
-    reset_state(p);
 
     return 0;
 }
