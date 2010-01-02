@@ -1,8 +1,8 @@
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 20803)
+--- libavcodec/Makefile	(revision 20995)
 +++ libavcodec/Makefile	(working copy)
-@@ -52,6 +52,7 @@
+@@ -49,6 +49,7 @@
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o
  OBJS-$(CONFIG_ALS_DECODER)             += alsdec.o
@@ -12,9 +12,9 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 20803)
+--- libavcodec/allcodecs.c	(revision 20995)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -201,6 +201,7 @@
+@@ -206,6 +206,7 @@
      REGISTER_ENCDEC  (AC3, ac3);
      REGISTER_ENCDEC  (ALAC, alac);
      REGISTER_DECODER (ALS, als);
@@ -24,9 +24,9 @@ Index: libavcodec/allcodecs.c
      REGISTER_DECODER (ATRAC3, atrac3);
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 20803)
+--- doc/general.texi	(revision 20995)
 +++ doc/general.texi	(working copy)
-@@ -530,8 +530,8 @@
+@@ -537,8 +537,8 @@
  @item ADPCM Westwood Studios IMA @tab     @tab  X
      @tab Used in Westwood Studios games like Command and Conquer.
  @item ADPCM Yamaha           @tab  X  @tab  X
@@ -39,12 +39,12 @@ Index: doc/general.texi
  @item Apple lossless audio   @tab  X  @tab  X
 Index: Changelog
 ===================================================================
---- Changelog	(revision 20803)
+--- Changelog	(revision 20995)
 +++ Changelog	(working copy)
-@@ -44,6 +44,7 @@
- - MPEG-4 Audio Lossless Coding (ALS) decoder
- - -formats option split into -formats, -codecs, -bsfs, and -protocols
- - IV8 demuxer
+@@ -47,6 +47,7 @@
+ - CDG demuxer and decoder
+ - R210 decoder
+ - Auravision Aura 1 and 2 decoders
 +- AMR-NB decoder
  
  
