@@ -36,8 +36,16 @@
 
 #define IVI_DEBUG
 
-#define IVI5_FRAMETYPE_INTRA    0
-#define IVI5_FRAMETYPE_NULL     4
+/**
+ *  Indeo5 frame types.
+ */
+enum {
+    FRAMETYPE_INTRA       = 0,
+    FRAMETYPE_INTER       = 1,  ///< non-droppable P-frame
+    FRAMETYPE_INTER_SCAL  = 2,  ///< droppable P-frame used in the scalability mode
+    FRAMETYPE_INTER_NOREF = 3,  ///< droppable P-frame
+    FRAMETYPE_NULL        = 4   ///< empty frame with no data
+};
 
 #define IVI5_PIC_SIZE_ESC       15
 
@@ -329,7 +337,7 @@ static int decode_pic_hdr(IVI5DecContext *ctx, AVCodecContext *avctx)
 
     ctx->frame_num = get_bits(&ctx->gb, 8);
 
-    if (ctx->frame_type == IVI5_FRAMETYPE_INTRA) {
+    if (ctx->frame_type == FRAMETYPE_INTRA) {
         if (decode_gop_header(ctx, avctx))
             return -1;
 #ifdef IVI_DEBUG
@@ -337,7 +345,7 @@ static int decode_pic_hdr(IVI5DecContext *ctx, AVCodecContext *avctx)
 #endif
     }
 
-    if (ctx->frame_type != IVI5_FRAMETYPE_NULL) {
+    if (ctx->frame_type != FRAMETYPE_NULL) {
         ctx->frame_flags = get_bits(&ctx->gb, 8);
 
         /* get size of the picture header if present */
@@ -513,7 +521,7 @@ static int decode_mb_info(IVI5DecContext *ctx, IVIBandDesc *band,
             mb->buf_offs = mb_offset;
 
             if (get_bits1(&ctx->gb)) {
-                if (ctx->frame_type == IVI5_FRAMETYPE_INTRA) {
+                if (ctx->frame_type == FRAMETYPE_INTRA) {
                     av_log(avctx, AV_LOG_ERROR, "Empty macroblock in an INTRA picture!\n");
                     return -1;
                 }
@@ -548,7 +556,7 @@ static int decode_mb_info(IVI5DecContext *ctx, IVIBandDesc *band,
             } else {
                 if (band->inherit_mv) {
                     mb->type = ref_mb->type; /* copy mb_type from corresponding reference mb */
-                } else if (ctx->frame_type == IVI5_FRAMETYPE_INTRA) {
+                } else if (ctx->frame_type == FRAMETYPE_INTRA) {
                     mb->type = 0; /* mb_type is always INTRA for intra-frames */
                 } else
                     mb->type = get_bits1(&ctx->gb); /* get mb_type from bitstream */
@@ -735,23 +743,24 @@ static int decode_band(IVI5DecContext *ctx, int plane_num,
 static void switch_buffers(IVI5DecContext *ctx, AVCodecContext *avctx)
 {
     switch (ctx->frame_type) {
-    case IVI5_FRAMETYPE_INTRA:
+    case FRAMETYPE_INTRA:
         ctx->buf_switch = 0;
         ctx->dst_buf    = 0;
         ctx->ref_buf    = 0;
         break;
-    case 1:
+    case FRAMETYPE_INTER:
         ctx->buf_switch &= 1;
-        /* swap buffers only if there is no frame of the type 3 */
-        if (ctx->prev_frame_type != 3 && ctx->prev_frame_type != 2)
+        /* swap buffers only if there was no droppable frames */
+        if (ctx->prev_frame_type != FRAMETYPE_INTER_NOREF &&
+            ctx->prev_frame_type != FRAMETYPE_INTER_SCAL)
             ctx->buf_switch ^= 1;
         ctx->dst_buf = ctx->buf_switch;
         ctx->ref_buf = ctx->buf_switch ^ 1;
         break;
-    case 2:
-        if (ctx->prev_frame_type == 3)
+    case FRAMETYPE_INTER_SCAL:
+        if (ctx->prev_frame_type == FRAMETYPE_INTER_NOREF)
             break;
-        if (ctx->prev_frame_type != 2) {
+        if (ctx->prev_frame_type != FRAMETYPE_INTER_SCAL) {
             ctx->buf_switch ^= 1;
             ctx->dst_buf     = ctx->buf_switch;
             ctx->ref_buf     = ctx->buf_switch ^ 1;
@@ -763,8 +772,8 @@ static void switch_buffers(IVI5DecContext *ctx, AVCodecContext *avctx)
                 FFSWAP(uint8_t, ctx->dst_buf, ctx->ref_buf);
         }
         break;
-    case 3:
-        if (ctx->prev_frame_type == 2) {
+    case FRAMETYPE_INTER_NOREF:
+        if (ctx->prev_frame_type == FRAMETYPE_INTER_SCAL) {
             ctx->buf_switch ^= 2;
             ctx->dst_buf = 2;
             ctx->ref_buf = ctx->buf_switch & 1;
@@ -776,7 +785,7 @@ static void switch_buffers(IVI5DecContext *ctx, AVCodecContext *avctx)
             ctx->ref_buf     = (ctx->buf_switch & 1) ^ 1;
         }
         break;
-    case IVI5_FRAMETYPE_NULL:
+    case FRAMETYPE_NULL:
         return;
     default:
         av_log(avctx, AV_LOG_ERROR, "unsupported frame type: %d\n", ctx->frame_type);
@@ -861,7 +870,7 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
     //START_TIMER;
 
-    if (ctx->frame_type == IVI5_FRAMETYPE_NULL) {
+    if (ctx->frame_type == FRAMETYPE_NULL) {
         ctx->frame_type = ctx->prev_frame_type;
     } else {
         for (p = 0; p < 3; p++) {
