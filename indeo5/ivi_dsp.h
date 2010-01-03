@@ -33,7 +33,7 @@
 #include "ivi_common.h"
 
 /**
- *  5/3 - Wavelet recomposition filter for Indeo5.
+ *  5/3 wavelet recomposition filter for Indeo5
  *
  *  @param plane        [in]  pointer to the descriptor of the plane being processed
  *  @param dst          [out] pointer to the destination buffer
@@ -44,7 +44,7 @@ void ff_ivi_recompose53(const IVIPlaneDesc *plane, uint8_t *dst,
                         const int dst_pitch, const int num_bands);
 
 /**
- *  Two-dimensional inverse slant 8x8 transform.
+ *  two-dimensional inverse slant 8x8 transform
  *
  *  @param  in      [in]  pointer to the vector of transform coefficients
  *  @param  out     [out] pointer to the output buffer (frame)
@@ -56,7 +56,7 @@ void ff_ivi_recompose53(const IVIPlaneDesc *plane, uint8_t *dst,
 void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
 
 /**
- *  Two-dimensional inverse slant 4x4 transform.
+ *  two-dimensional inverse slant 4x4 transform
  *
  *  @param  in      [in]  pointer to the vector of transform coefficients
  *  @param  out     [out] pointer to the output buffer (frame)
@@ -108,7 +108,7 @@ void ff_ivi_dc_row_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size
 void ff_ivi_dc_col_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
 
 /**
- *  8x8 block motion compensation with adding delta.
+ *  8x8 block motion compensation with adding delta
  *
  *  @param  buf     [in,out] pointer to the block in the current frame buffer containing delta
  *  @param  ref_buf [in]     pointer to the corresponding block in the reference frame
@@ -118,7 +118,7 @@ void ff_ivi_dc_col_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size
 void ff_ivi_mc_8x8_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type);
 
 /**
- *  4x4 block motion compensation with adding delta.
+ *  4x4 block motion compensation with adding delta
  *
  *  @param  buf     [in,out] pointer to the block in the current frame buffer containing delta
  *  @param  ref_buf [in]     pointer to the corresponding block in the reference frame
@@ -128,7 +128,7 @@ void ff_ivi_mc_8x8_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_
 void ff_ivi_mc_4x4_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type);
 
 /**
- *  Motion compensation without adding delta.
+ *  motion compensation without adding delta
  *
  *  @param  buf     [in,out] pointer to the block in the current frame receiving the result
  *  @param  ref_buf [in]     pointer to the corresponding block in the reference frame
@@ -138,7 +138,7 @@ void ff_ivi_mc_4x4_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_
 void ff_ivi_mc_8x8_no_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type);
 
 /**
- *  4x4 block motion compensation without adding delta.
+ *  4x4 block motion compensation without adding delta
  *
  *  @param  buf     [in,out] pointer to the block in the current frame receiving the result
  *  @param  ref_buf [in]     pointer to the corresponding block in the reference frame

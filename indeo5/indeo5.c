@@ -21,7 +21,8 @@
 
 /**
  * @file libavcodec/indeo5.c
- * This is a decoder for Indeo Video Interactive v5.
+ * Indeo Video Interactive version 5 decoder
+ *
  * Indeo5 data is usually transported within .avi or .mov files.
  * Known FOURCCs: 'IV50'
  */
@@ -45,9 +46,9 @@
 typedef struct {
     GetBitContext   gb;
     AVFrame         frame;
-    RVMapDesc       rvmap_tabs[9];   ///< local changeable copy of the static rvmap tables
+    RVMapDesc       rvmap_tabs[9];   ///< local corrected copy of the static rvmap tables
     IVIPlaneDesc    planes[3];       ///< color planes
-    const uint8_t   *frame_data;     ///< ptr to the input frame data
+    const uint8_t   *frame_data;     ///< input frame data pointer
     uint8_t         buf_switch;      ///< used to switch between three buffers
     uint8_t         dst_buf;
     uint8_t         ref_buf;
@@ -70,7 +71,7 @@ typedef struct {
     uint32_t        lock_word;
     IVIPicConfig    pic_conf;
 #ifdef IVI_DEBUG
-    int32_t         gop_num; ///< gop number
+    int32_t         gop_num;         ///< gop number
 #endif
 } IVI5DecContext;
 
@@ -80,7 +81,7 @@ static VLC blk_vlc_tabs[8];
 
 
 /**
- *  Decode Indeo5 GOP (Group of pictures) header.
+ *  Decodes Indeo5 GOP (Group of pictures) header.
  *  This header is present in key frames only.
  *  It defines parameters for all frames in a GOP.
  *
@@ -286,7 +287,7 @@ static int decode_gop_header(IVI5DecContext *ctx, AVCodecContext *avctx)
 
 
 /**
- *  Skip a header extension.
+ *  Skips a header extension.
  *
  *  @param gb   [in,out] the GetBit context
  */
@@ -302,7 +303,7 @@ static inline void skip_hdr_extension(GetBitContext *gb)
 
 
 /**
- *  Decode Indeo5 picture header.
+ *  Decodes Indeo5 picture header.
  *
  *  @param ctx      [in,out] ptr to the decoder context
  *  @param avctx    [in] ptr to the AVCodecContext
@@ -382,7 +383,7 @@ static int decode_pic_hdr(IVI5DecContext *ctx, AVCodecContext *avctx)
 
 
 /**
- *  Decode Indeo5 band header.
+ *  Decodes Indeo5 band header.
  *
  *  @param ctx      [in,out] ptr to the decoder context
  *  @param band     [in,out] ptr to the band descriptor
@@ -478,7 +479,7 @@ static int decode_band_hdr(IVI5DecContext *ctx, IVIBandDesc *band,
 
 
 /**
- *  Decode info (block type, cbp, quant delta, motion vector)
+ *  Decodes info (block type, cbp, quant delta, motion vector)
  *  for all macroblocks in the current tile.
  *
  *  @param ctx      [in,out] ptr to the decoder context
@@ -619,7 +620,7 @@ static int decode_mb_info(IVI5DecContext *ctx, IVIBandDesc *band,
 
 
 /**
- *  Decode an Indeo5 band.
+ *  Decodes an Indeo5 band.
  *
  *  @param ctx      [in,out] ptr to the decoder context
  *  @param band     [in,out] ptr to the band descriptor
@@ -726,7 +727,7 @@ static int decode_band(IVI5DecContext *ctx, int plane_num,
 
 
 /**
- *  Switch buffers.
+ *  Switches buffers.
  *
  *  @param ctx      [in,out] ptr to the decoder context
  *  @param avctx    [in] ptr to the AVCodecContext
@@ -784,7 +785,7 @@ static void switch_buffers(IVI5DecContext *ctx, AVCodecContext *avctx)
 
 
 /**
- *  Indeo5 decoder initializations
+ *  Initializes Indeo5 decoder.
  */
 static av_cold int decode_init(AVCodecContext *avctx)
 {
@@ -903,7 +904,7 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
 
 /**
- *  Indeo5 free function
+ *  Closes Indeo5 decoder and cleans up its context.
  */
 static av_cold int decode_close(AVCodecContext *avctx)
 {

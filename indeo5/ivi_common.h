@@ -51,11 +51,11 @@ extern const IVIHuffDesc ff_ivi_blk_huff_desc[8]; ///< static block huffman tabl
 
 
 /**
- *  Run-value (RLE) table descriptor
+ *  run-value (RLE) table descriptor
  */
 typedef struct {
-    uint8_t     eob_sym; ///< huffman symbol for EOB (end of block)
-    uint8_t     esc_sym; ///< huffman symbol for ESC (escape)
+    uint8_t     eob_sym; ///< end of block symbol
+    uint8_t     esc_sym; ///< escape symbol
     uint8_t     runtab[256];
     int8_t      valtab[256];
 } RVMapDesc;
@@ -64,7 +64,7 @@ extern const RVMapDesc ff_ivi_rvmap_tabs[9]; /* defined in ivi_common.c */
 
 
 /**
- *  This structure describes an Indeo macroblock (16x16, 8x8 or 4x4).
+ *  information for Indeo macroblock (16x16, 8x8 or 4x4)
  */
 typedef struct {
     int16_t     xpos;
@@ -79,7 +79,7 @@ typedef struct {
 
 
 /**
- *  This structure describes an Indeo tile.
+ *  information for Indeo tile
  */
 typedef struct {
     uint32_t    xpos;
@@ -95,7 +95,7 @@ typedef struct {
 
 
 /**
- *  This structure describes an Indeo wavelet band.
+ *  information for Indeo wavelet band
  */
 typedef struct {
     uint8_t         plane;          ///< plane number this band belongs to
@@ -104,8 +104,8 @@ typedef struct {
     uint32_t        height;
     const uint8_t   *data_ptr;      ///< ptr to the first byte of the band data
     uint32_t        data_size;      ///< size of the band data
-    int16_t         *buf;           ///< ptr to the output buffer for this band
-    int16_t         *ref_buf;       ///< ptr to the reference frame buffer for motion compensation
+    int16_t         *buf;           ///< pointer to the output buffer for this band
+    int16_t         *ref_buf;       ///< pointer to the reference frame buffer (for motion compensation)
     int16_t         *bufs[3];       ///< array of pointers to the band buffers
     uint32_t        pitch;          ///< pitch associated with the buffers above
     uint8_t         is_empty;       ///< = 1 if this band doesn't contain any data
@@ -132,13 +132,13 @@ typedef struct {
     RVMapDesc       *rv_map;        ///< ptr to the RLE table for this band
     uint16_t        num_tiles;      ///< number of tiles in this band
     IVITile         *tiles;         ///< array of tile descriptors
-    void (*inv_transform)(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags); ///< ptr to inverse transform function
-    void (*dc_transform) (int32_t *in, int16_t *out, uint32_t pitch, int blk_size);   ///< ptr to dc transform function or NULL
-    uint8_t         is_2d_trans;    ///< 1 indicates that the two-dimensional inverse transform
+    void (*inv_transform)(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags); ///< inverse transform function pointer
+    void (*dc_transform) (int32_t *in, int16_t *out, uint32_t pitch, int blk_size);   ///< dc transform function pointer, it may be NULL
+    uint8_t         is_2d_trans;    ///< 1 indicates that the two-dimensional inverse transform is used
 #ifdef IVI_DEBUG
-    uint16_t        checksum; ///< for debug purposes
+    uint16_t        checksum;        ///< for debug purposes
     int32_t         checksum_present;
-    uint32_t        bufsize; ///< band buffer size in bytes
+    uint32_t        bufsize;         ///< band buffer size in bytes
 #endif
     const uint8_t   *intra_base;
     const uint8_t   *inter_base;
@@ -148,7 +148,7 @@ typedef struct {
 
 
 /**
- *  This structure describes a color plane (luma or chroma).
+ *  color plane (luma or chroma) information
  */
 typedef struct {
     uint16_t    width;
