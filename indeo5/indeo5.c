@@ -29,7 +29,7 @@
 #define ALT_BITSTREAM_READER_LE
 #include "avcodec.h"
 #include "get_bits.h"
-#include "ivi_slant.h"
+#include "ivi_dsp.h"
 #include "ivi_common.h"
 #include "indeo5data.h"
 
@@ -48,6 +48,9 @@ typedef struct {
     RVMapDesc       rvmap_tabs[9];   ///< local changeable copy of the static rvmap tables
     IVIPlaneDesc    planes[3];       ///< color planes
     const uint8_t   *frame_data;     ///< ptr to the input frame data
+    uint8_t         buf_switch;      ///< used to switch between three buffers
+    uint8_t         dst_buf;
+    uint8_t         ref_buf;
     uint32_t        frame_size;      ///< frame size in bytes
     uint32_t        frame_type;
     uint32_t        prev_frame_type; ///< frame type of the previous frame
@@ -214,13 +217,6 @@ static int decode_gop_header(IVI5DecContext *ctx, AVCodecContext *avctx)
             band->is_2d_trans = band->inv_transform == ff_ivi_inverse_slant_8x8 ||
                                 band->inv_transform == ff_ivi_inverse_slant_4x4;
 
-            /* select transform functions according with plane and band number */
-            //band->inv_transform = !p ? ff_ivi_inverse_slant_8x8 : ff_ivi_inverse_slant_4x4;
-            //band->dc_transform  = ff_ivi_dc_slant_2d;
-
-            /* select scan pattern for this band */
-            //band->scan = (!p) ? ivi5_scans8x8[0] : ivi5_scan4x4;
-
             /* select dequant matrix according with plane and band number */
             if (!p) {
                 band->quant_mat = (pic_conf.luma_bands > 1) ? i+1 : 0;
@@ -276,9 +272,11 @@ static int decode_gop_header(IVI5DecContext *ctx, AVCodecContext *avctx)
 
     skip_bits(&ctx->gb, 23); /* FIXME: unknown meaning */
 
+    /* skip GOP extension if any */
     if (get_bits1(&ctx->gb)) {
-        av_log(avctx, AV_LOG_ERROR, "GOP extension encountered!\n");
-        return -1;
+        do {
+            i = get_bits(&ctx->gb, 16);
+        } while (i & 0x8000);
     }
 
     align_get_bits(&ctx->gb);
@@ -396,7 +394,6 @@ static int decode_band_hdr(IVI5DecContext *ctx, IVIBandDesc *band,
 {
     int         i, result;
     uint8_t     band_flags;
-    //uint32_t    band_data_size;
     IVIHuffDesc new_huff;
 
     band_flags = get_bits(&ctx->gb, 8);
@@ -639,13 +636,8 @@ static int decode_band(IVI5DecContext *ctx, int plane_num,
 #endif
 
     /* setup buffer pointers according with the buffer switch */
-    if (ctx->planes[plane_num].buf_switch) {
-        band->buf     = band->buf2;
-        band->ref_buf = band->buf1;
-    } else {
-        band->buf     = band->buf1;
-        band->ref_buf = band->buf2;
-    }
+    band->buf     = band->bufs[ctx->dst_buf];
+    band->ref_buf = band->bufs[ctx->ref_buf];
 
     /* get the starting position of the band data */
     band->data_ptr = ctx->frame_data + (get_bits_count(&ctx->gb) >> 3);
@@ -741,38 +733,52 @@ static int decode_band(IVI5DecContext *ctx, int plane_num,
  */
 static void switch_buffers(IVI5DecContext *ctx, AVCodecContext *avctx)
 {
-    int             p;
-    IVIPlaneDesc    *plane;
-
-    for (p = 0; p < 3; p++) {
-        plane = &ctx->planes[p];
-
-        switch (ctx->frame_type) {
-        case IVI5_FRAMETYPE_INTRA:
-            plane->buf_switch = 0;
+    switch (ctx->frame_type) {
+    case IVI5_FRAMETYPE_INTRA:
+        ctx->buf_switch = 0;
+        ctx->dst_buf    = 0;
+        ctx->ref_buf    = 0;
+        break;
+    case 1:
+        ctx->buf_switch &= 1;
+        /* swap buffers only if there is no frame of the type 3 */
+        if (ctx->prev_frame_type != 3 && ctx->prev_frame_type != 2)
+            ctx->buf_switch ^= 1;
+        ctx->dst_buf = ctx->buf_switch;
+        ctx->ref_buf = ctx->buf_switch ^ 1;
+        break;
+    case 2:
+        if (ctx->prev_frame_type == 3)
             break;
-        case 1:
-            if (ctx->prev_frame_type != 3)
-                plane->buf_switch ^= 1; /* swap buffers only if there is no frame of the type 3 */
-            break;
-        case 2:
-            plane->buf_switch ^= 1;
-            break;
-        case 3:
-            plane->buf_switch ^= 1;
-            break;
-        case IVI5_FRAMETYPE_NULL:
-            return;
-        default:
-            av_log(avctx, AV_LOG_ERROR, "unsupported frame type: %d\n", ctx->frame_type);
+        if (ctx->prev_frame_type != 2) {
+            ctx->buf_switch ^= 1;
+            ctx->dst_buf     = ctx->buf_switch;
+            ctx->ref_buf     = ctx->buf_switch ^ 1;
+        } else {
+            ctx->buf_switch ^= 2;
+            ctx->dst_buf = 2;
+            ctx->ref_buf = ctx->buf_switch & 1;
+            if (!(ctx->buf_switch & 2))
+                FFSWAP(uint8_t, ctx->dst_buf, ctx->ref_buf);
         }
-
-        //if (plane->num_bands == 1) {
-        //    plane->bands[0].buf     = (plane->buf_switch) ? plane->buf2
-        //                                                  : plane->buf1;
-        //    plane->bands[0].ref_buf = (plane->buf_switch) ? plane->buf1
-        //                                                  : plane->buf2;
-        //}
+        break;
+    case 3:
+        if (ctx->prev_frame_type == 2) {
+            ctx->buf_switch ^= 2;
+            ctx->dst_buf = 2;
+            ctx->ref_buf = ctx->buf_switch & 1;
+            if (!(ctx->buf_switch & 2))
+                FFSWAP(uint8_t, ctx->dst_buf, ctx->ref_buf);
+        } else {
+            ctx->buf_switch ^= 1;
+            ctx->dst_buf     =  ctx->buf_switch & 1;
+            ctx->ref_buf     = (ctx->buf_switch & 1) ^ 1;
+        }
+        break;
+    case IVI5_FRAMETYPE_NULL:
+        return;
+    default:
+        av_log(avctx, AV_LOG_ERROR, "unsupported frame type: %d\n", ctx->frame_type);
     }
 }
 
@@ -845,15 +851,12 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         return -1;
     }
 
-    if (ctx->gop_flags & IVI5_IS_PROTECTED)
-        return -1;
-
-    switch_buffers(ctx, avctx);
-
     if (ctx->gop_flags & IVI5_IS_PROTECTED) {
-        av_log(avctx, AV_LOG_ERROR, "Protected clip!\n");
+        av_log(avctx, AV_LOG_ERROR, "Password-protected clip!\n");
         return -1;
     }
+
+    switch_buffers(ctx, avctx);
 
     //START_TIMER;
 
@@ -883,7 +886,12 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *data_size,
         return -1;
     }
 
-    ff_ivi_output_plane(&ctx->planes[0], ctx->frame.data[0], ctx->frame.linesize[0]);
+    if (ctx->is_scalable) {
+        ff_ivi_recompose53 (&ctx->planes[0], ctx->frame.data[0], ctx->frame.linesize[0], 4);
+    } else {
+        ff_ivi_output_plane(&ctx->planes[0], ctx->frame.data[0], ctx->frame.linesize[0]);
+    }
+
     ff_ivi_output_plane(&ctx->planes[2], ctx->frame.data[1], ctx->frame.linesize[1]);
     ff_ivi_output_plane(&ctx->planes[1], ctx->frame.data[2], ctx->frame.linesize[2]);
 
@@ -903,6 +911,9 @@ static av_cold int decode_close(AVCodecContext *avctx)
 
     /* free allocated decoder buffers */
     ff_ivi_free_buffers(&ctx->planes[0]);
+
+    if (ctx->frame.data[0])
+        avctx->release_buffer(avctx, &ctx->frame);
 
     return 0;
 }

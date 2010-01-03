@@ -30,7 +30,8 @@
 #include "avcodec.h"
 #include "get_bits.h"
 #include "ivi_common.h"
-#include "ivi_mc.h"
+#include "libavutil/common.h"
+#include "ivi_dsp.h"
 
 /**
  *  Reverse "nbits" bits of the value "val" and return the result
@@ -41,9 +42,9 @@ static uint16_t inv_bits(const uint16_t val, const int nbits)
     uint16_t res;
 
     if (nbits <= 8) {
-        res = ff_reverse[val & 0xFF] >> (8-nbits);
+        res = av_reverse[val & 0xFF] >> (8-nbits);
     } else
-        res = ((ff_reverse[val & 0xFF] << 8) + (ff_reverse[val >> 8])) >> (16-nbits);
+        res = ((av_reverse[val & 0xFF] << 8) + (av_reverse[val >> 8])) >> (16-nbits);
 
     return res;
 }
@@ -174,8 +175,7 @@ int av_cold ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg)
     planes[1].num_bands = planes[2].num_bands = cfg->chroma_bands;
 
     for (p = 0; p < 3; p++) {
-        planes[p].bands      = av_mallocz(planes[p].num_bands * sizeof(IVIBandDesc));
-        planes[p].buf_switch = 0; /* use primary buffer */
+        planes[p].bands = av_mallocz(planes[p].num_bands * sizeof(IVIBandDesc));
 
         /* select band dimensions: if there is only one band then it
          *  has the full size, if there are several bands each of them
@@ -197,8 +197,12 @@ int av_cold ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg)
             band->width    = b_width;
             band->height   = b_height;
             band->pitch    = width_aligned;
-            band->buf1     = av_malloc(buf_size);
-            band->buf2     = av_malloc(buf_size);
+            band->bufs[0]  = av_malloc(buf_size);
+            band->bufs[1]  = av_malloc(buf_size);
+
+            /* allocate the 3rd band buffer for scalability mode */
+            if (cfg->luma_bands > 1)
+                band->bufs[2] = av_malloc(buf_size);
 
             planes[p].bands[0].huff_desc.num_rows = 0; /* reset custom vlc */
         }
@@ -219,8 +223,9 @@ void av_cold ff_ivi_free_buffers(IVIPlaneDesc *planes)
 
     for (p = 0; p < 3; p++) {
         for (b = 0; b < planes[p].num_bands; b++) {
-            av_freep(&planes[p].bands[b].buf1);
-            av_freep(&planes[p].bands[b].buf2);
+            av_freep(&planes[p].bands[b].bufs[0]);
+            av_freep(&planes[p].bands[b].bufs[1]);
+            av_freep(&planes[p].bands[b].bufs[2]);
 
             for (t = 0; t < planes[p].bands[b].num_tiles; t++)
                 av_freep(&planes[p].bands[b].tiles[t].mbs);
@@ -321,6 +326,7 @@ void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch,
 
     out[0] = in[0];
     memset(&out[1], 0, 7*sizeof(int16_t));
+    out += pitch;
 
     for (y = 1; y < 8; out += pitch, y++)
         memset(out, 0, 8*sizeof(int16_t));
@@ -682,7 +688,7 @@ int ivi_check_band (IVIBandDesc *band, uint8_t *ref, int pitch)
  *  @param dst          [out] pointer to the buffer receiving converted pixels
  *  @param dst_pitch    [in]  pitch for moving to the next y line
  */
-void ff_ivi_output_plane(IVIPlaneDesc *plane, uint8_t *dst, int dst_pitch)
+void ff_ivi_output_plane(const IVIPlaneDesc *plane, uint8_t *dst, const int dst_pitch)
 {
     int             x, y;
     const int16_t   *src  = plane->bands[0].buf;

@@ -29,6 +29,8 @@
 #ifndef AVCODEC_IVI_COMMON_H
 #define AVCODEC_IVI_COMMON_H
 
+#include "avcodec.h"
+#include "get_bits.h"
 #include <stdint.h>
 
 #define IVI_DEBUG
@@ -104,8 +106,7 @@ typedef struct {
     uint32_t        data_size;      ///< size of the band data
     int16_t         *buf;           ///< ptr to the output buffer for this band
     int16_t         *ref_buf;       ///< ptr to the reference frame buffer for motion compensation
-    int16_t         *buf1;          ///< primary   band buffer
-    int16_t         *buf2;          ///< secondary band buffer
+    int16_t         *bufs[3];       ///< array of pointers to the band buffers
     uint32_t        pitch;          ///< pitch associated with the buffers above
     uint8_t         is_empty;       ///< = 1 if this band doesn't contain any data
     uint8_t         mb_size;        ///< macroblock size
@@ -152,10 +153,6 @@ typedef struct {
 typedef struct {
     uint16_t    width;
     uint16_t    height;
-   // uint32_t    pitch;
-    uint8_t     buf_switch; ///< used to switch between two buffers
-    //int16_t     *buf1;      ///< primary buffer to store decoded pixels
-    //int16_t     *buf2;      ///< secondary buffer to store decoded pixels
     uint8_t     num_bands;  ///< number of bands this plane subdivided into
     IVIBandDesc *bands;     ///< array of band descriptors
 } IVIPlaneDesc;
@@ -206,7 +203,7 @@ int  ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width, const int til
 int  ff_ivi_dec_tile_data_size(GetBitContext *gb);
 int  ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile);
 void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band, IVITile *tile, int32_t mv_scale);
-void ff_ivi_output_plane(IVIPlaneDesc *plane, uint8_t *dst, int dst_pitch);
+void ff_ivi_output_plane(const IVIPlaneDesc *plane, uint8_t *dst, const int dst_pitch);
 void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
 void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
 

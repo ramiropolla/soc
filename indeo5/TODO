@@ -7,3 +7,6 @@ decode indeo5 videos:
   snow.c:spatial_compose53i) and adapt it to indeo5. The indeo5
   high-pass coefficients must be upscaled by -2 in this case
   before they can be passed to that filter.
+
+* Sometimes doxygen parameters descriptions were placed in the source
+  directly. Move them to the header files.
