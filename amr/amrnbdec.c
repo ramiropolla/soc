@@ -105,7 +105,7 @@ static void weighted_vector_sumd(double *out, const double *in_a,
 {
     int i;
 
-    for(i = 0; i < length; i++)
+    for (i = 0; i < length; i++)
         out[i] = weight_coeff_a * in_a[i]
                + weight_coeff_b * in_b[i];
 }
