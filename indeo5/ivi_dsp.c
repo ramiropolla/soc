@@ -34,7 +34,8 @@
 /**
  *  5/3 - Wavelet recomposition filter for indeo5.
  */
-void ff_ivi_recompose53(const IVIPlaneDesc *plane, uint8_t *dst, const int dst_pitch, const int num_bands)
+void ff_ivi_recompose53(const IVIPlaneDesc *plane, uint8_t *dst,
+                        const int dst_pitch, const int num_bands)
 {
     int             x, y, indx;
     int32_t         p0, p1, p2, p3, tmp0, tmp1, tmp2;
@@ -332,7 +333,7 @@ void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags
             memset(out, 0, 8*sizeof(int16_t));
         } else {
             IVI_INV_SLANT8( in[0],  in[1],  in[2],  in[3],  in[4],  in[5],  in[6],  in[7],
-                            out[0], out[1], out[2], out[3], out[4], out[5], out[6], out[7]);
+                           out[0], out[1], out[2], out[3], out[4], out[5], out[6], out[7]);
         }
         in += 8;
         out += pitch;
@@ -421,38 +422,35 @@ void ff_ivi_mc_8x8_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_
     int16_t *wptr;
 
     switch (mc_type) {
-        case 0: /* fullpel (no interpolation) */
-            for (i = 0; i < 8; i++, buf += pitch, ref_buf += pitch) {
-                buf[0] += ref_buf[0];
-                buf[1] += ref_buf[1];
-                buf[2] += ref_buf[2];
-                buf[3] += ref_buf[3];
-                buf[4] += ref_buf[4];
-                buf[5] += ref_buf[5];
-                buf[6] += ref_buf[6];
-                buf[7] += ref_buf[7];
-            }
-            break;
-        case 1: /* horizontal halfpel interpolation */
-            for (i = 0; i < 8; i++, buf += pitch, ref_buf += pitch) {
-                for (j = 0; j < 8; j++)
-                    buf[j] += (ref_buf[j] + ref_buf[j+1]) >> 1;
-            }
-            break;
-        case 2: /* vertical halfpel interpolation */
-            wptr = ref_buf + pitch;
-            for (i = 0; i < 8; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
-                for (j = 0; j < 8; j++)
-                    buf[j] += (ref_buf[j] + wptr[j]) >> 1;
-            }
-            break;
-        case 3: /* vertical and horizontal halfpel interpolation */
-            wptr = ref_buf + pitch;
-            for (i = 0; i < 8; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
-                for (j = 0; j < 8; j++)
-                    buf[j] += (ref_buf[j] + ref_buf[j+1] + wptr[j] + wptr[j+1]) >> 2;
-            }
-            break;
+    case 0: /* fullpel (no interpolation) */
+        for (i = 0; i < 8; i++, buf += pitch, ref_buf += pitch) {
+            buf[0] += ref_buf[0];
+            buf[1] += ref_buf[1];
+            buf[2] += ref_buf[2];
+            buf[3] += ref_buf[3];
+            buf[4] += ref_buf[4];
+            buf[5] += ref_buf[5];
+            buf[6] += ref_buf[6];
+            buf[7] += ref_buf[7];
+        }
+        break;
+    case 1: /* horizontal halfpel interpolation */
+        for (i = 0; i < 8; i++, buf += pitch, ref_buf += pitch)
+            for (j = 0; j < 8; j++)
+                buf[j] += (ref_buf[j] + ref_buf[j+1]) >> 1;
+        break;
+    case 2: /* vertical halfpel interpolation */
+        wptr = ref_buf + pitch;
+        for (i = 0; i < 8; i++, buf += pitch, wptr += pitch, ref_buf += pitch)
+            for (j = 0; j < 8; j++)
+                buf[j] += (ref_buf[j] + wptr[j]) >> 1;
+        break;
+    case 3: /* vertical and horizontal halfpel interpolation */
+        wptr = ref_buf + pitch;
+        for (i = 0; i < 8; i++, buf += pitch, wptr += pitch, ref_buf += pitch)
+            for (j = 0; j < 8; j++)
+                buf[j] += (ref_buf[j] + ref_buf[j+1] + wptr[j] + wptr[j+1]) >> 2;
+        break;
     }
 }
 
@@ -466,40 +464,40 @@ void ff_ivi_mc_4x4_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_
     int16_t *wptr;
 
     switch (mc_type) {
-        case 0: /* fullpel (no interpolation) */
-            for (i = 0; i < 4; i++, buf += pitch, ref_buf += pitch) {
-                buf[0] += ref_buf[0];
-                buf[1] += ref_buf[1];
-                buf[2] += ref_buf[2];
-                buf[3] += ref_buf[3];
-            }
-            break;
-        case 1: /* horizontal halfpel interpolation */
-            for (i = 0; i < 4; i++, buf += pitch, ref_buf += pitch) {
-                buf[0] += (ref_buf[0] + ref_buf[1]) >> 1;
-                buf[1] += (ref_buf[1] + ref_buf[2]) >> 1;
-                buf[2] += (ref_buf[2] + ref_buf[3]) >> 1;
-                buf[3] += (ref_buf[3] + ref_buf[4]) >> 1;
-            }
-            break;
-        case 2: /* vertical halfpel interpolation */
-            wptr = ref_buf + pitch;
-            for (i = 0; i < 4; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
-                buf[0] += (ref_buf[0] + wptr[0]) >> 1;
-                buf[1] += (ref_buf[1] + wptr[1]) >> 1;
-                buf[2] += (ref_buf[2] + wptr[2]) >> 1;
-                buf[3] += (ref_buf[3] + wptr[3]) >> 1;
-            }
-            break;
-        case 3: /* vertical and horizontal halfpel interpolation */
-            wptr = ref_buf + pitch;
-            for (i = 0; i < 4; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
-                buf[0] += (ref_buf[0] + ref_buf[1] + wptr[0] + wptr[1]) >> 2;
-                buf[1] += (ref_buf[1] + ref_buf[2] + wptr[1] + wptr[2]) >> 2;
-                buf[2] += (ref_buf[2] + ref_buf[3] + wptr[2] + wptr[3]) >> 2;
-                buf[3] += (ref_buf[3] + ref_buf[4] + wptr[3] + wptr[4]) >> 2;
-            }
-            break;
+    case 0: /* fullpel (no interpolation) */
+        for (i = 0; i < 4; i++, buf += pitch, ref_buf += pitch) {
+            buf[0] += ref_buf[0];
+            buf[1] += ref_buf[1];
+            buf[2] += ref_buf[2];
+            buf[3] += ref_buf[3];
+        }
+        break;
+    case 1: /* horizontal halfpel interpolation */
+        for (i = 0; i < 4; i++, buf += pitch, ref_buf += pitch) {
+            buf[0] += (ref_buf[0] + ref_buf[1]) >> 1;
+            buf[1] += (ref_buf[1] + ref_buf[2]) >> 1;
+            buf[2] += (ref_buf[2] + ref_buf[3]) >> 1;
+            buf[3] += (ref_buf[3] + ref_buf[4]) >> 1;
+        }
+        break;
+    case 2: /* vertical halfpel interpolation */
+        wptr = ref_buf + pitch;
+        for (i = 0; i < 4; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
+            buf[0] += (ref_buf[0] + wptr[0]) >> 1;
+            buf[1] += (ref_buf[1] + wptr[1]) >> 1;
+            buf[2] += (ref_buf[2] + wptr[2]) >> 1;
+            buf[3] += (ref_buf[3] + wptr[3]) >> 1;
+        }
+        break;
+    case 3: /* vertical and horizontal halfpel interpolation */
+        wptr = ref_buf + pitch;
+        for (i = 0; i < 4; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
+            buf[0] += (ref_buf[0] + ref_buf[1] + wptr[0] + wptr[1]) >> 2;
+            buf[1] += (ref_buf[1] + ref_buf[2] + wptr[1] + wptr[2]) >> 2;
+            buf[2] += (ref_buf[2] + ref_buf[3] + wptr[2] + wptr[3]) >> 2;
+            buf[3] += (ref_buf[3] + ref_buf[4] + wptr[3] + wptr[4]) >> 2;
+        }
+        break;
     }
 }
 
@@ -513,30 +511,27 @@ void ff_ivi_mc_8x8_no_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int 
     int16_t *wptr;
 
     switch (mc_type) {
-        case 0: /* fullpel (no interpolation, just copy) */
-            for (i = 0; i < 8; i++, buf += pitch, ref_buf += pitch)
-                memcpy(buf, ref_buf, 8*sizeof(int16_t)); /* FIXME: speed critical? */
-            break;
-        case 1: /* horizontal halfpel interpolation */
-            for (i = 0; i < 8; i++, buf += pitch, ref_buf += pitch) {
-                for (j = 0; j < 8; j++)
-                    buf[j] = (ref_buf[j] + ref_buf[j+1]) >> 1;
-            }
-            break;
-        case 2: /* vertical halfpel interpolation */
-            wptr = ref_buf + pitch;
-            for (i = 0; i < 8; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
-                for (j = 0; j < 8; j++)
-                    buf[j] = (ref_buf[j] + wptr[j]) >> 1;
-            }
-            break;
-        case 3: /* vertical and horizontal halfpel interpolation */
-            wptr = ref_buf + pitch;
-            for (i = 0; i < 8; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
-                for (j = 0; j < 8; j++)
-                    buf[j] = (ref_buf[j] + ref_buf[j+1] + wptr[j] + wptr[j+1]) >> 2;
-            }
-            break;
+    case 0: /* fullpel (no interpolation, just copy) */
+        for (i = 0; i < 8; i++, buf += pitch, ref_buf += pitch)
+            memcpy(buf, ref_buf, 8*sizeof(int16_t)); /* FIXME: speed critical? */
+        break;
+    case 1: /* horizontal halfpel interpolation */
+        for (i = 0; i < 8; i++, buf += pitch, ref_buf += pitch)
+            for (j = 0; j < 8; j++)
+                buf[j] = (ref_buf[j] + ref_buf[j+1]) >> 1;
+        break;
+    case 2: /* vertical halfpel interpolation */
+        wptr = ref_buf + pitch;
+        for (i = 0; i < 8; i++, buf += pitch, wptr += pitch, ref_buf += pitch)
+            for (j = 0; j < 8; j++)
+                buf[j] = (ref_buf[j] + wptr[j]) >> 1;
+        break;
+    case 3: /* vertical and horizontal halfpel interpolation */
+        wptr = ref_buf + pitch;
+        for (i = 0; i < 8; i++, buf += pitch, wptr += pitch, ref_buf += pitch)
+            for (j = 0; j < 8; j++)
+                buf[j] = (ref_buf[j] + ref_buf[j+1] + wptr[j] + wptr[j+1]) >> 2;
+        break;
     }
 }
 
@@ -550,39 +545,39 @@ void ff_ivi_mc_4x4_no_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int 
     int16_t *wptr;
 
     switch (mc_type) {
-        case 0: /* fullpel (no interpolation, just copy) */
-            for (i = 0; i < 4; i++, buf += pitch, ref_buf += pitch) {
-                buf[0] = ref_buf[0];
-                buf[1] = ref_buf[1];
-                buf[2] = ref_buf[2];
-                buf[3] = ref_buf[3];
-            }
-            break;
-        case 1: /* horizontal halfpel interpolation */
-            for (i = 0; i < 4; i++, buf += pitch, ref_buf += pitch) {
-                buf[0] = (ref_buf[0] + ref_buf[1]) >> 1;
-                buf[1] = (ref_buf[1] + ref_buf[2]) >> 1;
-                buf[2] = (ref_buf[2] + ref_buf[3]) >> 1;
-                buf[3] = (ref_buf[3] + ref_buf[4]) >> 1;
-            }
-            break;
-        case 2: /* vertical halfpel interpolation */
-            wptr = ref_buf + pitch;
-            for (i = 0; i < 4; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
-                buf[0] = (ref_buf[0] + wptr[0]) >> 1;
-                buf[1] = (ref_buf[1] + wptr[1]) >> 1;
-                buf[2] = (ref_buf[2] + wptr[2]) >> 1;
-                buf[3] = (ref_buf[3] + wptr[3]) >> 1;
-            }
-            break;
-        case 3: /* vertical and horizontal halfpel interpolation */
-            wptr = ref_buf + pitch;
-            for (i = 0; i < 4; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
-                buf[0] = (ref_buf[0] + ref_buf[1] + wptr[0] + wptr[1]) >> 2;
-                buf[1] = (ref_buf[1] + ref_buf[2] + wptr[1] + wptr[2]) >> 2;
-                buf[2] = (ref_buf[2] + ref_buf[3] + wptr[2] + wptr[3]) >> 2;
-                buf[3] = (ref_buf[3] + ref_buf[4] + wptr[3] + wptr[4]) >> 2;
-            }
-            break;
+    case 0: /* fullpel (no interpolation, just copy) */
+        for (i = 0; i < 4; i++, buf += pitch, ref_buf += pitch) {
+            buf[0] = ref_buf[0];
+            buf[1] = ref_buf[1];
+            buf[2] = ref_buf[2];
+            buf[3] = ref_buf[3];
+        }
+        break;
+    case 1: /* horizontal halfpel interpolation */
+        for (i = 0; i < 4; i++, buf += pitch, ref_buf += pitch) {
+            buf[0] = (ref_buf[0] + ref_buf[1]) >> 1;
+            buf[1] = (ref_buf[1] + ref_buf[2]) >> 1;
+            buf[2] = (ref_buf[2] + ref_buf[3]) >> 1;
+            buf[3] = (ref_buf[3] + ref_buf[4]) >> 1;
+        }
+        break;
+    case 2: /* vertical halfpel interpolation */
+        wptr = ref_buf + pitch;
+        for (i = 0; i < 4; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
+            buf[0] = (ref_buf[0] + wptr[0]) >> 1;
+            buf[1] = (ref_buf[1] + wptr[1]) >> 1;
+            buf[2] = (ref_buf[2] + wptr[2]) >> 1;
+            buf[3] = (ref_buf[3] + wptr[3]) >> 1;
+        }
+        break;
+    case 3: /* vertical and horizontal halfpel interpolation */
+        wptr = ref_buf + pitch;
+        for (i = 0; i < 4; i++, buf += pitch, wptr += pitch, ref_buf += pitch) {
+            buf[0] = (ref_buf[0] + ref_buf[1] + wptr[0] + wptr[1]) >> 2;
+            buf[1] = (ref_buf[1] + ref_buf[2] + wptr[1] + wptr[2]) >> 2;
+            buf[2] = (ref_buf[2] + ref_buf[3] + wptr[2] + wptr[3]) >> 2;
+            buf[3] = (ref_buf[3] + ref_buf[4] + wptr[3] + wptr[4]) >> 2;
+        }
+        break;
     }
 }

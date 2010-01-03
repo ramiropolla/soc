@@ -40,7 +40,8 @@
  *  @param dst_pitch    [in]  pitch of the destination buffer
  *  @param num_bands    [in]  number of wavelet bands to be processed
  */
-void ff_ivi_recompose53(const IVIPlaneDesc *plane, uint8_t *dst, const int dst_pitch, const int num_bands);
+void ff_ivi_recompose53(const IVIPlaneDesc *plane, uint8_t *dst,
+                        const int dst_pitch, const int num_bands);
 
 /**
  *  Two-dimensional inverse slant 8x8 transform.
