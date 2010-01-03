@@ -99,7 +99,7 @@ typedef struct AMRContext {
 } AMRContext;
 
 /** Double version of ff_weighted_vector_sumf() */
-void weighted_vector_sumd(double *out, const double *in_a, const double *in_b,
+static void weighted_vector_sumd(double *out, const double *in_a, const double *in_b,
                           double weight_coeff_a, double weight_coeff_b,
                           int length)
 {
