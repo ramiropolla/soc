@@ -103,8 +103,14 @@ void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags
  */
 void ff_ivi_col_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
 
+/**
+ *  DC-only inverse row slant transform
+ */
 void ff_ivi_dc_row_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
 
+/**
+ *  DC-only inverse column slant transform
+ */
 void ff_ivi_dc_col_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
 
 /**

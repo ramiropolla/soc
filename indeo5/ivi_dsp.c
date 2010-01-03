@@ -31,9 +31,6 @@
 #include "ivi_common.h"
 #include "ivi_dsp.h"
 
-/**
- *  5/3 wavelet recomposition filter for Indeo5
- */
 void ff_ivi_recompose53(const IVIPlaneDesc *plane, uint8_t *dst,
                         const int dst_pitch, const int num_bands)
 {
@@ -219,10 +216,6 @@ void ff_ivi_recompose53(const IVIPlaneDesc *plane, uint8_t *dst,
     d3 = COMPENSATE(s3);\
     d4 = COMPENSATE(s4);}
 
-
-/**
- *  two-dimensional inverse slant 8x8 transform
- */
 void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags)
 {
     int     i, t1;
@@ -261,10 +254,6 @@ void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t
 #undef COMPENSATE
 }
 
-
-/**
- *  two-dimensional inverse slant 4x4 transform
- */
 void ff_ivi_inverse_slant_4x4(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags)
 {
     int     i, t1;
@@ -300,10 +289,6 @@ void ff_ivi_inverse_slant_4x4(int32_t *in, int16_t *out, uint32_t pitch, uint8_t
 #undef COMPENSATE
 }
 
-
-/**
- *  DC-only inverse 2D slant transforms
- */
 void ff_ivi_dc_slant_2d(int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
 {
     int     x, y;
@@ -317,10 +302,6 @@ void ff_ivi_dc_slant_2d(int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
     }
 }
 
-
-/**
- *  inverse 1D row slant transform
- */
 void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags)
 {
     int     i, t1;
@@ -341,10 +322,6 @@ void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags
 #undef COMPENSATE
 }
 
-
-/**
- *  DC-only inverse row slant transform
- */
 void ff_ivi_dc_row_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
 {
     int     x, y;
@@ -363,10 +340,6 @@ void ff_ivi_dc_row_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size
     }
 }
 
-
-/**
- *  inverse 1D column slant transform
- */
 void ff_ivi_col_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags)
 {
     int     i, t1, row2, row4, row8;
@@ -394,10 +367,6 @@ void ff_ivi_col_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags
 #undef COMPENSATE
 }
 
-
-/**
- *  DC-only inverse column slant transform
- */
 void ff_ivi_dc_col_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
 {
     int     x, y;
@@ -412,10 +381,6 @@ void ff_ivi_dc_col_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size
     }
 }
 
-
-/**
- *  8x8 block motion compensation with adding delta
- */
 void ff_ivi_mc_8x8_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type)
 {
     int     i, j;
@@ -454,10 +419,6 @@ void ff_ivi_mc_8x8_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_
     }
 }
 
-
-/**
- *  4x4 block motion compensation with adding delta
- */
 void ff_ivi_mc_4x4_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type)
 {
     int     i;
@@ -501,10 +462,6 @@ void ff_ivi_mc_4x4_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_
     }
 }
 
-
-/**
- *  motion compensation without adding delta
- */
 void ff_ivi_mc_8x8_no_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type)
 {
     int     i, j;
@@ -535,10 +492,6 @@ void ff_ivi_mc_8x8_no_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int 
     }
 }
 
-
-/**
- *  4x4 block motion compensation without adding delta
- */
 void ff_ivi_mc_4x4_no_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type)
 {
     int     i;

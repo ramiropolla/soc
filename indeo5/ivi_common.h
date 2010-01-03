@@ -193,22 +193,137 @@ static inline int ivi_pic_config_cmp(IVIPicConfig *str1, IVIPicConfig *str2)
 /** divide the motion vector mv by 2 */
 #define IVI_MV_DIV2(mv) (((mv) + ((mv) > 0))>>1)
 
+/**
+ *  Generates a huffman codebook from the given descriptor
+ *  and converts it into the FFmpeg VLC table.
+ *
+ *  @param cb   [in]  pointer to codebook descriptor
+ *  @param pOut [out] where to place the generated VLC table
+ *  @param flag [in]  flag: 1 - for static or 0 for dynamic tables
+ *  @return     result code: 0 - OK, -1 = error (invalid codebook descriptor)
+ */
 int  ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *pOut, int flag);
+
+/**
+ *  Decodes a huffman codebook descriptor from the bitstream.
+ *
+ *  @param gb   [in,out] the GetBit context
+ *  @param desc [out] ptr to descriptor to be filled with data
+ *  @return     selector indicating huffman table:
+ *              (0...6 - predefined, 7 - custom one supplied with the bitstream)
+ */
 int  ff_ivi_dec_huff_desc(GetBitContext *gb, IVIHuffDesc *desc);
+
+/**
+ *  Compares two huffman codebook descriptors.
+ *
+ *  @param desc1    [in] ptr to the 1st descriptor to compare
+ *  @param desc2    [in] ptr to the 2nd descriptor to compare
+ *  @return         comparison result: 0 - equal, 1 - not equal
+ */
 int  ff_ivi_huff_desc_cmp(const IVIHuffDesc *desc1, const IVIHuffDesc *desc2);
+
+/**
+ *  Copies huffman codebook descriptors.
+ *
+ *  @param dst  [out] ptr to the destination descriptor
+ *  @param src  [in]  ptr to the source descriptor
+ */
 void ff_ivi_huff_desc_copy(IVIHuffDesc *dst, const IVIHuffDesc *src);
+
+/**
+ *  Initializes planes (prepares descriptors, allocates buffers etc).
+ *
+ *  @param planes       [in,out] pointer to the array of the plane descriptors
+ *  @param cfg          [in] pointer to the ivi_pic_config structure describing picture layout
+ *  @return             result code: 0 - OK
+ */
 int  ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg);
+
+/**
+ *  Frees planes, bands and macroblocks buffers.
+ *
+ *  @param planes       [in] pointer to the array of the plane descriptors
+ */
 void ff_ivi_free_buffers(IVIPlaneDesc *planes);
+
+/**
+ *  Initializes tile and macroblock descriptors.
+ *
+ *  @param planes       [in,out] pointer to the array of the plane descriptors
+ *  @param tile_width   [in]     tile width
+ *  @param tile_height  [in]     tile height
+ *  @return             result code: 0 - OK
+ */
 int  ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width, const int tile_height);
+
+/**
+ *  Decodes size of the tile data.
+ *  The size is stored as a variable-length field having the following format:
+ *  if (tile_data_size < 255) than this field is only one byte long
+ *  if (tile_data_size >= 255) than this field four is byte long: 0xFF X1 X2 X3
+ *  where X1-X3 is size of the tile data
+ *
+ *  @param gb   [in,out] the GetBit context
+ *  @return     size of the tile data in bytes
+ */
 int  ff_ivi_dec_tile_data_size(GetBitContext *gb);
+
+/**
+ *  Decodes block data:
+ *  extracts huffman-coded transform coefficients from the bitstream,
+ *  dequantizes them, applies inverse transform and motion compensation
+ *  in order to reconstruct the picture.
+ *
+ *  @param gb   [in,out] the GetBit context
+ *  @param band [in]     pointer to the band descriptor
+ *  @param tile [in]     pointer to the tile descriptor
+ *  @return     result code: 0 - OK, -1 = error (corrupted blocks data)
+ */
 int  ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile);
+
+/**
+ *  Handles empty tiles by performing data copying and motion
+ *  compensation respectively.
+ *
+ *  @param avctx    [in] ptr to the AVCodecContext
+ *  @param band     [in] pointer to the band descriptor
+ *  @param tile     [in] pointer to the tile descriptor
+ *  @param mv_scale [in] scaling factor for motion vectors
+ */
 void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band, IVITile *tile, int32_t mv_scale);
+
+/**
+ *  Converts and outputs the current plane.
+ *  This conversion is done by adding back the bias value of 128
+ *  (subtracted in the encoder) and clipping the result.
+ *
+ *  @param plane        [in]  pointer to the descriptor of the plane being processed
+ *  @param dst          [out] pointer to the buffer receiving converted pixels
+ *  @param dst_pitch    [in]  pitch for moving to the next y line
+ */
 void ff_ivi_output_plane(const IVIPlaneDesc *plane, uint8_t *dst, const int dst_pitch);
+
+/**
+ *  Copies the pixels into the frame buffer.
+ */
 void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
+
+/**
+ *  Copies the DC coefficient into the first pixel of the block and
+ *  zeroes all others.
+ */
 void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
 
 #ifdef IVI_DEBUG
+/**
+ *  Calculates band checksum from band data.
+ */
 uint16_t ivi_calc_band_checksum (IVIBandDesc *band);
+
+/**
+ *  Verifies that band data lies in range.
+ */
 int ivi_check_band (IVIBandDesc *band, uint8_t *ref, int pitch);
 #endif
 
