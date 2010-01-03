@@ -47,7 +47,7 @@
  * Fundamentally, this scale is determined by energy_mean through
  * the fixed vector contribution to the excitation vector.
  */
-#define AMR_SAMPLE_SCALE  (2.0/32768.0)
+#define AMR_SAMPLE_SCALE  (2.0 / 32768.0)
 
 
 /** Frame type (Table 1a in 3GPP TS 26.101) */
@@ -1527,9 +1527,9 @@ static const float pred_fac[LP_FILTER_ORDER] = {
 /** Prediction factor for 12.2kbit/s mode */
 #define PRED_FAC_MODE_12k2             0.65
 
-#define LSF_R_FAC          (8000.0/32768.0) ///< LSF residual tables to Hertz
-#define MIN_LSF_SPACING             50.0488 ///< Ensures stability of LPC filter
-#define PITCH_LAG_MIN_MODE_12k2          18 ///< Lower bound on decoded lag search in 12.2kbit/s mode
+#define LSF_R_FAC          (8000.0 / 32768.0) ///< LSF residual tables to Hertz
+#define MIN_LSF_SPACING             50.0488   ///< Ensures stability of LPC filter
+#define PITCH_LAG_MIN_MODE_12k2          18   ///< Lower bound on decoded lag search in 12.2kbit/s mode
 
 
 // fixed tables

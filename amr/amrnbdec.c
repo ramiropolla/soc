@@ -99,13 +99,13 @@ typedef struct AMRContext {
 } AMRContext;
 
 /** Double version of ff_weighted_vector_sumf() */
-static void weighted_vector_sumd(double *out, const double *in_a, const double *in_b,
-                          double weight_coeff_a, double weight_coeff_b,
-                          int length)
+static void weighted_vector_sumd(double *out, const double *in_a,
+                                 const double *in_b, double weight_coeff_a,
+                                 double weight_coeff_b, int length)
 {
     int i;
 
-    for(i=0; i<length; i++)
+    for(i = 0; i < length; i++)
         out[i] = weight_coeff_a * in_a[i]
                + weight_coeff_b * in_b[i];
 }
@@ -1005,7 +1005,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
     for (i = 0; i < AMR_BLOCK_SIZE; i++)
         buf_out[i] = av_clipf(buf_out[i] * AMR_SAMPLE_SCALE,
-                              -1.0, 32767.0/32768.0);
+                              -1.0, 32767.0 / 32768.0);
 
     /* Update averaged lsf vector (used for fixed gain smoothing).
      *
