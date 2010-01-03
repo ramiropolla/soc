@@ -2,11 +2,14 @@ Index: libavcodec/Makefile
 ===================================================================
 --- libavcodec/Makefile	(revision 20995)
 +++ libavcodec/Makefile	(working copy)
-@@ -49,6 +49,7 @@
+@@ -49,6 +49,10 @@
  OBJS-$(CONFIG_ALAC_DECODER)            += alac.o
  OBJS-$(CONFIG_ALAC_ENCODER)            += alacenc.o
  OBJS-$(CONFIG_ALS_DECODER)             += alsdec.o
-+OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbdec.o celp_filters.o celp_math.o acelp_filters.o acelp_vectors.o lsp.o acelp_pitch_delay.o
++OBJS-$(CONFIG_AMRNB_DECODER)           += amrnbdec.o celp_filters.o   \
++                                          celp_math.o acelp_filters.o \
++                                          acelp_vectors.o lsp.o       \
++                                          acelp_pitch_delay.o
  OBJS-$(CONFIG_AMV_DECODER)             += sp5xdec.o mjpegdec.o mjpeg.o
  OBJS-$(CONFIG_APE_DECODER)             += apedec.o
  OBJS-$(CONFIG_ASV1_DECODER)            += asv1.o mpeg12data.o
@@ -39,7 +42,7 @@ Index: doc/general.texi
  @item Apple lossless audio   @tab  X  @tab  X
 Index: Changelog
 ===================================================================
---- Changelog	(revision 20995)
+--- Changelog	(revision 21005)
 +++ Changelog	(working copy)
 @@ -47,6 +47,7 @@
  - CDG demuxer and decoder
