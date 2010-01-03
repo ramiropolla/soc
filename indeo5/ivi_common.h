@@ -1,5 +1,5 @@
 /*
- * common functions for Indeo Video Interactive codecs (indeo4 and indeo5)
+ * common functions for Indeo Video Interactive codecs (Indeo4 and Indeo5)
  *
  * Copyright (c) 2009 Maxim Poliakovski
  *
@@ -64,7 +64,7 @@ extern const RVMapDesc ff_ivi_rvmap_tabs[9]; /* defined in ivi_common.c */
 
 
 /**
- *  This structure describes an indeo macroblock (16x16, 8x8 or 4x4).
+ *  This structure describes an Indeo macroblock (16x16, 8x8 or 4x4).
  */
 typedef struct {
     int16_t     xpos;
@@ -79,7 +79,7 @@ typedef struct {
 
 
 /**
- *  This structure describes an indeo tile.
+ *  This structure describes an Indeo tile.
  */
 typedef struct {
     uint32_t    xpos;
@@ -95,7 +95,7 @@ typedef struct {
 
 
 /**
- *  This structure describes an indeo wavelet band.
+ *  This structure describes an Indeo wavelet band.
  */
 typedef struct {
     uint8_t         plane;          ///< plane number this band belongs to
@@ -114,7 +114,7 @@ typedef struct {
     uint8_t         mc_resolution;  ///< resolution of the motion compensation: 0 - fullpel, 1 - halfpel
     int8_t          inherit_mv;
     int8_t          inherit_qdelta;
-    int8_t          qdelta_present; ///< tells if Qdelta signal is present in the bitstream (indeo5 only)
+    int8_t          qdelta_present; ///< tells if Qdelta signal is present in the bitstream (Indeo5 only)
     uint8_t         quant_mat;      ///< dequant matrix
     uint8_t         glob_quant;     ///< quant base for this band
     const uint8_t   *scan;          ///< ptr to the scan pattern

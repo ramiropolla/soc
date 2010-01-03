@@ -37,7 +37,7 @@ static uint16_t ivi5_common_pic_sizes[30] = {640, 480, 320, 240, 160, 120, 704, 
 
 
 /**
- *  indeo5 8x8 scan (zigzag) patterns
+ *  Indeo5 8x8 scan (zigzag) patterns
  */
 static const uint8_t ivi5_scans8x8[3][64] = {
     {0,  1,  8, 16,  9,  2,  3, 10, 17, 24, 32, 25, 18, 11,  4,  5,
@@ -58,7 +58,7 @@ static const uint8_t ivi5_scans8x8[3][64] = {
 };
 
 /**
- *  indeo5 4x4 scan (zigzag) pattern
+ *  Indeo5 4x4 scan (zigzag) pattern
  */
 static const uint8_t ivi5_scan4x4[16] = {
     0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15
@@ -66,7 +66,7 @@ static const uint8_t ivi5_scan4x4[16] = {
 
 
 /**
- *  indeo5 dequantization matrixes consist of two tables: base table
+ *  Indeo5 dequantization matrixes consist of two tables: base table
  *  and scale table. The base table defines the dequantization matrix
  *  itself and the scale table tells how this matrix should be scaled
  *  for a particular quant level (0...24).

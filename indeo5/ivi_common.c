@@ -1,5 +1,5 @@
 /*
- * common functions for Indeo Video Interactive codecs (indeo4 and indeo5)
+ * common functions for Indeo Video Interactive codecs (Indeo4 and Indeo5)
  *
  * Copyright (c) 2009 Maxim Poliakovski
  *
@@ -74,7 +74,7 @@ int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *pOut,
         prefix        = ((1 << i) - 1) << (cb->xbits[i] + last_row);
 
         for (j = 0; j < codes_per_row; j++) {
-            if (pos >= 256) /* Some indeo5 codebooks can have more than 256 */
+            if (pos >= 256) /* Some Indeo5 codebooks can have more than 256 */
                 break;      /* elements, but only 256 codes are allowed! */
 
             bits[pos] = i + cb->xbits[i] + last_row;

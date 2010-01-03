@@ -1,5 +1,5 @@
 /*
- * DSP functions for Indeo Video Interactive codecs (indeo4 and indeo5)
+ * DSP functions for Indeo Video Interactive codecs (Indeo4 and Indeo5)
  *
  * Copyright (c) 2009 Maxim Poliakovski
  *
@@ -23,7 +23,7 @@
 /**
  * @file libavcodec/ivi_dsp.h
  * DSP functions (inverse transforms, motion compensations, wavelet recompostion)
- * for indeo video interactive codecs.
+ * for Indeo Video Interactive codecs.
  */
 
 #ifndef AVCODEC_IVI_DSP_H
@@ -33,7 +33,7 @@
 #include "ivi_common.h"
 
 /**
- *  5/3 - Wavelet recomposition filter for indeo5.
+ *  5/3 - Wavelet recomposition filter for Indeo5.
  *
  *  @param plane        [in]  pointer to the descriptor of the plane being processed
  *  @param dst          [out] pointer to the destination buffer

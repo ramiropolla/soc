@@ -80,7 +80,7 @@ static VLC blk_vlc_tabs[8];
 
 
 /**
- *  Decode indeo5 GOP (Group of pictures) header.
+ *  Decode Indeo5 GOP (Group of pictures) header.
  *  This header is present in key frames only.
  *  It defines parameters for all frames in a GOP.
  *
@@ -302,7 +302,7 @@ static inline void skip_hdr_extension(GetBitContext *gb)
 
 
 /**
- *  Decode indeo5 picture header.
+ *  Decode Indeo5 picture header.
  *
  *  @param ctx      [in,out] ptr to the decoder context
  *  @param avctx    [in] ptr to the AVCodecContext
@@ -382,7 +382,7 @@ static int decode_pic_hdr(IVI5DecContext *ctx, AVCodecContext *avctx)
 
 
 /**
- *  Decode indeo5 band header.
+ *  Decode Indeo5 band header.
  *
  *  @param ctx      [in,out] ptr to the decoder context
  *  @param band     [in,out] ptr to the band descriptor
@@ -619,7 +619,7 @@ static int decode_mb_info(IVI5DecContext *ctx, IVIBandDesc *band,
 
 
 /**
- *  Decode an indeo5 band.
+ *  Decode an Indeo5 band.
  *
  *  @param ctx      [in,out] ptr to the decoder context
  *  @param band     [in,out] ptr to the band descriptor
@@ -784,7 +784,7 @@ static void switch_buffers(IVI5DecContext *ctx, AVCodecContext *avctx)
 
 
 /**
- *  indeo5 decoder initializations
+ *  Indeo5 decoder initializations
  */
 static av_cold int decode_init(AVCodecContext *avctx)
 {
@@ -811,7 +811,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     ctx->pic_conf.tile_height   = avctx->height;
     ctx->pic_conf.luma_bands    = ctx->pic_conf.chroma_bands = 1;
 
-    /* allocate and initialize indeo5 internal structures */
+    /* allocate and initialize Indeo5 internal structures */
     result = ff_ivi_init_planes(ctx->planes, &ctx->pic_conf);
     if (result) {
         av_log(avctx, AV_LOG_ERROR, "Couldn't allocate color planes!\n");
@@ -903,7 +903,7 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *data_size,
 
 
 /**
- *  indeo5 free function
+ *  Indeo5 free function
  */
 static av_cold int decode_close(AVCodecContext *avctx)
 {
