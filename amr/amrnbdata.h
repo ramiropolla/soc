@@ -34,9 +34,9 @@
 #include "libavutil/common.h"      /* offsetof */
 #include "libavutil/mathematics.h" /* M_PI */
 
-#define AMR_BLOCK_SIZE              160   ///< Samples per frame
-#define AMR_SUBFRAME_SIZE            40   ///< Samples per subframe
-#define AMR_SAMPLE_BOUND        32768.0   ///< Threshold for synthesis overflow
+#define AMR_BLOCK_SIZE              160   ///< samples per frame
+#define AMR_SUBFRAME_SIZE            40   ///< samples per subframe
+#define AMR_SAMPLE_BOUND        32768.0   ///< threshold for synthesis overflow
 
 /**
  * Scale from constructed speech to [-1,1]
