@@ -1,11 +1,11 @@
 #! /bin/sh
 
 echo "checking out pristine ffmpeg"
-svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r20995
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r21036
 
 echo "downloading the corresponding version of swscale"
 cd ffmpeg/libswscale
-svn up -r30160
+svn up -r30184
 cd ../..
 
 echo "patching ffmpeg"
