@@ -90,10 +90,10 @@ typedef struct {
  * AMRNB unpacked data frame
  */
 typedef struct {
-    uint16_t lsf[5];           ///< lsf parameters: 5 parameters for MODE_12k2, only 3 for other modes
-    AMRNBSubframe subframe[4]; ///< unpacked data for each subframe
     uint16_t sid_vector;       ///< index of SID LSF reference vector
     uint16_t sid_energy;       ///< SID frame energy
+    uint16_t lsf[5];           ///< lsf parameters: 5 parameters for MODE_12k2, only 3 for other modes
+    AMRNBSubframe subframe[4]; ///< unpacked data for each subframe
 } AMRNBFrame;
 
 
