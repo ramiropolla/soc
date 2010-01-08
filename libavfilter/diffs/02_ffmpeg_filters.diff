@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 21036)
+--- ffmpeg.c	(revision 21105)
 +++ ffmpeg.c	(working copy)
 @@ -41,6 +41,13 @@
  #include "libavutil/avstring.h"
@@ -281,7 +281,7 @@ Index: ffmpeg.c
  
      if (ost->video_pad) {
          av_picture_pad((AVPicture*)final_picture, (AVPicture *)padding_src,
-@@ -1279,6 +1487,10 @@
+@@ -1278,6 +1486,10 @@
      static unsigned int samples_size= 0;
      AVSubtitle subtitle, *subtitle_to_free;
      int got_subtitle;
@@ -292,7 +292,7 @@ Index: ffmpeg.c
      AVPacket avpkt;
      int bps = av_get_bits_per_sample_format(ist->st->codec->sample_fmt)>>3;
  
-@@ -1401,6 +1613,15 @@
+@@ -1403,6 +1615,15 @@
                                      &buffer_to_free);
          }
  
@@ -308,7 +308,7 @@ Index: ffmpeg.c
          // preprocess audio (volume)
          if (ist->st->codec->codec_type == CODEC_TYPE_AUDIO) {
              if (audio_volume != 256) {
-@@ -1422,10 +1643,18 @@
+@@ -1424,10 +1645,18 @@
              if (pts > now)
                  usleep(pts - now);
          }
@@ -328,8 +328,8 @@ Index: ffmpeg.c
              for(i=0;i<nb_ostreams;i++) {
                  int frame_size;
  
-@@ -1442,6 +1671,9 @@
-                             do_audio_out(os, ost, ist, data_buf, data_size);
+@@ -1445,6 +1674,9 @@
+                             do_audio_out(os, ost, ist, decoded_data_buf, decoded_data_size);
                              break;
                          case CODEC_TYPE_VIDEO:
 +#if CONFIG_AVFILTER
@@ -338,7 +338,7 @@ Index: ffmpeg.c
                              do_video_out(os, ost, ist, &picture, &frame_size);
                              if (vstats_filename && frame_size)
                                  do_video_stats(os, ost, frame_size);
-@@ -1507,7 +1739,17 @@
+@@ -1510,7 +1742,17 @@
                          av_free_packet(&opkt);
                      }
                  }
@@ -356,7 +356,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1961,9 +2203,10 @@
+@@ -1964,9 +2206,10 @@
                          av_exit(1);
                      }
  
@@ -368,7 +368,7 @@ Index: ffmpeg.c
                      codec->bits_per_raw_sample= 0;
                  }
                  ost->resample_height = icodec->height - (frame_topBand  + frame_bottomBand);
-@@ -1971,6 +2214,13 @@
+@@ -1974,6 +2217,13 @@
                  ost->resample_pix_fmt= icodec->pix_fmt;
                  ost->encoding_needed = 1;
                  ist->decoding_needed = 1;
@@ -382,7 +382,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -2357,6 +2607,12 @@
+@@ -2360,6 +2610,12 @@
              avcodec_close(ist->st->codec);
          }
      }
@@ -395,7 +395,7 @@ Index: ffmpeg.c
  
      /* finished ! */
      ret = 0;
-@@ -3914,6 +4170,9 @@
+@@ -3917,6 +4173,9 @@
      { "psnr", OPT_BOOL | OPT_EXPERT | OPT_VIDEO, {(void*)&do_psnr}, "calculate PSNR of compressed frames" },
      { "vstats", OPT_EXPERT | OPT_VIDEO, {(void*)&opt_vstats}, "dump video coding statistics to file" },
      { "vstats_file", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_vstats_file}, "dump video coding statistics to file", "file" },
@@ -405,7 +405,7 @@ Index: ffmpeg.c
      { "intra_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_intra_matrix}, "specify intra matrix coeffs", "matrix" },
      { "inter_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_inter_matrix}, "specify inter matrix coeffs", "matrix" },
      { "top", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_top_field_first}, "top=1/bottom=0/auto=-1 field first", "" },
-@@ -3974,6 +4233,9 @@
+@@ -3977,6 +4236,9 @@
  
      avcodec_register_all();
      avdevice_register_all();
