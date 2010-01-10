@@ -1,24 +1,20 @@
 Index: Changelog
 ===================================================================
---- Changelog	(revision 20294)
+--- Changelog	(revision 21107)
 +++ Changelog	(working copy)
-@@ -41,9 +41,11 @@
- - Atrac1 decoder
- - MD STUDIO audio demuxer
- - RF64 support in WAV demuxer
+@@ -47,6 +47,7 @@
+ - CDG demuxer and decoder
+ - R210 decoder
+ - Auravision Aura 1 and 2 decoders
 +- JPEG2000 encoder and decoder
  
  
  
-+
- version 0.5:
- 
- - DV50 AKA DVCPRO50 encoder, decoder, muxer and demuxer
 Index: libavcodec/allcodecs.c
 ===================================================================
---- libavcodec/allcodecs.c	(revision 20294)
+--- libavcodec/allcodecs.c	(revision 21107)
 +++ libavcodec/allcodecs.c	(working copy)
-@@ -109,6 +109,7 @@
+@@ -113,6 +113,7 @@
      REGISTER_DECODER (INDEO2, indeo2);
      REGISTER_DECODER (INDEO3, indeo3);
      REGISTER_DECODER (INTERPLAY_VIDEO, interplay_video);
@@ -28,9 +24,9 @@ Index: libavcodec/allcodecs.c
      REGISTER_ENCODER (LJPEG, ljpeg);
 Index: libavcodec/Makefile
 ===================================================================
---- libavcodec/Makefile	(revision 20294)
+--- libavcodec/Makefile	(revision 21107)
 +++ libavcodec/Makefile	(working copy)
-@@ -144,6 +144,8 @@
+@@ -142,6 +142,8 @@
  OBJS-$(CONFIG_INDEO3_DECODER)          += indeo3.o
  OBJS-$(CONFIG_INTERPLAY_DPCM_DECODER)  += dpcm.o
  OBJS-$(CONFIG_INTERPLAY_VIDEO_DECODER) += interplayvideo.o
@@ -41,9 +37,9 @@ Index: libavcodec/Makefile
  OBJS-$(CONFIG_JPEGLS_ENCODER)          += jpeglsenc.o jpegls.o
 Index: doc/general.texi
 ===================================================================
---- doc/general.texi	(revision 20294)
+--- doc/general.texi	(revision 21107)
 +++ doc/general.texi	(working copy)
-@@ -253,8 +253,7 @@
+@@ -258,8 +258,7 @@
      @tab Digital Picture Exchange
  @item JPEG         @tab X @tab X
      @tab Progressive JPEG is not supported.
@@ -55,7 +51,7 @@ Index: doc/general.texi
      @tab Lossless JPEG
 Index: libavformat/img2.c
 ===================================================================
---- libavformat/img2.c	(revision 20294)
+--- libavformat/img2.c	(revision 21107)
 +++ libavformat/img2.c	(working copy)
 @@ -72,6 +72,8 @@
      { CODEC_ID_SUNRAST   , "im24"},
@@ -68,9 +64,9 @@ Index: libavformat/img2.c
  };
 Index: libavformat/riff.c
 ===================================================================
---- libavformat/riff.c	(revision 20294)
+--- libavformat/riff.c	(revision 21107)
 +++ libavformat/riff.c	(working copy)
-@@ -204,6 +204,7 @@
+@@ -222,6 +222,7 @@
      { CODEC_ID_ZMBV,         MKTAG('Z', 'M', 'B', 'V') },
      { CODEC_ID_KMVC,         MKTAG('K', 'M', 'V', 'C') },
      { CODEC_ID_CAVS,         MKTAG('C', 'A', 'V', 'S') },
