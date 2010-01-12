@@ -161,20 +161,19 @@ static enum Mode unpack_bitstream(AMRContext *p, const uint8_t *buf,
     if (mode <= MODE_DTX) {
         uint16_t *data = (uint16_t *)&p->frame;
         const uint8_t *order = amr_unpacking_bitmaps_per_mode[mode];
-        int field_header; // 16 * relative field index + number of field bits
+        int field_size;
 
         memset(&p->frame, 0, sizeof(AMRNBFrame));
         buf++;
-        while ((field_header = *order++)) {
+        while ((field_size = *order++)) {
             int field = 0;
-            data += field_header >> 4;
-            field_header &= 0xf;
-            while (field_header--) {
+            int field_offset = *order++;
+            while (field_size--) {
                int bit = *order++;
                field <<= 1;
                field |= buf[bit >> 3] >> (bit & 7) & 1;
             }
-            *data = field;
+            data[field_offset] = field;
         }
     }
 
