@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 21105)
+--- ffmpeg.c	(revision 21177)
 +++ ffmpeg.c	(working copy)
 @@ -41,6 +41,13 @@
  #include "libavutil/avstring.h"
@@ -211,7 +211,7 @@ Index: ffmpeg.c
 +    /* configure all the filter links */
 +    if(avfilter_graph_check_validity(filt_graph_all, NULL))
 +        return -1;
-+    if(avfilter_graph_config_formats(filt_graph_all))
++    if(avfilter_graph_config_formats(filt_graph_all, NULL))
 +        return -1;
 +    if(avfilter_graph_config_links(filt_graph_all, NULL))
 +        return -1;
