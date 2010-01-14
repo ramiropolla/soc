@@ -368,7 +368,7 @@ static const uint8_t order_MODE_DTX[] = {
  * position of the bitmapping data for each packet type in
  * the AMRNBFrame
  */
-static const uint8_t * const amr_unpacking_bitmaps_per_mode[9] = {
+static const uint8_t * const amr_unpacking_bitmaps_per_mode[N_MODES] = {
     order_MODE_4k75,
     order_MODE_5k15,
     order_MODE_5k9,
