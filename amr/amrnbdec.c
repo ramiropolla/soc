@@ -405,10 +405,10 @@ static void decode_10bit_pulse(int code, int pulse_position[8],
 {
     // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
     // the 3 pulses and the upper 7 bits being coded in base 5
-    int temp = code >> 3;
-    pulse_position[i1] = (( temp       % 5) << 1) + ( code       & 1);
-    pulse_position[i2] = (((temp /  5) % 5) << 1) + ((code >> 1) & 1);
-    pulse_position[i3] = (((temp / 25) % 5) << 1) + ((code >> 2) & 1);
+    const uint8_t *positions = base_five_table[code >> 3];
+    pulse_position[i1] = (positions[2] << 1) + ( code       & 1);
+    pulse_position[i2] = (positions[1] << 1) + ((code >> 1) & 1);
+    pulse_position[i3] = (positions[0] << 1) + ((code >> 2) & 1);
 }
 
 /**
