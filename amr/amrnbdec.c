@@ -398,6 +398,20 @@ static void decode_pitch_vector(AMRContext *p,
 /// @{
 
 /**
+ * Decode a 10-bit algebraic codebook index from a 10.2 kbit/s frame.
+ */
+static void decode_10bit_pulse(int code, int pulse_position[8],
+                               int i1, int i2, int i3)
+{
+    // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
+    // the 3 pulses and the upper 7 bits being coded in base 5
+    int temp = code >> 3;
+    pulse_position[i1] = (( temp       % 5) << 1) + ( code       & 1);
+    pulse_position[i2] = (((temp /  5) % 5) << 1) + ((code >> 1) & 1);
+    pulse_position[i3] = (((temp / 25) % 5) << 1) + ((code >> 2) & 1);
+}
+
+/**
  * Decode the algebraic codebook index to pulse positions and signs and
  * construct the algebraic codebook vector for MODE_10k2.
  *
@@ -410,19 +424,8 @@ static void decode_8_pulses_31bits(const int16_t *fixed_index,
     int pulse_position[8];
     int i, temp;
 
-    // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
-    // the 3 pulses and the upper 7 bits being coded in base 5
-    temp = fixed_index[4] >> 3;
-    pulse_position[0] = (( temp       % 5) << 1) + ( fixed_index[4]       & 1);
-    pulse_position[4] = (((temp /  5) % 5) << 1) + ((fixed_index[4] >> 1) & 1);
-    pulse_position[1] = (((temp / 25) % 5) << 1) + ((fixed_index[4] >> 2) & 1);
-
-    // coded using 7+3 bits with the 3 LSBs being, individually, the LSB of 1 of
-    // the 3 pulses and the upper 7 bits being coded in base 5
-    temp = fixed_index[5] >> 3;
-    pulse_position[2] = (( temp       % 5) << 1) + ( fixed_index[5]       & 1);
-    pulse_position[6] = (((temp /  5) % 5) << 1) + ((fixed_index[5] >> 1) & 1);
-    pulse_position[5] = (((temp / 25) % 5) << 1) + ((fixed_index[5] >> 2) & 1);
+    decode_10bit_pulse(fixed_index[4], pulse_position, 0, 4, 1);
+    decode_10bit_pulse(fixed_index[5], pulse_position, 2, 6, 5);
 
     // coded using 5+2 bits with the 2 LSBs being, individually, the LSB of 1 of
     // the 2 pulses and the upper 5 bits being coded in base 5
