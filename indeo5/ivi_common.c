@@ -372,6 +372,8 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
 
                     /* de-zigzag and dequantize */
                     scan_pos += run;
+                    if (scan_pos >= num_coeffs)
+                        break;
                     pos = band->scan[scan_pos];
 
                 #ifdef IVI_DEBUG
