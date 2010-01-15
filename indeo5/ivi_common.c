@@ -493,7 +493,6 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band,
         for (mbn = 0, mb = tile->mbs; mbn < tile->num_MBs; mb++, mbn++) {
             mv_x = mb->mv_x;
             mv_y = mb->mv_y;
-            offs = mb->buf_offs;
             if (!band->is_halfpel) {
                 mc_type = 0; /* we have only fullpel vectors */
             } else {
@@ -504,12 +503,7 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band,
 
             for (blk = 0; blk < num_blocks; blk++) {
                 /* adjust block position in the buffer according with its number */
-                if (blk & 1) {
-                    offs += band->blk_size;
-                } else if (blk == 2) {
-                    offs -= band->blk_size;
-                    offs += band->blk_size * band->pitch;
-                }
+                offs = mb->buf_offs + band->blk_size * ((blk & 1) + !!(blk & 2) * band->pitch);
                 mc_no_delta_func(band->buf + offs,
                                  band->ref_buf + offs + mv_y * band->pitch + mv_x,
                                  band->pitch, mc_type);
