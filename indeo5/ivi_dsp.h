@@ -114,6 +114,17 @@ void ff_ivi_dc_row_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size
 void ff_ivi_dc_col_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
 
 /**
+ *  Copies the pixels into the frame buffer.
+ */
+void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
+
+/**
+ *  Copies the DC coefficient into the first pixel of the block and
+ *  zeroes all others.
+ */
+void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
+
+/**
  *  8x8 block motion compensation with adding delta
  *
  *  @param  buf     [in,out] pointer to the block in the current frame buffer containing delta

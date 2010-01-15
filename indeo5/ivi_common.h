@@ -304,17 +304,6 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band, IVITile
  */
 void ff_ivi_output_plane(const IVIPlaneDesc *plane, uint8_t *dst, const int dst_pitch);
 
-/**
- *  Copies the pixels into the frame buffer.
- */
-void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
-
-/**
- *  Copies the DC coefficient into the first pixel of the block and
- *  zeroes all others.
- */
-void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
-
 #ifdef IVI_DEBUG
 /**
  *  Calculates band checksum from band data.

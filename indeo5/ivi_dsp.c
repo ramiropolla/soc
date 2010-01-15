@@ -381,6 +381,29 @@ void ff_ivi_dc_col_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size
     }
 }
 
+void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch,
+                           uint8_t *flags)
+{
+    int     x, y;
+
+    for (y = 0; y < 8; out += pitch, in += 8, y++)
+        for (x = 0; x < 8; x++)
+            out[x] = in[x];
+}
+
+void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch,
+                             int blk_size)
+{
+    int     y;
+
+    out[0] = in[0];
+    memset(&out[1], 0, 7*sizeof(int16_t));
+    out += pitch;
+
+    for (y = 1; y < 8; out += pitch, y++)
+        memset(out, 0, 8*sizeof(int16_t));
+}
+
 void ff_ivi_mc_8x8_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type)
 {
     int     i, j;

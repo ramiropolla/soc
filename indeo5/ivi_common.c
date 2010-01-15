@@ -252,29 +252,6 @@ int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width,
     return 0;
 }
 
-void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch,
-                           uint8_t *flags)
-{
-    int     x, y;
-
-    for (y = 0; y < 8; out += pitch, in += 8, y++)
-        for (x = 0; x < 8; x++)
-            out[x] = in[x];
-}
-
-void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch,
-                             int blk_size)
-{
-    int     y;
-
-    out[0] = in[0];
-    memset(&out[1], 0, 7*sizeof(int16_t));
-    out += pitch;
-
-    for (y = 1; y < 8; out += pitch, y++)
-        memset(out, 0, 8*sizeof(int16_t));
-}
-
 int ff_ivi_dec_tile_data_size(GetBitContext *gb)
 {
     int    len;
