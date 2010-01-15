@@ -215,7 +215,7 @@ int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width,
                 for (x = 0; x < band->width; x += t_width) {
                     tile->xpos     = x;
                     tile->ypos     = y;
-                    tile->width    = FFMIN(band->width - x, t_width);
+                    tile->width    = FFMIN(band->width - x,  t_width);
                     tile->height   = FFMIN(band->height - y, t_height);
                     tile->is_empty = tile->data_size = 0;
                     /* calculate number of macroblocks */
