@@ -102,10 +102,8 @@ int ff_ivi_dec_huff_desc(GetBitContext *gb, IVIHuffDesc *desc)
 
 int ff_ivi_huff_desc_cmp(const IVIHuffDesc *desc1, const IVIHuffDesc *desc2)
 {
-    if (desc1->num_rows != desc2->num_rows ||
-                           memcmp(desc1->xbits, desc2->xbits, desc1->num_rows))
-        return 1;
-    return 0;
+    return    desc1->num_rows != desc2->num_rows
+           || memcmp(desc1->xbits, desc2->xbits, desc1->num_rows);
 }
 
 void ff_ivi_huff_desc_copy(IVIHuffDesc *dst, const IVIHuffDesc *src)
@@ -143,7 +141,7 @@ int av_cold ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg)
 
         /* luma   band buffers will be aligned on 16x16 (max macroblock size) */
         /* chroma band buffers will be aligned on   8x8 (max macroblock size) */
-        align_fac       = !p ? 15 : 7;
+        align_fac       = p ? 7 : 15;
         width_aligned   = (b_width  + align_fac) & ~align_fac;
         height_aligned  = (b_height + align_fac) & ~align_fac;
         buf_size        = width_aligned * height_aligned * sizeof(int16_t);
