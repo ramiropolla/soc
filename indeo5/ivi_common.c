@@ -42,7 +42,7 @@ static uint16_t inv_bits(const uint16_t val, const int nbits)
     uint16_t res;
 
     if (nbits <= 8) {
-        res = av_reverse[val & 0xFF] >> (8-nbits);
+        res = av_reverse[val] >> (8-nbits);
     } else
         res = ((av_reverse[val & 0xFF] << 8) + (av_reverse[val >> 8])) >> (16-nbits);
 
