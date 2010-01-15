@@ -323,7 +323,7 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
         if (!is_intra) {
             mv_x = mb->mv_x;
             mv_y = mb->mv_y;
-            if (!band->mc_resolution) {
+            if (!band->is_halfpel) {
                 mc_type = 0; /* we have only fullpel vectors */
             } else {
                 mc_type = ((mv_y & 1) << 1) | (mv_x & 1);
@@ -496,7 +496,7 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band,
             mv_x = mb->mv_x;
             mv_y = mb->mv_y;
             offs = mb->buf_offs;
-            if (!band->mc_resolution) {
+            if (!band->is_halfpel) {
                 mc_type = 0; /* we have only fullpel vectors */
             } else {
                 mc_type = ((mv_y & 1) << 1) | (mv_x & 1);

@@ -111,7 +111,7 @@ typedef struct {
     uint8_t         is_empty;       ///< = 1 if this band doesn't contain any data
     uint8_t         mb_size;        ///< macroblock size
     uint8_t         blk_size;       ///< block size
-    uint8_t         mc_resolution;  ///< resolution of the motion compensation: 0 - fullpel, 1 - halfpel
+    uint8_t         is_halfpel;     ///< precision of the motion compensation: 0 - fullpel, 1 - halfpel
     int8_t          inherit_mv;
     int8_t          inherit_qdelta;
     int8_t          qdelta_present; ///< tells if Qdelta signal is present in the bitstream (Indeo5 only)

@@ -172,7 +172,7 @@ static int decode_gop_header(IVI5DecContext *ctx, AVCodecContext *avctx)
         for (i = 0; i < (!p ? pic_conf.luma_bands : pic_conf.chroma_bands); i++) {
             band = &ctx->planes[p].bands[i]; /* select appropriate plane/band */
 
-            band->mc_resolution = get_bits1(&ctx->gb);
+            band->is_halfpel = get_bits1(&ctx->gb);
 
             /* decode block and macroblock sizes */
             mb_size  = get_bits1(&ctx->gb);
@@ -248,7 +248,7 @@ static int decode_gop_header(IVI5DecContext *ctx, AVCodecContext *avctx)
         band2->height        = band1->height;
         band2->mb_size       = band1->mb_size;
         band2->blk_size      = band1->blk_size;
-        band2->mc_resolution = band1->mc_resolution;
+        band2->is_halfpel    = band1->is_halfpel;
         band2->quant_mat     = band1->quant_mat;
         band2->scan          = band1->scan;
         band2->inv_transform = band1->inv_transform;
