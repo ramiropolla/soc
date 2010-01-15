@@ -132,6 +132,8 @@ int av_cold ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg)
 
     for (p = 0; p < 3; p++) {
         planes[p].bands = av_mallocz(planes[p].num_bands * sizeof(IVIBandDesc));
+        if (!planes[p].bands)
+            return AVERROR(ENOMEM);
 
         /* select band dimensions: if there is only one band then it
          *  has the full size, if there are several bands each of them
@@ -155,10 +157,15 @@ int av_cold ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg)
             band->pitch    = width_aligned;
             band->bufs[0]  = av_malloc(buf_size);
             band->bufs[1]  = av_malloc(buf_size);
+            if (!band->bufs[0] || !band->bufs[1])
+                return AVERROR(ENOMEM);
 
             /* allocate the 3rd band buffer for scalability mode */
-            if (cfg->luma_bands > 1)
+            if (cfg->luma_bands > 1) {
                 band->bufs[2] = av_malloc(buf_size);
+                if (!band->bufs[2])
+                    return AVERROR(ENOMEM);
+            }
 
             planes[p].bands[0].huff_desc.num_rows = 0; /* reset custom vlc */
         }
@@ -204,6 +211,8 @@ int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width,
 
             av_freep(&band->tiles);
             band->tiles = av_mallocz(band->num_tiles * sizeof(IVITile));
+            if (!band->tiles)
+                return AVERROR(ENOMEM);
 
             tile = band->tiles;
 
@@ -224,6 +233,8 @@ int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width,
 
                     av_freep(&tile->mbs);
                     tile->mbs = av_malloc(tile->num_MBs * sizeof(IVIMbInfo));
+                    if (!tile->mbs)
+                        return AVERROR(ENOMEM);
 
                     tile->ref_mbs = 0;
                     if (p || b) {
