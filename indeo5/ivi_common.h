@@ -112,10 +112,10 @@ typedef struct {
     uint8_t         mb_size;        ///< macroblock size
     uint8_t         blk_size;       ///< block size
     uint8_t         is_halfpel;     ///< precision of the motion compensation: 0 - fullpel, 1 - halfpel
-    int8_t          inherit_mv;
-    int8_t          inherit_qdelta;
+    int8_t          inherit_mv;     ///< tells if motion vector is inherited from reference macroblock
+    int8_t          inherit_qdelta; ///< tells if quantiser delta is inherited from reference macroblock
     int8_t          qdelta_present; ///< tells if Qdelta signal is present in the bitstream (Indeo5 only)
-    uint8_t         quant_mat;      ///< dequant matrix
+    uint8_t         quant_mat;      ///< dequant matrix index
     uint8_t         glob_quant;     ///< quant base for this band
     const uint8_t   *scan;          ///< ptr to the scan pattern
 
@@ -140,10 +140,10 @@ typedef struct {
     int32_t         checksum_present;
     uint32_t        bufsize;         ///< band buffer size in bytes
 #endif
-    const uint8_t   *intra_base;
-    const uint8_t   *inter_base;
-    const uint8_t   *intra_scale;
-    const uint8_t   *inter_scale;
+    const uint8_t   *intra_base;     ///< quantization matrix for intra blocks
+    const uint8_t   *inter_base;     ///< quantization matrix for inter blocks
+    const uint8_t   *intra_scale;    ///< quantization coefficient for intra blocks
+    const uint8_t   *inter_scale;    ///< quantization coefficient for inter blocks
 } IVIBandDesc;
 
 
