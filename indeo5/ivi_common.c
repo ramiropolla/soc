@@ -138,8 +138,8 @@ int av_cold ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg)
         /* select band dimensions: if there is only one band then it
          *  has the full size, if there are several bands each of them
          *  has only half size */
-        b_width  = planes[p].num_bands == 1 ? planes[p].width  : planes[p].width  >> 1;
-        b_height = planes[p].num_bands == 1 ? planes[p].height : planes[p].height >> 1;
+        b_width  = planes[p].num_bands == 1 ? planes[p].width  : (planes[p].width  + 1) >> 1;
+        b_height = planes[p].num_bands == 1 ? planes[p].height : (planes[p].height + 1) >> 1;
 
         /* luma   band buffers will be aligned on 16x16 (max macroblock size) */
         /* chroma band buffers will be aligned on   8x8 (max macroblock size) */
