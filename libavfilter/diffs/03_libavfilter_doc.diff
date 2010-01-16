@@ -1,6 +1,6 @@
 Index: doc/libavfilter.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 21177)
+--- doc/libavfilter.texi	(revision 21242)
 +++ doc/libavfilter.texi	(working copy)
 @@ -111,6 +111,20 @@
  
@@ -137,14 +137,10 @@ Index: doc/libavfilter.texi
  @section vflip
  
  Flip the input video vertically.
-@@ -197,4 +297,34 @@
- ./ffmpeg -i in.avi -vfilters "vflip" out.avi
- @end example
+@@ -201,6 +301,32 @@
  
-+@chapter Available video sources
-+
-+Below is a description of the currently available video sources.
-+
+ Below is a description of the currently available video sources.
+ 
 +@section buffer
 +
 +This input filter is used by the client application to feed pictures to
@@ -171,4 +167,6 @@ Index: doc/libavfilter.texi
 +ffmpeg -i in.avi -s 240x320 -vfilters "[in]setpts=PTS-STARTPTS, [T1]overlay=16:16[out]; movie=3200000:avi:in.avi, scale=180:144, setpts=PTS-STARTPTS[T1]" -y out.avi
 +@end example
 +
- @bye
+ @section nullsrc
+ 
+ Null video source, never return images. It is mainly useful as a
