@@ -32,7 +32,6 @@
 #include <stdint.h>
 
 #include "libavutil/common.h"      /* offsetof */
-#include "libavutil/mathematics.h" /* M_PI */
 
 #define AMR_SUBFRAME_SIZE            40   ///< samples per subframe
 
