@@ -159,9 +159,8 @@ static av_cold int amrnb_decode_init(AVCodecContext *avctx)
     p->excitation = &p->excitation_buf[PITCH_DELAY_MAX + LP_FILTER_ORDER + 1];
 
     for (i = 0; i < LP_FILTER_ORDER; i++) {
-        p->prev_lsp_sub4[i] = lsp_sub4_init[i] * 1000 / (float)(1 << 15);
-        p->lsf_avg[i]       =
-        p->lsf_q[3][i]      = lsp_avg_init[i]         / (float)(1 << 15);
+        p->prev_lsp_sub4[i] =    lsp_sub4_init[i] * 1000 / (float)(1 << 15);
+        p->lsf_avg[i] = p->lsf_q[3][i] = lsp_avg_init[i] / (float)(1 << 15);
     }
 
     for (i = 0; i < 4; i++)
