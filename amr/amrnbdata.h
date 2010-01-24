@@ -34,21 +34,7 @@
 #include "libavutil/common.h"      /* offsetof */
 #include "libavutil/mathematics.h" /* M_PI */
 
-#define AMR_BLOCK_SIZE              160   ///< samples per frame
 #define AMR_SUBFRAME_SIZE            40   ///< samples per subframe
-#define AMR_SAMPLE_BOUND        32768.0   ///< threshold for synthesis overflow
-
-/**
- * Scale from constructed speech to [-1,1]
- *
- * AMR is designed to produce 16-bit PCM samples (3GPP TS 26.090 4.2) but
- * upscales by two (section 6.2.2).
- *
- * Fundamentally, this scale is determined by energy_mean through
- * the fixed vector contribution to the excitation vector.
- */
-#define AMR_SAMPLE_SCALE  (2.0 / 32768.0)
-
 
 /** Frame type (Table 1a in 3GPP TS 26.101) */
 enum Mode {
@@ -1449,14 +1435,6 @@ static const float pred_fac[LP_FILTER_ORDER] = {
     0.355560, 0.323120, 0.298065, 0.262238, 0.197876,
 };
 
-/** Prediction factor for 12.2kbit/s mode */
-#define PRED_FAC_MODE_12k2             0.65
-
-#define LSF_R_FAC          (8000.0 / 32768.0) ///< LSF residual tables to Hertz
-#define MIN_LSF_SPACING             50.0488   ///< Ensures stability of LPC filter
-#define PITCH_LAG_MIN_MODE_12k2          18   ///< Lower bound on decoded lag search in 12.2kbit/s mode
-
-
 // fixed tables
 
 /**
@@ -1474,9 +1452,6 @@ static const uint8_t gray_decode[8] = { 0, 5, 15, 10, 25, 30, 20, 35 };
 
 
 // gain tables
-
-/** Initial energy in dB. Also used for bad frames (unimplemented). */
-#define MIN_ENERGY -14.0
 
 /** scalar quantized pitch gain table for 7.95 and 12.2 kbps modes */
 static const uint16_t qua_gain_pit[16] = {
@@ -1664,13 +1639,6 @@ static const uint16_t gains_low[64][2] = {
 
 // pre-processing tables
 
-/** Maximum sharpening factor
- *
- * The specification says 0.8, which should be 13107, but the reference C code
- * uses 13017 instead. (Amusingly the same applies to SHARP_MAX in g729dec.c.)
- */
-#define SHARP_MAX 0.79449462890625
-
 /** impulse response filter tables converted to float from Q15 int32_t
  * used for anti-sparseness processing */
 static const float ir_filter_strong_MODE_7k95[AMR_SUBFRAME_SIZE] = {
@@ -1706,15 +1674,6 @@ static const float *ir_filters_lookup[2]           = {
 static const float *ir_filters_lookup_MODE_7k95[2] = {
     ir_filter_strong_MODE_7k95, ir_filter_medium
 };
-
-
-/** Number of impulse response coefficients used for tilt factor */
-#define AMR_TILT_RESPONSE   22
-/** Tilt factor = 1st reflection coefficient * gamma_t */
-#define AMR_TILT_GAMMA_T   0.8
-/** Adaptive gain control factor used in post-filter */
-#define AMR_AGC_ALPHA      0.9
-
 
 // High-pass coefficients
 

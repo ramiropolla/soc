@@ -55,6 +55,44 @@
 
 #include "amrnbdata.h"
 
+#define AMR_BLOCK_SIZE              160   ///< samples per frame
+#define AMR_SAMPLE_BOUND        32768.0   ///< threshold for synthesis overflow
+
+/**
+ * Scale from constructed speech to [-1,1]
+ *
+ * AMR is designed to produce 16-bit PCM samples (3GPP TS 26.090 4.2) but
+ * upscales by two (section 6.2.2).
+ *
+ * Fundamentally, this scale is determined by energy_mean through
+ * the fixed vector contribution to the excitation vector.
+ */
+#define AMR_SAMPLE_SCALE  (2.0 / 32768.0)
+
+/** Prediction factor for 12.2kbit/s mode */
+#define PRED_FAC_MODE_12k2             0.65
+
+#define LSF_R_FAC          (8000.0 / 32768.0) ///< LSF residual tables to Hertz
+#define MIN_LSF_SPACING             50.0488   ///< Ensures stability of LPC filter
+#define PITCH_LAG_MIN_MODE_12k2          18   ///< Lower bound on decoded lag search in 12.2kbit/s mode
+
+/** Initial energy in dB. Also used for bad frames (unimplemented). */
+#define MIN_ENERGY -14.0
+
+/** Maximum sharpening factor
+ *
+ * The specification says 0.8, which should be 13107, but the reference C code
+ * uses 13017 instead. (Amusingly the same applies to SHARP_MAX in g729dec.c.)
+ */
+#define SHARP_MAX 0.79449462890625
+
+/** Number of impulse response coefficients used for tilt factor */
+#define AMR_TILT_RESPONSE   22
+/** Tilt factor = 1st reflection coefficient * gamma_t */
+#define AMR_TILT_GAMMA_T   0.8
+/** Adaptive gain control factor used in post-filter */
+#define AMR_AGC_ALPHA      0.9
+
 typedef struct AMRContext {
     AMRNBFrame                        frame; ///< decoded AMR parameters (lsf coefficients, codebook indexes, etc)
     uint8_t             bad_frame_indicator; ///< bad frame ? 1 : 0
