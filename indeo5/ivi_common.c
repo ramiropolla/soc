@@ -285,9 +285,9 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
     prev_dc = 0; /* init intra prediction for the DC coefficient */
 
     blk_size   = band->blk_size;
-    col_mask   = (blk_size == 8) ? 7 : 3; /* column mask for tracking non-zero coeffs */
+    col_mask   = blk_size - 1; /* column mask for tracking non-zero coeffs */
     num_blocks = (band->mb_size != blk_size) ? 4 : 1; /* number of blocks per mb */
-    num_coeffs = 16 << ((blk_size >> 2) & 2); /* 64 - for 8x8 block, 16 - for 4x4 */
+    num_coeffs = blk_size * blk_size;
     if (blk_size == 8) {
         mc_with_delta_func = ff_ivi_mc_8x8_delta;
         mc_no_delta_func   = ff_ivi_mc_8x8_no_delta;
@@ -303,8 +303,8 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
 
         quant = av_clip(band->glob_quant + mb->q_delta, 0, 23);
 
-        base_tab  = (is_intra) ? band->intra_base  : band->inter_base;
-        scale_tab = (is_intra) ? band->intra_scale : band->inter_scale;
+        base_tab  = is_intra ? band->intra_base  : band->inter_base;
+        scale_tab = is_intra ? band->intra_scale : band->inter_scale;
 
         if (!is_intra) {
             mv_x = mb->mv_x;
@@ -359,10 +359,8 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
                 #endif
 
                     q = (base_tab[pos] * scale_tab[quant]) >> 8;
-                    q += !q; // ensure the q always >= 1
-                    if (q > 1) {
+                    if (q > 1)
                         val = val * q + FFSIGN(val) * ((q >> 1) - (q & 1));
-                    }
                     trvec[pos] = val;
                     col_flags[pos & col_mask] |= val; /* track columns containing non-zero coeffs */
                 }// while
