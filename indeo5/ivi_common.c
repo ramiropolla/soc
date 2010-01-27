@@ -37,7 +37,7 @@
  *  Reverses "nbits" bits of the value "val" and returns the result
  *  in the least significant bits.
  */
-static uint16_t inv_bits(const uint16_t val, const int nbits)
+static uint16_t inv_bits(uint16_t val, int nbits)
 {
     uint16_t res;
 
