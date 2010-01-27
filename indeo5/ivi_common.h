@@ -45,7 +45,6 @@ typedef struct {
     uint8_t     xbits[16];
 } IVIHuffDesc;
 
-/* see ivi_common.c for a definition */
 extern const IVIHuffDesc ff_ivi_mb_huff_desc[8];  ///< static macroblock huffman tables
 extern const IVIHuffDesc ff_ivi_blk_huff_desc[8]; ///< static block huffman tables
 
@@ -60,7 +59,7 @@ typedef struct {
     int8_t      valtab[256];
 } RVMapDesc;
 
-extern const RVMapDesc ff_ivi_rvmap_tabs[9]; /* defined in ivi_common.c */
+extern const RVMapDesc ff_ivi_rvmap_tabs[9];
 
 
 /**
