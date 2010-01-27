@@ -329,7 +329,7 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
 
             if (cbp & 1) { /* block coded ? */
                 scan_pos = -1;
-                memset(trvec, 0, num_coeffs*sizeof(int32_t)); /* zero transform vector */
+                memset(trvec, 0, num_coeffs*sizeof(trvec[0])); /* zero transform vector */
                 memset(col_flags, 0, sizeof(col_flags));      /* zero column flags */
 
                 while (scan_pos <= num_coeffs) {
@@ -501,7 +501,7 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band,
         src = &band->ref_buf[tile->ypos * band->pitch + tile->xpos];
         dst = &band->buf[tile->ypos * band->pitch + tile->xpos];
         for (y = 0; y < tile->height; y++) {
-            memcpy(dst, src, tile->width*sizeof(int16_t));
+            memcpy(dst, src, tile->width*sizeof(band->buf[0]));
             src += band->pitch;
             dst += band->pitch;
         }

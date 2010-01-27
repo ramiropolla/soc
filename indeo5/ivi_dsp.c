@@ -243,7 +243,7 @@ void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t
     src = tmp;
     for (i = 0; i < 8; i++) {
         if (!src[0] && !src[1] && !src[2] && !src[3] && !src[4] && !src[5] && !src[6] && !src[7]) {
-            memset(out, 0, 8*sizeof(int16_t));
+            memset(out, 0, 8*sizeof(out[0]));
         } else {
             IVI_INV_SLANT8(src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7],
                            out[0], out[1], out[2], out[3], out[4], out[5], out[6], out[7]);
@@ -311,7 +311,7 @@ void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags
 #define COMPENSATE(x) ((x + 1)>>1)
     for (i = 0; i < 8; i++) {
         if (!in[0] && !in[1] && !in[2] && !in[3] && !in[4] && !in[5] && !in[6] && !in[7]) {
-            memset(out, 0, 8*sizeof(int16_t));
+            memset(out, 0, 8*sizeof(out[0]));
         } else {
             IVI_INV_SLANT8( in[0],  in[1],  in[2],  in[3],  in[4],  in[5],  in[6],  in[7],
                            out[0], out[1], out[2], out[3], out[4], out[5], out[6], out[7]);
@@ -397,11 +397,11 @@ void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch,
     int     y;
 
     out[0] = in[0];
-    memset(&out[1], 0, 7*sizeof(int16_t));
+    memset(&out[1], 0, 7*sizeof(out[0]));
     out += pitch;
 
     for (y = 1; y < 8; out += pitch, y++)
-        memset(out, 0, 8*sizeof(int16_t));
+        memset(out, 0, 8*sizeof(out[0]));
 }
 
 void ff_ivi_mc_8x8_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type)
