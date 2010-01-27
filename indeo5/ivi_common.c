@@ -35,7 +35,7 @@
 
 /**
  *  Reverses "nbits" bits of the value "val" and returns the result
- *  right-justified.
+ *  in the least significant bits.
  */
 static uint16_t inv_bits(const uint16_t val, const int nbits)
 {
