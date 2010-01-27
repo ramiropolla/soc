@@ -216,7 +216,7 @@ void ff_ivi_recompose53(const IVIPlaneDesc *plane, uint8_t *dst,
     d3 = COMPENSATE(s3);\
     d4 = COMPENSATE(s4);}
 
-void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags)
+void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, const uint8_t *flags)
 {
     int     i, t1;
     int32_t *src, *dst, tmp[64];
@@ -254,7 +254,7 @@ void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t
 #undef COMPENSATE
 }
 
-void ff_ivi_inverse_slant_4x4(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags)
+void ff_ivi_inverse_slant_4x4(int32_t *in, int16_t *out, uint32_t pitch, const uint8_t *flags)
 {
     int     i, t1;
     int32_t *src, *dst, tmp[16];
@@ -289,7 +289,7 @@ void ff_ivi_inverse_slant_4x4(int32_t *in, int16_t *out, uint32_t pitch, uint8_t
 #undef COMPENSATE
 }
 
-void ff_ivi_dc_slant_2d(int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
+void ff_ivi_dc_slant_2d(const int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
 {
     int     x, y;
     int16_t dc_coeff;
@@ -302,7 +302,7 @@ void ff_ivi_dc_slant_2d(int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
     }
 }
 
-void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags)
+void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, const uint8_t *flags)
 {
     int     i, t1;
 
@@ -322,7 +322,7 @@ void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags
 #undef COMPENSATE
 }
 
-void ff_ivi_dc_row_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
+void ff_ivi_dc_row_slant(const int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
 {
     int     x, y;
     int16_t dc_coeff;
@@ -340,7 +340,7 @@ void ff_ivi_dc_row_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size
     }
 }
 
-void ff_ivi_col_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags)
+void ff_ivi_col_slant8(int32_t *in, int16_t *out, uint32_t pitch, const uint8_t *flags)
 {
     int     i, t1, row2, row4, row8;
 
@@ -367,7 +367,7 @@ void ff_ivi_col_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags
 #undef COMPENSATE
 }
 
-void ff_ivi_dc_col_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
+void ff_ivi_dc_col_slant(const int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
 {
     int     x, y;
     int16_t dc_coeff;
@@ -382,7 +382,7 @@ void ff_ivi_dc_col_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size
 }
 
 void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch,
-                           uint8_t *flags)
+                           const uint8_t *flags)
 {
     int     x, y;
 
@@ -391,7 +391,7 @@ void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch,
             out[x] = in[x];
 }
 
-void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch,
+void ff_ivi_put_dc_pixel_8x8(const int32_t *in, int16_t *out, uint32_t pitch,
                              int blk_size)
 {
     int     y;

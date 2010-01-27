@@ -53,7 +53,7 @@ void ff_ivi_recompose53(const IVIPlaneDesc *plane, uint8_t *dst,
  *                        != 0 - non_empty column, 0 - empty one
  *                        (this array must be filled by caller)
  */
-void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
+void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, const uint8_t *flags);
 
 /**
  *  two-dimensional inverse slant 4x4 transform
@@ -65,7 +65,7 @@ void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t
  *                        != 0 - non_empty column, 0 - empty one
  *                        (this array must be filled by caller)
  */
-void ff_ivi_inverse_slant_4x4(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
+void ff_ivi_inverse_slant_4x4(int32_t *in, int16_t *out, uint32_t pitch, const uint8_t *flags);
 
 /**
  *  DC-only two-dimensional inverse slant transform.
@@ -78,7 +78,7 @@ void ff_ivi_inverse_slant_4x4(int32_t *in, int16_t *out, uint32_t pitch, uint8_t
  *  @param  pitch       [in]  pitch to move to the next y line
  *  @param  blk_size    [in]  transform block size
  */
-void ff_ivi_dc_slant_2d(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
+void ff_ivi_dc_slant_2d(const int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
 
 /**
  *  inverse 1D row slant transform
@@ -88,7 +88,7 @@ void ff_ivi_dc_slant_2d(int32_t *in, int16_t *out, uint32_t pitch, int blk_size)
  *  @param  pitch   [in]  pitch to move to the next y line
  *  @param  flags   [in]  pointer to the array of column flags (unused here)
  */
-void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
+void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, const uint8_t *flags);
 
 /**
  *  inverse 1D column slant transform
@@ -100,28 +100,28 @@ void ff_ivi_row_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags
  *                        != 0 - non_empty column, 0 - empty one
  *                        (this array must be filled by caller)
  */
-void ff_ivi_col_slant8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
+void ff_ivi_col_slant8(int32_t *in, int16_t *out, uint32_t pitch, const uint8_t *flags);
 
 /**
  *  DC-only inverse row slant transform
  */
-void ff_ivi_dc_row_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
+void ff_ivi_dc_row_slant(const int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
 
 /**
  *  DC-only inverse column slant transform
  */
-void ff_ivi_dc_col_slant(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
+void ff_ivi_dc_col_slant(const int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
 
 /**
  *  Copies the pixels into the frame buffer.
  */
-void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
+void ff_ivi_put_pixels_8x8(int32_t *in, int16_t *out, uint32_t pitch, const uint8_t *flags);
 
 /**
  *  Copies the DC coefficient into the first pixel of the block and
  *  zeroes all others.
  */
-void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
+void ff_ivi_put_dc_pixel_8x8(const int32_t *in, int16_t *out, uint32_t pitch, int blk_size);
 
 /**
  *  8x8 block motion compensation with adding delta

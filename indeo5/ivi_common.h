@@ -253,7 +253,7 @@ void ff_ivi_free_buffers(IVIPlaneDesc *planes);
  *  @param tile_height  [in]     tile height
  *  @return             result code: 0 - OK
  */
-int  ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width, const int tile_height);
+int  ff_ivi_init_tiles(IVIPlaneDesc *planes, int tile_width, int tile_height);
 
 /**
  *  Decodes size of the tile data.
@@ -300,7 +300,7 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band, IVITile
  *  @param dst          [out] pointer to the buffer receiving converted pixels
  *  @param dst_pitch    [in]  pitch for moving to the next y line
  */
-void ff_ivi_output_plane(const IVIPlaneDesc *plane, uint8_t *dst, const int dst_pitch);
+void ff_ivi_output_plane(IVIPlaneDesc *plane, uint8_t *dst, int dst_pitch);
 
 #if IVI_DEBUG
 /**

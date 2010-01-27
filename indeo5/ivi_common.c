@@ -192,8 +192,7 @@ void av_cold ff_ivi_free_buffers(IVIPlaneDesc *planes)
     }
 }
 
-int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, const int tile_width,
-                              const int tile_height)
+int av_cold ff_ivi_init_tiles(IVIPlaneDesc *planes, int tile_width, int tile_height)
 {
     int         p, b, x, y, x_tiles, y_tiles, t_width, t_height;
     IVIBandDesc *band;
@@ -278,8 +277,8 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
     uint32_t    cbp, sym, lo, hi, quant, buf_offs, q;
     IVIMbInfo   *mb;
     RVMapDesc   *rvmap = band->rv_map;
-    void (*mc_with_delta_func)(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type);
-    void (*mc_no_delta_func)  (int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type);
+    void (*mc_with_delta_func)(int16_t *buf, const int16_t *ref_buf, uint32_t pitch, int mc_type);
+    void (*mc_no_delta_func)  (int16_t *buf, const int16_t *ref_buf, uint32_t pitch, int mc_type);
     const uint8_t   *base_tab, *scale_tab;
 
     prev_dc = 0; /* init intra prediction for the DC coefficient */
@@ -412,7 +411,7 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band,
     IVIMbInfo       *mb, *ref_mb;
     const int16_t   *src;
     int16_t         *dst;
-    void (*mc_no_delta_func)(int16_t *buf, int16_t *ref_buf, uint32_t pitch,
+    void (*mc_no_delta_func)(int16_t *buf, const int16_t *ref_buf, uint32_t pitch,
                              int mc_type);
 
     offs       = tile->ypos * band->pitch + tile->xpos;
@@ -514,7 +513,7 @@ uint16_t ivi_calc_band_checksum (IVIBandDesc *band)
     return checksum;
 }
 
-int ivi_check_band (IVIBandDesc *band, uint8_t *ref, int pitch)
+int ivi_check_band (IVIBandDesc *band, const uint8_t *ref, int pitch)
 {
     int         x, y, result;
     uint8_t     t1, t2;
@@ -540,7 +539,7 @@ int ivi_check_band (IVIBandDesc *band, uint8_t *ref, int pitch)
 }
 #endif
 
-void ff_ivi_output_plane(const IVIPlaneDesc *plane, uint8_t *dst, const int dst_pitch)
+void ff_ivi_output_plane(IVIPlaneDesc *plane, uint8_t *dst, int dst_pitch)
 {
     int             x, y;
     const int16_t   *src  = plane->bands[0].buf;
