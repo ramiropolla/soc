@@ -52,7 +52,7 @@ static uint16_t inv_bits(uint16_t val, int nbits)
 int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *vlc,
                                  const int flag)
 {
-    int         pos, i, j, codes_per_row, prefix, last_row;
+    int         pos, i, j, codes_per_row, prefix, not_last_row;
     uint16_t    codewords[256]; /* FIXME: move this temporal storage out? */
     uint8_t     bits[256];
 
@@ -60,14 +60,14 @@ int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *vlc,
 
     for (i = 0; i < cb->num_rows; i++) {
         codes_per_row = 1 << cb->xbits[i];
-        last_row      = !!(i - cb->num_rows + 1); /* = 0 for the last row */
-        prefix        = ((1 << i) - 1) << (cb->xbits[i] + last_row);
+        not_last_row  = (i != cb->num_rows - 1);
+        prefix        = ((1 << i) - 1) << (cb->xbits[i] + not_last_row);
 
         for (j = 0; j < codes_per_row; j++) {
             if (pos >= 256) /* Some Indeo5 codebooks can have more than 256 */
                 break;      /* elements, but only 256 codes are allowed! */
 
-            bits[pos] = i + cb->xbits[i] + last_row;
+            bits[pos] = i + cb->xbits[i] + not_last_row;
             if (bits[pos] > IVI_VLC_BITS)
                 return -1; /* invalid descriptor */
 
