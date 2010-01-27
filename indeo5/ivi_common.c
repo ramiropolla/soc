@@ -49,7 +49,7 @@ static uint16_t inv_bits(uint16_t val, int nbits)
     return res;
 }
 
-int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *pOut,
+int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *vlc,
                                  const int flag)
 {
     int         pos, i, j, codes_per_row, prefix, last_row;
@@ -80,7 +80,7 @@ int ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *pOut,
     }//for i
 
     /* number of codewords = pos */
-    return init_vlc(pOut, IVI_VLC_BITS, pos, bits, 1, 1, codewords, 2, 2,
+    return init_vlc(vlc, IVI_VLC_BITS, pos, bits, 1, 1, codewords, 2, 2,
                     (flag & 1) | INIT_VLC_LE);
 }
 

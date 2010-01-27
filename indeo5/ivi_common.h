@@ -198,11 +198,11 @@ static inline int ivi_pic_config_cmp(IVIPicConfig *str1, IVIPicConfig *str2)
  *  and converts it into the FFmpeg VLC table.
  *
  *  @param cb   [in]  pointer to codebook descriptor
- *  @param pOut [out] where to place the generated VLC table
+ *  @param vlc  [out] where to place the generated VLC table
  *  @param flag [in]  flag: 1 - for static or 0 for dynamic tables
  *  @return     result code: 0 - OK, -1 = error (invalid codebook descriptor)
  */
-int  ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *pOut, int flag);
+int  ff_ivi_create_huff_from_desc(const IVIHuffDesc *cb, VLC *vlc, int flag);
 
 /**
  *  Decodes a huffman codebook descriptor from the bitstream.
