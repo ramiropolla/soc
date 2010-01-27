@@ -131,7 +131,7 @@ void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch, int blk_
  *  @param  pitch   [in]     pitch for moving to the next y line
  *  @param  mc_type [in]     interpolation type
  */
-void ff_ivi_mc_8x8_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type);
+void ff_ivi_mc_8x8_delta(int16_t *buf, const int16_t *ref_buf, uint32_t pitch, int mc_type);
 
 /**
  *  4x4 block motion compensation with adding delta
@@ -141,7 +141,7 @@ void ff_ivi_mc_8x8_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_
  *  @param  pitch   [in]     pitch for moving to the next y line
  *  @param  mc_type [in]     interpolation type
  */
-void ff_ivi_mc_4x4_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type);
+void ff_ivi_mc_4x4_delta(int16_t *buf, const int16_t *ref_buf, uint32_t pitch, int mc_type);
 
 /**
  *  motion compensation without adding delta
@@ -151,7 +151,7 @@ void ff_ivi_mc_4x4_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_
  *  @param  pitch   [in]     pitch for moving to the next y line
  *  @param  mc_type [in]     interpolation type
  */
-void ff_ivi_mc_8x8_no_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type);
+void ff_ivi_mc_8x8_no_delta(int16_t *buf, const int16_t *ref_buf, uint32_t pitch, int mc_type);
 
 /**
  *  4x4 block motion compensation without adding delta
@@ -161,6 +161,6 @@ void ff_ivi_mc_8x8_no_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int 
  *  @param  pitch   [in]     pitch for moving to the next y line
  *  @param  mc_type [in]     interpolation type
  */
-void ff_ivi_mc_4x4_no_delta(int16_t *buf, int16_t *ref_buf, uint32_t pitch, int mc_type);
+void ff_ivi_mc_4x4_no_delta(int16_t *buf, const int16_t *ref_buf, uint32_t pitch, int mc_type);
 
 #endif /* AVCODEC_IVI_DSP_H */
