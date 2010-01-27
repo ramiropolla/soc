@@ -528,19 +528,12 @@ static int decode_mb_info(IVI5DecContext *ctx, IVIBandDesc *band,
                 mb->mv_x = mb->mv_y = 0; /* no motion vector coded */
                 if (band->inherit_mv){
                     /* motion vector inheritance */
-                    switch (mv_scale) {
-                    case 0:
+                    if (mv_scale) {
+                        mb->mv_x = ivi_scale_mv(ref_mb->mv_x, mv_scale);
+                        mb->mv_y = ivi_scale_mv(ref_mb->mv_y, mv_scale);
+                    } else {
                         mb->mv_x = ref_mb->mv_x;
                         mb->mv_y = ref_mb->mv_y;
-                        break;
-                    case 1:
-                        mb->mv_x = IVI_MV_DIV2(ref_mb->mv_x);
-                        mb->mv_y = IVI_MV_DIV2(ref_mb->mv_y);
-                        break;
-                    case 2:
-                        mb->mv_x = IVI_MV_DIV4(ref_mb->mv_x);
-                        mb->mv_y = IVI_MV_DIV4(ref_mb->mv_y);
-                        break;
                     }
                 }
             } else {
@@ -574,19 +567,12 @@ static int decode_mb_info(IVI5DecContext *ctx, IVIBandDesc *band,
                 } else {
                     if (band->inherit_mv){
                         /* motion vector inheritance */
-                        switch (mv_scale) {
-                        case 0:
+                        if (mv_scale) {
+                            mb->mv_x = ivi_scale_mv(ref_mb->mv_x, mv_scale);
+                            mb->mv_y = ivi_scale_mv(ref_mb->mv_y, mv_scale);
+                        } else {
                             mb->mv_x = ref_mb->mv_x;
                             mb->mv_y = ref_mb->mv_y;
-                            break;
-                        case 1:
-                            mb->mv_x = IVI_MV_DIV2(ref_mb->mv_x);
-                            mb->mv_y = IVI_MV_DIV2(ref_mb->mv_y);
-                            break;
-                        case 2:
-                            mb->mv_x = IVI_MV_DIV4(ref_mb->mv_x);
-                            mb->mv_y = IVI_MV_DIV4(ref_mb->mv_y);
-                            break;
                         }
                     } else {
                         /* decode motion vector deltas */

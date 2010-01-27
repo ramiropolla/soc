@@ -185,11 +185,11 @@ static inline int ivi_pic_config_cmp(IVIPicConfig *str1, IVIPicConfig *str2)
 /* TODO: find a way to calculate this without the conditional using bit magic */
 #define IVI_TOSIGNED(val) (((val) & 1) ? ((val) + 1) >> 1 : -(((val) + 1) >> 1))
 
-/** divide the motion vector mv by 4 */
-#define IVI_MV_DIV4(mv) (((mv) + 1 + ((mv) > 0))>>2)
-
-/** divide the motion vector mv by 2 */
-#define IVI_MV_DIV2(mv) (((mv) + ((mv) > 0))>>1)
+/** scales motion vector */
+static inline int ivi_scale_mv(int mv, int mv_scale)
+{
+    return (mv + (mv > 0) + (mv_scale - 1)) >> mv_scale;
+}
 
 /**
  *  Generates a huffman codebook from the given descriptor
