@@ -487,8 +487,8 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band,
         }
     } else {
         /* copy data from the reference tile into the current one */
-        src = &band->ref_buf[tile->ypos * band->pitch + tile->xpos];
-        dst = &band->buf[tile->ypos * band->pitch + tile->xpos];
+        src = band->ref_buf + tile->ypos * band->pitch + tile->xpos;
+        dst = band->buf     + tile->ypos * band->pitch + tile->xpos;
         for (y = 0; y < tile->height; y++) {
             memcpy(dst, src, tile->width*sizeof(band->buf[0]));
             src += band->pitch;

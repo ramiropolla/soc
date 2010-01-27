@@ -397,7 +397,7 @@ void ff_ivi_put_dc_pixel_8x8(int32_t *in, int16_t *out, uint32_t pitch,
     int     y;
 
     out[0] = in[0];
-    memset(&out[1], 0, 7*sizeof(out[0]));
+    memset(out + 1, 0, 7*sizeof(out[0]));
     out += pitch;
 
     for (y = 1; y < 8; out += pitch, y++)
