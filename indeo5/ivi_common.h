@@ -183,7 +183,7 @@ static inline int ivi_pic_config_cmp(IVIPicConfig *str1, IVIPicConfig *str2)
 
 /** convert unsigned values into signed ones (the sign is in the LSB) */
 /* TODO: find a way to calculate this without the conditional using bit magic */
-#define IVI_TOSIGNED(val) (((val) & 1) ? ((val) + 1) >> 1 : -(((val) + 1) >> 1))
+#define IVI_TOSIGNED(val) (-(((val) >> 1) ^ -((val) & 1)))
 
 /** scales motion vector */
 static inline int ivi_scale_mv(int mv, int mv_scale)
