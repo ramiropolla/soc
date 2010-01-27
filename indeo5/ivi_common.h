@@ -81,13 +81,13 @@ typedef struct {
  *  information for Indeo tile
  */
 typedef struct {
-    uint32_t    xpos;
-    uint32_t    ypos;
-    uint32_t    width;
-    uint32_t    height;
-    int32_t     is_empty;  ///< = 1 if this tile doesn't contain any data
-    uint32_t    data_size; ///< size of the data in bytes
-    uint32_t    num_MBs;   ///< number of macroblocks in this tile
+    int         xpos;
+    int         ypos;
+    int         width;
+    int         height;
+    int         is_empty;  ///< = 1 if this tile doesn't contain any data
+    int         data_size; ///< size of the data in bytes
+    int         num_MBs;   ///< number of macroblocks in this tile
     IVIMbInfo   *mbs;      ///< array of macroblock descriptors
     IVIMbInfo   *ref_mbs;  ///< ptr to the macroblock descriptors of the reference tile
 } IVITile;
@@ -97,50 +97,50 @@ typedef struct {
  *  information for Indeo wavelet band
  */
 typedef struct {
-    uint8_t         plane;          ///< plane number this band belongs to
-    uint8_t         band_num;       ///< band number
-    uint32_t        width;
-    uint32_t        height;
+    int             plane;          ///< plane number this band belongs to
+    int             band_num;       ///< band number
+    int             width;
+    int             height;
     const uint8_t   *data_ptr;      ///< ptr to the first byte of the band data
-    uint32_t        data_size;      ///< size of the band data
+    int             data_size;      ///< size of the band data
     int16_t         *buf;           ///< pointer to the output buffer for this band
     int16_t         *ref_buf;       ///< pointer to the reference frame buffer (for motion compensation)
     int16_t         *bufs[3];       ///< array of pointers to the band buffers
-    uint32_t        pitch;          ///< pitch associated with the buffers above
-    uint8_t         is_empty;       ///< = 1 if this band doesn't contain any data
-    uint8_t         mb_size;        ///< macroblock size
-    uint8_t         blk_size;       ///< block size
-    uint8_t         is_halfpel;     ///< precision of the motion compensation: 0 - fullpel, 1 - halfpel
-    int8_t          inherit_mv;     ///< tells if motion vector is inherited from reference macroblock
-    int8_t          inherit_qdelta; ///< tells if quantiser delta is inherited from reference macroblock
-    int8_t          qdelta_present; ///< tells if Qdelta signal is present in the bitstream (Indeo5 only)
-    uint8_t         quant_mat;      ///< dequant matrix index
-    uint8_t         glob_quant;     ///< quant base for this band
+    int             pitch;          ///< pitch associated with the buffers above
+    int             is_empty;       ///< = 1 if this band doesn't contain any data
+    int             mb_size;        ///< macroblock size
+    int             blk_size;       ///< block size
+    int             is_halfpel;     ///< precision of the motion compensation: 0 - fullpel, 1 - halfpel
+    int             inherit_mv;     ///< tells if motion vector is inherited from reference macroblock
+    int             inherit_qdelta; ///< tells if quantiser delta is inherited from reference macroblock
+    int             qdelta_present; ///< tells if Qdelta signal is present in the bitstream (Indeo5 only)
+    int             quant_mat;      ///< dequant matrix index
+    int             glob_quant;     ///< quant base for this band
     const uint8_t   *scan;          ///< ptr to the scan pattern
 
-    uint8_t         huff_sel;       ///< huffman table for this band
+    int             huff_sel;       ///< huffman table for this band
     IVIHuffDesc     huff_desc;      ///< table descriptor associated with the selector above
     VLC             *blk_vlc;       ///< ptr to the vlc table for decoding block data
     VLC             blk_vlc_cust;   ///< custom block vlc table
 
     uint16_t        *dequant_intra; ///< ptr to dequant tables for intra blocks
     uint16_t        *dequant_inter; ///< ptr dequant tables for inter blocks
-    uint8_t         num_corr;       ///< number of correction entries
+    int             num_corr;       ///< number of correction entries
     uint8_t         corr[61*2];     ///< rvmap correction pairs
-    uint8_t         rvmap_sel;      ///< rvmap table selector
+    int             rvmap_sel;      ///< rvmap table selector
     RVMapDesc       *rv_map;        ///< ptr to the RLE table for this band
-    uint16_t        num_tiles;      ///< number of tiles in this band
+    int             num_tiles;      ///< number of tiles in this band
     IVITile         *tiles;         ///< array of tile descriptors
-    void (*inv_transform)(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags); ///< inverse transform function pointer
-    void (*dc_transform) (int32_t *in, int16_t *out, uint32_t pitch, int blk_size);   ///< dc transform function pointer, it may be NULL
-    uint8_t         is_2d_trans;    ///< 1 indicates that the two-dimensional inverse transform is used
-    uint16_t        checksum;        ///< for debug purposes
-    int32_t         checksum_present;
-    uint32_t        bufsize;         ///< band buffer size in bytes
-    const uint8_t   *intra_base;     ///< quantization matrix for intra blocks
-    const uint8_t   *inter_base;     ///< quantization matrix for inter blocks
-    const uint8_t   *intra_scale;    ///< quantization coefficient for intra blocks
-    const uint8_t   *inter_scale;    ///< quantization coefficient for inter blocks
+    void (*inv_transform)(int32_t *in, int16_t *out, uint32_t pitch, const uint8_t *flags); ///< inverse transform function pointer
+    void (*dc_transform) (const int32_t *in, int16_t *out, uint32_t pitch, int blk_size);   ///< dc transform function pointer, it may be NULL
+    int             is_2d_trans;    ///< 1 indicates that the two-dimensional inverse transform is used
+    int32_t         checksum;       ///< for debug purposes
+    int             checksum_present;
+    int             bufsize;        ///< band buffer size in bytes
+    const uint8_t   *intra_base;    ///< quantization matrix for intra blocks
+    const uint8_t   *inter_base;    ///< quantization matrix for inter blocks
+    const uint8_t   *intra_scale;   ///< quantization coefficient for intra blocks
+    const uint8_t   *inter_scale;   ///< quantization coefficient for inter blocks
 } IVIBandDesc;
 
 
