@@ -68,8 +68,7 @@ void ff_ivi_inverse_slant_8x8(int32_t *in, int16_t *out, uint32_t pitch, uint8_t
 void ff_ivi_inverse_slant_4x4(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags);
 
 /**
- *  This is a speed-up version of the inverse 2D slant transforms
- *  for the case if there is a non-zero DC coeff and all AC coeffs are zero.
+ *  DC-only two-dimensional inverse slant transform.
  *  Performing the inverse slant transform in this case is equivalent to
  *  spreading (DC_coeff + 1)/2 over the whole block.
  *  It works much faster than performing the slant transform on a vector of zeroes.
