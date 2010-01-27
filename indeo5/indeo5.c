@@ -465,8 +465,9 @@ static int decode_band_hdr(IVI5DecContext *ctx, IVIBandDesc *band,
     if (get_bits1(&ctx->gb)) {
         band->checksum = get_bits(&ctx->gb, 16);
         band->checksum_present = 1;
-    } else
+    } else {
         band->checksum_present = 0;
+    }
 #else
     if (get_bits1(&ctx->gb))
         skip_bits(&ctx->gb, 16); /* ignore band checksum */
