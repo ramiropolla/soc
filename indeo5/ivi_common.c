@@ -143,9 +143,9 @@ int av_cold ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg)
 
         /* luma   band buffers will be aligned on 16x16 (max macroblock size) */
         /* chroma band buffers will be aligned on   8x8 (max macroblock size) */
-        align_fac       = p ? 7 : 15;
-        width_aligned   = (b_width  + align_fac) & ~align_fac;
-        height_aligned  = (b_height + align_fac) & ~align_fac;
+        align_fac       = p ? 8 : 16;
+        width_aligned   = FFALIGN(b_width , align_fac);
+        height_aligned  = FFALIGN(b_height, align_fac);
         buf_size        = width_aligned * height_aligned * sizeof(int16_t);
 
         for (b = 0; b < planes[p].num_bands; b++) {
