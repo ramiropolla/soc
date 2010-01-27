@@ -34,8 +34,6 @@
 #include "ivi_common.h"
 #include "indeo5data.h"
 
-#define IVI_DEBUG
-
 /**
  *  Indeo5 frame types.
  */
@@ -78,9 +76,7 @@ typedef struct {
     uint8_t         is_scalable;
     uint32_t        lock_word;
     IVIPicConfig    pic_conf;
-#ifdef IVI_DEBUG
     int32_t         gop_num;         ///< gop number
-#endif
 } IVI5DecContext;
 
 //! static vlc tables (initialized at startup)
@@ -340,9 +336,7 @@ static int decode_pic_hdr(IVI5DecContext *ctx, AVCodecContext *avctx)
     if (ctx->frame_type == FRAMETYPE_INTRA) {
         if (decode_gop_header(ctx, avctx))
             return -1;
-#ifdef IVI_DEBUG
         ctx->gop_num++;
-#endif
     }
 
     if (ctx->frame_type != FRAMETYPE_NULL) {
@@ -461,17 +455,12 @@ static int decode_band_hdr(IVI5DecContext *ctx, IVIBandDesc *band,
         band->blk_vlc = &blk_vlc_tabs[7]; /* select the default macroblock huffman table */
 
     /* get band checksum if present */
-#ifdef IVI_DEBUG
     if (get_bits1(&ctx->gb)) {
         band->checksum = get_bits(&ctx->gb, 16);
         band->checksum_present = 1;
     } else {
         band->checksum_present = 0;
     }
-#else
-    if (get_bits1(&ctx->gb))
-        skip_bits(&ctx->gb, 16); /* ignore band checksum */
-#endif
 
     band->glob_quant = get_bits(&ctx->gb, 5); /* band global quant */
 
@@ -641,9 +630,7 @@ static int decode_band(IVI5DecContext *ctx, int plane_num,
 {
     int         result, i, t, idx1, idx2;
     IVITile     *tile;
-#ifdef IVI_DEBUG
     uint16_t    chksum;
-#endif
 
     /* setup buffer pointers according with the buffer switch */
     band->buf     = band->bufs[ctx->dst_buf];
@@ -720,8 +707,7 @@ static int decode_band(IVI5DecContext *ctx, int plane_num,
         FFSWAP(int16_t, band->rv_map->valtab[idx1], band->rv_map->valtab[idx2]);
     }
 
-#ifdef IVI_DEBUG
-    if (band->checksum_present) {
+    if (IVI_DEBUG && band->checksum_present) {
         chksum = ivi_calc_band_checksum(band);
         if (chksum != band->checksum) {
             av_log(avctx, AV_LOG_ERROR,
@@ -729,7 +715,6 @@ static int decode_band(IVI5DecContext *ctx, int plane_num,
                    band->plane, band->band_num, band->checksum, chksum);
         }
     }
-#endif
 
     return result;
 }
@@ -829,9 +814,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
         return -1;
     }
 
-#ifdef IVI_DEBUG
     ctx->gop_num = -1;
-#endif
 
     /* needed here! Otherwise "avctx->get_buffer" won't be initialized!!! */
     avctx->pix_fmt = PIX_FMT_YUV410P;

@@ -353,10 +353,8 @@ int ff_ivi_decode_blocks(GetBitContext *gb, IVIBandDesc *band, IVITile *tile)
                         break;
                     pos = band->scan[scan_pos];
 
-                #ifdef IVI_DEBUG
-                    if (!val)
+                    if (IVI_DEBUG && !val)
                         av_log(NULL, AV_LOG_ERROR, "Val = 0 encountered!\n");
-                #endif
 
                     q = (base_tab[pos] * scale_tab[quant]) >> 8;
                     if (q > 1)
@@ -507,7 +505,7 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band,
 }
 
 
-#ifdef IVI_DEBUG
+#if IVI_DEBUG
 uint16_t ivi_calc_band_checksum (IVIBandDesc *band)
 {
     int         x, y;

@@ -33,7 +33,7 @@
 #include "get_bits.h"
 #include <stdint.h>
 
-#define IVI_DEBUG
+#define IVI_DEBUG 1
 
 #define IVI_VLC_BITS 13 ///< max number of bits of the ivi's huffman codes
 
@@ -135,11 +135,9 @@ typedef struct {
     void (*inv_transform)(int32_t *in, int16_t *out, uint32_t pitch, uint8_t *flags); ///< inverse transform function pointer
     void (*dc_transform) (int32_t *in, int16_t *out, uint32_t pitch, int blk_size);   ///< dc transform function pointer, it may be NULL
     uint8_t         is_2d_trans;    ///< 1 indicates that the two-dimensional inverse transform is used
-#ifdef IVI_DEBUG
     uint16_t        checksum;        ///< for debug purposes
     int32_t         checksum_present;
     uint32_t        bufsize;         ///< band buffer size in bytes
-#endif
     const uint8_t   *intra_base;     ///< quantization matrix for intra blocks
     const uint8_t   *inter_base;     ///< quantization matrix for inter blocks
     const uint8_t   *intra_scale;    ///< quantization coefficient for intra blocks
@@ -304,7 +302,7 @@ void ff_ivi_process_empty_tile(AVCodecContext *avctx, IVIBandDesc *band, IVITile
  */
 void ff_ivi_output_plane(const IVIPlaneDesc *plane, uint8_t *dst, const int dst_pitch);
 
-#ifdef IVI_DEBUG
+#if IVI_DEBUG
 /**
  *  Calculates band checksum from band data.
  */
@@ -313,7 +311,7 @@ uint16_t ivi_calc_band_checksum (IVIBandDesc *band);
 /**
  *  Verifies that band data lies in range.
  */
-int ivi_check_band (IVIBandDesc *band, uint8_t *ref, int pitch);
+int ivi_check_band (IVIBandDesc *band, const uint8_t *ref, int pitch);
 #endif
 
 #endif /* AVCODEC_IVI_COMMON_H */
