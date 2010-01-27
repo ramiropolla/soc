@@ -166,6 +166,7 @@ typedef struct {
     uint8_t     chroma_bands;
 } IVIPicConfig;
 
+/** compares some properties of two pictures */
 static inline int ivi_pic_config_cmp(IVIPicConfig *str1, IVIPicConfig *str2)
 {
     return (str1->pic_width    != str2->pic_width    || str1->pic_height    != str2->pic_height    ||
