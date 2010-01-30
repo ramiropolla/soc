@@ -1069,7 +1069,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     *data_size = AMR_BLOCK_SIZE * sizeof(float);
 
     /* return the amount of bytes consumed if everything was OK */
-    return (mode_bits[p->cur_frame_mode] + 15) >> 3; // +7 for rounding and +8 for TOC
+    return frame_sizes_nb[p->cur_frame_mode] + 1; // +7 for rounding and +8 for TOC
 }
 
 

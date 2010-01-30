@@ -365,9 +365,9 @@ static const uint8_t * const amr_unpacking_bitmaps_per_mode[N_MODES] = {
     order_MODE_DTX,
 };
 
-/** number of bits for each mode */
-static const uint8_t mode_bits[N_MODES] = {
-    95, 103, 118, 134, 148, 159, 204, 244, 35
+/** number of bytes for each mode */
+static const uint8_t frame_sizes_nb[N_MODES] = {
+    12, 13, 15, 17, 19, 20, 26, 31, 5
 };
 
 /**
