@@ -336,7 +336,7 @@ static void lsf2lsp_3(AMRContext *p)
     int16_t lsf_r[LP_FILTER_ORDER]; // residual LSF vector
     float lsf_q[LP_FILTER_ORDER]; // quantified LSF vector
     const int16_t *lsf_quantizer;
-    int i;
+    int i, j;
 
     lsf_quantizer = (p->cur_frame_mode == MODE_7k95 ? lsf_3_1_MODE_7k95 : lsf_3_1)[lsf_param[0]];
     memcpy(lsf_r, lsf_quantizer, 3 * sizeof(*lsf_r));
@@ -360,10 +360,10 @@ static void lsf2lsp_3(AMRContext *p)
     lsf2lsp(lsf_q, p->lsp[3]);
 
     // interpolate LSP vectors at subframes 1, 2 and 3
-    for (i = 0; i < 3; i++)
-        weighted_vector_sumd(p->lsp[i], p->prev_lsp_sub4, p->lsp[3],
-                                0.25 * (3 - i), 0.25 * (i + 1),
-                                LP_FILTER_ORDER);
+    for (i = 1; i <= 3; i++)
+        for(j = 0; j < LP_FILTER_ORDER; j++)
+            p->lsp[i-1][j] = p->prev_lsp_sub4[j] +
+                (p->lsp[3][j] - p->prev_lsp_sub4[j]) * 0.25 * i;
 }
 
 /// @}
