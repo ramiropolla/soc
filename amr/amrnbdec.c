@@ -73,7 +73,7 @@
 #define PRED_FAC_MODE_12k2             0.65
 
 #define LSF_R_FAC          (8000.0 / 32768.0) ///< LSF residual tables to Hertz
-#define MIN_LSF_SPACING             50.0488   ///< Ensures stability of LPC filter
+#define MIN_LSF_SPACING    (50.0488 / 8000.0) ///< Ensures stability of LPC filter
 #define PITCH_LAG_MIN_MODE_12k2          18   ///< Lower bound on decoded lag search in 12.2kbit/s mode
 
 /** Initial energy in dB. Also used for bad frames (unimplemented). */
@@ -232,7 +232,7 @@ static void lsf2lsp(const float *lsf, double *lsp)
     int i;
 
     for (i = 0; i < LP_FILTER_ORDER; i++)
-        lsp[i] = cos(2.0 * M_PI / 8000.0 * lsf[i]);
+        lsp[i] = cos(2.0 * M_PI * lsf[i]);
 }
 
 /**
@@ -240,7 +240,7 @@ static void lsf2lsp(const float *lsf, double *lsp)
  * The interpolation is done over all four subframes even in MODE_12k2.
  *
  * @param[in,out] lsf_q     LSFs in [0,1] for each subframe
- * @param[in]     lsf_new   New LSFs in Hertz for subframe 4
+ * @param[in]     lsf_new   New LSFs in [0,1] for subframe 4
  */
 static void interpolate_lsf(float lsf_q[4][LP_FILTER_ORDER], float *lsf_new)
 {
@@ -248,7 +248,7 @@ static void interpolate_lsf(float lsf_q[4][LP_FILTER_ORDER], float *lsf_new)
 
     for (i = 0; i < 4; i++)
         ff_weighted_vector_sumf(lsf_q[i], lsf_q[3], lsf_new,
-                                0.25 * (3 - i), 0.25 / 8000.0 * (i + 1),
+                                0.25 * (3 - i), 0.25 * (i + 1),
                                 LP_FILTER_ORDER);
 }
 
@@ -286,7 +286,7 @@ static void lsf2lsp_for_mode12k2(AMRContext *p, double lsp[LP_FILTER_ORDER],
         memcpy(p->prev_lsf_r, lsf_r, LP_FILTER_ORDER * sizeof(float));
 
     for (i = 0; i < LP_FILTER_ORDER; i++)
-        lsf_q[i] = lsf_r[i] * LSF_R_FAC + lsf_no_r[i];
+        lsf_q[i] = lsf_r[i] * (LSF_R_FAC / 8000.0) + lsf_no_r[i] * (1.0 / 8000.0);
 
     ff_set_min_dist_lsf(lsf_q, MIN_LSF_SPACING, LP_FILTER_ORDER);
 
@@ -349,7 +349,7 @@ static void lsf2lsp_3(AMRContext *p)
 
     // calculate mean-removed LSF vector and add mean
     for (i = 0; i < LP_FILTER_ORDER; i++)
-        lsf_q[i] = (lsf_r[i] + p->prev_lsf_r[i] * pred_fac[i]) * LSF_R_FAC + lsf_3_mean[i];
+        lsf_q[i] = (lsf_r[i] + p->prev_lsf_r[i] * pred_fac[i]) * (LSF_R_FAC / 8000.0) + lsf_3_mean[i] * (1.0 / 8000.0);
 
     ff_set_min_dist_lsf(lsf_q, MIN_LSF_SPACING, LP_FILTER_ORDER);
 
