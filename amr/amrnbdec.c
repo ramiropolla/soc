@@ -963,7 +963,7 @@ static int amrnb_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     float *buf_out = data;                   // pointer to the output data buffer
     int i, subframe;
     float fixed_gain_factor;
-    AMRFixed fixed_sparse;                   // fixed vector up to anti-sparseness processing
+    AMRFixed fixed_sparse = { 0 };           // fixed vector up to anti-sparseness processing
     float spare_vector[AMR_SUBFRAME_SIZE];   // extra stack space to hold result from anti-sparseness processing
     float synth_fixed_gain;                  // the fixed gain that synthesis should use
     const float *synth_fixed_vector;         // pointer to the fixed vector that synthesis should use
