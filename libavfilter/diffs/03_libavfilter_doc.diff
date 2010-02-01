@@ -1,6 +1,6 @@
 Index: doc/libavfilter.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 21414)
+--- doc/libavfilter.texi	(revision 21600)
 +++ doc/libavfilter.texi	(working copy)
 @@ -111,6 +111,20 @@
  
