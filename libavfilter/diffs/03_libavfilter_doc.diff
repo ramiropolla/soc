@@ -54,7 +54,7 @@ Index: doc/libavfilter.texi
  @section noformat
  
  Force libavfilter not to use any of the specified pixel formats for the
-@@ -149,6 +187,37 @@
+@@ -149,6 +187,64 @@
  
  Pass the source unchanged to the output.
  
@@ -81,6 +81,33 @@ Index: doc/libavfilter.texi
 +can be used to draw the overlay at 10 pixels from the bottom right
 +corner of the main video.
 +
++The filter accepts a third optional parameter, if set to a value
++different than 0, it will alpha-blend the overlayed video on top of
++the first one.
++
++This can be used in particular for performing watermarking effects, or
++for adding a logo on top of the input video.
++
++For example, the following command will insert a transparent PNG
++logo in the bottom left corner of the input video:
++@example
++movie=0:png:logo.png [logo]; [in][logo] overlay=10:mainH-overlayH-10:1 [out]
++@end example
++
++Notice the last parameter to overlay ":1" - this enables alpha blending.
++
++The following example will insert 2 different transparent PNG
++logos (second logo on bottom right corner):
++@example
++movie=0:png:logo1.png [logo1];
++movie=0:png:logo2.png [logo2];
++[in][logo1] overlay=10:mainH-overlayH-10:1 [in+logo1];
++[in+logo1][logo2] overlay=mainW-overlayW-10:mainH-overlayH-10:1 [out]
++@end example
++
++You could chain and add more overlays this way but the efficiency of
++such approach is yet to be tested.
++
 +@section rotate
 +
 +@example
@@ -92,7 +119,7 @@ Index: doc/libavfilter.texi
  @section scale
  
  Scale the input video to width:height and/or convert the image format.
-@@ -174,6 +243,24 @@
+@@ -174,6 +270,24 @@
  
  The default value of ``width'' and ``height'' is 0.
  
@@ -117,7 +144,7 @@ Index: doc/libavfilter.texi
  @section slicify
  
  Pass the images of input video on to next video filter as multiple
-@@ -189,6 +276,19 @@
+@@ -189,6 +303,19 @@
  Adding this in the beginning of filter chains should make filtering
  faster due to better use of the memory cache.
  
@@ -137,7 +164,7 @@ Index: doc/libavfilter.texi
  @section vflip
  
  Flip the input video vertically.
-@@ -201,6 +301,32 @@
+@@ -201,6 +328,32 @@
  
  Below is a description of the currently available video sources.
  
