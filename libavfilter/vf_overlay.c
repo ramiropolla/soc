@@ -250,7 +250,7 @@ static void copy_image(AVFilterPicRef *dst, int x, int y,
         copy_blended(pic.data[1], pic.linesize[1], src->data[1], src->linesize[1], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
         copy_blended(pic.data[2], pic.linesize[2], src->data[2], src->linesize[2], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
     } else {
-    av_picture_copy(&pic, (AVPicture *)src->data, dst->pic->format, w, h);
+        av_picture_copy(&pic, (AVPicture *)src->data, dst->pic->format, w, h);
     }
 }
 
