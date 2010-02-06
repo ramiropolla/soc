@@ -1,6 +1,6 @@
 Index: ffmpeg.c
 ===================================================================
---- ffmpeg.c	(revision 21600)
+--- ffmpeg.c	(revision 21650)
 +++ ffmpeg.c	(working copy)
 @@ -42,6 +42,13 @@
  #include "libavutil/avstring.h"
@@ -338,7 +338,7 @@ Index: ffmpeg.c
                              do_video_out(os, ost, ist, &picture, &frame_size);
                              if (vstats_filename && frame_size)
                                  do_video_stats(os, ost, frame_size);
-@@ -1521,7 +1753,17 @@
+@@ -1524,7 +1756,17 @@
                          av_free_packet(&opkt);
                      }
                  }
@@ -356,7 +356,7 @@ Index: ffmpeg.c
          av_free(buffer_to_free);
          /* XXX: allocate the subtitles in the codec ? */
          if (subtitle_to_free) {
-@@ -1975,9 +2217,10 @@
+@@ -1978,9 +2220,10 @@
                          av_exit(1);
                      }
  
@@ -368,7 +368,7 @@ Index: ffmpeg.c
                      codec->bits_per_raw_sample= 0;
                  }
                  ost->resample_height = icodec->height - (frame_topBand  + frame_bottomBand);
-@@ -1985,6 +2228,13 @@
+@@ -1988,6 +2231,13 @@
                  ost->resample_pix_fmt= icodec->pix_fmt;
                  ost->encoding_needed = 1;
                  ist->decoding_needed = 1;
@@ -382,7 +382,7 @@ Index: ffmpeg.c
                  break;
              case CODEC_TYPE_SUBTITLE:
                  ost->encoding_needed = 1;
-@@ -2375,6 +2625,12 @@
+@@ -2388,6 +2638,12 @@
              avcodec_close(ist->st->codec);
          }
      }
@@ -395,7 +395,7 @@ Index: ffmpeg.c
  
      /* finished ! */
      ret = 0;
-@@ -3929,6 +4185,9 @@
+@@ -3942,6 +4198,9 @@
      { "psnr", OPT_BOOL | OPT_EXPERT | OPT_VIDEO, {(void*)&do_psnr}, "calculate PSNR of compressed frames" },
      { "vstats", OPT_EXPERT | OPT_VIDEO, {(void*)&opt_vstats}, "dump video coding statistics to file" },
      { "vstats_file", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_vstats_file}, "dump video coding statistics to file", "file" },
@@ -405,7 +405,7 @@ Index: ffmpeg.c
      { "intra_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_intra_matrix}, "specify intra matrix coeffs", "matrix" },
      { "inter_matrix", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_inter_matrix}, "specify inter matrix coeffs", "matrix" },
      { "top", HAS_ARG | OPT_EXPERT | OPT_VIDEO, {(void*)opt_top_field_first}, "top=1/bottom=0/auto=-1 field first", "" },
-@@ -3989,6 +4248,9 @@
+@@ -4002,6 +4261,9 @@
  
      avcodec_register_all();
      avdevice_register_all();
