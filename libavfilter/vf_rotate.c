@@ -105,7 +105,7 @@ static int config_props_output(AVFilterLink *link)
     return 0;
 }
 
-static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
+static void end_frame(AVFilterLink *link)
 {
     RotContext *rot = link->dst->priv;
     AVFilterPicRef *in  = link->cur_pic;
@@ -121,7 +121,7 @@ static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
             int column = (i - rot->transy)*rot->cosx -
                 (j - rot->transx)*rot->sinx + 0.5;
 
-            if (line < 0 || line >= link->w || column < y || column >= h)
+            if (line < 0 || line >= in->w || column < 0 || column >= in->h)
                 *(out->data[0] +   i*out->linesize[0] + j) = rot->backcolor[0];
             else
                 *(out->data[0] +   i*out->linesize[0] + j) =
@@ -141,7 +141,7 @@ static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
                 int column = (i2 - rot->transy)*rot->cosx -
                     (j2 - rot->transx)*rot->sinx + 0.5;
 
-                if (line < 0 || line >= link->w || column < y || column >= h) {
+                if (line < 0 || line >= in->w || column < 0 || column >= in->h) {
                     *(out->data[plane] +   i*out->linesize[plane] + j) =
                         rot->backcolor[plane];
                 } else {
@@ -153,7 +153,23 @@ static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
                 }
             }
 
-    avfilter_draw_slice(link->dst->outputs[0], y, h, slice_dir);
+    avfilter_unref_pic(in);
+    avfilter_draw_slice(link->dst->outputs[0], 0, rot->output_w, 1);
+    avfilter_end_frame(link->dst->outputs[0]);
+    avfilter_unref_pic(out);
+}
+
+static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
+{
+    AVFilterLink *out = link->dst->outputs[0];
+
+    out->outpic      = avfilter_get_video_buffer(out, AV_PERM_WRITE, out->w, out->h);
+    out->outpic->pts = picref->pts;
+
+    out->outpic->pixel_aspect.num = picref->pixel_aspect.den;
+    out->outpic->pixel_aspect.den = picref->pixel_aspect.num;
+
+    avfilter_start_frame(out, avfilter_ref_pic(out->outpic, ~0));
 }
 
 AVFilter avfilter_vf_rotate =
@@ -168,7 +184,8 @@ AVFilter avfilter_vf_rotate =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
-                                    .draw_slice      = draw_slice,
+                                    .start_frame     = start_frame,
+                                    .end_frame       = end_frame,
                                     .config_props    = config_props_input,
                                     .min_perms       = AV_PERM_READ, },
                                   { .name = NULL}},
