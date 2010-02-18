@@ -88,8 +88,10 @@ static void end_frame(AVFilterLink *link)
         }
     }
 
+    avfilter_unref_pic(in);
     avfilter_draw_slice(output, 0, pic->h, 1);
     avfilter_end_frame(output);
+    avfilter_unref_pic(out);
 }
 
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
