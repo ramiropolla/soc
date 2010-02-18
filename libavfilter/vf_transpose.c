@@ -64,29 +64,32 @@ static int config_props_output(AVFilterLink *link)
     return 0;
 }
 
-static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
+static void end_frame(AVFilterLink *link)
 {
     TransContext *trans = link->dst->priv;
     AVFilterPicRef *in  = link->cur_pic;
     AVFilterPicRef *out = link->dst->outputs[0]->outpic;
+    AVFilterPicRef *pic = link->cur_pic;
+    AVFilterLink *output = link->dst->outputs[0];
     int i, j, plane;
 
     /* luma plane */
-    for(i = y; i < h; i ++)
-        for(j = 0; j < link->w; j ++)
+    for(i = 0; i < pic->h; i ++)
+        for(j = 0; j < pic->w; j ++)
             *(out->data[0] +   j *out->linesize[0] + i) =
                 *(in->data[0]+ i * in->linesize[0] + j);
 
     /* chroma planes */
     for(plane = 1; plane < 3; plane ++) {
-        for(i = y >> trans->vsub; i < h >> trans->vsub; i++) {
-            for(j = 0; j < link->w >> trans->hsub; j++)
+        for(i = 0; i < pic->h >> trans->vsub; i++) {
+            for(j = 0; j < pic->w >> trans->hsub; j++)
                 *(out->data[plane] +   j *out->linesize[plane] + i) =
                     *(in->data[plane]+ i * in->linesize[plane] + j);
         }
     }
 
-    avfilter_draw_slice(link->dst->outputs[0], y, h, slice_dir);
+    avfilter_draw_slice(output, 0, pic->h, 1);
+    avfilter_end_frame(output);
 }
 
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
@@ -113,7 +116,7 @@ AVFilter avfilter_vf_transpose =
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
-                                    .draw_slice      = draw_slice,
+                                    .end_frame       = end_frame,
                                     .config_props    = config_props_input,
                                     .min_perms       = AV_PERM_READ, },
                                   { .name = NULL}},
