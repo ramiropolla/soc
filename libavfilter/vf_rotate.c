@@ -154,7 +154,7 @@ static void end_frame(AVFilterLink *link)
             }
 
     avfilter_unref_pic(in);
-    avfilter_draw_slice(link->dst->outputs[0], 0, rot->output_w, 1);
+    avfilter_draw_slice(link->dst->outputs[0], 0, rot->output_h, 1);
     avfilter_end_frame(link->dst->outputs[0]);
     avfilter_unref_pic(out);
 }
