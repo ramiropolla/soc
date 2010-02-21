@@ -125,6 +125,19 @@ static int config_input(AVFilterLink *inlink)
     pad->hsub = pix_desc->log2_chroma_w;
     pad->vsub = pix_desc->log2_chroma_h;
 
+    if (!pad->w)
+        pad->w = inlink->w;
+    if (!pad->h)
+        pad->h = inlink->h;
+
+    pad->w &= ~((1 << pad->hsub) - 1);
+    pad->h &= ~((1 << pad->vsub) - 1);
+    pad->x &= ~((1 << pad->hsub) - 1);
+    pad->y &= ~((1 << pad->vsub) - 1);
+
+    pad->in_w = inlink->w & ~((1 << pad->hsub) - 1);
+    pad->in_h = inlink->h & ~((1 << pad->vsub) - 1);
+
     memcpy(rgba_color, pad->color, sizeof(rgba_color));
     if (is_packed_rgb) {
         pad->line_step[0] = (av_get_bits_per_pixel(&av_pix_fmt_descriptors[inlink->format]))>>3;
@@ -152,19 +165,6 @@ static int config_input(AVFilterLink *inlink)
             memset(pad->line[plane], pad->color[plane], line_size);
         }
     }
-
-    if (!pad->w)
-        pad->w = inlink->w;
-    if (!pad->h)
-        pad->h = inlink->h;
-
-    pad->w &= ~((1 << pad->hsub) - 1);
-    pad->h &= ~((1 << pad->vsub) - 1);
-    pad->x &= ~((1 << pad->hsub) - 1);
-    pad->y &= ~((1 << pad->vsub) - 1);
-
-    pad->in_w = inlink->w & ~((1 << pad->hsub) - 1);
-    pad->in_h = inlink->h & ~((1 << pad->vsub) - 1);
 
     av_log(ctx, AV_LOG_INFO, "w:%d h:%d x:%d y:%d color:0x%02X%02X%02X%02X[%s]\n",
            pad->w, pad->h, pad->x, pad->y,
