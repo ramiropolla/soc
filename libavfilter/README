@@ -67,9 +67,8 @@ could use this command:
 ./ffplay -vfilters scale=640:480 input_video.avi
 
 Be aware that some filters, notably the crop filter, interpret the parameters
-differently than mplayer does.  There's currently no documentation about this
-except the source of those particular filters.  Sorry.  Play around with some
-of the filters.
+differently than mplayer does.  Documentation for each filter is provided in the
+doc/libavfilter.html file.
 
 One of the interesting features of libavfilter is the ability for filters to
 have multiple inputs and multiple outputs.  Unfortunately, ffplay cannot feed
