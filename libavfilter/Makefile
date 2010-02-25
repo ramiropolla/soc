@@ -5,7 +5,7 @@ FFLIBS = avcodec avutil
 FFLIBS-$(CONFIG_SCALE_FILTER)  += swscale
 FFLIBS-$(CONFIG_AVFILTER_LAVF) += avformat
 
-HEADERS = avfilter.h
+HEADERS = avfilter.h avfiltergraph.h
 
 OBJS = allfilters.o                                                     \
        avfilter.o                                                       \
