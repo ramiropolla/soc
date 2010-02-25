@@ -1,8 +1,8 @@
 Index: doc/libavfilter.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 21854)
+--- doc/libavfilter.texi	(revision 22063)
 +++ doc/libavfilter.texi	(working copy)
-@@ -111,6 +111,20 @@
+@@ -139,6 +139,20 @@
  
  The default value of ``width'' and ``height'' is 0.
  
@@ -23,7 +23,7 @@ Index: doc/libavfilter.texi
  @section format
  
  Convert the input video to one of the specified pixel formats.
-@@ -128,6 +142,30 @@
+@@ -156,6 +170,30 @@
  
  will convert the input video to the format ``yuv420p''.
  
@@ -54,7 +54,7 @@ Index: doc/libavfilter.texi
  @section noformat
  
  Force libavfilter not to use any of the specified pixel formats for the
-@@ -149,6 +187,98 @@
+@@ -177,6 +215,98 @@
  
  Pass the source unchanged to the output.
  
@@ -153,7 +153,7 @@ Index: doc/libavfilter.texi
  @section scale
  
  Scale the input video to width:height and/or convert the image format.
-@@ -174,6 +304,24 @@
+@@ -202,6 +332,24 @@
  
  The default value of ``width'' and ``height'' is 0.
  
@@ -178,7 +178,7 @@ Index: doc/libavfilter.texi
  @section slicify
  
  Pass the images of input video on to next video filter as multiple
-@@ -189,6 +337,19 @@
+@@ -217,6 +365,19 @@
  Adding this in the beginning of filter chains should make filtering
  faster due to better use of the memory cache.
  
@@ -198,7 +198,7 @@ Index: doc/libavfilter.texi
  @section vflip
  
  Flip the input video vertically.
-@@ -201,6 +362,32 @@
+@@ -229,6 +390,32 @@
  
  Below is a description of the currently available video sources.
  
