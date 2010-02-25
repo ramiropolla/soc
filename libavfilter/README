@@ -76,6 +76,11 @@ multiple video streams to the filter system, and cannot handle multiple output
 streams.
 
 KNOWN ISSUES:
+- the -padtop, -padbottom, -padleft, -padright, -padcolor options of
+  ffmgeg do not work correctly when libavfilter is enabled, and they
+  are going to be deprecated/dropped when libavfilter will be
+  integrated in the main repository. Use the pad filter instead.
+
 - if for some reason the filter chain cannot be setup (due to an unknown
   filter, bad parameters to a filter, or for some reason two filters cannot
   be linked together successfully, for example), ffplay will not display any
