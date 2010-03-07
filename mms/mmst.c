@@ -169,8 +169,9 @@ typedef struct {
     int asf_header_size; ///< Size of stored ASF header.
     int asf_header_read_pos; ///< Current read position in header. See read_packet().
     int header_parsed; ///< The header has been received and parsed.
-    AVFormatContext private_av_format_ctx; ///< Private parsed header data (generic).
-    ASFContext      asf_context;           ///< Private parsed header data (ASF-specific).
+    int asf_packet_len;
+//    AVFormatContext private_av_format_ctx; ///< Private parsed header data (generic).
+//    ASFContext      asf_context;           ///< Private parsed header data (ASF-specific).
     AVFormatContext *av_format_ctx; ///< Optional external format context (for stream selection).
     /*@}*/
 
@@ -758,8 +759,8 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
  * after a seek. */
 static void pad_media_packet(MMSContext *mms)
 {
-    if(mms->media_packet_buffer_length<mms->asf_context.packet_obj_size) {
-        int padding_size = mms->asf_context.packet_obj_size - mms->media_packet_buffer_length;
+    if(mms->media_packet_buffer_length<mms->asf_packet_len) {
+        int padding_size = mms->asf_packet_len - mms->media_packet_buffer_length;
         //  fprintf(stderr, "Incoming packet smaller than the asf packet size stated (%d<%d) Padding.\n", mms->media_packet_buffer_length, mms->asf_context.packet_size);
         memset(mms->media_packet_incoming_buffer+mms->media_packet_buffer_length, 0, padding_size);
         mms->media_packet_buffer_length += padding_size;
@@ -908,6 +909,17 @@ static int send_startup_packet(MMSContext *mms)
     return err;
 }
 
+static int asf_header_parser(MMSContext *mms)
+{
+    int packet_len;
+    int i = 30;
+    if (mms->asf_header_size < i)
+        return -1;
+    // fixme, should check guid. we get the asf_packet_len directly here.
+    mms->asf_packet_len = AV_RL32(mms->asf_header + i + 92 - 24);
+    return 0;
+}
+
 /** Read the whole mms header into a buffer of our own .*/
 static int read_mms_header(MMSContext *mms)
 {
@@ -925,16 +937,17 @@ static int read_mms_header(MMSContext *mms)
     if(mms->state == STATE_ERROR)
         return -1;
 
+    asf_header_parser(mms);
     /* Parse the header */
-    init_put_byte(&mms->private_av_format_ctx.pb, mms->asf_header, mms->asf_header_size, 0, NULL, NULL, NULL, NULL);
-    mms->private_av_format_ctx.priv_data = &mms->asf_context;
+//    init_put_byte(&mms->private_av_format_ctx.pb, mms->asf_header, mms->asf_header_size, 0, NULL, NULL, NULL, NULL);
+//    mms->private_av_format_ctx.priv_data = &mms->asf_context;
 
-    if(asf_demuxer.read_header(&mms->private_av_format_ctx, NULL) < 0) {
-        fprintf(stderr, "read_header failed\n");
-        return -1;
-    }
+//    if(asf_demuxer.read_header(&mms->private_av_format_ctx, NULL) < 0) {
+//        fprintf(stderr, "read_header failed\n");
+ //       return -1;
+ //   }
 
-    mms->av_format_ctx = &mms->private_av_format_ctx; // Default
+//    mms->av_format_ctx = &mms->private_av_format_ctx; // Default
     mms->header_parsed = 1;
 
     return 0;
@@ -976,14 +989,17 @@ static int send_stream_selection_request(MMSContext *mms)
 
     //  send the streams we want back...
     start_command_packet(mms, CS_PACKET_STREAM_ID_REQUEST_TYPE);
-    put_le32(&mms->outgoing_packet_data, mms->av_format_ctx->nb_streams);
-
-    for(ii= 0; ii<mms->av_format_ctx->nb_streams; ii++) {
-        AVStream *st= mms->av_format_ctx->streams[ii];
+   //put_le32(&mms->outgoing_packet_data, mms->av_format_ctx->nb_streams);
+    put_le32(&mms->outgoing_packet_data, 2); // FIXME, set value for test according to the captured packet.
+//    for(ii= 0; ii<mms->av_format_ctx->nb_streams; ii++) {
+    for(ii= 0; ii<1; ii++) {
+//        AVStream *st= mms->av_format_ctx->streams[ii];
 
         put_le16(&mms->outgoing_packet_data, 0xffff); // flags
-        put_le16(&mms->outgoing_packet_data, st->id); // stream id
-        put_le16(&mms->outgoing_packet_data, ff_mms_stream_selection_code(st)); // selection
+//        put_le16(&mms->outgoing_packet_data, st->id); // stream id
+        put_le16(&mms->outgoing_packet_data, 1); // stream id
+ //       put_le16(&mms->outgoing_packet_data, ff_mms_stream_selection_code(st)); // selection
+       put_le16(&mms->outgoing_packet_data, 0); // selection
     }
 
     put_le16(&mms->outgoing_packet_data, 0); /* Extra zeroes */
@@ -1006,7 +1022,7 @@ static int request_streaming_from(MMSContext *mms,
     int result;
 
     if(byte_offset > 0)
-        packet = byte_offset / mms->asf_context.packet_obj_size;
+        packet = byte_offset / mms->asf_packet_len;
 
     /* Send a stream selection request if this is the first call to play */
     if(mms->state == ASF_HEADER_DONE) {
@@ -1082,8 +1098,8 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
 //                fprintf(stderr, "Type: 0x%x\n", packet_type);
                 switch (packet_type) {
                 case SC_PACKET_ASF_MEDIA_TYPE:
-                    if(mms->media_packet_buffer_length>mms->asf_context.packet_obj_size) {
-                        fprintf(stderr, "Incoming packet larger than the asf packet size stated (%d>%d)\n", mms->media_packet_buffer_length, mms->asf_context.packet_obj_size);
+                    if(mms->media_packet_buffer_length>mms->asf_packet_len) {
+                        fprintf(stderr, "Incoming packet larger than the asf packet size stated (%d>%d)\n", mms->media_packet_buffer_length, mms->asf_packet_len);
                         result= AVERROR_IO;
                         break;
                     }
@@ -1279,7 +1295,7 @@ static int ff_mms_play(URLContext *h)
 
     /* If resuming from pause */
     if(mms->state==STREAM_PAUSED)
-        stream_offset = (mms->pause_resume_seq+1) * mms->asf_context.packet_obj_size;
+        stream_offset = (mms->pause_resume_seq+1) * mms->asf_packet_len;
 
     clear_stream_buffers(mms);
 
