@@ -204,7 +204,7 @@ static void ff_mms_set_state(MMSContext *mms, int new_state)
 /** Close the remote connection. */
 static void close_connection(MMSContext *mms)
 {
-    av_freep(&mms->incoming_io_buffer.buffer);
+//    av_freep(&mms->incoming_io_buffer.buffer);
     url_close(mms->mms_hd);
 }
 
@@ -218,6 +218,7 @@ static int ff_mms_open_connection(MMSContext *mms)
 
     snprintf(tcpname, sizeof(tcpname), "tcp://%s:%d", mms->host, mms->port);
     err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
+#if 0
     if(err == 0) {
         /* open the incoming and outgoing connections; you can't open a single one with read/write, because it only has one buffer, not two. */
         /* you can't use url_fdopen if the flags of the mms_hd have a WR component, because it will screw up (returning data that is uninitialized) */
@@ -230,7 +231,7 @@ static int ff_mms_open_connection(MMSContext *mms)
             url_close(mms->mms_hd);
         }
     }
-
+#endif
     return err;
 }
 
@@ -371,6 +372,31 @@ static int send_media_file_request(MMSContext *mms)
     return err;
 }
 
+static int read_bytes(MMSContext *mms, uint8_t *buffer, int length_to_read)
+{
+    int len= 0;
+
+    while(len<length_to_read)
+    {
+        int read_result= url_read(mms->mms_hd, buffer+len, length_to_read-len);
+        if(read_result==0)
+        {
+            break;
+        }
+        else if(read_result<0)
+        {
+            // if we read something, we want to return up to that portion; if we didn't error out.
+            if(!len)
+                len= -1;
+            break;
+        } else {
+            len+= read_result;
+        }
+    }
+
+    return len;
+}
+
 /** Read incoming MMST media, header or command packet. */
 static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
 {
@@ -382,11 +408,13 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
     // use url_fdopen & url_fclose...
     do {
         done= 1; // assume we're going to get a valid packet.
-        if((read_result= get_buffer(&mms->incoming_io_buffer, mms->incoming_buffer, 8))==8) {
+//        if((read_result= get_buffer(&mms->incoming_io_buffer, mms->incoming_buffer, 8))==8) {
+        if((read_result= read_bytes(mms, mms->incoming_buffer, 8))==8) {
             // check if we are a command packet...
             if(AV_RL32(mms->incoming_buffer + 4)==0xb00bface) {
                 mms->incoming_flags= mms->incoming_buffer[3];
-                if((read_result= get_buffer(&mms->incoming_io_buffer, mms->incoming_buffer+8, 4)) == 4) {
+//                if((read_result= get_buffer(&mms->incoming_io_buffer, mms->incoming_buffer+8, 4)) == 4) {
+                if((read_result= read_bytes(mms, mms->incoming_buffer+8, 4)) == 4) {
                     int length_remaining= AV_RL32(mms->incoming_buffer+8) + 4;
 
 #if (MMS_DEBUG_LEVEL>0)
@@ -394,7 +422,8 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
 #endif
                     // FIXME? ** VERIFY LENGTH REMAINING HAS SPACE
                     // read the rest of the packet....
-                    read_result = get_buffer(&mms->incoming_io_buffer, mms->incoming_buffer + 12, length_remaining) ;
+//                    read_result = get_buffer(&mms->incoming_io_buffer, mms->incoming_buffer + 12, length_remaining) ;
+                    read_result = read_bytes(mms, mms->incoming_buffer + 12, length_remaining) ;
                     if (read_result == length_remaining) {
                         // we have it all; get the stuff out of it.
                         mms->incoming_buffer_length= length_remaining+12;
@@ -433,7 +462,8 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     fprintf(stderr, "Incoming Buffer Length exceeds buffer: %d>%d\n", mms->media_packet_buffer_length, (int) sizeof(mms->media_packet_incoming_buffer));
                 }
                 assert(mms->media_packet_buffer_length<sizeof(mms->media_packet_incoming_buffer));
-                read_result= get_buffer(&mms->incoming_io_buffer, dst, length_remaining);
+//                read_result= get_buffer(&mms->incoming_io_buffer, dst, length_remaining);
+                read_result= read_bytes(mms, dst, length_remaining);
                 if(read_result != length_remaining) {
 #if (MMS_DEBUG_LEVEL>0)
                     fprintf(stderr, "read_bytes result: %d asking for %d\n", read_result, length_remaining);
