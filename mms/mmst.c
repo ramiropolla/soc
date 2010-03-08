@@ -25,11 +25,16 @@
 #include "network.h"
 #include "asf.h"
 
+#define DEBUG
 #define MMS_DEBUG_LEVEL 2
 #define MMS_MAXIMUM_PACKET_LENGTH 512
 #define MMS_KILO                  1024
 #define MMS_URL_SIZE          4096
 #define DEFAULT_MMS_PORT      1755
+
+static const ff_asf_guid file_properties = {
+    0xA1, 0xDC, 0xAB, 0x8C, 0x47, 0xA9, 0xCF, 0x11, 0x8E, 0xE4, 0x00, 0xC0, 0x0C, 0x20, 0x53, 0x65
+};
 
 /** State machine states. */
 typedef enum {
@@ -630,7 +635,6 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
 {
     switch(packet_type) {
     case SC_PACKET_CLIENT_ACCEPTED:
-#if 0
         if(mms->state==AWAITING_SC_PACKET_CLIENT_ACCEPTED) {
 #if (MMS_DEBUG_LEVEL>0)
             fprintf(stderr, "Transitioning from AWAITING_SC_PACKET_CLIENT_ACCEPTED to AWAITING_SC_PACKET_TIMING_TEST_REPLY_TYPE\n");
@@ -645,7 +649,6 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
             return -1;
         }
         break;
-#endif
 
     case SC_PACKET_TIMING_TEST_REPLY_TYPE: // we may, or may not have timing tests.
         if(mms->state==AWAITING_SC_PACKET_TIMING_TEST_REPLY_TYPE || mms->state==AWAITING_SC_PACKET_CLIENT_ACCEPTED) {
@@ -894,29 +897,54 @@ static int send_startup_packet(MMSContext *mms)
 
     //snprintf(data_string, sizeof(data_string), "NSPlayer/7.0.0.1956; {%s}; Host: %s",
     //        my_guid, mms->host);
-    snprintf(data_string, sizeof(data_string), "NSPlayer/7.0.0.1956; {%s}",
-            "7E667F5D-A661-495E-A512-F55686DDA178");
+    snprintf(data_string, sizeof(data_string), "NSPlayer/7.0.0.1956; {%s}; Host: %s",
+            "7E667F5D-A661-495E-A512-F55686DDA178", mms->host);
 
     start_command_packet(mms, CS_PACKET_INITIAL_TYPE);
     insert_command_prefixes(mms, 0, 0x0004000b);
     put_le32(&mms->outgoing_packet_data, 0x0003001c);
     put_le_utf16(&mms->outgoing_packet_data, data_string);
-//    put_le16(&mms->outgoing_packet_data, 0); // double unicode ended string...
-    put_le32(&mms->outgoing_packet_data, 0); // double unicode ended string...
+    put_le16(&mms->outgoing_packet_data, 0); // double unicode ended string...
+//    put_le32(&mms->outgoing_packet_data, 0); // double unicode ended string...
 
     err = send_command_packet(mms);
     ff_mms_set_state(mms, AWAITING_SC_PACKET_CLIENT_ACCEPTED);
     return err;
 }
 
+static void print_guid(const ff_asf_guid *g)
+{
+    int i;
+    av_log(NULL, AV_LOG_DEBUG, "{");
+    for(i=0;i<16;i++)
+        av_log(NULL, AV_LOG_DEBUG, " 0x%02x,", (*g)[i]);
+    av_log(NULL, AV_LOG_DEBUG, "}\n");
+}
+
+static int get_guid(uint8_t* buf, ff_asf_guid* g)
+{
+    assert(sizeof(*g) == 16);
+    memcpy(g, buf, sizeof(*g));
+}
+
+static int guid_cmp(const void *g1, const void *g2)
+{
+    return memcmp(g1, g2, sizeof(ff_asf_guid));
+}
+
 static int asf_header_parser(MMSContext *mms)
 {
-    int packet_len;
+    ff_asf_guid g;
     int i = 30;
     if (mms->asf_header_size < i)
         return -1;
-    // fixme, should check guid. we get the asf_packet_len directly here.
-    mms->asf_packet_len = AV_RL32(mms->asf_header + i + 92 - 24);
+    get_guid(mms->asf_header  + i,g);
+    print_guid(&g);
+    if (!guid_cmp(&g, &file_properties))
+    {
+        // fixme, should check guid. we get the asf_packet_len directly here.
+        mms->asf_packet_len = AV_RL32(mms->asf_header + i + 92 - 24);
+    }
     return 0;
 }
 
@@ -992,12 +1020,12 @@ static int send_stream_selection_request(MMSContext *mms)
    //put_le32(&mms->outgoing_packet_data, mms->av_format_ctx->nb_streams);
     put_le32(&mms->outgoing_packet_data, 2); // FIXME, set value for test according to the captured packet.
 //    for(ii= 0; ii<mms->av_format_ctx->nb_streams; ii++) {
-    for(ii= 0; ii<1; ii++) {
+    for(ii= 0; ii<2; ii++) {
 //        AVStream *st= mms->av_format_ctx->streams[ii];
 
         put_le16(&mms->outgoing_packet_data, 0xffff); // flags
 //        put_le16(&mms->outgoing_packet_data, st->id); // stream id
-        put_le16(&mms->outgoing_packet_data, 1); // stream id
+        put_le16(&mms->outgoing_packet_data, ii +1); // stream id
  //       put_le16(&mms->outgoing_packet_data, ff_mms_stream_selection_code(st)); // selection
        put_le16(&mms->outgoing_packet_data, 0); // selection
     }
