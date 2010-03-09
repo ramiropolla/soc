@@ -1,0 +1,20 @@
+--- /Users/ronaldbultje/Projects/ffmpeg-svn/libavformat/allformats.c	2010-02-22 17:21:46.000000000 -0500
++++ allformats.c	2010-03-09 11:52:03.000000000 -0500
+@@ -216,6 +216,7 @@
+     REGISTER_PROTOCOL (FILE, file);
+     REGISTER_PROTOCOL (GOPHER, gopher);
+     REGISTER_PROTOCOL (HTTP, http);
++    REGISTER_PROTOCOL (MMST, mmst);
+     REGISTER_PROTOCOL (PIPE, pipe);
+     REGISTER_PROTOCOL (RTMP, rtmp);
+     REGISTER_PROTOCOL (RTP, rtp);
+--- /Users/ronaldbultje/Projects/ffmpeg-svn/libavformat/Makefile	2010-02-22 17:21:46.000000000 -0500
++++ Makefile	2010-03-09 11:52:03.000000000 -0500
+@@ -266,6 +266,7 @@
+ OBJS-$(CONFIG_FILE_PROTOCOL)             += file.o
+ OBJS-$(CONFIG_GOPHER_PROTOCOL)           += gopher.o
+ OBJS-$(CONFIG_HTTP_PROTOCOL)             += http.o
++OBJS-$(CONFIG_MMST_PROTOCOL)             += mmst.o
+ OBJS-$(CONFIG_PIPE_PROTOCOL)             += file.o
+ OBJS-$(CONFIG_RTMP_PROTOCOL)             += rtmpproto.o rtmppkt.o
+ OBJS-$(CONFIG_RTP_PROTOCOL)              += rtpproto.o
