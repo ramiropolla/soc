@@ -126,7 +126,7 @@ OBJS-$(CONFIG_MPEG1VIDEO_MUXER)          += raw.o
 OBJS-$(CONFIG_MPEG2VIDEO_MUXER)          += raw.o
 OBJS-$(CONFIG_MPEGPS_DEMUXER)            += mpeg.o
 OBJS-$(CONFIG_MPEGTS_DEMUXER)            += mpegts.o
-OBJS-$(CONFIG_MPEGTS_MUXER)              += mpegtsenc.o adtsenc.o
+OBJS-$(CONFIG_MPEGTS_MUXER)              += mpegtsenc.o
 OBJS-$(CONFIG_MPEGVIDEO_DEMUXER)         += raw.o
 OBJS-$(CONFIG_MPJPEG_MUXER)              += mpjpeg.o
 OBJS-$(CONFIG_MSNWC_TCP_DEMUXER)         += msnwc_tcp.o
@@ -216,10 +216,10 @@ OBJS-$(CONFIG_SDP_DEMUXER)               += rtsp.o        \
                                             rtp.o         \
                                             rtpdec.o      \
                                             rtpdec_amr.o  \
-                                            rtpdec_asf.o  \
                                             rtpdec_h263.o \
-                                            rtpdec_h264.o \
-                                            rtpdec_vorbis.o
+                                            rtp_asf.o     \
+                                            rtp_h264.o    \
+                                            rtp_vorbis.o
 OBJS-$(CONFIG_SEGAFILM_DEMUXER)          += segafilm.o
 OBJS-$(CONFIG_SHORTEN_DEMUXER)           += raw.o id3v2.o
 OBJS-$(CONFIG_SIFF_DEMUXER)              += siff.o
@@ -266,6 +266,7 @@ OBJS+= avio.o aviobuf.o
 OBJS-$(CONFIG_FILE_PROTOCOL)             += file.o
 OBJS-$(CONFIG_GOPHER_PROTOCOL)           += gopher.o
 OBJS-$(CONFIG_HTTP_PROTOCOL)             += http.o
+OBJS-$(CONFIG_MMST_PROTOCOL)             += mmst.o
 OBJS-$(CONFIG_PIPE_PROTOCOL)             += file.o
 OBJS-$(CONFIG_RTMP_PROTOCOL)             += rtmpproto.o rtmppkt.o
 OBJS-$(CONFIG_RTP_PROTOCOL)              += rtpproto.o
