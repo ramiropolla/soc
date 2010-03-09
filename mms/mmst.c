@@ -1126,11 +1126,11 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
 //                fprintf(stderr, "Type: 0x%x\n", packet_type);
                 switch (packet_type) {
                 case SC_PACKET_ASF_MEDIA_TYPE:
-                    if(mms->media_packet_buffer_length>mms->asf_packet_len) {
+//                   if(mms->media_packet_buffer_length>mms->asf_packet_len) {
                         fprintf(stderr, "Incoming packet larger than the asf packet size stated (%d>%d)\n", mms->media_packet_buffer_length, mms->asf_packet_len);
-                        result= AVERROR_IO;
-                        break;
-                    }
+//                        result= AVERROR_IO;
+//                        break;
+//                    }
 
                     // copy the data to the packet buffer...
                     size_to_copy= FFMIN(buf_size, mms->media_packet_buffer_length);
