@@ -946,26 +946,6 @@ static void clear_stream_buffers(MMSContext *mms)
     mms->media_packet_read_ptr = mms->media_packet_incoming_buffer;
 }
 
-/** Convert from AVDISCARD_* values to MMS stream selection code for the stream. */
-static int ff_mms_stream_selection_code(AVStream *st)
-{
-    switch(st->discard) {
-    case AVDISCARD_NONE:
-    case AVDISCARD_DEFAULT:
-    default:
-        return 0; // 00 = stream at full frame rate;
-
-    case AVDISCARD_NONREF:
-    case AVDISCARD_BIDIR:
-    case AVDISCARD_NONKEY:
-        return 1; // 01 = only stream key frames (doesn't work that well)
-
-    case AVDISCARD_ALL:
-        return 2; // 02 = no stream, switch it off.
-    }
-}
-
-
 /** Send MMST stream selection command based on the AVStream->discard values. */
 static int send_stream_selection_request(MMSContext *mms)
 {
