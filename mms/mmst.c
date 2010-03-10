@@ -224,20 +224,6 @@ static int ff_mms_open_connection(MMSContext *mms)
 
     snprintf(tcpname, sizeof(tcpname), "tcp://%s:%d", mms->host, mms->port);
     err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
-#if 0
-    if(err == 0) {
-        /* open the incoming and outgoing connections; you can't open a single one with read/write, because it only has one buffer, not two. */
-        /* you can't use url_fdopen if the flags of the mms_hd have a WR component, because it will screw up (returning data that is uninitialized) */
-        flags = mms->mms_hd->flags;
-        mms->mms_hd->flags = URL_RDONLY;
-        err = url_fdopen(&mms->incoming_io_buffer, mms->mms_hd);
-        mms->mms_hd->flags = flags;
-        if(err) {
-            // should have a url_fdclose()
-            url_close(mms->mms_hd);
-        }
-    }
-#endif
     return err;
 }
 
@@ -292,7 +278,6 @@ static int send_command_packet(MMSContext *mms)
     ByteIOContext *context= &mms->outgoing_packet_data;
     int exact_length= url_ftell(context);
     int first_length= exact_length - 16;
-//    int len8= (first_length+7)/8;
     int len8= first_length/8;
     int write_result;
 
@@ -306,9 +291,6 @@ static int send_command_packet(MMSContext *mms)
 
     // seek back to the end (may not be necessary...)
     url_fseek(context, exact_length, SEEK_SET);
-
-    // print it out...
-    //    print_command(context->buffer, exact_length);
 
     // write it out...
     write_result= url_write(mms->mms_hd, context->buffer, exact_length);
@@ -414,12 +396,10 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
     // use url_fdopen & url_fclose...
     do {
         done= 1; // assume we're going to get a valid packet.
-//        if((read_result= get_buffer(&mms->incoming_io_buffer, mms->incoming_buffer, 8))==8) {
         if((read_result= read_bytes(mms, mms->incoming_buffer, 8))==8) {
             // check if we are a command packet...
             if(AV_RL32(mms->incoming_buffer + 4)==0xb00bface) {
                 mms->incoming_flags= mms->incoming_buffer[3];
-//                if((read_result= get_buffer(&mms->incoming_io_buffer, mms->incoming_buffer+8, 4)) == 4) {
                 if((read_result= read_bytes(mms, mms->incoming_buffer+8, 4)) == 4) {
                     int length_remaining= AV_RL32(mms->incoming_buffer+8) + 4;
 
@@ -428,7 +408,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
 #endif
                     // FIXME? ** VERIFY LENGTH REMAINING HAS SPACE
                     // read the rest of the packet....
-//                    read_result = get_buffer(&mms->incoming_io_buffer, mms->incoming_buffer + 12, length_remaining) ;
                     read_result = read_bytes(mms, mms->incoming_buffer + 12, length_remaining) ;
                     if (read_result == length_remaining) {
                         // we have it all; get the stuff out of it.
@@ -468,7 +447,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     fprintf(stderr, "Incoming Buffer Length exceeds buffer: %d>%d\n", mms->media_packet_buffer_length, (int) sizeof(mms->media_packet_incoming_buffer));
                 }
                 assert(mms->media_packet_buffer_length<sizeof(mms->media_packet_incoming_buffer));
-//                read_result= get_buffer(&mms->incoming_io_buffer, dst, length_remaining);
                 read_result= read_bytes(mms, dst, length_remaining);
                 if(read_result != length_remaining) {
 #if (MMS_DEBUG_LEVEL>0)
@@ -479,7 +457,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     // if we successfully read everything....
                     if(packet_id_type == mms->header_packet_id) {
                         // asf header
-                        // fprintf(stderr, "asf header: %d\n", mms->incoming_buffer_length);
                         packet_type = SC_PACKET_ASF_HEADER_TYPE;
 
                         // Store the asf header
@@ -489,7 +466,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                             mms->asf_header_size += mms->media_packet_buffer_length;
                         }
                     } else if(packet_id_type == mms->packet_id) {
-                        //                    fprintf(stderr, "asf packet: %d\n", mms->incoming_buffer_length);
                         packet_type = SC_PACKET_ASF_MEDIA_TYPE;
                     } else {
 #if (MMS_DEBUG_LEVEL>0)
@@ -612,7 +588,6 @@ static void handle_packet_stream_changing_type(MMSContext *mms)
     mms->header_packet_id= (get_le32(&pkt) & 0xff); // prefix 2
 
     fprintf(stderr, "Changed header prefix to 0x%x", mms->header_packet_id);
-    // mms->asf_header_length= 0;
 
     ff_mms_set_state(mms, AWAITING_ASF_HEADER); // this is going to hork our avstreams.
 }
@@ -702,10 +677,6 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
 
     case SC_PACKET_HEADER_REQUEST_ACCEPTED_TYPE:
         if(mms->state==AWAITING_PACKET_HEADER_REQUEST_ACCEPTED_TYPE) {
-            // reset (in case we are doing this more than once)
-//                mms->asf_header_length= 0;
-
-            // wait for the header (follows immediately)
             ff_mms_set_state(mms, AWAITING_ASF_HEADER);
         } else {
             return -1;
@@ -895,8 +866,6 @@ static int send_startup_packet(MMSContext *mms)
     int err;
     char data_string[256];
 
-    //snprintf(data_string, sizeof(data_string), "NSPlayer/7.0.0.1956; {%s}; Host: %s",
-    //        my_guid, mms->host);
     snprintf(data_string, sizeof(data_string), "NSPlayer/7.0.0.1956; {%s}; Host: %s",
             "7E667F5D-A661-495E-A512-F55686DDA178", mms->host);
 
@@ -905,7 +874,6 @@ static int send_startup_packet(MMSContext *mms)
     put_le32(&mms->outgoing_packet_data, 0x0003001c);
     put_le_utf16(&mms->outgoing_packet_data, data_string);
     put_le16(&mms->outgoing_packet_data, 0); // double unicode ended string...
-//    put_le32(&mms->outgoing_packet_data, 0); // double unicode ended string...
 
     err = send_command_packet(mms);
     ff_mms_set_state(mms, AWAITING_SC_PACKET_CLIENT_ACCEPTED);
@@ -980,16 +948,6 @@ static int read_mms_header(MMSContext *mms)
         return -1;
 
     asf_header_parser(mms);
-    /* Parse the header */
-//    init_put_byte(&mms->private_av_format_ctx.pb, mms->asf_header, mms->asf_header_size, 0, NULL, NULL, NULL, NULL);
-//    mms->private_av_format_ctx.priv_data = &mms->asf_context;
-
-//    if(asf_demuxer.read_header(&mms->private_av_format_ctx, NULL) < 0) {
-//        fprintf(stderr, "read_header failed\n");
- //       return -1;
- //   }
-
-//    mms->av_format_ctx = &mms->private_av_format_ctx; // Default
     mms->header_parsed = 1;
 
     return 0;
@@ -1111,9 +1069,6 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
     MMSSCPacketType packet_type;
     int size_to_copy;
 
-//    fprintf(stderr, "mms_read_packet()\n");
-
-//    fprintf(stderr, "*** read packet %p needs %d bytes at %lld...\n", buf, buf_size, url_ftell(&mms->av_format_ctx->pb));
     if(mms->state != STREAM_DONE && mms->state != STREAM_PAUSED && mms->state != STATE_ERROR) {
         do {
             if(mms->asf_header_read_pos < mms->asf_header_size) {
@@ -1246,13 +1201,8 @@ static int mms_open_cnx(URLContext *h)
     url_split(NULL, 0, authorization, sizeof(authorization), mms->host, sizeof(mms->host),
               &mms->port, mms->path, sizeof(mms->path), mms->location);
 
-//    mms->protocol = &mmst_mmsprotocol;
-
     if(mms->port<0)
         mms->port = DEFAULT_MMS_PORT;
-//#if (MMS_DEBUG_LEVEL>0)
-//    fprintf(stderr, "Opening %s\n Auth: %s\n Host: %s\n Port: %d\n Path: %s\n", mms->location, authorization, mms->host, mms->port, mms->path);
-//#endif
 
     /* the outgoing packet buffer */
     init_put_byte(&mms->outgoing_packet_data, mms->outgoing_packet_buffer, sizeof(mms->outgoing_packet_buffer), 1, NULL, NULL, NULL, NULL);
