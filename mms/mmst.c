@@ -32,10 +32,6 @@
 #define MMS_URL_SIZE          4096
 #define DEFAULT_MMS_PORT      1755
 
-static const ff_asf_guid file_properties = {
-    0xA1, 0xDC, 0xAB, 0x8C, 0x47, 0xA9, 0xCF, 0x11, 0x8E, 0xE4, 0x00, 0xC0, 0x0C, 0x20, 0x53, 0x65
-};
-
 /** State machine states. */
 typedef enum {
     AWAITING_SC_PACKET_CLIENT_ACCEPTED= 0,
@@ -889,20 +885,8 @@ static void print_guid(const ff_asf_guid *g)
     av_log(NULL, AV_LOG_DEBUG, "}\n");
 }
 
-static int get_guid(uint8_t* buf, ff_asf_guid* g)
-{
-    assert(sizeof(*g) == 16);
-    memcpy(g, buf, sizeof(*g));
-}
-
-static int guid_cmp(const void *g1, const void *g2)
-{
-    return memcmp(g1, g2, sizeof(ff_asf_guid));
-}
-
 static int asf_header_parser(MMSContext *mms)
 {
-    ff_asf_guid g;
     uint8_t *p = mms->asf_header, *end = mms->asf_header + mms->asf_header_size;
 
     if (mms->asf_header_size < sizeof(ff_asf_guid) * 2 + 22 ||
