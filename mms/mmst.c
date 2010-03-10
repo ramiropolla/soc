@@ -22,6 +22,7 @@
  */
 #include "avformat.h"
 #include "libavutil/intreadwrite.h"
+#include "libavutil/avstring.h"
 #include "network.h"
 #include "asf.h"
 
@@ -214,7 +215,7 @@ static void close_connection(MMSContext *mms)
 static int ff_mms_open_connection(MMSContext *mms)
 {
     char tcpname[256];
-    int flags, err;
+    int err;
 
     close_connection(mms);
 
@@ -304,7 +305,7 @@ static int send_command_packet(MMSContext *mms)
 
 
 /** Log unexpected incoming packet */
-void log_packet_in_wrong_state(MMSContext *mms, MMSSCPacketType packet_type)
+static void log_packet_in_wrong_state(MMSContext *mms, MMSSCPacketType packet_type)
 {
 #if (MMS_DEBUG_LEVEL>0)
     if(packet_type>=0) {
@@ -938,7 +939,7 @@ static int read_mms_header(MMSContext *mms)
 }
 
 /** Clear all buffers of partial and old packets after a seek or other discontinuity */
-void clear_stream_buffers(MMSContext *mms)
+static void clear_stream_buffers(MMSContext *mms)
 {
     mms->incoming_io_buffer.buf_ptr = mms->incoming_io_buffer.buf_end;
     mms->media_packet_buffer_length = 0;
