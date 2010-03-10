@@ -935,17 +935,31 @@ static int guid_cmp(const void *g1, const void *g2)
 static int asf_header_parser(MMSContext *mms)
 {
     ff_asf_guid g;
-    int i = 30;
-    if (mms->asf_header_size < i)
+    uint8_t *p = mms->asf_header, *end = mms->asf_header + mms->asf_header_size;
+
+    if (mms->asf_header_size < sizeof(ff_asf_guid) * 2 + 22 ||
+        memcmp(p, ff_asf_header, sizeof(ff_asf_guid)))
         return -1;
-    get_guid(mms->asf_header  + i,g);
-    print_guid(&g);
-    if (!guid_cmp(&g, &file_properties))
-    {
-        // fixme, should check guid. we get the asf_packet_len directly here.
-        mms->asf_packet_len = AV_RL32(mms->asf_header + i + 92 - 24);
-    }
-    return 0;
+
+    p += sizeof(ff_asf_guid) + 14;
+    do {
+        uint64_t chunksize = AV_RL64(p + sizeof(ff_asf_guid));
+        if (memcmp(p, ff_asf_file_header, sizeof(ff_asf_guid))) {
+            if (chunksize > end - p)
+                return -1;
+            p += chunksize;
+            continue;
+        }
+
+        /* read packet size */
+        if (end - p > sizeof(ff_asf_guid) * 2 + 64) {
+            mms->asf_packet_len = AV_RL32(p + sizeof(ff_asf_guid) * 2 + 64);
+            return 0;
+        }
+        break;
+    } while (end - p >= sizeof(ff_asf_guid) + 8);
+
+    return -1;
 }
 
 /** Read the whole mms header into a buffer of our own .*/
