@@ -180,6 +180,7 @@ typedef struct {
     int pause_resume_seq; ///< Last packet returned by mms_read. Useful for resuming pause.
     // new added on 2010.2.21
     char location[MMS_URL_SIZE];
+    int stream_num;
 } MMSContext;
 
 /** Perform state transition. */
@@ -889,6 +890,7 @@ static void print_guid(const ff_asf_guid *g)
 static int asf_header_parser(MMSContext *mms)
 {
     uint8_t *p = mms->asf_header, *end = mms->asf_header + mms->asf_header_size;
+    mms->stream_num = 0;
 
     if (mms->asf_header_size < sizeof(ff_asf_guid) * 2 + 22 ||
         memcmp(p, ff_asf_header, sizeof(ff_asf_guid)))
@@ -897,19 +899,17 @@ static int asf_header_parser(MMSContext *mms)
     p += sizeof(ff_asf_guid) + 14;
     do {
         uint64_t chunksize = AV_RL64(p + sizeof(ff_asf_guid));
-        if (memcmp(p, ff_asf_file_header, sizeof(ff_asf_guid))) {
-            if (chunksize > end - p)
-                return -1;
-            p += chunksize;
-            continue;
-        }
-
+        if (!memcmp(p, ff_asf_file_header, sizeof(ff_asf_guid))) {
         /* read packet size */
         if (end - p > sizeof(ff_asf_guid) * 2 + 64) {
             mms->asf_packet_len = AV_RL32(p + sizeof(ff_asf_guid) * 2 + 64);
-            return 0;
         }
-        break;
+        } else if (!memcmp(p, ff_asf_stream_header, sizeof(ff_asf_guid))) {
+            mms->stream_num++;
+        }
+            if (chunksize > end - p)
+                return -1;
+            p += chunksize;
     } while (end - p >= sizeof(ff_asf_guid) + 8);
 
     return -1;
@@ -974,16 +974,10 @@ static int send_stream_selection_request(MMSContext *mms)
 
     //  send the streams we want back...
     start_command_packet(mms, CS_PACKET_STREAM_ID_REQUEST_TYPE);
-   //put_le32(&mms->outgoing_packet_data, mms->av_format_ctx->nb_streams);
-    put_le32(&mms->outgoing_packet_data, 2); // FIXME, set value for test according to the captured packet.
-//    for(ii= 0; ii<mms->av_format_ctx->nb_streams; ii++) {
-    for(ii= 0; ii<2; ii++) {
-//        AVStream *st= mms->av_format_ctx->streams[ii];
-
+    put_le32(&mms->outgoing_packet_data, mms->stream_num); // stream nums.
+    for(ii= 0; ii<mms->stream_num; ii++) {
         put_le16(&mms->outgoing_packet_data, 0xffff); // flags
-//        put_le16(&mms->outgoing_packet_data, st->id); // stream id
         put_le16(&mms->outgoing_packet_data, ii +1); // stream id
- //       put_le16(&mms->outgoing_packet_data, ff_mms_stream_selection_code(st)); // selection
        put_le16(&mms->outgoing_packet_data, 0); // selection
     }
 
