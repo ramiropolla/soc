@@ -122,7 +122,6 @@ static const char *state_names[]= {
 #endif
 
 typedef struct {
-    char local_guid[37]; ///< My randomly generated GUID.
     uint32_t local_ip_address; ///< Not ipv6 compatible, but neither is the protocol (sent, but not correct).
     int local_port; ///< My local port (sent but not correct).
     int sequence_number; ///< Outgoing packet sequence number.
@@ -132,7 +131,6 @@ typedef struct {
     int port; ///< Port of the resource.
 
     URLContext *mms_hd; ///< TCP connection handle
-    ByteIOContext incoming_io_buffer; ///< Incoming data on the socket
 
     /** Buffer for outgoing packets. */
     /*@{*/
@@ -162,9 +160,6 @@ typedef struct {
 
     int seekable; ///< This tells you if the stream is seekable.
 
-    int http_client_id; ///< HTTP's client id.
-    int http_play_rate; ///< Rate of playback (1 for normal, 5 or -5 for ffwd/rewind)
-
     /** Internal handling of the ASF header */
     /*@{*/
     uint8_t *asf_header; ///< Stored ASF header, for seeking into it and internal parsing.
@@ -172,13 +167,9 @@ typedef struct {
     int asf_header_read_pos; ///< Current read position in header. See read_packet().
     int header_parsed; ///< The header has been received and parsed.
     int asf_packet_len;
-//    AVFormatContext private_av_format_ctx; ///< Private parsed header data (generic).
-//    ASFContext      asf_context;           ///< Private parsed header data (ASF-specific).
-    AVFormatContext *av_format_ctx; ///< Optional external format context (for stream selection).
     /*@}*/
 
     int pause_resume_seq; ///< Last packet returned by mms_read. Useful for resuming pause.
-    // new added on 2010.2.21
     char location[MMS_URL_SIZE];
     int stream_num;
 } MMSContext;
@@ -941,7 +932,6 @@ static int read_mms_header(MMSContext *mms)
 /** Clear all buffers of partial and old packets after a seek or other discontinuity */
 static void clear_stream_buffers(MMSContext *mms)
 {
-    mms->incoming_io_buffer.buf_ptr = mms->incoming_io_buffer.buf_end;
     mms->media_packet_buffer_length = 0;
     mms->media_packet_read_ptr = mms->media_packet_incoming_buffer;
 }
