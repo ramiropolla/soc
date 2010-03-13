@@ -27,7 +27,6 @@
 #include "asf.h"
 
 #define DEBUG
-#define MMS_DEBUG_LEVEL 2
 #define MMS_MAXIMUM_PACKET_LENGTH 512
 #define DEFAULT_MMS_PORT      1755
 
@@ -156,15 +155,11 @@ static void ff_mms_set_state(MMSContext *mms, int new_state)
 {
     /* Can't exit error state */
     if(mms->state==STATE_ERROR) {
-#if (MMS_DEBUG_LEVEL>0)
-        fprintf(stderr, "Trying to set state to %d from %d!\n", new_state, mms->state);
-#endif
+        dprintf(NULL, "Trying to set state to %d from %d!\n", new_state, mms->state);
         return;
     }
 
-#if (MMS_DEBUG_LEVEL>0)
-    fprintf(stderr, "Set state to %d from %d!\n", new_state, mms->state);
-#endif
+    dprintf(NULL, "Set state to %d from %d!\n", new_state, mms->state);
     if(mms->state==new_state && new_state==USER_CANCELLED) {
         ff_mms_set_state(mms, STATE_ERROR);
         return;
@@ -261,9 +256,7 @@ static int send_command_packet(MMSContext *mms)
     // write it out...
     write_result= url_write(mms->mms_hd, context->buffer, exact_length);
     if(write_result != exact_length) {
-#if (MMS_DEBUG_LEVEL>0)
-        fprintf(stderr, "url_write returned: %d != %d\n", write_result, exact_length);
-#endif
+        dprintf(NULL, "url_write returned: %d != %d\n", write_result, exact_length);
 
         ff_mms_set_state(mms, STATE_ERROR);
         return AVERROR_IO;
@@ -276,13 +269,11 @@ static int send_command_packet(MMSContext *mms)
 /** Log unexpected incoming packet */
 static void log_packet_in_wrong_state(MMSContext *mms, MMSSCPacketType packet_type)
 {
-#if (MMS_DEBUG_LEVEL>0)
     if(packet_type>=0) {
-        fprintf(stderr, "Got a packet 0x%02x in the wrong state: %d!\n", packet_type, mms->state);
+       dprintf(NULL, "Got a packet 0x%02x in the wrong state: %d!\n", packet_type, mms->state);
     } else {
-        fprintf(stderr, "Got a pseudo-packet %d in the wrong state: %d!\n", packet_type,  mms->state);
+        dprintf(NULL, "Got a pseudo-packet %d in the wrong state: %d!\n", packet_type,  mms->state);
     }
-#endif
 }
 
 static int send_protocol_select(MMSContext *mms)
@@ -369,9 +360,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 if((read_result= read_bytes(mms, mms->incoming_buffer+8, 4)) == 4) {
                     int length_remaining= AV_RL32(mms->incoming_buffer+8) + 4;
 
-#if (MMS_DEBUG_LEVEL>0)
-                    fprintf(stderr, "Length remaining is %d\n", length_remaining);
-#endif
+                    dprintf(NULL, "Length remaining is %d\n", length_remaining);
                     // FIXME? ** VERIFY LENGTH REMAINING HAS SPACE
                     // read the rest of the packet....
                     read_result = read_bytes(mms, mms->incoming_buffer + 12, length_remaining) ;
@@ -383,16 +372,12 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                         packet_type= AV_RL16(mms->incoming_buffer+36);
 
                     } else {
-#if (MMS_DEBUG_LEVEL>0)
                         // read error...
-                        fprintf(stderr, "3 read returned %d!\n", read_result);
-#endif
+                        dprintf(NULL, "3 read returned %d!\n", read_result);
                     }
                 } else {
-#if (MMS_DEBUG_LEVEL>0)
                     // read error...
-                    fprintf(stderr, "2 read returned %d!\n", read_result);
-#endif
+                    dprintf(NULL, "2 read returned %d!\n", read_result);
                 }
             } else {
                 int length_remaining= (AV_RL16(mms->incoming_buffer + 6) - 8) & 0xffff;
@@ -410,14 +395,12 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 mms->media_packet_read_ptr      = mms->media_packet_incoming_buffer;
 
                 if(mms->media_packet_buffer_length>=sizeof(mms->media_packet_incoming_buffer)) {
-                    fprintf(stderr, "Incoming Buffer Length exceeds buffer: %d>%d\n", mms->media_packet_buffer_length, (int) sizeof(mms->media_packet_incoming_buffer));
+                    dprintf(NULL, "Incoming Buffer Length exceeds buffer: %d>%d\n", mms->media_packet_buffer_length, (int) sizeof(mms->media_packet_incoming_buffer));
                 }
                 assert(mms->media_packet_buffer_length<sizeof(mms->media_packet_incoming_buffer));
                 read_result= read_bytes(mms, dst, length_remaining);
                 if(read_result != length_remaining) {
-#if (MMS_DEBUG_LEVEL>0)
-                    fprintf(stderr, "read_bytes result: %d asking for %d\n", read_result, length_remaining);
-#endif
+                    dprintf(NULL, "read_bytes result: %d asking for %d\n", read_result, length_remaining);
                     break;
                 } else {
                     // if we successfully read everything....
@@ -434,9 +417,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     } else if(packet_id_type == mms->packet_id) {
                         packet_type = SC_PACKET_ASF_MEDIA_TYPE;
                     } else {
-#if (MMS_DEBUG_LEVEL>0)
-                        fprintf(stderr, "packet id type %d which must be old, getting another one.", packet_id_type);
-#endif
+                        dprintf(NULL, "packet id type %d which must be old, getting another one.", packet_id_type);
                         done= 0;
                     }
                 }
@@ -444,14 +425,10 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
         } else {
             // read error...
             if(read_result<0) {
-#if (MMS_DEBUG_LEVEL>0)
-                fprintf(stderr, "Read error (or cancelled) returned %d!\n", read_result);
-#endif
+                dprintf(NULL, "Read error (or cancelled) returned %d!\n", read_result);
                 packet_type = SC_PACKET_TYPE_CANCEL;
             } else {// 0 is okay, no data received.
-#if (MMS_DEBUG_LEVEL>0)
-                fprintf(stderr, "Read result of zero?!\n");
-#endif
+                dprintf(NULL, "Read result of zero?!\n");
                 packet_type = SC_PACKET_TYPE_NO_DATA;
             }
             done = 1;
@@ -479,9 +456,7 @@ static void handle_packet_media_file_details(MMSContext *mms)
     flags= get_le32(&pkt); // flags?
     if(flags==0xffffffff) {
         // this is a permission denied event.
-#if (MMS_DEBUG_LEVEL>0)
-        fprintf(stderr, "Permission denied!\n");
-#endif
+        dprintf(NULL, "Permission denied!\n");
         ff_mms_set_state(mms, STATE_ERROR);
     } else {
         get_le32(&pkt);
@@ -501,16 +476,14 @@ static void handle_packet_media_file_details(MMSContext *mms)
         get_le32(&pkt);
         highest_bit_rate= get_le32(&pkt);
         header_size= get_le32(&pkt);
-#if (MMS_DEBUG_LEVEL>0)
-        fprintf(stderr, "Broadcast flags: 0x%x\n", broadcast_flags); // 8000= allow index, 01= prerecorded, 02= live 42= presentation with script commands
-        fprintf(stderr, "File Time Point?: %lld double size: %d double value: %lf\n", total_file_length_in_seconds, (int) sizeof(double), duration);
-        fprintf(stderr, "Total in Seconds: %d\n", total_length_in_seconds);
-        fprintf(stderr, "Packet length: %d\n", packet_length);
-        fprintf(stderr, "Total Packet Count: %d\n", total_packet_count);
-        fprintf(stderr, "Highest Bit Rate: %d\n", highest_bit_rate);
-        fprintf(stderr, "Header Size: %d\n", header_size);
-        fprintf(stderr, "---- Done ----\n");
-#endif
+        dprintf(NULL, "Broadcast flags: 0x%x\n", broadcast_flags); // 8000= allow index, 01= prerecorded, 02= live 42= presentation with script commands
+        dprintf(NULL, "File Time Point?: %lld double size: %d double value: %lf\n", total_file_length_in_seconds, (int) sizeof(double), duration);
+        dprintf(NULL, "Total in Seconds: %d\n", total_length_in_seconds);
+        dprintf(NULL, "Packet length: %d\n", packet_length);
+        dprintf(NULL, "Total Packet Count: %d\n", total_packet_count);
+        dprintf(NULL, "Highest Bit Rate: %d\n", highest_bit_rate);
+        dprintf(NULL, "Header Size: %d\n", header_size);
+        dprintf(NULL, "---- Done ----\n");
 
         /* Disable seeking in live broadcasts for now */
         if(! (broadcast_flags & 0x0200))
@@ -544,16 +517,14 @@ static int send_media_header_request(MMSContext *mms)
 static void handle_packet_stream_changing_type(MMSContext *mms)
 {
     ByteIOContext pkt;
-#if (MMS_DEBUG_LEVEL>0)
-    fprintf(stderr, "Stream changing!\n");
-#endif
+    dprintf(NULL, "Stream changing!\n");
 
     // read these from the incoming buffer.. (40 is the packet header size, without the prefixes)
     init_put_byte(&pkt, mms->incoming_buffer+40, mms->incoming_buffer_length-40, 0, NULL, NULL, NULL, NULL);
     get_le32(&pkt); // prefix 1
     mms->header_packet_id= (get_le32(&pkt) & 0xff); // prefix 2
 
-    fprintf(stderr, "Changed header prefix to 0x%x", mms->header_packet_id);
+    dprintf(NULL, "Changed header prefix to 0x%x", mms->header_packet_id);
 
     ff_mms_set_state(mms, AWAITING_ASF_HEADER); // this is going to hork our avstreams.
 }
@@ -577,9 +548,7 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
     switch(packet_type) {
     case SC_PACKET_CLIENT_ACCEPTED:
         if(mms->state==AWAITING_SC_PACKET_CLIENT_ACCEPTED) {
-#if (MMS_DEBUG_LEVEL>0)
-            fprintf(stderr, "Transitioning from AWAITING_SC_PACKET_CLIENT_ACCEPTED to AWAITING_SC_PACKET_TIMING_TEST_REPLY_TYPE\n");
-#endif
+            dprintf(NULL, "Transitioning from AWAITING_SC_PACKET_CLIENT_ACCEPTED to AWAITING_SC_PACKET_TIMING_TEST_REPLY_TYPE\n");
             // send the timing request packet...
             start_command_packet(mms, CS_PACKET_TIMING_DATA_REQUEST_TYPE);
             insert_command_prefixes(mms, 0xf0f0f0f1, 0x0004000b);
@@ -610,9 +579,7 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
     case SC_PACKET_PROTOCOL_FAILED_TYPE:
         if(mms->state==AWAITING_CS_PACKET_PROTOCOL_ACCEPTANCE) {
             // abort;
-#if (MMS_DEBUG_LEVEL>0)
-            fprintf(stderr, "Protocol failed\n");
-#endif
+            dprintf(NULL, "Protocol failed\n");
             ff_mms_set_state(mms, STATE_ERROR);
         } else {
             return -1;
@@ -622,9 +589,7 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
     case SC_PACKET_PASSWORD_REQUIRED_TYPE:
         if(mms->state==AWAITING_PASSWORD_QUERY_OR_MEDIA_FILE) {
             // we don't support this right now.
-#if (MMS_DEBUG_LEVEL>0)
-            fprintf(stderr, "Password required\n");
-#endif
+            dprintf(NULL, "Password required\n");
             ff_mms_set_state(mms, STATE_ERROR);
         } else {
             return -1;
@@ -659,9 +624,7 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
 
     case SC_PACKET_STREAM_ID_ACCEPTED_TYPE:
         if(mms->state==AWAITING_STREAM_ID_ACCEPTANCE) {
-#if (MMS_DEBUG_LEVEL>0)
-            fprintf(stderr, "Stream ID's accepted!\n");
-#endif
+            dprintf(NULL, "Stream ID's accepted!\n");
             ff_mms_set_state(mms, STREAM_PAUSED); // only way to get out of this is to play...
         } else {
             return -1;
@@ -679,9 +642,7 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
 
     case SC_PACKET_KEEPALIVE_TYPE:
         if(mms->state==STREAMING || mms->state==STREAM_PAUSED) {
-#if (MMS_DEBUG_LEVEL>0)
-            fprintf(stderr, "Got a Keepalive!\n");
-#endif
+           dprintf(NULL, "Got a Keepalive!\n");
             send_keepalive_packet(mms);
         } else {
             return -1;
@@ -701,7 +662,6 @@ static void pad_media_packet(MMSContext *mms)
 {
     if(mms->media_packet_buffer_length<mms->asf_packet_len) {
         int padding_size = mms->asf_packet_len - mms->media_packet_buffer_length;
-        //  fprintf(stderr, "Incoming packet smaller than the asf packet size stated (%d<%d) Padding.\n", mms->media_packet_buffer_length, mms->asf_context.packet_size);
         memset(mms->media_packet_incoming_buffer+mms->media_packet_buffer_length, 0, padding_size);
         mms->media_packet_buffer_length += padding_size;
     }
@@ -732,14 +692,10 @@ static MMSSCPacketType ff_mms_packet_state_machine(MMSContext *mms)
     switch(packet_type) {
     case SC_PACKET_ASF_HEADER_TYPE:
         if(mms->state==AWAITING_ASF_HEADER) {
-#if (MMS_DEBUG_LEVEL>0)
-            fprintf(stderr, "Got a SC_PACKET_ASF_HEADER: %d\n", mms->media_packet_buffer_length);
-#endif
+            dprintf(NULL, "Got a SC_PACKET_ASF_HEADER: %d\n", mms->media_packet_buffer_length);
             if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C))
             {
-#if (MMS_DEBUG_LEVEL>0)
-                fprintf(stderr, "Got the full header!\n");
-#endif
+                dprintf(NULL, "Got the full header!\n");
                 ff_mms_set_state(mms, ASF_HEADER_DONE);
             }
         } else {
@@ -749,7 +705,6 @@ static MMSSCPacketType ff_mms_packet_state_machine(MMSContext *mms)
 
     case SC_PACKET_ASF_MEDIA_TYPE:
         if(mms->state==STREAMING || mms->state==AWAITING_PAUSE_ACKNOWLEDGE || mms->state==AWAITING_HTTP_PAUSE_CONTROL_ACKNOWLEDGE) {
-//                fprintf(stderr, "Got a stream packet of length %d!\n", mms->incoming_buffer_length);
             pad_media_packet(mms);
         } else {
             log_packet_in_wrong_state(mms, packet_type);
@@ -758,9 +713,7 @@ static MMSSCPacketType ff_mms_packet_state_machine(MMSContext *mms)
 
     case SC_PACKET_STREAM_STOPPED_TYPE:
         if(mms->state==AWAITING_PAUSE_ACKNOWLEDGE) {
-#if (MMS_DEBUG_LEVEL>0)
-            fprintf(stderr, "Server echoed stream pause\n");
-#endif
+            dprintf(NULL, "Server echoed stream pause\n");
             ff_mms_set_state(mms, STREAM_PAUSED);
         } else if(mms->state==STREAMING) {
             /*
@@ -790,9 +743,7 @@ static MMSSCPacketType ff_mms_packet_state_machine(MMSContext *mms)
              prefix1        00000000
              prefix2        00000004
             */
-#if (MMS_DEBUG_LEVEL>0)
-            fprintf(stderr, "** Server hit end of stream (may be sending new header information)\n");
-#endif
+            dprintf(NULL, "** Server hit end of stream (may be sending new header information)\n");
             // TODO: if this is a live stream, on the resumption of a pause, this happens, then it follows with a SC_PACKET_STREAM_CHANGING_TYPE
             // otherwise it means this stream is done.
             ff_mms_set_state(mms, STREAM_DONE);
@@ -802,15 +753,13 @@ static MMSSCPacketType ff_mms_packet_state_machine(MMSContext *mms)
         break;
 
     case SC_PACKET_TYPE_CANCEL:
-        fprintf(stderr, "Got a -1 packet type\n");
+        dprintf(NULL, "Got a -1 packet type\n");
         // user cancelled; let us out so it gets closed down...
         ff_mms_set_state(mms, USER_CANCELLED);
         break;
 
     case SC_PACKET_TYPE_NO_DATA:
-#if (MMS_DEBUG_LEVEL>0)
-        fprintf(stderr, "Got no data (closed?)\n");
-#endif
+       dprintf(NULL, "Got no data (closed?)\n");
         ff_mms_set_state(mms, STREAM_DONE); //?
         break;
 
@@ -819,7 +768,7 @@ static MMSSCPacketType ff_mms_packet_state_machine(MMSContext *mms)
         break;
 
     default:
-        fprintf(stderr, "Unhandled packet type %d\n", packet_type);
+        dprintf(NULL, "Unhandled packet type %d\n", packet_type);
         break;
     }
 
@@ -887,7 +836,7 @@ static int asf_header_parser(MMSContext *mms)
 static int read_mms_header(MMSContext *mms)
 {
     if(mms->state != AWAITING_ASF_HEADER) {
-        fprintf(stderr, "cannot read header this state\n");
+        dprintf(NULL, "cannot read header this state\n");
         ff_mms_set_state(mms, STATE_ERROR);
         return -1;
     }
@@ -982,7 +931,7 @@ static int request_streaming_from(MMSContext *mms,
         return 0;
     } else {
 #if (MMS_DEBUG_LEVEL>0)
-//        fprintf(stderr, "Tried a read_play when the state was not stream paused (%s)\n", state_names[mms->state]);
+        dprintf(NULL, "Tried a read_play when the state was not stream paused (%s)\n", state_names[mms->state]);
 #endif
         return -1;
     }
@@ -1003,9 +952,7 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                 memcpy(buf, mms->asf_header + mms->asf_header_read_pos, size_to_copy);
                 mms->asf_header_read_pos += size_to_copy;
                 result += size_to_copy;
-#if (MMS_DEBUG_LEVEL > 0)
-                fprintf(stderr, "Copied %d bytes from stored header. left: %d\n", size_to_copy, mms->asf_header_size - mms->asf_header_read_pos);
-#endif
+                dprintf(NULL, "Copied %d bytes from stored header. left: %d\n", size_to_copy, mms->asf_header_size - mms->asf_header_read_pos);
             } else if(mms->media_packet_buffer_length) {
                 /* Read from media packet buffer */
                 size_to_copy = FFMIN(buf_size, mms->media_packet_buffer_length);
@@ -1013,19 +960,16 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                 mms->media_packet_buffer_length -= size_to_copy;
                 mms->media_packet_read_ptr+= size_to_copy;
                 result += size_to_copy;
-                //fprintf(stderr, "Copied %d bytes from media_packet read pointer! (result: %d, left: %d)\n", size_to_copy, result, mms->media_packet_buffer_length);
             } else {
                 /* Read from network */
-//               fprintf(stderr, "Calling state machine...\n");
                 packet_type= ff_mms_packet_state_machine(mms);
-//                fprintf(stderr, "Type: 0x%x\n", packet_type);
                 switch (packet_type) {
                 case SC_PACKET_ASF_MEDIA_TYPE:
-//                   if(mms->media_packet_buffer_length>mms->asf_packet_len) {
-                        fprintf(stderr, "Incoming packet larger than the asf packet size stated (%d>%d)\n", mms->media_packet_buffer_length, mms->asf_packet_len);
-//                        result= AVERROR_IO;
-//                        break;
-//                    }
+                   if(mms->media_packet_buffer_length>mms->asf_packet_len) {
+                        dprintf(NULL, "Incoming packet larger than the asf packet size stated (%d>%d)\n", mms->media_packet_buffer_length, mms->asf_packet_len);
+                        result= AVERROR_IO;
+                        break;
+                    }
 
                     // copy the data to the packet buffer...
                     size_to_copy= FFMIN(buf_size, mms->media_packet_buffer_length);
@@ -1033,7 +977,6 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                     mms->media_packet_buffer_length -= size_to_copy;
                     mms->media_packet_read_ptr += size_to_copy;
                     result += size_to_copy;
-//fprintf(stderr, "Copied %d bytes (Media) from media_packet read pointer! (result: %d)\n", size_to_copy, result);
                     break;
                 case SC_PACKET_ASF_HEADER_TYPE:
                     // copy the data to the packet buffer...
@@ -1042,7 +985,6 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                     mms->media_packet_buffer_length -= size_to_copy;
                     mms->media_packet_read_ptr+= size_to_copy;
                     result+= size_to_copy;
-//fprintf(stderr, "Copied %d bytes (header) from media_packet read pointer! (result: %d)\n", size_to_copy, result);
                     break;
                 default:
                     if(mms->state==STREAM_PAUSED) {
@@ -1051,15 +993,11 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                         result=-1;
                     } else if(mms->state==AWAITING_ASF_HEADER) {
                         // we have reset the header; spin though the loop..
-//                        fprintf(stderr, "****-- Spinning the loop!\n");
                         while(mms->state != STREAMING && mms->state != STATE_ERROR) {
                             ff_mms_packet_state_machine(mms);
                         }
-//                        fprintf(stderr, "****-- Done Spinning the loop!\n");
                     } else {
-#if (MMS_DEBUG_LEVEL>0)
-                        fprintf(stderr, "Got a packet in odd state: %d Packet Type: 0x%x\n", mms->state, packet_type);
-#endif
+                        dprintf(NULL, "Got a packet in odd state: %d Packet Type: 0x%x\n", mms->state, packet_type);
                     }
                     break;
                 }
@@ -1072,7 +1010,6 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
             result= -1;
         }
     }
-//    fprintf(stderr, "read packet %p needs %d bytes.  getting %d\n", buf, buf_size, result);
 
     return result;
 }
@@ -1093,9 +1030,6 @@ static int mms_close(URLContext *h)
 {
     MMSContext *mms = (MMSContext *)h->priv_data;
 
-#if (MMS_DEBUG_LEVEL>0)
-    fprintf(stderr, "mms_close\n");
-#endif
     if(mms->mms_hd) {
         // send the close packet if we should...
         if(mms->state != STATE_ERROR) {
@@ -1105,9 +1039,6 @@ static int mms_close(URLContext *h)
         // need an url_fdclose()
         close_connection(mms);
     }
-#if (MMS_DEBUG_LEVEL>0)
-    fprintf(stderr, "done with mms_close\n");
-#endif
 
     /* TODO: free all separately allocated pointers in mms */
     av_free(mms->asf_header);
@@ -1163,17 +1094,13 @@ static int mms_open_cnx(URLContext *h)
         goto fail;
     }
 
-#if (MMS_DEBUG_LEVEL>0)
-    fprintf(stderr, "Leaving open (success)\n");
-#endif
+    dprintf(NULL, "Leaving open (success)\n");
 
     return 0;
 fail:
     mms_close(h);
 
-#if (MMS_DEBUG_LEVEL>0)
-    fprintf(stderr, "Leaving open (failure: %d)\n", err);
-#endif
+    dprintf(NULL, "Leaving open (failure: %d)\n", err);
 
     return err;
 }
@@ -1207,10 +1134,6 @@ static int ff_mms_play(URLContext *h)
     if(mms->state == STREAMING || mms->state == AWAITING_STREAM_START_PACKET)
         return 0;
 
-#if (MMS_DEBUG_LEVEL>0)
-    fprintf(stderr, "MMS Play\n");
-#endif
-
     /* If resuming from pause */
     if(mms->state==STREAM_PAUSED)
         stream_offset = (mms->pause_resume_seq+1) * mms->asf_packet_len;
@@ -1233,7 +1156,7 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     /* Automatically start playing if the app wants to read before it has called play()
      * (helps with non-streaming aware apps) */
     if(mms->state == ASF_HEADER_DONE && mms->asf_header_read_pos >= mms->asf_header_size) {
-        fprintf(stderr, "mms_read() before play(). Playing automatically.\n");
+        dprintf(NULL, "mms_read() before play(). Playing automatically.\n");
         result = ff_mms_play(h);// TOBEDONE
         if(result < 0)
             return result;
@@ -1242,7 +1165,7 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     /* We won't get any packets from the server if paused. Nothing else to do than
      * to return. FIXME: return AVERROR(EAGAIN)? */
     if(mms->state == STREAM_PAUSED) {
-        fprintf(stderr, "mms_read in STREAM_PAUSED\n");
+        dprintf(NULL, "mms_read in STREAM_PAUSED\n");
         return 0;
     } else if(mms->state==STREAMING || mms->state==AWAITING_STREAM_START_PACKET || mms->state == ASF_HEADER_DONE) {
         result = read_mms_packet(mms, buf, size);//TOBEDONE use asf_read_packet?
@@ -1250,9 +1173,7 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
         /* Note which packet we last returned. FIXME: doesn't handle partially read packets */
         mms->pause_resume_seq = mms->incoming_packet_seq;
     } else {
-#if (MMS_DEBUG_LEVEL>0)
-        fprintf(stderr, "mms_read: wrong state %d, returning AVERROR_IO!\n", mms->state);
-#endif
+        dprintf(NULL, "mms_read: wrong state %d, returning AVERROR_IO!\n", mms->state);
         result = AVERROR(EIO);
     }
 
