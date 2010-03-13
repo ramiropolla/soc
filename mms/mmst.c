@@ -555,25 +555,22 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
             send_command_packet(mms);
 
             ff_mms_set_state(mms, AWAITING_SC_PACKET_TIMING_TEST_REPLY_TYPE);
-        } else {
+        } else
             return -1;
-        }
         break;
 
     case SC_PACKET_TIMING_TEST_REPLY_TYPE: // we may, or may not have timing tests.
         if(mms->state==AWAITING_SC_PACKET_TIMING_TEST_REPLY_TYPE || mms->state==AWAITING_SC_PACKET_CLIENT_ACCEPTED) {
             send_protocol_select(mms);
-        } else {
+        } else
             return -1;
-        }
         break;
 
     case SC_PACKET_PROTOCOL_ACCEPTED_TYPE:
         if(mms->state==AWAITING_CS_PACKET_PROTOCOL_ACCEPTANCE) {
             send_media_file_request(mms);
-        } else {
+        } else
             return -1;
-        }
         break;
 
     case SC_PACKET_PROTOCOL_FAILED_TYPE:
@@ -581,9 +578,8 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
             // abort;
             dprintf(NULL, "Protocol failed\n");
             ff_mms_set_state(mms, STATE_ERROR);
-        } else {
+        } else
             return -1;
-        }
         break;
 
     case SC_PACKET_PASSWORD_REQUIRED_TYPE:
@@ -591,9 +587,8 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
             // we don't support this right now.
             dprintf(NULL, "Password required\n");
             ff_mms_set_state(mms, STATE_ERROR);
-        } else {
+        } else
             return -1;
-        }
         break;
 
     case SC_PACKET_MEDIA_FILE_DETAILS_TYPE:
@@ -601,52 +596,46 @@ static int tcp_packet_state_machine(MMSContext *mms, MMSSCPacketType packet_type
             handle_packet_media_file_details(mms);
             if(mms->state != STATE_ERROR)
                 send_media_header_request(mms);
-        } else {
+        } else
             return -1;
-        }
         break;
 
     case SC_PACKET_HEADER_REQUEST_ACCEPTED_TYPE:
         if(mms->state==AWAITING_PACKET_HEADER_REQUEST_ACCEPTED_TYPE) {
             ff_mms_set_state(mms, AWAITING_ASF_HEADER);
-        } else {
+        } else
             return -1;
-        }
         break;
 
     case SC_PACKET_STREAM_CHANGING_TYPE:
         if(mms->state==STREAMING) {
             handle_packet_stream_changing_type(mms);
-        } else {
+        } else
             return -1;
-        }
         break;
 
     case SC_PACKET_STREAM_ID_ACCEPTED_TYPE:
         if(mms->state==AWAITING_STREAM_ID_ACCEPTANCE) {
             dprintf(NULL, "Stream ID's accepted!\n");
             ff_mms_set_state(mms, STREAM_PAUSED); // only way to get out of this is to play...
-        } else {
+        } else
             return -1;
-        }
         break;
 
     case SC_PACKET_MEDIA_PACKET_FOLLOWS_TYPE:
         if(mms->state==AWAITING_STREAM_START_PACKET) {
             // get the stream packets...
             ff_mms_set_state(mms, STREAMING);
-        } else {
+        } else
             return -1;
-        }
         break;
 
     case SC_PACKET_KEEPALIVE_TYPE:
         if(mms->state==STREAMING || mms->state==STREAM_PAUSED) {
            dprintf(NULL, "Got a Keepalive!\n");
             send_keepalive_packet(mms);
-        } else {
+        } else
             return -1;
-        }
         break;
 
     default:
