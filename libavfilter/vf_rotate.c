@@ -105,6 +105,10 @@ static int config_props_output(AVFilterLink *link)
     return 0;
 }
 
+static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
+{
+}
+
 static void end_frame(AVFilterLink *link)
 {
     RotContext *rot = link->dst->priv;
@@ -186,6 +190,7 @@ AVFilter avfilter_vf_rotate =
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
+                                    .draw_slice      = draw_slice,
                                     .end_frame       = end_frame,
                                     .config_props    = config_props_input,
                                     .min_perms       = AV_PERM_READ, },
