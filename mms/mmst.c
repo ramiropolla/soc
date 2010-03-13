@@ -98,27 +98,6 @@ typedef enum {
     /*@}*/
 } MMSSCPacketType;
 
-#if (MMS_DEBUG_LEVEL>0)
-static const char *state_names[]= {
-    "AWAITING_SC_PACKET_CLIENT_ACCEPTED",
-    "AWAITING_SC_PACKET_TIMING_TEST_REPLY_TYPE",
-    "AWAITING_CS_PACKET_PROTOCOL_ACCEPTANCE",
-    "AWAITING_PASSWORD_QUERY_OR_MEDIA_FILE",
-    "AWAITING_PACKET_HEADER_REQUEST_ACCEPTED_TYPE",
-    "AWAITING_STREAM_ID_ACCEPTANCE",
-    "AWAITING_STREAM_START_PACKET",
-    "AWAITING_ASF_HEADER",
-    "ASF_HEADER_DONE",
-    "AWAITING_PAUSE_ACKNOWLEDGE",
-    "AWAITING_HTTP_PAUSE_CONTROL_ACKNOWLEDGE",
-    "STREAMING",
-    "STREAM_DONE",
-    "STATE_ERROR",
-    "STREAM_PAUSED",
-    "USER_CANCELLED"
-};
-#endif
-
 typedef struct {
     uint32_t local_ip_address; ///< Not ipv6 compatible, but neither is the protocol (sent, but not correct).
     int local_port; ///< My local port (sent but not correct).
@@ -178,13 +157,13 @@ static void ff_mms_set_state(MMSContext *mms, int new_state)
     /* Can't exit error state */
     if(mms->state==STATE_ERROR) {
 #if (MMS_DEBUG_LEVEL>0)
-        fprintf(stderr, "Trying to set state to %s from %s!\n", state_names[new_state], state_names[mms->state]);
+        fprintf(stderr, "Trying to set state to %d from %d!\n", new_state, mms->state);
 #endif
         return;
     }
 
 #if (MMS_DEBUG_LEVEL>0)
-    fprintf(stderr, "Set state to %s (%d) from %s (%d)!\n", state_names[new_state], new_state, state_names[mms->state], mms->state);
+    fprintf(stderr, "Set state to %d from %d!\n", new_state, mms->state);
 #endif
     if(mms->state==new_state && new_state==USER_CANCELLED) {
         ff_mms_set_state(mms, STATE_ERROR);
@@ -299,9 +278,9 @@ static void log_packet_in_wrong_state(MMSContext *mms, MMSSCPacketType packet_ty
 {
 #if (MMS_DEBUG_LEVEL>0)
     if(packet_type>=0) {
-        fprintf(stderr, "Got a packet 0x%02x in the wrong state: %s (%d)!\n", packet_type, state_names[mms->state], mms->state);
+        fprintf(stderr, "Got a packet 0x%02x in the wrong state: %d!\n", packet_type, mms->state);
     } else {
-        fprintf(stderr, "Got a pseudo-packet %d in the wrong state: %s (%d)!\n", packet_type, state_names[mms->state], mms->state);
+        fprintf(stderr, "Got a pseudo-packet %d in the wrong state: %d!\n", packet_type,  mms->state);
     }
 #endif
 }
@@ -1079,7 +1058,7 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
 //                        fprintf(stderr, "****-- Done Spinning the loop!\n");
                     } else {
 #if (MMS_DEBUG_LEVEL>0)
-                        fprintf(stderr, "Got a packet in odd state: %s Packet Type: 0x%x\n", state_names[mms->state], packet_type);
+                        fprintf(stderr, "Got a packet in odd state: %d Packet Type: 0x%x\n", mms->state, packet_type);
 #endif
                     }
                     break;
@@ -1272,7 +1251,7 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
         mms->pause_resume_seq = mms->incoming_packet_seq;
     } else {
 #if (MMS_DEBUG_LEVEL>0)
-        fprintf(stderr, "mms_read: wrong state %s, returning AVERROR_IO!\n", state_names[mms->state]);
+        fprintf(stderr, "mms_read: wrong state %d, returning AVERROR_IO!\n", mms->state);
 #endif
         result = AVERROR(EIO);
     }
