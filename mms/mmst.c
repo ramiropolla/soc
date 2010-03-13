@@ -29,7 +29,6 @@
 #define DEBUG
 #define MMS_DEBUG_LEVEL 2
 #define MMS_MAXIMUM_PACKET_LENGTH 512
-#define MMS_KILO                  1024
 #define DEFAULT_MMS_PORT      1755
 
 /** State machine states. */
@@ -139,13 +138,13 @@ typedef struct {
 
     /** Buffer for incoming control packets. */
     /*@{*/
-    uint8_t incoming_buffer[8*MMS_KILO]; ///< Incoming buffer location.
+    uint8_t incoming_buffer[8192]; ///< Incoming buffer location.
     int incoming_buffer_length; ///< Incoming buffer length.
     /*@}*/
 
     /** Buffer for incoming media/header packets. */
     /*@{*/
-    uint8_t media_packet_incoming_buffer[8*MMS_KILO]; ///< Either a header or media packet.
+    uint8_t media_packet_incoming_buffer[8192]; ///< Either a header or media packet.
     uint8_t *media_packet_read_ptr; ///< Pointer for partial reads.
     int media_packet_buffer_length; ///< Buffer length.
     int media_packet_seek_offset;   ///< Additional offset into packet from seek.
