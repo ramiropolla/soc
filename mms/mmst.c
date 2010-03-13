@@ -272,7 +272,7 @@ static void log_packet_in_wrong_state(MMSContext *mms, MMSSCPacketType packet_ty
     if(packet_type>=0) {
        dprintf(NULL, "Got a packet 0x%02x in the wrong state: %d!\n", packet_type, mms->state);
     } else {
-        dprintf(NULL, "Got a pseudo-packet %d in the wrong state: %d!\n", packet_type,  mms->state);
+       dprintf(NULL, "Got a pseudo-packet %d in the wrong state: %d!\n", packet_type,  mms->state);
     }
 }
 
