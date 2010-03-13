@@ -869,7 +869,7 @@ static int asf_header_parser(MMSContext *mms)
         uint64_t chunksize = AV_RL64(p + sizeof(ff_asf_guid));
         if (!memcmp(p, ff_asf_file_header, sizeof(ff_asf_guid))) {
             /* read packet size */
-            if (end - p > sizeof(ff_asf_guid) * 2 + 64) {
+            if (end - p > sizeof(ff_asf_guid) * 2 + 68) {
                 mms->asf_packet_len = AV_RL32(p + sizeof(ff_asf_guid) * 2 + 64);
             }
         } else if (!memcmp(p, ff_asf_stream_header, sizeof(ff_asf_guid))) {
