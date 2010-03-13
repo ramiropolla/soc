@@ -30,7 +30,6 @@
 #define MMS_DEBUG_LEVEL 2
 #define MMS_MAXIMUM_PACKET_LENGTH 512
 #define MMS_KILO                  1024
-#define MMS_URL_SIZE          4096
 #define DEFAULT_MMS_PORT      1755
 
 /** State machine states. */
@@ -170,7 +169,7 @@ typedef struct {
     /*@}*/
 
     int pause_resume_seq; ///< Last packet returned by mms_read. Useful for resuming pause.
-    char location[MMS_URL_SIZE];
+    char location[4096];
     int stream_num;
 } MMSContext;
 
@@ -1212,7 +1211,7 @@ static int mms_open(URLContext *h, const char *uri, int flags)
         return AVERROR(ENOMEM);
     memset(mms, 0, sizeof(MMSContext));
     h->priv_data = mms;
-    av_strlcpy(mms->location, uri, MMS_URL_SIZE);
+    av_strlcpy(mms->location, uri, sizeof(mms->location));
 
     ret = mms_open_cnx(h);
     return ret;
