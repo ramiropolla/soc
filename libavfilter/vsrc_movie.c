@@ -43,7 +43,7 @@ typedef struct {
     AVFilterPicRef *pic;
 } MovieContext;
 
-int movie_init(AVFilterContext *ctx)
+static int movie_init(AVFilterContext *ctx)
 {
     AVInputFormat  *file_iformat = NULL;
     int             i;
@@ -165,7 +165,7 @@ static int config_props(AVFilterLink *link)
     return 0;
 }
 
-int movie_get_frame(AVFilterLink *link)
+static int movie_get_frame(AVFilterLink *link)
 {
     AVPacket packet;
     int      frame_finished;

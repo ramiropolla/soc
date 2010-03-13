@@ -20,6 +20,7 @@
  */
 
 #include "avfilter.h"
+#include "vsrc_buffer.h"
 
 typedef struct {
     int64_t           pts;
