@@ -324,19 +324,11 @@ static int read_bytes(MMSContext *mms, uint8_t *buffer, int length_to_read)
     while(len<length_to_read)
     {
         int read_result= url_read(mms->mms_hd, buffer+len, length_to_read-len);
-        if(read_result==0)
+        if(read_result)
         {
-            break;
-        }
-        else if(read_result<0)
-        {
-            // if we read something, we want to return up to that portion; if we didn't error out.
-            if(!len)
-                len= -1;
-            break;
-        } else {
             len+= read_result;
-        }
+        } else
+            return read_result;
     }
 
     return len;
