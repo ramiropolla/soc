@@ -658,17 +658,9 @@ static int mms_open_cnx(URLContext *h)
 
     send_startup_packet(mms);
     if (get_tcp_server_response(mms) == SC_PACKET_CLIENT_ACCEPTED) {
-//        start_command_packet(mms, CS_PACKET_TIMING_DATA_REQUEST_TYPE);
-//        insert_command_prefixes(mms, 0xf0f0f0f1, 0x0004000b);
-//        send_command_packet(mms);
             send_protocol_select(mms);
     } else
         goto fail;
-
-//    if (get_tcp_server_response(mms) == SC_PACKET_TIMING_TEST_REPLY_TYPE) {
-//        send_protocol_select(mms);
-//    } else
-//        goto fail;
 
     if (get_tcp_server_response(mms) == SC_PACKET_PROTOCOL_ACCEPTED_TYPE) {
         send_media_file_request(mms);
