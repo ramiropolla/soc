@@ -123,6 +123,7 @@ typedef struct {
     int pause_resume_seq; ///< Last packet returned by mms_read. Useful for resuming pause.
     char location[4096];
     int stream_num;
+    int streaming_flag;
 } MMSContext;
 
 /** Close the remote connection. */
@@ -736,6 +737,13 @@ static int send_media_packet_request(MMSContext *mms)
     return send_command_packet(mms);
 }
 
+/** Clear all buffers of partial and old packets after a seek or other discontinuity */
+static void clear_stream_buffers(MMSContext *mms)
+{
+    mms->media_packet_buffer_length = 0;
+    mms->media_packet_read_ptr = mms->media_packet_incoming_buffer;
+}
+
 /** Read ASF data through the protocol. */
 static int mms_read(URLContext *h, uint8_t *buf, int size)
 {
@@ -749,8 +757,9 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     /* Automatically start playing if the app wants to read before it has called play()
      * (helps with non-streaming aware apps) */
     if(mms->header_parsed) {
-        if (mms->asf_header_read_pos >= mms->asf_header_size) {
+        if (mms->asf_header_read_pos >= mms->asf_header_size && !mms->streaming_flag) {
             dprintf(NULL, "mms_read() before play(). Playing automatically.\n");
+            clear_stream_buffers(mms);
             result = send_stream_selection_request(mms);
             if(result < 0)
                 return result;
@@ -761,7 +770,9 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
 
             // send media packet request
             send_media_packet_request(mms);
-            if (get_tcp_server_response(mms) != SC_PACKET_MEDIA_PACKET_FOLLOWS_TYPE) {
+            if (get_tcp_server_response(mms) == SC_PACKET_MEDIA_PACKET_FOLLOWS_TYPE) {
+               mms->streaming_flag = 1;
+            } else {
                 dprintf(NULL, "Canot get media follows packet from server.\n");
                 return 0;
             }
