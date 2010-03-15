@@ -74,7 +74,7 @@ typedef enum {
 } MMSSCPacketType;
 
 typedef struct {
-    uint32_t local_ip_address; ///< Not ipv6 compatible, but neither is the protocol (sent, but not correct).
+    uint32_t local_ip_address;
     int local_port; ///< My local port (sent but not correct).
     int sequence_number; ///< Outgoing packet sequence number.
     char path[256]; ///< Path of the resource being asked for.
@@ -97,30 +97,30 @@ typedef struct {
 
     /** Buffer for incoming media/header packets. */
     /*@{*/
-    uint8_t media_packet_incoming_buffer[8192]; ///< Either a header or media packet.
+    uint8_t media_packet_incoming_buffer[8192]; ///< header or media packet.
     uint8_t *media_packet_read_ptr; ///< Pointer for partial reads.
     int media_packet_buffer_length; ///< Buffer length.
-    int media_packet_seek_offset;   ///< Additional offset into packet from seek.
+    int media_packet_seek_offset;   ///< offset in packet.
     /*@}*/
 
     int incoming_packet_seq; ///< Incoming packet sequence number.
     int incoming_flags; ///< Incoming packet flags.
 
-    int packet_id; ///< Identifier for packets in the current stream, incremented on stops, etc.
-    unsigned int header_packet_id; ///< The header packet id (default is 2, can be reset)
+    int packet_id; ///< Identifier for packets in the current stream.
+    unsigned int header_packet_id; ///< default is 2.
 
     int seekable; ///< This tells you if the stream is seekable.
 
     /** Internal handling of the ASF header */
     /*@{*/
-    uint8_t *asf_header; ///< Stored ASF header, for seeking into it and internal parsing.
+    uint8_t *asf_header; ///< Stored ASF header.
     int asf_header_size; ///< Size of stored ASF header.
-    int asf_header_read_pos; ///< Current read position in header. See read_packet().
+    int asf_header_read_pos; ///< Current read position in header.
     int header_parsed; ///< The header has been received and parsed.
     int asf_packet_len;
     /*@}*/
 
-    int pause_resume_seq; ///< Last packet returned by mms_read. Useful for resuming pause.
+    int pause_resume_seq; ///< Last packet sequence.
     char location[4096];
     int stream_num;
     int streaming_flag;
@@ -153,8 +153,11 @@ static void start_command_packet(MMSContext *mms, MMSCSPacketType packet_type)
     url_fseek(context, 0, SEEK_SET); // start at the beginning...
     put_le32(context, 1); // start sequence?
     put_le32(context, 0xb00bface);
-    put_le32(context, 0); // Length of command until the end of all data  Value is in bytes and starts from after the protocol type bytes
-    put_byte(context, 'M'); put_byte(context, 'M'); put_byte(context, 'S'); put_byte(context, ' ');
+    put_le32(context, 0); // Length starts from after the protocol type bytes
+    put_byte(context, 'M');
+    put_byte(context, 'M');
+    put_byte(context, 'S');
+    put_byte(context, ' ');
     put_le32(context, 0);
     put_le32(context, mms->sequence_number++);
     put_le64(context, 0); // timestmamp
@@ -173,15 +176,12 @@ static void insert_command_prefixes(MMSContext *mms,
     put_le32(context, prefix2); // second prefix
 }
 
-/** Write a utf-16 string in little-endian order.
- * @note This is NOT the same as static int ascii_to_wc (ByteIOContext *pb, uint8_t *b), because ascii_to_wc is big endian, and this is little endian.
- */
 static void put_le_utf16(ByteIOContext *pb, char *utf8)
 {
     int val;
 
     while(*utf8) {
-        GET_UTF8(val, *utf8++, break;); // goto's suck, but i want to make sure it's terminated.
+        GET_UTF8(val, *utf8++, break;);
         put_le16(pb, val);
     }
 
@@ -213,7 +213,8 @@ static int send_command_packet(MMSContext *mms)
     // write it out...
     write_result= url_write(mms->mms_hd, context->buffer, exact_length);
     if(write_result != exact_length) {
-        dprintf(NULL, "url_write returned: %d != %d\n", write_result, exact_length);
+        dprintf(NULL, "url_write returned: %d != %d\n",
+                write_result, exact_length);
         return AVERROR_IO;
     }
 
@@ -249,7 +250,7 @@ static int send_media_file_request(MMSContext *mms)
     insert_command_prefixes(mms, 1, 0xffffffff);
     put_le32(&mms->outgoing_packet_data, 0);
     put_le32(&mms->outgoing_packet_data, 0);
-    put_le_utf16(&mms->outgoing_packet_data, mms->path+1); // +1 because we skip the leading /
+    put_le_utf16(&mms->outgoing_packet_data, mms->path+1); // +1 for skip "/".
     put_le32(&mms->outgoing_packet_data, 0); /* More zeroes */
 
     return send_command_packet(mms);
@@ -277,8 +278,9 @@ static void handle_packet_stream_changing_type(MMSContext *mms)
     ByteIOContext pkt;
     dprintf(NULL, "Stream changing!\n");
 
-    // read these from the incoming buffer.. (40 is the packet header size, without the prefixes)
-    init_put_byte(&pkt, mms->incoming_buffer+40, mms->incoming_buffer_length-40, 0, NULL, NULL, NULL, NULL);
+    // 40 is the packet header size, without the prefixea.s
+    init_put_byte(&pkt, mms->incoming_buffer+40,
+            mms->incoming_buffer_length-40, 0, NULL, NULL, NULL, NULL);
     get_le32(&pkt); // prefix 1
     mms->header_packet_id= (get_le32(&pkt) & 0xff); // prefix 2
     dprintf(NULL, "Changed header prefix to 0x%x", mms->header_packet_id);
@@ -297,8 +299,10 @@ static int send_keepalive_packet(MMSContext *mms)
 static void pad_media_packet(MMSContext *mms)
 {
     if(mms->media_packet_buffer_length<mms->asf_packet_len) {
-        int padding_size = mms->asf_packet_len - mms->media_packet_buffer_length;
-        memset(mms->media_packet_incoming_buffer+mms->media_packet_buffer_length, 0, padding_size);
+        int padding_size = mms->asf_packet_len
+                           - mms->media_packet_buffer_length;
+        memset(mms->media_packet_incoming_buffer
+               + mms->media_packet_buffer_length, 0, padding_size);
         mms->media_packet_buffer_length += padding_size;
     }
     if(mms->media_packet_seek_offset) {
@@ -321,13 +325,15 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
             // check if we are a command packet...
             if(AV_RL32(mms->incoming_buffer + 4)==0xb00bface) {
                 mms->incoming_flags= mms->incoming_buffer[3];
-                if((read_result= read_bytes(mms, mms->incoming_buffer+8, 4)) == 4) {
+                read_result= read_bytes(mms, mms->incoming_buffer+8, 4);
+                if(read_result == 4) {
                     int length_remaining= AV_RL32(mms->incoming_buffer+8) + 4;
 
                     dprintf(NULL, "Length remaining is %d\n", length_remaining);
                     // FIXME? ** VERIFY LENGTH REMAINING HAS SPACE
                     // read the rest of the packet....
-                    read_result = read_bytes(mms, mms->incoming_buffer + 12, length_remaining) ;
+                    read_result = read_bytes(mms, mms->incoming_buffer + 12,
+                                                  length_remaining) ;
                     if (read_result == length_remaining) {
                         // we have it all; get the stuff out of it.
                         mms->incoming_buffer_length= length_remaining+12;
@@ -344,27 +350,32 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     dprintf(NULL, "2 read returned %d!\n", read_result);
                 }
             } else {
-                int length_remaining= (AV_RL16(mms->incoming_buffer + 6) - 8) & 0xffff;
+                int length_remaining;
                 uint8_t *dst= mms->media_packet_incoming_buffer;
                 int packet_id_type;
 
-                assert(mms->media_packet_buffer_length==0); // assert all has been consumed.
+                assert(mms->media_packet_buffer_length==0);
 
                 //** VERIFY LENGTH REMAINING HAS SPACE
-                // note we cache the first 8 bytes, then fill up the buffer with the others
+                // note we cache the first 8 bytes,
+                // then fill up the buffer with the others
+                length_remaining = (AV_RL16(mms->incoming_buffer + 6) - 8) & 0xffff;
                 mms->incoming_packet_seq        = AV_RL32(mms->incoming_buffer);
-                packet_id_type                  = mms->incoming_buffer[4]; // NOTE: THIS IS THE ONE I CAN CHANGE
+                packet_id_type                  = mms->incoming_buffer[4];
                 mms->incoming_flags             = mms->incoming_buffer[5];
                 mms->media_packet_buffer_length = length_remaining;
                 mms->media_packet_read_ptr      = mms->media_packet_incoming_buffer;
 
-                if(mms->media_packet_buffer_length>=sizeof(mms->media_packet_incoming_buffer)) {
-                    dprintf(NULL, "Incoming Buffer Length exceeds buffer: %d>%d\n", mms->media_packet_buffer_length, (int) sizeof(mms->media_packet_incoming_buffer));
+                if(mms->media_packet_buffer_length >=
+                        sizeof(mms->media_packet_incoming_buffer)) {
+                    dprintf(NULL, "Incoming Buffer Length overflow: %d>%d\n",
+                    mms ->media_packet_buffer_length,
+                    (int) sizeof(mms->media_packet_incoming_buffer));
                 }
-                assert(mms->media_packet_buffer_length<sizeof(mms->media_packet_incoming_buffer));
                 read_result= read_bytes(mms, dst, length_remaining);
                 if(read_result != length_remaining) {
-                    dprintf(NULL, "read_bytes result: %d asking for %d\n", read_result, length_remaining);
+                    dprintf(NULL, "read_bytes result: %d asking for %d\n",
+                            read_result, length_remaining);
                     break;
                 } else {
                     // if we successfully read everything....
@@ -373,14 +384,18 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                         packet_type = SC_PACKET_ASF_HEADER_TYPE;
                         // Store the asf header
                         if(!mms->header_parsed) {
-                            mms->asf_header = av_realloc(mms->asf_header, mms->asf_header_size + mms->media_packet_buffer_length);
-                            memcpy(mms->asf_header + mms->asf_header_size, mms->media_packet_read_ptr, mms->media_packet_buffer_length);
+                            mms->asf_header = av_realloc(mms->asf_header,
+                                              mms->asf_header_size
+                                              + mms->media_packet_buffer_length);
+                            memcpy(mms->asf_header + mms->asf_header_size,
+                                                 mms->media_packet_read_ptr,
+                                                 mms->media_packet_buffer_length);
                             mms->asf_header_size += mms->media_packet_buffer_length;
                         }
                     } else if(packet_id_type == mms->packet_id) {
                         packet_type = SC_PACKET_ASF_MEDIA_TYPE;
                     } else {
-                        dprintf(NULL, "packet id type %d which must be old, getting another one.", packet_id_type);
+                        dprintf(NULL, "packet id type %d is old.", packet_id_type);
                         done= 0;
                     }
                 }
@@ -425,7 +440,8 @@ static void handle_packet_media_file_details(MMSContext *mms)
     double duration;
 
     // read these from the incoming buffer.. (48 is the packet header size)
-    init_put_byte(&pkt, mms->incoming_buffer+48, mms->incoming_buffer_length-48, 0, NULL, NULL, NULL, NULL);
+    init_put_byte(&pkt, mms->incoming_buffer+48,
+                    mms->incoming_buffer_length-48, 0, NULL, NULL, NULL, NULL);
     flags= get_le32(&pkt); // flags?
     if(flags==0xffffffff) {
         // this is a permission denied event.
@@ -448,8 +464,12 @@ static void handle_packet_media_file_details(MMSContext *mms)
         get_le32(&pkt);
         highest_bit_rate= get_le32(&pkt);
         header_size= get_le32(&pkt);
-        dprintf(NULL, "Broadcast flags: 0x%x\n", broadcast_flags); // 8000= allow index, 01= prerecorded, 02= live 42= presentation with script commands
-        dprintf(NULL, "File Time Point?: %lld double size: %d double value: %lf\n", total_file_length_in_seconds, (int) sizeof(double), duration);
+
+         // broadcast_flags: 8000= allow index, 01= prerecorded,
+        //  02= live 42= presentation with script commands
+        dprintf(NULL, "Broadcast flags: 0x%x\n", broadcast_flags);
+        dprintf(NULL, "File Time Point?: %lld double size: %d double value: %lf\n",
+                       total_file_length_in_seconds, (int) sizeof(double), duration);
         dprintf(NULL, "Total in Seconds: %d\n", total_length_in_seconds);
         dprintf(NULL, "Packet length: %d\n", packet_length);
         dprintf(NULL, "Total Packet Count: %d\n", total_packet_count);
@@ -488,7 +508,8 @@ static int send_startup_packet(MMSContext *mms)
 {
     char data_string[256];
 
-    snprintf(data_string, sizeof(data_string), "NSPlayer/7.0.0.1956; {%s}; Host: %s",
+    snprintf(data_string, sizeof(data_string),
+            "NSPlayer/7.0.0.1956; {%s}; Host: %s",
             "7E667F5D-A661-495E-A512-F55686DDA178", mms->host);
 
     start_command_packet(mms, CS_PACKET_INITIAL_TYPE);
@@ -557,11 +578,13 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
     do {
         if(mms->asf_header_read_pos < mms->asf_header_size) {
             /* Read from ASF header buffer */
-            size_to_copy= FFMIN(buf_size, mms->asf_header_size - mms->asf_header_read_pos);
+            size_to_copy= FFMIN(buf_size,
+                                mms->asf_header_size - mms->asf_header_read_pos);
             memcpy(buf, mms->asf_header + mms->asf_header_read_pos, size_to_copy);
             mms->asf_header_read_pos += size_to_copy;
             result += size_to_copy;
-            dprintf(NULL, "Copied %d bytes from stored header. left: %d\n", size_to_copy, mms->asf_header_size - mms->asf_header_read_pos);
+            dprintf(NULL, "Copied %d bytes from stored header. left: %d\n",
+                   size_to_copy, mms->asf_header_size - mms->asf_header_read_pos);
         } else if(mms->media_packet_buffer_length) {
             /* Read from media packet buffer */
             size_to_copy = FFMIN(buf_size, mms->media_packet_buffer_length);
@@ -575,7 +598,9 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
             switch (packet_type) {
             case SC_PACKET_ASF_MEDIA_TYPE:
                if(mms->media_packet_buffer_length>mms->asf_packet_len) {
-                    dprintf(NULL, "Incoming packet larger than the asf packet size stated (%d>%d)\n", mms->media_packet_buffer_length, mms->asf_packet_len);
+                    dprintf(NULL, "Incoming packet
+                            larger than the asf packet size stated (%d>%d)\n",
+                            mms->media_packet_buffer_length, mms->asf_packet_len);
                     result= AVERROR_IO;
                     break;
                 }
@@ -675,23 +700,26 @@ static int mms_open_cnx(URLContext *h)
     int ret;
 
     // only for MMS over TCP, so set proto = NULL
-    url_split(NULL, 0, authorization, sizeof(authorization), mms->host, sizeof(mms->host),
-              &mms->port, mms->path, sizeof(mms->path), mms->location);
+    url_split(NULL, 0, authorization, sizeof(authorization),
+            mms->host, sizeof(mms->host), &mms->port, mms->path,
+            sizeof(mms->path), mms->location);
 
     if(mms->port<0)
         mms->port = 1755; // defaut mms protocol port
 
     /* the outgoing packet buffer */
-    init_put_byte(&mms->outgoing_packet_data, mms->outgoing_packet_buffer, sizeof(mms->outgoing_packet_buffer), 1, NULL, NULL, NULL, NULL);
+    init_put_byte(&mms->outgoing_packet_data, mms->outgoing_packet_buffer,
+                  sizeof(mms->outgoing_packet_buffer), 1, NULL,
+                  NULL, NULL, NULL);
 
     /* open the tcp connexion */
     if((err = ff_mms_open_connection(mms)))
         goto fail;
 
     // Fill in some parameters...
-    mms->local_ip_address = 0xc0a80081; // This should be the local IP address; how do I get this from the url_ stuff?  (nothing is apparent)
-    mms->local_port = 1037; // as above, this should be the port I am connected to; how do I get this frmo the url stuff? (Server doesn't really seem to care too much)
-    mms->packet_id = 3; // default, initial value. (3 will be incremented to 4 before first use)
+    mms->local_ip_address = 0xc0a80081; // This should be the local IP address
+    mms->local_port       = 1037; // as above, this should be the port
+    mms->packet_id        = 3; // default, initial value.
     mms->header_packet_id = 2; // default, initial value.
 
     send_startup_packet(mms);
@@ -740,12 +768,12 @@ static int send_media_packet_request(MMSContext *mms)
     put_byte(&mms->outgoing_packet_data, 0xff); // max stream time limit
     put_byte(&mms->outgoing_packet_data, 0x00); // stream time limit flag
 
-    mms->packet_id++; // new packet_id so we can separate new data from old data
+    mms->packet_id++; // new packet_id
     put_le32(&mms->outgoing_packet_data, mms->packet_id);
     return send_command_packet(mms);
 }
 
-/** Clear all buffers of partial and old packets after a seek or other discontinuity */
+
 static void clear_stream_buffers(MMSContext *mms)
 {
     mms->media_packet_buffer_length = 0;
@@ -762,17 +790,16 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     /* Since we read the header at open(), this shouldn't be possible */
     assert(mms->header_parsed);
 
-    /* Automatically start playing if the app wants to read before it has called play()
-     * (helps with non-streaming aware apps) */
     if(mms->header_parsed) {
-        if (mms->asf_header_read_pos >= mms->asf_header_size && !mms->streaming_flag) {
-            dprintf(NULL, "mms_read() before play(). Playing automatically.\n");
+        if (mms->asf_header_read_pos >= mms->asf_header_size
+            && !mms->streaming_flag) {
+            dprintf(NULL, "mms_read() before play().\n");
             clear_stream_buffers(mms);
             result = send_stream_selection_request(mms);
             if(result < 0)
                 return result;
             if (get_tcp_server_response(mms) != SC_PACKET_STREAM_ID_ACCEPTED_TYPE) {
-                dprintf(NULL, "Canot get stream id accepted packet from server.\n");
+                dprintf(NULL, "Can't get stream id accepted packet.\n");
                 return 0;
             }
 
