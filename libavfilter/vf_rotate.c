@@ -174,8 +174,8 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     if(picref->pixel_aspect.num == 0) {
         out->outpic->pixel_aspect = picref->pixel_aspect;
     } else {
-    out->outpic->pixel_aspect.num = picref->pixel_aspect.den;
-    out->outpic->pixel_aspect.den = picref->pixel_aspect.num;
+        out->outpic->pixel_aspect.num = picref->pixel_aspect.den;
+        out->outpic->pixel_aspect.den = picref->pixel_aspect.num;
     }
 
     avfilter_start_frame(out, avfilter_ref_pic(out->outpic, ~0));
