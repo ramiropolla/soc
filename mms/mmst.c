@@ -629,12 +629,50 @@ static int mms_close(URLContext *h)
     return 0;
 }
 
+static int handle_mms_msg_pkt(MMSContext *mms, const MMSSCPacketType packet_type)
+{
+    int ret = -1;
+
+    switch(packet_type) {
+    case SC_PACKET_CLIENT_ACCEPTED:
+        ret = send_protocol_select(mms);
+        break;
+
+    case SC_PACKET_PROTOCOL_ACCEPTED_TYPE:
+        ret = send_media_file_request(mms);
+        break;
+
+    case SC_PACKET_MEDIA_FILE_DETAILS_TYPE:
+        handle_packet_media_file_details(mms);
+        ret = send_media_header_request(mms);
+        break;
+
+    case SC_PACKET_HEADER_REQUEST_ACCEPTED_TYPE:
+        ret = 0;
+        break;
+
+    case SC_PACKET_ASF_HEADER_TYPE:
+        if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C)) {
+            ret = asf_header_parser(mms);
+            mms->header_parsed = 1;
+        }
+        break;
+    default:
+        dprintf(NULL, "Unhandled packet type %d\n", packet_type);
+        break;
+    }
+
+    return ret;
+}
+
 static int mms_open_cnx(URLContext *h)
 {
     MMSContext *mms = h->priv_data;
+    MMSSCPacketType packet_type;
 
     char authorization[64];
     int err = AVERROR(EIO);
+    int ret;
 
     // only for MMS over TCP, so set proto = NULL
     url_split(NULL, 0, authorization, sizeof(authorization), mms->host, sizeof(mms->host),
@@ -657,34 +695,12 @@ static int mms_open_cnx(URLContext *h)
     mms->header_packet_id = 2; // default, initial value.
 
     send_startup_packet(mms);
-    if (get_tcp_server_response(mms) == SC_PACKET_CLIENT_ACCEPTED) {
-            send_protocol_select(mms);
-    } else
-        goto fail;
-
-    if (get_tcp_server_response(mms) == SC_PACKET_PROTOCOL_ACCEPTED_TYPE) {
-        send_media_file_request(mms);
-    } else
-        goto fail;
-
-    if (get_tcp_server_response(mms) == SC_PACKET_MEDIA_FILE_DETAILS_TYPE) {
-        handle_packet_media_file_details(mms);
-        send_media_header_request(mms);
-    } else
-        goto fail;
-
-    if (get_tcp_server_response(mms) == SC_PACKET_HEADER_REQUEST_ACCEPTED_TYPE) {
-        // recv asf header data
-        if (get_tcp_server_response(mms) == SC_PACKET_ASF_HEADER_TYPE) {
-            if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C)) {
-                asf_header_parser(mms);
-                mms->header_parsed = 1;
-            }  else
-                goto fail;
-        } else
-            goto fail;
-    } else
-        goto fail;
+    while (!mms->header_parsed) {
+        packet_type = get_tcp_server_response(mms);
+        ret = handle_mms_msg_pkt(mms, packet_type);
+        if (ret < 0)
+            break;
+    }
 
     if (!mms->asf_packet_len || !mms->stream_num)
         goto fail;
