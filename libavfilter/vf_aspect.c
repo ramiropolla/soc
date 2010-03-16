@@ -1,4 +1,7 @@
 /*
+ * Aspect ratio modification video filter
+ * Copyright (c) 2010 Bobby Bingham
+
  * This file is part of FFmpeg.
  *
  * FFmpeg is free software; you can redistribute it and/or
