@@ -16,6 +16,7 @@ OBJS = allfilters.o                                                     \
        parseutils.o                                                     \
 
 
+OBJS-$(CONFIG_ASPECT_FILTER)     += vf_aspect.o
 OBJS-$(CONFIG_CROP_FILTER)       += vf_crop.o
 OBJS-$(CONFIG_DRAWBOX_FILTER)    += vf_drawbox.o
 OBJS-$(CONFIG_FPS_FILTER)        += vf_fps.o
@@ -26,6 +27,7 @@ OBJS-$(CONFIG_FORMAT_FILTER)     += vf_format.o
 OBJS-$(CONFIG_NULL_FILTER)       += vf_null.o
 OBJS-$(CONFIG_OVERLAY_FILTER)    += vf_overlay.o
 OBJS-$(CONFIG_PAD_FILTER)        += vf_pad.o
+OBJS-$(CONFIG_PIXELASPECT_FILTER)+= vf_aspect.o
 OBJS-$(CONFIG_ROTATE_FILTER)     += vf_rotate.o
 OBJS-$(CONFIG_SCALE_FILTER)      += vf_scale.o
 OBJS-$(CONFIG_SETPTS_FILTER)     += vf_setpts.o

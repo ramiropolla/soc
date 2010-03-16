@@ -34,6 +34,7 @@ void avfilter_register_all(void)
         return;
     initialized = 1;
 
+    REGISTER_FILTER (ASPECT,    aspect,    vf);
     REGISTER_FILTER (CROP,      crop,      vf);
     REGISTER_FILTER (DRAWBOX,   drawbox,   vf);
     REGISTER_FILTER (FIFO,      fifo,      vf);
@@ -45,6 +46,7 @@ void avfilter_register_all(void)
     REGISTER_FILTER (NULL,      null,      vf);
     REGISTER_FILTER (OVERLAY,   overlay,   vf);
     REGISTER_FILTER (PAD,       pad,       vf);
+    REGISTER_FILTER (PIXELASPECT, pixelaspect, vf);
     REGISTER_FILTER (ROTATE,    rotate,    vf);
     REGISTER_FILTER (SCALE,     scale,     vf);
     REGISTER_FILTER (SETPTS,    setpts,    vf);
