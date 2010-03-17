@@ -23,6 +23,7 @@ OBJS-$(CONFIG_HFLIP_FILTER)                  += vf_hflip.o
 OBJS-$(CONFIG_NEGATE_FILTER)                 += vf_negate.o
 OBJS-$(CONFIG_FIFO_FILTER)                   += vf_fifo.o
 OBJS-$(CONFIG_FORMAT_FILTER)                 += vf_format.o
+OBJS-$(CONFIG_NOFORMAT_FILTER)               += vf_format.o
 OBJS-$(CONFIG_NULL_FILTER)                   += vf_null.o
 OBJS-$(CONFIG_OVERLAY_FILTER)                += vf_overlay.o
 OBJS-$(CONFIG_PAD_FILTER)                    += vf_pad.o
