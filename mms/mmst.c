@@ -100,7 +100,7 @@ typedef struct {
     uint8_t pkt_buf[8192]; ///< header or media packet.
     uint8_t *pkt_read_ptr; ///< Pointer for partial reads.
     int pkt_buf_len; ///< Buffer length.
-    int media_packet_seek_offset;   ///< offset in packet.
+    int pkt_offset;   ///< offset in packet.
     /*@}*/
 
     int incoming_packet_seq; ///< Incoming packet sequence number.
@@ -305,10 +305,10 @@ static void pad_media_packet(MMSContext *mms)
                + mms->pkt_buf_len, 0, padding_size);
         mms->pkt_buf_len += padding_size;
     }
-    if(mms->media_packet_seek_offset) {
-        mms->pkt_buf_len -= mms->media_packet_seek_offset;
-        mms->pkt_read_ptr += mms->media_packet_seek_offset;
-        mms->media_packet_seek_offset = 0;
+    if(mms->pkt_offset) {
+        mms->pkt_buf_len -= mms->pkt_offset;
+        mms->pkt_read_ptr += mms->pkt_offset;
+        mms->pkt_offset = 0;
     }
 }
 
