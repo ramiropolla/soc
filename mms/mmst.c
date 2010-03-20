@@ -136,13 +136,10 @@ static void close_connection(MMSContext *mms)
 static int ff_mms_open_connection(MMSContext *mms)
 {
     char tcpname[256];
-    int err;
 
     close_connection(mms);
-
     snprintf(tcpname, sizeof(tcpname), "tcp://%s:%d", mms->host, mms->port);
-    err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
-    return err;
+    return url_open(&mms->mms_hd, tcpname, URL_RDWR);
 }
 
 /** Create MMST command packet header */
