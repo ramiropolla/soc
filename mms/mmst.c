@@ -98,7 +98,7 @@ typedef struct {
     /** Buffer for incoming media/header packets. */
     /*@{*/
     uint8_t pkt_buf[8192]; ///< header or media packet.
-    uint8_t *media_packet_read_ptr; ///< Pointer for partial reads.
+    uint8_t *pkt_read_ptr; ///< Pointer for partial reads.
     int pkt_buf_len; ///< Buffer length.
     int media_packet_seek_offset;   ///< offset in packet.
     /*@}*/
@@ -307,7 +307,7 @@ static void pad_media_packet(MMSContext *mms)
     }
     if(mms->media_packet_seek_offset) {
         mms->pkt_buf_len -= mms->media_packet_seek_offset;
-        mms->media_packet_read_ptr += mms->media_packet_seek_offset;
+        mms->pkt_read_ptr += mms->media_packet_seek_offset;
         mms->media_packet_seek_offset = 0;
     }
 }
@@ -364,7 +364,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 packet_id_type                  = mms->incoming_buffer[4];
                 mms->incoming_flags             = mms->incoming_buffer[5];
                 mms->pkt_buf_len = length_remaining;
-                mms->media_packet_read_ptr      = mms->pkt_buf;
+                mms->pkt_read_ptr      = mms->pkt_buf;
 
                 if(mms->pkt_buf_len >=
                         sizeof(mms->pkt_buf)) {
@@ -388,7 +388,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                                               mms->asf_header_size
                                               + mms->pkt_buf_len);
                             memcpy(mms->asf_header + mms->asf_header_size,
-                                                 mms->media_packet_read_ptr,
+                                                 mms->pkt_read_ptr,
                                                  mms->pkt_buf_len);
                             mms->asf_header_size += mms->pkt_buf_len;
                         }
@@ -588,9 +588,9 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
         } else if(mms->pkt_buf_len) {
             /* Read from media packet buffer */
             size_to_copy = FFMIN(buf_size, mms->pkt_buf_len);
-            memcpy(buf, mms->media_packet_read_ptr, size_to_copy);
+            memcpy(buf, mms->pkt_read_ptr, size_to_copy);
             mms->pkt_buf_len -= size_to_copy;
-            mms->media_packet_read_ptr+= size_to_copy;
+            mms->pkt_read_ptr+= size_to_copy;
             result += size_to_copy;
         } else {
             /* Read from network */
@@ -607,17 +607,17 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
 
                 // copy the data to the packet buffer...
                 size_to_copy= FFMIN(buf_size, mms->pkt_buf_len);
-                memcpy(buf, mms->media_packet_read_ptr, size_to_copy);
+                memcpy(buf, mms->pkt_read_ptr, size_to_copy);
                 mms->pkt_buf_len -= size_to_copy;
-                mms->media_packet_read_ptr += size_to_copy;
+                mms->pkt_read_ptr += size_to_copy;
                 result += size_to_copy;
                 break;
             case SC_PACKET_ASF_HEADER_TYPE:
                 // copy the data to the packet buffer...
                 size_to_copy= FFMIN(buf_size, mms->pkt_buf_len);
-                memcpy(buf, mms->media_packet_read_ptr, size_to_copy);
+                memcpy(buf, mms->pkt_read_ptr, size_to_copy);
                 mms->pkt_buf_len -= size_to_copy;
-                mms->media_packet_read_ptr+= size_to_copy;
+                mms->pkt_read_ptr+= size_to_copy;
                 result+= size_to_copy;
                 break;
             default:
@@ -777,7 +777,7 @@ static int send_media_packet_request(MMSContext *mms)
 static void clear_stream_buffers(MMSContext *mms)
 {
     mms->pkt_buf_len = 0;
-    mms->media_packet_read_ptr = mms->pkt_buf;
+    mms->pkt_read_ptr = mms->pkt_buf;
 }
 
 /** Read ASF data through the protocol. */
