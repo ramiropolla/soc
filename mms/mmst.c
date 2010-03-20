@@ -28,48 +28,48 @@
 
 /** Client to server packet types. */
 typedef enum {
-    CS_PACKET_INITIAL_TYPE= 0x01,
-    CS_PACKET_PROTOCOL_SELECT_TYPE= 0x02,
-    CS_PACKET_MEDIA_FILE_REQUEST_TYPE= 0x05,
-    CS_PACKET_START_FROM_PACKET_ID_TYPE= 0x07,
-    CS_PACKET_STREAM_PAUSE_TYPE= 0x09, // tcp left open, but data stopped.
-    CS_PACKET_STREAM_CLOSE_TYPE= 0x0d,
-    CS_PACKET_MEDIA_HEADER_REQUEST_TYPE= 0x15,
-    CS_PACKET_TIMING_DATA_REQUEST_TYPE= 0x18,
-    CS_PACKET_USER_PASSWORD_TYPE= 0x1a,
-    CS_PACKET_KEEPALIVE_TYPE= 0x1b,
-    CS_PACKET_STREAM_ID_REQUEST_TYPE= 0x33,
+    CS_PKT_INITIAL= 0x01,
+    CS_PKT_PROTOCOL_SELECT= 0x02,
+    CS_PKT_MEDIA_FILE_REQUEST= 0x05,
+    CS_PKT_START_FROM_PKT_ID= 0x07,
+    CS_PKT_STREAM_PAUSE= 0x09, // tcp left open, but data stopped.
+    CS_PKT_STREAM_CLOSE= 0x0d,
+    CS_PKT_MEDIA_HEADER_REQUEST= 0x15,
+    CS_PKT_TIMING_DATA_REQUEST= 0x18,
+    CS_PKT_USER_PASSWORD= 0x1a,
+    CS_PKT_KEEPALIVE= 0x1b,
+    CS_PKT_STREAM_ID_REQUEST= 0x33,
 } MMSCSPacketType;
 
 /** Server to client packet types. */
 typedef enum {
     /** Control packets. */
     /*@{*/
-    SC_PACKET_CLIENT_ACCEPTED= 0x01,
-    SC_PACKET_PROTOCOL_ACCEPTED_TYPE= 0x02,
-    SC_PACKET_PROTOCOL_FAILED_TYPE= 0x03,
-    SC_PACKET_MEDIA_PACKET_FOLLOWS_TYPE= 0x05,
-    SC_PACKET_MEDIA_FILE_DETAILS_TYPE= 0x06,
-    SC_PACKET_HEADER_REQUEST_ACCEPTED_TYPE= 0x11,
-    SC_PACKET_TIMING_TEST_REPLY_TYPE= 0x15,
-    SC_PACKET_PASSWORD_REQUIRED_TYPE= 0x1a,
-    SC_PACKET_KEEPALIVE_TYPE= 0x1b,
-    SC_PACKET_STREAM_STOPPED_TYPE= 0x1e, // mmst, mmsh
-    SC_PACKET_STREAM_CHANGING_TYPE= 0x20,
-    SC_PACKET_STREAM_ID_ACCEPTED_TYPE= 0x21,
+    SC_PKT_CLIENT_ACCEPTED= 0x01,
+    SC_PKT_PROTOCOL_ACCEPTED= 0x02,
+    SC_PKT_PROTOCOL_FAILED= 0x03,
+    SC_PKT_MEDIA_PKT_FOLLOWS= 0x05,
+    SC_PKT_MEDIA_FILE_DETAILS= 0x06,
+    SC_PKT_HEADER_REQUEST_ACCEPTED= 0x11,
+    SC_PKT_TIMING_TEST_REPLY= 0x15,
+    SC_PKT_PASSWORD_REQUIRED= 0x1a,
+    SC_PKT_KEEPALIVE= 0x1b,
+    SC_PKT_STREAM_STOPPED= 0x1e, // mmst, mmsh
+    SC_PKT_STREAM_CHANGING= 0x20,
+    SC_PKT_STREAM_ID_ACCEPTED= 0x21,
     /*@}*/
 
     /** Pseudo packets. */
     /*@{*/
-    SC_PACKET_TYPE_CANCEL = -1, // mmst
-    SC_PACKET_TYPE_NO_DATA = -2, // mmst
-    SC_PACKET_HTTP_CONTROL_ACKNOWLEDGE = -3, // mmsh
+    SC_PKT_CANCEL = -1, // mmst
+    SC_PKT_NO_DATA = -2, // mmst
+    SC_PKT_HTTP_CONTROL_ACKNOWLEDGE = -3, // mmsh
     /*@}*/
 
     /** Data packets. */
     /*@{*/
-    SC_PACKET_ASF_HEADER_TYPE= 0x81, // mmst, mmsh
-    SC_PACKET_ASF_MEDIA_TYPE= 0x82, // mmst, mmsh
+    SC_PKT_ASF_HEADER= 0x81, // mmst, mmsh
+    SC_PKT_ASF_MEDIA= 0x82, // mmst, mmsh
     /*@}*/
 } MMSSCPacketType;
 
@@ -226,7 +226,7 @@ static int send_protocol_select(MMSContext *mms)
     char data_string[256];
 
     // send the timing request packet...
-    start_command_packet(mms, CS_PACKET_PROTOCOL_SELECT_TYPE);
+    start_command_packet(mms, CS_PKT_PROTOCOL_SELECT);
     insert_command_prefixes(mms, 0, 0);
     put_le32(&mms->outgoing_packet_data, 0);  // timestamp?
     put_le32(&mms->outgoing_packet_data, 0);  // timestamp?
@@ -246,7 +246,7 @@ static int send_protocol_select(MMSContext *mms)
 
 static int send_media_file_request(MMSContext *mms)
 {
-    start_command_packet(mms, CS_PACKET_MEDIA_FILE_REQUEST_TYPE);
+    start_command_packet(mms, CS_PKT_MEDIA_FILE_REQUEST);
     insert_command_prefixes(mms, 1, 0xffffffff);
     put_le32(&mms->outgoing_packet_data, 0);
     put_le32(&mms->outgoing_packet_data, 0);
@@ -289,7 +289,7 @@ static void handle_packet_stream_changing_type(MMSContext *mms)
 static int send_keepalive_packet(MMSContext *mms)
 {
     // respond to a keepalive with a keepalive...
-    start_command_packet(mms, CS_PACKET_KEEPALIVE_TYPE);
+    start_command_packet(mms, CS_PKT_KEEPALIVE);
     insert_command_prefixes(mms, 1, 0x100FFFF);
     return send_command_packet(mms);
 }
@@ -379,7 +379,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     // if we successfully read everything....
                     if(packet_id_type == mms->header_packet_id) {
                         // asf header
-                        packet_type = SC_PACKET_ASF_HEADER_TYPE;
+                        packet_type = SC_PKT_ASF_HEADER;
                         // Store the asf header
                         if(!mms->header_parsed) {
                             mms->asf_header = av_realloc(mms->asf_header,
@@ -391,7 +391,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                             mms->asf_header_size += mms->pkt_buf_len;
                         }
                     } else if(packet_id_type == mms->packet_id) {
-                        packet_type = SC_PACKET_ASF_MEDIA_TYPE;
+                        packet_type = SC_PKT_ASF_MEDIA;
                     } else {
                         dprintf(NULL, "packet id type %d is old.", packet_id_type);
                         done= 0;
@@ -402,23 +402,23 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
             // read error...
             if(read_result<0) {
                 dprintf(NULL, "Read error (or cancelled) returned %d!\n", read_result);
-                packet_type = SC_PACKET_TYPE_CANCEL;
+                packet_type = SC_PKT_CANCEL;
             } else {// 0 is okay, no data received.
                 dprintf(NULL, "Read result of zero?!\n");
-                packet_type = SC_PACKET_TYPE_NO_DATA;
+                packet_type = SC_PKT_NO_DATA;
             }
             done = 1;
         }
     } while(!done);
 
-    if (packet_type == SC_PACKET_KEEPALIVE_TYPE) {
+    if (packet_type == SC_PKT_KEEPALIVE) {
         send_keepalive_packet(mms);
     }
-    if (packet_type == SC_PACKET_STREAM_CHANGING_TYPE) {
+    if (packet_type == SC_PKT_STREAM_CHANGING) {
         handle_packet_stream_changing_type(mms);
         //TODO: Handle new header when change the stream type.
     }
-    if (packet_type == SC_PACKET_ASF_MEDIA_TYPE) {
+    if (packet_type == SC_PKT_ASF_MEDIA) {
         pad_media_packet(mms);
     }
     return packet_type;
@@ -483,7 +483,7 @@ static void handle_packet_media_file_details(MMSContext *mms)
 
 static int send_media_header_request(MMSContext *mms)
 {
-    start_command_packet(mms, CS_PACKET_MEDIA_HEADER_REQUEST_TYPE);
+    start_command_packet(mms, CS_PKT_MEDIA_HEADER_REQUEST);
     insert_command_prefixes(mms, 1, 0);
     put_le32(&mms->outgoing_packet_data, 0);
     put_le32(&mms->outgoing_packet_data, 0x00800000);
@@ -510,7 +510,7 @@ static int send_startup_packet(MMSContext *mms)
             "NSPlayer/7.0.0.1956; {%s}; Host: %s",
             "7E667F5D-A661-495E-A512-F55686DDA178", mms->host);
 
-    start_command_packet(mms, CS_PACKET_INITIAL_TYPE);
+    start_command_packet(mms, CS_PKT_INITIAL);
     insert_command_prefixes(mms, 0, 0x0004000b);
     put_le32(&mms->outgoing_packet_data, 0x0003001c);
     put_le_utf16(&mms->outgoing_packet_data, data_string);
@@ -553,7 +553,7 @@ static int send_stream_selection_request(MMSContext *mms)
     int ii;
 
     //  send the streams we want back...
-    start_command_packet(mms, CS_PACKET_STREAM_ID_REQUEST_TYPE);
+    start_command_packet(mms, CS_PKT_STREAM_ID_REQUEST);
     put_le32(&mms->outgoing_packet_data, mms->stream_num); // stream nums.
     for(ii= 0; ii<mms->stream_num; ii++) {
         put_le16(&mms->outgoing_packet_data, 0xffff); // flags
@@ -594,7 +594,7 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
             /* Read from network */
             packet_type= get_tcp_server_response(mms);
             switch (packet_type) {
-            case SC_PACKET_ASF_MEDIA_TYPE:
+            case SC_PKT_ASF_MEDIA:
                if(mms->pkt_buf_len>mms->asf_packet_len) {
                     dprintf(NULL, "Incoming packet
                             larger than the asf packet size stated (%d>%d)\n",
@@ -610,7 +610,7 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                 mms->pkt_read_ptr += size_to_copy;
                 result += size_to_copy;
                 break;
-            case SC_PACKET_ASF_HEADER_TYPE:
+            case SC_PKT_ASF_HEADER:
                 // copy the data to the packet buffer...
                 size_to_copy= FFMIN(buf_size, mms->pkt_buf_len);
                 memcpy(buf, mms->pkt_read_ptr, size_to_copy);
@@ -629,7 +629,7 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
 
 static int send_close_packet(MMSContext *mms)
 {
-    start_command_packet(mms, CS_PACKET_STREAM_CLOSE_TYPE);
+    start_command_packet(mms, CS_PKT_STREAM_CLOSE);
     insert_command_prefixes(mms, 1, 1);
 
     return send_command_packet(mms);
@@ -657,24 +657,24 @@ static int handle_mms_msg_pkt(MMSContext *mms, const MMSSCPacketType packet_type
     int ret = -1;
 
     switch(packet_type) {
-    case SC_PACKET_CLIENT_ACCEPTED:
+    case SC_PKT_CLIENT_ACCEPTED:
         ret = send_protocol_select(mms);
         break;
 
-    case SC_PACKET_PROTOCOL_ACCEPTED_TYPE:
+    case SC_PKT_PROTOCOL_ACCEPTED:
         ret = send_media_file_request(mms);
         break;
 
-    case SC_PACKET_MEDIA_FILE_DETAILS_TYPE:
+    case SC_PKT_MEDIA_FILE_DETAILS:
         handle_packet_media_file_details(mms);
         ret = send_media_header_request(mms);
         break;
 
-    case SC_PACKET_HEADER_REQUEST_ACCEPTED_TYPE:
+    case SC_PKT_HEADER_REQUEST_ACCEPTED:
         ret = 0;
         break;
 
-    case SC_PACKET_ASF_HEADER_TYPE:
+    case SC_PKT_ASF_HEADER:
         if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C)) {
             ret = asf_header_parser(mms);
             mms->header_parsed = 1;
@@ -756,7 +756,7 @@ static int mms_open(URLContext *h, const char *uri, int flags)
 
 static int send_media_packet_request(MMSContext *mms)
 {
-    start_command_packet(mms, CS_PACKET_START_FROM_PACKET_ID_TYPE);
+    start_command_packet(mms, CS_PKT_START_FROM_PKT_ID);
     insert_command_prefixes(mms, 1, 0x0001FFFF);
     put_le64(&mms->outgoing_packet_data, 0); // seek timestamp
     put_le32(&mms->outgoing_packet_data, 0xffffffff);  // unknown
@@ -796,14 +796,14 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
             result = send_stream_selection_request(mms);
             if(result < 0)
                 return result;
-            if (get_tcp_server_response(mms) != SC_PACKET_STREAM_ID_ACCEPTED_TYPE) {
+            if (get_tcp_server_response(mms) != SC_PKT_STREAM_ID_ACCEPTED) {
                 dprintf(NULL, "Can't get stream id accepted packet.\n");
                 return 0;
             }
 
             // send media packet request
             send_media_packet_request(mms);
-            if (get_tcp_server_response(mms) == SC_PACKET_MEDIA_PACKET_FOLLOWS_TYPE) {
+            if (get_tcp_server_response(mms) == SC_PKT_MEDIA_PKT_FOLLOWS) {
                mms->streaming_flag = 1;
             } else {
                 dprintf(NULL, "Canot get media follows packet from server.\n");
