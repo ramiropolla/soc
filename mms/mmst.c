@@ -151,10 +151,7 @@ static void start_command_packet(MMSContext *mms, MMSCSPacketType packet_type)
     put_le32(context, 1); // start sequence?
     put_le32(context, 0xb00bface);
     put_le32(context, 0); // Length starts from after the protocol type bytes
-    put_byte(context, 'M');
-    put_byte(context, 'M');
-    put_byte(context, 'S');
-    put_byte(context, ' ');
+    put_le32(context, MKTAG('M','M','S',' '));
     put_le32(context, 0);
     put_le32(context, mms->sequence_number++);
     put_le64(context, 0); // timestmamp
