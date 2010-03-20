@@ -299,10 +299,8 @@ static int send_keepalive_packet(MMSContext *mms)
 static void pad_media_packet(MMSContext *mms)
 {
     if(mms->pkt_buf_len<mms->asf_packet_len) {
-        int padding_size = mms->asf_packet_len
-                           - mms->pkt_buf_len;
-        memset(mms->pkt_buf
-               + mms->pkt_buf_len, 0, padding_size);
+        int padding_size = mms->asf_packet_len - mms->pkt_buf_len;
+        memset(mms->pkt_buf + mms->pkt_buf_len, 0, padding_size);
         mms->pkt_buf_len += padding_size;
     }
     if(mms->pkt_offset) {
@@ -353,24 +351,24 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 int length_remaining;
                 uint8_t *dst= mms->pkt_buf;
                 int packet_id_type;
+                int tmp;
 
                 assert(mms->pkt_buf_len==0);
 
                 //** VERIFY LENGTH REMAINING HAS SPACE
                 // note we cache the first 8 bytes,
                 // then fill up the buffer with the others
-                length_remaining = (AV_RL16(mms->incoming_buffer + 6) - 8) & 0xffff;
-                mms->incoming_packet_seq        = AV_RL32(mms->incoming_buffer);
-                packet_id_type                  = mms->incoming_buffer[4];
-                mms->incoming_flags             = mms->incoming_buffer[5];
-                mms->pkt_buf_len = length_remaining;
-                mms->pkt_read_ptr      = mms->pkt_buf;
+                tmp                       = AV_RL16(mms->incoming_buffer + 6);
+                length_remaining          = (tmp - 8) & 0xffff;
+                mms->incoming_packet_seq  = AV_RL32(mms->incoming_buffer);
+                packet_id_type            = mms->incoming_buffer[4];
+                mms->incoming_flags       = mms->incoming_buffer[5];
+                mms->pkt_buf_len          = length_remaining;
+                mms->pkt_read_ptr         = mms->pkt_buf;
 
-                if(mms->pkt_buf_len >=
-                        sizeof(mms->pkt_buf)) {
+                if(mms->pkt_buf_len >= sizeof(mms->pkt_buf)) {
                     dprintf(NULL, "Incoming Buffer Length overflow: %d>%d\n",
-                    mms ->pkt_buf_len,
-                    (int) sizeof(mms->pkt_buf));
+                    mms ->pkt_buf_len, (int) sizeof(mms->pkt_buf));
                 }
                 read_result= read_bytes(mms, dst, length_remaining);
                 if(read_result != length_remaining) {
