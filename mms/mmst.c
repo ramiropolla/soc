@@ -97,7 +97,7 @@ typedef struct {
 
     /** Buffer for incoming media/header packets. */
     /*@{*/
-    uint8_t media_packet_incoming_buffer[8192]; ///< header or media packet.
+    uint8_t pkt_buf[8192]; ///< header or media packet.
     uint8_t *media_packet_read_ptr; ///< Pointer for partial reads.
     int pkt_buf_len; ///< Buffer length.
     int media_packet_seek_offset;   ///< offset in packet.
@@ -301,7 +301,7 @@ static void pad_media_packet(MMSContext *mms)
     if(mms->pkt_buf_len<mms->asf_packet_len) {
         int padding_size = mms->asf_packet_len
                            - mms->pkt_buf_len;
-        memset(mms->media_packet_incoming_buffer
+        memset(mms->pkt_buf
                + mms->pkt_buf_len, 0, padding_size);
         mms->pkt_buf_len += padding_size;
     }
@@ -351,7 +351,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 }
             } else {
                 int length_remaining;
-                uint8_t *dst= mms->media_packet_incoming_buffer;
+                uint8_t *dst= mms->pkt_buf;
                 int packet_id_type;
 
                 assert(mms->pkt_buf_len==0);
@@ -364,13 +364,13 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 packet_id_type                  = mms->incoming_buffer[4];
                 mms->incoming_flags             = mms->incoming_buffer[5];
                 mms->pkt_buf_len = length_remaining;
-                mms->media_packet_read_ptr      = mms->media_packet_incoming_buffer;
+                mms->media_packet_read_ptr      = mms->pkt_buf;
 
                 if(mms->pkt_buf_len >=
-                        sizeof(mms->media_packet_incoming_buffer)) {
+                        sizeof(mms->pkt_buf)) {
                     dprintf(NULL, "Incoming Buffer Length overflow: %d>%d\n",
                     mms ->pkt_buf_len,
-                    (int) sizeof(mms->media_packet_incoming_buffer));
+                    (int) sizeof(mms->pkt_buf));
                 }
                 read_result= read_bytes(mms, dst, length_remaining);
                 if(read_result != length_remaining) {
@@ -777,7 +777,7 @@ static int send_media_packet_request(MMSContext *mms)
 static void clear_stream_buffers(MMSContext *mms)
 {
     mms->pkt_buf_len = 0;
-    mms->media_packet_read_ptr = mms->media_packet_incoming_buffer;
+    mms->media_packet_read_ptr = mms->pkt_buf;
 }
 
 /** Read ASF data through the protocol. */
