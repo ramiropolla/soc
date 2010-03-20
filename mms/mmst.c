@@ -254,13 +254,11 @@ static int read_bytes(MMSContext *mms, uint8_t *buffer, int length_to_read)
 {
     int len= 0;
 
-    while(len<length_to_read)
-    {
+    while(len<length_to_read) {
         int read_result= url_read(mms->mms_hd, buffer+len, length_to_read-len);
         if(read_result < 0)
             return read_result;
-        if(read_result)
-        {
+        if(read_result) {
             len+= read_result;
         } else
             return read_result;
