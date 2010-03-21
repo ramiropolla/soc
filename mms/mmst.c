@@ -653,20 +653,16 @@ static int handle_mms_msg_pkt(MMSContext *mms, const MMSSCPacketType packet_type
     case SC_PKT_CLIENT_ACCEPTED:
         ret = send_protocol_select(mms);
         break;
-
     case SC_PKT_PROTOCOL_ACCEPTED:
         ret = send_media_file_request(mms);
         break;
-
     case SC_PKT_MEDIA_FILE_DETAILS:
         handle_packet_media_file_details(mms);
         ret = send_media_header_request(mms);
         break;
-
     case SC_PKT_HEADER_REQUEST_ACCEPTED:
         ret = 0;
         break;
-
     case SC_PKT_ASF_HEADER:
         if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C)) {
             ret = asf_header_parser(mms);
@@ -677,7 +673,6 @@ static int handle_mms_msg_pkt(MMSContext *mms, const MMSSCPacketType packet_type
         dprintf(NULL, "Unhandled packet type %d\n", packet_type);
         break;
     }
-
     return ret;
 }
 
