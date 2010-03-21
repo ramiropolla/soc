@@ -109,8 +109,6 @@ typedef struct {
     int packet_id; ///< Identifier for packets in the current stream.
     unsigned int header_packet_id; ///< default is 2.
 
-    int seekable; ///< This tells you if the stream is seekable.
-
     /** Internal handling of the ASF header */
     /*@{*/
     uint8_t *asf_header; ///< Stored ASF header.
@@ -120,7 +118,6 @@ typedef struct {
     int asf_packet_len;
     /*@}*/
 
-    int pause_resume_seq; ///< Last packet sequence.
     char location[4096];
     int stream_num;
     int streaming_flag;
@@ -454,10 +451,6 @@ static void handle_packet_media_file_details(MMSContext *mms)
         dprintf(NULL, "Highest Bit Rate: %d\n", highest_bit_rate);
         dprintf(NULL, "Header Size: %d\n", header_size);
         dprintf(NULL, "---- Done ----\n");
-
-        /* Disable seeking in live broadcasts for now */
-        if(! (broadcast_flags & 0x0200))
-            mms->seekable = 1;
     }
 }
 
