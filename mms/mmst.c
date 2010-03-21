@@ -533,6 +533,16 @@ static int send_stream_selection_request(MMSContext *mms)
     return send_command_packet(mms);
 }
 
+static void read_data(MMSContext *mms, uint8_t *buf, const int buf_size, int* result)
+{
+    int read_size;
+    read_size = FFMIN(buf_size, mms->pkt_buf_len);
+    memcpy(buf, mms->pkt_read_ptr, read_size);
+    mms->pkt_buf_len -= read_size;
+    mms->pkt_read_ptr+= read_size;
+    *result += read_size;
+}
+
 /** Read at most one media packet (or a whole header). */
 static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
 {
@@ -552,11 +562,7 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                    size_to_copy, mms->asf_header_size - mms->asf_header_read_pos);
         } else if(mms->pkt_buf_len) {
             /* Read from media packet buffer */
-            size_to_copy = FFMIN(buf_size, mms->pkt_buf_len);
-            memcpy(buf, mms->pkt_read_ptr, size_to_copy);
-            mms->pkt_buf_len -= size_to_copy;
-            mms->pkt_read_ptr+= size_to_copy;
-            result += size_to_copy;
+            read_data(mms, buf, buf_size, &result);
         } else {
             /* Read from network */
             packet_type= get_tcp_server_response(mms);
@@ -571,19 +577,11 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                 }
 
                 // copy the data to the packet buffer.
-                size_to_copy= FFMIN(buf_size, mms->pkt_buf_len);
-                memcpy(buf, mms->pkt_read_ptr, size_to_copy);
-                mms->pkt_buf_len -= size_to_copy;
-                mms->pkt_read_ptr += size_to_copy;
-                result += size_to_copy;
+                read_data(mms, buf, buf_size, &result);
                 break;
             case SC_PKT_ASF_HEADER:
                 // copy the data to the packet buffer.
-                size_to_copy= FFMIN(buf_size, mms->pkt_buf_len);
-                memcpy(buf, mms->pkt_read_ptr, size_to_copy);
-                mms->pkt_buf_len -= size_to_copy;
-                mms->pkt_read_ptr+= size_to_copy;
-                result+= size_to_copy;
+                read_data(mms, buf, buf_size, &result);
                 break;
             default:
                 dprintf(NULL, "Got a unkown Packet Type: 0x%x\n", packet_type);
