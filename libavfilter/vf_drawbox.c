@@ -144,8 +144,7 @@ AVFilter avfilter_vf_drawbox=
                                     .config_props    = config_input,
                                     .min_perms       = AV_PERM_WRITE |
                                                        AV_PERM_READ,
-                                    .rej_perms       = AV_PERM_REUSE |
-                                                       AV_PERM_REUSE2},
+                                    .rej_perms       = AV_PERM_PRESERVE },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO, },
