@@ -21,12 +21,6 @@
 
 #include "avfilter.h"
 
-static AVFilterPicRef *get_video_buffer(AVFilterLink *link, int perms,
-                                        int w, int h)
-{
-    return avfilter_get_video_buffer(link->dst->outputs[0], perms, w, h);
-}
-
 static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 {
     avfilter_start_frame(link->dst->outputs[0],
@@ -55,7 +49,7 @@ AVFilter avfilter_vf_split =
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
                                     .type            = CODEC_TYPE_VIDEO,
-                                    .get_video_buffer= get_video_buffer,
+                                    .get_video_buffer= avfilter_null_get_video_buffer,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .end_frame       = end_frame, },
