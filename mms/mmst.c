@@ -132,16 +132,6 @@ static void close_connection(MMSContext *mms)
     url_close(mms->mms_hd);
 }
 
-/** Open or reopen (http) the remote connection. */
-static int ff_mms_open_connection(MMSContext *mms)
-{
-    char tcpname[256];
-
-    close_connection(mms);
-    snprintf(tcpname, sizeof(tcpname), "tcp://%s:%d", mms->host, mms->port);
-    return url_open(&mms->mms_hd, tcpname, URL_RDWR);
-}
-
 /** Create MMST command packet header */
 static void start_command_packet(MMSContext *mms, MMSCSPacketType packet_type)
 {
@@ -681,6 +671,7 @@ static int mms_open_cnx(URLContext *h)
     MMSContext *mms = h->priv_data;
     MMSSCPacketType packet_type;
 
+    char tcpname[256];
     char authorization[64];
     int err = AVERROR(EIO);
     int ret;
@@ -697,9 +688,11 @@ static int mms_open_cnx(URLContext *h)
     init_put_byte(&mms->outgoing_packet_data, mms->outgoing_packet_buffer,
                   sizeof(mms->outgoing_packet_buffer), 1, NULL,
                   NULL, NULL, NULL);
-
-    /* open the tcp connexion */
-    if((err = ff_mms_open_connection(mms)))
+    // establish tcp connection.
+    close_connection(mms);
+    snprintf(tcpname, sizeof(tcpname), "tcp://%s:%d", mms->host, mms->port);
+    err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
+    if (err)
         goto fail;
 
     // Fill in some parameters...
