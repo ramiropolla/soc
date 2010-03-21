@@ -540,8 +540,8 @@ static int send_stream_selection_request(MMSContext *mms)
     put_le32(&mms->outgoing_packet_data, mms->stream_num); // stream nums.
     for(ii= 0; ii<mms->stream_num; ii++) {
         put_le16(&mms->outgoing_packet_data, 0xffff); // flags
-        put_le16(&mms->outgoing_packet_data, ii +1); // stream id
-       put_le16(&mms->outgoing_packet_data, 0); // selection
+        put_le16(&mms->outgoing_packet_data, ii +1);  // stream id
+        put_le16(&mms->outgoing_packet_data, 0);      // selection
     }
 
     put_le16(&mms->outgoing_packet_data, 0); /* Extra zeroes */
