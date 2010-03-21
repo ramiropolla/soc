@@ -405,12 +405,10 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
 
     if (packet_type == SC_PKT_KEEPALIVE) {
         send_keepalive_packet(mms);
-    }
-    if (packet_type == SC_PKT_STREAM_CHANGING) {
+    } else if (packet_type == SC_PKT_STREAM_CHANGING) {
         handle_packet_stream_changing_type(mms);
         //TODO: Handle new header when change the stream type.
-    }
-    if (packet_type == SC_PKT_ASF_MEDIA) {
+    } else if (packet_type == SC_PKT_ASF_MEDIA) {
         pad_media_packet(mms);
     }
     return packet_type;
