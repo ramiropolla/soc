@@ -322,7 +322,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 }
             } else {
                 int length_remaining;
-                uint8_t *dst= mms->pkt_buf;
                 int packet_id_type;
                 int tmp;
 
@@ -343,7 +342,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     dprintf(NULL, "Incoming Buffer Length overflow: %d>%d\n",
                     mms ->pkt_buf_len, (int) sizeof(mms->pkt_buf));
                 }
-                read_result= read_bytes(mms, dst, length_remaining);
+                read_result= read_bytes(mms, mms->pkt_buf, length_remaining);
                 if(read_result != length_remaining) {
                     dprintf(NULL, "read_bytes result: %d asking for %d\n",
                             read_result, length_remaining);
