@@ -392,58 +392,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
     return packet_type;
 }
 
-static void handle_packet_media_file_details(MMSContext *mms)
-{
-    ByteIOContext pkt;
-    uint16_t broadcast_flags;
-    int64_t total_file_length_in_seconds;
-    uint32_t total_length_in_seconds;
-    uint32_t packet_length;
-    uint32_t total_packet_count;
-    uint32_t highest_bit_rate;
-    uint32_t header_size;
-    uint32_t flags;
-    double duration;
-
-    // read these from the incoming buffer(48 is the packet header size).
-    init_put_byte(&pkt, mms->incoming_buffer+48,
-                    mms->incoming_buffer_length-48, 0, NULL, NULL, NULL, NULL);
-    flags= get_le32(&pkt); // flags?
-    if(flags==0xffffffff) {
-        dprintf(NULL, "Permission denied!\n");
-    } else {
-        get_le32(&pkt);
-        get_le32(&pkt);
-        get_le16(&pkt);
-        broadcast_flags= get_le16(&pkt);
-
-        total_file_length_in_seconds= get_le64(&pkt);
-        duration= av_int2dbl(total_file_length_in_seconds);
-        total_length_in_seconds= get_le32(&pkt);
-        get_le32(&pkt);
-        get_le32(&pkt);
-        get_le32(&pkt);
-        get_le32(&pkt);
-        packet_length= get_le32(&pkt);
-        total_packet_count= get_le32(&pkt);
-        get_le32(&pkt);
-        highest_bit_rate= get_le32(&pkt);
-        header_size= get_le32(&pkt);
-
-        // broadcast_flags: 8000= allow index, 01= prerecorded,
-        // 02= live 42= presentation with script commands
-        dprintf(NULL, "Broadcast flags: 0x%x\n", broadcast_flags);
-        dprintf(NULL, "File Time Point?: %lld double size: %d double value: %lf\n",
-                       total_file_length_in_seconds, (int) sizeof(double), duration);
-        dprintf(NULL, "Total in Seconds: %d\n", total_length_in_seconds);
-        dprintf(NULL, "Packet length: %d\n", packet_length);
-        dprintf(NULL, "Total Packet Count: %d\n", total_packet_count);
-        dprintf(NULL, "Highest Bit Rate: %d\n", highest_bit_rate);
-        dprintf(NULL, "Header Size: %d\n", header_size);
-        dprintf(NULL, "---- Done ----\n");
-    }
-}
-
 static int send_media_header_request(MMSContext *mms)
 {
     start_command_packet(mms, CS_PKT_MEDIA_HEADER_REQUEST);
@@ -628,7 +576,6 @@ static int handle_mms_msg_pkt(MMSContext *mms, const MMSSCPacketType packet_type
         ret = send_media_file_request(mms);
         break;
     case SC_PKT_MEDIA_FILE_DETAILS:
-        handle_packet_media_file_details(mms);
         ret = send_media_header_request(mms);
         break;
     case SC_PKT_HEADER_REQUEST_ACCEPTED:
