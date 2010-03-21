@@ -221,9 +221,9 @@ static int send_protocol_select(MMSContext *mms)
 
     // send the timing request packet...
     start_command_packet(mms, CS_PKT_PROTOCOL_SELECT);
-    insert_command_prefixes(mms, 0, 0);
-    put_le32(&mms->outgoing_packet_data, 0);  // timestamp?
-    put_le32(&mms->outgoing_packet_data, 0);  // timestamp?
+    insert_command_prefixes(mms, 0, 0xffffffff);
+    put_le32(&mms->outgoing_packet_data, 0);  // maxFunnelBytes
+    put_le32(&mms->outgoing_packet_data, 0x00989680);  // maxbitRate
     put_le32(&mms->outgoing_packet_data, 2);
     snprintf(data_string, sizeof(data_string), "\\\\%d.%d.%d.%d\\%s\\%d",
             (mms->local_ip_address>>24)&0xff,
@@ -233,7 +233,6 @@ static int send_protocol_select(MMSContext *mms)
             "TCP", // or UDP
             mms->local_port);
     put_le_utf16(&mms->outgoing_packet_data, data_string);
-    put_le16(&mms->outgoing_packet_data, 0x30);
 
     return send_command_packet(mms);
 }
