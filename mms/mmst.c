@@ -672,12 +672,11 @@ static int mms_open_cnx(URLContext *h)
     MMSSCPacketType packet_type;
 
     char tcpname[256];
-    char authorization[64];
     int err = AVERROR(EIO);
     int ret;
 
     // only for MMS over TCP, so set proto = NULL
-    url_split(NULL, 0, authorization, sizeof(authorization),
+    url_split(NULL, 0, NULL, 0,
             mms->host, sizeof(mms->host), &mms->port, mms->path,
             sizeof(mms->path), mms->location);
 
