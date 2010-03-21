@@ -495,7 +495,10 @@ static int send_media_header_request(MMSContext *mms)
 static int send_startup_packet(MMSContext *mms)
 {
     char data_string[256];
-
+    // SubscriberName is defined in MS specification linked below.
+    // The guid value can be any valid value.
+    // http://download.microsoft.com/
+    // download/9/5/E/95EF66AF-9026-4BB0-A41D-A4F81802D92C/%5BMS-WMSP%5D.pdf
     snprintf(data_string, sizeof(data_string),
             "NSPlayer/7.0.0.1956; {%s}; Host: %s",
             "7E667F5D-A661-495E-A512-F55686DDA178", mms->host);
