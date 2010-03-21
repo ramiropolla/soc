@@ -219,12 +219,11 @@ static int send_protocol_select(MMSContext *mms)
 {
     char data_string[256];
 
-    // send the timing request packet...
     start_command_packet(mms, CS_PKT_PROTOCOL_SELECT);
     insert_command_prefixes(mms, 0, 0xffffffff);
-    put_le32(&mms->outgoing_packet_data, 0);  // maxFunnelBytes
-    put_le32(&mms->outgoing_packet_data, 0x00989680);  // maxbitRate
-    put_le32(&mms->outgoing_packet_data, 2);
+    put_le32(&mms->outgoing_packet_data, 0); // maxFunnelBytes
+    put_le32(&mms->outgoing_packet_data, 0x00989680); // maxbitRate
+    put_le32(&mms->outgoing_packet_data, 2); // funnelMode
     snprintf(data_string, sizeof(data_string), "\\\\%d.%d.%d.%d\\%s\\%d",
             (mms->local_ip_address>>24)&0xff,
             (mms->local_ip_address>>16)&0xff,
