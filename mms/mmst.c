@@ -158,20 +158,6 @@ static void insert_command_prefixes(MMSContext *mms,
     put_le32(context, prefix2); // second prefix
 }
 
-static void put_le_utf16(ByteIOContext *pb, char *utf8)
-{
-    int val;
-
-    while(*utf8) {
-        GET_UTF8(val, *utf8++, break;);
-        put_le16(pb, val);
-    }
-
-    put_le16(pb, 0x00);
-
-    return;
-}
-
 /** Send a prepared MMST command packet. */
 static int send_command_packet(MMSContext *mms)
 {
@@ -219,7 +205,7 @@ static int send_protocol_select(MMSContext *mms)
             mms->local_ip_address&0xff,
             "TCP",                                    // or UDP
             mms->local_port);
-    put_le_utf16(&mms->outgoing_packet_data, data_string);
+    ff_put_str16_nolen(&mms->outgoing_packet_data, data_string);
 
     return send_command_packet(mms);
 }
@@ -230,7 +216,7 @@ static int send_media_file_request(MMSContext *mms)
     insert_command_prefixes(mms, 1, 0xffffffff);
     put_le32(&mms->outgoing_packet_data, 0);
     put_le32(&mms->outgoing_packet_data, 0);
-    put_le_utf16(&mms->outgoing_packet_data, mms->path+1); // +1 for skip "/".
+    ff_put_str16_nolen(&mms->outgoing_packet_data, mms->path+1); // +1 for skip "/".
     put_le32(&mms->outgoing_packet_data, 0);
 
     return send_command_packet(mms);
@@ -428,7 +414,7 @@ static int send_startup_packet(MMSContext *mms)
     start_command_packet(mms, CS_PKT_INITIAL);
     insert_command_prefixes(mms, 0, 0x0004000b);
     put_le32(&mms->outgoing_packet_data, 0x0003001c);
-    put_le_utf16(&mms->outgoing_packet_data, data_string);
+    ff_put_str16_nolen(&mms->outgoing_packet_data, data_string);
     put_le16(&mms->outgoing_packet_data, 0); // double unicode ended string.
 
     return send_command_packet(mms);
