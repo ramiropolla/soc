@@ -21,6 +21,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include "avformat.h"
+#include "internal.h"
 #include "libavutil/intreadwrite.h"
 #include "libavutil/avstring.h"
 #include "network.h"
@@ -604,7 +605,7 @@ static int mms_open_cnx(URLContext *h)
     int ret;
 
     // only for MMS over TCP, so set proto = NULL
-    url_split(NULL, 0, NULL, 0,
+    ff_url_split(NULL, 0, NULL, 0,
             mms->host, sizeof(mms->host), &mms->port, mms->path,
             sizeof(mms->path), mms->location);
 
@@ -617,7 +618,7 @@ static int mms_open_cnx(URLContext *h)
                   NULL, NULL, NULL);
     // establish tcp connection.
     close_connection(mms);
-    snprintf(tcpname, sizeof(tcpname), "tcp://%s:%d", mms->host, mms->port);
+    ff_url_join(tcpname, sizeof(tcpname), "tcp", NULL, mms->host, mms->port, NULL);
     err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
     if (err)
         goto fail;
