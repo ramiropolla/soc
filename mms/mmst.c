@@ -503,8 +503,8 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
             switch (packet_type) {
             case SC_PKT_ASF_MEDIA:
                if(mms->pkt_buf_len>mms->asf_packet_len) {
-                    dprintf(NULL, "Incoming packet
-                            larger than the asf packet size stated (%d>%d)\n",
+                    dprintf(NULL, "Incoming packet"
+                            "larger than the asf packet size stated (%d>%d)\n",
                             mms->pkt_buf_len, mms->asf_packet_len);
                     result= AVERROR_IO;
                     break;
