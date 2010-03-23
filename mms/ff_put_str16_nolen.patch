@@ -1,0 +1,50 @@
+Index: libavformat/asfenc.c
+===================================================================
+--- libavformat/asfenc.c	(revision 22644)
++++ libavformat/asfenc.c	(working copy)
+@@ -203,7 +203,7 @@
+     put_buffer(s, *g, sizeof(*g));
+ }
+ 
+-static int put_str16_nolen(ByteIOContext *s, const char *tag)
++int ff_put_str16_nolen(ByteIOContext *s, const char *tag)
+ {
+     const uint8_t *q = tag;
+     int ret = 0;
+@@ -228,7 +228,7 @@
+     if (url_open_dyn_buf(&dyn_buf) < 0)
+         return;
+ 
+-    put_str16_nolen(dyn_buf, tag);
++    ff_put_str16_nolen(dyn_buf, tag);
+     len = url_close_dyn_buf(dyn_buf, &pb);
+     put_le16(s, len);
+     put_buffer(s, pb, len);
+@@ -361,7 +361,7 @@
+         hpos = put_header(pb, &ff_asf_comment_header);
+ 
+         for (n = 0; n < FF_ARRAY_ELEMS(tags); n++) {
+-            len = tags[n] ? put_str16_nolen(dyn_buf, tags[n]->value) : 0;
++            len = tags[n] ? ff_put_str16_nolen(dyn_buf, tags[n]->value) : 0;
+             put_le16(pb, len);
+         }
+         len = url_close_dyn_buf(dyn_buf, &buf);
+@@ -489,7 +489,7 @@
+         if ( url_open_dyn_buf(&dyn_buf) < 0)
+             return AVERROR(ENOMEM);
+ 
+-        put_str16_nolen(dyn_buf, desc);
++        ff_put_str16_nolen(dyn_buf, desc);
+         len = url_close_dyn_buf(dyn_buf, &buf);
+         put_le16(pb, len / 2); // "number of characters" = length in bytes / 2
+ 
+Index: libavformat/asf.h
+===================================================================
+--- libavformat/asf.h	(revision 22644)
++++ libavformat/asf.h	(working copy)
+@@ -230,4 +230,5 @@
+ 
+ extern AVInputFormat asf_demuxer;
+ 
++extern int ff_put_str16_nolen(ByteIOContext *s, const char *tag);
+ #endif /* AVFORMAT_ASF_H */
