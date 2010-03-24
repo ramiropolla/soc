@@ -96,7 +96,6 @@ typedef struct {
 
     /** Buffer for incoming media/header packets. */
     /*@{*/
-    uint8_t pkt_buf[8192];               ///< header or media packet.
     uint8_t *pkt_read_ptr;               ///< Pointer for partial reads.
     int pkt_buf_len;                     ///< Buffer length.
     int pkt_offset;                      ///< offset in packet.
@@ -263,7 +262,7 @@ static void pad_media_packet(MMSContext *mms)
 {
     if(mms->pkt_buf_len<mms->asf_packet_len) {
         int padding_size = mms->asf_packet_len - mms->pkt_buf_len;
-        memset(mms->pkt_buf + mms->pkt_buf_len, 0, padding_size);
+        memset(mms->incoming_buffer + mms->pkt_buf_len, 0, padding_size);
         mms->pkt_buf_len += padding_size;
     }
     if(mms->pkt_offset) {
@@ -320,13 +319,9 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 packet_id_type            = mms->incoming_buffer[4];
                 mms->incoming_flags       = mms->incoming_buffer[5];
                 mms->pkt_buf_len          = length_remaining;
-                mms->pkt_read_ptr         = mms->pkt_buf;
+                mms->pkt_read_ptr         = mms->incoming_buffer;
 
-                if(mms->pkt_buf_len >= sizeof(mms->pkt_buf)) {
-                    dprintf(NULL, "Incoming Buffer Length overflow: %d>%d\n",
-                    mms ->pkt_buf_len, (int) sizeof(mms->pkt_buf));
-                }
-                read_result= read_bytes(mms, mms->pkt_buf, length_remaining);
+                read_result= read_bytes(mms, mms->incoming_buffer, length_remaining);
                 if(read_result != length_remaining) {
                     dprintf(NULL, "read_bytes result: %d asking for %d\n",
                             read_result, length_remaining);
@@ -664,7 +659,7 @@ static int send_media_packet_request(MMSContext *mms)
 static void clear_stream_buffers(MMSContext *mms)
 {
     mms->pkt_buf_len = 0;
-    mms->pkt_read_ptr = mms->pkt_buf;
+    mms->pkt_read_ptr = mms->incoming_buffer;
 }
 
 /** Read ASF data through the protocol. */
