@@ -218,23 +218,6 @@ static int send_media_file_request(MMSContext *mms)
     return send_command_packet(mms);
 }
 
-static int read_bytes(MMSContext *mms, uint8_t *buffer, int length_to_read)
-{
-    int len= 0;
-
-    while(len<length_to_read) {
-        int read_result= url_read(mms->mms_hd, buffer+len, length_to_read-len);
-        if(read_result < 0)
-            return read_result;
-        if(read_result) {
-            len+= read_result;
-        } else
-            return read_result;
-    }
-
-    return len;
-}
-
 static void handle_packet_stream_changing_type(MMSContext *mms)
 {
     ByteIOContext pkt;
@@ -281,17 +264,17 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
 
     do {
         done= 1;
-        if((read_result= read_bytes(mms, mms->incoming_buffer, 8))==8) {
+        if((read_result= url_read_complete(mms->mms_hd, mms->incoming_buffer, 8))==8) {
             // handle command packet.
             if(AV_RL32(mms->incoming_buffer + 4)==0xb00bface) {
                 mms->incoming_flags= mms->incoming_buffer[3];
-                read_result= read_bytes(mms, mms->incoming_buffer+8, 4);
+                read_result= url_read_complete(mms->mms_hd, mms->incoming_buffer+8, 4);
                 if(read_result == 4) {
                     int length_remaining= AV_RL32(mms->incoming_buffer+8) + 4;
 
                     dprintf(NULL, "Length remaining is %d\n", length_remaining);
                     // read the rest of the packet.
-                    read_result = read_bytes(mms, mms->incoming_buffer + 12,
+                    read_result = url_read_complete(mms->mms_hd, mms->incoming_buffer + 12,
                                                   length_remaining) ;
                     if (read_result == length_remaining) {
                         mms->incoming_buffer_length= length_remaining+12;
@@ -321,7 +304,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 mms->pkt_buf_len          = length_remaining;
                 mms->pkt_read_ptr         = mms->incoming_buffer;
 
-                read_result= read_bytes(mms, mms->incoming_buffer, length_remaining);
+                read_result= url_read_complete(mms->mms_hd, mms->incoming_buffer, length_remaining);
                 if(read_result != length_remaining) {
                     dprintf(NULL, "read_bytes result: %d asking for %d\n",
                             read_result, length_remaining);
