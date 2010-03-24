@@ -23,7 +23,6 @@
 #include "avformat.h"
 #include "internal.h"
 #include "libavutil/intreadwrite.h"
-#include "libavutil/avstring.h"
 #include "network.h"
 #include "asf.h"
 
@@ -118,7 +117,6 @@ typedef struct {
     int asf_packet_len;
     /*@}*/
 
-    char location[4096];
     int stream_num;
     int streaming_flag;
 } MMSContext;
@@ -580,7 +578,7 @@ static int handle_mms_msg_pkt(MMSContext *mms, const MMSSCPacketType packet_type
     return ret;
 }
 
-static int mms_open_cnx(URLContext *h)
+static int mms_open_cnx(URLContext *h, const char *url)
 {
     MMSContext *mms = h->priv_data;
     MMSSCPacketType packet_type;
@@ -593,7 +591,7 @@ static int mms_open_cnx(URLContext *h)
     // only for MMS over TCP, so set proto = NULL
     ff_url_split(NULL, 0, NULL, 0,
             mms->host, sizeof(mms->host), &port, mms->path,
-            sizeof(mms->path), mms->location);
+            sizeof(mms->path), url);
 
     if(port<0)
         port = 1755; // defaut mms protocol port
@@ -641,9 +639,8 @@ static int mms_open(URLContext *h, const char *uri, int flags)
         return AVERROR(ENOMEM);
     memset(mms, 0, sizeof(MMSContext));
     h->priv_data = mms;
-    av_strlcpy(mms->location, uri, sizeof(mms->location));
 
-    return mms_open_cnx(h);
+    return mms_open_cnx(h, uri);
 }
 
 static int send_media_packet_request(MMSContext *mms)
