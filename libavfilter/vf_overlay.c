@@ -184,6 +184,10 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     }
 }
 
+static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
+{
+}
+
 static void end_frame(AVFilterLink *link)
 {
 }
@@ -341,6 +345,7 @@ AVFilter avfilter_vf_overlay =
                                     .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .config_props    = config_input_main,
+                                    .draw_slice      = draw_slice,
                                     .end_frame       = end_frame,
                                     .min_perms       = AV_PERM_READ,
                                     .rej_perms       = AV_PERM_REUSE2, },
@@ -348,6 +353,7 @@ AVFilter avfilter_vf_overlay =
                                     .type            = CODEC_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .config_props    = config_input_overlay,
+                                    .draw_slice      = draw_slice,
                                     .end_frame       = end_frame,
                                     .min_perms       = AV_PERM_READ,
                                     .rej_perms       = AV_PERM_REUSE2, },
