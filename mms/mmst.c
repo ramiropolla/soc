@@ -80,7 +80,6 @@ typedef struct {
     int sequence_number;                 ///< Outgoing packet sequence number.
     char path[256];                      ///< Path of the resource being asked for.
     char host[128];                      ///< Host of the resources.
-    int port;                            ///< Port of the resource.
 
     URLContext *mms_hd;                  ///< TCP connection handle
 
@@ -585,6 +584,7 @@ static int mms_open_cnx(URLContext *h)
 {
     MMSContext *mms = h->priv_data;
     MMSSCPacketType packet_type;
+    int port;
 
     char tcpname[256];
     int err = AVERROR(EIO);
@@ -592,11 +592,11 @@ static int mms_open_cnx(URLContext *h)
 
     // only for MMS over TCP, so set proto = NULL
     ff_url_split(NULL, 0, NULL, 0,
-            mms->host, sizeof(mms->host), &mms->port, mms->path,
+            mms->host, sizeof(mms->host), &port, mms->path,
             sizeof(mms->path), mms->location);
 
-    if(mms->port<0)
-        mms->port = 1755; // defaut mms protocol port
+    if(port<0)
+        port = 1755; // defaut mms protocol port
 
     /* the outgoing packet buffer */
     init_put_byte(&mms->outgoing_packet_data, mms->outgoing_packet_buffer,
@@ -604,7 +604,7 @@ static int mms_open_cnx(URLContext *h)
                   NULL, NULL, NULL);
     // establish tcp connection.
     close_connection(mms);
-    ff_url_join(tcpname, sizeof(tcpname), "tcp", NULL, mms->host, mms->port, NULL);
+    ff_url_join(tcpname, sizeof(tcpname), "tcp", NULL, mms->host, port, NULL);
     err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
     if (err)
         goto fail;
