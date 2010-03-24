@@ -27,6 +27,8 @@
 #include "network.h"
 #include "asf.h"
 
+#define LOCAL_ADDRESS 0xc0a80081    // server doesn't care about it.
+#define LOCAL_PORT    1037          // as above.
 /** Client to server packet types. */
 typedef enum {
     CS_PKT_INITIAL= 0x01,
@@ -75,8 +77,6 @@ typedef enum {
 } MMSSCPacketType;
 
 typedef struct {
-    uint32_t local_ip_address;
-    int local_port;                      ///< My local port (sent but not correct).
     int sequence_number;                 ///< Outgoing packet sequence number.
     char path[256];                      ///< Path of the resource being asked for.
     char host[128];                      ///< Host of the resources.
@@ -198,12 +198,12 @@ static int send_protocol_select(MMSContext *mms)
     put_le32(&mms->outgoing_packet_data, 0x00989680); // maxbitRate
     put_le32(&mms->outgoing_packet_data, 2);          // funnelMode
     snprintf(data_string, sizeof(data_string), "\\\\%d.%d.%d.%d\\%s\\%d",
-            (mms->local_ip_address>>24)&0xff,
-            (mms->local_ip_address>>16)&0xff,
-            (mms->local_ip_address>>8)&0xff,
-            mms->local_ip_address&0xff,
+            (LOCAL_ADDRESS>>24)&0xff,
+            (LOCAL_ADDRESS>>16)&0xff,
+            (LOCAL_ADDRESS>>8)&0xff,
+            LOCAL_ADDRESS&0xff,
             "TCP",                                    // or UDP
-            mms->local_port);
+            LOCAL_PORT);
     ff_put_str16_nolen(&mms->outgoing_packet_data, data_string);
 
     return send_command_packet(mms);
@@ -609,8 +609,6 @@ static int mms_open_cnx(URLContext *h)
     if (err)
         goto fail;
 
-    mms->local_ip_address = 0xc0a80081; // local IP address,server don't care.
-    mms->local_port       = 1037;       // as above,could be arbitrary value.
     mms->packet_id        = 3;          // default, initial value.
     mms->header_packet_id = 2;          // default, initial value.
 
