@@ -132,7 +132,7 @@ static void start_command_packet(MMSContext *mms, MMSCSPacketType packet_type)
     put_le32(context, MKTAG('M','M','S',' '));
     put_le32(context, 0);
     put_le32(context, mms->sequence_number++);
-    put_le64(context, 0); // timestmamp
+    put_le64(context, 0); // timestamp
     put_le32(context, 0);
     put_le16(context, packet_type);
     put_le16(context, 3); // direction to server
@@ -207,7 +207,6 @@ static int send_media_file_request(MMSContext *mms)
     put_le32(&mms->outgoing_packet_data, 0);
     put_le32(&mms->outgoing_packet_data, 0);
     ff_put_str16_nolen(&mms->outgoing_packet_data, mms->path+1); // +1 for skip "/".
-    put_le32(&mms->outgoing_packet_data, 0);
 
     return send_command_packet(mms);
 }
@@ -384,7 +383,6 @@ static int send_startup_packet(MMSContext *mms)
     insert_command_prefixes(mms, 0, 0x0004000b);
     put_le32(&mms->outgoing_packet_data, 0x0003001c);
     ff_put_str16_nolen(&mms->outgoing_packet_data, data_string);
-    put_le16(&mms->outgoing_packet_data, 0); // double unicode ended string.
 
     return send_command_packet(mms);
 }
