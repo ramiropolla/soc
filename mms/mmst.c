@@ -30,48 +30,48 @@
 #define LOCAL_PORT    1037          // as above.
 /** Client to server packet types. */
 typedef enum {
-    CS_PKT_INITIAL= 0x01,
-    CS_PKT_PROTOCOL_SELECT= 0x02,
-    CS_PKT_MEDIA_FILE_REQUEST= 0x05,
-    CS_PKT_START_FROM_PKT_ID= 0x07,
-    CS_PKT_STREAM_PAUSE= 0x09,
-    CS_PKT_STREAM_CLOSE= 0x0d,
-    CS_PKT_MEDIA_HEADER_REQUEST= 0x15,
-    CS_PKT_TIMING_DATA_REQUEST= 0x18,
-    CS_PKT_USER_PASSWORD= 0x1a,
-    CS_PKT_KEEPALIVE= 0x1b,
-    CS_PKT_STREAM_ID_REQUEST= 0x33,
+    CS_PKT_INITIAL                  = 0x01,
+    CS_PKT_PROTOCOL_SELECT          = 0x02,
+    CS_PKT_MEDIA_FILE_REQUEST       = 0x05,
+    CS_PKT_START_FROM_PKT_ID        = 0x07,
+    CS_PKT_STREAM_PAUSE             = 0x09,
+    CS_PKT_STREAM_CLOSE             = 0x0d,
+    CS_PKT_MEDIA_HEADER_REQUEST     = 0x15,
+    CS_PKT_TIMING_DATA_REQUEST      = 0x18,
+    CS_PKT_USER_PASSWORD            = 0x1a,
+    CS_PKT_KEEPALIVE                = 0x1b,
+    CS_PKT_STREAM_ID_REQUEST        = 0x33,
 } MMSCSPacketType;
 
 /** Server to client packet types. */
 typedef enum {
     /** Control packets. */
     /*@{*/
-    SC_PKT_CLIENT_ACCEPTED= 0x01,
-    SC_PKT_PROTOCOL_ACCEPTED= 0x02,
-    SC_PKT_PROTOCOL_FAILED= 0x03,
-    SC_PKT_MEDIA_PKT_FOLLOWS= 0x05,
-    SC_PKT_MEDIA_FILE_DETAILS= 0x06,
-    SC_PKT_HEADER_REQUEST_ACCEPTED= 0x11,
-    SC_PKT_TIMING_TEST_REPLY= 0x15,
-    SC_PKT_PASSWORD_REQUIRED= 0x1a,
-    SC_PKT_KEEPALIVE= 0x1b,
-    SC_PKT_STREAM_STOPPED= 0x1e,
-    SC_PKT_STREAM_CHANGING= 0x20,
-    SC_PKT_STREAM_ID_ACCEPTED= 0x21,
+    SC_PKT_CLIENT_ACCEPTED          = 0x01,
+    SC_PKT_PROTOCOL_ACCEPTED        = 0x02,
+    SC_PKT_PROTOCOL_FAILED          = 0x03,
+    SC_PKT_MEDIA_PKT_FOLLOWS        = 0x05,
+    SC_PKT_MEDIA_FILE_DETAILS       = 0x06,
+    SC_PKT_HEADER_REQUEST_ACCEPTED  = 0x11,
+    SC_PKT_TIMING_TEST_REPLY        = 0x15,
+    SC_PKT_PASSWORD_REQUIRED        = 0x1a,
+    SC_PKT_KEEPALIVE                = 0x1b,
+    SC_PKT_STREAM_STOPPED           = 0x1e,
+    SC_PKT_STREAM_CHANGING          = 0x20,
+    SC_PKT_STREAM_ID_ACCEPTED       = 0x21,
     /*@}*/
 
     /** Pseudo packets. */
     /*@{*/
-    SC_PKT_CANCEL = -1,
-    SC_PKT_NO_DATA = -2,
+    SC_PKT_CANCEL                   = -1,
+    SC_PKT_NO_DATA                  = -2,
     SC_PKT_HTTP_CONTROL_ACKNOWLEDGE = -3,
     /*@}*/
 
     /** Data packets. */
     /*@{*/
-    SC_PKT_ASF_HEADER= 0x81,
-    SC_PKT_ASF_MEDIA= 0x82,
+    SC_PKT_ASF_HEADER               = 0x81,
+    SC_PKT_ASF_MEDIA                = 0x82,
     /*@}*/
 } MMSSCPacketType;
 
@@ -119,12 +119,6 @@ typedef struct {
     int stream_num;
     int streaming_flag;
 } MMSContext;
-
-/** Close the remote connection. */
-static void close_connection(MMSContext *mms)
-{
-    url_close(mms->mms_hd);
-}
 
 /** Create MMST command packet header */
 static void start_command_packet(MMSContext *mms, MMSCSPacketType packet_type)
@@ -516,7 +510,7 @@ static int mms_close(URLContext *h)
 
     if(mms->mms_hd) {
         send_close_packet(mms);
-        close_connection(mms);
+        url_close(mms->mms_hd);
     }
 
     /* free all separately allocated pointers in mms */
@@ -579,7 +573,6 @@ static int mms_open_cnx(URLContext *h, const char *url)
                   sizeof(mms->outgoing_packet_buffer), 1, NULL,
                   NULL, NULL, NULL);
     // establish tcp connection.
-    close_connection(mms);
     ff_url_join(tcpname, sizeof(tcpname), "tcp", NULL, mms->host, port, NULL);
     err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
     if (err)
