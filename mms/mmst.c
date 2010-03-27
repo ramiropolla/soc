@@ -646,28 +646,28 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     /* Since we read the header at open(), this shouldn't be possible */
     assert(mms->header_parsed);
 
-        if (mms->asf_header_read_pos >= mms->asf_header_size
-            && !mms->streaming_flag) {
-            dprintf(NULL, "mms_read() before play().\n");
-            clear_stream_buffers(mms);
-            result = send_stream_selection_request(mms);
-            if(result < 0)
-                return result;
-            if (get_tcp_server_response(mms) != SC_PKT_STREAM_ID_ACCEPTED) {
-                dprintf(NULL, "Can't get stream id accepted packet.\n");
-                return 0;
-            }
-
-            // send media packet request
-            send_media_packet_request(mms);
-            if (get_tcp_server_response(mms) == SC_PKT_MEDIA_PKT_FOLLOWS) {
-               mms->streaming_flag = 1;
-            } else {
-                dprintf(NULL, "Canot get media follows packet from server.\n");
-                return 0;
-            }
+    if (mms->asf_header_read_pos >= mms->asf_header_size
+        && !mms->streaming_flag) {
+        dprintf(NULL, "mms_read() before play().\n");
+        clear_stream_buffers(mms);
+        result = send_stream_selection_request(mms);
+        if(result < 0)
+            return result;
+        if (get_tcp_server_response(mms) != SC_PKT_STREAM_ID_ACCEPTED) {
+            dprintf(NULL, "Can't get stream id accepted packet.\n");
+            return 0;
         }
-        result = read_mms_packet(mms, buf, size);
+
+        // send media packet request
+        send_media_packet_request(mms);
+        if (get_tcp_server_response(mms) == SC_PKT_MEDIA_PKT_FOLLOWS) {
+           mms->streaming_flag = 1;
+        } else {
+            dprintf(NULL, "Canot get media follows packet from server.\n");
+            return 0;
+        }
+    }
+    result = read_mms_packet(mms, buf, size);
 
     return result;
 }
