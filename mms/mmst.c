@@ -667,9 +667,7 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
             return 0;
         }
     }
-    result = read_mms_packet(mms, buf, size);
-
-    return result;
+    return read_mms_packet(mms, buf, size);
 }
 
 URLProtocol mmst_protocol = {
