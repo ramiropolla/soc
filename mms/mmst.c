@@ -475,8 +475,8 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                             mms->pkt_buf_len, mms->asf_packet_len);
                     result= AVERROR_IO;
                 } else {
-                // copy the data to the packet buffer.
-                read_data(mms, buf, buf_size, &result);
+                    // copy the data to the packet buffer.
+                    read_data(mms, buf, buf_size, &result);
                 }
             } else {
                 dprintf(NULL, "Got a unkown Packet Type: 0x%x\n", packet_type);
