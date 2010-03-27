@@ -480,10 +480,6 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                 // copy the data to the packet buffer.
                 read_data(mms, buf, buf_size, &result);
                 break;
-            case SC_PKT_ASF_HEADER:
-                // copy the data to the packet buffer.
-                read_data(mms, buf, buf_size, &result);
-                break;
             default:
                 dprintf(NULL, "Got a unkown Packet Type: 0x%x\n", packet_type);
                 break;
