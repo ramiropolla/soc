@@ -468,22 +468,18 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
         } else {
             /* Read from network */
             packet_type= get_tcp_server_response(mms);
-            switch (packet_type) {
-            case SC_PKT_ASF_MEDIA:
-               if(mms->pkt_buf_len>mms->asf_packet_len) {
+            if (packet_type == SC_PKT_ASF_MEDIA) {
+                if(mms->pkt_buf_len>mms->asf_packet_len) {
                     dprintf(NULL, "Incoming packet"
                             "larger than the asf packet size stated (%d>%d)\n",
                             mms->pkt_buf_len, mms->asf_packet_len);
                     result= AVERROR_IO;
-                    break;
-                }
-
+                } else {
                 // copy the data to the packet buffer.
                 read_data(mms, buf, buf_size, &result);
-                break;
-            default:
+                }
+            } else {
                 dprintf(NULL, "Got a unkown Packet Type: 0x%x\n", packet_type);
-                break;
             }
         }
     } while(!result); // only return one packet.
