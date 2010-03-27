@@ -461,6 +461,7 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
             result += size_to_copy;
             dprintf(NULL, "Copied %d bytes from stored header. left: %d\n",
                    size_to_copy, mms->asf_header_size - mms->asf_header_read_pos);
+            av_freep(&mms->asf_header);
         } else if(mms->pkt_buf_len) {
             /* Read from media packet buffer */
             read_data(mms, buf, buf_size, &result);
