@@ -26,7 +26,7 @@
 #include "network.h"
 #include "asf.h"
 
-#define LOCAL_ADDRESS 0xc0a80081    // server doesn't care about it.
+#define LOCAL_ADDRESS 0xc0a80081    // FIXME get and use correct local ip address.
 #define LOCAL_PORT    1037          // as above.
 /** Client to server packet types. */
 typedef enum {
@@ -646,7 +646,6 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     /* Since we read the header at open(), this shouldn't be possible */
     assert(mms->header_parsed);
 
-    if(mms->header_parsed) {
         if (mms->asf_header_read_pos >= mms->asf_header_size
             && !mms->streaming_flag) {
             dprintf(NULL, "mms_read() before play().\n");
@@ -669,7 +668,6 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
             }
         }
         result = read_mms_packet(mms, buf, size);
-    }
 
     return result;
 }
