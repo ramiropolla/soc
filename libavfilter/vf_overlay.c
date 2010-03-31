@@ -342,7 +342,7 @@ AVFilter avfilter_vf_overlay =
     .query_formats = query_formats,
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .config_props    = config_input_main,
                                     .draw_slice      = draw_slice,
@@ -350,7 +350,7 @@ AVFilter avfilter_vf_overlay =
                                     .min_perms       = AV_PERM_READ,
                                     .rej_perms       = AV_PERM_REUSE2, },
                                   { .name            = "sub",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .config_props    = config_input_overlay,
                                     .draw_slice      = draw_slice,
@@ -359,7 +359,7 @@ AVFilter avfilter_vf_overlay =
                                     .rej_perms       = AV_PERM_REUSE2, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .request_frame   = request_frame, },
                                   { .name = NULL}},
 };

@@ -311,7 +311,7 @@ AVFilter avfilter_vf_pad = {
     .query_formats = query_formats,
 
     .inputs    = (AVFilterPad[]) {{ .name             = "default",
-                                    .type             = CODEC_TYPE_VIDEO,
+                                    .type             = AVMEDIA_TYPE_VIDEO,
                                     .config_props     = config_input,
                                     .get_video_buffer = get_video_buffer,
                                     .start_frame      = start_frame,
@@ -320,7 +320,7 @@ AVFilter avfilter_vf_pad = {
                                   { .name = NULL}},
 
     .outputs   = (AVFilterPad[]) {{ .name             = "default",
-                                    .type             = CODEC_TYPE_VIDEO,
+                                    .type             = AVMEDIA_TYPE_VIDEO,
                                     .config_props     = config_output, },
                                   { .name = NULL}},
 };

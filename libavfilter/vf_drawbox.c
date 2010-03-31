@@ -137,7 +137,7 @@ AVFilter avfilter_vf_drawbox=
 
     .query_formats   = query_formats,
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .get_video_buffer= avfilter_null_get_video_buffer,
                                     .start_frame     = avfilter_null_start_frame,
                                     .end_frame       = end_frame,
@@ -147,6 +147,6 @@ AVFilter avfilter_vf_drawbox=
                                     .rej_perms       = AV_PERM_PRESERVE },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO, },
+                                    .type            = AVMEDIA_TYPE_VIDEO, },
                                   { .name = NULL}},
 };

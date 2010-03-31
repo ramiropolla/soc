@@ -86,7 +86,7 @@ static int movie_init(AVFilterContext *ctx)
     // TODO: allow to choose the video stream
     mv->video_stream = -1;
     for(i = 0; i < mv->format_ctx->nb_streams; i++)
-        if(mv->format_ctx->streams[i]->codec->codec_type==CODEC_TYPE_VIDEO) {
+        if(mv->format_ctx->streams[i]->codec->codec_type==AVMEDIA_TYPE_VIDEO) {
             mv->video_stream = i;
             break;
         }
@@ -264,7 +264,7 @@ AVFilter avfilter_vsrc_movie =
 
     .inputs    = (AVFilterPad[]) {{ .name = NULL }},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .request_frame   = request_frame,
                                     .config_props    = config_props, },
                                   { .name = NULL}},

@@ -106,7 +106,7 @@ AVFilter avfilter_vf_fifo =
     .priv_size = sizeof(BufferContext),
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .get_video_buffer= avfilter_null_get_video_buffer,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
@@ -114,7 +114,7 @@ AVFilter avfilter_vf_fifo =
                                     .rej_perms       = AV_PERM_REUSE2, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .request_frame   = request_frame, },
                                   { .name = NULL}},
 };

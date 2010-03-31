@@ -120,7 +120,7 @@ AVFilter avfilter_vf_transpose =
     .query_formats = query_formats,
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .end_frame       = end_frame,
                                     .config_props    = config_props_input,
@@ -128,7 +128,7 @@ AVFilter avfilter_vf_transpose =
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .config_props    = config_props_output,
-                                    .type            = CODEC_TYPE_VIDEO, },
+                                    .type            = AVMEDIA_TYPE_VIDEO, },
                                   { .name = NULL}},
 };
 

@@ -192,7 +192,7 @@ AVFilter avfilter_vf_rotate =
     .query_formats = query_formats,
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .end_frame       = end_frame,
@@ -201,7 +201,7 @@ AVFilter avfilter_vf_rotate =
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
                                     .config_props    = config_props_output,
-                                    .type            = CODEC_TYPE_VIDEO, },
+                                    .type            = AVMEDIA_TYPE_VIDEO, },
                                   { .name = NULL}},
 };
 

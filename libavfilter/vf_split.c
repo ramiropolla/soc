@@ -48,16 +48,16 @@ AVFilter avfilter_vf_split =
     .name      = "split",
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .get_video_buffer= avfilter_null_get_video_buffer,
                                     .start_frame     = start_frame,
                                     .draw_slice      = draw_slice,
                                     .end_frame       = end_frame, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO, },
+                                    .type            = AVMEDIA_TYPE_VIDEO, },
                                   { .name            = "default2",
-                                    .type            = CODEC_TYPE_VIDEO, },
+                                    .type            = AVMEDIA_TYPE_VIDEO, },
                                   { .name = NULL}},
 };
 
