@@ -418,7 +418,7 @@ static void put_subframe(DCAContext *c, int32_t subband_data[8*SUBSUBFRAMES][MAX
     put_bits(&c->pb, 16, 0xffff);
 }
 
-void put_frame(DCAContext *c, int32_t subband_data[PCM_SAMPLES][MAX_CHANNELS][32], uint8_t *frame)
+static void put_frame(DCAContext *c, int32_t subband_data[PCM_SAMPLES][MAX_CHANNELS][32], uint8_t *frame)
 {
     int i;
     init_put_bits(&c->pb, frame + DCA_HEADER_SIZE, DCA_MAX_FRAME_SIZE-DCA_HEADER_SIZE);
