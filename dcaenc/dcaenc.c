@@ -21,7 +21,7 @@
  */
 
 #include "avcodec.h"
-#include "bitstream.h"
+#include "put_bits.h"
 #include "dcaenc.h"
 #include "dcadata.h"
 
