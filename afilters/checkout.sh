@@ -1,6 +1,11 @@
 #!/bin/sh
 echo "checking clean ffmpeg svn"
-svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg -r19479
+
+echo "downloading the corresponding version of swscale"
+cd ffmpeg/libswscale
+svn up -r29435
+cd ../..
 
 echo "deleting source files in libavfilter..."
 rm ffmpeg/libavfilter/*.c ffmpeg/libavfilter/*.h
