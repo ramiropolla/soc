@@ -141,7 +141,6 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
             if (mv->seek_point >= 0 && *mv->file_name)
                 return movie_init(ctx);
         }
-        else
             av_log(ctx, AV_LOG_ERROR, "init() expected 3 arguments:'%s'\n", args);
     return -1;
 }
