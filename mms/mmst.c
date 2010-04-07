@@ -321,6 +321,8 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                             mms->asf_header = av_realloc(mms->asf_header,
                                               mms->asf_header_size
                                               + mms->pkt_buf_len);
+                            if (!mms->asf_header)
+                                return -1;
                             memcpy(mms->asf_header + mms->asf_header_size,
                                                  mms->pkt_read_ptr,
                                                  mms->pkt_buf_len);
