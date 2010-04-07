@@ -553,9 +553,9 @@ static int handle_mms_msg_pkt(MMSContext *mms, const MMSSCPacketType packet_type
     return ret;
 }
 
-static int mms_open_cnx(URLContext *h, const char *url)
+static int mms_open(URLContext *h, const char *uri, int flags)
 {
-    MMSContext *mms = h->priv_data;
+    MMSContext *mms;
     MMSSCPacketType packet_type;
     int port;
 
@@ -563,10 +563,14 @@ static int mms_open_cnx(URLContext *h, const char *url)
     int err = AVERROR(EIO);
     int ret;
 
+    h->is_streamed = 1;
+    h->priv_data = av_mallocz(sizeof(MMSContext));
+    mms = (MMSContext *) h->priv_data;
+
     // only for MMS over TCP, so set proto = NULL
     ff_url_split(NULL, 0, NULL, 0,
             mms->host, sizeof(mms->host), &port, mms->path,
-            sizeof(mms->path), url);
+            sizeof(mms->path), uri);
 
     if(port<0)
         port = 1755; // defaut mms protocol port
@@ -601,16 +605,6 @@ fail:
     mms_close(h);
     dprintf(NULL, "Leaving open (failure: %d)\n", err);
     return err;
-}
-
-static int mms_open(URLContext *h, const char *uri, int flags)
-{
-    MMSContext *mms;
-
-    h->is_streamed = 1;
-    h->priv_data = av_mallocz(sizeof(MMSContext));
-
-    return mms_open_cnx(h, uri);
 }
 
 static int send_media_packet_request(MMSContext *mms)
