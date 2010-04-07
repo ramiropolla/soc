@@ -608,11 +608,7 @@ static int mms_open(URLContext *h, const char *uri, int flags)
     MMSContext *mms;
 
     h->is_streamed = 1;
-    mms = av_malloc(sizeof(MMSContext));
-    if (!mms)
-        return AVERROR(ENOMEM);
-    memset(mms, 0, sizeof(MMSContext));
-    h->priv_data = mms;
+    h->priv_data = av_mallocz(sizeof(MMSContext));
 
     return mms_open_cnx(h, uri);
 }
