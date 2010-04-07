@@ -76,11 +76,16 @@ typedef enum {
 } MMSSCPacketType;
 
 typedef struct {
+    int id;
+}MMSStream;
+
+typedef struct {
     int sequence_number;                 ///< Outgoing packet sequence number.
     char path[256];                      ///< Path of the resource being asked for.
     char host[128];                      ///< Host of the resources.
 
     URLContext *mms_hd;                  ///< TCP connection handle
+    MMSStream streams[MAX_STREAMS];
 
     /** Buffer for outgoing packets. */
     /*@{*/
@@ -402,6 +407,7 @@ static int send_startup_packet(MMSContext *mms)
 static int asf_header_parser(MMSContext *mms)
 {
     uint8_t *p = mms->asf_header, *end = mms->asf_header + mms->asf_header_size;
+    int flags, stream_id;
     mms->stream_num = 0;
 
     if (mms->asf_header_size < sizeof(ff_asf_guid) * 2 + 22 ||
@@ -417,7 +423,13 @@ static int asf_header_parser(MMSContext *mms)
                 mms->asf_packet_len = AV_RL32(p + sizeof(ff_asf_guid) * 2 + 64);
             }
         } else if (!memcmp(p, ff_asf_stream_header, sizeof(ff_asf_guid))) {
-            mms->stream_num++;
+            flags = AV_RL16(p + sizeof(ff_asf_guid)*3 + 24);
+            stream_id = flags & 0x7F;
+            if (mms->stream_num < MAX_STREAMS) {
+                mms->streams[mms->stream_num].id = stream_id;
+                mms->stream_num++;
+            } else
+                dprintf("Too many streams.\n");
         }
         if (chunksize > end - p)
             return -1;
@@ -437,7 +449,7 @@ static int send_stream_selection_request(MMSContext *mms)
     put_le32(&mms->outgoing_packet_data, mms->stream_num); // stream nums.
     for(ii= 0; ii<mms->stream_num; ii++) {
         put_le16(&mms->outgoing_packet_data, 0xffff);      // flags
-        put_le16(&mms->outgoing_packet_data, ii +1);       // stream id
+        put_le16(&mms->outgoing_packet_data, mms->streams[ii].id);       // stream id
         put_le16(&mms->outgoing_packet_data, 0);           // selection
     }
 
