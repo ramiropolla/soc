@@ -446,11 +446,11 @@ static int send_stream_selection_request(MMSContext *mms)
 
     //  send the streams we want back...
     start_command_packet(mms, CS_PKT_STREAM_ID_REQUEST);
-    put_le32(&mms->outgoing_packet_data, mms->stream_num); // stream nums.
+    put_le32(&mms->outgoing_packet_data, mms->stream_num);         // stream nums
     for(ii= 0; ii<mms->stream_num; ii++) {
-        put_le16(&mms->outgoing_packet_data, 0xffff);      // flags
-        put_le16(&mms->outgoing_packet_data, mms->streams[ii].id);       // stream id
-        put_le16(&mms->outgoing_packet_data, 0);           // selection
+        put_le16(&mms->outgoing_packet_data, 0xffff);              // flags
+        put_le16(&mms->outgoing_packet_data, mms->streams[ii].id); // stream id
+        put_le16(&mms->outgoing_packet_data, 0);                   // selection
     }
 
     put_le16(&mms->outgoing_packet_data, 0);
