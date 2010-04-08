@@ -259,6 +259,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
     int read_result;
     MMSSCPacketType packet_type= -1;
     int done;
+    uint8_t *p;
 
     do {
         done= 1;
@@ -323,13 +324,14 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                         packet_type = SC_PKT_ASF_HEADER;
                         // Store the asf header
                         if(!mms->header_parsed) {
-                            mms->asf_header = av_realloc(mms->asf_header,
+                            p = av_realloc(mms->asf_header,
                                               mms->asf_header_size
                                               + mms->pkt_buf_len);
-                            if (!mms->asf_header) {
+                            if (!p) {
                                 av_freep(&mms->asf_header);
                                 return AVERROR(ENOMEM);
-                            }
+                            } else
+                                mms->asf_header = p;
                             memcpy(mms->asf_header + mms->asf_header_size,
                                                  mms->pkt_read_ptr,
                                                  mms->pkt_buf_len);
