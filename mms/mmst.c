@@ -579,7 +579,7 @@ static int mms_open(URLContext *h, const char *uri, int flags)
     h->priv_data = av_mallocz(sizeof(MMSContext));
     if (!h->priv_data)
         return AVERROR(ENOMEM);
-    mms = (MMSContext *) h->priv_data;
+    mms = h->priv_data;
 
     // only for MMS over TCP, so set proto = NULL
     ff_url_split(NULL, 0, NULL, 0,
