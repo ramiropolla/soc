@@ -273,7 +273,8 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
 
                     dprintf(NULL, "Length remaining is %d\n", length_remaining);
                     // read the rest of the packet.
-                    if (length_remaining > sizeof(mms->incoming_buffer) - 12) {
+                    if (length_remaining < 0
+                        || length_remaining > sizeof(mms->incoming_buffer) - 12) {
                         dprintf("Incoming message len %d exceeds buffer len %d\n",
                             length_remaining, sizeof(mms->incoming_buffer) - 12);
                         break;
@@ -308,7 +309,8 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 mms->pkt_buf_len          = length_remaining;
                 mms->pkt_read_ptr         = mms->incoming_buffer;
 
-                if (length_remaining > sizeof(mms->incoming_buffer)) {
+                if (length_remaining < 0
+                        || length_remaining > sizeof(mms->incoming_buffer)) {
                     dprintf("Incoming data len %d exceeds buffer len %d\n",
                             length_remaining, sizeof(mms->incoming_buffer));
                     break;
