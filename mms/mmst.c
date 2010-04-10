@@ -225,7 +225,8 @@ static void handle_packet_stream_changing_type(MMSContext *mms)
     init_put_byte(&pkt, mms->incoming_buffer+40,
             mms->incoming_buffer_length-40, 0, NULL, NULL, NULL, NULL);
     get_le32(&pkt);                                 // prefix 1
-    mms->header_packet_id= (get_le32(&pkt) & 0xff); // prefix 2
+    get_le24(&pkt);                                 // prefix 2
+    mms->header_packet_id= get_byte(&pkt);
     dprintf(NULL, "Changed header prefix to 0x%x", mms->header_packet_id);
 }
 
