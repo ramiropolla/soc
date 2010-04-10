@@ -330,8 +330,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                             if (!p) {
                                 av_freep(&mms->asf_header);
                                 return AVERROR(ENOMEM);
-                            } else
-                                mms->asf_header = p;
+                            }
                             memcpy(mms->asf_header + mms->asf_header_size,
                                                  mms->pkt_read_ptr,
                                                  mms->pkt_buf_len);
