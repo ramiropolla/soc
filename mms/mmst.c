@@ -306,8 +306,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 mms->incoming_packet_seq  = AV_RL32(mms->incoming_buffer);
                 packet_id_type            = mms->incoming_buffer[4];
                 mms->incoming_flags       = mms->incoming_buffer[5];
-                mms->pkt_buf_len          = length_remaining;
-                mms->pkt_read_ptr         = mms->incoming_buffer;
 
                 if (length_remaining < 0
                         || length_remaining > sizeof(mms->incoming_buffer)) {
@@ -315,6 +313,8 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                             length_remaining, sizeof(mms->incoming_buffer));
                     break;
                 }
+                mms->pkt_buf_len          = length_remaining;
+                mms->pkt_read_ptr         = mms->incoming_buffer;
                 read_result= url_read_complete(mms->mms_hd, mms->incoming_buffer, length_remaining);
                 if(read_result != length_remaining) {
                     dprintf(NULL, "read_bytes result: %d asking for %d\n",
