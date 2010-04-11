@@ -157,21 +157,16 @@ static void insert_command_prefixes(MMSContext *mms,
 static int send_command_packet(MMSContext *mms)
 {
     ByteIOContext *context= &mms->outgoing_packet_data;
+    uint8_t *p = mms->outgoing_packet_buffer;
     int exact_length= url_ftell(context);
     int first_length= exact_length - 16;
     int len8= first_length/8;
     int write_result;
 
     // update packet length fields.
-    url_fseek(context, 8, SEEK_SET);
-    put_le32(context, first_length);
-    url_fseek(context, 16, SEEK_SET);
-    put_le32(context, len8);
-    url_fseek(context, 32, SEEK_SET);
-    put_le32(context, len8-2);
-
-    // seek back to the end.
-    url_fseek(context, exact_length, SEEK_SET);
+    AV_WL32(p + 8, first_length);
+    AV_WL32(p + 16, len8);
+    AV_WL32(p + 32, len8-2);
 
     // write it out.
     write_result= url_write(mms->mms_hd, context->buffer, exact_length);
