@@ -1,6 +1,6 @@
 Index: doc/libavfilter.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 22749)
+--- doc/libavfilter.texi	(revision 22866)
 +++ doc/libavfilter.texi	(working copy)
 @@ -139,6 +139,20 @@
  
@@ -195,10 +195,10 @@ Index: doc/libavfilter.texi
 +
 +Transpose (line => column) input video to next video filter.
 +
- @section vflip
+ @section unsharp
  
- Flip the input video vertically.
-@@ -229,6 +390,32 @@
+ Sharpen or blur the input video. It accepts the following parameters:
+@@ -282,6 +443,32 @@
  
  Below is a description of the currently available video sources.
  

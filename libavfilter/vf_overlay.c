@@ -144,11 +144,11 @@ static int config_input_overlay(AVFilterLink *link)
     var_values[OVERLAY_W] = ctx->inputs[1]->w;
     var_values[OVERLAY_H] = ctx->inputs[1]->h;
 
-    over->x = ff_eval2((expr = over->x_expr), var_values, var_names,
+    over->x = ff_parse_and_eval_expr((expr = over->x_expr), var_values, var_names,
                        NULL, NULL, NULL, NULL, NULL, &error);
     if (error)
         goto fail;
-    over->y = ff_eval2((expr = over->y_expr), var_values, var_names,
+    over->y = ff_parse_and_eval_expr((expr = over->y_expr), var_values, var_names,
                        NULL, NULL, NULL, NULL, NULL, &error);
     if (error)
         goto fail;

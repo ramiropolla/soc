@@ -63,7 +63,7 @@ enum PosOfValue {
 };
 
 typedef struct {
-    AVEvalExpr *expr;
+    AVExpr *expr;
     double const_values[POV_NULL+1];
 } SetPTSContext;
 
@@ -72,7 +72,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
     SetPTSContext *setpts = ctx->priv;
     const char *error;
 
-    setpts->expr = ff_parse(args ? args : "PTS",
+    setpts->expr = ff_parse_expr(args ? args : "PTS",
                         const_names, NULL, NULL, NULL, NULL, &error);
     if (! setpts->expr)
         av_log(ctx, AV_LOG_ERROR,
@@ -108,7 +108,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     //    (uint64_t) ff_parse_eval(setpts->expr, setpts->const_values, setpts));
 
     ref2->pts =
-        (uint64_t) ff_parse_eval(setpts->expr, setpts->const_values, setpts);
+        (uint64_t) ff_eval_expr(setpts->expr, setpts->const_values, setpts);
 
     setpts->const_values[POV_N  ] += 1.0;
 
@@ -118,7 +118,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 static av_cold void uninit(AVFilterContext *ctx)
 {
     SetPTSContext *setpts = ctx->priv;
-    ff_eval_free(setpts->expr);
+    ff_free_expr(setpts->expr);
 }
 
 AVFilter avfilter_vf_setpts =
