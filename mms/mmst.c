@@ -81,7 +81,7 @@ typedef struct {
 }MMSStream;
 
 typedef struct {
-    int sequence_number;                 ///< Outgoing packet sequence number.
+    int outgoing_packet_seq;            ///< Outgoing packet sequence number.
     char path[256];                      ///< Path of the resource being asked for.
     char host[128];                      ///< Host of the resources.
 
@@ -136,7 +136,7 @@ static void start_command_packet(MMSContext *mms, MMSCSPacketType packet_type)
     bytestream_put_le32(&mms->write_ptr, 0); // Length starts from after the protocol type bytes
     bytestream_put_le32(&mms->write_ptr, MKTAG('M','M','S',' '));
     bytestream_put_le32(&mms->write_ptr, 0);
-    bytestream_put_le32(&mms->write_ptr, mms->sequence_number++);
+    bytestream_put_le32(&mms->write_ptr, mms->outgoing_packet_seq++);
     bytestream_put_le64(&mms->write_ptr, 0); // timestamp
     bytestream_put_le32(&mms->write_ptr, 0);
     bytestream_put_le16(&mms->write_ptr, packet_type);
