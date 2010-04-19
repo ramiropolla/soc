@@ -148,16 +148,15 @@ static void insert_command_prefixes(MMSContext *mms,
 /** Send a prepared MMST command packet. */
 static int send_command_packet(MMSContext *mms)
 {
-    unsigned char *p = mms->outgoing_packet_buffer;
-    int exact_length= mms->write_ptr - p;
+    int exact_length= mms->write_ptr - mms->outgoing_packet_buffer;
     int first_length= exact_length - 16;
     int len8= first_length/8;
     int write_result;
 
     // update packet length fields.
-    AV_WL32(p + 8, first_length);
-    AV_WL32(p + 16, len8);
-    AV_WL32(p + 32, len8-2);
+    AV_WL32(mms->outgoing_packet_buffer + 8, first_length);
+    AV_WL32(mms->outgoing_packet_buffer + 16, len8);
+    AV_WL32(mms->outgoing_packet_buffer + 32, len8-2);
 
     // write it out.
     write_result= url_write(mms->mms_hd, mms->outgoing_packet_buffer, exact_length);
