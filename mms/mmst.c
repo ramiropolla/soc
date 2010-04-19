@@ -455,14 +455,14 @@ static int send_stream_selection_request(MMSContext *mms)
     return send_command_packet(mms);
 }
 
-static void read_data(MMSContext *mms, uint8_t *buf, const int buf_size, int* result)
+static int read_data(MMSContext *mms, uint8_t *buf, const int buf_size)
 {
     int read_size;
     read_size = FFMIN(buf_size, mms->pkt_buf_len);
     memcpy(buf, mms->pkt_read_ptr, read_size);
     mms->pkt_buf_len -= read_size;
     mms->pkt_read_ptr+= read_size;
-    *result += read_size;
+    return read_size;
 }
 
 /** Read at most one media packet (or a whole header). */
@@ -485,7 +485,7 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
             av_freep(&mms->asf_header);
         } else if(mms->pkt_buf_len) {
             /* Read from media packet buffer */
-            read_data(mms, buf, buf_size, &result);
+            result = read_data(mms, buf, buf_size);
         } else {
             /* Read from network */
             packet_type= get_tcp_server_response(mms);
@@ -497,7 +497,7 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                     result= AVERROR_IO;
                 } else {
                     // copy the data to the packet buffer.
-                    read_data(mms, buf, buf_size, &result);
+                    result = read_data(mms, buf, buf_size);
                 }
             } else {
                 dprintf(NULL, "Got a unkown Packet Type: 0x%x\n", packet_type);
