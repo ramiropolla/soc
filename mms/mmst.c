@@ -439,14 +439,14 @@ static int asf_header_parser(MMSContext *mms)
 /** Send MMST stream selection command based on the AVStream->discard values. */
 static int send_stream_selection_request(MMSContext *mms)
 {
-    int ii;
+    int i;
 
     //  send the streams we want back...
     start_command_packet(mms, CS_PKT_STREAM_ID_REQUEST);
     bytestream_put_le32(&mms->write_ptr, mms->stream_num);         // stream nums
-    for(ii= 0; ii<mms->stream_num; ii++) {
+    for(i= 0; i<mms->stream_num; i++) {
         bytestream_put_le16(&mms->write_ptr, 0xffff);              // flags
-        bytestream_put_le16(&mms->write_ptr, mms->streams[ii].id); // stream id
+        bytestream_put_le16(&mms->write_ptr, mms->streams[i].id); // stream id
         bytestream_put_le16(&mms->write_ptr, 0);                   // selection
     }
 
