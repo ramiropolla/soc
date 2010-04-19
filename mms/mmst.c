@@ -81,7 +81,7 @@ typedef struct {
 }MMSStream;
 
 typedef struct {
-    int outgoing_packet_seq;            ///< Outgoing packet sequence number.
+    int outgoing_packet_seq;             ///< Outgoing packet sequence number.
     char path[256];                      ///< Path of the resource being asked for.
     char host[128];                      ///< Host of the resources.
 
@@ -90,20 +90,16 @@ typedef struct {
 
     /** Buffer for outgoing packets. */
     /*@{*/
-    uint8_t *write_ptr;
-    uint8_t outgoing_packet_buffer[512]; ///< Outgoing packet data
+    uint8_t *write_ptr;                  ///< Pointer for writting the buffer.
+    uint8_t outgoing_packet_buffer[512]; ///< Buffer for outgoing packet.
     /*@}*/
 
-    /** Buffer for incoming control packets. */
+    /** Buffer for incoming packets. */
     /*@{*/
-    uint8_t incoming_buffer[8192];       ///< Incoming buffer location.
+    uint8_t incoming_buffer[8192];       ///< Buffer for incoming packets.
     int incoming_buffer_length;          ///< Incoming buffer length.
-    /*@}*/
-
-    /** Buffer for incoming media/header packets. */
-    /*@{*/
-    uint8_t *pkt_read_ptr;               ///< Pointer for partial reads.
-    int pkt_buf_len;                     ///< Buffer length.
+    uint8_t *pkt_read_ptr;               ///< Pointer for reading from incoming buffer.
+    int pkt_buf_len;                     ///< Reading length from incoming buffer.
     /*@}*/
 
     int incoming_packet_seq;             ///< Incoming packet sequence number.
@@ -121,8 +117,8 @@ typedef struct {
     int asf_packet_len;
     /*@}*/
 
-    int stream_num;
-    int streaming_flag;
+    int stream_num;                      ///< stream numbers.
+    int is_playing;
 } MMSContext;
 
 /** Create MMST command packet header */
@@ -653,7 +649,7 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     assert(mms->header_parsed);
 
     if (mms->asf_header_read_pos >= mms->asf_header_size
-        && !mms->streaming_flag) {
+        && !mms->is_playing) {
         dprintf(NULL, "mms_read() before play().\n");
         clear_stream_buffers(mms);
         result = send_stream_selection_request(mms);
@@ -667,7 +663,7 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
         // send media packet request
         send_media_packet_request(mms);
         if (get_tcp_server_response(mms) == SC_PKT_MEDIA_PKT_FOLLOWS) {
-           mms->streaming_flag = 1;
+           mms->is_playing = 1;
         } else {
             dprintf(NULL, "Canot get media follows packet from server.\n");
             return 0;
