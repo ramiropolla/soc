@@ -444,6 +444,11 @@ static int send_stream_selection_request(MMSContext *mms)
     //  send the streams we want back...
     start_command_packet(mms, CS_PKT_STREAM_ID_REQUEST);
     bytestream_put_le32(&mms->write_ptr, mms->stream_num);         // stream nums
+    if (mms->write_ptr - mms->outgoing_packet_buffer >
+            sizeof(mms->outgoing_packet_buffer) - 6 * mms->stream_num) {
+        dprintf("buffer will overflow for too many streams: %d.\n", mms->stream_num);
+        return AVERROR_IO;
+    }
     for(i= 0; i<mms->stream_num; i++) {
         bytestream_put_le16(&mms->write_ptr, 0xffff);              // flags
         bytestream_put_le16(&mms->write_ptr, mms->streams[i].id); // stream id
