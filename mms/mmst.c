@@ -97,7 +97,6 @@ typedef struct {
     /** Buffer for incoming packets. */
     /*@{*/
     uint8_t incoming_buffer[8192];       ///< Buffer for incoming packets.
-    int incoming_buffer_length;          ///< Incoming buffer length.
     uint8_t *pkt_read_ptr;               ///< Pointer for reading from incoming buffer.
     int pkt_buf_len;                     ///< Reading length from incoming buffer.
     /*@}*/
@@ -269,7 +268,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     read_result = url_read_complete(mms->mms_hd, mms->incoming_buffer + 12,
                                                   length_remaining) ;
                     if (read_result == length_remaining) {
-                        mms->incoming_buffer_length= length_remaining+12;
                         packet_type= AV_RL16(mms->incoming_buffer+36);
 
                     } else {
