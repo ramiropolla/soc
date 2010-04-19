@@ -252,10 +252,8 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
 {
     int read_result;
     MMSSCPacketType packet_type= -1;
-    int done;
 
-    do {
-        done= 1;
+    for(;;) {
         if((read_result= url_read_complete(mms->mms_hd, mms->incoming_buffer, 8))==8) {
             // handle command packet.
             if(AV_RL32(mms->incoming_buffer + 4)==0xb00bface) {
@@ -336,10 +334,11 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                         packet_type = SC_PKT_ASF_MEDIA;
                     } else {
                         dprintf(NULL, "packet id type %d is old.", packet_id_type);
-                        done= 0;
+                        continue;
                     }
                 }
             }
+            break;
         } else {
             if(read_result<0) {
                 dprintf(NULL, "Read error (or cancelled) returned %d!\n", read_result);
@@ -348,9 +347,9 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 dprintf(NULL, "Read result of zero?!\n");
                 packet_type = SC_PKT_NO_DATA;
             }
-            done = 1;
+            return packet_type;
         }
-    } while(!done);
+    }
 
     if (packet_type == SC_PKT_KEEPALIVE) {
         send_keepalive_packet(mms);
