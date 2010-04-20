@@ -417,7 +417,8 @@ static int asf_header_parser(MMSContext *mms)
         } else if (!memcmp(p, ff_asf_stream_header, sizeof(ff_asf_guid))) {
             flags     = AV_RL16(p + sizeof(ff_asf_guid)*3 + 24);
             stream_id = flags & 0x7F;
-            if (mms->stream_num < MAX_STREAMS) {
+            if (mms->stream_num < MAX_STREAMS &&
+                    46 + mms->stream_num * 6 < sizeof(mms->out_buffer)) {
                 mms->streams[mms->stream_num].id = stream_id;
                 mms->stream_num++;
             } else
@@ -439,11 +440,6 @@ static int send_stream_selection_request(MMSContext *mms)
     //  send the streams we want back...
     start_command_packet(mms, CS_PKT_STREAM_ID_REQUEST);
     bytestream_put_le32(&mms->write_out_ptr, mms->stream_num);         // stream nums
-    if (mms->write_out_ptr - mms->out_buffer >
-            sizeof(mms->out_buffer) - 6 * mms->stream_num) {
-        dprintf("buffer will overflow for too many streams: %d.\n", mms->stream_num);
-        return AVERROR_IO;
-    }
     for(i= 0; i<mms->stream_num; i++) {
         bytestream_put_le16(&mms->write_out_ptr, 0xffff);              // flags
         bytestream_put_le16(&mms->write_out_ptr, mms->streams[i].id);  // stream id
