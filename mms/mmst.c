@@ -91,7 +91,7 @@ typedef struct {
     /** Buffer for outgoing packets. */
     /*@{*/
     uint8_t *write_ptr;                  ///< Pointer for writting the buffer.
-    uint8_t outgoing_packet_buffer[512]; ///< Buffer for outgoing packet.
+    uint8_t out_buffer[512]; ///< Buffer for outgoing packet.
     /*@}*/
 
     /** Buffer for incoming packets. */
@@ -123,7 +123,7 @@ typedef struct {
 /** Create MMST command packet header */
 static void start_command_packet(MMSContext *mms, MMSCSPacketType packet_type)
 {
-    mms->write_ptr = mms->outgoing_packet_buffer;
+    mms->write_ptr = mms->out_buffer;
 
     bytestream_put_le32(&mms->write_ptr, 1); // start sequence
     bytestream_put_le32(&mms->write_ptr, 0xb00bface);
@@ -148,18 +148,18 @@ static void insert_command_prefixes(MMSContext *mms,
 /** Send a prepared MMST command packet. */
 static int send_command_packet(MMSContext *mms)
 {
-    int exact_length= mms->write_ptr - mms->outgoing_packet_buffer;
+    int exact_length= mms->write_ptr - mms->out_buffer;
     int first_length= exact_length - 16;
     int len8= first_length/8;
     int write_result;
 
     // update packet length fields.
-    AV_WL32(mms->outgoing_packet_buffer + 8, first_length);
-    AV_WL32(mms->outgoing_packet_buffer + 16, len8);
-    AV_WL32(mms->outgoing_packet_buffer + 32, len8-2);
+    AV_WL32(mms->out_buffer + 8, first_length);
+    AV_WL32(mms->out_buffer + 16, len8);
+    AV_WL32(mms->out_buffer + 32, len8-2);
 
     // write it out.
-    write_result= url_write(mms->mms_hd, mms->outgoing_packet_buffer, exact_length);
+    write_result= url_write(mms->mms_hd, mms->out_buffer, exact_length);
     if(write_result != exact_length) {
         dprintf(NULL, "url_write returned: %d != %d\n",
                 write_result, exact_length);
@@ -172,10 +172,10 @@ static int send_command_packet(MMSContext *mms)
 static void mms_put_utf16(MMSContext *mms, uint8_t *src)
 {
     ByteIOContext bic;
-    int size = mms->write_ptr - mms->outgoing_packet_buffer;
+    int size = mms->write_ptr - mms->out_buffer;
     int len;
     init_put_byte(&bic, mms->write_ptr,
-            sizeof(mms->outgoing_packet_buffer) - size, 1, NULL, NULL, NULL, NULL);
+            sizeof(mms->out_buffer) - size, 1, NULL, NULL, NULL, NULL);
 
     len = ff_put_str16_nolen(&bic, src);
     mms->write_ptr += len;
@@ -441,8 +441,8 @@ static int send_stream_selection_request(MMSContext *mms)
     //  send the streams we want back...
     start_command_packet(mms, CS_PKT_STREAM_ID_REQUEST);
     bytestream_put_le32(&mms->write_ptr, mms->stream_num);         // stream nums
-    if (mms->write_ptr - mms->outgoing_packet_buffer >
-            sizeof(mms->outgoing_packet_buffer) - 6 * mms->stream_num) {
+    if (mms->write_ptr - mms->out_buffer >
+            sizeof(mms->out_buffer) - 6 * mms->stream_num) {
         dprintf("buffer will overflow for too many streams: %d.\n", mms->stream_num);
         return AVERROR_IO;
     }
