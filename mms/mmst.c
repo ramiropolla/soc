@@ -268,7 +268,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                                                   length_remaining) ;
                     if (read_result == length_remaining) {
                         packet_type= AV_RL16(mms->in_buffer+36);
-
                     } else {
                         dprintf(NULL, "3 read returned %d!\n", read_result);
                     }
@@ -282,7 +281,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
 
                 assert(mms->remaining_in_len==0);
 
-                //** VERIFY LENGTH REMAINING HAS SPACE
                 // note we cache the first 8 bytes,
                 // then fill up the buffer with the others
                 tmp                       = AV_RL16(mms->in_buffer + 6);
