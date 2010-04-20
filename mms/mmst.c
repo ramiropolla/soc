@@ -90,7 +90,7 @@ typedef struct {
 
     /** Buffer for outgoing packets. */
     /*@{*/
-    uint8_t *write_ptr;                  ///< Pointer for writting the buffer.
+    uint8_t *write_out_ptr;                  ///< Pointer for writting the buffer.
     uint8_t out_buffer[512]; ///< Buffer for outgoing packet.
     /*@}*/
 
@@ -123,32 +123,32 @@ typedef struct {
 /** Create MMST command packet header */
 static void start_command_packet(MMSContext *mms, MMSCSPacketType packet_type)
 {
-    mms->write_ptr = mms->out_buffer;
+    mms->write_out_ptr = mms->out_buffer;
 
-    bytestream_put_le32(&mms->write_ptr, 1); // start sequence
-    bytestream_put_le32(&mms->write_ptr, 0xb00bface);
-    bytestream_put_le32(&mms->write_ptr, 0); // Length starts from after the protocol type bytes
-    bytestream_put_le32(&mms->write_ptr, MKTAG('M','M','S',' '));
-    bytestream_put_le32(&mms->write_ptr, 0);
-    bytestream_put_le32(&mms->write_ptr, mms->outgoing_packet_seq++);
-    bytestream_put_le64(&mms->write_ptr, 0); // timestamp
-    bytestream_put_le32(&mms->write_ptr, 0);
-    bytestream_put_le16(&mms->write_ptr, packet_type);
-    bytestream_put_le16(&mms->write_ptr, 3); // direction to server
+    bytestream_put_le32(&mms->write_out_ptr, 1); // start sequence
+    bytestream_put_le32(&mms->write_out_ptr, 0xb00bface);
+    bytestream_put_le32(&mms->write_out_ptr, 0); // Length starts from after the protocol type bytes
+    bytestream_put_le32(&mms->write_out_ptr, MKTAG('M','M','S',' '));
+    bytestream_put_le32(&mms->write_out_ptr, 0);
+    bytestream_put_le32(&mms->write_out_ptr, mms->outgoing_packet_seq++);
+    bytestream_put_le64(&mms->write_out_ptr, 0); // timestamp
+    bytestream_put_le32(&mms->write_out_ptr, 0);
+    bytestream_put_le16(&mms->write_out_ptr, packet_type);
+    bytestream_put_le16(&mms->write_out_ptr, 3); // direction to server
 }
 
 /** Add prefixes to MMST command packet. */
 static void insert_command_prefixes(MMSContext *mms,
         uint32_t prefix1, uint32_t prefix2)
 {
-    bytestream_put_le32(&mms->write_ptr, prefix1); // first prefix
-    bytestream_put_le32(&mms->write_ptr, prefix2); // second prefix
+    bytestream_put_le32(&mms->write_out_ptr, prefix1); // first prefix
+    bytestream_put_le32(&mms->write_out_ptr, prefix2); // second prefix
 }
 
 /** Send a prepared MMST command packet. */
 static int send_command_packet(MMSContext *mms)
 {
-    int exact_length= mms->write_ptr - mms->out_buffer;
+    int exact_length= mms->write_out_ptr - mms->out_buffer;
     int first_length= exact_length - 16;
     int len8= first_length/8;
     int write_result;
@@ -172,13 +172,13 @@ static int send_command_packet(MMSContext *mms)
 static void mms_put_utf16(MMSContext *mms, uint8_t *src)
 {
     ByteIOContext bic;
-    int size = mms->write_ptr - mms->out_buffer;
+    int size = mms->write_out_ptr - mms->out_buffer;
     int len;
-    init_put_byte(&bic, mms->write_ptr,
+    init_put_byte(&bic, mms->write_out_ptr,
             sizeof(mms->out_buffer) - size, 1, NULL, NULL, NULL, NULL);
 
     len = ff_put_str16_nolen(&bic, src);
-    mms->write_ptr += len;
+    mms->write_out_ptr += len;
 }
 
 static int send_protocol_select(MMSContext *mms)
@@ -187,9 +187,9 @@ static int send_protocol_select(MMSContext *mms)
 
     start_command_packet(mms, CS_PKT_PROTOCOL_SELECT);
     insert_command_prefixes(mms, 0, 0xffffffff);
-    bytestream_put_le32(&mms->write_ptr, 0);          // maxFunnelBytes
-    bytestream_put_le32(&mms->write_ptr, 0x00989680); // maxbitRate
-    bytestream_put_le32(&mms->write_ptr, 2);          // funnelMode
+    bytestream_put_le32(&mms->write_out_ptr, 0);          // maxFunnelBytes
+    bytestream_put_le32(&mms->write_out_ptr, 0x00989680); // maxbitRate
+    bytestream_put_le32(&mms->write_out_ptr, 2);          // funnelMode
     snprintf(data_string, sizeof(data_string), "\\\\%d.%d.%d.%d\\%s\\%d",
             (LOCAL_ADDRESS>>24)&0xff,
             (LOCAL_ADDRESS>>16)&0xff,
@@ -206,8 +206,8 @@ static int send_media_file_request(MMSContext *mms)
 {
     start_command_packet(mms, CS_PKT_MEDIA_FILE_REQUEST);
     insert_command_prefixes(mms, 1, 0xffffffff);
-    bytestream_put_le32(&mms->write_ptr, 0);
-    bytestream_put_le32(&mms->write_ptr, 0);
+    bytestream_put_le32(&mms->write_out_ptr, 0);
+    bytestream_put_le32(&mms->write_out_ptr, 0);
     mms_put_utf16(mms, mms->path + 1); // +1 for skip "/"
 
     return send_command_packet(mms);
@@ -359,18 +359,18 @@ static int send_media_header_request(MMSContext *mms)
 {
     start_command_packet(mms, CS_PKT_MEDIA_HEADER_REQUEST);
     insert_command_prefixes(mms, 1, 0);
-    bytestream_put_le32(&mms->write_ptr, 0);
-    bytestream_put_le32(&mms->write_ptr, 0x00800000);
-    bytestream_put_le32(&mms->write_ptr, 0xffffffff);
-    bytestream_put_le32(&mms->write_ptr, 0);
-    bytestream_put_le32(&mms->write_ptr, 0);
-    bytestream_put_le32(&mms->write_ptr, 0);
+    bytestream_put_le32(&mms->write_out_ptr, 0);
+    bytestream_put_le32(&mms->write_out_ptr, 0x00800000);
+    bytestream_put_le32(&mms->write_out_ptr, 0xffffffff);
+    bytestream_put_le32(&mms->write_out_ptr, 0);
+    bytestream_put_le32(&mms->write_out_ptr, 0);
+    bytestream_put_le32(&mms->write_out_ptr, 0);
 
     // the media preroll value in milliseconds?
-    bytestream_put_le32(&mms->write_ptr, 0);
-    bytestream_put_le32(&mms->write_ptr, 0x40AC2000);
-    bytestream_put_le32(&mms->write_ptr, 2);
-    bytestream_put_le32(&mms->write_ptr, 0);
+    bytestream_put_le32(&mms->write_out_ptr, 0);
+    bytestream_put_le32(&mms->write_out_ptr, 0x40AC2000);
+    bytestream_put_le32(&mms->write_out_ptr, 2);
+    bytestream_put_le32(&mms->write_out_ptr, 0);
 
     return send_command_packet(mms);
 }
@@ -389,7 +389,7 @@ static int send_startup_packet(MMSContext *mms)
 
     start_command_packet(mms, CS_PKT_INITIAL);
     insert_command_prefixes(mms, 0, 0x0004000b);
-    bytestream_put_le32(&mms->write_ptr, 0x0003001c);
+    bytestream_put_le32(&mms->write_out_ptr, 0x0003001c);
     mms_put_utf16(mms, data_string);
     return send_command_packet(mms);
 }
@@ -440,19 +440,19 @@ static int send_stream_selection_request(MMSContext *mms)
 
     //  send the streams we want back...
     start_command_packet(mms, CS_PKT_STREAM_ID_REQUEST);
-    bytestream_put_le32(&mms->write_ptr, mms->stream_num);         // stream nums
-    if (mms->write_ptr - mms->out_buffer >
+    bytestream_put_le32(&mms->write_out_ptr, mms->stream_num);         // stream nums
+    if (mms->write_out_ptr - mms->out_buffer >
             sizeof(mms->out_buffer) - 6 * mms->stream_num) {
         dprintf("buffer will overflow for too many streams: %d.\n", mms->stream_num);
         return AVERROR_IO;
     }
     for(i= 0; i<mms->stream_num; i++) {
-        bytestream_put_le16(&mms->write_ptr, 0xffff);              // flags
-        bytestream_put_le16(&mms->write_ptr, mms->streams[i].id); // stream id
-        bytestream_put_le16(&mms->write_ptr, 0);                   // selection
+        bytestream_put_le16(&mms->write_out_ptr, 0xffff);              // flags
+        bytestream_put_le16(&mms->write_out_ptr, mms->streams[i].id); // stream id
+        bytestream_put_le16(&mms->write_out_ptr, 0);                   // selection
     }
 
-    bytestream_put_le16(&mms->write_ptr, 0);
+    bytestream_put_le16(&mms->write_out_ptr, 0);
 
     return send_command_packet(mms);
 }
@@ -619,16 +619,16 @@ static int send_media_packet_request(MMSContext *mms)
 {
     start_command_packet(mms, CS_PKT_START_FROM_PKT_ID);
     insert_command_prefixes(mms, 1, 0x0001FFFF);
-    bytestream_put_le64(&mms->write_ptr, 0);          // seek timestamp
-    bytestream_put_le32(&mms->write_ptr, 0xffffffff); // unknown
-    bytestream_put_le32(&mms->write_ptr, 0xffffffff); // packet offset
-    bytestream_put_byte(&mms->write_ptr, 0xff);       // max stream time limit
-    bytestream_put_byte(&mms->write_ptr, 0xff);       // max stream time limit
-    bytestream_put_byte(&mms->write_ptr, 0xff);       // max stream time limit
-    bytestream_put_byte(&mms->write_ptr, 0x00);       // stream time limit flag
+    bytestream_put_le64(&mms->write_out_ptr, 0);          // seek timestamp
+    bytestream_put_le32(&mms->write_out_ptr, 0xffffffff); // unknown
+    bytestream_put_le32(&mms->write_out_ptr, 0xffffffff); // packet offset
+    bytestream_put_byte(&mms->write_out_ptr, 0xff);       // max stream time limit
+    bytestream_put_byte(&mms->write_out_ptr, 0xff);       // max stream time limit
+    bytestream_put_byte(&mms->write_out_ptr, 0xff);       // max stream time limit
+    bytestream_put_byte(&mms->write_out_ptr, 0x00);       // stream time limit flag
 
     mms->packet_id++;                                 // new packet_id
-    bytestream_put_le32(&mms->write_ptr, mms->packet_id);
+    bytestream_put_le32(&mms->write_out_ptr, mms->packet_id);
     return send_command_packet(mms);
 }
 
