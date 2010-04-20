@@ -97,7 +97,7 @@ typedef struct {
     /** Buffer for incoming packets. */
     /*@{*/
     uint8_t in_buffer[8192];       ///< Buffer for incoming packets.
-    uint8_t *pkt_read_ptr;               ///< Pointer for reading from incoming buffer.
+    uint8_t *read_in_ptr;               ///< Pointer for reading from incoming buffer.
     int pkt_buf_len;                     ///< Reading length from incoming buffer.
     /*@}*/
 
@@ -298,7 +298,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     break;
                 }
                 mms->pkt_buf_len          = length_remaining;
-                mms->pkt_read_ptr         = mms->in_buffer;
+                mms->read_in_ptr         = mms->in_buffer;
                 read_result= url_read_complete(mms->mms_hd, mms->in_buffer, length_remaining);
                 if(read_result != length_remaining) {
                     dprintf(NULL, "read_bytes result: %d asking for %d\n",
@@ -319,7 +319,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                             }
                             mms->asf_header = p;
                             memcpy(mms->asf_header + mms->asf_header_size,
-                                                 mms->pkt_read_ptr,
+                                                 mms->read_in_ptr,
                                                  mms->pkt_buf_len);
                             mms->asf_header_size += mms->pkt_buf_len;
                         }
@@ -461,9 +461,9 @@ static int read_data(MMSContext *mms, uint8_t *buf, const int buf_size)
 {
     int read_size;
     read_size = FFMIN(buf_size, mms->pkt_buf_len);
-    memcpy(buf, mms->pkt_read_ptr, read_size);
+    memcpy(buf, mms->read_in_ptr, read_size);
     mms->pkt_buf_len -= read_size;
-    mms->pkt_read_ptr+= read_size;
+    mms->read_in_ptr+= read_size;
     return read_size;
 }
 
@@ -636,7 +636,7 @@ static int send_media_packet_request(MMSContext *mms)
 static void clear_stream_buffers(MMSContext *mms)
 {
     mms->pkt_buf_len = 0;
-    mms->pkt_read_ptr = mms->in_buffer;
+    mms->read_in_ptr = mms->in_buffer;
 }
 
 /** Read ASF data through the protocol. */
