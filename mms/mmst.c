@@ -96,7 +96,7 @@ typedef struct {
 
     /** Buffer for incoming packets. */
     /*@{*/
-    uint8_t incoming_buffer[8192];       ///< Buffer for incoming packets.
+    uint8_t in_buffer[8192];       ///< Buffer for incoming packets.
     uint8_t *pkt_read_ptr;               ///< Pointer for reading from incoming buffer.
     int pkt_buf_len;                     ///< Reading length from incoming buffer.
     /*@}*/
@@ -218,7 +218,7 @@ static void handle_packet_stream_changing_type(MMSContext *mms)
     dprintf(NULL, "Stream changing!\n");
 
     // 40 is the packet header size, 7 is the prefix size.
-    mms->header_packet_id= AV_RL32(mms->incoming_buffer + 40 + 7);
+    mms->header_packet_id= AV_RL32(mms->in_buffer + 40 + 7);
     dprintf(NULL, "Changed header prefix to 0x%x", mms->header_packet_id);
 }
 
@@ -236,7 +236,7 @@ static void pad_media_packet(MMSContext *mms)
 {
     if(mms->pkt_buf_len<mms->asf_packet_len) {
         int padding_size = mms->asf_packet_len - mms->pkt_buf_len;
-        memset(mms->incoming_buffer + mms->pkt_buf_len, 0, padding_size);
+        memset(mms->in_buffer + mms->pkt_buf_len, 0, padding_size);
         mms->pkt_buf_len += padding_size;
     }
 }
@@ -248,26 +248,26 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
     MMSSCPacketType packet_type= -1;
 
     for(;;) {
-        if((read_result= url_read_complete(mms->mms_hd, mms->incoming_buffer, 8))==8) {
+        if((read_result= url_read_complete(mms->mms_hd, mms->in_buffer, 8))==8) {
             // handle command packet.
-            if(AV_RL32(mms->incoming_buffer + 4)==0xb00bface) {
-                mms->incoming_flags= mms->incoming_buffer[3];
-                read_result= url_read_complete(mms->mms_hd, mms->incoming_buffer+8, 4);
+            if(AV_RL32(mms->in_buffer + 4)==0xb00bface) {
+                mms->incoming_flags= mms->in_buffer[3];
+                read_result= url_read_complete(mms->mms_hd, mms->in_buffer+8, 4);
                 if(read_result == 4) {
-                    int length_remaining= AV_RL32(mms->incoming_buffer+8) + 4;
+                    int length_remaining= AV_RL32(mms->in_buffer+8) + 4;
 
                     dprintf(NULL, "Length remaining is %d\n", length_remaining);
                     // read the rest of the packet.
                     if (length_remaining < 0
-                        || length_remaining > sizeof(mms->incoming_buffer) - 12) {
+                        || length_remaining > sizeof(mms->in_buffer) - 12) {
                         dprintf("Incoming message len %d exceeds buffer len %d\n",
-                            length_remaining, sizeof(mms->incoming_buffer) - 12);
+                            length_remaining, sizeof(mms->in_buffer) - 12);
                         break;
                     }
-                    read_result = url_read_complete(mms->mms_hd, mms->incoming_buffer + 12,
+                    read_result = url_read_complete(mms->mms_hd, mms->in_buffer + 12,
                                                   length_remaining) ;
                     if (read_result == length_remaining) {
-                        packet_type= AV_RL16(mms->incoming_buffer+36);
+                        packet_type= AV_RL16(mms->in_buffer+36);
 
                     } else {
                         dprintf(NULL, "3 read returned %d!\n", read_result);
@@ -285,21 +285,21 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 //** VERIFY LENGTH REMAINING HAS SPACE
                 // note we cache the first 8 bytes,
                 // then fill up the buffer with the others
-                tmp                       = AV_RL16(mms->incoming_buffer + 6);
+                tmp                       = AV_RL16(mms->in_buffer + 6);
                 length_remaining          = (tmp - 8) & 0xffff;
-                mms->incoming_packet_seq  = AV_RL32(mms->incoming_buffer);
-                packet_id_type            = mms->incoming_buffer[4];
-                mms->incoming_flags       = mms->incoming_buffer[5];
+                mms->incoming_packet_seq  = AV_RL32(mms->in_buffer);
+                packet_id_type            = mms->in_buffer[4];
+                mms->incoming_flags       = mms->in_buffer[5];
 
                 if (length_remaining < 0
-                        || length_remaining > sizeof(mms->incoming_buffer)) {
+                        || length_remaining > sizeof(mms->in_buffer)) {
                     dprintf("Incoming data len %d exceeds buffer len %d\n",
-                            length_remaining, sizeof(mms->incoming_buffer));
+                            length_remaining, sizeof(mms->in_buffer));
                     break;
                 }
                 mms->pkt_buf_len          = length_remaining;
-                mms->pkt_read_ptr         = mms->incoming_buffer;
-                read_result= url_read_complete(mms->mms_hd, mms->incoming_buffer, length_remaining);
+                mms->pkt_read_ptr         = mms->in_buffer;
+                read_result= url_read_complete(mms->mms_hd, mms->in_buffer, length_remaining);
                 if(read_result != length_remaining) {
                     dprintf(NULL, "read_bytes result: %d asking for %d\n",
                             read_result, length_remaining);
@@ -411,9 +411,9 @@ static int asf_header_parser(MMSContext *mms)
             /* read packet size */
             if (end - p > sizeof(ff_asf_guid) * 2 + 68) {
                 mms->asf_packet_len = AV_RL32(p + sizeof(ff_asf_guid) * 2 + 64);
-                if (mms->asf_packet_len > sizeof(mms->incoming_buffer)) {
+                if (mms->asf_packet_len > sizeof(mms->in_buffer)) {
                     dprintf(NULL,"Too large packet len:%d"
-                        " may overwrite incoming_buffer when padding", mms->asf_packet_len);
+                        " may overwrite in_buffer when padding", mms->asf_packet_len);
                 }
             }
         } else if (!memcmp(p, ff_asf_stream_header, sizeof(ff_asf_guid))) {
@@ -636,7 +636,7 @@ static int send_media_packet_request(MMSContext *mms)
 static void clear_stream_buffers(MMSContext *mms)
 {
     mms->pkt_buf_len = 0;
-    mms->pkt_read_ptr = mms->incoming_buffer;
+    mms->pkt_read_ptr = mms->in_buffer;
 }
 
 /** Read ASF data through the protocol. */
