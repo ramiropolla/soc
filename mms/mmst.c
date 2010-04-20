@@ -90,15 +90,15 @@ typedef struct {
 
     /** Buffer for outgoing packets. */
     /*@{*/
-    uint8_t *write_out_ptr;                  ///< Pointer for writting the buffer.
-    uint8_t out_buffer[512]; ///< Buffer for outgoing packet.
+    uint8_t *write_out_ptr;              ///< Pointer for writting the buffer.
+    uint8_t out_buffer[512];             ///< Buffer for outgoing packet.
     /*@}*/
 
     /** Buffer for incoming packets. */
     /*@{*/
-    uint8_t in_buffer[8192];       ///< Buffer for incoming packets.
-    uint8_t *read_in_ptr;               ///< Pointer for reading from incoming buffer.
-    int remaining_in_len;                     ///< Reading length from incoming buffer.
+    uint8_t in_buffer[8192];             ///< Buffer for incoming packets.
+    uint8_t *read_in_ptr;                ///< Pointer for reading from incoming buffer.
+    int remaining_in_len;                ///< Reading length from incoming buffer.
     /*@}*/
 
     int incoming_packet_seq;             ///< Incoming packet sequence number.
@@ -195,7 +195,7 @@ static int send_protocol_select(MMSContext *mms)
             (LOCAL_ADDRESS>>16)&0xff,
             (LOCAL_ADDRESS>>8)&0xff,
             LOCAL_ADDRESS&0xff,
-            "TCP",                                    // or UDP
+            "TCP",                                        // or UDP
             LOCAL_PORT);
 
     mms_put_utf16(mms, data_string);
@@ -297,7 +297,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                             length_remaining, sizeof(mms->in_buffer));
                     break;
                 }
-                mms->remaining_in_len          = length_remaining;
+                mms->remaining_in_len    = length_remaining;
                 mms->read_in_ptr         = mms->in_buffer;
                 read_result= url_read_complete(mms->mms_hd, mms->in_buffer, length_remaining);
                 if(read_result != length_remaining) {
@@ -417,7 +417,7 @@ static int asf_header_parser(MMSContext *mms)
                 }
             }
         } else if (!memcmp(p, ff_asf_stream_header, sizeof(ff_asf_guid))) {
-            flags = AV_RL16(p + sizeof(ff_asf_guid)*3 + 24);
+            flags     = AV_RL16(p + sizeof(ff_asf_guid)*3 + 24);
             stream_id = flags & 0x7F;
             if (mms->stream_num < MAX_STREAMS) {
                 mms->streams[mms->stream_num].id = stream_id;
@@ -448,7 +448,7 @@ static int send_stream_selection_request(MMSContext *mms)
     }
     for(i= 0; i<mms->stream_num; i++) {
         bytestream_put_le16(&mms->write_out_ptr, 0xffff);              // flags
-        bytestream_put_le16(&mms->write_out_ptr, mms->streams[i].id); // stream id
+        bytestream_put_le16(&mms->write_out_ptr, mms->streams[i].id);  // stream id
         bytestream_put_le16(&mms->write_out_ptr, 0);                   // selection
     }
 
@@ -463,7 +463,7 @@ static int read_data(MMSContext *mms, uint8_t *buf, const int buf_size)
     read_size = FFMIN(buf_size, mms->remaining_in_len);
     memcpy(buf, mms->read_in_ptr, read_size);
     mms->remaining_in_len -= read_size;
-    mms->read_in_ptr+= read_size;
+    mms->read_in_ptr      += read_size;
     return read_size;
 }
 
@@ -627,7 +627,7 @@ static int send_media_packet_request(MMSContext *mms)
     bytestream_put_byte(&mms->write_out_ptr, 0xff);       // max stream time limit
     bytestream_put_byte(&mms->write_out_ptr, 0x00);       // stream time limit flag
 
-    mms->packet_id++;                                 // new packet_id
+    mms->packet_id++;                                     // new packet_id
     bytestream_put_le32(&mms->write_out_ptr, mms->packet_id);
     return send_command_packet(mms);
 }
@@ -636,7 +636,7 @@ static int send_media_packet_request(MMSContext *mms)
 static void clear_stream_buffers(MMSContext *mms)
 {
     mms->remaining_in_len = 0;
-    mms->read_in_ptr = mms->in_buffer;
+    mms->read_in_ptr      = mms->in_buffer;
 }
 
 /** Read ASF data through the protocol. */
