@@ -353,6 +353,22 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
     return packet_type;
 }
 
+static int mms_safe_send_recv(MMSContext *mms, int (*send_fun)(), const MMSSCPacketType expect_type)
+{
+    MMSSCPacketType type;
+    if(send_fun) {
+        if (send_fun(mms) < 0) {
+            dprintf(NULL, "Send Packet error before expecting recv packet %d\n", expect_type);
+            return -1;
+        }
+    }
+    if((type = get_tcp_server_response(mms)) != expect_type) {
+        dprintf(NULL,"Unhandled packet type %d\n", type);
+        return -1;
+    }
+    return 0;
+}
+
 static int send_media_header_request(MMSContext *mms)
 {
     start_command_packet(mms, CS_PKT_MEDIA_HEADER_REQUEST);
@@ -469,7 +485,6 @@ static int read_data(MMSContext *mms, uint8_t *buf, const int buf_size)
 static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
 {
     int result = 0;
-    MMSSCPacketType packet_type;
     int size_to_copy;
 
     do {
@@ -488,8 +503,8 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
             result = read_data(mms, buf, buf_size);
         } else {
             /* Read from network */
-            packet_type= get_tcp_server_response(mms);
-            if (packet_type == SC_PKT_ASF_MEDIA) {
+            int err = mms_safe_send_recv(mms, NULL, SC_PKT_ASF_MEDIA);
+            if (!err) {
                 if(mms->remaining_in_len>mms->asf_packet_len) {
                     dprintf(NULL, "Incoming packet"
                             "larger than the asf packet size stated (%d>%d)\n",
@@ -499,8 +514,6 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                     // copy the data to the packet buffer.
                     result = read_data(mms, buf, buf_size);
                 }
-            } else {
-                dprintf(NULL, "Got a unkown Packet Type: 0x%x\n", packet_type);
             }
         }
     } while(!result); // only return one packet.
@@ -532,40 +545,9 @@ static int mms_close(URLContext *h)
     return 0;
 }
 
-static int handle_mms_msg_pkt(MMSContext *mms, const MMSSCPacketType packet_type)
-{
-    int ret = -1;
-
-    switch(packet_type) {
-    case SC_PKT_CLIENT_ACCEPTED:
-        ret = send_protocol_select(mms);
-        break;
-    case SC_PKT_PROTOCOL_ACCEPTED:
-        ret = send_media_file_request(mms);
-        break;
-    case SC_PKT_MEDIA_FILE_DETAILS:
-        ret = send_media_header_request(mms);
-        break;
-    case SC_PKT_HEADER_REQUEST_ACCEPTED:
-        ret = 0;
-        break;
-    case SC_PKT_ASF_HEADER:
-        if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C)) {
-            ret = asf_header_parser(mms);
-            mms->header_parsed = 1;
-        }
-        break;
-    default:
-        dprintf(NULL, "Unhandled packet type %d\n", packet_type);
-        break;
-    }
-    return ret;
-}
-
 static int mms_open(URLContext *h, const char *uri, int flags)
 {
     MMSContext *mms;
-    MMSSCPacketType packet_type;
     int port;
 
     char tcpname[256];
@@ -593,13 +575,26 @@ static int mms_open(URLContext *h, const char *uri, int flags)
 
     mms->packet_id        = 3;          // default, initial value.
     mms->header_packet_id = 2;          // default, initial value.
-
-    send_startup_packet(mms);
-    while (!mms->header_parsed) {
-        packet_type = get_tcp_server_response(mms);
-        ret = handle_mms_msg_pkt(mms, packet_type);
-        if (ret < 0)
-            break;
+    err = mms_safe_send_recv(mms, send_startup_packet, SC_PKT_CLIENT_ACCEPTED);
+    if (err)
+        goto fail;
+    err = mms_safe_send_recv(mms, send_protocol_select, SC_PKT_PROTOCOL_ACCEPTED);
+    if (err)
+        goto fail;
+    err = mms_safe_send_recv(mms, send_media_file_request, SC_PKT_MEDIA_FILE_DETAILS);
+    if (err)
+        goto fail;
+    err = mms_safe_send_recv(mms, send_media_header_request, SC_PKT_HEADER_REQUEST_ACCEPTED);
+    if (err)
+        goto fail;
+    err = mms_safe_send_recv(mms, NULL, SC_PKT_ASF_HEADER);
+    if (err)
+        goto fail;
+    else {
+        if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C)) {
+            ret = asf_header_parser(mms);
+            mms->header_parsed = 1;
+        }
     }
 
     if (!mms->asf_packet_len || !mms->stream_num)
@@ -651,22 +646,15 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
         && !mms->is_playing) {
         dprintf(NULL, "mms_read() before play().\n");
         clear_stream_buffers(mms);
-        result = send_stream_selection_request(mms);
-        if(result < 0)
+        result = mms_safe_send_recv(mms, send_stream_selection_request, SC_PKT_STREAM_ID_ACCEPTED);
+        if (result)
             return result;
-        if (get_tcp_server_response(mms) != SC_PKT_STREAM_ID_ACCEPTED) {
-            dprintf(NULL, "Can't get stream id accepted packet.\n");
-            return 0;
-        }
-
         // send media packet request
-        send_media_packet_request(mms);
-        if (get_tcp_server_response(mms) == SC_PKT_MEDIA_PKT_FOLLOWS) {
-           mms->is_playing = 1;
-        } else {
-            dprintf(NULL, "Canot get media follows packet from server.\n");
-            return 0;
-        }
+        result = mms_safe_send_recv(mms, send_media_packet_request, SC_PKT_MEDIA_PKT_FOLLOWS);
+        if (result)
+            return result;
+        else
+            mms->is_playing = 1;
     }
     return read_mms_packet(mms, buf, size);
 }
