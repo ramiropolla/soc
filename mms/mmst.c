@@ -409,9 +409,10 @@ static int asf_header_parser(MMSContext *mms)
             /* read packet size */
             if (end - p > sizeof(ff_asf_guid) * 2 + 68) {
                 mms->asf_packet_len = AV_RL32(p + sizeof(ff_asf_guid) * 2 + 64);
-                if (mms->asf_packet_len > sizeof(mms->in_buffer)) {
+                if (mms->asf_packet_len <= 0 || mms->asf_packet_len > sizeof(mms->in_buffer)) {
                     dprintf(NULL,"Too large packet len:%d"
                         " may overwrite in_buffer when padding", mms->asf_packet_len);
+                    return -1;
                 }
             }
         } else if (!memcmp(p, ff_asf_stream_header, sizeof(ff_asf_guid))) {
