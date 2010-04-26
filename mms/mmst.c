@@ -353,7 +353,9 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
     return packet_type;
 }
 
-static int mms_safe_send_recv(MMSContext *mms, int (*send_fun)(), const MMSSCPacketType expect_type)
+static int mms_safe_send_recv(MMSContext *mms,
+                              int (*send_fun)(MMSContext *mms),
+                              const MMSSCPacketType expect_type)
 {
     MMSSCPacketType type;
     if(send_fun) {
