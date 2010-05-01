@@ -1,10 +1,10 @@
 Index: doc/libavfilter.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 22866)
+--- doc/libavfilter.texi	(revision 23004)
 +++ doc/libavfilter.texi	(working copy)
 @@ -139,6 +139,20 @@
  
- The default value of ``width'' and ``height'' is 0.
+ The default value of @var{width} and @var{height} is 0.
  
 +@section drawbox
 +
@@ -152,10 +152,10 @@ Index: doc/libavfilter.texi
 +
  @section scale
  
- Scale the input video to width:height and/or convert the image format.
+ Scale the input video to @var{width}:@var{height} and/or convert the image format.
 @@ -202,6 +332,24 @@
  
- The default value of ``width'' and ``height'' is 0.
+ The default value of @var{width} and @var{height} is 0.
  
 +@section setpts
 +
