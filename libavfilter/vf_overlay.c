@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include "avfilter.h"
+#include "libavutil/pixdesc.h"
 #include "libavcodec/eval.h"
 #include "libavutil/avstring.h"
 
@@ -108,28 +109,9 @@ static int config_input_main(AVFilterLink *link)
 {
     OverlayContext *over = link->dst->priv;
 
-    switch(link->format) {
-    case PIX_FMT_RGB32:
-    case PIX_FMT_BGR32:
-        over->bpp = 4;
-        break;
-    case PIX_FMT_RGB24:
-    case PIX_FMT_BGR24:
-        over->bpp = 3;
-        break;
-    case PIX_FMT_RGB565:
-    case PIX_FMT_RGB555:
-    case PIX_FMT_BGR565:
-    case PIX_FMT_BGR555:
-    case PIX_FMT_GRAY16BE:
-    case PIX_FMT_GRAY16LE:
-        over->bpp = 2;
-        break;
-    default:
-        over->bpp = 1;
-    }
-
-    avcodec_get_chroma_sub_sample(link->format, &over->hsub, &over->vsub);
+    over->bpp = (av_get_bits_per_pixel(&av_pix_fmt_descriptors[link->format]) + 7) >> 3;
+    over->hsub = av_pix_fmt_descriptors[link->format].log2_chroma_w;
+    over->vsub = av_pix_fmt_descriptors[link->format].log2_chroma_h;
 
     return 0;
 }
