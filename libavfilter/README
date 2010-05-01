@@ -13,6 +13,12 @@ Note: in order to enable the movie filter you need to add the
 ffmpeg -filters will show you the list of filters/sources/sinks
 enabled.
 
+If you want to update the libavfilter repository after the first
+checkout, you will need to revert all the changes done in the ffmpeg
+tree before to run checkout.sh again.
+You can do it by running the command:
+cd ffmpeg; svn revert -R *
+
 WRITING FILTERS:
 
 There is some documentation on writing basic filters over at the multimedia
