@@ -1,5 +1,4 @@
 /*
- * filter to overlay one video on top of another
  * copyright (c) 2007 Bobby Bingham
  *
  * This file is part of FFmpeg.
@@ -17,6 +16,11 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+
+/**
+ * @file
+ * filter to overlay one video on top of another
  */
 
 #include <stdio.h>
