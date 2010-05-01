@@ -317,6 +317,7 @@ static int request_frame(AVFilterLink *link)
 AVFilter avfilter_vf_overlay =
 {
     .name      = "overlay",
+    .description = "Overlay a video source on top of the input.",
 
     .init      = init,
     .uninit    = uninit,
