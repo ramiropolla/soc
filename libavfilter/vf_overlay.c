@@ -23,8 +23,6 @@
  * filter to overlay one video on top of another
  */
 
-#include <stdio.h>
-
 #include "avfilter.h"
 #include "libavutil/pixdesc.h"
 #include "libavcodec/eval.h"
