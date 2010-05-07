@@ -1,6 +1,6 @@
 Index: doc/libavfilter.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 23004)
+--- doc/libavfilter.texi	(revision 23053)
 +++ doc/libavfilter.texi	(working copy)
 @@ -139,6 +139,21 @@
  
@@ -55,7 +55,7 @@ Index: doc/libavfilter.texi
  @section noformat
  
  Force libavfilter not to use any of the specified pixel formats for the
-@@ -177,6 +216,99 @@
+@@ -177,6 +216,56 @@
  
  Pass the source unchanged to the output.
  
@@ -109,41 +109,13 @@ Index: doc/libavfilter.texi
 +You could chain and add more overlays this way but the efficiency of
 +such approach is yet to be tested.
 +
-+@section pad
-+
-+Add paddings to the input image, and places the original input at the
-+given coordinates @var{x}, @var{y}.
-+
-+It accepts the following parameters:
-+@var{width}:@var{height}:@var{x}:@var{y}:@var{color}.
-+
-+Follows the description of the accepted parameters.
-+
-+@table @option
-+@item width, height
-+
-+Specify the size of the output image with the paddings added. If the
-+value for @var{width} or @var{height} is 0, the corresponding input size
-+is used for the output.
-+
-+The default value of @var{width} and @var{height} is 0.
-+
-+@item x, y
-+
-+Specify the offsets where to place the input image in the padded area
-+with respect to the top/left border of the output image.
-+
-+The default value of @var{x} and @var{y} is 0.
-+
-+@item color
-+
-+Specify the color of the padded area, it can be the name of a color
-+(case insensitive match) or a 0xRRGGBB[AA] sequence.
-+
-+The default value of @var{color} is ``black''.
-+
-+@end table
-+
+ @section pad
+ 
+ Add paddings to the input image, and places the original input at the
+@@ -212,6 +301,14 @@
+ 
+ @end table
+ 
 +@section rotate
 +
 +@example
@@ -155,7 +127,7 @@ Index: doc/libavfilter.texi
  @section scale
  
  Scale the input video to @var{width}:@var{height} and/or convert the image format.
-@@ -202,6 +334,24 @@
+@@ -237,6 +334,24 @@
  
  The default value of @var{width} and @var{height} is 0.
  
@@ -180,7 +152,7 @@ Index: doc/libavfilter.texi
  @section slicify
  
  Pass the images of input video on to next video filter as multiple
-@@ -217,6 +367,19 @@
+@@ -252,6 +367,19 @@
  Adding this in the beginning of filter chains should make filtering
  faster due to better use of the memory cache.
  
@@ -200,7 +172,7 @@ Index: doc/libavfilter.texi
  @section unsharp
  
  Sharpen or blur the input video. It accepts the following parameters:
-@@ -282,6 +445,32 @@
+@@ -317,6 +445,32 @@
  
  Below is a description of the currently available video sources.
  
