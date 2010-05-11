@@ -29,10 +29,10 @@
 #include "libavutil/avstring.h"
 
 static const char *var_names[] = {
-    "mainW",    ///< width of the main video
-    "mainH",    ///< height of the main video
-    "overlayW", ///< width of the overlay video
-    "overlayH", ///< height of the overlay video
+    "main_w",    ///< width of the main video
+    "main_h",    ///< height of the main video
+    "overlay_w", ///< width of the overlay video
+    "overlay_h", ///< height of the overlay video
     NULL
 };
 
