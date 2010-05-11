@@ -340,15 +340,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
             return packet_type;
         }
     }
-
-    if (packet_type == SC_PKT_KEEPALIVE) {
-        send_keepalive_packet(mms);
-    } else if (packet_type == SC_PKT_STREAM_CHANGING) {
-        handle_packet_stream_changing_type(mms);
-        //TODO: Handle new header when change the stream type.
-    } else if (packet_type == SC_PKT_ASF_MEDIA) {
-        pad_media_packet(mms);
-    }
     return packet_type;
 }
 
@@ -364,11 +355,26 @@ static int mms_safe_send_recv(MMSContext *mms,
             return ret;
         }
     }
-    if((type = get_tcp_server_response(mms)) != expect_type) {
-        dprintf(NULL,"Unhandled packet type %d\n", type);
-        return -1;
+
+recv_again:
+    type = get_tcp_server_response(mms);
+    if (type != expect_type) {
+        if (type == SC_PKT_KEEPALIVE) {
+            send_keepalive_packet(mms);
+            goto recv_again;
+        } else if (type == SC_PKT_STREAM_CHANGING) {
+            handle_packet_stream_changing_type(mms);
+            //TODO: Handle new header when change the stream type.
+            return -1;
+        } else {
+            dprintf(NULL,"Unhandled packet type %d\n", type);
+            return -1;
+        }
+    } else {
+        if (type == SC_PKT_ASF_MEDIA)
+            pad_media_packet(mms);
+        return 0;
     }
-    return 0;
 }
 
 static int send_media_header_request(MMSContext *mms)
