@@ -70,8 +70,8 @@ typedef enum {
 
     /** Data packets. */
     /*@{*/
-    SC_PKT_ASF_HEADER               = 0x81,
-    SC_PKT_ASF_MEDIA                = 0x82,
+    SC_PKT_ASF_HEADER               = 0x010000,// make it bigger than 0xFF in case of
+    SC_PKT_ASF_MEDIA                = 0x010001,// receiving false data packets.
     /*@}*/
 } MMSSCPacketType;
 
