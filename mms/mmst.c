@@ -358,9 +358,10 @@ static int mms_safe_send_recv(MMSContext *mms,
 {
     MMSSCPacketType type;
     if(send_fun) {
-        if (send_fun(mms) < 0) {
+        int ret = send_fun(mms);
+        if (ret < 0) {
             dprintf(NULL, "Send Packet error before expecting recv packet %d\n", expect_type);
-            return -1;
+            return ret;
         }
     }
     if((type = get_tcp_server_response(mms)) != expect_type) {
