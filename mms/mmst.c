@@ -66,7 +66,6 @@ typedef enum {
     /*@{*/
     SC_PKT_CANCEL                   = -1,
     SC_PKT_NO_DATA                  = -2,
-    SC_PKT_HTTP_CONTROL_ACKNOWLEDGE = -3,
     /*@}*/
 
     /** Data packets. */
