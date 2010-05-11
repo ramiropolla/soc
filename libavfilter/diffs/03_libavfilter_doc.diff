@@ -73,11 +73,11 @@ Index: doc/libavfilter.texi
 +Parameters to the filter are separated by a colon. The first parameter
 +is the x coordinate of the overlay, the second parameter is the y
 +coordinate. The parameters need not be constant expressions, but may
-+be expressions containing the names @var{mainW}, @var{mainH},
-+@var{overlayW} and @var{overlayH}, for the size of the first and second
++be expressions containing the names @var{main_w}, @var{main_h},
++@var{overlay_w} and @var{overlay_h}, for the size of the first and second
 +input video, respectively. For example,
 +@example
-+overlay=mainW-overlayW-10:mainH-overlayH-10
++overlay=main_w-overlay_w-10:main_h-overlay_h-10
 +@end example
 +can be used to draw the overlay at 10 pixels from the bottom right
 +corner of the main video.
@@ -92,7 +92,7 @@ Index: doc/libavfilter.texi
 +For example, the following command will insert a transparent PNG
 +logo in the bottom left corner of the input video:
 +@example
-+movie=0:png:logo.png [logo]; [in][logo] overlay=10:mainH-overlayH-10:1 [out]
++movie=0:png:logo.png [logo]; [in][logo] overlay=10:main_h-overlay_h-10:1 [out]
 +@end example
 +
 +Notice the last parameter to overlay ":1" - this enables alpha blending.
@@ -102,8 +102,8 @@ Index: doc/libavfilter.texi
 +@example
 +movie=0:png:logo1.png [logo1];
 +movie=0:png:logo2.png [logo2];
-+[in][logo1] overlay=10:mainH-overlayH-10:1 [in+logo1];
-+[in+logo1][logo2] overlay=mainW-overlayW-10:mainH-overlayH-10:1 [out]
++[in][logo1] overlay=10:main_h-overlay_h-10:1 [in+logo1];
++[in+logo1][logo2] overlay=main_w-overlay_w-10:main_h-overlay_h-10:1 [out]
 +@end example
 +
 +You could chain and add more overlays this way but the efficiency of
