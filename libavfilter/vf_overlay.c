@@ -56,8 +56,6 @@ typedef struct {
     int hsub, vsub;             //< chroma subsampling
 
     char x_expr[256], y_expr[256];
-
-    int blend;
 } OverlayContext;
 
 static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
@@ -68,7 +66,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
     av_strlcpy(over->y_expr, "0", sizeof(over->y_expr));
 
     if (args)
-        sscanf(args, "%255[^:]:%255[^:]:%d", over->x_expr, over->y_expr, &over->blend);
+        sscanf(args, "%255[^:]:%255[^:]", over->x_expr, over->y_expr);
 
     return 0;
 }
@@ -86,19 +84,15 @@ static av_cold void uninit(AVFilterContext *ctx)
 
 static int query_formats(AVFilterContext *ctx)
 {
-    OverlayContext *over = ctx->priv;
-    if (over->blend) {
-        enum PixelFormat inout_pix_fmts[] = { PIX_FMT_YUV420P,  PIX_FMT_NONE };
-        enum PixelFormat blend_pix_fmts[] = { PIX_FMT_YUVA420P, PIX_FMT_NONE };
-        AVFilterFormats *inout_formats = avfilter_make_format_list(inout_pix_fmts);
-        AVFilterFormats *blend_formats = avfilter_make_format_list(blend_pix_fmts);
+    enum PixelFormat inout_pix_fmts[] = { PIX_FMT_YUV420P, PIX_FMT_NONE };
+    enum PixelFormat blend_pix_fmts[] = { PIX_FMT_YUVA420P, PIX_FMT_NONE };
+    AVFilterFormats *inout_formats = avfilter_make_format_list(inout_pix_fmts);
+    AVFilterFormats *blend_formats = avfilter_make_format_list(blend_pix_fmts);
 
-        avfilter_formats_ref(inout_formats, &ctx->inputs [0]->out_formats);
-        avfilter_formats_ref(blend_formats, &ctx->inputs [1]->out_formats);
-        avfilter_formats_ref(inout_formats, &ctx->outputs[0]->in_formats );
-    } else {
-        avfilter_default_query_formats(ctx);
-    }
+    avfilter_formats_ref(inout_formats, &ctx->inputs [0]->out_formats);
+    avfilter_formats_ref(blend_formats, &ctx->inputs [1]->out_formats);
+    avfilter_formats_ref(inout_formats, &ctx->outputs[0]->in_formats );
+
     return 0;
 }
 
@@ -228,7 +222,7 @@ static void copy_blended(uint8_t* out, int out_linesize,
 
 static void copy_image(AVFilterPicRef *dst, int x, int y,
                        AVFilterPicRef *src, int w, int h,
-                       int bpp, int hsub, int vsub, int blend)
+                       int bpp, int hsub, int vsub)
 {
     AVPicture pic;
     int i;
@@ -247,11 +241,10 @@ static void copy_image(AVFilterPicRef *dst, int x, int y,
         }
     }
 
-    if (blend) {
+    if (src->pic->format == PIX_FMT_YUVA420P) {
         int chroma_w = w>>hsub;
         int chroma_h = h>>vsub;
         assert(dst->pic->format == PIX_FMT_YUV420P);
-        assert(src->pic->format == PIX_FMT_YUVA420P);
         copy_blended(pic.data[0], pic.linesize[0], src->data[0], src->linesize[0], src->data[3], src->linesize[3], w, h, 0, 0);
         copy_blended(pic.data[1], pic.linesize[1], src->data[1], src->linesize[1], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
         copy_blended(pic.data[2], pic.linesize[2], src->data[2], src->linesize[2], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
@@ -310,7 +303,7 @@ static int request_frame(AVFilterLink *link)
     if(over->pics[0][0]) {
         pic->pixel_aspect = over->pics[0][0]->pixel_aspect;
         copy_image(pic, 0, 0, over->pics[0][0], link->w, link->h,
-                   over->bpp, over->hsub, over->vsub, 0);
+                   over->bpp, over->hsub, over->vsub);
     }
     x = FFMIN(over->x, link->w-1);
     y = FFMIN(over->y, link->h-1);
@@ -318,7 +311,7 @@ static int request_frame(AVFilterLink *link)
     h = FFMIN(link->h-y, over->pics[1][0]->h);
     if(over->pics[1][0])
         copy_image(pic, x, y, over->pics[1][0], w, h,
-                   over->bpp, over->hsub, over->vsub, over->blend);
+                   over->bpp, over->hsub, over->vsub);
 
     /* we give the output frame the higher of the two current pts values */
     pic->pts = FFMAX(over->pics[0][0]->pts, over->pics[1][0]->pts);
