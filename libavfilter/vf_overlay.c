@@ -84,8 +84,8 @@ static av_cold void uninit(AVFilterContext *ctx)
 
 static int query_formats(AVFilterContext *ctx)
 {
-    enum PixelFormat inout_pix_fmts[] = { PIX_FMT_YUV420P, PIX_FMT_NONE };
-    enum PixelFormat blend_pix_fmts[] = { PIX_FMT_YUVA420P, PIX_FMT_NONE };
+    const enum PixelFormat inout_pix_fmts[] = { PIX_FMT_YUV420P, PIX_FMT_NONE };
+    const enum PixelFormat blend_pix_fmts[] = { PIX_FMT_YUVA420P, PIX_FMT_NONE };
     AVFilterFormats *inout_formats = avfilter_make_format_list(inout_pix_fmts);
     AVFilterFormats *blend_formats = avfilter_make_format_list(blend_pix_fmts);
 
