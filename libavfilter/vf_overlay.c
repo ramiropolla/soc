@@ -212,7 +212,7 @@ static void copy_blended(uint8_t* out, int out_linesize,
         const uint8_t *aptr = alpha + (y<<vsub) * alpha_linesize;
         for (x = 0; x < w; x++) {
             uint8_t a = *aptr;
-            *optr = (*optr * (0xff - a) + *iptr * a) >> 8;
+            *optr = (*optr * (0xff - a) + *iptr * a + 128) >> 8;
             optr++;
             iptr++;
             aptr += 1 << hsub;
