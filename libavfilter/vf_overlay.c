@@ -84,6 +84,8 @@ static av_cold void uninit(AVFilterContext *ctx)
 
 static int query_formats(AVFilterContext *ctx)
 {
+  //const enum PixelFormat inout_pix_fmts[] = { PIX_FMT_BGR24, PIX_FMT_NONE };
+  //const enum PixelFormat blend_pix_fmts[] = { PIX_FMT_BGRA, PIX_FMT_NONE };
     const enum PixelFormat inout_pix_fmts[] = { PIX_FMT_YUV420P, PIX_FMT_NONE };
     const enum PixelFormat blend_pix_fmts[] = { PIX_FMT_YUVA420P, PIX_FMT_NONE };
     AVFilterFormats *inout_formats = avfilter_make_format_list(inout_pix_fmts);
@@ -199,6 +201,33 @@ static int lower_timestamp(OverlayContext *over)
     return (over->pics[0][1]->pts > over->pics[1][1]->pts);
 }
 
+static void copy_image_rgb(AVFilterPicRef *dst, int x, int y,
+                           AVFilterPicRef *src, int w, int h, int bpp)
+{
+    AVPicture pic;
+
+    memcpy(&pic, &dst->data, sizeof(AVPicture));
+    pic.data[0] += x * bpp;
+    pic.data[0] += y * pic.linesize[0];
+
+    if (src->pic->format == PIX_FMT_BGRA) {
+        for (y = 0; y < h; y++) {
+                  uint8_t *optr = pic.data[0]  + y * pic.linesize[0];
+            const uint8_t *iptr = src->data[0] + y * src->linesize[0];
+            for (x = 0; x < w; x++) {
+                uint8_t a = iptr[3];
+                optr[0] = (optr[0] * (0xff - a) + iptr[0] * a + 128) >> 8;
+                optr[1] = (optr[1] * (0xff - a) + iptr[1] * a + 128) >> 8;
+                optr[2] = (optr[2] * (0xff - a) + iptr[2] * a + 128) >> 8;
+                iptr += bpp+1;
+                optr += bpp;
+            }
+        }
+    } else {
+        av_picture_copy(&pic, (AVPicture *)src->data, dst->pic->format, w, h);
+    }
+}
+
 static void copy_blended(uint8_t* out, int out_linesize,
     const uint8_t* in, int in_linesize,
     const uint8_t* alpha, int alpha_linesize,
@@ -220,9 +249,9 @@ static void copy_blended(uint8_t* out, int out_linesize,
     }
 }
 
-static void copy_image(AVFilterPicRef *dst, int x, int y,
-                       AVFilterPicRef *src, int w, int h,
-                       int bpp, int hsub, int vsub)
+static void copy_image_yuv(AVFilterPicRef *dst, int x, int y,
+                           AVFilterPicRef *src, int w, int h,
+                           int bpp, int hsub, int vsub)
 {
     AVPicture pic;
     int i;
@@ -251,6 +280,16 @@ static void copy_image(AVFilterPicRef *dst, int x, int y,
     } else {
         av_picture_copy(&pic, (AVPicture *)src->data, dst->pic->format, w, h);
     }
+}
+
+static void copy_image(AVFilterPicRef *dst, int x, int y,
+                       AVFilterPicRef *src, int w, int h,
+                       int bpp, int hsub, int vsub)
+{
+    if (dst->pic->format == PIX_FMT_YUV420P)
+        return copy_image_yuv(dst, x, y, src, w, h, bpp, hsub, vsub);
+    else
+        return copy_image_rgb(dst, x, y, src, w, h, bpp);
 }
 
 static int request_frame(AVFilterLink *link)
