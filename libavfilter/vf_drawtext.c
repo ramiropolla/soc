@@ -217,11 +217,11 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
         return AVERROR(EINVAL);
     }
 
-    if ((err = FT_New_Face( dtext->library, dtext->fontfile, 0, &(dtext->face)))) {
+    if ((err = FT_New_Face(dtext->library, dtext->fontfile, 0, &(dtext->face)))) {
         av_log(ctx, AV_LOG_ERROR, "Could not load fontface %s: %s\n", dtext->fontfile, FT_ERRMSG(err));
         return AVERROR(EINVAL);
     }
-    if ((err = FT_Set_Pixel_Sizes( dtext->face, 0, dtext->fontsize))) {
+    if ((err = FT_Set_Pixel_Sizes(dtext->face, 0, dtext->fontsize))) {
         av_log(ctx, AV_LOG_ERROR, "Could not set font size to %d pixels: %s\n", dtext->fontsize, FT_ERRMSG(err));
         return AVERROR(EINVAL);
     }
