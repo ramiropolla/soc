@@ -2,7 +2,7 @@ Index: doc/libavfilter.texi
 ===================================================================
 --- doc/libavfilter.texi	(revision 23145)
 +++ doc/libavfilter.texi	(working copy)
-@@ -139,6 +139,107 @@
+@@ -139,6 +139,111 @@
  
  The default value of @var{width} and @var{height} is 0.
  
@@ -17,9 +17,13 @@ Index: doc/libavfilter.texi
 +
 +@section drawtext
 +
-+Draw text string or text from specified file on top of video.
++Draw text string or text from specified file on top of video using the
++libfreetype library.
 +The filter also recognizes strftime() sequences in the provided text and
 +expands them accordingly. Check the documentation of strftime().
++
++To enable compilation of this filter you need to configure FFmpeg with
++--enable-libfreetype.
 +
 +The filter accepts parameters as a list of @var{key}=@var{value} pairs,
 +separated by ":".
@@ -110,7 +114,7 @@ Index: doc/libavfilter.texi
  @section format
  
  Convert the input video to one of the specified pixel formats.
-@@ -156,6 +257,30 @@
+@@ -156,6 +261,30 @@
  
  will convert the input video to the format ``yuv420p''.
  
@@ -141,7 +145,7 @@ Index: doc/libavfilter.texi
  @section noformat
  
  Force libavfilter not to use any of the specified pixel formats for the
-@@ -177,6 +302,56 @@
+@@ -177,6 +306,56 @@
  
  Pass the source unchanged to the output.
  
@@ -198,7 +202,7 @@ Index: doc/libavfilter.texi
  @section pad
  
  Add paddings to the input image, and places the original input at the
-@@ -212,6 +387,14 @@
+@@ -212,6 +391,14 @@
  
  @end table
  
@@ -213,7 +217,7 @@ Index: doc/libavfilter.texi
  @section scale
  
  Scale the input video to @var{width}:@var{height} and/or convert the image format.
-@@ -237,6 +420,24 @@
+@@ -237,6 +424,24 @@
  
  The default value of @var{width} and @var{height} is 0.
  
@@ -238,7 +242,7 @@ Index: doc/libavfilter.texi
  @section slicify
  
  Pass the images of input video on to next video filter as multiple
-@@ -252,6 +453,19 @@
+@@ -252,6 +457,19 @@
  Adding this in the beginning of filter chains should make filtering
  faster due to better use of the memory cache.
  
@@ -258,7 +262,7 @@ Index: doc/libavfilter.texi
  @section unsharp
  
  Sharpen or blur the input video. It accepts the following parameters:
-@@ -317,6 +531,32 @@
+@@ -317,6 +535,32 @@
  
  Below is a description of the currently available video sources.
  
