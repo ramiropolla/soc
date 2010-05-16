@@ -1,0 +1,8 @@
+This directory contains indeo4 related files for FFmpeg.
+
+The attached decoder is able to decode only key frames at this moment.
+It will be extended step by step to support all necessary coding modes.
+
+PLEASE NOTE: in order to be able to run this decoder some patching of the
+existing FFmpeg code for indeo5 is required! I'll send all needed patches
+as soon I tested them...
