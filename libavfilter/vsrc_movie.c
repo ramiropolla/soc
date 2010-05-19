@@ -231,7 +231,7 @@ static int request_frame(AVFilterLink *link)
     out->pixel_aspect = mv->codec_ctx->sample_aspect_ratio;
 
     avfilter_start_frame(link, out);
-    avfilter_draw_slice(link, 0, out->h, 1);
+    avfilter_draw_slice(link, 0, link->h, 1);
     avfilter_end_frame(link);
 
     return 0;
