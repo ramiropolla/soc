@@ -189,10 +189,8 @@ static int movie_get_frame(AVFilterLink *link)
 
             // Did we get a video frame?
             if(frame_finished) {
-                memcpy(mv->pic->data,     mv->frame->data,
-                       sizeof(mv->frame->data));
-                memcpy(mv->pic->linesize, mv->frame->linesize,
-                       sizeof(mv->frame->linesize));
+                av_picture_copy((AVPicture *)&mv->pic->data, (AVPicture *)mv->frame,
+                                mv->pic->pic->format, link->w, link->h);
 
                 // Advance in the time line
                 mv->pic->pts = av_rescale_q(packet.pts,
@@ -229,7 +227,7 @@ static int request_frame(AVFilterLink *link)
     if (mv->is_done)
         return AVERROR_EOF;
 
-    out = avfilter_ref_pic(mv->pic, ~AV_PERM_WRITE);
+    out = avfilter_ref_pic(mv->pic, ~0);
     out->pixel_aspect = mv->codec_ctx->sample_aspect_ratio;
 
     avfilter_start_frame(link, out);
