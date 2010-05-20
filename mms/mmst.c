@@ -261,17 +261,19 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                         || length_remaining > sizeof(mms->in_buffer) - 12) {
                         dprintf("Incoming message len %d exceeds buffer len %d\n",
                             length_remaining, sizeof(mms->in_buffer) - 12);
-                        break;
+                        return -1;
                     }
                     read_result = url_read_complete(mms->mms_hd, mms->in_buffer + 12,
                                                   length_remaining) ;
                     if (read_result == length_remaining) {
                         packet_type= AV_RL16(mms->in_buffer+36);
                     } else {
-                        dprintf(NULL, "3 read returned %d!\n", read_result);
+                        dprintf(NULL, "read for packet type failed%d!\n", read_result);
+                        return -1;
                     }
                 } else {
-                    dprintf(NULL, "2 read returned %d!\n", read_result);
+                    dprintf(NULL, "read for length remaining failed%d!\n", read_result);
+                    return -1;
                 }
             } else {
                 int length_remaining;
@@ -292,7 +294,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                         || length_remaining > sizeof(mms->in_buffer)) {
                     dprintf("Incoming data len %d exceeds buffer len %d\n",
                             length_remaining, sizeof(mms->in_buffer));
-                    break;
+                    return -1;
                 }
                 mms->remaining_in_len    = length_remaining;
                 mms->read_in_ptr         = mms->in_buffer;
@@ -300,7 +302,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 if(read_result != length_remaining) {
                     dprintf(NULL, "read_bytes result: %d asking for %d\n",
                             read_result, length_remaining);
-                    break;
+                    return -1;
                 } else {
                     // if we successfully read everything.
                     if(packet_id_type == mms->header_packet_id) {
@@ -328,7 +330,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     }
                 }
             }
-            break;
+            return packet_type;
         } else {
             if(read_result<0) {
                 dprintf(NULL, "Read error (or cancelled) returned %d!\n", read_result);
