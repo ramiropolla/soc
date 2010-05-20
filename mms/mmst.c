@@ -330,6 +330,16 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                     }
                 }
             }
+
+            // preprocess some packet type
+            if(packet_type == SC_PKT_KEEPALIVE) {
+                send_keepalive_packet(mms);
+                continue;
+            } else if(packet_type == SC_PKT_STREAM_CHANGING) {
+                handle_packet_stream_changing_type(mms);
+            } else if(packet_type == SC_PKT_ASF_MEDIA) {
+                pad_media_packet(mms);
+            }
             return packet_type;
         } else {
             if(read_result<0) {
@@ -342,7 +352,6 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
             return packet_type;
         }
     }
-    return packet_type;
 }
 
 static int mms_safe_send_recv(MMSContext *mms,
@@ -358,23 +367,10 @@ static int mms_safe_send_recv(MMSContext *mms,
         }
     }
 
-recv_again:
-    type = get_tcp_server_response(mms);
-    if (type != expect_type) {
-        if (type == SC_PKT_KEEPALIVE) {
-            send_keepalive_packet(mms);
-            goto recv_again;
-        } else if (type == SC_PKT_STREAM_CHANGING) {
-            handle_packet_stream_changing_type(mms);
-            //TODO: Handle new header when change the stream type.
-            return -1;
-        } else {
-            dprintf(NULL,"Unhandled packet type %d\n", type);
-            return -1;
-        }
+    if ((type = get_tcp_server_response(mms)) != expect_type) {
+        dprintf(NULL,"Unexpected packet type %d with type %d\n", type, expect_type);
+        return -1;
     } else {
-        if (type == SC_PKT_ASF_MEDIA)
-            pad_media_packet(mms);
         return 0;
     }
 }
