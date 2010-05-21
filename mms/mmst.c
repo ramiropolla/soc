@@ -416,17 +416,24 @@ static int send_startup_packet(MMSContext *mms)
 
 static int asf_header_parser(MMSContext *mms)
 {
-    uint8_t *p = mms->asf_header, *end = mms->asf_header + mms->asf_header_size;
-    int flags, stream_id;
+    uint8_t *p = mms->asf_header;
+    uint8_t *end;
+    int flags, stream_id, real_header_size;
     mms->stream_num = 0;
 
     if (mms->asf_header_size < sizeof(ff_asf_guid) * 2 + 22 ||
         memcmp(p, ff_asf_header, sizeof(ff_asf_guid)))
         return -1;
 
+    real_header_size = AV_RL64(p + sizeof(ff_asf_guid));
+    end = mms->asf_header + real_header_size;
+
     p += sizeof(ff_asf_guid) + 14;
-    do {
+    while(end - p >= sizeof(ff_asf_guid) + 8) {
         uint64_t chunksize = AV_RL64(p + sizeof(ff_asf_guid));
+        dprintf("chunksize is %d\n", chunksize);
+        if (chunksize > end - p)
+           return -1;
         if (!memcmp(p, ff_asf_file_header, sizeof(ff_asf_guid))) {
             /* read packet size */
             if (end - p > sizeof(ff_asf_guid) * 2 + 68) {
@@ -447,13 +454,13 @@ static int asf_header_parser(MMSContext *mms)
                     46 + mms->stream_num * 6 < sizeof(mms->out_buffer)) {
                 mms->streams[mms->stream_num].id = stream_id;
                 mms->stream_num++;
-            } else
+            } else {
                 dprintf("Too many streams.\n");
+                return -1;
+            }
         }
-        if (chunksize > end - p)
-            return -1;
         p += chunksize;
-    } while (end - p >= sizeof(ff_asf_guid) + 8);
+    }
 
     return 0;
 }
@@ -599,6 +606,10 @@ static int mms_open(URLContext *h, const char *uri, int flags)
     else {
         if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C)) {
             ret = asf_header_parser(mms);
+            if (ret < 0) {
+                dprintf(NULL, "asf header parsed failed!\n");
+                goto fail;
+            }
             mms->header_parsed = 1;
         }
     }
