@@ -605,9 +605,9 @@ static int mms_open(URLContext *h, const char *uri, int flags)
     if (err)
         goto fail;
     err = mms_safe_send_recv(mms, NULL, SC_PKT_ASF_HEADER);
-    if (err)
+    if (err) {
         goto fail;
-    else {
+    } else {
         if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C)) {
             ret = asf_header_parser(mms);
             if (ret < 0) {
@@ -672,10 +672,11 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
             return result;
         // send media packet request
         result = mms_safe_send_recv(mms, send_media_packet_request, SC_PKT_MEDIA_PKT_FOLLOWS);
-        if (result)
+        if (result) {
             return result;
-        else
+        } else {
             mms->is_playing = 1;
+        }
     }
     return read_mms_packet(mms, buf, size);
 }
