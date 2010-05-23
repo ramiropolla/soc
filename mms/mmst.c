@@ -291,7 +291,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                 mms->incoming_flags       = mms->in_buffer[5];
 
                 if (length_remaining < 0
-                        || length_remaining > sizeof(mms->in_buffer)) {
+                        || length_remaining > sizeof(mms->in_buffer) - 8) {
                     dprintf("Incoming data len %d exceeds buffer len %d\n",
                             length_remaining, sizeof(mms->in_buffer));
                     return -1;
