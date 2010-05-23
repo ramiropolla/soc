@@ -513,12 +513,13 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                    size_to_copy, mms->asf_header_size - mms->asf_header_read_pos);
             av_freep(&mms->asf_header);
         } else if(mms->remaining_in_len) {
-            /* Read from media packet buffer */
+            /* Read remaining packet data to buffer.
+             * the result can not be zero because remaining_in_len is positive.*/
             result = read_data(mms, buf, buf_size);
         } else {
             /* Read from network */
             int err = mms_safe_send_recv(mms, NULL, SC_PKT_ASF_MEDIA);
-            if (!err) {
+            if (err == 0) {
                 if(mms->remaining_in_len>mms->asf_packet_len) {
                     dprintf(NULL, "Incoming packet"
                             "larger than the asf packet size stated (%d>%d)\n",
@@ -527,7 +528,14 @@ static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
                 } else {
                     // copy the data to the packet buffer.
                     result = read_data(mms, buf, buf_size);
+                    if (result == 0) {
+                        dprintf(NULL, "read asf media paket size is zero!\n");
+                        break;
+                    }
                 }
+            } else {
+                dprintf(NULL, "read packet error!\n");
+                break;
             }
         }
     } while(!result); // only return one packet.
