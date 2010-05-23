@@ -568,8 +568,7 @@ static int mms_open(URLContext *h, const char *uri, int flags)
     int port;
 
     char tcpname[256];
-    int err = AVERROR(EIO);
-    int ret;
+    int err;
 
     h->is_streamed = 1;
     mms = h->priv_data = av_mallocz(sizeof(MMSContext));
@@ -609,8 +608,8 @@ static int mms_open(URLContext *h, const char *uri, int flags)
         goto fail;
     } else {
         if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C)) {
-            ret = asf_header_parser(mms);
-            if (ret < 0) {
+            err = asf_header_parser(mms);
+            if (err) {
                 dprintf(NULL, "asf header parsed failed!\n");
                 goto fail;
             }
