@@ -431,13 +431,10 @@ static int asf_header_parser(MMSContext *mms)
     p += sizeof(ff_asf_guid) + 14;
     while(end - p >= sizeof(ff_asf_guid) + 8) {
         uint64_t chunksize = AV_RL64(p + sizeof(ff_asf_guid));
-        if (!chunksize) {
-            dprintf("chunksize is zero!\n");
+        if (!chunksize || chunksize > end - p) {
+            dprintf("chunksize is exceptional value:%d!\n", chunksize);
             return -1;
         }
-        dprintf("chunksize is %d\n", chunksize);
-        if (chunksize > end - p)
-           return -1;
         if (!memcmp(p, ff_asf_file_header, sizeof(ff_asf_guid))) {
             /* read packet size */
             if (end - p > sizeof(ff_asf_guid) * 2 + 68) {
