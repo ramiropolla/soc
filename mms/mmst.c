@@ -565,10 +565,8 @@ static int mms_close(URLContext *h)
 static int mms_open(URLContext *h, const char *uri, int flags)
 {
     MMSContext *mms;
-    int port;
-
+    int port, err;
     char tcpname[256];
-    int err;
 
     h->is_streamed = 1;
     mms = h->priv_data = av_mallocz(sizeof(MMSContext));
