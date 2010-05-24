@@ -609,18 +609,16 @@ static int mms_open(URLContext *h, const char *uri, int flags)
     if (err)
         goto fail;
     err = mms_safe_send_recv(mms, NULL, SC_PKT_ASF_HEADER);
-    if (err) {
+    if (err)
         goto fail;
-    } else {
-        if((mms->incoming_flags == 0X08) || (mms->incoming_flags == 0X0C)) {
-            err = asf_header_parser(mms);
-            if (err) {
-                dprintf(NULL, "asf header parsed failed!\n");
-                goto fail;
-            }
-            mms->header_parsed = 1;
-        }
+    if((mms->incoming_flags != 0X08) && (mms->incoming_flags != 0X0C))
+        goto fail;
+    err = asf_header_parser(mms);
+    if (err) {
+        dprintf(NULL, "asf header parsed failed!\n");
+        goto fail;
     }
+    mms->header_parsed = 1;
 
     if (!mms->asf_packet_len || !mms->stream_num)
         goto fail;
