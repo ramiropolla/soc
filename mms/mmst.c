@@ -110,7 +110,6 @@ typedef struct {
     /*@{*/
     uint8_t *asf_header;                 ///< Stored ASF header.
     int asf_header_size;                 ///< Size of stored ASF header.
-    int asf_header_read_pos;             ///< Current read position in header.
     int header_parsed;                   ///< The header has been received and parsed.
     int asf_packet_len;
     /*@}*/
@@ -498,20 +497,23 @@ static int read_data(MMSContext *mms, uint8_t *buf, const int buf_size)
 /** Read at most one media packet (or a whole header). */
 static int read_mms_packet(MMSContext *mms, uint8_t *buf, int buf_size)
 {
-    int result = 0;
+    int result = 0, read_header_size = 0;
     int size_to_copy;
 
     do {
-        if(mms->asf_header_read_pos < mms->asf_header_size) {
+        if(read_header_size < mms->asf_header_size && !mms->is_playing) {
             /* Read from ASF header buffer */
             size_to_copy= FFMIN(buf_size,
-                                mms->asf_header_size - mms->asf_header_read_pos);
-            memcpy(buf, mms->asf_header + mms->asf_header_read_pos, size_to_copy);
-            mms->asf_header_read_pos += size_to_copy;
+                                mms->asf_header_size - read_header_size);
+            memcpy(buf, mms->asf_header + read_header_size, size_to_copy);
+            read_header_size += size_to_copy;
             result += size_to_copy;
             dprintf(NULL, "Copied %d bytes from stored header. left: %d\n",
-                   size_to_copy, mms->asf_header_size - mms->asf_header_read_pos);
-            av_freep(&mms->asf_header);
+                   size_to_copy, mms->asf_header_size - read_header_size);
+            if (mms->asf_header_size == read_header_size) {
+                av_freep(&mms->asf_header);
+                mms->is_playing = 1;
+            }
         } else if(mms->remaining_in_len) {
             /* Read remaining packet data to buffer.
              * the result can not be zero because remaining_in_len is positive.*/
@@ -665,8 +667,7 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     /* Since we read the header at open(), this shouldn't be possible */
     assert(mms->header_parsed);
 
-    if (mms->asf_header_read_pos >= mms->asf_header_size
-        && !mms->is_playing) {
+    if (!mms->is_playing) {
         dprintf(NULL, "mms_read() before play().\n");
         clear_stream_buffers(mms);
         result = mms_safe_send_recv(mms, send_stream_selection_request, SC_PKT_STREAM_ID_ACCEPTED);
@@ -676,8 +677,6 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
         result = mms_safe_send_recv(mms, send_media_packet_request, SC_PKT_MEDIA_PKT_FOLLOWS);
         if (result) {
             return result;
-        } else {
-            mms->is_playing = 1;
         }
     }
     return read_mms_packet(mms, buf, size);
