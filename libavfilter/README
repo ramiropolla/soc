@@ -56,12 +56,12 @@ RUNNING IT:
 The command line syntax for specifying filters is similar to that of mplayer.
 For example, to vertically flip a video, you would do:
 
-./ffplay -vfilters vflip input_video.avi
+./ffplay -vf vflip input_video.avi
 
-The argument to -vfilters lists the video filters to load.  A comma separates
+The argument to -vf lists the video filters to load.  A comma separates
 sequential filters.  For example, this command:
 
-./ffplay -vfilters vflip,vflip input_video.avi
+./ffplay -vf vflip,vflip input_video.avi
 
 will run the video through two instances of the vflip filter, which should
 result in the original, unflipped video.
@@ -70,7 +70,7 @@ Some filters accept parameters, which can be specified in the same way as
 would be done for mplayer.  For example, to scale a video to 640x480, you
 could use this command:
 
-./ffplay -vfilters scale=640:480 input_video.avi
+./ffplay -vf scale=640:480 input_video.avi
 
 Be aware that some filters, notably the crop filter, interpret the parameters
 differently than mplayer does.  Documentation for each filter is provided in the
