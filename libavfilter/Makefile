@@ -19,6 +19,7 @@ OBJS-$(CONFIG_ASPECT_FILTER)                 += vf_aspect.o
 OBJS-$(CONFIG_CROP_FILTER)                   += vf_crop.o
 OBJS-$(CONFIG_DRAWBOX_FILTER)                += vf_drawbox.o
 OBJS-$(CONFIG_DRAWTEXT_FILTER)               += vf_drawtext.o
+OBJS-$(CONFIG_FADE_FILTER)                   += vf_fade.o
 OBJS-$(CONFIG_FIFO_FILTER)                   += vf_fifo.o
 OBJS-$(CONFIG_FORMAT_FILTER)                 += vf_format.o
 OBJS-$(CONFIG_FPS_FILTER)                    += vf_fps.o
