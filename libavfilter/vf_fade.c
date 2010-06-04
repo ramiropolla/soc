@@ -124,8 +124,9 @@ static void end_frame(AVFilterLink *link)
     avfilter_unref_pic(link->cur_pic);
 
     if (fade->frame_index >= fade->start_frame &&
-        fade->frame_index < fade->stop_frame)
+        fade->frame_index <= fade->stop_frame)
         fade->factor += fade->fade_per_frame;
+    fade->factor = av_clip_uint16(fade->factor);
     fade->frame_index++;
 }
 
@@ -136,7 +137,7 @@ static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
     uint8_t *p;
     int i, j, plane;
 
-    if (fade->factor != 65536) {
+    if (fade->factor < 65536) {
         /* luma or rgb plane */
         for (i = 0; i < h; i++) {
             p = outpic->data[0] + (y+i) * outpic->linesize[0];
