@@ -25,7 +25,7 @@
  */
 
 #include "avfilter.h"
-#include "libavcodec/eval.h"
+#include "libavutil/eval.h"
 #include "libavutil/avstring.h"
 
 static const char *var_names[] = {
@@ -126,8 +126,9 @@ static int config_input_overlay(AVFilterLink *link)
 {
     AVFilterContext *ctx  = link->dst;
     OverlayContext  *over = link->dst->priv;
-    const char *error = NULL, *expr;
-    double var_values[VARS_NB], ret;
+    const char *expr;
+    double var_values[VARS_NB], res;
+    int ret;
 
     /* Finish the configuration by evaluating the expressions
        now when both inputs are configured. */
@@ -139,16 +140,16 @@ static int config_input_overlay(AVFilterLink *link)
     av_log(ctx, AV_LOG_INFO, "main %dx%d overlay %dx%d\n", ctx->inputs[0]->w, ctx->inputs[0]->h,
            ctx->inputs[1]->w, ctx->inputs[1]->h);
 
-    if (ff_parse_and_eval_expr(&ret, (expr = over->x_expr),
+    if ((ret = av_parse_and_eval_expr(&res, (expr = over->x_expr),
                                var_names, var_values,
                                NULL, NULL, NULL, NULL,
-                               NULL, 0, ctx) < 0)
+                                      NULL, 0, ctx)) < 0)
         goto fail;
     over->x = ret;
-    if (ff_parse_and_eval_expr(&ret, (expr = over->y_expr),
+    if ((ret = av_parse_and_eval_expr(&res, (expr = over->y_expr),
                                var_names, var_values,
                                NULL, NULL, NULL, NULL,
-                               NULL, 0, ctx) < 0)
+                                      NULL, 0, ctx)) < 0)
         goto fail;
     over->y = ret;
 
@@ -161,8 +162,8 @@ static int config_input_overlay(AVFilterLink *link)
 
 fail:
     av_log(NULL, AV_LOG_ERROR,
-           "Error when evaluating the expression '%s': %s\n", expr, error);
-    return -1;
+           "Error when evaluating the expression '%s'\n", expr);
+    return ret;
 }
 
 static AVFilterPicRef *get_video_buffer(AVFilterLink *link, int perms, int w, int h)

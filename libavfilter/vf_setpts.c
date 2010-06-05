@@ -36,7 +36,7 @@
  ffmpeg -i input.avi -vfilters 'setpts=AVTB/25*(N+0.05*sin(N*2*PI/25))' output.avi
 */
 
-#include "libavcodec/eval.h"
+#include "libavutil/eval.h"
 
 #include "avfilter.h"
 
@@ -70,13 +70,15 @@ typedef struct {
 static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 {
     SetPTSContext *setpts = ctx->priv;
-    const char *error;
+    int ret;
 
-    setpts->expr = ff_parse_expr(args ? args : "PTS",
-                        const_names, NULL, NULL, NULL, NULL, &error);
-    if (! setpts->expr)
+    ret = av_parse_expr(&setpts->expr, args ? args : "PTS",
+                        const_names, NULL, NULL, NULL, NULL, 0, ctx);
+    if (ret < 0) {
         av_log(ctx, AV_LOG_ERROR,
-            "init() cannot parse expresion '%s' due to %s\n", args, error);
+               "Error while parsing expression '%s'\n", args);
+        return ret;
+    }
 
     setpts->const_values[POV_PI      ] = M_PI;
     setpts->const_values[POV_E       ] = M_E;
@@ -108,7 +110,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
     //    (uint64_t) ff_parse_eval(setpts->expr, setpts->const_values, setpts));
 
     ref2->pts =
-        (uint64_t) ff_eval_expr(setpts->expr, setpts->const_values, setpts);
+        (uint64_t) av_eval_expr(setpts->expr, setpts->const_values, setpts);
 
     setpts->const_values[POV_N  ] += 1.0;
 
@@ -118,7 +120,7 @@ static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
 static av_cold void uninit(AVFilterContext *ctx)
 {
     SetPTSContext *setpts = ctx->priv;
-    ff_free_expr(setpts->expr);
+    av_free_expr(setpts->expr);
 }
 
 AVFilter avfilter_vf_setpts =
