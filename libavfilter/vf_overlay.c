@@ -145,13 +145,13 @@ static int config_input_overlay(AVFilterLink *link)
                                       NULL, NULL, NULL, NULL,
                                       NULL, 0, ctx)) < 0)
         goto fail;
-    over->x = ret;
+    over->x = res;
     if ((ret = av_parse_and_eval_expr(&res, (expr = over->y_expr),
                                       var_names, var_values,
                                       NULL, NULL, NULL, NULL,
                                       NULL, 0, ctx)) < 0)
         goto fail;
-    over->y = ret;
+    over->y = res;
 
     over->x &= ~((1 << over->hsub) - 1);
     over->y &= ~((1 << over->vsub) - 1);
