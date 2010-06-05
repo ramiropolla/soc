@@ -141,14 +141,14 @@ static int config_input_overlay(AVFilterLink *link)
            ctx->inputs[1]->w, ctx->inputs[1]->h);
 
     if ((ret = av_parse_and_eval_expr(&res, (expr = over->x_expr),
-                               var_names, var_values,
-                               NULL, NULL, NULL, NULL,
+                                      var_names, var_values,
+                                      NULL, NULL, NULL, NULL,
                                       NULL, 0, ctx)) < 0)
         goto fail;
     over->x = ret;
     if ((ret = av_parse_and_eval_expr(&res, (expr = over->y_expr),
-                               var_names, var_values,
-                               NULL, NULL, NULL, NULL,
+                                      var_names, var_values,
+                                      NULL, NULL, NULL, NULL,
                                       NULL, 0, ctx)) < 0)
         goto fail;
     over->y = ret;
