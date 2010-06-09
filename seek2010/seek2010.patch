@@ -1,0 +1,648 @@
+Index: ffplay.c
+===================================================================
+--- ffplay.c	(revision 23548)
++++ ffplay.c	(working copy)
+@@ -2501,6 +2501,8 @@
+         goto fail;
+     }
+ 
++    av_build_index(ic, 0);    
++
+     for(;;) {
+         if (is->abort_request)
+             break;
+Index: libavformat/mov.c
+===================================================================
+--- libavformat/mov.c	(revision 23548)
++++ libavformat/mov.c	(working copy)
+@@ -2495,7 +2495,10 @@
+     int sample, time_sample;
+     int i;
+ 
+-    sample = av_index_search_timestamp(st, timestamp, flags);
++    if(st->seek_table.flags&AV_SEEKTABLE_FINISHED)
++	sample = av_table_search_timestamp(st, timestamp, flags);
++    else
++	sample = av_index_search_timestamp(st, timestamp, flags);
+     dprintf(s, "stream %d, timestamp %"PRId64", sample %d\n", st->index, timestamp, sample);
+     if (sample < 0) /* not sure what to do */
+         return -1;
+@@ -2523,6 +2526,7 @@
+     int64_t seek_timestamp, timestamp;
+     int sample;
+     int i;
++    AVIndexEntry* entries;
+ 
+     if (stream_index >= s->nb_streams)
+         return -1;
+@@ -2530,12 +2534,13 @@
+         sample_time = 0;
+ 
+     st = s->streams[stream_index];
++    entries = (st->seek_table.flags&AV_SEEKTABLE_FINISHED)?st->seek_table.index_entries:st->index_entries;
+     sample = mov_seek_stream(s, st, sample_time, flags);
+     if (sample < 0)
+         return -1;
+ 
+     /* adjust seek timestamp to found sample timestamp */
+-    seek_timestamp = st->index_entries[sample].timestamp;
++    seek_timestamp = entries[sample].timestamp;
+ 
+     for (i = 0; i < s->nb_streams; i++) {
+         st = s->streams[i];
+Index: libavformat/avidec.c
+===================================================================
+--- libavformat/avidec.c	(revision 23548)
++++ libavformat/avidec.c	(working copy)
+@@ -1084,7 +1084,8 @@
+     int i, index;
+     int64_t pos;
+     AVIStream *ast;
+-
++    AVIndexEntry* entries;
++    int (*search_func)(AVStream*, int64_t, int);
+     if (!avi->index_loaded) {
+         /* we only load the index on demand */
+         avi_load_index(s);
+@@ -1094,13 +1095,22 @@
+ 
+     st = s->streams[stream_index];
+     ast= st->priv_data;
+-    index= av_index_search_timestamp(st, timestamp * FFMAX(ast->sample_size, 1), flags);
++    if(st->seek_table.flags&AV_SEEKTABLE_FINISHED) {
++	search_func = &av_table_search_timestamp;
++	entries = st->seek_table.index_entries;
++    } else {
++	search_func = &av_index_search_timestamp;
++	entries = st->index_entries;
++    }
++    
++    index = search_func(st, timestamp * FFMAX(ast->sample_size, 1), flags);    
++
+     if(index<0)
+         return -1;
+ 
+     /* find the position */
+-    pos = st->index_entries[index].pos;
+-    timestamp = st->index_entries[index].timestamp / FFMAX(ast->sample_size, 1);
++    pos = entries[index].pos;
++    timestamp = entries[index].timestamp / FFMAX(ast->sample_size, 1);
+ 
+ //    av_log(s, AV_LOG_DEBUG, "XX %"PRId64" %d %"PRId64"\n", timestamp, index, st->index_entries[index].timestamp);
+ 
+@@ -1122,16 +1132,17 @@
+     for(i = 0; i < s->nb_streams; i++) {
+         AVStream *st2 = s->streams[i];
+         AVIStream *ast2 = st2->priv_data;
+-
++	int nb_entries_st2 = st2->seek_table.index_entries?st->seek_table.nb_index_entries:st->nb_index_entries;
++	entries = st->seek_table.index_entries?st->seek_table.index_entries:st->index_entries;
+         ast2->packet_size=
+         ast2->remaining= 0;
+ 
+-        if (st2->nb_index_entries <= 0)
++        if (nb_entries_st2 <= 0)
+             continue;
+ 
+ //        assert(st2->codec->block_align);
+         assert((int64_t)st2->time_base.num*ast2->rate == (int64_t)st2->time_base.den*ast2->scale);
+-        index = av_index_search_timestamp(
++        index = search_func(
+                 st2,
+                 av_rescale_q(timestamp, st->time_base, st2->time_base) * FFMAX(ast2->sample_size, 1),
+                 flags | AVSEEK_FLAG_BACKWARD);
+@@ -1139,9 +1150,9 @@
+             index=0;
+ 
+         if(!avi->non_interleaved){
+-            while(index>0 && st2->index_entries[index].pos > pos)
++            while(index>0 && entries[index].pos > pos)
+                 index--;
+-            while(index+1 < st2->nb_index_entries && st2->index_entries[index].pos < pos)
++            while(index+1 < nb_entries_st2 && entries[index].pos < pos)
+                 index++;
+         }
+ 
+Index: libavformat/avformat.h
+===================================================================
+--- libavformat/avformat.h	(revision 23548)
++++ libavformat/avformat.h	(working copy)
+@@ -390,6 +390,21 @@
+     int min_distance;         /**< Minimum distance between this and the previous keyframe, used to avoid unneeded searching. */
+ } AVIndexEntry;
+ 
++#define AV_SEEKTABLE_BUILDING   0x0001
++#define AV_SEEKTABLE_CBR        0x0002
++#define AV_SEEKTABLE_FINISHED   0x0004
++#define AV_SEEKTABLE_COPIED     0x0008
++
++
++typedef struct AVSeekTable {
++    AVIndexEntry *index_entries; /**< Only used if the format does not
++                                    support seeking natively. */
++    int nb_index_entries;
++    unsigned int index_entries_allocated_size;  
++    int flags;
++} AVSeekTable;
++
++
+ #define AV_DISPOSITION_DEFAULT   0x0001
+ #define AV_DISPOSITION_DUB       0x0002
+ #define AV_DISPOSITION_ORIGINAL  0x0004
+@@ -531,6 +546,9 @@
+      * Number of frames that have been demuxed during av_find_stream_info()
+      */
+     int codec_info_nb_frames;
++
++    /* new av_seek_frame() support */
++    AVSeekTable seek_table;
+ } AVStream;
+ 
+ #define AV_PROGRAM_RUNNING 1
+@@ -1131,6 +1149,23 @@
+ int av_index_search_timestamp(AVStream *st, int64_t timestamp, int flags);
+ 
+ /**
++ * Gets the index for a specific timestamp using the table.
++ * @param flags if AVSEEK_FLAG_BACKWARD then the returned index will correspond
++ *                 to the timestamp which is <= the requested one, if backward
++ *                 is 0, then it will be >=
++ *              if AVSEEK_FLAG_ANY seek to any frame, only keyframes otherwise
++ * @return < 0 if no such timestamp could be found
++ */
++int av_table_search_timestamp(AVStream *st, int64_t wanted_timestamp, int flags);
++
++/**
++ * Builds a complete index for seeking in each stream where it is possible.
++ * Requires that the streams have been opened.
++ * Part of the new seeking api.  incomplete.
++ */
++int av_build_index(AVFormatContext *s, int flags);
++
++/**
+  * Ensures the index uses less memory than the maximum specified in
+  * AVFormatContext.max_index_size by discarding entries if it grows
+  * too large.
+@@ -1149,6 +1184,15 @@
+                        int size, int distance, int flags);
+ 
+ /**
++ * Does a dictionary search on the seek table.
++ * av_build_index must be successfully called before using this function.
++ * @param timestamp target timestamp in the time base of the given stream
++ * @param stream_index stream number
++ */
++int av_seek_frame_table(AVFormatContext *s,
++			int stream_index, int64_t timestamp, int flags);
++
++/**
+  * Does a binary search using av_index_search_timestamp() and
+  * AVCodec.read_timestamp().
+  * This is not supposed to be called directly by a user application,
+Index: libavformat/utils.c
+===================================================================
+--- libavformat/utils.c	(revision 23548)
++++ libavformat/utils.c	(working copy)
+@@ -1001,7 +1001,38 @@
+         pkt->convergence_duration = pc->convergence_duration;
+ }
+ 
++static int av_add_table_entry(AVStream *st,
++                            int64_t pos, int64_t timestamp, int size, int distance, int flags)
++{
++    AVIndexEntry *entries, *ie;
++    int index;
+ 
++    if((unsigned)st->nb_index_entries + 1 >= UINT_MAX / sizeof(AVIndexEntry))
++        return -1;
++
++    entries = av_fast_realloc(st->seek_table.index_entries,
++                              &st->seek_table.index_entries_allocated_size,
++                              (st->seek_table.nb_index_entries + 1) *
++                              sizeof(AVIndexEntry));
++    if(!entries)
++        return -1;
++
++    st->seek_table.index_entries= entries;
++
++    /* we assume the indecies are placed in order */
++    ie = &st->seek_table.index_entries[st->seek_table.nb_index_entries++];
++    assert(index==0 || ie[-1].timestamp < timestamp);
++
++    ie->pos = pos;
++    ie->timestamp = timestamp;
++    ie->min_distance= distance;
++    ie->size= size;
++    ie->flags = flags;
++
++    return st->seek_table.nb_index_entries;
++}
++
++
+ static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
+ {
+     AVStream *st;
+@@ -1359,6 +1390,7 @@
+     int a, b, m;
+     int64_t timestamp;
+ 
++
+     a = - 1;
+     b = nb_entries;
+ 
+@@ -1675,6 +1707,11 @@
+         timestamp = av_rescale(timestamp, st->time_base.den, AV_TIME_BASE * (int64_t)st->time_base.num);
+     }
+ 
++    /* if we've built a seek table, use it. */
++    st = s->streams[stream_index];
++    if (st->seek_table.flags & AV_SEEKTABLE_FINISHED)
++        return av_seek_frame_table(s, stream_index, timestamp, flags);
++
+     /* first, we try the format specific seek */
+     if (s->iformat->read_seek)
+         ret = s->iformat->read_seek(s, stream_index, timestamp, flags);
+@@ -1712,9 +1749,367 @@
+     // try some generic seek like av_seek_frame_generic() but with new ts semantics
+ }
+ 
++
+ /*******************************************************/
++int av_table_search_timestamp(AVStream *st, int64_t wanted_timestamp,
++                              int flags)
++{
++    AVIndexEntry *entries= st->seek_table.index_entries;
++    int nb_entries= st->seek_table.nb_index_entries;
++    int a, b, m;
++    int64_t timestamp;
+ 
++    a = - 1;
++    b = nb_entries;
++
++    //optimize appending index entries at the end
++    if(b && entries[b-1].timestamp < wanted_timestamp)
++        a= b-1;
++
++    while (b - a > 1) {
++	//TODO: since we have a lot of contiguous entries in the table, we can use something more
++	//like dictionary search, which will speed things up quite a bit.
++        m = (a + b) >> 1;
++        timestamp = entries[m].timestamp;
++        if(timestamp >= wanted_timestamp)
++            b = m;
++        if(timestamp <= wanted_timestamp)
++            a = m;
++    }
++    m= (flags & AVSEEK_FLAG_BACKWARD) ? a : b;
++
++    if(!(flags & AVSEEK_FLAG_ANY)){
++        while(m>=0 && m<nb_entries && !(entries[m].flags & AVINDEX_KEYFRAME)){
++            m += (flags & AVSEEK_FLAG_BACKWARD) ? -1 : 1;
++        }
++    }
++
++    if(m == nb_entries)
++        return -1;
++    return  m;
++}
++
++int av_seek_frame_table(AVFormatContext *s,
++                                 int stream_index, int64_t timestamp, int flags)
++{
++    int index;
++    int64_t ret;
++    AVStream *st;
++    AVIndexEntry *ie;
++    AVSeekTable *tbl;
++
++    //TODO: see if we can do something with the CBR field.
++    if(tbl->flags & AV_SEEKTABLE_CBR){
++	;
++    }
++
++    st = s->streams[stream_index];
++    tbl = &st->seek_table;
++    index = av_table_search_timestamp(st, timestamp, flags);
++
++    /* this function should only be called after the table is complete. */
++    if(index < 0 || index>=tbl->nb_index_entries-1){
++        return -1;
++    }
++
++    ff_read_frame_flush(s);
++    /* we use the native seek function if it exists, (still have to modify them to use seek_table) */
++    if (s->iformat->read_seek){
++        if(s->iformat->read_seek(s, stream_index, timestamp, flags) >= 0) {
++	    printf("SEEK_TABLE_DEBUG: table seeked using native function\n");
++	    return 0;
++	}
++    }
++
++    ie = &tbl->index_entries[index];
++    if ((ret = url_fseek(s->pb, ie->pos, SEEK_SET)) < 0)
++        return ret;
++    av_update_cur_dts(s, st, ie->timestamp);
++
++    {
++	float request_time = (((float)timestamp/st->time_base.den)*st->time_base.num);
++	float actual_time = (((float)ie->timestamp/st->time_base.den)*st->time_base.num);
++	printf("SEEK_TABLE_DEBUG: table seeked to %.2fs (actual request was %.2fs)\n",actual_time, request_time );
++    }
++    return 0;
++}
++
++static int av_fill_table_internal(AVFormatContext *s, AVPacket *pkt, ByteIOContext *pb)
++{
++    AVStream *st;
++    int len, ret, i;
++
++    av_init_packet(pkt);
++
++    for(;;) {
++        /* select current input stream component */
++        st = s->cur_st;
++        if (st) {
++            if (!st->need_parsing || !st->parser) {
++                /* no parsing needed: we just output the packet as is */
++                /* raw data support */
++                *pkt = st->cur_pkt; st->cur_pkt.data= NULL;
++                compute_pkt_fields(s, st, NULL, pkt);
++                s->cur_st = NULL;
++                if ((s->iformat->flags & AVFMT_GENERIC_INDEX) &&
++                    (pkt->flags & AV_PKT_FLAG_KEY) && pkt->dts != AV_NOPTS_VALUE) {
++			av_add_table_entry(st, pkt->pos, pkt->dts, 0, 0, AVINDEX_KEYFRAME);		  
++                }
++                break;
++            } else if (st->cur_len > 0 && st->discard < AVDISCARD_ALL) {
++                len = av_parser_parse2(st->parser, st->codec, &pkt->data, &pkt->size,
++                                       st->cur_ptr, st->cur_len,
++                                       st->cur_pkt.pts, st->cur_pkt.dts,
++                                       st->cur_pkt.pos);
++                st->cur_pkt.pts = AV_NOPTS_VALUE;
++                st->cur_pkt.dts = AV_NOPTS_VALUE;
++                /* increment read pointer */
++                st->cur_ptr += len;
++                st->cur_len -= len;
++
++                /* return packet if any */
++                if (pkt->size) {
++                got_packet:
++                    pkt->duration = 0;
++                    pkt->stream_index = st->index;
++                    pkt->pts = st->parser->pts;
++                    pkt->dts = st->parser->dts;
++                    pkt->pos = st->parser->pos;
++                    pkt->destruct = NULL;
++                    compute_pkt_fields(s, st, st->parser, pkt);
++
++                    if((s->iformat->flags & AVFMT_GENERIC_INDEX) && pkt->flags & AV_PKT_FLAG_KEY){
++			av_add_table_entry(st, st->parser->frame_offset, pkt->dts,
++					   0, 0, AVINDEX_KEYFRAME);
++                    }
++
++                    break;
++                }
++            } else {
++                /* free packet */
++                av_free_packet(&st->cur_pkt);
++                s->cur_st = NULL;
++	    }
++        } else {
++            AVPacket cur_pkt;
++            /* read next packet */
++            ret = av_read_packet(s, &cur_pkt);
++            if (ret < 0) {
++                if (ret == AVERROR(EAGAIN))
++                    return ret;
++                /* return the last frames, if any */
++                for(i = 0; i < s->nb_streams; i++) {
++                    st = s->streams[i];
++                    if (st->parser && st->need_parsing) {
++                        av_parser_parse2(st->parser, st->codec,
++                                        &pkt->data, &pkt->size,
++                                        NULL, 0,
++                                        AV_NOPTS_VALUE, AV_NOPTS_VALUE,
++                                        AV_NOPTS_VALUE);
++                        if (pkt->size)
++                            goto got_packet;
++                    }
++                }
++                /* no more packets: really terminate parsing */
++                return ret;
++            }
++            st = s->streams[cur_pkt.stream_index];
++            st->cur_pkt= cur_pkt;
++
++            if(st->cur_pkt.pts != AV_NOPTS_VALUE &&
++               st->cur_pkt.dts != AV_NOPTS_VALUE &&
++               st->cur_pkt.pts < st->cur_pkt.dts){
++                av_log(s, AV_LOG_WARNING, "Invalid timestamps stream=%d, pts=%"PRId64", dts=%"PRId64", size=%d\n",
++                    st->cur_pkt.stream_index,
++                    st->cur_pkt.pts,
++                    st->cur_pkt.dts,
++                    st->cur_pkt.size);
++//                av_free_packet(&st->cur_pkt);
++//                return -1;
++            }
++
++            if(s->debug & FF_FDEBUG_TS)
++                av_log(s, AV_LOG_DEBUG, "av_read_packet stream=%d, pts=%"PRId64", dts=%"PRId64", size=%d, duration=%d, flags=%d\n",
++                    st->cur_pkt.stream_index,
++                    st->cur_pkt.pts,
++                    st->cur_pkt.dts,
++                    st->cur_pkt.size,
++                    st->cur_pkt.duration,
++                    st->cur_pkt.flags);
++
++            s->cur_st = st;
++            st->cur_ptr = st->cur_pkt.data;
++            st->cur_len = st->cur_pkt.size;
++            if (st->need_parsing && !st->parser && !(s->flags & AVFMT_FLAG_NOPARSE)) {
++                st->parser = av_parser_init(st->codec->codec_id);
++                if (!st->parser) {
++                    /* no parser available: just output the raw packets */
++                    st->need_parsing = AVSTREAM_PARSE_NONE;
++                }else if(st->need_parsing == AVSTREAM_PARSE_HEADERS){
++                    st->parser->flags |= PARSER_FLAG_COMPLETE_FRAMES;
++                }
++                if(st->parser && (s->iformat->flags & AVFMT_GENERIC_INDEX)){
++                    st->parser->next_frame_offset=
++                    st->parser->cur_offset= st->cur_pkt.pos;
++                }
++            }
++        }
++    }
++    if(s->debug & FF_FDEBUG_TS)
++        av_log(s, AV_LOG_DEBUG, "av_read_frame_internal stream=%d, pts=%"PRId64", dts=%"PRId64", size=%d, duration=%d, flags=%d\n",
++            pkt->stream_index,
++            pkt->pts,
++            pkt->dts,
++            pkt->size,
++            pkt->duration,
++            pkt->flags);
++
++    return 0;
++}
++
++static int av_fill_table_frame(AVFormatContext *s, AVPacket *pkt, ByteIOContext *pb)
++{
++    AVPacketList *pktl;
++    int eof=0;
++    /* adapted from av_read_frame */
++    for(;;){
++        pktl = s->packet_buffer;
++        if (pktl) {
++            AVPacket *next_pkt= &pktl->pkt;
++            if(next_pkt->dts != AV_NOPTS_VALUE){
++                while(pktl && next_pkt->pts == AV_NOPTS_VALUE){
++                    if(   pktl->pkt.stream_index == next_pkt->stream_index
++                       && next_pkt->dts < pktl->pkt.dts
++                       && pktl->pkt.pts != pktl->pkt.dts //not b frame
++                       /*&& pktl->pkt.dts != AV_NOPTS_VALUE*/){
++			next_pkt->pts= pktl->pkt.dts;
++                    }
++                    pktl= pktl->next;
++                }
++                pktl = s->packet_buffer;
++            }
++
++            if(   next_pkt->pts != AV_NOPTS_VALUE
++               || next_pkt->dts == AV_NOPTS_VALUE
++               || eof){
++                /* read packet from packet buffer, if there is data */
++                *pkt = *next_pkt;
++                s->packet_buffer = pktl->next;
++                av_free(pktl);
++                return 0;
++            }
++        }
++        {
++            int ret= av_fill_table_internal(s, pkt, pb);
++            if(ret<0){
++                if(pktl && ret != AVERROR(EAGAIN)){
++                    eof=1;
++                    continue;
++                }else
++                    return ret;
++            }
++
++            if(av_dup_packet(add_to_pktbuf(&s->packet_buffer, pkt,
++                                           &s->packet_buffer_end)) < 0)
++                return AVERROR(ENOMEM);
++        }
++    }
++}
++
++
+ /**
++ * Starts building a index for seeking.
++ * TODO: use a different file pointer so we can do this in a thread-safe manner,
++ *       as there are cases when the user will want to playback while building the index
++ **/
++int av_build_index(AVFormatContext *s, int flags)
++{
++    AVStream *st;
++    int ret;
++    int stream_index;
++    int i;
++    printf("SEEK_TABLE_DEBUG: starting building index\n");
++    stream_index = av_find_default_stream_index(s);
++    if(stream_index < 0)
++	return -1;
++
++    st = s->streams[stream_index];
++    /* TODO: check if this stream is CBR and the codec has a seek by timestamp. */
++    /*       if this is true then we can set a flag and exit here. */
++    if(0) {
++        st->seek_table.flags |= AV_SEEKTABLE_CBR;
++    } else if(0) {
++	/* TODO: for this case see if we have a special method for generating the table */
++	/*       specific to a given format. */
++    } else if(0 && st->nb_index_entries) {
++	/* some demuxers load an index upon file open. */
++	/* copy the data.  maybe we should borrow it instead?*/
++	int sz;
++	printf("SEEK_TABLE_DEBUG: building index from copy\n");
++	for(i=0; i<s->nb_streams;i++){
++	    sz = s->streams[i]->nb_index_entries;
++	    s->streams[i]->seek_table.nb_index_entries=sz;
++	    sz *= sizeof(AVIndexEntry);
++	    s->streams[i]->seek_table.index_entries = av_malloc(sz);
++	    memcpy(s->streams[i]->seek_table.index_entries,s->streams[i]->index_entries,sz);
++	    s->streams[i]->seek_table.index_entries_allocated_size = sz;
++	    s->streams[i]->seek_table.flags |= AV_SEEKTABLE_COPIED;
++	}
++    } else {
++        AVPacket pkt;
++
++        /* default table generation behavior from av_seek_frame_generic */
++	/* TODO: see why s->data_offset is the file length for avi/mp4 and others */
++	
++	/* use an independent file pointer so that we can use this call in multithreaded contexts*/
++	/* not complete yet - see av_read_packet to see how we need to swap out the old file pointers*/
++	ByteIOContext* pb;
++
++	printf("SEEK_TABLE_DEBUG: building index from scratch\n");
++
++        if ((ret=url_fopen(&pb, s->filename, URL_RDONLY)) < 0) {
++	    return ret;
++	}
++	
++        if ((ret = url_fseek(pb, 0/*s->data_offset*/, SEEK_SET)) < 0){
++	    printf("SEEK_TABLE_DEBUG: error building index: %i\n",ret);
++            return ret;
++	}
++
++        for(i=0;; i++) {
++            do{
++                ret = av_fill_table_frame(s, &pkt, pb);
++            }while(ret == AVERROR(EAGAIN));
++            if(ret<0)
++                break;
++            av_free_packet(&pkt);
++            }
++	if (pb)
++	    url_fclose(pb);
++    }
++    
++    /* return seek to start of stream.  Not sure if this the desired behavior. */
++    ff_read_frame_flush(s);
++
++    for(i=0; i<s->nb_streams;i++)
++	if(s->streams[i]->seek_table.nb_index_entries)
++	    s->streams[i]->seek_table.flags |= AV_SEEKTABLE_FINISHED;
++
++    if( (ret = av_seek_frame(s, stream_index, st->start_time, 0) ) < 0 ) {
++	printf("SEEK_TABLE_DEBUG: finished building index but error seeking: %i,trying url_fseek\n",ret);
++	/* last ditch effort to seek using the file pointer. */  
++	if ((ret = url_fseek(s->pb, 0, SEEK_SET)) < 0) {
++	    printf("SEEK_TABLE_DEBUG: error seeking with url_fseek: %i\n",ret);
++	    return ret;
++	}
++    }
++    printf("SEEK_TABLE_DEBUG: finished building index\n");
++    return 0;
++}
++
++/*******************************************************/
++
++/**
+  * Returns TRUE if the stream has accurate duration in any stream.
+  *
+  * @return TRUE if the stream has accurate duration for at least one component.
+@@ -2422,6 +2817,7 @@
+         }
+         av_metadata_free(&st->metadata);
+         av_free(st->index_entries);
++	av_free(st->seek_table.index_entries);
+         av_free(st->codec->extradata);
+         av_free(st->codec);
+ #if LIBAVFORMAT_VERSION_INT < (53<<16)
+@@ -2971,6 +3367,7 @@
+     for(i=0;i<s->nb_streams;i++) {
+         av_freep(&s->streams[i]->priv_data);
+         av_freep(&s->streams[i]->index_entries);
++        av_freep(&s->streams[i]->seek_table.index_entries);
+     }
+     av_freep(&s->priv_data);
+     return ret;
