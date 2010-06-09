@@ -27,6 +27,7 @@
 #include "avfilter.h"
 #include "libavutil/eval.h"
 #include "libavutil/avstring.h"
+#include "libavutil/pixdesc.h"
 
 static const char *var_names[] = {
     "main_w",    ///< width of the main video
@@ -117,7 +118,8 @@ static int config_input_main(AVFilterLink *link)
         over->bpp = 1;
     }
 
-    avcodec_get_chroma_sub_sample(link->format, &over->hsub, &over->vsub);
+    over->hsub = av_pix_fmt_descriptors[link->format].log2_chroma_w;
+    over->vsub = av_pix_fmt_descriptors[link->format].log2_chroma_h;
 
     return 0;
 }
