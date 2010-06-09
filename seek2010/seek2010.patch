@@ -262,7 +262,7 @@ Index: libavformat/utils.c
      /* first, we try the format specific seek */
      if (s->iformat->read_seek)
          ret = s->iformat->read_seek(s, stream_index, timestamp, flags);
-@@ -1712,9 +1749,367 @@
+@@ -1712,9 +1749,368 @@
      // try some generic seek like av_seek_frame_generic() but with new ts semantics
  }
  
@@ -346,7 +346,8 @@ Index: libavformat/utils.c
 +    {
 +	float request_time = (((float)timestamp/st->time_base.den)*st->time_base.num);
 +	float actual_time = (((float)ie->timestamp/st->time_base.den)*st->time_base.num);
-+	printf("SEEK_TABLE_DEBUG: table seeked to %.2fs (actual request was %.2fs)\n",actual_time, request_time );
++	float time_base_inv = ((float)st->time_base.den/st->time_base.num);
++	printf("SEEK_TABLE_DEBUG: table seeked to %.2fs (actual request was %.2fs), timebaseinv %f, samplerate of %d\n",actual_time, request_time, time_base_inv, st->codec->sample_rate );
 +    }
 +    return 0;
 +}
@@ -558,7 +559,7 @@ Index: libavformat/utils.c
 +    } else if(0) {
 +	/* TODO: for this case see if we have a special method for generating the table */
 +	/*       specific to a given format. */
-+    } else if(0 && st->nb_index_entries) {
++    } else if(st->nb_frames!=0 && st->nb_index_entries > st->nb_frames/2) {
 +	/* some demuxers load an index upon file open. */
 +	/* copy the data.  maybe we should borrow it instead?*/
 +	int sz;
@@ -630,7 +631,7 @@ Index: libavformat/utils.c
   * Returns TRUE if the stream has accurate duration in any stream.
   *
   * @return TRUE if the stream has accurate duration for at least one component.
-@@ -2422,6 +2817,7 @@
+@@ -2422,6 +2818,7 @@
          }
          av_metadata_free(&st->metadata);
          av_free(st->index_entries);
@@ -638,7 +639,7 @@ Index: libavformat/utils.c
          av_free(st->codec->extradata);
          av_free(st->codec);
  #if LIBAVFORMAT_VERSION_INT < (53<<16)
-@@ -2971,6 +3367,7 @@
+@@ -2971,6 +3368,7 @@
      for(i=0;i<s->nb_streams;i++) {
          av_freep(&s->streams[i]->priv_data);
          av_freep(&s->streams[i]->index_entries);
