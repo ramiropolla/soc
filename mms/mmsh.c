@@ -22,10 +22,15 @@
 #include "internal.h"
 #include "libavutil/intreadwrite.h"
 #include <string.h>
+#include "libavutil/avstring.h"
 
 #define CHUNK_TYPE_DATA        0x4424
 #define CHUNK_TYPE_ASF_HEADER  0x4824
 #define CHUNK_TYPE_END         0x4524
+#define CHUNK_TYPE_STREAM_CHANGE 0x4324
+
+#define CHUNK_HEADER_LENGTH 4
+#define EXT_HEADER_LENGTH   8
 
 #define USERAGENT "User-Agent: NSPlayer/4.1.0.3856\r\n"
 #define CLIENTGUID "Pragma: xClientGUID={c77e7400-738a-11d2-9add-0020af0a3278}\r\n"
@@ -77,8 +82,7 @@ typedef struct
     int asf_header_read_size;
     int asf_data_remaining_len;
 
-    char path[256];
-    char host[128];
+    char location[1024];
     int seekable;
     int stream_num;
     int request_seq;
@@ -189,6 +193,12 @@ static int get_and_parse_http_header(MMSHContext *mms)
     }
 }
 
+static int asf_header_parser(MMSHContext * mms)
+{
+    //TODO
+    return 0;
+}
+
 static uint16_t http_header_data_parser(MMSHContext *mms)
 {
     uint16_t chunk_type;
@@ -203,8 +213,6 @@ static uint16_t http_header_data_parser(MMSHContext *mms)
             mms->asf_header_pos = pos + 12; // start from asf header data
             mms->asf_header_len = chunk_len - 8;
         }
-        if (chunk_type == CHUNK_TYPE_ASF_HEADER || chunk_type == CHUNK_TYPE_DATA)
-            mms->chunk_seq = AV_RL32(pos + 4);
         data_len -= chunk_len + 4;
         pos += chunk_len + 4;
         if (data_len <= 0) {
@@ -212,7 +220,7 @@ static uint16_t http_header_data_parser(MMSHContext *mms)
             return -1;
         }
         if (chunk_type == CHUNK_TYPE_ASF_HEADER) {
-            //TODO parse asf header
+            asf_header_parser(mms);
         }
     }
     return 0;
@@ -251,6 +259,21 @@ static int get_http_header_data(MMSHContext *mms, const int flag)
             return -1;
         }
         av_free(tmp);
+    } else if (flag == 3){
+        int header_len;
+        res = url_read(mms->mms_hd, mms->http_header_data, CHUNK_HEADER_LENGTH);
+        if (res != CHUNK_HEADER_LENGTH) {
+            dprintf(NULL, "read chunk header failed with flag = 3!\n");
+            return AVERROR(EIO);
+        }
+        // read header
+        header_len = AV_RL16(mms->http_header_data + 2);
+        res = url_read_complete(mms->mms_hd, mms->http_header_data + 4, header_len);
+        if (res != header_len) {
+            dprintf(NULL, "read chunk data failed with flag = 3!\n");
+            return AVERROR(EIO);
+        }
+        asf_header_parser(mms);
     } else {
         dprintf(NULL, "http response has no data!\n");
         return -1;
@@ -282,65 +305,68 @@ static int get_http_answer(MMSHContext *mms, const int flag)
     return 0;
 }
 
-static int mmsh_open_cnx(URLContext *h)
+static int mmsh_open_cnx(MMSHContext *mms)
 {
-    MMSHContext *mms = h->priv_data;
+    int port, err;
+    char tcpname[256], path[256], host[128];
+
     if (mms->mms_hd) {
         url_close(mms->mms_hd);
     }
+    ff_url_split(NULL, 0, NULL, 0,
+            host, sizeof(host), &port, path, sizeof(path), mms->location);
+    if(port<0)
+        port = 80; // defaut mmsh protocol port
+
+    ff_url_join(tcpname, sizeof(tcpname), "tcp", NULL, host, port, NULL);
+    err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
+    if (err)
+        return err;
+    // send describe request
+    snprintf (mms->out_buffer, sizeof(mms->out_buffer), mmsh_first_request, path,
+            host, port, mms->request_seq++);
+    err = send_pack(mms);
+    if (err)
+        return err;
+    err = get_http_answer(mms, 1); // TODO match with the first request
+    if(err)
+        return err;
+
+    // send paly request
+    if (mms->seekable) {
+        snprintf(mms->out_buffer, sizeof(mms->out_buffer), mmsh_seekable_request, path,
+            host, port, 0, 0, 0, mms->request_seq++, 0, mms->stream_num, mms->stream_selection);
+    } else {
+        snprintf(mms->out_buffer, sizeof(mms->out_buffer), mmsh_live_request, path,
+            host, port, mms->request_seq++, mms->stream_num, mms->stream_selection);
+    }
+    err = send_pack(mms);
+    if (err)
+        return err;
+    err = get_http_answer(mms, 2);// TODO mathc with the second request
+    if(err)
+        return err;
     return 0;
 }
 
 static int mmsh_open(URLContext *h, const char *uri, int flags)
 {
     MMSHContext *mms;
-    int port, err;
-    char tcpname[256];
-
-    h->is_streamed = 1;
+    int err;
+    mms->request_seq = h->is_streamed = 1;
     mms = h->priv_data = av_mallocz(sizeof(MMSHContext));
     if (!h->priv_data)
         return AVERROR(ENOMEM);
+    av_strlcpy(mms->location, uri, sizeof(mms->location));
 
-    ff_url_split(NULL, 0, NULL, 0,
-            mms->host, sizeof(mms->host), &port, mms->path,
-            sizeof(mms->path), uri);
-    if(port<0)
-        port = 80; // defaut mmsh protocol port
-
-    ff_url_join(tcpname, sizeof(tcpname), "tcp", NULL, mms->host, port, NULL);
-    err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
-    if (err)
-        goto fail;
-    // send describe request
-    snprintf (mms->out_buffer, sizeof(mms->out_buffer), mmsh_first_request, mms->path,
-            mms->host, port, mms->request_seq++);
-    err = send_pack(mms);
-    if (err)
-        goto fail;
-    err = get_http_answer(mms, 1); // TODO match with the first request
-    if(err)
-        goto fail;
-
-    // send paly request
-    if (mms->seekable) {
-        snprintf(mms->out_buffer, sizeof(mms->out_buffer), mmsh_seekable_request, mms->path,
-            mms->host, port, 0, 0, 0, mms->request_seq++, 0, mms->stream_num, mms->stream_selection);
-    } else {
-        snprintf(mms->out_buffer, sizeof(mms->out_buffer), mmsh_live_request, mms->path,
-            mms->host, port, mms->request_seq++, mms->stream_num, mms->stream_selection);
+    err =mmsh_open_cnx(mms);
+    if (err) {
+        dprintf(NULL, "Leaving mmsh open (failure: %d)\n", err);
+        mmsh_close(h);
+        return err;
     }
-    err = send_pack(mms);
-    if (err)
-        goto fail;
-    err = get_http_answer(mms, 2);// TODO mathc with the second request
-    if(err)
-        goto fail;
     dprintf(NULL, "Leaving mmsh open success.\n");
-fail:
-    mmsh_close(h);
-    dprintf(NULL, "Leaving mmsh open (failure: %d)\n", err);
-    return err;
+    return 0;
 }
 
 static int read_data(MMSHContext *mms, char *buf, int size)
@@ -355,21 +381,62 @@ static int read_data(MMSHContext *mms, char *buf, int size)
 
 static int handle_chunk_type(MMSHContext *mms)
 {
+    uint8_t chunk_header[CHUNK_HEADER_LENGTH];
+    uint8_t ext_header[EXT_HEADER_LENGTH];
     uint16_t chunk_type;
-    int chunk_len, res;
-    res = url_read(mms->mms_hd, mms->in_buffer, 4);
-    if (res != 4) { // TODO extact common log code as macro define
+    int chunk_len, res, ext_header_len = 0;
+
+    res = url_read(mms->mms_hd, chunk_header, CHUNK_HEADER_LENGTH);
+    if (res != CHUNK_HEADER_LENGTH) { // TODO extact common log code as macro define
         dprintf(NULL, "read data packet  header failed!\n");
         return AVERROR(EIO);
     }
-    chunk_type = AV_RL16(mms->in_buffer);
-    chunk_len = AV_RL16(mms->in_buffer + 2);
-    if (chunk_type == CHUNK_TYPE_END) {
-        //TODO
-    } else if (chunk_type == CHUNK_TYPE_ASF_HEADER) {
-        //TODO
-    } else if (chunk_type == CHUNK_TYPE_DATA){
-        //TODO
+    chunk_type = AV_RL16(chunk_header);
+    chunk_len = AV_RL16(chunk_header + 2);
+    if (chunk_type == CHUNK_TYPE_END ||chunk_type == CHUNK_TYPE_STREAM_CHANGE) {
+        ext_header_len = 4;
+    } else if (chunk_type == CHUNK_TYPE_ASF_HEADER || chunk_type == CHUNK_TYPE_DATA) {
+        ext_header_len = 8;
+    }
+    if (ext_header_len) {
+        res = url_read(mms->mms_hd, ext_header, ext_header_len);
+        if (res != ext_header_len) {
+            dprintf(NULL, "read ext header failed!\n");
+            return AVERROR(EIO);
+        }
+    }
+    if (chunk_type == CHUNK_TYPE_ASF_HEADER || chunk_type == CHUNK_TYPE_DATA)
+        mms->chunk_seq = AV_RL32(ext_header);
+
+    if(chunk_type == CHUNK_TYPE_END) {
+        if (mms->chunk_seq == 0) {
+            dprintf(NULL, "The stream is end.\n");
+            return -1;
+        }
+        // reconnect
+        mms->request_seq = 1;
+        if ((res = mmsh_open_cnx(mms)) !=0) {
+            dprintf(NULL, Reconnect failed!\n);
+            return res;
+        }
+    } else if (chunk_type == CHUNK_TYPE_STREAM_CHANGE) {
+        if ((res = get_http_header_data(mms, 3)) !=0) {
+            dprintf(NULL,"stream changed! get new header failed!\n");
+            return res;
+        }
+    } else if (chunk_type == CHUNK_TYPE_DATA) {
+        int data_len = chunk_len - ext_header_len;
+        res = url_read_complete(mms->mms_hd, mms->in_buffer, data_len);
+        dprintf(NULL, "data packet len = %d\n", data_len);
+        mms->read_in_ptr = mms->in_buffer;
+        mms->asf_data_remaining_len = data_len; //TODO paddings
+        if (res != data_len) {
+            dprintf(NULL, "read data packet failed!\n");
+            return AVERROR(EIO);
+        }
+    } else {
+        dprintf(NULL, "recv other type packet %d\n", chunk_type);
+        return -1;
     }
     return 0;
 }
@@ -394,21 +461,13 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
     } else if (mms->asf_data_remaining_len){
         res =read_data(mms, buf, size);
     } else {
-        // read data packet from network
-            int len;
-            len = handle_chunk_type(mms);
-            if (len > 0) {
-                res = url_read_complete(mms->mms_hd, mms->in_buffer + 4, len);
-                if (res != len) {
-                    dprintf(NULL, "read data packet failed!\n");
-                    return AVERROR(EIO);
-                }
-                mms->read_in_ptr = mms->in_buffer;
-                mms->asf_data_remaining_len = len + 4;
-                res = read_data(mms, buf, size);
-            } else {
-                dprintf(NULL, "other situation!\n");
-            }
+         // read data packet from network
+        res = handle_chunk_type(mms);
+        if (res == 0) {
+            res = read_data(mms, buf, size);
+        } else {
+            dprintf(NULL, "other situation!\n");
+        }
     }
     return res;
 }
