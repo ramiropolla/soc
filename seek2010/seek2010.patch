@@ -1,19 +1,19 @@
 Index: ffplay.c
 ===================================================================
---- ffplay.c	(revision 23548)
+--- ffplay.c	(revision 23615)
 +++ ffplay.c	(working copy)
 @@ -2501,6 +2501,8 @@
          goto fail;
      }
  
-+    av_build_index(ic, 0);    
++    av_build_index(ic, AV_BUILD_INDEX_THREADSAFE);    
 +
      for(;;) {
          if (is->abort_request)
              break;
 Index: libavformat/mov.c
 ===================================================================
---- libavformat/mov.c	(revision 23548)
+--- libavformat/mov.c	(revision 23615)
 +++ libavformat/mov.c	(working copy)
 @@ -2495,7 +2495,10 @@
      int sample, time_sample;
@@ -52,7 +52,7 @@ Index: libavformat/mov.c
          st = s->streams[i];
 Index: libavformat/avidec.c
 ===================================================================
---- libavformat/avidec.c	(revision 23548)
+--- libavformat/avidec.c	(revision 23615)
 +++ libavformat/avidec.c	(working copy)
 @@ -1084,7 +1084,8 @@
      int i, index;
@@ -125,7 +125,7 @@ Index: libavformat/avidec.c
  
 Index: libavformat/avformat.h
 ===================================================================
---- libavformat/avformat.h	(revision 23548)
+--- libavformat/avformat.h	(revision 23615)
 +++ libavformat/avformat.h	(working copy)
 @@ -390,6 +390,21 @@
      int min_distance;         /**< Minimum distance between this and the previous keyframe, used to avoid unneeded searching. */
@@ -159,7 +159,7 @@ Index: libavformat/avformat.h
  } AVStream;
  
  #define AV_PROGRAM_RUNNING 1
-@@ -1131,6 +1149,23 @@
+@@ -1131,6 +1149,24 @@
  int av_index_search_timestamp(AVStream *st, int64_t timestamp, int flags);
  
  /**
@@ -178,12 +178,13 @@ Index: libavformat/avformat.h
 + * Part of the new seeking api.  incomplete.
 + */
 +int av_build_index(AVFormatContext *s, int flags);
++#define AV_BUILD_INDEX_THREADSAFE 0x0001
 +
 +/**
   * Ensures the index uses less memory than the maximum specified in
   * AVFormatContext.max_index_size by discarding entries if it grows
   * too large.
-@@ -1149,6 +1184,15 @@
+@@ -1149,6 +1185,15 @@
                         int size, int distance, int flags);
  
  /**
@@ -201,9 +202,9 @@ Index: libavformat/avformat.h
   * This is not supposed to be called directly by a user application,
 Index: libavformat/utils.c
 ===================================================================
---- libavformat/utils.c	(revision 23548)
+--- libavformat/utils.c	(revision 23615)
 +++ libavformat/utils.c	(working copy)
-@@ -1001,7 +1001,38 @@
+@@ -1031,7 +1031,38 @@
          pkt->convergence_duration = pc->convergence_duration;
  }
  
@@ -242,7 +243,7 @@ Index: libavformat/utils.c
  static int av_read_frame_internal(AVFormatContext *s, AVPacket *pkt)
  {
      AVStream *st;
-@@ -1359,6 +1390,7 @@
+@@ -1389,6 +1420,7 @@
      int a, b, m;
      int64_t timestamp;
  
@@ -250,7 +251,7 @@ Index: libavformat/utils.c
      a = - 1;
      b = nb_entries;
  
-@@ -1675,6 +1707,11 @@
+@@ -1705,6 +1737,11 @@
          timestamp = av_rescale(timestamp, st->time_base.den, AV_TIME_BASE * (int64_t)st->time_base.num);
      }
  
@@ -262,7 +263,7 @@ Index: libavformat/utils.c
      /* first, we try the format specific seek */
      if (s->iformat->read_seek)
          ret = s->iformat->read_seek(s, stream_index, timestamp, flags);
-@@ -1712,9 +1749,368 @@
+@@ -1742,9 +1779,416 @@
      // try some generic seek like av_seek_frame_generic() but with new ts semantics
  }
  
@@ -352,7 +353,7 @@ Index: libavformat/utils.c
 +    return 0;
 +}
 +
-+static int av_fill_table_internal(AVFormatContext *s, AVPacket *pkt, ByteIOContext *pb)
++static int av_fill_table_internal(AVFormatContext *s, AVPacket *pkt)
 +{
 +    AVStream *st;
 +    int len, ret, i;
@@ -485,7 +486,7 @@ Index: libavformat/utils.c
 +    return 0;
 +}
 +
-+static int av_fill_table_frame(AVFormatContext *s, AVPacket *pkt, ByteIOContext *pb)
++static int av_fill_table_frame(AVFormatContext *s, AVPacket *pkt)
 +{
 +    AVPacketList *pktl;
 +    int eof=0;
@@ -518,7 +519,7 @@ Index: libavformat/utils.c
 +            }
 +        }
 +        {
-+            int ret= av_fill_table_internal(s, pkt, pb);
++            int ret = av_fill_table_internal(s, pkt);
 +            if(ret<0){
 +                if(pktl && ret != AVERROR(EAGAIN)){
 +                    eof=1;
@@ -574,36 +575,84 @@ Index: libavformat/utils.c
 +	    s->streams[i]->seek_table.flags |= AV_SEEKTABLE_COPIED;
 +	}
 +    } else {
++	AVFormatContext *build_ic;
 +        AVPacket pkt;
-+
-+        /* default table generation behavior from av_seek_frame_generic */
-+	/* TODO: see why s->data_offset is the file length for avi/mp4 and others */
-+	
-+	/* use an independent file pointer so that we can use this call in multithreaded contexts*/
-+	/* not complete yet - see av_read_packet to see how we need to swap out the old file pointers*/
-+	ByteIOContext* pb;
 +
 +	printf("SEEK_TABLE_DEBUG: building index from scratch\n");
 +
-+        if ((ret=url_fopen(&pb, s->filename, URL_RDONLY)) < 0) {
-+	    return ret;
++	/* if the client needs it to be threadsafe, create a new format context to read from. */
++	if(flags & AV_BUILD_INDEX_THREADSAFE) {
++	    printf("SEEK_TABLE_DEBUG: making thread-safe copy of streams\n");
++	    build_ic = avformat_alloc_context();
++	    ret = av_open_input_file(&build_ic, s->filename, s->iformat, 0, NULL);
++
++	    if(ret < 0) {
++		printf("SEEK_TABLE_DEBUG: error re-opening file/streams: %i\n",ret);
++		goto cleanup;
++	    }
++	    if(build_ic->nb_streams != s->nb_streams) {
++		ret = -1;
++		printf("SEEK_TABLE_DEBUG: cloned AVFormatContext has different number of streams!");
++		goto cleanup;
++	    }
++	    
++	    for(i = 0; i < build_ic->nb_streams; i++) {
++		AVStream *build_st= build_ic->streams[i];
++		AVCodecContext *avctx = build_st->codec;
++		AVCodec *pCodec;
++		build_ic->streams[i]->discard = AVDISCARD_DEFAULT;
++
++		//compare with the orignal stream's context, and if opened, copy settings and open the clone
++		if(s->streams[i]->codec->priv_data) {
++		    printf("SEEK_TABLE_DEBUG: copying stream based on priv_data\n");
++		    if((ret = avcodec_copy_context(avctx, s->streams[i]->codec)) < 0) {
++			printf("SEEK_TABLE_DEBUG: error copying codec:%i\n",ret);
++			goto cleanup;
++		    }
++		    pCodec = avcodec_find_decoder(avctx->codec_id);
++		    if((ret = avcodec_open(avctx,pCodec)) < 0) {
++			printf("SEEK_TABLE_DEBUG: error opening codec:%i\n",ret);
++			goto cleanup;
++		    }
++		}
++	    }
++	} else {
++	    build_ic = s;
 +	}
-+	
-+        if ((ret = url_fseek(pb, 0/*s->data_offset*/, SEEK_SET)) < 0){
++
++        /* default table generation behavior from av_seek_frame_generic */
++	/* TODO: see why s->data_offset is the file length for avi/mp4 and others */
++        if ((ret = url_fseek(build_ic->pb, 0/*s->data_offset*/, SEEK_SET)) < 0){
 +	    printf("SEEK_TABLE_DEBUG: error building index: %i\n",ret);
-+            return ret;
++            goto cleanup;
 +	}
 +
 +        for(i=0;; i++) {
 +            do{
-+                ret = av_fill_table_frame(s, &pkt, pb);
++                ret = av_fill_table_frame(build_ic, &pkt);
 +            }while(ret == AVERROR(EAGAIN));
 +            if(ret<0)
 +                break;
 +            av_free_packet(&pkt);
-+            }
-+	if (pb)
-+	    url_fclose(pb);
++	}
++	ret = 0;
++    cleanup:
++	if(flags & AV_BUILD_INDEX_THREADSAFE) {
++	    if(build_ic) {
++		//take the index over from our clone
++		for(i = 0; i < build_ic->nb_streams; i++) {
++		    if(ret >= 0) { 
++			printf("SEEK_TABLE_DEBUG: copying over %i frames from clone stream\n",build_ic->streams[i]->seek_table.nb_index_entries);
++			s->streams[i]->seek_table = build_ic->streams[i]->seek_table;
++			memset(&build_ic->streams[i]->seek_table,0,sizeof(AVSeekTable));
++		    }
++		    avcodec_close(build_ic->streams[i]->codec);
++		}
++		av_close_input_file(build_ic);
++	    }
++	}
++	if(ret < 0) 
++	    return ret;
 +    }
 +    
 +    /* return seek to start of stream.  Not sure if this the desired behavior. */
@@ -621,7 +670,7 @@ Index: libavformat/utils.c
 +	    return ret;
 +	}
 +    }
-+    printf("SEEK_TABLE_DEBUG: finished building index\n");
++    printf("SEEK_TABLE_DEBUG: finished building index");
 +    return 0;
 +}
 +
@@ -631,7 +680,7 @@ Index: libavformat/utils.c
   * Returns TRUE if the stream has accurate duration in any stream.
   *
   * @return TRUE if the stream has accurate duration for at least one component.
-@@ -2422,6 +2818,7 @@
+@@ -2452,6 +2896,7 @@
          }
          av_metadata_free(&st->metadata);
          av_free(st->index_entries);
@@ -639,7 +688,7 @@ Index: libavformat/utils.c
          av_free(st->codec->extradata);
          av_free(st->codec);
  #if LIBAVFORMAT_VERSION_INT < (53<<16)
-@@ -2971,6 +3368,7 @@
+@@ -3001,6 +3446,7 @@
      for(i=0;i<s->nb_streams;i++) {
          av_freep(&s->streams[i]->priv_data);
          av_freep(&s->streams[i]->index_entries);
