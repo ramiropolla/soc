@@ -77,8 +77,8 @@ typedef struct {
 typedef struct
 {
     URLContext *mms_hd;
-    uint8_t out_buffer[1024];             ///< Buffer for outgoing packet.
-    uint8_t in_buffer[1024]; //TODO, maybe reused by out_buffer.
+    uint8_t out_buffer[8192];             ///< Buffer for outgoing packet.
+    uint8_t in_buffer[8192]; //TODO, maybe reused by out_buffer.
     uint8_t *read_in_ptr;
     MMSStream streams[MAX_STREAMS];
 
@@ -137,8 +137,8 @@ static int get_and_parse_http_header(MMSHContext *mms)
     int http_code;
     char content_type[128]={'\0'};
     char *p, *pos;
-    uint8_t tmp_buf[8192];
-    url_read_complete(mms->mms_hd, tmp_buf, sizeof(tmp_buf));
+    //uint8_t tmp_buf[8192];
+    //url_read_complete(mms->mms_hd, tmp_buf, sizeof(tmp_buf));
     for(;;) {
         if(url_read(mms->mms_hd, &mms->in_buffer[len], 1) != 1) {
             dprintf(NULL, "recv http header failed!\n");
@@ -276,7 +276,7 @@ static int get_chunk_header(MMSHContext *mms, int *len)
         return -1;
     }
     *len = chunk_len - ext_header_len;
-    if (chunk_type == CHUNK_TYPE_ASF_HEADER || chunk_type == CHUNK_TYPE_DATA)
+    if (chunk_type == CHUNK_TYPE_END || chunk_type == CHUNK_TYPE_DATA)
         mms->chunk_seq = AV_RL32(ext_header);
     return chunk_type;
 }
@@ -315,17 +315,17 @@ static int get_http_header_data(MMSHContext *mms)
         } else if (chunk_type == CHUNK_TYPE_ASF_HEADER){
             // get asf header and stored it
             if (!mms->is_header_parsed) {
-                if (!mms->asf_header) {
+                if (mms->asf_header) {
                     if (len != mms->asf_header_size) {
                         mms->asf_header_size = len;
                         dprintf(NULL, "header len changed form %d to %d\n",
                                 mms->asf_header_size, len);
                         av_freep(&mms->asf_header);
                     }
-                    mms->asf_header = av_mallocz(len);
-                    if (!mms->asf_header) {
-                        return AVERROR(ENOMEM);
-                    }
+                }
+                mms->asf_header = av_mallocz(len);
+                if (!mms->asf_header) {
+                    return AVERROR(ENOMEM);
                 }
             }
             res = url_read_complete(mms->mms_hd, mms->asf_header, len);
@@ -337,7 +337,7 @@ static int get_http_header_data(MMSHContext *mms)
             if (!mms->is_header_parsed) {
                 res = asf_header_parser(mms);
                 mms->is_header_parsed = 1;
-                return res;
+                //return res;
             }
         } else if (chunk_type == CHUNK_TYPE_DATA) {
             // read data packet and do padding
@@ -381,6 +381,7 @@ static int mmsh_open_cnx(MMSHContext *mms)
     int i, port, err, offset = 0;
     char tcpname[256], path[256], host[128];
     char stream_selection[10 * MAX_STREAMS];
+
     if (mms->mms_hd) {
         url_close(mms->mms_hd);
     }
@@ -402,6 +403,8 @@ static int mmsh_open_cnx(MMSHContext *mms)
     err = get_http_answer(mms); // TODO match with the first request
     if(err)
         return err;
+    // close the socket and then reopen it for sending the second play request.
+    url_close(mms->mms_hd);
 
     for (i = 0; i < mms->stream_num; i++) {
         err = snprintf(stream_selection + offset, sizeof(stream_selection) - offset,
@@ -423,6 +426,12 @@ static int mmsh_open_cnx(MMSHContext *mms)
         dprintf(NULL, "build play request failed!\n");
         return err;
     }
+    dprintf(NULL, "out_buffer is %s", mms->out_buffer);
+
+    //reopen the connection.
+    err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
+    if (err)
+        return err;
     err = send_pack(mms);
     if (err)
         return err;
@@ -486,7 +495,7 @@ static int handle_chunk_type(MMSHContext *mms)
             return res;
         }
     } else if (chunk_type == CHUNK_TYPE_DATA) {
-        read_data_packet(mms, len);
+        return read_data_packet(mms, len);
     } else {
         dprintf(NULL, "recv other type packet %d\n", chunk_type);
         return -1;
