@@ -337,7 +337,7 @@ static int get_http_header_data(MMSHContext *mms)
             if (!mms->is_header_parsed) {
                 res = asf_header_parser(mms);
                 mms->is_header_parsed = 1;
-                //return res;
+                return res;
             }
         } else if (chunk_type == CHUNK_TYPE_DATA) {
             // read data packet and do padding
