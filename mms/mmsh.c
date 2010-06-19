@@ -508,6 +508,7 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
     int res = 0;
     MMSHContext *mms = h->priv_data;
 
+    do{
     if (mms->asf_header_read_size < mms->asf_header_size) {
         // copy asf header into buffer
         char *pos;
@@ -517,6 +518,7 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
         pos = mms->asf_header + mms->asf_header_read_size;
         memcpy(buf, pos, size_to_copy);
         mms->asf_header_read_size += size_to_copy;
+        res = size_to_copy;
         if (mms->asf_header_read_size == mms->asf_header_size) {
             av_freep(&mms->asf_header); // which contains asf header
         }
@@ -531,6 +533,7 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
             dprintf(NULL, "other situation!\n");
         }
     }
+    }while(!res);
     return res;
 }
 
