@@ -509,30 +509,30 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
     MMSHContext *mms = h->priv_data;
 
     do{
-    if (mms->asf_header_read_size < mms->asf_header_size) {
-        // copy asf header into buffer
-        char *pos;
-        int size_to_copy;
-        int remaining_size = mms->asf_header_size - mms->asf_header_read_size;
-        size_to_copy = FFMIN(size, remaining_size);
-        pos = mms->asf_header + mms->asf_header_read_size;
-        memcpy(buf, pos, size_to_copy);
-        mms->asf_header_read_size += size_to_copy;
-        res = size_to_copy;
-        if (mms->asf_header_read_size == mms->asf_header_size) {
-            av_freep(&mms->asf_header); // which contains asf header
-        }
-    } else if (mms->asf_data_remaining_len){
-        res =read_data(mms, buf, size);
-    } else {
-         // read data packet from network
-        res = handle_chunk_type(mms);
-        if (res == 0) {
-            res = read_data(mms, buf, size);
+        if (mms->asf_header_read_size < mms->asf_header_size) {
+            // copy asf header into buffer
+            char *pos;
+            int size_to_copy;
+            int remaining_size = mms->asf_header_size - mms->asf_header_read_size;
+            size_to_copy = FFMIN(size, remaining_size);
+            pos = mms->asf_header + mms->asf_header_read_size;
+            memcpy(buf, pos, size_to_copy);
+            mms->asf_header_read_size += size_to_copy;
+            res = size_to_copy;
+            if (mms->asf_header_read_size == mms->asf_header_size) {
+                av_freep(&mms->asf_header); // which contains asf header
+            }
+        } else if (mms->asf_data_remaining_len){
+            res =read_data(mms, buf, size);
         } else {
-            dprintf(NULL, "other situation!\n");
+             // read data packet from network
+            res = handle_chunk_type(mms);
+            if (res == 0) {
+                res = read_data(mms, buf, size);
+            } else {
+                dprintf(NULL, "other situation!\n");
+            }
         }
-    }
     }while(!res);
     return res;
 }
