@@ -1,8 +1,8 @@
-Index: doc/libavfilter.texi
+Index: doc/filters.texi
 ===================================================================
---- doc/libavfilter.texi	(revision 23486)
-+++ doc/libavfilter.texi	(working copy)
-@@ -139,6 +139,111 @@
+--- doc/filters.texi	(revision 23745)
++++ doc/filters.texi	(working copy)
+@@ -39,6 +39,111 @@
  
  The default value of @var{width} and @var{height} is 0.
  
@@ -114,7 +114,7 @@ Index: doc/libavfilter.texi
  @section format
  
  Convert the input video to one of the specified pixel formats.
-@@ -156,6 +261,30 @@
+@@ -56,6 +161,30 @@
  
  will convert the input video to the format ``yuv420p''.
  
@@ -145,7 +145,7 @@ Index: doc/libavfilter.texi
  @section noformat
  
  Force libavfilter not to use any of the specified pixel formats for the
-@@ -177,6 +306,56 @@
+@@ -77,6 +206,56 @@
  
  Pass the source unchanged to the output.
  
@@ -202,7 +202,7 @@ Index: doc/libavfilter.texi
  @section pad
  
  Add paddings to the input image, and places the original input at the
-@@ -212,6 +391,14 @@
+@@ -112,6 +291,14 @@
  
  @end table
  
@@ -217,7 +217,7 @@ Index: doc/libavfilter.texi
  @section scale
  
  Scale the input video to @var{width}:@var{height} and/or convert the image format.
-@@ -237,6 +424,24 @@
+@@ -137,6 +324,24 @@
  
  The default value of @var{width} and @var{height} is 0.
  
@@ -242,7 +242,7 @@ Index: doc/libavfilter.texi
  @section slicify
  
  Pass the images of input video on to next video filter as multiple
-@@ -252,6 +457,19 @@
+@@ -152,6 +357,19 @@
  Adding this in the beginning of filter chains should make filtering
  faster due to better use of the memory cache.
  
@@ -261,8 +261,8 @@ Index: doc/libavfilter.texi
 +
  @section unsharp
  
- Sharpen or blur the input video. It accepts the following parameters:
-@@ -317,6 +535,32 @@
+ Sharpen or blur the input video.
+@@ -217,6 +435,32 @@
  
  Below is a description of the currently available video sources.
  
