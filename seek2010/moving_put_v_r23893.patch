@@ -20,7 +20,7 @@ Index: libavformat/aviobuf.c
 ===================================================================
 --- libavformat/aviobuf.c	(revision 23893)
 +++ libavformat/aviobuf.c	(working copy)
-@@ -284,6 +284,28 @@
+@@ -284,6 +284,27 @@
      put_byte(s, val);
  }
  
@@ -44,7 +44,6 @@ Index: libavformat/aviobuf.c
 +
 +    put_byte(bc, val&127);
 +}
-+
 +
  void put_tag(ByteIOContext *s, const char *tag)
  {
