@@ -1,0 +1,83 @@
+Index: libavformat/avio.h
+===================================================================
+--- libavformat/avio.h	(revision 23893)
++++ libavformat/avio.h	(working copy)
+@@ -348,8 +348,12 @@
+ void put_tag(ByteIOContext *s, const char *tag);
+ 
+ void put_strz(ByteIOContext *s, const char *buf);
+-
++void put_v(ByteIOContext *bc, uint64_t val);
+ /**
++ * Gets the length in bytes which is needed to store val as v.
++ */
++int get_length(uint64_t val);
++/**
+  * fseek() equivalent for ByteIOContext.
+  * @return new position or AVERROR.
+  */
+Index: libavformat/aviobuf.c
+===================================================================
+--- libavformat/aviobuf.c	(revision 23893)
++++ libavformat/aviobuf.c	(working copy)
+@@ -284,6 +284,28 @@
+     put_byte(s, val);
+ }
+ 
++/**
++ * Gets the length in bytes which is needed to store val as v.
++ */
++int get_length(uint64_t val){
++    int i=1;
++
++    while(val>>=7)
++        i++;
++
++    return i;
++}
++
++void put_v(ByteIOContext *bc, uint64_t val){
++    int i= get_length(val);
++
++    while(--i>0)
++        put_byte(bc, 128 | (val>>(7*i)));
++
++    put_byte(bc, val&127);
++}
++
++
+ void put_tag(ByteIOContext *s, const char *tag)
+ {
+     while (*tag) {
+Index: libavformat/nutenc.c
+===================================================================
+--- libavformat/nutenc.c	(revision 23893)
++++ libavformat/nutenc.c	(working copy)
+@@ -241,27 +241,6 @@
+     nut->frame_code['N'].flags= FLAG_INVALID;
+ }
+ 
+-/**
+- * Gets the length in bytes which is needed to store val as v.
+- */
+-static int get_length(uint64_t val){
+-    int i=1;
+-
+-    while(val>>=7)
+-        i++;
+-
+-    return i;
+-}
+-
+-static void put_v(ByteIOContext *bc, uint64_t val){
+-    int i= get_length(val);
+-
+-    while(--i>0)
+-        put_byte(bc, 128 | (val>>(7*i)));
+-
+-    put_byte(bc, val&127);
+-}
+-
+ static void put_tt(NUTContext *nut, StreamContext *nus, ByteIOContext *bc, uint64_t val){
+     val *= nut->time_base_count;
+     val += nus->time_base - nut->time_base;
