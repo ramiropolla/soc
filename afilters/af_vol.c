@@ -17,7 +17,7 @@
  */
 
 /**
- * @file libavfilter/af_vol.c
+ * @file
  * null filter. used as an example, or for development
  */
 

@@ -20,7 +20,7 @@
  */
 
 /**
- * @file lowpass.h
+ * @file
  * lowpass filter interface
  */
 

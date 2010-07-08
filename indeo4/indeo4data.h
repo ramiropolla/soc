@@ -20,7 +20,7 @@
 */
 
 /**
-* @file libavcodec/indeo4data.h
+* @file
 * This file contains data needed for the Indeo4 decoder.
 */
 

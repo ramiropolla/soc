@@ -20,7 +20,7 @@
  */
 
 /**
- * @file libavcodec/aacsbr_internal.h
+ * @file
  * AAC Spectral Band Replication function declarations
  * @author Robert Swain ( rob opendot cl )
  */

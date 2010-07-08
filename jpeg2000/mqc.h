@@ -24,7 +24,7 @@
 
 /**
  * MQ-coder
- * @file libavcodec/mqc.h
+ * @file
  * @author Kamil Nowosad
  */
 

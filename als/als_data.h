@@ -23,7 +23,7 @@
 #define AVCODEC_ALS_DATA_H
 
 /**
- * @file libavcodec/als_data.h
+ * @file
  * MPEG-4 ALS common data tables
  * @author Thilo Borgmann <thilo.borgmann _at_ googlemail.com>
  */

@@ -20,7 +20,7 @@
  */
 
 /**
- * @file rv34.c
+ * @file
  * RV30/40 decoder common data.
  */
 

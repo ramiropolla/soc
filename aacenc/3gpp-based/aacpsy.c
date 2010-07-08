@@ -20,7 +20,7 @@
  */
 
 /**
- * @file aacpsy.c
+ * @file
  * AAC encoder psychoacoustic model
  */
 

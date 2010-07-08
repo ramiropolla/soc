@@ -19,7 +19,7 @@
  */
 
 /**
- * @file libavformat/mpegpes.h
+ * @file
  * MPEG PES packetizer API header
  */
 

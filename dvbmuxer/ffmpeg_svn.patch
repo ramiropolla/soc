@@ -24,7 +24,7 @@ Index: libavformat/mpegpes.h
 + */
 +
 +/**
-+ * @file libavformat/mpegpes.h
++ * @file
 + * MPEG PES packetizer API header
 + */
 +

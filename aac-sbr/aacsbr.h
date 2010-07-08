@@ -20,7 +20,7 @@
  */
 
 /**
- * @file libavcodec/aacsbr.h
+ * @file
  * AAC Spectral Band Replication definitions and structures
  * @author Robert Swain ( rob opendot cl )
  */

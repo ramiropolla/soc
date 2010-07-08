@@ -20,7 +20,7 @@
  */
 
 /**
- * @file lowpass.c
+ * @file
  * lowpass filter implementation
  */
 

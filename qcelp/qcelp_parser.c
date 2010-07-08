@@ -20,7 +20,7 @@
  */
 
 /**
- * @file qcelp_parser.c
+ * @file
  * QCELP parser
  * @author Reynaldo H. Verdejo Pinochet
  */

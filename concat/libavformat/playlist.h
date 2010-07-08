@@ -19,7 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-/** @file libavformat/playlist.h
+/** @file
  *  @author Geza Kovacs ( gkovacs mit edu )
  *
  *  @brief Internal functions used to manipulate playlists

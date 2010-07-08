@@ -21,7 +21,7 @@
 
 
 /**
- * @file libavcodec/amrnbfixeddec.c
+ * @file
  * AMR narrowband decoder
  */
 

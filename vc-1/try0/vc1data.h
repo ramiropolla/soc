@@ -21,7 +21,7 @@
  */
 
 /**
- * @file vc1data.h
+ * @file
  * VC-1 tables.
  */
 

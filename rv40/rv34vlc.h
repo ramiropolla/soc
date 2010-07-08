@@ -20,7 +20,7 @@
  */
 
 /**
- * @file rv34vlc.h
+ * @file
  * RV30/40 VLC tables.
  */
 

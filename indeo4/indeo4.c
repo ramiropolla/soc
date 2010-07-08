@@ -20,7 +20,7 @@
  */
 
 /**
- * @file libavcodec/indeo4.c
+ * @file
  * Indeo Video Interactive version 4 decoder
  *
  * Indeo4 data is usually transported within .avi or .mov files.
