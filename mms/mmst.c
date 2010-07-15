@@ -516,9 +516,6 @@ static int send_stream_selection_request(MMSContext *mms)
         bytestream_put_le16(&mms->write_out_ptr, mms->streams[i].id);  // stream id
         bytestream_put_le16(&mms->write_out_ptr, 0);                   // selection
     }
-
-    bytestream_put_le16(&mms->write_out_ptr, 0);
-
     return send_command_packet(mms);
 }
 
