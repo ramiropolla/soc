@@ -79,7 +79,6 @@ typedef enum {
 
 typedef struct {
     int id;
-    int rate;
 }MMSStream;
 
 typedef struct {
@@ -489,7 +488,6 @@ static int asf_header_parser(MMSContext *mms)
             chunksize = 46;
         } else if (!memcmp(p, ff_asf_stream_bitrate_properties, sizeof(ff_asf_guid))) {
             int record_cnt = AV_RL16(p + sizeof(ff_asf_guid) + 8);
-            uint8_t *pos;
             if (record_cnt*6 + 16 + 8 + 2 > chunksize) {
                 dprintf(NULL, "Too many stream record count.\n");
                 return -1;
@@ -501,15 +499,6 @@ static int asf_header_parser(MMSContext *mms)
             } else {
                 dprintf(NULL, "Too many streams(bitrate properties)\n");
                 return -1;
-            }
-            pos = p + 24 + 2;
-            while(record_cnt > 0) {
-                flags = AV_RL16(pos);
-                pos += 2;
-                stream_id = flags & 0x7F;
-                mms->streams[stream_id].rate = AV_RL32(pos);
-                pos += 4;
-                record_cnt--;
             }
         }
         p += chunksize;
