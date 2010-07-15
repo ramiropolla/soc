@@ -26,7 +26,6 @@
 #include "libavcodec/bytestream.h"
 #include "network.h"
 #include "asf.h"
-#include <unistd.h>
 
 #define LOCAL_ADDRESS 0xc0a80081    // FIXME get and use correct local ip address.
 #define LOCAL_PORT    1037          // as above.
@@ -208,7 +207,6 @@ static int send_protocol_select(MMSContext *mms)
             LOCAL_PORT);
 
     mms_put_utf16(mms, data_string);
-    bytestream_put_le16(&mms->write_out_ptr, 0);
     return send_command_packet(mms);
 }
 
@@ -377,7 +375,6 @@ static int mms_safe_send_recv(MMSContext *mms,
                               const MMSSCPacketType expect_type)
 {
     MMSSCPacketType type;
-    int i;
     if(send_fun) {
         int ret = send_fun(mms);
         if (ret < 0) {
@@ -391,7 +388,6 @@ static int mms_safe_send_recv(MMSContext *mms,
     } else {
         return 0;
     }
-    return -1;
 }
 
 static int send_media_header_request(MMSContext *mms)
