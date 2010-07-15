@@ -150,7 +150,8 @@ static void insert_command_prefixes(MMSContext *mms,
 /** Send a prepared MMST command packet. */
 static int send_command_packet(MMSContext *mms)
 {
-    int exact_length= mms->write_out_ptr - mms->out_buffer;
+    int len= mms->write_out_ptr - mms->out_buffer;
+    int exact_length = (len + 7) & ~7;
     int first_length= exact_length - 16;
     int len8= first_length/8;
     int write_result;
@@ -159,6 +160,7 @@ static int send_command_packet(MMSContext *mms)
     AV_WL32(mms->out_buffer + 8, first_length);
     AV_WL32(mms->out_buffer + 16, len8);
     AV_WL32(mms->out_buffer + 32, len8-2);
+    memset(mms->write_out_ptr, 0, exact_length - len);
 
     // write it out.
     write_result= url_write(mms->mms_hd, mms->out_buffer, exact_length);
