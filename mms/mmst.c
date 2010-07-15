@@ -442,6 +442,7 @@ static int asf_header_parser(MMSContext *mms)
 {
     uint8_t *p = mms->asf_header;
     uint8_t *end;
+    int st_idx = 0;
     int flags, stream_id, is_stream_num_known = 0;
     mms->stream_num = 0;
 
@@ -476,7 +477,8 @@ static int asf_header_parser(MMSContext *mms)
             //Please see function send_stream_selection_request().
             if (mms->stream_num < MAX_STREAMS &&
                     46 + mms->stream_num * 6 < sizeof(mms->out_buffer)) {
-                mms->streams[mms->stream_num].id = stream_id;
+                st_idx = is_stream_num_known ? st_idx++ : mms->stream_num;
+                mms->streams[st_idx].id = stream_id;
                 if (!is_stream_num_known)
                     mms->stream_num++;
             } else {
