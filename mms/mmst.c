@@ -30,7 +30,6 @@
 
 #define LOCAL_ADDRESS 0xc0a80081    // FIXME get and use correct local ip address.
 #define LOCAL_PORT    1037          // as above.
-#define RETRY_TIMES   10
 /** Client to server packet types. */
 typedef enum {
     CS_PKT_INITIAL                  = 0x01,
@@ -386,14 +385,11 @@ static int mms_safe_send_recv(MMSContext *mms,
             return ret;
         }
     }
-    for (i = 0; i < RETRY_TIMES; i++) {
     if ((type = get_tcp_server_response(mms)) != expect_type) {
         dprintf(NULL,"Unexpected packet type %d with type %d\n", type, expect_type);
-        //return -1;
-        usleep(50000);
+        return -1;
     } else {
         return 0;
-    }
     }
     return -1;
 }
