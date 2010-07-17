@@ -1,6 +1,6 @@
 Index: configure
 ===================================================================
---- configure	(revision 24040)
+--- configure	(revision 24294)
 +++ configure	(working copy)
 @@ -167,6 +167,7 @@
                             and libraw1394 [no]
@@ -10,7 +10,7 @@ Index: configure
    --enable-libgsm          enable GSM support via libgsm [no]
    --enable-libmp3lame      enable MP3 encoding via libmp3lame [no]
    --enable-libnut          enable NUT (de)muxing via libnut,
-@@ -860,6 +861,7 @@
+@@ -869,6 +870,7 @@
      libdc1394
      libdirac
      libfaac
@@ -18,7 +18,7 @@ Index: configure
      libgsm
      libmp3lame
      libnut
-@@ -1001,6 +1003,7 @@
+@@ -1010,6 +1012,7 @@
      llrintf
      local_aligned_16
      local_aligned_8
@@ -26,7 +26,7 @@ Index: configure
      log2
      log2f
      loongson
-@@ -1369,6 +1372,7 @@
+@@ -1376,6 +1379,7 @@
  udp_protocol_deps="network"
  
  # filters
@@ -34,7 +34,7 @@ Index: configure
  movie_filter_deps="avfilter_lavf"
  avfilter_lavf_deps="avformat"
  
-@@ -2461,6 +2465,7 @@
+@@ -2559,6 +2563,7 @@
  check_struct "sys/time.h sys/resource.h" "struct rusage" ru_maxrss
  check_func  inet_aton $network_extralibs
  check_func  isatty
@@ -42,7 +42,7 @@ Index: configure
  check_func  ${malloc_prefix}memalign            && enable memalign
  check_func  mkstemp
  check_func  ${malloc_prefix}posix_memalign      && enable posix_memalign
-@@ -2543,6 +2548,7 @@
+@@ -2641,6 +2646,7 @@
                        require  libdirac libdirac_decoder/dirac_parser.h dirac_decoder_init $(pkg-config --libs dirac) &&
                        require  libdirac libdirac_encoder/dirac_encoder.h dirac_encoder_init $(pkg-config --libs dirac)
  enabled libfaac    && require2 libfaac "stdint.h faac.h" faacEncGetVersion -lfaac
