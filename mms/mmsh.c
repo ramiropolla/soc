@@ -24,6 +24,7 @@
 #include <string.h>
 #include "libavutil/avstring.h"
 #include "asf.h"
+#include "http.h"
 
 #define DEBUG
 #define CHUNK_TYPE_DATA        0x4424
@@ -38,7 +39,6 @@
 #define CLIENTGUID "Pragma: xClientGUID={c77e7400-738a-11d2-9add-0020af0a3278}\r\n"
 
 static const char* mmsh_first_request =
-    "GET %s HTTP/1.0\r\n"
     "Accept: */*\r\n"
     USERAGENT
     "Host: %s:%d\r\n"
@@ -47,7 +47,6 @@ static const char* mmsh_first_request =
     "Connection: Close\r\n\r\n";
 
 static const char* mmsh_seekable_request =
-    "GET %s HTTP/1.0\r\n"
     "Accept: */*\r\n"
     USERAGENT
     "Host: %s:%d\r\n"
@@ -59,7 +58,6 @@ static const char* mmsh_seekable_request =
     "Connection: Close\r\n\r\n";
 
 static const char* mmsh_live_request =
-    "GET %s HTTP/1.0\r\n"
     "Accept: */*\r\n"
     USERAGENT
     "Host: %s:%d\r\n"
@@ -108,97 +106,6 @@ static int mmsh_close(URLContext *h)
     return 0;
 }
 
-static int send_pack(MMSHContext *mms)
-{
-    int len, result;
-    len = strlen(mms->out_buffer);
-    result = url_write(mms->mms_hd, mms->out_buffer, len);
-    if(result != len) {
-        dprintf(NULL,"send pack failed!return len %d != %d\n", result, len);
-        return AVERROR_IO;
-    }
-    return 0;
-}
-
-static char* find_str(char * dst, const char *str, const int len)
-{
-    char *p = NULL;
-    if(strncasecmp(dst, str, len) == 0) {
-        p = &dst[len];
-        while(isspace(*p))
-            p++;
-    }
-    return p;
-}
-
-static int get_and_parse_http_header(MMSHContext *mms)
-{
-    int len = 0, line_num = 0;
-    int http_code;
-    char content_type[128]={'\0'};
-    char *p, *pos;
-    //uint8_t tmp_buf[8192];
-    //url_read_complete(mms->mms_hd, tmp_buf, sizeof(tmp_buf));
-    for(;;) {
-        if(url_read(mms->mms_hd, &mms->in_buffer[len], 1) != 1) {
-            dprintf(NULL, "recv http header failed!\n");
-            return AVERROR(EIO);
-        }
-
-        if(mms->in_buffer[len] != 0x0A) {
-            len++;
-            if(len >= sizeof(mms->in_buffer)) {
-                dprintf(NULL, "recv http header overwrite the buffer!\n");
-                return -1;
-            }
-        } else {
-            mms->in_buffer[len--] = '\0';
-            if (len >= 0 && mms->in_buffer[len] == 0x0D) {
-                line_num++;
-                mms->in_buffer[len--] = '\0';
-                if(len < 0) {
-                    return 0; // \r\n\r\n is the end of http header
-                } else {
-                    len = 0;// begin to read next http header line
-                }
-            }
-            if (line_num == 1) {
-                p = mms->in_buffer;
-                while(!isspace(*p) && *p != '\0')
-                    p++;
-                while(isspace(*p))
-                    p++;
-                http_code = strtol(p, NULL, 10);
-                dprintf(NULL, "mmsh protocol http_code=%d\n", http_code);
-                if(http_code != 200) {
-                    return -1;
-                }
-            } else {
-                if ((p = find_str(mms->in_buffer, "Content-Type:", 13)) != NULL) {
-                    strncpy(content_type, p, sizeof(content_type));
-                    dprintf(NULL, "Content-Type:%s\n", content_type);
-                    if(strcmp(content_type, "application/x-mms-framed") != 0
-                        && strcmp(content_type, "application/octet-stream") != 0
-                        && strcmp(content_type, "application/vnd.ms.wms-hdr.asfv1") != 0) {
-                        return -1;
-                    }
-                } else if((p = find_str(mms->in_buffer, "Pragma:", 7)) != NULL) {
-                    pos = strstr(p, "features=");
-                    if (pos){
-                        if(strstr(pos, "seekable")) {
-                            mms->seekable = 1;
-                        } else if (strstr(pos, "broadcast")) {
-                            mms->seekable = 0;
-                        }
-                    } else {
-                        dprintf(NULL, "Can't find features!\n");
-                    }
-                }
-            }
-        }
-    }
-}
-
 static int asf_header_parser(MMSHContext * mms)
 {
     uint8_t *p = mms->asf_header;
@@ -217,7 +124,7 @@ static int asf_header_parser(MMSHContext * mms)
     while(end - p >= sizeof(ff_asf_guid) + 8) {
         uint64_t chunksize = AV_RL64(p + sizeof(ff_asf_guid));
         if (!chunksize || chunksize > end - p) {
-            dprintf(NULL, "chunksize is exceptional value:%d!\n", chunksize);
+            dprintf(NULL, "chunksize is exceptional value:%"PRId64"!\n", chunksize);
             return -1;
         }
         if (!memcmp(p, ff_asf_file_header, sizeof(ff_asf_guid))) {
@@ -359,53 +266,46 @@ static int get_http_header_data(MMSHContext *mms)
     return 0;
 }
 
-static int get_http_answer(MMSHContext *mms)
-{
-    int result;
-    result = get_and_parse_http_header(mms);
-    if (result) {
-        dprintf(NULL, "http header parser failed!\n");
-        return result;
-    }
-
-    result = get_http_header_data(mms);
-    if (result) {
-        dprintf(NULL, "get http header data fialed!\n");
-        return result;
-    }
-    return 0;
-}
-
 static int mmsh_open_cnx(MMSHContext *mms)
 {
     int i, port, err, offset = 0;
-    char tcpname[256], path[256], host[128];
+    char httpname[256], path[256], host[128];
     char stream_selection[10 * MAX_STREAMS];
+    char headers[1024];
 
     if (mms->mms_hd) {
         url_close(mms->mms_hd);
     }
+
     ff_url_split(NULL, 0, NULL, 0,
             host, sizeof(host), &port, path, sizeof(path), mms->location);
     if(port<0)
         port = 80; // defaut mmsh protocol port
+    ff_url_join(httpname, sizeof(httpname), "http", NULL, host, port, path);
 
-    ff_url_join(tcpname, sizeof(tcpname), "tcp", NULL, host, port, NULL);
-    err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
-    if (err)
-        return err;
-    // send describe request
-    snprintf (mms->out_buffer, sizeof(mms->out_buffer), mmsh_first_request, path,
-             host, port, mms->request_seq++);
-    err = send_pack(mms);
-    if (err)
-        return err;
-    err = get_http_answer(mms); // TODO match with the first request
-    if(err)
-        return err;
+    if (url_alloc(&mms->mms_hd, httpname, URL_RDONLY) < 0) {
+        return AVERROR(EIO);
+    }
+
+    snprintf (headers, sizeof(headers), mmsh_first_request,
+        host, port, mms->request_seq++);
+    ff_http_set_headers(mms->mms_hd, headers);
+
+    if (url_connect(mms->mms_hd)) {
+          return AVERROR(EIO);
+    }
+    err = get_http_header_data(mms);
+    if (err) {
+        dprintf(NULL, "get http header data fialed!\n");
+        return (err);
+    }
+
     // close the socket and then reopen it for sending the second play request.
     url_close(mms->mms_hd);
-
+    memset(headers, 0, sizeof(headers));
+    if (url_alloc(&mms->mms_hd, httpname, URL_RDONLY) < 0) {
+        return AVERROR(EIO);
+    }
     for (i = 0; i < mms->stream_num; i++) {
         err = snprintf(stream_selection + offset, sizeof(stream_selection) - offset,
                           "ffff:%d:0 ", mms->streams[i].id);
@@ -413,31 +313,31 @@ static int mmsh_open_cnx(MMSHContext *mms)
             return err;
         offset += err;
     }
-
     // send paly request
     if (mms->seekable) {
-        err = snprintf(mms->out_buffer, sizeof(mms->out_buffer), mmsh_seekable_request, path,
+        err = snprintf(headers, sizeof(headers), mmsh_seekable_request,
             host, port, 0, 0, 0, mms->request_seq++, 0, mms->stream_num, stream_selection);
     } else {
-        err = snprintf(mms->out_buffer, sizeof(mms->out_buffer), mmsh_live_request, path,
+        err = snprintf(headers, sizeof(headers), mmsh_live_request,
             host, port, mms->request_seq++, mms->stream_num, stream_selection);
     }
     if (err < 0) {
         dprintf(NULL, "build play request failed!\n");
         return err;
     }
-    dprintf(NULL, "out_buffer is %s", mms->out_buffer);
+    dprintf(NULL, "out_buffer is %s", headers);
+    ff_http_set_headers(mms->mms_hd, headers);
 
-    //reopen the connection.
-    err = url_open(&mms->mms_hd, tcpname, URL_RDWR);
-    if (err)
-        return err;
-    err = send_pack(mms);
-    if (err)
-        return err;
-    err = get_http_answer(mms);// TODO mathc with the second request
-    if(err)
-        return err;
+    if (url_connect(mms->mms_hd)) {
+          return AVERROR(EIO);
+    }
+
+   err = get_http_header_data(mms);
+    if (err) {
+        dprintf(NULL, "get http header data fialed!\n");
+        return (err);
+    }
+
     return 0;
 }
 
