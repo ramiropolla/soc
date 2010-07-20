@@ -20,6 +20,14 @@
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
+/*References
+ * MMS protocol specification:
+ *  [1]http://msdn.microsoft.com/en-us/library/cc234711(PROT.10).aspx
+ *asf specification. Revision 01.20.03.
+ *  [2]http://msdn.microsoft.com/en-us/library/bb643323.aspx
+ */
+
 #include "avformat.h"
 #include "internal.h"
 #include "libavutil/intreadwrite.h"
@@ -282,8 +290,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                         return -1;
                     }
                     hr = AV_RL32(mms->in_buffer + 40);
-                    if (hr)
-                    {
+                    if (hr) {
                         dprintf(NULL, "The server side send back error code:0x%x\n", hr);
                         return -1;
                     }
@@ -336,6 +343,7 @@ static MMSSCPacketType get_tcp_server_response(MMSContext *mms)
                                                  mms->remaining_in_len);
                             mms->asf_header_size += mms->remaining_in_len;
                         }
+                        // 0x04 means asf header is sent in multiple packets.
                         if (mms->incoming_flags == 0x04)
                             continue;
                     } else if(packet_id_type == mms->packet_id) {
@@ -382,6 +390,7 @@ static int mms_safe_send_recv(MMSContext *mms,
             return ret;
         }
     }
+
     if ((type = get_tcp_server_response(mms)) != expect_type) {
         dprintf(NULL,"Unexpected packet type %d with type %d\n", type, expect_type);
         return -1;
@@ -433,8 +442,7 @@ static int asf_header_parser(MMSContext *mms)
 {
     uint8_t *p = mms->asf_header;
     uint8_t *end;
-    int st_idx = 0;
-    int flags, stream_id, is_stream_num_known = 0;
+    int flags, stream_id;
     mms->stream_num = 0;
 
     if (mms->asf_header_size < sizeof(ff_asf_guid) * 2 + 22 ||
@@ -448,7 +456,7 @@ static int asf_header_parser(MMSContext *mms)
         uint64_t chunksize = AV_RL64(p + sizeof(ff_asf_guid));
         if (!chunksize || chunksize > end - p) {
             dprintf(NULL, "chunksize is exceptional value:%"PRId64"!\n", chunksize);
-            return 0;
+            return -1;
         }
         if (!memcmp(p, ff_asf_file_header, sizeof(ff_asf_guid))) {
             /* read packet size */
@@ -468,30 +476,14 @@ static int asf_header_parser(MMSContext *mms)
             //Please see function send_stream_selection_request().
             if (mms->stream_num < MAX_STREAMS &&
                     46 + mms->stream_num * 6 < sizeof(mms->out_buffer)) {
-                st_idx = is_stream_num_known ? st_idx++ : mms->stream_num;
-                mms->streams[st_idx].id = stream_id;
-                if (!is_stream_num_known)
-                    mms->stream_num++;
+                mms->streams[mms->stream_num].id = stream_id;
+                mms->stream_num++;
             } else {
                 dprintf(NULL, "Too many streams.\n");
                 return -1;
             }
         } else if (!memcmp(p, ff_asf_head1_guid, sizeof(ff_asf_guid))) {
-            chunksize = 46;
-        } else if (!memcmp(p, ff_asf_stream_bitrate_properties, sizeof(ff_asf_guid))) {
-            int record_cnt = AV_RL16(p + sizeof(ff_asf_guid) + 8);
-            if (record_cnt*6 + 16 + 8 + 2 > chunksize) {
-                dprintf(NULL, "Too many stream record count.\n");
-                return -1;
-            }
-            if (mms->stream_num < MAX_STREAMS &&
-                  46 + mms->stream_num * 6 < sizeof(mms->out_buffer)) {
-                mms->stream_num = record_cnt;
-                is_stream_num_known = 1;
-            } else {
-                dprintf(NULL, "Too many streams(bitrate properties)\n");
-                return -1;
-            }
+            chunksize = 46; // see references [2] section 3.4. This should be set 46.
         }
         p += chunksize;
     }
