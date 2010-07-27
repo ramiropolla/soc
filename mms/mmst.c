@@ -28,7 +28,7 @@
  *  [2]http://msdn.microsoft.com/en-us/library/bb643323.aspx
  */
 
-#include "avformat.h"
+#include "mms.h"
 #include "internal.h"
 #include "libavutil/intreadwrite.h"
 #include "libavcodec/bytestream.h"
@@ -82,50 +82,6 @@ typedef enum {
     SC_PKT_ASF_MEDIA                = 0x010001,// receiving false data packets.
     /*@}*/
 } MMSSCPacketType;
-
-typedef struct {
-    int id;
-}MMSStream;
-
-typedef struct {
-    int outgoing_packet_seq;             ///< Outgoing packet sequence number.
-    char path[256];                      ///< Path of the resource being asked for.
-    char host[128];                      ///< Host of the resources.
-
-    URLContext *mms_hd;                  ///< TCP connection handle
-    MMSStream streams[MAX_STREAMS];
-
-    /** Buffer for outgoing packets. */
-    /*@{*/
-    uint8_t *write_out_ptr;              ///< Pointer for writting the buffer.
-    uint8_t out_buffer[512];             ///< Buffer for outgoing packet.
-    /*@}*/
-
-    /** Buffer for incoming packets. */
-    /*@{*/
-    uint8_t in_buffer[8192];             ///< Buffer for incoming packets.
-    uint8_t *read_in_ptr;                ///< Pointer for reading from incoming buffer.
-    int remaining_in_len;                ///< Reading length from incoming buffer.
-    /*@}*/
-
-    int incoming_packet_seq;             ///< Incoming packet sequence number.
-    int incoming_flags;                  ///< Incoming packet flags.
-
-    int packet_id;                       ///< Identifier for packets in the current stream.
-    unsigned int header_packet_id;       ///< default is 2.
-
-    /** Internal handling of the ASF header */
-    /*@{*/
-    uint8_t *asf_header;                 ///< Stored ASF header.
-    int asf_header_size;                 ///< Size of stored ASF header.
-    int header_parsed;                   ///< The header has been received and parsed.
-    int asf_packet_len;
-    int asf_header_read_size;
-    /*@}*/
-
-    int stream_num;                      ///< stream numbers.
-    int is_playing;
-} MMSContext;
 
 /** Create MMST command packet header */
 static void start_command_packet(MMSContext *mms, MMSCSPacketType packet_type)
