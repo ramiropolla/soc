@@ -12,4 +12,21 @@ echo "patching ffmpeg"
 for diff in $(ls $(pwd)/diffs/*.diff); do patch -d ffmpeg -p0 -i $diff; done
 
 echo "copying files to libavfilter"
-find $(pwd) -maxdepth 1 -type f -not -name $(basename $0) -exec cp {} ffmpeg/libavfilter \;
+cp                      \
+    vf_clone.c          \
+    vf_concatenate.c    \
+    vf_drawbox.c        \
+    vf_drawtext.c       \
+    vf_fade.c           \
+    vf_fifo.c           \
+    vf_fps.c            \
+    vf_hflip.c          \
+    vf_negate.c         \
+    vf_overlay.c        \
+    vf_rotate.c         \
+    vf_setpts.c         \
+    vf_split.c          \
+    vf_transpose.c      \
+    vsrc_movie.c        \
+    ffmpeg/libavfilter
+
