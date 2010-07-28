@@ -34,7 +34,7 @@ typedef struct {
     /** Buffer for outgoing packets. */
     /*@{*/
     uint8_t *write_out_ptr;              ///< Pointer for writting the buffer.
-    uint8_t out_buffer[512];             ///< Buffer for outgoing packet.
+    uint8_t out_buffer[8192];             ///< Buffer for outgoing packet.
     /*@}*/
 
     /** Buffer for incoming packets. */
@@ -55,27 +55,4 @@ typedef struct {
 
     int stream_num;                      ///< stream numbers.
 } MMSContext;
-
-typedef struct
-{
-    URLContext *mms_hd;
-    uint8_t out_buffer[8192];             ///< Buffer for outgoing packet.
-    uint8_t in_buffer[8192]; //TODO, maybe reused by out_buffer.
-    uint8_t *read_in_ptr;
-    MMSStream streams[MAX_STREAMS];
-
-    uint8_t *asf_header;
-    int asf_header_size;
-    int asf_header_read_size;
-    int asf_data_remaining_len;
-    int asf_packet_len;
-
-
-    char location[1024];
-    int seekable;
-    int stream_num;
-    int request_seq;
-    int chunk_seq;
-    int is_header_parsed;
-}MMSHContext;
 #endif
