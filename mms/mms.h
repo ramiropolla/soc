@@ -28,10 +28,6 @@ typedef struct {
 }MMSStream;
 
 typedef struct {
-    int outgoing_packet_seq;             ///< Outgoing packet sequence number.
-    char path[256];                      ///< Path of the resource being asked for.
-    char host[128];                      ///< Host of the resources.
-
     URLContext *mms_hd;                  ///< TCP connection handle
     MMSStream streams[MAX_STREAMS];
 
@@ -48,12 +44,6 @@ typedef struct {
     int remaining_in_len;                ///< Reading length from incoming buffer.
     /*@}*/
 
-    int incoming_packet_seq;             ///< Incoming packet sequence number.
-    int incoming_flags;                  ///< Incoming packet flags.
-
-    int packet_id;                       ///< Identifier for packets in the current stream.
-    unsigned int header_packet_id;       ///< default is 2.
-
     /** Internal handling of the ASF header */
     /*@{*/
     uint8_t *asf_header;                 ///< Stored ASF header.
@@ -64,7 +54,6 @@ typedef struct {
     /*@}*/
 
     int stream_num;                      ///< stream numbers.
-    int is_playing;
 } MMSContext;
 
 typedef struct
