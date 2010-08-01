@@ -1,5 +1,5 @@
 /*
- * MMS protocol over HTTP
+ * MMS protocol common definitions.
  * Copyright (c) 2010 Zhentan Feng <spyfeng at gmail dot com>
  *
  * This file is part of FFmpeg.
