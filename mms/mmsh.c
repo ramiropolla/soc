@@ -347,17 +347,7 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
     do{
         if (mms->asf_header_read_size < mms->asf_header_size) {
             // copy asf header into buffer
-            char *pos;
-            int size_to_copy;
-            int remaining_size = mms->asf_header_size - mms->asf_header_read_size;
-            size_to_copy = FFMIN(size, remaining_size);
-            pos = mms->asf_header + mms->asf_header_read_size;
-            memcpy(buf, pos, size_to_copy);
-            mms->asf_header_read_size += size_to_copy;
-            res = size_to_copy;
-            if (mms->asf_header_read_size == mms->asf_header_size) {
-                av_freep(&mms->asf_header); // which contains asf header
-            }
+            res = ff_read_header(mms, buf, size);
         } else if (mms->remaining_in_len){
             res = ff_read_data(mms, buf, size);
         } else {

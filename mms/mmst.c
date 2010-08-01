@@ -593,21 +593,10 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     /* TODO: see tcp.c:tcp_read() about a possible timeout scheme */
     MMSTContext *mmst_ctx = h->priv_data;
     int result = 0;
-    int size_to_copy;
     MMSContext *mms = mmst_ctx->ff_ctx;
     do {
         if(mms->asf_header_read_size < mms->asf_header_size) {
-            /* Read from ASF header buffer */
-            size_to_copy= FFMIN(size,
-                                mms->asf_header_size - mms->asf_header_read_size);
-            memcpy(buf, mms->asf_header + mms->asf_header_read_size, size_to_copy);
-            mms->asf_header_read_size += size_to_copy;
-            result += size_to_copy;
-            dprintf(NULL, "Copied %d bytes from stored header. left: %d\n",
-                   size_to_copy, mms->asf_header_size - mms->asf_header_read_size);
-            if (mms->asf_header_size == mms->asf_header_read_size) {
-                av_freep(&mms->asf_header);
-            }
+           result =  ff_read_header(mms, buf, size);
         } else if(mms->remaining_in_len) {
             /* Read remaining packet data to buffer.
              * the result can not be zero because remaining_in_len is positive.*/
