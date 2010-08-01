@@ -47,7 +47,6 @@ typedef struct {
     int incoming_flags;                  ///< Incoming packet flags.
     int packet_id;                       ///< Identifier for packets in the current stream.
     unsigned int header_packet_id;       ///< default is 2.
-    int is_playing;
 } MMSTContext;
 
 
@@ -597,7 +596,7 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     int size_to_copy;
     MMSContext *mms = mmst_ctx->ff_ctx;
     do {
-        if(mms->asf_header_read_size < mms->asf_header_size && !mmst_ctx->is_playing) {
+        if(mms->asf_header_read_size < mms->asf_header_size) {
             /* Read from ASF header buffer */
             size_to_copy= FFMIN(size,
                                 mms->asf_header_size - mms->asf_header_read_size);
@@ -608,7 +607,6 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
                    size_to_copy, mms->asf_header_size - mms->asf_header_read_size);
             if (mms->asf_header_size == mms->asf_header_read_size) {
                 av_freep(&mms->asf_header);
-                mmst_ctx->is_playing = 1;
             }
         } else if(mms->remaining_in_len) {
             /* Read remaining packet data to buffer.
