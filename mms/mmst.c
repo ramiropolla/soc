@@ -619,18 +619,16 @@ static int mms_open(URLContext *h, const char *uri, int flags)
     /* Since we read the header at open(), this shouldn't be possible */
     assert(mmst_ctx->ff_ctx->header_parsed);
 
-//    if (!mmst_ctx->is_playing) {
-        dprintf(NULL, "mms_read() before play().\n");
-        clear_stream_buffers(mmst_ctx);
-        err = mms_safe_send_recv(mmst_ctx, send_stream_selection_request, SC_PKT_STREAM_ID_ACCEPTED);
-        if (err)
-            goto fail;
-        // send media packet request
-        err = mms_safe_send_recv(mmst_ctx, send_media_packet_request, SC_PKT_MEDIA_PKT_FOLLOWS);
-        if (err) {
-            goto fail;
-        }
-//    }
+    dprintf(NULL, "mms_read() before play().\n");
+    clear_stream_buffers(mmst_ctx);
+    err = mms_safe_send_recv(mmst_ctx, send_stream_selection_request, SC_PKT_STREAM_ID_ACCEPTED);
+    if (err)
+        goto fail;
+    // send media packet request
+    err = mms_safe_send_recv(mmst_ctx, send_media_packet_request, SC_PKT_MEDIA_PKT_FOLLOWS);
+    if (err) {
+        goto fail;
+    }
 
     dprintf(NULL, "Leaving open (success)\n");
     return 0;
