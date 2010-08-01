@@ -530,6 +530,31 @@ static int mms_close(URLContext *h)
     return 0;
 }
 
+static int send_media_packet_request(MMSTContext *mmst_ctx)
+{
+    MMSContext *mms = mmst_ctx->ff_ctx;
+    start_command_packet(mmst_ctx, CS_PKT_START_FROM_PKT_ID);
+    insert_command_prefixes(mmst_ctx, 1, 0x0001FFFF);
+    bytestream_put_le64(&mms->write_out_ptr, 0);          // seek timestamp
+    bytestream_put_le32(&mms->write_out_ptr, 0xffffffff); // unknown
+    bytestream_put_le32(&mms->write_out_ptr, 0xffffffff); // packet offset
+    bytestream_put_byte(&mms->write_out_ptr, 0xff);       // max stream time limit
+    bytestream_put_byte(&mms->write_out_ptr, 0xff);       // max stream time limit
+    bytestream_put_byte(&mms->write_out_ptr, 0xff);       // max stream time limit
+    bytestream_put_byte(&mms->write_out_ptr, 0x00);       // stream time limit flag
+
+    mmst_ctx->packet_id++;                                     // new packet_id
+    bytestream_put_le32(&mms->write_out_ptr, mmst_ctx->packet_id);
+    return send_command_packet(mmst_ctx);
+}
+
+static void clear_stream_buffers(MMSTContext *mmst_ctx)
+{
+    MMSContext *mms = mmst_ctx->ff_ctx;
+    mms->remaining_in_len = 0;
+    mms->read_in_ptr      = mms->in_buffer;
+}
+
 static int mms_open(URLContext *h, const char *uri, int flags)
 {
     MMSTContext *mmst_ctx;
@@ -591,6 +616,22 @@ static int mms_open(URLContext *h, const char *uri, int flags)
     if (!mms->asf_packet_len || !mms->stream_num)
         goto fail;
 
+    /* Since we read the header at open(), this shouldn't be possible */
+    assert(mmst_ctx->ff_ctx->header_parsed);
+
+//    if (!mmst_ctx->is_playing) {
+        dprintf(NULL, "mms_read() before play().\n");
+        clear_stream_buffers(mmst_ctx);
+        err = mms_safe_send_recv(mmst_ctx, send_stream_selection_request, SC_PKT_STREAM_ID_ACCEPTED);
+        if (err)
+            goto fail;
+        // send media packet request
+        err = mms_safe_send_recv(mmst_ctx, send_media_packet_request, SC_PKT_MEDIA_PKT_FOLLOWS);
+        if (err) {
+            goto fail;
+        }
+//    }
+
     dprintf(NULL, "Leaving open (success)\n");
     return 0;
 fail:
@@ -599,54 +640,11 @@ fail:
     return err;
 }
 
-static int send_media_packet_request(MMSTContext *mmst_ctx)
-{
-    MMSContext *mms = mmst_ctx->ff_ctx;
-    start_command_packet(mmst_ctx, CS_PKT_START_FROM_PKT_ID);
-    insert_command_prefixes(mmst_ctx, 1, 0x0001FFFF);
-    bytestream_put_le64(&mms->write_out_ptr, 0);          // seek timestamp
-    bytestream_put_le32(&mms->write_out_ptr, 0xffffffff); // unknown
-    bytestream_put_le32(&mms->write_out_ptr, 0xffffffff); // packet offset
-    bytestream_put_byte(&mms->write_out_ptr, 0xff);       // max stream time limit
-    bytestream_put_byte(&mms->write_out_ptr, 0xff);       // max stream time limit
-    bytestream_put_byte(&mms->write_out_ptr, 0xff);       // max stream time limit
-    bytestream_put_byte(&mms->write_out_ptr, 0x00);       // stream time limit flag
-
-    mmst_ctx->packet_id++;                                     // new packet_id
-    bytestream_put_le32(&mms->write_out_ptr, mmst_ctx->packet_id);
-    return send_command_packet(mmst_ctx);
-}
-
-
-static void clear_stream_buffers(MMSTContext *mmst_ctx)
-{
-    MMSContext *mms = mmst_ctx->ff_ctx;
-    mms->remaining_in_len = 0;
-    mms->read_in_ptr      = mms->in_buffer;
-}
-
 /** Read ASF data through the protocol. */
 static int mms_read(URLContext *h, uint8_t *buf, int size)
 {
     /* TODO: see tcp.c:tcp_read() about a possible timeout scheme */
     MMSTContext *mmst_ctx = h->priv_data;
-    int result = 0;
-
-    /* Since we read the header at open(), this shouldn't be possible */
-    assert(mmst_ctx->ff_ctx->header_parsed);
-
-    if (!mmst_ctx->is_playing) {
-        dprintf(NULL, "mms_read() before play().\n");
-        clear_stream_buffers(mmst_ctx);
-        result = mms_safe_send_recv(mmst_ctx, send_stream_selection_request, SC_PKT_STREAM_ID_ACCEPTED);
-        if (result)
-            return result;
-        // send media packet request
-        result = mms_safe_send_recv(mmst_ctx, send_media_packet_request, SC_PKT_MEDIA_PKT_FOLLOWS);
-        if (result) {
-            return result;
-        }
-    }
     return read_mms_packet(mmst_ctx, buf, size);
 }
 
