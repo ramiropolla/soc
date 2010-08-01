@@ -306,17 +306,6 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
     return 0;
 }
 
-static int read_data(MMSHContext *mmsh_ctx, char *buf, int size)
-{
-    MMSContext *mms = mmsh_ctx->ff_ctx;
-    int read_size;
-    read_size = FFMIN(size, mms->remaining_in_len);
-    memcpy(buf, mms->read_in_ptr, read_size);
-    mms->remaining_in_len -= read_size;
-    mms->read_in_ptr      += read_size;
-    return read_size;
-}
-
 static int handle_chunk_type(MMSHContext *mmsh_ctx)
 {
     MMSContext *mms = mmsh_ctx->ff_ctx;
@@ -370,12 +359,12 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
                 av_freep(&mms->asf_header); // which contains asf header
             }
         } else if (mms->remaining_in_len){
-            res =read_data(mmsh_ctx, buf, size);
+            res = ff_read_data(mms, buf, size);
         } else {
              // read data packet from network
             res = handle_chunk_type(mmsh_ctx);
             if (res == 0) {
-                res = read_data(mmsh_ctx, buf, size);
+                res = ff_read_data(mms, buf, size);
             } else {
                 dprintf(NULL, "other situation!\n");
             }

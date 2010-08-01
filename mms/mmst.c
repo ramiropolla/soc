@@ -454,17 +454,6 @@ static int send_stream_selection_request(MMSTContext *mmst_ctx)
     return send_command_packet(mmst_ctx);
 }
 
-static int read_data(MMSTContext *mmst_ctx, uint8_t *buf, const int buf_size)
-{
-    int read_size;
-    MMSContext *mms = mmst_ctx->ff_ctx;
-    read_size = FFMIN(buf_size, mms->remaining_in_len);
-    memcpy(buf, mms->read_in_ptr, read_size);
-    mms->remaining_in_len -= read_size;
-    mms->read_in_ptr      += read_size;
-    return read_size;
-}
-
 /** Read at most one media packet (or a whole header). */
 static int read_mms_packet(MMSTContext *mmst_ctx, uint8_t *buf, int buf_size)
 {
@@ -488,7 +477,7 @@ static int read_mms_packet(MMSTContext *mmst_ctx, uint8_t *buf, int buf_size)
         } else if(mms->remaining_in_len) {
             /* Read remaining packet data to buffer.
              * the result can not be zero because remaining_in_len is positive.*/
-            result = read_data(mmst_ctx, buf, buf_size);
+            result = ff_read_data(mms, buf, buf_size);
         } else {
             /* Read from network */
             int err = mms_safe_send_recv(mmst_ctx, NULL, SC_PKT_ASF_MEDIA);
@@ -500,7 +489,7 @@ static int read_mms_packet(MMSTContext *mmst_ctx, uint8_t *buf, int buf_size)
                     result= AVERROR_IO;
                 } else {
                     // copy the data to the packet buffer.
-                    result = read_data(mmst_ctx, buf, buf_size);
+                    result = ff_read_data(mms, buf, buf_size);
                     if (result == 0) {
                         dprintf(NULL, "read asf media paket size is zero!\n");
                         break;

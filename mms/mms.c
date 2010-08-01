@@ -24,6 +24,16 @@
 #include "asf.h"
 #include "libavutil/intreadwrite.h"
 
+int ff_read_data(MMSContext *mms, uint8_t *buf, const int buf_size)
+{
+    int read_size;
+    read_size = FFMIN(buf_size, mms->remaining_in_len);
+    memcpy(buf, mms->read_in_ptr, read_size);
+    mms->remaining_in_len -= read_size;
+    mms->read_in_ptr      += read_size;
+    return read_size;
+}
+
 int ff_asf_header_parser(MMSContext *mms)
 {
     uint8_t *p = mms->asf_header;

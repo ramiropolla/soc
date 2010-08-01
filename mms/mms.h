@@ -57,4 +57,5 @@ typedef struct {
 } MMSContext;
 
 int ff_asf_header_parser(MMSContext * mms);
+int ff_read_data(MMSContext *mms, uint8_t *buf, const int buf_size);
 #endif
