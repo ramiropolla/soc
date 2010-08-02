@@ -39,10 +39,10 @@ int ff_mms_read_header(MMSContext *mms, uint8_t *buf, const int size)
     return size_to_copy;
 }
 
-int ff_mms_read_data(MMSContext *mms, uint8_t *buf, const int buf_size)
+int ff_mms_read_data(MMSContext *mms, uint8_t *buf, const int size)
 {
     int read_size;
-    read_size = FFMIN(buf_size, mms->remaining_in_len);
+    read_size = FFMIN(size, mms->remaining_in_len);
     memcpy(buf, mms->read_in_ptr, read_size);
     mms->remaining_in_len -= read_size;
     mms->read_in_ptr      += read_size;
