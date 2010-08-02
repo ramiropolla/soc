@@ -24,7 +24,7 @@
 #include "asf.h"
 #include "libavutil/intreadwrite.h"
 
-int ff_mms_read_header(MMSContext *mms, uint8_t *buf, int size)
+int ff_mms_read_header(MMSContext *mms, uint8_t *buf, const int size)
 {
     char *pos;
     int size_to_copy;
