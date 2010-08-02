@@ -182,7 +182,7 @@ static int get_http_header_data(MMSHContext *mmsh_ctx)
             }
             mms->asf_header_size = len;
             if (!mms->header_parsed) {
-                res = ff_asf_header_parser(mms);
+                res = ff_mms_asf_header_parser(mms);
                 mms->header_parsed = 1;
                 return res;
             }
@@ -347,14 +347,14 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
     do{
         if (mms->asf_header_read_size < mms->asf_header_size) {
             // copy asf header into buffer
-            res = ff_read_header(mms, buf, size);
+            res = ff_mms_read_header(mms, buf, size);
         } else if (mms->remaining_in_len){
-            res = ff_read_data(mms, buf, size);
+            res = ff_mms_read_data(mms, buf, size);
         } else {
              // read data packet from network
             res = handle_chunk_type(mmsh_ctx);
             if (res == 0) {
-                res = ff_read_data(mms, buf, size);
+                res = ff_mms_read_data(mms, buf, size);
             } else {
                 dprintf(NULL, "other situation!\n");
             }

@@ -555,7 +555,7 @@ static int mms_open(URLContext *h, const char *uri, int flags)
         goto fail;
     if((mmst_ctx->incoming_flags != 0X08) && (mmst_ctx->incoming_flags != 0X0C))
         goto fail;
-    err = ff_asf_header_parser(mms);
+    err = ff_mms_asf_header_parser(mms);
     if (err) {
         dprintf(NULL, "asf header parsed failed!\n");
         goto fail;
@@ -596,11 +596,11 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
     MMSContext *mms = mmst_ctx->ff_ctx;
     do {
         if(mms->asf_header_read_size < mms->asf_header_size) {
-           result =  ff_read_header(mms, buf, size);
+           result =  ff_mms_read_header(mms, buf, size);
         } else if(mms->remaining_in_len) {
             /* Read remaining packet data to buffer.
              * the result can not be zero because remaining_in_len is positive.*/
-            result = ff_read_data(mms, buf, size);
+            result = ff_mms_read_data(mms, buf, size);
         } else {
             /* Read from network */
             int err = mms_safe_send_recv(mmst_ctx, NULL, SC_PKT_ASF_MEDIA);
@@ -612,7 +612,7 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
                     result= AVERROR_IO;
                 } else {
                     // copy the data to the packet buffer.
-                    result = ff_read_data(mms, buf, size);
+                    result = ff_mms_read_data(mms, buf, size);
                     if (result == 0) {
                         dprintf(NULL, "read asf media paket size is zero!\n");
                         break;
