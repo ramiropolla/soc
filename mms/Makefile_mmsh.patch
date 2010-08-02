@@ -2,12 +2,11 @@ Index: libavformat/Makefile
 ===================================================================
 --- libavformat/Makefile	(revision 24643)
 +++ libavformat/Makefile	(working copy)
-@@ -287,7 +287,9 @@
+@@ -287,7 +287,8 @@
  OBJS-$(CONFIG_FILE_PROTOCOL)             += file.o
  OBJS-$(CONFIG_GOPHER_PROTOCOL)           += gopher.o
  OBJS-$(CONFIG_HTTP_PROTOCOL)             += http.o httpauth.o
 -OBJS-$(CONFIG_MMST_PROTOCOL)             += mmst.o asf.o
-+OBJS-$(CONFIG_MMS_PROTOCOL)              += mmsh.o mms.o asf.o
 +OBJS-$(CONFIG_MMSH_PROTOCOL)             += mmsh.o mms.o asf.o
 +OBJS-$(CONFIG_MMST_PROTOCOL)             += mmst.o mms.o asf.o
  OBJS-$(CONFIG_MD5_PROTOCOL)              += md5proto.o
@@ -17,11 +16,10 @@ Index: libavformat/allformats.c
 ===================================================================
 --- libavformat/allformats.c	(revision 24643)
 +++ libavformat/allformats.c	(working copy)
-@@ -225,6 +225,8 @@
+@@ -225,6 +225,7 @@
      REGISTER_PROTOCOL (FILE, file);
      REGISTER_PROTOCOL (GOPHER, gopher);
      REGISTER_PROTOCOL (HTTP, http);
-+    REGISTER_PROTOCOL (MMS, mms);
 +    REGISTER_PROTOCOL (MMSH, mmsh);
      REGISTER_PROTOCOL (MMST, mmst);
      REGISTER_PROTOCOL (MD5,  md5);

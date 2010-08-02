@@ -363,15 +363,6 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
     return res;
 }
 
-URLProtocol mms_protocol = {
-    "mms",
-    mmsh_open,
-    mmsh_read,
-    NULL, // write
-    NULL, // seek
-    mmsh_close,
-};
-
 URLProtocol mmsh_protocol = {
     "mmsh",
     mmsh_open,
