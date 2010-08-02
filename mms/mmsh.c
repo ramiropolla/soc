@@ -81,7 +81,7 @@ typedef struct
 static int mmsh_close(URLContext *h)
 {
     MMSHContext *mmsh_ctx = (MMSHContext *)h->priv_data;
-    MMSContext *mms = mmsh_ctx->ff_ctx;
+    MMSContext *mms       = mmsh_ctx->ff_ctx;
     if(mms->mms_hd)
         url_close(mms->mms_hd);
     av_freep(&mms->asf_header);
@@ -104,7 +104,7 @@ static int get_chunk_header(MMSHContext *mmsh_ctx, int *len)
         return AVERROR(EIO);
     }
     chunk_type = AV_RL16(chunk_header);
-    chunk_len = AV_RL16(chunk_header + 2);
+    chunk_len  = AV_RL16(chunk_header + 2);
     if (chunk_type == CHUNK_TYPE_END ||chunk_type == CHUNK_TYPE_STREAM_CHANGE) {
         ext_header_len = 4;
     } else if (chunk_type == CHUNK_TYPE_ASF_HEADER || chunk_type == CHUNK_TYPE_DATA) {
@@ -128,7 +128,7 @@ static int get_chunk_header(MMSHContext *mmsh_ctx, int *len)
 
 static int read_data_packet(MMSHContext *mmsh_ctx, const int len)
 {
-    MMSContext *mms = mmsh_ctx->ff_ctx;
+    MMSContext *mms   = mmsh_ctx->ff_ctx;
     int res, pad_size = 0;
     res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
     dprintf(NULL, "data packet len = %d\n", len);
@@ -143,7 +143,7 @@ static int read_data_packet(MMSHContext *mmsh_ctx, const int len)
         pad_size = mms->asf_packet_len - len;
         memset(mms->in_buffer + len, 0, pad_size);
     }
-    mms->read_in_ptr = mms->in_buffer;
+    mms->read_in_ptr      = mms->in_buffer;
     mms->remaining_in_len = mms->asf_packet_len;
     return 0;
 }
@@ -273,7 +273,7 @@ static int mmsh_open_cnx(MMSHContext *mmsh_ctx)
           return AVERROR(EIO);
     }
 
-   err = get_http_header_data(mmsh_ctx);
+    err = get_http_header_data(mmsh_ctx);
     if (err) {
         dprintf(NULL, "get http header data fialed!\n");
         return (err);
@@ -343,7 +343,7 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
 {
     int res = 0;
     MMSHContext *mmsh_ctx = h->priv_data;
-    MMSContext *mms = mmsh_ctx->ff_ctx;
+    MMSContext *mms       = mmsh_ctx->ff_ctx;
     do{
         if (mms->asf_header_read_size < mms->asf_header_size) {
             // copy asf header into buffer

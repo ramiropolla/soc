@@ -34,7 +34,7 @@ typedef struct {
     /** Buffer for outgoing packets. */
     /*@{*/
     uint8_t *write_out_ptr;              ///< Pointer for writting the buffer.
-    uint8_t out_buffer[8192];             ///< Buffer for outgoing packet.
+    uint8_t out_buffer[8192];            ///< Buffer for outgoing packet.
     /*@}*/
 
     /** Buffer for incoming packets. */

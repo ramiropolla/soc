@@ -309,10 +309,10 @@ static MMSSCPacketType get_tcp_server_response(MMSTContext *mmst_ctx)
 
             // note we cache the first 8 bytes,
             // then fill up the buffer with the others
-            tmp                       = AV_RL16(mms->in_buffer + 6);
-            length_remaining          = (tmp - 8) & 0xffff;
+            tmp                            = AV_RL16(mms->in_buffer + 6);
+            length_remaining               = (tmp - 8) & 0xffff;
             mmst_ctx->incoming_packet_seq  = AV_RL32(mms->in_buffer);
-            packet_id_type            = mms->in_buffer[4];
+            packet_id_type                 = mms->in_buffer[4];
             mmst_ctx->incoming_flags       = mms->in_buffer[5];
 
             if (length_remaining < 0
@@ -499,7 +499,7 @@ static int send_media_packet_request(MMSTContext *mmst_ctx)
 
 static void clear_stream_buffers(MMSTContext *mmst_ctx)
 {
-    MMSContext *mms = mmst_ctx->ff_ctx;
+    MMSContext *mms       = mmst_ctx->ff_ctx;
     mms->remaining_in_len = 0;
     mms->read_in_ptr      = mms->in_buffer;
 }
@@ -592,8 +592,8 @@ static int mms_read(URLContext *h, uint8_t *buf, int size)
 {
     /* TODO: see tcp.c:tcp_read() about a possible timeout scheme */
     MMSTContext *mmst_ctx = h->priv_data;
-    int result = 0;
-    MMSContext *mms = mmst_ctx->ff_ctx;
+    int result            = 0;
+    MMSContext *mms       = mmst_ctx->ff_ctx;
     do {
         if(mms->asf_header_read_size < mms->asf_header_size) {
            result =  ff_mms_read_header(mms, buf, size);
