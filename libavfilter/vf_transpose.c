@@ -67,48 +67,48 @@ static int config_props_output(AVFilterLink *link)
 static void end_frame(AVFilterLink *link)
 {
     TransContext *trans = link->dst->priv;
-    AVFilterPicRef *in  = link->cur_pic;
-    AVFilterPicRef *out = link->dst->outputs[0]->outpic;
-    AVFilterPicRef *pic = link->cur_pic;
+    AVFilterBufferRef *in  = link->cur_buf;
+    AVFilterBufferRef *out = link->dst->outputs[0]->out_buf;
+    AVFilterBufferRef *pic = link->cur_buf;
     AVFilterLink *output = link->dst->outputs[0];
     int i, j, plane;
 
     /* luma plane */
-    for(i = 0; i < pic->h; i ++)
-        for(j = 0; j < pic->w; j ++)
+    for(i = 0; i < pic->video->h; i ++)
+        for(j = 0; j < pic->video->w; j ++)
             *(out->data[0] +   j *out->linesize[0] + i) =
                 *(in->data[0]+ i * in->linesize[0] + j);
 
     /* chroma planes */
     for(plane = 1; plane < 3; plane ++) {
-        for(i = 0; i < pic->h >> trans->vsub; i++) {
-            for(j = 0; j < pic->w >> trans->hsub; j++)
+        for(i = 0; i < pic->video->h >> trans->vsub; i++) {
+            for(j = 0; j < pic->video->w >> trans->hsub; j++)
                 *(out->data[plane] +   j *out->linesize[plane] + i) =
                     *(in->data[plane]+ i * in->linesize[plane] + j);
         }
     }
 
-    avfilter_unref_pic(in);
-    avfilter_draw_slice(output, 0, out->h, 1);
+    avfilter_unref_buffer(in);
+    avfilter_draw_slice(output, 0, out->video->h, 1);
     avfilter_end_frame(output);
-    avfilter_unref_pic(out);
+    avfilter_unref_buffer(out);
 }
 
-static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
+static void start_frame(AVFilterLink *link, AVFilterBufferRef *picref)
 {
     AVFilterLink *out = link->dst->outputs[0];
 
-    out->outpic      = avfilter_get_video_buffer(out, AV_PERM_WRITE, out->w, out->h);
-    out->outpic->pts = picref->pts;
+    out->out_buf      = avfilter_get_video_buffer(out, AV_PERM_WRITE, out->w, out->h);
+    out->out_buf->pts = picref->pts;
 
-    if(picref->pixel_aspect.num == 0) {
-        out->outpic->pixel_aspect = picref->pixel_aspect;
+    if (picref->video->pixel_aspect.num == 0) {
+        out->out_buf->video->pixel_aspect = picref->video->pixel_aspect;
     } else {
-        out->outpic->pixel_aspect.num = picref->pixel_aspect.den;
-        out->outpic->pixel_aspect.den = picref->pixel_aspect.num;
+        out->out_buf->video->pixel_aspect.num = picref->video->pixel_aspect.den;
+        out->out_buf->video->pixel_aspect.den = picref->video->pixel_aspect.num;
     }
 
-    avfilter_start_frame(out, avfilter_ref_pic(out->outpic, ~0));
+    avfilter_start_frame(out, avfilter_ref_buffer(out->out_buf, ~0));
 }
 
 AVFilter avfilter_vf_transpose =

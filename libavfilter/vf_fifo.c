@@ -23,7 +23,7 @@
 
 typedef struct BufPic
 {
-    AVFilterPicRef *pic;
+    AVFilterBufferRef *pic;
     struct BufPic  *next;
 } BufPic;
 
@@ -48,12 +48,12 @@ static av_cold void uninit(AVFilterContext *ctx)
 
     for(pic = buf->root.next; pic; pic = tmp) {
         tmp = pic->next;
-        avfilter_unref_pic(pic->pic);
+        avfilter_unref_buffer(pic->pic);
         av_free(pic);
     }
 }
 
-static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
+static void start_frame(AVFilterLink *link, AVFilterBufferRef *picref)
 {
     BufferContext *buf = link->dst->priv;
 
@@ -84,7 +84,7 @@ static int request_frame(AVFilterLink *link)
     /* by doing this, we give ownership of the reference to the next filter,
      * so we don't have to worry about dereferencing it ourselves. */
     avfilter_start_frame(link, buf->root.next->pic);
-    avfilter_draw_slice(link, 0, buf->root.next->pic->h, 1);
+    avfilter_draw_slice(link, 0, buf->root.next->pic->video->h, 1);
     avfilter_end_frame(link);
 
     if(buf->last == buf->root.next)

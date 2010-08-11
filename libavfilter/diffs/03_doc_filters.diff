@@ -1,6 +1,6 @@
 Index: doc/filters.texi
 ===================================================================
---- doc/filters.texi	(revision 24545)
+--- doc/filters.texi	(revision 24776)
 +++ doc/filters.texi	(working copy)
 @@ -39,6 +39,114 @@
  

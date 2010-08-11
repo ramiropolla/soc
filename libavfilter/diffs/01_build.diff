@@ -1,15 +1,12 @@
 Index: libavfilter/Makefile
 ===================================================================
---- libavfilter/Makefile	(revision 24545)
+--- libavfilter/Makefile	(revision 24776)
 +++ libavfilter/Makefile	(working copy)
-@@ -1,10 +1,11 @@
- include $(SUBDIR)../config.mak
- 
+@@ -3,8 +3,9 @@
  NAME = avfilter
--FFLIBS = avcodec avcore avutil swscale
-+FFLIBS = avcodec avcore avutil
-+FFLIBS-$(CONFIG_SCALE_FILTER)  += swscale
- FFLIBS-$(CONFIG_AVFILTER_LAVF) += avformat
+ FFLIBS = avcodec avcore avutil
+ FFLIBS-$(CONFIG_SCALE_FILTER) += swscale
++FFLIBS-$(CONFIG_MOVIE_FILTER) += avformat
  
 -HEADERS = avfilter.h
 +HEADERS = avfilter.h avfiltergraph.h
@@ -51,7 +48,7 @@ Index: libavfilter/Makefile
  OBJS-$(CONFIG_NULLSINK_FILTER)               += vsink_nullsink.o
 Index: libavfilter/allfilters.c
 ===================================================================
---- libavfilter/allfilters.c	(revision 24545)
+--- libavfilter/allfilters.c	(revision 24776)
 +++ libavfilter/allfilters.c	(working copy)
 @@ -36,19 +36,32 @@
  

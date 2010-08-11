@@ -21,12 +21,13 @@
 
 /* TODO: improve handling of non-continuous timestamps (mpeg, seeking, etc) */
 
+#include "libavcore/parseutils.h"
 #include "avfilter.h"
 
 typedef struct {
     uint64_t timebase;
     uint64_t pts;
-    AVFilterPicRef *pic;
+    AVFilterBufferRef *pic;
     int videoend;
     int has_frame;
 } FPSContext;
@@ -39,7 +40,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 
     rate = default_rate;
 
-    if (args && (av_parse_video_frame_rate(&rate, args) < 0)) {
+    if (args && (av_parse_video_rate(&rate, args) < 0)) {
         av_log(ctx, AV_LOG_ERROR, "Invalid frame rate: \"%s\"\n", args);
         rate = default_rate;
     }
@@ -51,13 +52,13 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
 static av_cold void uninit(AVFilterContext *ctx)
 {
     FPSContext *fps = ctx->priv;
-    if(fps->pic) avfilter_unref_pic(fps->pic);
+    if(fps->pic) avfilter_unref_buffer(fps->pic);
 }
 
-static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
+static void start_frame(AVFilterLink *link, AVFilterBufferRef *picref)
 {
     FPSContext *fps = link->dst->priv;
-    if(fps->pic) avfilter_unref_pic(fps->pic);
+    if(fps->pic) avfilter_unref_buffer(fps->pic);
     fps->pic = picref;
 }
 
@@ -95,11 +96,11 @@ static int request_frame(AVFilterLink *link)
                 return -1;
 
     fps->has_frame=0;
-    avfilter_start_frame(link, avfilter_ref_pic(fps->pic, ~AV_PERM_WRITE));
-    avfilter_draw_slice (link, 0, fps->pic->h, 1);
+    avfilter_start_frame(link, avfilter_ref_buffer(fps->pic, ~AV_PERM_WRITE));
+    avfilter_draw_slice (link, 0, fps->pic->video->h, 1);
     avfilter_end_frame  (link);
 
-    avfilter_unref_pic(fps->pic);
+    avfilter_unref_buffer(fps->pic);
     fps->pic = NULL;
 
     fps->pts += fps->timebase;

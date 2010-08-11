@@ -1,6 +1,6 @@
 Index: configure
 ===================================================================
---- configure	(revision 24545)
+--- configure	(revision 24776)
 +++ configure	(working copy)
 @@ -168,6 +168,7 @@
                             and libraw1394 [no]
@@ -10,7 +10,7 @@ Index: configure
    --enable-libgsm          enable GSM support via libgsm [no]
    --enable-libmp3lame      enable MP3 encoding via libmp3lame [no]
    --enable-libnut          enable NUT (de)muxing via libnut,
-@@ -872,6 +873,7 @@
+@@ -873,6 +874,7 @@
      libdc1394
      libdirac
      libfaac
@@ -18,7 +18,7 @@ Index: configure
      libgsm
      libmp3lame
      libnut
-@@ -1014,6 +1016,7 @@
+@@ -1015,6 +1017,7 @@
      llrintf
      local_aligned_16
      local_aligned_8
@@ -26,15 +26,18 @@ Index: configure
      log2
      log2f
      loongson
-@@ -1381,6 +1384,7 @@
+@@ -1380,6 +1383,10 @@
+ tcp_protocol_deps="network"
  udp_protocol_deps="network"
  
- # filters
++# filters
 +drawtext_filter_deps="libfreetype"
- movie_filter_deps="avfilter_lavf"
- avfilter_lavf_deps="avformat"
- 
-@@ -2579,6 +2583,7 @@
++movie_filter_deps="avformat"
++
+ # libraries
+ avdevice_deps="avcodec avformat"
+ avformat_deps="avcodec"
+@@ -2602,6 +2609,7 @@
  check_struct "sys/time.h sys/resource.h" "struct rusage" ru_maxrss
  check_func  inet_aton $network_extralibs
  check_func  isatty
@@ -42,7 +45,7 @@ Index: configure
  check_func  ${malloc_prefix}memalign            && enable memalign
  check_func  mkstemp
  check_func  ${malloc_prefix}posix_memalign      && enable posix_memalign
-@@ -2661,6 +2666,7 @@
+@@ -2684,6 +2692,7 @@
                        require  libdirac libdirac_decoder/dirac_parser.h dirac_decoder_init $(pkg-config --libs dirac) &&
                        require  libdirac libdirac_encoder/dirac_encoder.h dirac_encoder_init $(pkg-config --libs dirac)
  enabled libfaac    && require2 libfaac "stdint.h faac.h" faacEncGetVersion -lfaac

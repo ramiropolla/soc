@@ -50,7 +50,7 @@ typedef struct {
      *  pics[1][0..1] are pictures for the sub image.
      *  pics[x][0]    are previously outputted images.
      *  pics[x][1]    are queued, yet unused frames for each input. */
-    AVFilterPicRef *pics[2][2];
+    AVFilterBufferRef *pics[2][2];
 
     int bpp;                    //< bytes per pixel
     int hsub, vsub;             //< chroma subsampling
@@ -79,7 +79,7 @@ static av_cold void uninit(AVFilterContext *ctx)
     for(i = 0; i < 2; i ++)
         for(j = 0; j < 2; j ++)
             if(over->pics[i][j])
-                avfilter_unref_pic(over->pics[i][j]);
+                avfilter_unref_buffer(over->pics[i][j]);
 }
 
 static int query_formats(AVFilterContext *ctx)
@@ -163,12 +163,12 @@ static void shift_input(OverlayContext *over, int idx)
 {
     assert(over->pics[idx][0]);
     assert(over->pics[idx][1]);
-    avfilter_unref_pic(over->pics[idx][0]);
+    avfilter_unref_buffer(over->pics[idx][0]);
     over->pics[idx][0] = over->pics[idx][1];
     over->pics[idx][1] = NULL;
 }
 
-static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
+static void start_frame(AVFilterLink *link, AVFilterBufferRef *picref)
 {
     OverlayContext *over = link->dst->priv;
     /* There shouldn't be any previous queued frame in this queue */
@@ -201,8 +201,8 @@ static int lower_timestamp(OverlayContext *over)
     return (over->pics[0][1]->pts > over->pics[1][1]->pts);
 }
 
-static void copy_image_rgb(AVFilterPicRef *dst, int x, int y,
-                           AVFilterPicRef *src, int w, int h, int bpp)
+static void copy_image_rgb(AVFilterBufferRef *dst, int x, int y,
+                           AVFilterBufferRef *src, int w, int h, int bpp)
 {
     AVPicture pic;
 
@@ -210,7 +210,7 @@ static void copy_image_rgb(AVFilterPicRef *dst, int x, int y,
     pic.data[0] += x * bpp;
     pic.data[0] += y * pic.linesize[0];
 
-    if (src->pic->format == PIX_FMT_BGRA) {
+    if (src->format == PIX_FMT_BGRA) {
         for (y = 0; y < h; y++) {
                   uint8_t *optr = pic.data[0]  + y * pic.linesize[0];
             const uint8_t *iptr = src->data[0] + y * src->linesize[0];
@@ -224,7 +224,7 @@ static void copy_image_rgb(AVFilterPicRef *dst, int x, int y,
             }
         }
     } else {
-        av_picture_copy(&pic, (AVPicture *)src->data, dst->pic->format, w, h);
+        av_picture_copy(&pic, (AVPicture *)src->data, dst->format, w, h);
     }
 }
 
@@ -249,8 +249,8 @@ static void copy_blended(uint8_t* out, int out_linesize,
     }
 }
 
-static void copy_image_yuv(AVFilterPicRef *dst, int x, int y,
-                           AVFilterPicRef *src, int w, int h,
+static void copy_image_yuv(AVFilterBufferRef *dst, int x, int y,
+                           AVFilterBufferRef *src, int w, int h,
                            int bpp, int hsub, int vsub)
 {
     AVPicture pic;
@@ -270,7 +270,7 @@ static void copy_image_yuv(AVFilterPicRef *dst, int x, int y,
         }
     }
 
-    if (src->pic->format == PIX_FMT_YUVA420P) {
+    if (src->format == PIX_FMT_YUVA420P) {
         int chroma_w = w>>hsub;
         int chroma_h = h>>vsub;
         assert(dst->pic->format == PIX_FMT_YUV420P);
@@ -278,15 +278,15 @@ static void copy_image_yuv(AVFilterPicRef *dst, int x, int y,
         copy_blended(pic.data[1], pic.linesize[1], src->data[1], src->linesize[1], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
         copy_blended(pic.data[2], pic.linesize[2], src->data[2], src->linesize[2], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
     } else {
-        av_picture_copy(&pic, (AVPicture *)src->data, dst->pic->format, w, h);
+        av_picture_copy(&pic, (AVPicture *)src->data, dst->format, w, h);
     }
 }
 
-static void copy_image(AVFilterPicRef *dst, int x, int y,
-                       AVFilterPicRef *src, int w, int h,
+static void copy_image(AVFilterBufferRef *dst, int x, int y,
+                       AVFilterBufferRef *src, int w, int h,
                        int bpp, int hsub, int vsub)
 {
-    if (dst->pic->format == PIX_FMT_YUV420P)
+    if (dst->format == PIX_FMT_YUV420P)
         return copy_image_yuv(dst, x, y, src, w, h, bpp, hsub, vsub);
     else
         return copy_image_rgb(dst, x, y, src, w, h, bpp);
@@ -294,7 +294,7 @@ static void copy_image(AVFilterPicRef *dst, int x, int y,
 
 static int request_frame(AVFilterLink *link)
 {
-    AVFilterPicRef *pic;
+    AVFilterBufferRef *pic;
     OverlayContext *over = link->src->priv;
     int idx;
     int x, y, w, h;
@@ -340,14 +340,14 @@ static int request_frame(AVFilterLink *link)
     /* we draw the output frame */
     pic = avfilter_get_video_buffer(link, AV_PERM_WRITE, link->w, link->h);
     if(over->pics[0][0]) {
-        pic->pixel_aspect = over->pics[0][0]->pixel_aspect;
+        pic->video->pixel_aspect = over->pics[0][0]->video->pixel_aspect;
         copy_image(pic, 0, 0, over->pics[0][0], link->w, link->h,
                    over->bpp, over->hsub, over->vsub);
     }
     x = FFMIN(over->x, link->w-1);
     y = FFMIN(over->y, link->h-1);
-    w = FFMIN(link->w-x, over->pics[1][0]->w);
-    h = FFMIN(link->h-y, over->pics[1][0]->h);
+    w = FFMIN(link->w-x, over->pics[1][0]->video->w);
+    h = FFMIN(link->h-y, over->pics[1][0]->video->h);
     if(over->pics[1][0])
         copy_image(pic, x, y, over->pics[1][0], w, h,
                    over->bpp, over->hsub, over->vsub);
@@ -356,10 +356,10 @@ static int request_frame(AVFilterLink *link)
     pic->pts = FFMAX(over->pics[0][0]->pts, over->pics[1][0]->pts);
 
     /* and send it to the next filter */
-    avfilter_start_frame(link, avfilter_ref_pic(pic, ~0));
-    avfilter_draw_slice (link, 0, pic->h, 1);
+    avfilter_start_frame(link, avfilter_ref_buffer(pic, ~0));
+    avfilter_draw_slice (link, 0, pic->video->h, 1);
     avfilter_end_frame  (link);
-    avfilter_unref_pic(pic);
+    avfilter_unref_buffer(pic);
 
     return 0;
 }

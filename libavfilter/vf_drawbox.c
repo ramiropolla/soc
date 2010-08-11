@@ -92,7 +92,7 @@ static int config_input(AVFilterLink *link)
     return 0;
 }
 
-static void draw_box(AVFilterPicRef *pic, BoxContext* context, box_color color)
+static void draw_box(AVFilterBufferRef *pic, BoxContext* context, box_color color)
 {
     int x, y;
     int channel;
@@ -100,14 +100,14 @@ static void draw_box(AVFilterPicRef *pic, BoxContext* context, box_color color)
     int xb = context->x;
     int yb = context->y;
 
-    for (y = yb; (y < yb + context->h) && y < pic->h; y++) {
+    for (y = yb; (y < yb + context->h) && y < pic->video->h; y++) {
         row[0] = pic->data[0] + y * pic->linesize[0];
 
         for (channel = 1; channel < 3; channel++)
             row[channel] = pic->data[channel] +
                 pic->linesize[channel] * (y>> context->vsub);
 
-        for (x = xb; (x < xb + context->w) && x < pic->w; x++)
+        for (x = xb; (x < xb + context->w) && x < pic->video->w; x++)
             if((y - yb < 3) || (yb + context->h - y < 4) ||
                (x - xb < 3) || (xb + context->w - x < 4)) {
                 row[0][x] = color.y;
@@ -121,11 +121,11 @@ static void end_frame(AVFilterLink *link)
 {
     BoxContext *context = link->dst->priv;
     AVFilterLink *output = link->dst->outputs[0];
-    AVFilterPicRef *pic = link->cur_pic;
+    AVFilterBufferRef *pic = link->cur_buf;
 
     draw_box(pic,context,context->color);
 
-    avfilter_draw_slice(output, 0, pic->h, 1);
+    avfilter_draw_slice(output, 0, pic->video->h, 1);
     avfilter_end_frame(output);
 }
 

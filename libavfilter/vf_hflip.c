@@ -53,14 +53,14 @@ static int config_props(AVFilterLink *link)
 static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
 {
     FlipContext    *flip = link->dst->priv;
-    AVFilterPicRef *in   = link->cur_pic;
-    AVFilterPicRef *out  = link->dst->outputs[0]->outpic;
+    AVFilterBufferRef *in   = link->cur_buf;
+    AVFilterBufferRef *out  = link->dst->outputs[0]->out_buf;
     uint8_t *inrow, *outrow;
     int i, j, plane;
 
     /* luma plane */
     outrow = out->data[0] + y * out->linesize[0];
-    inrow  = in-> data[0] + y * in-> linesize[0] + in->w -1;
+    inrow  = in-> data[0] + y * in-> linesize[0] + in->video->w -1;
     for(i = 0; i < h; i++) {
         for(j = 0; j < link->w; j++)
             outrow[j] = inrow[-j];
