@@ -56,17 +56,6 @@ static const char* mmsh_first_request =
     CLIENTGUID
     "Connection: Close\r\n\r\n";
 
-static const char* mmsh_seekable_request =
-    "Accept: */*\r\n"
-    USERAGENT
-    "Host: %s:%d\r\n"
-    "Pragma: no-cache,rate=1.000000,stream-time=%u,stream-offset=%u:%u,request-context=%u,max-duration=%u\r\n"
-    CLIENTGUID
-    "Pragma: xPlayStrm=1\r\n"
-    "Pragma: stream-switch-count=%d\r\n"
-    "Pragma: stream-switch-entry=%s\r\n" /*  ffff:1:0 ffff:2:0 */
-    "Connection: Close\r\n\r\n";
-
 static const char* mmsh_live_request =
     "Accept: */*\r\n"
     USERAGENT
@@ -81,7 +70,6 @@ static const char* mmsh_live_request =
 typedef struct {
     MMSContext mms;
     char location[1024];
-    int seekable;
     int stream_num;
     int request_seq;  ///< request packet sequence
     int chunk_seq;    ///< data packet sequence
@@ -263,13 +251,8 @@ static int mmsh_open_cnx(MMSHContext *mmsh)
         offset += err;
     }
     // send play request
-    if (mmsh->seekable) {
-        err = snprintf(headers, sizeof(headers), mmsh_seekable_request,
-            host, port, 0, 0, 0, mmsh->request_seq++, 0, mms->stream_num, stream_selection);
-    } else {
         err = snprintf(headers, sizeof(headers), mmsh_live_request,
             host, port, mmsh->request_seq++, mms->stream_num, stream_selection);
-    }
     if (err < 0) {
         dprintf(NULL, "build play request failed!\n");
         return err;
