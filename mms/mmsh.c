@@ -344,16 +344,10 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
         if (mms->asf_header_read_size < mms->asf_header_size) {
             // copy asf header into buffer
             res = ff_mms_read_header(mms, buf, size);
-        } else if (mms->remaining_in_len){
-            res = ff_mms_read_data(mms, buf, size);
         } else {
-             // read data packet from network
-            res = handle_chunk_type(mmsh);
-            if (res == 0) {
-                res = ff_mms_read_data(mms, buf, size);
-            } else {
-                dprintf(NULL, "other situation!\n");
-            }
+            if (!mms->remaining_in_len && (res = handle_chunk_type(mmsh)))
+                return res;
+            res = ff_mms_read_data(mms, buf, size);
         }
     }while(!res);
     return res;
