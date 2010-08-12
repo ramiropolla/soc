@@ -315,20 +315,21 @@ static int handle_chunk_type(MMSHContext *mmsh)
     int chunk_type;
     chunk_type = get_chunk_header(mmsh, &len);
 
-    if(chunk_type == CHUNK_TYPE_END) {
-        if (mmsh->chunk_seq == 0) {
-            av_log(NULL, AV_LOG_ERROR, "The stream is end.\n");
-            return AVERROR_IO;
-        }
-    } else if (chunk_type == CHUNK_TYPE_STREAM_CHANGE) {
+    switch (chunk_type) {
+    case CHUNK_TYPE_END:
+        mmsh->chunk_seq = 0;
+        av_log(NULL, AV_LOG_ERROR, "The stream is end.\n");
+        return AVERROR_IO;
+    case CHUNK_TYPE_STREAM_CHANGE:
         mms->header_parsed = 0;
         if ((res = get_http_header_data(mmsh)) !=0) {
             av_log(NULL, AV_LOG_ERROR,"stream changed! get new header failed!\n");
             return res;
         }
-    } else if (chunk_type == CHUNK_TYPE_DATA) {
+        break;
+    case CHUNK_TYPE_DATA:
         return read_data_packet(mmsh, len);
-    } else {
+    default:
         av_log(NULL, AV_LOG_ERROR, "recv other type packet %d\n", chunk_type);
         return AVERROR_INVALIDDATA;
     }
