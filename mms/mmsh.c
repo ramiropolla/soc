@@ -251,8 +251,8 @@ static int mmsh_open_cnx(MMSHContext *mmsh)
         offset += err;
     }
     // send play request
-        err = snprintf(headers, sizeof(headers), mmsh_live_request,
-            host, port, mmsh->request_seq++, mms->stream_num, stream_selection);
+    err = snprintf(headers, sizeof(headers), mmsh_live_request,
+        host, port, mmsh->request_seq++, mms->stream_num, stream_selection);
     if (err < 0) {
         dprintf(NULL, "build play request failed!\n");
         return err;
