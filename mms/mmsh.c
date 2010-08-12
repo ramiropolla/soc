@@ -114,11 +114,11 @@ static int get_chunk_header(MMSHContext *mmsh, int *len)
         return AVERROR_INVALIDDATA;
     }
 
-        res = url_read(mms->mms_hd, ext_header, ext_header_len);
-        if (res != ext_header_len) {
-            av_log(NULL, AV_LOG_ERROR, "read ext header failed!\n");
-            return AVERROR(EIO);
-        }
+    res = url_read(mms->mms_hd, ext_header, ext_header_len);
+    if (res != ext_header_len) {
+        av_log(NULL, AV_LOG_ERROR, "read ext header failed!\n");
+        return AVERROR(EIO);
+    }
     *len = chunk_len - ext_header_len;
     if (chunk_type == CHUNK_TYPE_END || chunk_type == CHUNK_TYPE_DATA)
         mmsh->chunk_seq = AV_RL32(ext_header);
