@@ -32,7 +32,7 @@
 #include "asf.h"
 #include "http.h"
 
-#define DEBUG
+// see Ref 2.2.3 for packet type define
 #define CHUNK_TYPE_DATA           0x4424
 #define CHUNK_TYPE_ASF_HEADER     0x4824
 #define CHUNK_TYPE_END            0x4524
@@ -78,14 +78,13 @@ static const char* mmsh_live_request =
     "Pragma: stream-switch-entry=%s\r\n"
     "Connection: Close\r\n\r\n";
 
-typedef struct
-{
+typedef struct {
     MMSContext mms;
     char location[1024];
     int seekable;
     int stream_num;
-    int request_seq;
-    int chunk_seq;
+    int request_seq;  ///< request packet sequence
+    int chunk_seq;    ///< data packet sequence
 }MMSHContext;
 
 static int mmsh_close(URLContext *h)
@@ -230,7 +229,7 @@ static int mmsh_open_cnx(MMSHContext *mmsh)
     ff_url_split(NULL, 0, NULL, 0,
             host, sizeof(host), &port, path, sizeof(path), mmsh->location);
     if(port<0)
-        port = 80; // defaut mmsh protocol port
+        port = 80; // default mmsh protocol port
     ff_url_join(httpname, sizeof(httpname), "http", NULL, host, port, path);
 
     if (url_alloc(&mms->mms_hd, httpname, URL_RDONLY) < 0) {
@@ -263,7 +262,7 @@ static int mmsh_open_cnx(MMSHContext *mmsh)
             return err;
         offset += err;
     }
-    // send paly request
+    // send play request
     if (mmsh->seekable) {
         err = snprintf(headers, sizeof(headers), mmsh_seekable_request,
             host, port, 0, 0, 0, mmsh->request_seq++, 0, mms->stream_num, stream_selection);
