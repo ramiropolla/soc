@@ -90,7 +90,7 @@ static int get_chunk_header(MMSHContext *mmsh, int *len)
     uint8_t chunk_header[CHUNK_HEADER_LENGTH];
     uint8_t ext_header[EXT_HEADER_LENGTH];
     int chunk_type;
-    int chunk_len, res, ext_header_len = 0;
+    int chunk_len, res, ext_header_len;
 
     res = url_read(mms->mms_hd, chunk_header, CHUNK_HEADER_LENGTH);
     if (res != CHUNK_HEADER_LENGTH) {
@@ -99,21 +99,26 @@ static int get_chunk_header(MMSHContext *mmsh, int *len)
     }
     chunk_type = AV_RL16(chunk_header);
     chunk_len  = AV_RL16(chunk_header + 2);
-    if (chunk_type == CHUNK_TYPE_END ||chunk_type == CHUNK_TYPE_STREAM_CHANGE) {
+
+    switch (chunk_type) {
+    case CHUNK_TYPE_END:
+    case CHUNK_TYPE_STREAM_CHANGE:
         ext_header_len = 4;
-    } else if (chunk_type == CHUNK_TYPE_ASF_HEADER || chunk_type == CHUNK_TYPE_DATA) {
+        break;
+    case CHUNK_TYPE_ASF_HEADER:
+    case CHUNK_TYPE_DATA:
         ext_header_len = 8;
+        break;
+    default:
+        av_log(NULL, AV_LOG_ERROR, "strange chunk type %d\n", chunk_type);
+        return AVERROR_INVALIDDATA;
     }
-    if (ext_header_len) {
+
         res = url_read(mms->mms_hd, ext_header, ext_header_len);
         if (res != ext_header_len) {
             av_log(NULL, AV_LOG_ERROR, "read ext header failed!\n");
             return AVERROR(EIO);
         }
-    } else {
-        av_log(NULL, AV_LOG_ERROR, "strange chunk type %d\n", chunk_type);
-        return AVERROR_INVALIDDATA;
-    }
     *len = chunk_len - ext_header_len;
     if (chunk_type == CHUNK_TYPE_END || chunk_type == CHUNK_TYPE_DATA)
         mmsh->chunk_seq = AV_RL32(ext_header);
