@@ -204,7 +204,6 @@ static int get_http_header_data(MMSHContext *mmsh)
         } else if (chunk_type == CHUNK_TYPE_DATA) {
             // read data packet and do padding
             return read_data_packet(mmsh, len);
-            break;
         } else {
             if (len) {
                 if (len > sizeof(mms->in_buffer)) {
