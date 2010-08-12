@@ -18,6 +18,12 @@
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
+/*
+ * Reference
+ * Windows Media HTTP Streaming Protocol.
+ * http://msdn.microsoft.com/en-us/library/cc251059(PROT.10).aspx
+ */
 #include "mms.h"
 #include "internal.h"
 #include "libavutil/intreadwrite.h"
@@ -27,17 +33,21 @@
 #include "http.h"
 
 #define DEBUG
-#define CHUNK_TYPE_DATA        0x4424
-#define CHUNK_TYPE_ASF_HEADER  0x4824
-#define CHUNK_TYPE_END         0x4524
-#define CHUNK_TYPE_STREAM_CHANGE 0x4324
+#define CHUNK_TYPE_DATA           0x4424
+#define CHUNK_TYPE_ASF_HEADER     0x4824
+#define CHUNK_TYPE_END            0x4524
+#define CHUNK_TYPE_STREAM_CHANGE  0x4324
 
-#define CHUNK_HEADER_LENGTH 4
-#define EXT_HEADER_LENGTH   8
+#define CHUNK_HEADER_LENGTH 4   // 2bytes chunk type and 2bytes chunk length.
+#define EXT_HEADER_LENGTH   8   // 4bytes seqence, 2bytes usless and 2bytes chunk length.
 
-#define USERAGENT "User-Agent: NSPlayer/4.1.0.3856\r\n"
+// see Ref 2.2.1.8
+#define USERAGENT  "User-Agent: NSPlayer/4.1.0.3856\r\n"
+// see Ref 2.2.1.4.33
+// the guid value can be changed to any valid value.
 #define CLIENTGUID "Pragma: xClientGUID={c77e7400-738a-11d2-9add-0020af0a3278}\r\n"
 
+// mmsh request messages.
 static const char* mmsh_first_request =
     "Accept: */*\r\n"
     USERAGENT
@@ -70,7 +80,7 @@ static const char* mmsh_live_request =
 
 typedef struct
 {
-    MMSContext *ff_ctx;
+    MMSContext mms;
     char location[1024];
     int seekable;
     int stream_num;
@@ -80,26 +90,25 @@ typedef struct
 
 static int mmsh_close(URLContext *h)
 {
-    MMSHContext *mmsh_ctx = (MMSHContext *)h->priv_data;
-    MMSContext *mms       = mmsh_ctx->ff_ctx;
+    MMSHContext *mmsh = (MMSHContext *)h->priv_data;
+    MMSContext *mms   = &mmsh->mms;
     if(mms->mms_hd)
         url_close(mms->mms_hd);
     av_freep(&mms->asf_header);
-    av_freep(&mms);
     av_freep(&h->priv_data);
     return 0;
 }
 
-static int get_chunk_header(MMSHContext *mmsh_ctx, int *len)
+static int get_chunk_header(MMSHContext *mmsh, int *len)
 {
-    MMSContext *mms = mmsh_ctx->ff_ctx;
+    MMSContext *mms = &mmsh->mms;
     uint8_t chunk_header[CHUNK_HEADER_LENGTH];
     uint8_t ext_header[EXT_HEADER_LENGTH];
     int chunk_type;
     int chunk_len, res, ext_header_len = 0;
 
     res = url_read(mms->mms_hd, chunk_header, CHUNK_HEADER_LENGTH);
-    if (res != CHUNK_HEADER_LENGTH) { // TODO extact common log code as macro define
+    if (res != CHUNK_HEADER_LENGTH) {
         dprintf(NULL, "read data packet  header failed!\n");
         return AVERROR(EIO);
     }
@@ -122,13 +131,13 @@ static int get_chunk_header(MMSHContext *mmsh_ctx, int *len)
     }
     *len = chunk_len - ext_header_len;
     if (chunk_type == CHUNK_TYPE_END || chunk_type == CHUNK_TYPE_DATA)
-        mmsh_ctx->chunk_seq = AV_RL32(ext_header);
+        mmsh->chunk_seq = AV_RL32(ext_header);
     return chunk_type;
 }
 
-static int read_data_packet(MMSHContext *mmsh_ctx, const int len)
+static int read_data_packet(MMSHContext *mmsh, const int len)
 {
-    MMSContext *mms   = mmsh_ctx->ff_ctx;
+    MMSContext *mms   = &mmsh->mms;
     int res, pad_size = 0;
     res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
     dprintf(NULL, "data packet len = %d\n", len);
@@ -148,15 +157,15 @@ static int read_data_packet(MMSHContext *mmsh_ctx, const int len)
     return 0;
 }
 
-static int get_http_header_data(MMSHContext *mmsh_ctx)
+static int get_http_header_data(MMSHContext *mmsh)
 {
-    MMSContext *mms = mmsh_ctx->ff_ctx;
+    MMSContext *mms = &mmsh->mms;
     int res, len;
     int chunk_type;
 
     for (;;) {
         len = 0;
-        chunk_type = get_chunk_header(mmsh_ctx, &len);
+        chunk_type = get_chunk_header(mmsh, &len);
         if (chunk_type < 0) {
             return chunk_type;
         } else if (chunk_type == CHUNK_TYPE_ASF_HEADER){
@@ -188,7 +197,7 @@ static int get_http_header_data(MMSHContext *mmsh_ctx)
             }
         } else if (chunk_type == CHUNK_TYPE_DATA) {
             // read data packet and do padding
-            return read_data_packet(mmsh_ctx, len);
+            return read_data_packet(mmsh, len);
             break;
         } else {
             if (len) {
@@ -206,9 +215,9 @@ static int get_http_header_data(MMSHContext *mmsh_ctx)
     return 0;
 }
 
-static int mmsh_open_cnx(MMSHContext *mmsh_ctx)
+static int mmsh_open_cnx(MMSHContext *mmsh)
 {
-    MMSContext *mms = mmsh_ctx->ff_ctx;
+    MMSContext *mms = &mmsh->mms;
     int i, port, err, offset = 0;
     char httpname[256], path[256], host[128];
     char stream_selection[10 * MAX_STREAMS];
@@ -219,7 +228,7 @@ static int mmsh_open_cnx(MMSHContext *mmsh_ctx)
     }
 
     ff_url_split(NULL, 0, NULL, 0,
-            host, sizeof(host), &port, path, sizeof(path), mmsh_ctx->location);
+            host, sizeof(host), &port, path, sizeof(path), mmsh->location);
     if(port<0)
         port = 80; // defaut mmsh protocol port
     ff_url_join(httpname, sizeof(httpname), "http", NULL, host, port, path);
@@ -229,13 +238,13 @@ static int mmsh_open_cnx(MMSHContext *mmsh_ctx)
     }
 
     snprintf (headers, sizeof(headers), mmsh_first_request,
-        host, port, mmsh_ctx->request_seq++);
+        host, port, mmsh->request_seq++);
     ff_http_set_headers(mms->mms_hd, headers);
 
     if (url_connect(mms->mms_hd)) {
           return AVERROR(EIO);
     }
-    err = get_http_header_data(mmsh_ctx);
+    err = get_http_header_data(mmsh);
     if (err) {
         dprintf(NULL, "get http header data fialed!\n");
         return (err);
@@ -255,12 +264,12 @@ static int mmsh_open_cnx(MMSHContext *mmsh_ctx)
         offset += err;
     }
     // send paly request
-    if (mmsh_ctx->seekable) {
+    if (mmsh->seekable) {
         err = snprintf(headers, sizeof(headers), mmsh_seekable_request,
-            host, port, 0, 0, 0, mmsh_ctx->request_seq++, 0, mms->stream_num, stream_selection);
+            host, port, 0, 0, 0, mmsh->request_seq++, 0, mms->stream_num, stream_selection);
     } else {
         err = snprintf(headers, sizeof(headers), mmsh_live_request,
-            host, port, mmsh_ctx->request_seq++, mms->stream_num, stream_selection);
+            host, port, mmsh->request_seq++, mms->stream_num, stream_selection);
     }
     if (err < 0) {
         dprintf(NULL, "build play request failed!\n");
@@ -273,7 +282,7 @@ static int mmsh_open_cnx(MMSHContext *mmsh_ctx)
           return AVERROR(EIO);
     }
 
-    err = get_http_header_data(mmsh_ctx);
+    err = get_http_header_data(mmsh);
     if (err) {
         dprintf(NULL, "get http header data fialed!\n");
         return (err);
@@ -284,19 +293,15 @@ static int mmsh_open_cnx(MMSHContext *mmsh_ctx)
 
 static int mmsh_open(URLContext *h, const char *uri, int flags)
 {
-    MMSHContext *mmsh_ctx;
-    MMSContext *mms;
+    MMSHContext *mmsh;
     int err;
-    mmsh_ctx = h->priv_data = av_mallocz(sizeof(MMSHContext));
+    mmsh = h->priv_data = av_mallocz(sizeof(MMSHContext));
     if (!h->priv_data)
         return AVERROR(ENOMEM);
-    mms = mmsh_ctx->ff_ctx = av_mallocz(sizeof(MMSContext));
-    if (!mmsh_ctx->ff_ctx)
-        return AVERROR(ENOMEM);
-    mmsh_ctx->request_seq = h->is_streamed = 1;
-    av_strlcpy(mmsh_ctx->location, uri, sizeof(mmsh_ctx->location));
+    mmsh->request_seq = h->is_streamed = 1;
+    av_strlcpy(mmsh->location, uri, sizeof(mmsh->location));
 
-    err =mmsh_open_cnx(mmsh_ctx);
+    err =mmsh_open_cnx(mmsh);
     if (err) {
         dprintf(NULL, "Leaving mmsh open (failure: %d)\n", err);
         mmsh_close(h);
@@ -306,32 +311,32 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
     return 0;
 }
 
-static int handle_chunk_type(MMSHContext *mmsh_ctx)
+static int handle_chunk_type(MMSHContext *mmsh)
 {
-    MMSContext *mms = mmsh_ctx->ff_ctx;
+    MMSContext *mms = &mmsh->mms;
     int res, len = 0;
     int chunk_type;
-    chunk_type = get_chunk_header(mmsh_ctx, &len);
+    chunk_type = get_chunk_header(mmsh, &len);
 
     if(chunk_type == CHUNK_TYPE_END) {
-        if (mmsh_ctx->chunk_seq == 0) {
+        if (mmsh->chunk_seq == 0) {
             dprintf(NULL, "The stream is end.\n");
             return -1;
         }
         // reconnect
-        mmsh_ctx->request_seq = 1;
-        if ((res = mmsh_open_cnx(mmsh_ctx)) !=0) {
+        mmsh->request_seq = 1;
+        if ((res = mmsh_open_cnx(mmsh)) !=0) {
             dprintf(NULL, "Reconnect failed!\n");
             return res;
         }
     } else if (chunk_type == CHUNK_TYPE_STREAM_CHANGE) {
         mms->header_parsed = 0;
-        if ((res = get_http_header_data(mmsh_ctx)) !=0) {
+        if ((res = get_http_header_data(mmsh)) !=0) {
             dprintf(NULL,"stream changed! get new header failed!\n");
             return res;
         }
     } else if (chunk_type == CHUNK_TYPE_DATA) {
-        return read_data_packet(mmsh_ctx, len);
+        return read_data_packet(mmsh, len);
     } else {
         dprintf(NULL, "recv other type packet %d\n", chunk_type);
         return -1;
@@ -342,8 +347,8 @@ static int handle_chunk_type(MMSHContext *mmsh_ctx)
 static int mmsh_read(URLContext *h, uint8_t *buf, int size)
 {
     int res = 0;
-    MMSHContext *mmsh_ctx = h->priv_data;
-    MMSContext *mms       = mmsh_ctx->ff_ctx;
+    MMSHContext *mmsh = h->priv_data;
+    MMSContext *mms       = &mmsh->mms;
     do{
         if (mms->asf_header_read_size < mms->asf_header_size) {
             // copy asf header into buffer
@@ -352,7 +357,7 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
             res = ff_mms_read_data(mms, buf, size);
         } else {
              // read data packet from network
-            res = handle_chunk_type(mmsh_ctx);
+            res = handle_chunk_type(mmsh);
             if (res == 0) {
                 res = ff_mms_read_data(mms, buf, size);
             } else {
