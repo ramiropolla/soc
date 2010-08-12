@@ -339,7 +339,7 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
 {
     int res = 0;
     MMSHContext *mmsh = h->priv_data;
-    MMSContext *mms       = &mmsh->mms;
+    MMSContext *mms   = &mmsh->mms;
     do{
         if (mms->asf_header_read_size < mms->asf_header_size) {
             // copy asf header into buffer
