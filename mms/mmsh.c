@@ -69,8 +69,6 @@ static const char* mmsh_live_request =
 
 typedef struct {
     MMSContext mms;
-    char location[1024];
-    int stream_num;
     int request_seq;  ///< request packet sequence
     int chunk_seq;    ///< data packet sequence
 }MMSHContext;
@@ -202,20 +200,24 @@ static int get_http_header_data(MMSHContext *mmsh)
     return 0;
 }
 
-static int mmsh_open_cnx(MMSHContext *mmsh)
+static int mmsh_open(URLContext *h, const char *uri, int flags)
 {
-    MMSContext *mms = &mmsh->mms;
     int i, port, err, offset = 0;
-    char httpname[256], path[256], host[128];
+    char httpname[256], path[256], host[128], location[1024];
     char stream_selection[10 * MAX_STREAMS];
     char headers[1024];
+    MMSHContext *mmsh;
+    MMSContext *mms;
 
-    if (mms->mms_hd) {
-        url_close(mms->mms_hd);
-    }
+    mmsh = h->priv_data = av_mallocz(sizeof(MMSHContext));
+    if (!h->priv_data)
+        return AVERROR(ENOMEM);
+    mmsh->request_seq = h->is_streamed = 1;
+    mms = &mmsh->mms;
+    av_strlcpy(location, uri, sizeof(location));
 
     ff_url_split(NULL, 0, NULL, 0,
-            host, sizeof(host), &port, path, sizeof(path), mmsh->location);
+            host, sizeof(host), &port, path, sizeof(path), location);
     if(port<0)
         port = 80; // default mmsh protocol port
     ff_url_join(httpname, sizeof(httpname), "http", NULL, host, port, path);
@@ -228,13 +230,14 @@ static int mmsh_open_cnx(MMSHContext *mmsh)
         host, port, mmsh->request_seq++);
     ff_http_set_headers(mms->mms_hd, headers);
 
-    if (url_connect(mms->mms_hd)) {
-          return AVERROR(EIO);
+    err = url_connect(mms->mms_hd);
+    if (err) {
+          goto fail;
     }
     err = get_http_header_data(mmsh);
     if (err) {
         dprintf(NULL, "get http header data fialed!\n");
-        return (err);
+        goto fail;
     }
 
     // close the socket and then reopen it for sending the second play request.
@@ -247,7 +250,7 @@ static int mmsh_open_cnx(MMSHContext *mmsh)
         err = snprintf(stream_selection + offset, sizeof(stream_selection) - offset,
                           "ffff:%d:0 ", mms->streams[i].id);
         if (err < 0)
-            return err;
+            goto fail;
         offset += err;
     }
     // send play request
@@ -255,42 +258,28 @@ static int mmsh_open_cnx(MMSHContext *mmsh)
         host, port, mmsh->request_seq++, mms->stream_num, stream_selection);
     if (err < 0) {
         dprintf(NULL, "build play request failed!\n");
-        return err;
+        goto fail;
     }
     dprintf(NULL, "out_buffer is %s", headers);
     ff_http_set_headers(mms->mms_hd, headers);
 
-    if (url_connect(mms->mms_hd)) {
-          return AVERROR(EIO);
+    err = url_connect(mms->mms_hd);
+    if (err) {
+          goto fail;
     }
 
     err = get_http_header_data(mmsh);
     if (err) {
         dprintf(NULL, "get http header data fialed!\n");
-        return (err);
+        goto fail;
     }
 
-    return 0;
-}
-
-static int mmsh_open(URLContext *h, const char *uri, int flags)
-{
-    MMSHContext *mmsh;
-    int err;
-    mmsh = h->priv_data = av_mallocz(sizeof(MMSHContext));
-    if (!h->priv_data)
-        return AVERROR(ENOMEM);
-    mmsh->request_seq = h->is_streamed = 1;
-    av_strlcpy(mmsh->location, uri, sizeof(mmsh->location));
-
-    err =mmsh_open_cnx(mmsh);
-    if (err) {
-        dprintf(NULL, "Leaving mmsh open (failure: %d)\n", err);
-        mmsh_close(h);
-        return err;
-    }
     dprintf(NULL, "Leaving mmsh open success.\n");
     return 0;
+fail:
+    mmsh_close(h);
+    dprintf(NULL, "Leaving mmsh open (failure: %d)\n", err);
+    return err;
 }
 
 static int handle_chunk_type(MMSHContext *mmsh)
@@ -304,12 +293,6 @@ static int handle_chunk_type(MMSHContext *mmsh)
         if (mmsh->chunk_seq == 0) {
             dprintf(NULL, "The stream is end.\n");
             return -1;
-        }
-        // reconnect
-        mmsh->request_seq = 1;
-        if ((res = mmsh_open_cnx(mmsh)) !=0) {
-            dprintf(NULL, "Reconnect failed!\n");
-            return res;
         }
     } else if (chunk_type == CHUNK_TYPE_STREAM_CHANGE) {
         mms->header_parsed = 0;
