@@ -92,7 +92,7 @@ static int get_chunk_header(MMSHContext *mmsh, int *len)
     int chunk_type;
     int chunk_len, res, ext_header_len;
 
-    res = url_read(mms->mms_hd, chunk_header, CHUNK_HEADER_LENGTH);
+    res = url_read_complete(mms->mms_hd, chunk_header, CHUNK_HEADER_LENGTH);
     if (res != CHUNK_HEADER_LENGTH) {
         av_log(NULL, AV_LOG_ERROR, "read data packet  header failed!\n");
         return AVERROR(EIO);
@@ -114,7 +114,12 @@ static int get_chunk_header(MMSHContext *mmsh, int *len)
         return AVERROR_INVALIDDATA;
     }
 
-    res = url_read(mms->mms_hd, ext_header, ext_header_len);
+    if (ext_header_len > EXT_HEADER_LENGTH) {
+        av_log(NULL, AV_LOG_ERROR, "ext_header_len = %d exceed the buffer size %d\n",
+                    ext_header_len, EXT_HEADER_LENGTH);
+        return AVERROR_INVALIDDATA;
+    }
+    res = url_read_complete(mms->mms_hd, ext_header, ext_header_len);
     if (res != ext_header_len) {
         av_log(NULL, AV_LOG_ERROR, "read ext header failed!\n");
         return AVERROR(EIO);
@@ -129,6 +134,11 @@ static int read_data_packet(MMSHContext *mmsh, const int len)
 {
     MMSContext *mms   = &mmsh->mms;
     int res, pad_size = 0;
+    if (len > sizeof(mms->in_buffer)) {
+        av_log(NULL, AV_LOG_ERROR, "data packet len = %d exceed the in_buffer size %d\n",
+                    len, sizeof(mms->in_buffer));
+        return AVERROR_IO;
+    }
     res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
     dprintf(NULL, "data packet len = %d\n", len);
     if (res != len) {
@@ -173,6 +183,12 @@ static int get_http_header_data(MMSHContext *mmsh)
                 if (!mms->asf_header) {
                     return AVERROR(ENOMEM);
                 }
+                mms->asf_header_size = len;
+            }
+            if (len > mms->asf_header_size) {
+                av_log(NULL, AV_LOG_ERROR, "asf header packet len = %d exceed the asf header buf size %d\n",
+                            len, mms->asf_header_size);
+                return AVERROR_IO;
             }
             res = url_read_complete(mms->mms_hd, mms->asf_header, len);
             if (res != len) {
@@ -191,6 +207,11 @@ static int get_http_header_data(MMSHContext *mmsh)
             break;
         } else {
             if (len) {
+                if (len > sizeof(mms->in_buffer)) {
+                    av_log(NULL, AV_LOG_ERROR, "other packet len = %d exceed the in_buffer size %d\n",
+                                len, sizeof(mms->in_buffer));
+                    return AVERROR_IO;
+                }
                 res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
                 if (res != len) {
                     av_log(NULL, AV_LOG_ERROR, "read other chunk type data failed!\n");
