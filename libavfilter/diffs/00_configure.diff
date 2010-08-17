@@ -1,6 +1,6 @@
 Index: configure
 ===================================================================
---- configure	(revision 24776)
+--- configure	(revision 24819)
 +++ configure	(working copy)
 @@ -168,6 +168,7 @@
                             and libraw1394 [no]
@@ -37,7 +37,7 @@ Index: configure
  # libraries
  avdevice_deps="avcodec avformat"
  avformat_deps="avcodec"
-@@ -2602,6 +2609,7 @@
+@@ -2603,6 +2610,7 @@
  check_struct "sys/time.h sys/resource.h" "struct rusage" ru_maxrss
  check_func  inet_aton $network_extralibs
  check_func  isatty
@@ -45,7 +45,7 @@ Index: configure
  check_func  ${malloc_prefix}memalign            && enable memalign
  check_func  mkstemp
  check_func  ${malloc_prefix}posix_memalign      && enable posix_memalign
-@@ -2684,6 +2692,7 @@
+@@ -2685,6 +2693,7 @@
                        require  libdirac libdirac_decoder/dirac_parser.h dirac_decoder_init $(pkg-config --libs dirac) &&
                        require  libdirac libdirac_encoder/dirac_encoder.h dirac_encoder_init $(pkg-config --libs dirac)
  enabled libfaac    && require2 libfaac "stdint.h faac.h" faacEncGetVersion -lfaac
