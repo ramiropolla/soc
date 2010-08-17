@@ -13,8 +13,6 @@ for diff in $(ls $(pwd)/diffs/*.diff); do patch -d ffmpeg -p0 -i $diff; done
 
 echo "copying files to libavfilter"
 cp                      \
-    vf_clone.c          \
-    vf_concatenate.c    \
     vf_drawbox.c        \
     vf_drawtext.c       \
     vf_fade.c           \
