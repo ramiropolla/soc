@@ -211,9 +211,9 @@ static int get_http_header_data(MMSHContext *mmsh)
 
 static int mmsh_open(URLContext *h, const char *uri, int flags)
 {
-    int i, port, err, offset = 0;
+    int i, port, err;
     char httpname[256], path[256], host[128], location[1024];
-    char stream_selection[10 * MAX_STREAMS];
+    char *stream_selection;
     char headers[1024];
     MMSHContext *mmsh;
     MMSContext *mms;
@@ -262,12 +262,16 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
     if (url_alloc(&mms->mms_hd, httpname, URL_RDONLY) < 0) {
         return AVERROR(EIO);
     }
+    stream_selection = av_mallocz(mms->stream_num * 19 + 1);
+    if (!stream_selection)
+        return AVERROR(ENOMEM);
     for (i = 0; i < mms->stream_num; i++) {
-        err = snprintf(stream_selection + offset, sizeof(stream_selection) - offset,
+        char tmp[20];
+        err = snprintf(tmp, sizeof(tmp),
                           "ffff:%d:0 ", mms->streams[i].id);
         if (err < 0)
             goto fail;
-        offset += err;
+        av_strlcat(stream_selection, tmp, mms->stream_num * 19 + 1);
     }
     // send play request
     err = snprintf(headers, sizeof(headers),
@@ -281,6 +285,7 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
         "Pragma: stream-switch-entry=%s\r\n"
         "Connection: Close\r\n\r\n",
         host, port, mmsh->request_seq++, mms->stream_num, stream_selection);
+    av_freep(&stream_selection);
     if (err < 0) {
         av_log(NULL, AV_LOG_ERROR, "build play request failed!\n");
         goto fail;
@@ -302,6 +307,7 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
     dprintf(NULL, "Leaving mmsh open success.\n");
     return 0;
 fail:
+    av_freep(&stream_selection);
     mmsh_close(h);
     dprintf(NULL, "Leaving mmsh open (failure: %d)\n", err);
     return err;
