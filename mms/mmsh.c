@@ -98,11 +98,6 @@ static ChunkType get_chunk_header(MMSHContext *mmsh, int *len)
         return AVERROR_INVALIDDATA;
     }
 
-    if (ext_header_len > EXT_HEADER_LENGTH) {
-        av_log(NULL, AV_LOG_ERROR, "ext_header_len = %d exceed the buffer size %d\n",
-                    ext_header_len, EXT_HEADER_LENGTH);
-        return AVERROR_INVALIDDATA;
-    }
     res = url_read_complete(mms->mms_hd, ext_header, ext_header_len);
     if (res != ext_header_len) {
         av_log(NULL, AV_LOG_ERROR, "read ext header failed!\n");
