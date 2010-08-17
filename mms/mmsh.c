@@ -114,8 +114,9 @@ static int read_data_packet(MMSHContext *mmsh, const int len)
     MMSContext *mms   = &mmsh->mms;
     int res;
     if (len > sizeof(mms->in_buffer)) {
-        av_log(NULL, AV_LOG_ERROR, "data packet len = %d exceed the in_buffer size %d\n",
-                    len, sizeof(mms->in_buffer));
+        av_log(NULL, AV_LOG_ERROR,
+                "data packet len = %d exceed the in_buffer size %d\n",
+                len, sizeof(mms->in_buffer));
         return AVERROR_IO;
     }
     res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
@@ -125,7 +126,9 @@ static int read_data_packet(MMSHContext *mmsh, const int len)
         return AVERROR(EIO);
     }
     if (len > mms->asf_packet_len) {
-        av_log(NULL, AV_LOG_ERROR, "chunk length %d exceed packet length %d\n", len, mms->asf_packet_len);
+        av_log(NULL, AV_LOG_ERROR,
+                "chunk length %d exceed packet length %d\n",
+                len, mms->asf_packet_len);
         return -1;
     } else {
         memset(mms->in_buffer + len, 0, mms->asf_packet_len - len); // padding
@@ -164,13 +167,15 @@ static int get_http_header_data(MMSHContext *mmsh)
                 mms->asf_header_size = len;
             }
             if (len > mms->asf_header_size) {
-                av_log(NULL, AV_LOG_ERROR, "asf header packet len = %d exceed the asf header buf size %d\n",
-                            len, mms->asf_header_size);
+                av_log(NULL, AV_LOG_ERROR,
+                   "asf header packet len = %d exceed the asf header buf size %d\n",
+                   len, mms->asf_header_size);
                 return AVERROR_IO;
             }
             res = url_read_complete(mms->mms_hd, mms->asf_header, len);
             if (res != len) {
-                av_log(NULL, AV_LOG_ERROR, "recv asf header data len %d != %d", res, len);
+                av_log(NULL, AV_LOG_ERROR,
+                        "recv asf header data len %d != %d\n", res, len);
                 return AVERROR(EIO);
             }
             mms->asf_header_size = len;
@@ -185,8 +190,9 @@ static int get_http_header_data(MMSHContext *mmsh)
         } else {
             if (len) {
                 if (len > sizeof(mms->in_buffer)) {
-                    av_log(NULL, AV_LOG_ERROR, "other packet len = %d exceed the in_buffer size %d\n",
-                                len, sizeof(mms->in_buffer));
+                    av_log(NULL, AV_LOG_ERROR,
+                        "other packet len = %d exceed the in_buffer size %d\n",
+                        len, sizeof(mms->in_buffer));
                     return AVERROR_IO;
                 }
                 res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
@@ -233,7 +239,8 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
         "Accept: */*\r\n"
         USERAGENT
         "Host: %s:%d\r\n"
-        "Pragma: no-cache,rate=1.000000,stream-time=0,stream-offset=0:0,request-context=%u,max-duration=0\r\n"
+        "Pragma: no-cache,rate=1.000000,stream-time=0,"
+        "stream-offset=0:0,request-context=%u,max-duration=0\r\n"
         CLIENTGUID
         "Connection: Close\r\n\r\n",
         host, port, mmsh->request_seq++);
@@ -354,4 +361,3 @@ URLProtocol mmsh_protocol = {
     NULL, // seek
     mmsh_close,
 };
-
