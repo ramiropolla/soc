@@ -100,18 +100,18 @@ static int config_props(AVFilterLink *link)
     return 0;
 }
 
-static AVFilterPicRef *get_video_buffer(AVFilterLink *inlink, int perms, int w, int h)
+static AVFilterBufferRef *get_video_buffer(AVFilterLink *inlink, int perms, int w, int h)
 {
-    AVFilterPicRef *picref = avfilter_get_video_buffer(inlink->dst->outputs[0],
+    AVFilterBufferRef *picref = avfilter_get_video_buffer(inlink->dst->outputs[0],
                                                        perms, w, h);
     return picref;
 }
 
-static void start_frame(AVFilterLink *link, AVFilterPicRef *picref)
+static void start_frame(AVFilterLink *link, AVFilterBufferRef *picref)
 {
-    AVFilterPicRef *outpicref = avfilter_ref_pic(picref, ~0);
+    AVFilterBufferRef *outpicref = avfilter_ref_buffer(picref, ~0);
 
-    link->dst->outputs[0]->outpic = outpicref;
+    link->dst->outputs[0]->out_buf = outpicref;
 
     avfilter_start_frame(link->dst->outputs[0], outpicref);
 }
@@ -121,7 +121,7 @@ static void end_frame(AVFilterLink *link)
     FadeContext *fade = link->dst->priv;
 
     avfilter_end_frame(link->dst->outputs[0]);
-    avfilter_unref_pic(link->cur_pic);
+    avfilter_unref_buffer(link->cur_buf);
 
     if (fade->frame_index >= fade->start_frame &&
         fade->frame_index <= fade->stop_frame)
@@ -133,7 +133,7 @@ static void end_frame(AVFilterLink *link)
 static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
 {
     FadeContext *fade = link->dst->priv;
-    AVFilterPicRef *outpic = link->dst->outputs[0]->outpic;
+    AVFilterBufferRef *outpic = link->dst->outputs[0]->out_buf;
     uint8_t *p;
     int i, j, plane;
 
