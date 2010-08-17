@@ -41,26 +41,6 @@
 // the guid value can be changed to any valid value.
 #define CLIENTGUID "Pragma: xClientGUID={c77e7400-738a-11d2-9add-0020af0a3278}\r\n"
 
-// mmsh request messages.
-static const char* mmsh_first_request =
-    "Accept: */*\r\n"
-    USERAGENT
-    "Host: %s:%d\r\n"
-    "Pragma: no-cache,rate=1.000000,stream-time=0,stream-offset=0:0,request-context=%u,max-duration=0\r\n"
-    CLIENTGUID
-    "Connection: Close\r\n\r\n";
-
-static const char* mmsh_live_request =
-    "Accept: */*\r\n"
-    USERAGENT
-    "Host: %s:%d\r\n"
-    "Pragma: no-cache,rate=1.000000,request-context=%u\r\n"
-    "Pragma: xPlayStrm=1\r\n"
-    CLIENTGUID
-    "Pragma: stream-switch-count=%d\r\n"
-    "Pragma: stream-switch-entry=%s\r\n"
-    "Connection: Close\r\n\r\n";
-
 // see Ref 2.2.3 for packet type define:
 // chunk type contains 2 fields: Frame and PacketID.
 // Frame is 0x24 or 0xA4(rarely), different PacketID indicates different packet type.
@@ -255,7 +235,13 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
         return AVERROR(EIO);
     }
 
-    snprintf (headers, sizeof(headers), mmsh_first_request,
+    snprintf(headers, sizeof(headers),
+        "Accept: */*\r\n"
+        USERAGENT
+        "Host: %s:%d\r\n"
+        "Pragma: no-cache,rate=1.000000,stream-time=0,stream-offset=0:0,request-context=%u,max-duration=0\r\n"
+        CLIENTGUID
+        "Connection: Close\r\n\r\n",
         host, port, mmsh->request_seq++);
     ff_http_set_headers(mms->mms_hd, headers);
 
@@ -283,7 +269,16 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
         offset += err;
     }
     // send play request
-    err = snprintf(headers, sizeof(headers), mmsh_live_request,
+    err = snprintf(headers, sizeof(headers),
+        "Accept: */*\r\n"
+        USERAGENT
+        "Host: %s:%d\r\n"
+        "Pragma: no-cache,rate=1.000000,request-context=%u\r\n"
+        "Pragma: xPlayStrm=1\r\n"
+        CLIENTGUID
+        "Pragma: stream-switch-count=%d\r\n"
+        "Pragma: stream-switch-entry=%s\r\n"
+        "Connection: Close\r\n\r\n",
         host, port, mmsh->request_seq++, mms->stream_num, stream_selection);
     if (err < 0) {
         av_log(NULL, AV_LOG_ERROR, "build play request failed!\n");
