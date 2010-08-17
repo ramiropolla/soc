@@ -112,7 +112,7 @@ static ChunkType get_chunk_header(MMSHContext *mmsh, int *len)
 static int read_data_packet(MMSHContext *mmsh, const int len)
 {
     MMSContext *mms   = &mmsh->mms;
-    int res, pad_size = 0;
+    int res;
     if (len > sizeof(mms->in_buffer)) {
         av_log(NULL, AV_LOG_ERROR, "data packet len = %d exceed the in_buffer size %d\n",
                     len, sizeof(mms->in_buffer));
@@ -128,8 +128,7 @@ static int read_data_packet(MMSHContext *mmsh, const int len)
         av_log(NULL, AV_LOG_ERROR, "chunk length %d exceed packet length %d\n", len, mms->asf_packet_len);
         return -1;
     } else {
-        pad_size = mms->asf_packet_len - len;
-        memset(mms->in_buffer + len, 0, pad_size);
+        memset(mms->in_buffer + len, 0, mms->asf_packet_len - len); // padding
     }
     mms->read_in_ptr      = mms->in_buffer;
     mms->remaining_in_len = mms->asf_packet_len;
