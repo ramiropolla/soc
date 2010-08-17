@@ -32,12 +32,6 @@
 #include "asf.h"
 #include "http.h"
 
-// see Ref 2.2.3 for packet type define
-#define CHUNK_TYPE_DATA           0x4424
-#define CHUNK_TYPE_ASF_HEADER     0x4824
-#define CHUNK_TYPE_END            0x4524
-#define CHUNK_TYPE_STREAM_CHANGE  0x4324
-
 #define CHUNK_HEADER_LENGTH 4   // 2bytes chunk type and 2bytes chunk length.
 #define EXT_HEADER_LENGTH   8   // 4bytes seqence, 2bytes usless and 2bytes chunk length.
 
@@ -67,6 +61,16 @@ static const char* mmsh_live_request =
     "Pragma: stream-switch-entry=%s\r\n"
     "Connection: Close\r\n\r\n";
 
+// see Ref 2.2.3 for packet type define:
+// chunk type contains 2 fields: Frame and PacketID.
+// Frame is 0x24 or 0xA4(rarely), different PacketID indicates different packet type.
+typedef enum {
+    CHUNK_TYPE_DATA          = 0x4424,
+    CHUNK_TYPE_ASF_HEADER    = 0x4824,
+    CHUNK_TYPE_END           = 0x4524,
+    CHUNK_TYPE_STREAM_CHANGE = 0x4324,
+}ChunkType;
+
 typedef struct {
     MMSContext mms;
     int request_seq;  ///< request packet sequence
@@ -84,12 +88,12 @@ static int mmsh_close(URLContext *h)
     return 0;
 }
 
-static int get_chunk_header(MMSHContext *mmsh, int *len)
+static ChunkType get_chunk_header(MMSHContext *mmsh, int *len)
 {
     MMSContext *mms = &mmsh->mms;
     uint8_t chunk_header[CHUNK_HEADER_LENGTH];
     uint8_t ext_header[EXT_HEADER_LENGTH];
-    int chunk_type;
+    ChunkType chunk_type;
     int chunk_len, res, ext_header_len;
 
     res = url_read_complete(mms->mms_hd, chunk_header, CHUNK_HEADER_LENGTH);
@@ -161,7 +165,7 @@ static int get_http_header_data(MMSHContext *mmsh)
 {
     MMSContext *mms = &mmsh->mms;
     int res, len;
-    int chunk_type;
+    ChunkType chunk_type;
 
     for (;;) {
         len = 0;
@@ -311,7 +315,7 @@ static int handle_chunk_type(MMSHContext *mmsh)
 {
     MMSContext *mms = &mmsh->mms;
     int res, len = 0;
-    int chunk_type;
+    ChunkType chunk_type;
     chunk_type = get_chunk_header(mmsh, &len);
 
     switch (chunk_type) {
