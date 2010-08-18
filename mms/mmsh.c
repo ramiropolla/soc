@@ -175,7 +175,7 @@ static int get_http_header_data(MMSHContext *mmsh)
             res = url_read_complete(mms->mms_hd, mms->asf_header, len);
             if (res != len) {
                 av_log(NULL, AV_LOG_ERROR,
-                        "Recv asf header data len %d != %d\n", res, len);
+                        "Recv asf header data len %d != expected len %d\n", res, len);
                 return AVERROR(EIO);
             }
             mms->asf_header_size = len;
