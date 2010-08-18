@@ -226,7 +226,7 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
     av_strlcpy(location, uri, sizeof(location));
 
     ff_url_split(NULL, 0, NULL, 0,
-            host, sizeof(host), &port, path, sizeof(path), location);
+        host, sizeof(host), &port, path, sizeof(path), location);
     if (port<0)
         port = 80; // default mmsh protocol port
     ff_url_join(httpname, sizeof(httpname), "http", NULL, host, port, path);
@@ -304,12 +304,12 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
         goto fail;
     }
 
-    dprintf(NULL, "Leaving mmsh open success.\n");
+    dprintf(NULL, "Open connection successfully.\n");
     return 0;
 fail:
     av_freep(&stream_selection);
     mmsh_close(h);
-    dprintf(NULL, "Leaving mmsh open (failure: %d)\n", err);
+    dprintf(NULL, "Open connection failed! (error = %d)\n", err);
     return err;
 }
 
