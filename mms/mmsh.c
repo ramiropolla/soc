@@ -78,7 +78,7 @@ static ChunkType get_chunk_header(MMSHContext *mmsh, int *len)
 
     res = url_read_complete(mms->mms_hd, chunk_header, CHUNK_HEADER_LENGTH);
     if (res != CHUNK_HEADER_LENGTH) {
-        av_log(NULL, AV_LOG_ERROR, "read data packet  header failed!\n");
+        av_log(NULL, AV_LOG_ERROR, "Read data packet header failed!\n");
         return AVERROR(EIO);
     }
     chunk_type = AV_RL16(chunk_header);
@@ -94,13 +94,13 @@ static ChunkType get_chunk_header(MMSHContext *mmsh, int *len)
         ext_header_len = 8;
         break;
     default:
-        av_log(NULL, AV_LOG_ERROR, "strange chunk type %d\n", chunk_type);
+        av_log(NULL, AV_LOG_ERROR, "Strange chunk type %d\n", chunk_type);
         return AVERROR_INVALIDDATA;
     }
 
     res = url_read_complete(mms->mms_hd, ext_header, ext_header_len);
     if (res != ext_header_len) {
-        av_log(NULL, AV_LOG_ERROR, "read ext header failed!\n");
+        av_log(NULL, AV_LOG_ERROR, "Read ext header failed!\n");
         return AVERROR(EIO);
     }
     *len = chunk_len - ext_header_len;
@@ -115,19 +115,19 @@ static int read_data_packet(MMSHContext *mmsh, const int len)
     int res;
     if (len > sizeof(mms->in_buffer)) {
         av_log(NULL, AV_LOG_ERROR,
-                "data packet len = %d exceed the in_buffer size %d\n",
+                "Data packet len = %d exceed the in_buffer size %d\n",
                 len, sizeof(mms->in_buffer));
         return AVERROR_IO;
     }
     res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
-    dprintf(NULL, "data packet len = %d\n", len);
+    dprintf(NULL, "Data packet len = %d\n", len);
     if (res != len) {
-        av_log(NULL, AV_LOG_ERROR, "read data packet failed!\n");
+        av_log(NULL, AV_LOG_ERROR, "Read data packet failed!\n");
         return AVERROR(EIO);
     }
     if (len > mms->asf_packet_len) {
         av_log(NULL, AV_LOG_ERROR,
-                "chunk length %d exceed packet length %d\n",
+                "Chunk length %d exceed packet length %d\n",
                 len, mms->asf_packet_len);
         return -1;
     } else {
@@ -155,7 +155,7 @@ static int get_http_header_data(MMSHContext *mmsh)
                 if (mms->asf_header) {
                     if (len != mms->asf_header_size) {
                         mms->asf_header_size = len;
-                        dprintf(NULL, "header len changed form %d to %d\n",
+                        dprintf(NULL, "Header len changed form %d to %d\n",
                                 mms->asf_header_size, len);
                         av_freep(&mms->asf_header);
                     }
@@ -168,14 +168,14 @@ static int get_http_header_data(MMSHContext *mmsh)
             }
             if (len > mms->asf_header_size) {
                 av_log(NULL, AV_LOG_ERROR,
-                   "asf header packet len = %d exceed the asf header buf size %d\n",
+                   "Asf header packet len = %d exceed the asf header buf size %d\n",
                    len, mms->asf_header_size);
                 return AVERROR_IO;
             }
             res = url_read_complete(mms->mms_hd, mms->asf_header, len);
             if (res != len) {
                 av_log(NULL, AV_LOG_ERROR,
-                        "recv asf header data len %d != %d\n", res, len);
+                        "Recv asf header data len %d != %d\n", res, len);
                 return AVERROR(EIO);
             }
             mms->asf_header_size = len;
@@ -191,16 +191,16 @@ static int get_http_header_data(MMSHContext *mmsh)
             if (len) {
                 if (len > sizeof(mms->in_buffer)) {
                     av_log(NULL, AV_LOG_ERROR,
-                        "other packet len = %d exceed the in_buffer size %d\n",
+                        "Other packet len = %d exceed the in_buffer size %d\n",
                         len, sizeof(mms->in_buffer));
                     return AVERROR_IO;
                 }
                 res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
                 if (res != len) {
-                    av_log(NULL, AV_LOG_ERROR, "read other chunk type data failed!\n");
+                    av_log(NULL, AV_LOG_ERROR, "Read other chunk type data failed!\n");
                     return AVERROR(EIO);
                 } else {
-                    dprintf(NULL, "skip chunk type %d \n", chunk_type);
+                    dprintf(NULL, "Skip chunk type %d \n", chunk_type);
                     continue;
                 }
             }
@@ -252,7 +252,7 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
     }
     err = get_http_header_data(mmsh);
     if (err) {
-        av_log(NULL, AV_LOG_ERROR, "get http header data fialed!\n");
+        av_log(NULL, AV_LOG_ERROR, "Get http header data fialed!\n");
         goto fail;
     }
 
@@ -287,7 +287,7 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
         host, port, mmsh->request_seq++, mms->stream_num, stream_selection);
     av_freep(&stream_selection);
     if (err < 0) {
-        av_log(NULL, AV_LOG_ERROR, "build play request failed!\n");
+        av_log(NULL, AV_LOG_ERROR, "Build play request failed!\n");
         goto fail;
     }
     dprintf(NULL, "out_buffer is %s", headers);
@@ -300,7 +300,7 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
 
     err = get_http_header_data(mmsh);
     if (err) {
-        av_log(NULL, AV_LOG_ERROR, "get http header data fialed!\n");
+        av_log(NULL, AV_LOG_ERROR, "Get http header data failed!\n");
         goto fail;
     }
 
@@ -328,14 +328,14 @@ static int handle_chunk_type(MMSHContext *mmsh)
     case CHUNK_TYPE_STREAM_CHANGE:
         mms->header_parsed = 0;
         if ((res = get_http_header_data(mmsh)) != 0) {
-            av_log(NULL, AV_LOG_ERROR,"stream changed! get new header failed!\n");
+            av_log(NULL, AV_LOG_ERROR,"Stream changed! get new header failed!\n");
             return res;
         }
         break;
     case CHUNK_TYPE_DATA:
         return read_data_packet(mmsh, len);
     default:
-        av_log(NULL, AV_LOG_ERROR, "recv other type packet %d\n", chunk_type);
+        av_log(NULL, AV_LOG_ERROR, "Recv other type packet %d\n", chunk_type);
         return AVERROR_INVALIDDATA;
     }
     return 0;
