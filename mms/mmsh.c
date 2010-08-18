@@ -117,7 +117,7 @@ static int read_data_packet(MMSHContext *mmsh, const int len)
         av_log(NULL, AV_LOG_ERROR,
                 "Data packet length %d exceeds the in_buffer size %d\n",
                 len, sizeof(mms->in_buffer));
-        return AVERROR_IO;
+        return AVERROR(EIO);
     }
     res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
     dprintf(NULL, "Data packet len = %d\n", len);
@@ -129,7 +129,7 @@ static int read_data_packet(MMSHContext *mmsh, const int len)
         av_log(NULL, AV_LOG_ERROR,
                 "Chunk length %d exceed packet length %d\n",
                 len, mms->asf_packet_len);
-        return -1;
+        return AVERROR_INVALIDDATA;
     } else {
         memset(mms->in_buffer + len, 0, mms->asf_packet_len - len); // padding
     }
@@ -170,7 +170,7 @@ static int get_http_header_data(MMSHContext *mmsh)
                 av_log(NULL, AV_LOG_ERROR,
                    "Asf header packet len = %d exceed the asf header buf size %d\n",
                    len, mms->asf_header_size);
-                return AVERROR_IO;
+                return AVERROR(EIO);
             }
             res = url_read_complete(mms->mms_hd, mms->asf_header, len);
             if (res != len) {
@@ -193,7 +193,7 @@ static int get_http_header_data(MMSHContext *mmsh)
                     av_log(NULL, AV_LOG_ERROR,
                         "Other packet len = %d exceed the in_buffer size %d\n",
                         len, sizeof(mms->in_buffer));
-                    return AVERROR_IO;
+                    return AVERROR(EIO);
                 }
                 res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
                 if (res != len) {
@@ -324,7 +324,7 @@ static int handle_chunk_type(MMSHContext *mmsh)
     case CHUNK_TYPE_END:
         mmsh->chunk_seq = 0;
         av_log(NULL, AV_LOG_ERROR, "The stream is end.\n");
-        return AVERROR_IO;
+        return AVERROR(EIO);
     case CHUNK_TYPE_STREAM_CHANGE:
         mms->header_parsed = 0;
         if ((res = get_http_header_data(mmsh)) != 0) {
