@@ -49,19 +49,19 @@ typedef enum {
     CHUNK_TYPE_ASF_HEADER    = 0x4824,
     CHUNK_TYPE_END           = 0x4524,
     CHUNK_TYPE_STREAM_CHANGE = 0x4324,
-}ChunkType;
+} ChunkType;
 
 typedef struct {
     MMSContext mms;
     int request_seq;  ///< request packet sequence
     int chunk_seq;    ///< data packet sequence
-}MMSHContext;
+} MMSHContext;
 
 static int mmsh_close(URLContext *h)
 {
     MMSHContext *mmsh = (MMSHContext *)h->priv_data;
     MMSContext *mms   = &mmsh->mms;
-    if(mms->mms_hd)
+    if (mms->mms_hd)
         url_close(mms->mms_hd);
     av_freep(&mms->asf_header);
     av_freep(&h->priv_data);
@@ -227,7 +227,7 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
 
     ff_url_split(NULL, 0, NULL, 0,
             host, sizeof(host), &port, path, sizeof(path), location);
-    if(port<0)
+    if (port<0)
         port = 80; // default mmsh protocol port
     ff_url_join(httpname, sizeof(httpname), "http", NULL, host, port, path);
 
@@ -327,7 +327,7 @@ static int handle_chunk_type(MMSHContext *mmsh)
         return AVERROR_IO;
     case CHUNK_TYPE_STREAM_CHANGE:
         mms->header_parsed = 0;
-        if ((res = get_http_header_data(mmsh)) !=0) {
+        if ((res = get_http_header_data(mmsh)) != 0) {
             av_log(NULL, AV_LOG_ERROR,"stream changed! get new header failed!\n");
             return res;
         }
@@ -346,7 +346,7 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
     int res = 0;
     MMSHContext *mmsh = h->priv_data;
     MMSContext *mms   = &mmsh->mms;
-    do{
+    do {
         if (mms->asf_header_read_size < mms->asf_header_size) {
             // copy asf header into buffer
             res = ff_mms_read_header(mms, buf, size);
@@ -355,7 +355,7 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
                 return res;
             res = ff_mms_read_data(mms, buf, size);
         }
-    }while(!res);
+    } while (!res);
     return res;
 }
 
