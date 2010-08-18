@@ -115,7 +115,7 @@ static int read_data_packet(MMSHContext *mmsh, const int len)
     int res;
     if (len > sizeof(mms->in_buffer)) {
         av_log(NULL, AV_LOG_ERROR,
-                "Data packet len = %d exceed the in_buffer size %d\n",
+                "Data packet length %d exceeds the in_buffer size %d\n",
                 len, sizeof(mms->in_buffer));
         return AVERROR_IO;
     }
