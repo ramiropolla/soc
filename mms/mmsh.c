@@ -24,11 +24,11 @@
  * Windows Media HTTP Streaming Protocol.
  * http://msdn.microsoft.com/en-us/library/cc251059(PROT.10).aspx
  */
-#include "mms.h"
-#include "internal.h"
-#include "libavutil/intreadwrite.h"
 #include <string.h>
+#include "libavutil/intreadwrite.h"
 #include "libavutil/avstring.h"
+#include "libavutil/internal.h"
+#include "mms.h"
 #include "asf.h"
 #include "http.h"
 
