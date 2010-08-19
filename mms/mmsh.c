@@ -27,7 +27,7 @@
 #include <string.h>
 #include "libavutil/intreadwrite.h"
 #include "libavutil/avstring.h"
-#include "libavutil/internal.h"
+#include "libavformat/internal.h"
 #include "mms.h"
 #include "asf.h"
 #include "http.h"
@@ -225,7 +225,7 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
     mms = &mmsh->mms;
     av_strlcpy(location, uri, sizeof(location));
 
-    ff_url_split(NULL, 0, NULL, 0,
+    av_url_split(NULL, 0, NULL, 0,
         host, sizeof(host), &port, path, sizeof(path), location);
     if (port<0)
         port = 80; // default mmsh protocol port
