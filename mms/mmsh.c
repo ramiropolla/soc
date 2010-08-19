@@ -359,10 +359,10 @@ static int mmsh_read(URLContext *h, uint8_t *buf, int size)
 }
 
 URLProtocol mmsh_protocol = {
-    "mmsh",
-    mmsh_open,
-    mmsh_read,
-    NULL, // write
-    NULL, // seek
-    mmsh_close,
+    .name      = "mmsh",
+    .url_open  = mmsh_open,
+    .url_read  = mmsh_read,
+    .url_write = NULL, // write
+    .url_seek  = NULL, // seek
+    .url_close = mmsh_close,
 };
