@@ -155,7 +155,7 @@ static int get_http_header_data(MMSHContext *mmsh)
                 if (mms->asf_header) {
                     if (len != mms->asf_header_size) {
                         mms->asf_header_size = len;
-                        dprintf(NULL, "Header len changed form %d to %d\n",
+                        dprintf(NULL, "Header len changed from %d to %d\n",
                                 mms->asf_header_size, len);
                         av_freep(&mms->asf_header);
                     }
@@ -252,7 +252,7 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
     }
     err = get_http_header_data(mmsh);
     if (err) {
-        av_log(NULL, AV_LOG_ERROR, "Get http header data fialed!\n");
+        av_log(NULL, AV_LOG_ERROR, "Get http header data failed!\n");
         goto fail;
     }
 
@@ -267,8 +267,7 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
         return AVERROR(ENOMEM);
     for (i = 0; i < mms->stream_num; i++) {
         char tmp[20];
-        err = snprintf(tmp, sizeof(tmp),
-                          "ffff:%d:0 ", mms->streams[i].id);
+        err = snprintf(tmp, sizeof(tmp), "ffff:%d:0 ", mms->streams[i].id);
         if (err < 0)
             goto fail;
         av_strlcat(stream_selection, tmp, mms->stream_num * 19 + 1);
@@ -304,12 +303,12 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
         goto fail;
     }
 
-    dprintf(NULL, "Open connection successfully.\n");
+    dprintf(NULL, "Connection successfully open\n");
     return 0;
 fail:
     av_freep(&stream_selection);
     mmsh_close(h);
-    dprintf(NULL, "Open connection failed! (error = %d)\n", err);
+    dprintf(NULL, "Connection failed with error %d\n", err);
     return err;
 }
 
@@ -323,7 +322,7 @@ static int handle_chunk_type(MMSHContext *mmsh)
     switch (chunk_type) {
     case CHUNK_TYPE_END:
         mmsh->chunk_seq = 0;
-        av_log(NULL, AV_LOG_ERROR, "The stream is end.\n");
+        av_log(NULL, AV_LOG_ERROR, "Stream ended!\n");
         return AVERROR(EIO);
     case CHUNK_TYPE_STREAM_CHANGE:
         mms->header_parsed = 0;
