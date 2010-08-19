@@ -204,15 +204,12 @@ static int lower_timestamp(OverlayContext *over)
 static void copy_image_rgb(AVFilterBufferRef *dst, int x, int y,
                            AVFilterBufferRef *src, int w, int h, int bpp)
 {
-    AVPicture pic;
-
-    memcpy(&pic, &dst->data, sizeof(AVPicture));
-    pic.data[0] += x * bpp;
-    pic.data[0] += y * pic.linesize[0];
+    dst->data[0] += x * bpp;
+    dst->data[0] += y * dst->linesize[0];
 
     if (src->format == PIX_FMT_BGRA) {
         for (y = 0; y < h; y++) {
-                  uint8_t *optr = pic.data[0]  + y * pic.linesize[0];
+                  uint8_t *optr = dst->data[0] + y * dst->linesize[0];
             const uint8_t *iptr = src->data[0] + y * src->linesize[0];
             for (x = 0; x < w; x++) {
                 uint8_t a = iptr[3];
@@ -224,7 +221,9 @@ static void copy_image_rgb(AVFilterBufferRef *dst, int x, int y,
             }
         }
     } else {
-        av_picture_copy(&pic, (AVPicture *)src->data, dst->format, w, h);
+        av_picture_data_copy(dst->data, dst->linesize,
+                             src->data, src->linesize,
+                             dst->format, w, h);
     }
 }
 
@@ -253,20 +252,18 @@ static void copy_image_yuv(AVFilterBufferRef *dst, int x, int y,
                            AVFilterBufferRef *src, int w, int h,
                            int bpp, int hsub, int vsub)
 {
-    AVPicture pic;
     int i;
 
-    memcpy(&pic, &dst->data, sizeof(AVPicture));
     for(i = 0; i < 4; i ++) {
-        if(pic.data[i]) {
+        if (dst->data[i]) {
             int x_off = x;
             int y_off = y;
             if (i == 1 || i == 2) {
                 x_off >>= hsub;
                 y_off >>= vsub;
             }
-            pic.data[i] += x_off * bpp;
-            pic.data[i] += y_off * pic.linesize[i];
+            dst->data[i] += x_off * bpp;
+            dst->data[i] += y_off * dst->linesize[i];
         }
     }
 
@@ -274,11 +271,11 @@ static void copy_image_yuv(AVFilterBufferRef *dst, int x, int y,
         int chroma_w = w>>hsub;
         int chroma_h = h>>vsub;
         assert(dst->pic->format == PIX_FMT_YUV420P);
-        copy_blended(pic.data[0], pic.linesize[0], src->data[0], src->linesize[0], src->data[3], src->linesize[3], w, h, 0, 0);
-        copy_blended(pic.data[1], pic.linesize[1], src->data[1], src->linesize[1], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
-        copy_blended(pic.data[2], pic.linesize[2], src->data[2], src->linesize[2], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
+        copy_blended(dst->data[0], dst->linesize[0], src->data[0], src->linesize[0], src->data[3], src->linesize[3], w, h, 0, 0);
+        copy_blended(dst->data[1], dst->linesize[1], src->data[1], src->linesize[1], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
+        copy_blended(dst->data[2], dst->linesize[2], src->data[2], src->linesize[2], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
     } else {
-        av_picture_copy(&pic, (AVPicture *)src->data, dst->format, w, h);
+        av_picture_data_copy(dst->data, dst->linesize, src->data, src->linesize, dst->format, w, h);
     }
 }
 
