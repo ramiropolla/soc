@@ -115,8 +115,8 @@ static int read_data_packet(MMSHContext *mmsh, const int len)
     int res;
     if (len > sizeof(mms->in_buffer)) {
         av_log(NULL, AV_LOG_ERROR,
-                "Data packet length %d exceeds the in_buffer size %d\n",
-                len, sizeof(mms->in_buffer));
+              "Data packet length %d exceeds the in_buffer size %d\n",
+               len, sizeof(mms->in_buffer));
         return AVERROR(EIO);
     }
     res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
@@ -127,8 +127,7 @@ static int read_data_packet(MMSHContext *mmsh, const int len)
     }
     if (len > mms->asf_packet_len) {
         av_log(NULL, AV_LOG_ERROR,
-                "Chunk length %d exceed packet length %d\n",
-                len, mms->asf_packet_len);
+              "Chunk length %d exceed packet length %d\n",len, mms->asf_packet_len);
         return AVERROR_INVALIDDATA;
     } else {
         memset(mms->in_buffer + len, 0, mms->asf_packet_len - len); // padding
@@ -168,14 +167,14 @@ static int get_http_header_data(MMSHContext *mmsh)
             }
             if (len > mms->asf_header_size) {
                 av_log(NULL, AV_LOG_ERROR,
-                   "Asf header packet len = %d exceed the asf header buf size %d\n",
-                   len, mms->asf_header_size);
+                      "Asf header packet len = %d exceed the asf header buf size %d\n",
+                       len, mms->asf_header_size);
                 return AVERROR(EIO);
             }
             res = url_read_complete(mms->mms_hd, mms->asf_header, len);
             if (res != len) {
                 av_log(NULL, AV_LOG_ERROR,
-                        "Recv asf header data len %d != expected len %d\n", res, len);
+                      "Recv asf header data len %d != expected len %d\n", res, len);
                 return AVERROR(EIO);
             }
             mms->asf_header_size = len;
@@ -191,8 +190,8 @@ static int get_http_header_data(MMSHContext *mmsh)
             if (len) {
                 if (len > sizeof(mms->in_buffer)) {
                     av_log(NULL, AV_LOG_ERROR,
-                        "Other packet len = %d exceed the in_buffer size %d\n",
-                        len, sizeof(mms->in_buffer));
+                          "Other packet len = %d exceed the in_buffer size %d\n",
+                           len, sizeof(mms->in_buffer));
                     return AVERROR(EIO);
                 }
                 res = url_read_complete(mms->mms_hd, mms->in_buffer, len);
@@ -236,19 +235,19 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
     }
 
     snprintf(headers, sizeof(headers),
-        "Accept: */*\r\n"
-        USERAGENT
-        "Host: %s:%d\r\n"
-        "Pragma: no-cache,rate=1.000000,stream-time=0,"
-        "stream-offset=0:0,request-context=%u,max-duration=0\r\n"
-        CLIENTGUID
-        "Connection: Close\r\n\r\n",
-        host, port, mmsh->request_seq++);
+            "Accept: */*\r\n"
+             USERAGENT
+            "Host: %s:%d\r\n"
+            "Pragma: no-cache,rate=1.000000,stream-time=0,"
+            "stream-offset=0:0,request-context=%u,max-duration=0\r\n"
+             CLIENTGUID
+            "Connection: Close\r\n\r\n",
+             host, port, mmsh->request_seq++);
     ff_http_set_headers(mms->mms_hd, headers);
 
     err = url_connect(mms->mms_hd);
     if (err) {
-          goto fail;
+        goto fail;
     }
     err = get_http_header_data(mmsh);
     if (err) {
@@ -274,16 +273,16 @@ static int mmsh_open(URLContext *h, const char *uri, int flags)
     }
     // send play request
     err = snprintf(headers, sizeof(headers),
-        "Accept: */*\r\n"
-        USERAGENT
-        "Host: %s:%d\r\n"
-        "Pragma: no-cache,rate=1.000000,request-context=%u\r\n"
-        "Pragma: xPlayStrm=1\r\n"
-        CLIENTGUID
-        "Pragma: stream-switch-count=%d\r\n"
-        "Pragma: stream-switch-entry=%s\r\n"
-        "Connection: Close\r\n\r\n",
-        host, port, mmsh->request_seq++, mms->stream_num, stream_selection);
+                  "Accept: */*\r\n"
+                   USERAGENT
+                  "Host: %s:%d\r\n"
+                  "Pragma: no-cache,rate=1.000000,request-context=%u\r\n"
+                  "Pragma: xPlayStrm=1\r\n"
+                   CLIENTGUID
+                  "Pragma: stream-switch-count=%d\r\n"
+                  "Pragma: stream-switch-entry=%s\r\n"
+                  "Connection: Close\r\n\r\n",
+                   host, port, mmsh->request_seq++, mms->stream_num, stream_selection);
     av_freep(&stream_selection);
     if (err < 0) {
         av_log(NULL, AV_LOG_ERROR, "Build play request failed!\n");
@@ -362,7 +361,7 @@ URLProtocol mmsh_protocol = {
     .name      = "mmsh",
     .url_open  = mmsh_open,
     .url_read  = mmsh_read,
-    .url_write = NULL, // write
-    .url_seek  = NULL, // seek
+    .url_write = NULL,
+    .url_seek  = NULL,
     .url_close = mmsh_close,
 };
