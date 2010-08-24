@@ -1,11 +1,11 @@
 #! /bin/sh
 
 echo "checking out pristine ffmpeg"
-svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r24819
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r24896
 
 echo "downloading the corresponding version of swscale"
 cd ffmpeg/libswscale
-svn up -r31972
+svn up -r32011
 cd ../..
 
 echo "patching ffmpeg"
@@ -16,7 +16,6 @@ cp                      \
     vf_drawbox.c        \
     vf_drawtext.c       \
     vf_fade.c           \
-    vf_fifo.c           \
     vf_fps.c            \
     vf_negate.c         \
     vf_overlay.c        \
