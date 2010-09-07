@@ -153,7 +153,7 @@ static void draw_slice(AVFilterLink *link, int y, int h, int slice_dir)
         if (outpic->data[0] && outpic->data[1]) {
             /* chroma planes */
             for (plane = 1; plane < 3; plane++) {
-                for (i = 0; i < h >> fade->vsub; i++) {
+                for (i = 0; i < h; i++) {
                     p = outpic->data[plane] + ((y+i) >> fade->vsub) * outpic->linesize[plane];
                     for (j = 0; j < link->w >> fade->hsub; j++) {
                         /* 8421367 = ((128 << 1) + 1) << 15. It is an integer
