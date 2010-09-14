@@ -1,6 +1,6 @@
 Index: libavfilter/Makefile
 ===================================================================
---- libavfilter/Makefile	(revision 24896)
+--- libavfilter/Makefile	(revision 25118)
 +++ libavfilter/Makefile	(working copy)
 @@ -3,8 +3,9 @@
  NAME = avfilter
@@ -13,7 +13,7 @@ Index: libavfilter/Makefile
  
  OBJS = allfilters.o                                                     \
         avfilter.o                                                       \
-@@ -18,21 +19,32 @@
+@@ -18,22 +19,33 @@
  
  OBJS-$(CONFIG_ASPECT_FILTER)                 += vf_aspect.o
  OBJS-$(CONFIG_CROP_FILTER)                   += vf_crop.o
@@ -27,6 +27,7 @@ Index: libavfilter/Makefile
 +OBJS-$(CONFIG_NEGATE_FILTER)                 += vf_negate.o
  OBJS-$(CONFIG_NOFORMAT_FILTER)               += vf_format.o
  OBJS-$(CONFIG_NULL_FILTER)                   += vf_null.o
+ OBJS-$(CONFIG_OCV_SMOOTH_FILTER)             += vf_libopencv.o
 +OBJS-$(CONFIG_OVERLAY_FILTER)                += vf_overlay.o
  OBJS-$(CONFIG_PAD_FILTER)                    += vf_pad.o
  OBJS-$(CONFIG_PIXDESCTEST_FILTER)            += vf_pixdesctest.o
@@ -48,9 +49,9 @@ Index: libavfilter/Makefile
  OBJS-$(CONFIG_NULLSINK_FILTER)               += vsink_nullsink.o
 Index: libavfilter/allfilters.c
 ===================================================================
---- libavfilter/allfilters.c	(revision 24896)
+--- libavfilter/allfilters.c	(revision 25118)
 +++ libavfilter/allfilters.c	(working copy)
-@@ -38,21 +38,32 @@
+@@ -38,22 +38,33 @@
  
      REGISTER_FILTER (ASPECT,      aspect,      vf);
      REGISTER_FILTER (CROP,        crop,        vf);
@@ -64,6 +65,7 @@ Index: libavfilter/allfilters.c
 +    REGISTER_FILTER (NEGATE,      negate,      vf);
      REGISTER_FILTER (NOFORMAT,    noformat,    vf);
      REGISTER_FILTER (NULL,        null,        vf);
+     REGISTER_FILTER (OCV_SMOOTH,  ocv_smooth,  vf);
 +    REGISTER_FILTER (OVERLAY,     overlay,     vf);
      REGISTER_FILTER (PAD,         pad,         vf);
      REGISTER_FILTER (PIXDESCTEST, pixdesctest, vf);
