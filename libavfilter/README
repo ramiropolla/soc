@@ -7,9 +7,6 @@ Here is what to do to try it out:
 3) make
 4) run it!
 
-Note: in order to enable the movie filter you need to add the
---enable-avfilter-lavf to the configure command.
-
 ffmpeg -filters will show you the list of filters/sources/sinks
 enabled.
 
