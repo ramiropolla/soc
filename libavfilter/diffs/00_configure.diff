@@ -1,8 +1,8 @@
 Index: configure
 ===================================================================
---- configure	(revision 25118)
+--- configure	(revision 25200)
 +++ configure	(working copy)
-@@ -169,6 +169,7 @@
+@@ -170,6 +170,7 @@
                             and libraw1394 [no]
    --enable-libdirac        enable Dirac support via libdirac [no]
    --enable-libfaac         enable FAAC support via libfaac [no]
@@ -10,7 +10,7 @@ Index: configure
    --enable-libgsm          enable GSM support via libgsm [no]
    --enable-libmp3lame      enable MP3 encoding via libmp3lame [no]
    --enable-libnut          enable NUT (de)muxing via libnut,
-@@ -883,6 +884,7 @@
+@@ -885,6 +886,7 @@
      libdc1394
      libdirac
      libfaac
@@ -18,7 +18,7 @@ Index: configure
      libgsm
      libmp3lame
      libnut
-@@ -1026,6 +1028,7 @@
+@@ -1029,6 +1031,7 @@
      llrintf
      local_aligned_16
      local_aligned_8
@@ -26,16 +26,16 @@ Index: configure
      log2
      log2f
      loongson
-@@ -1393,6 +1396,8 @@
+@@ -1401,6 +1404,8 @@
  udp_protocol_deps="network"
  
  # filters
 +drawtext_filter_deps="libfreetype"
 +movie_filter_deps="avformat"
  ocv_smooth_filter_deps="libopencv"
+ yadif_filter_deps="gpl"
  
- # libraries
-@@ -2631,6 +2636,7 @@
+@@ -2649,6 +2654,7 @@
  check_struct "sys/time.h sys/resource.h" "struct rusage" ru_maxrss
  check_func  inet_aton $network_extralibs
  check_func  isatty
@@ -43,11 +43,11 @@ Index: configure
  check_func  ${malloc_prefix}memalign            && enable memalign
  check_func  mkstemp
  check_func  ${malloc_prefix}posix_memalign      && enable posix_memalign
-@@ -2713,6 +2719,7 @@
+@@ -2733,6 +2739,7 @@
                        require  libdirac libdirac_decoder/dirac_parser.h dirac_decoder_init $(pkg-config --libs dirac) &&
                        require  libdirac libdirac_encoder/dirac_encoder.h dirac_encoder_init $(pkg-config --libs dirac)
  enabled libfaac    && require2 libfaac "stdint.h faac.h" faacEncGetVersion -lfaac
 +enabled libfreetype && add_cflags $(pkg-config --cflags freetype2) && require libfreetype ft2build.h FT_Init_FreeType -lfreetype -lz
  enabled libgsm     && require  libgsm gsm/gsm.h gsm_create -lgsm
- enabled libmp3lame && require  libmp3lame lame/lame.h lame_init -lmp3lame
+ enabled libmp3lame && require  "libmp3lame >= 3.98.3" lame/lame.h hip_decode_init -lmp3lame
  enabled libnut     && require  libnut libnut.h nut_demuxer_init -lnut
