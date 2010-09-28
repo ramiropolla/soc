@@ -1,6 +1,6 @@
 Index: configure
 ===================================================================
---- configure	(revision 25200)
+--- configure	(revision 25245)
 +++ configure	(working copy)
 @@ -170,6 +170,7 @@
                             and libraw1394 [no]
@@ -26,16 +26,17 @@ Index: configure
      log2
      log2f
      loongson
-@@ -1401,6 +1404,8 @@
- udp_protocol_deps="network"
+@@ -1399,7 +1402,9 @@
  
  # filters
+ blackframe_filter_deps="gpl"
 +drawtext_filter_deps="libfreetype"
+ frei0r_filter_deps="frei0r dlopen strtok_r"
 +movie_filter_deps="avformat"
  ocv_smooth_filter_deps="libopencv"
  yadif_filter_deps="gpl"
  
-@@ -2649,6 +2654,7 @@
+@@ -2657,6 +2662,7 @@
  check_struct "sys/time.h sys/resource.h" "struct rusage" ru_maxrss
  check_func  inet_aton $network_extralibs
  check_func  isatty
@@ -43,7 +44,7 @@ Index: configure
  check_func  ${malloc_prefix}memalign            && enable memalign
  check_func  mkstemp
  check_func  ${malloc_prefix}posix_memalign      && enable posix_memalign
-@@ -2733,6 +2739,7 @@
+@@ -2741,6 +2747,7 @@
                        require  libdirac libdirac_decoder/dirac_parser.h dirac_decoder_init $(pkg-config --libs dirac) &&
                        require  libdirac libdirac_encoder/dirac_encoder.h dirac_encoder_init $(pkg-config --libs dirac)
  enabled libfaac    && require2 libfaac "stdint.h faac.h" faacEncGetVersion -lfaac

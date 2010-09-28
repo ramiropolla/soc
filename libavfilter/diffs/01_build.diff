@@ -1,6 +1,6 @@
 Index: libavfilter/Makefile
 ===================================================================
---- libavfilter/Makefile	(revision 25200)
+--- libavfilter/Makefile	(revision 25245)
 +++ libavfilter/Makefile	(working copy)
 @@ -3,8 +3,9 @@
  NAME = avfilter
@@ -13,11 +13,10 @@ Index: libavfilter/Makefile
  
  OBJS = allfilters.o                                                     \
         avfilter.o                                                       \
-@@ -22,18 +23,28 @@
- 
- OBJS-$(CONFIG_ASPECT_FILTER)                 += vf_aspect.o
+@@ -24,24 +25,34 @@
+ OBJS-$(CONFIG_BLACKFRAME_FILTER)             += vf_blackframe.o
  OBJS-$(CONFIG_CROP_FILTER)                   += vf_crop.o
-+OBJS-$(CONFIG_DRAWBOX_FILTER)                += vf_drawbox.o
+ OBJS-$(CONFIG_DRAWBOX_FILTER)                += vf_drawbox.o
 +OBJS-$(CONFIG_DRAWTEXT_FILTER)               += vf_drawtext.o
 +OBJS-$(CONFIG_FADE_FILTER)                   += vf_fade.o
  OBJS-$(CONFIG_FIFO_FILTER)                   += vf_fifo.o
@@ -42,7 +41,6 @@ Index: libavfilter/Makefile
  OBJS-$(CONFIG_UNSHARP_FILTER)                += vf_unsharp.o
  OBJS-$(CONFIG_VFLIP_FILTER)                  += vf_vflip.o
  OBJS-$(CONFIG_YADIF_FILTER)                  += vf_yadif.o
-@@ -42,6 +53,7 @@
  
  OBJS-$(CONFIG_BUFFER_FILTER)                 += vsrc_buffer.o
  OBJS-$(CONFIG_COLOR_FILTER)                  += vf_pad.o
@@ -52,13 +50,12 @@ Index: libavfilter/Makefile
  OBJS-$(CONFIG_NULLSINK_FILTER)               += vsink_nullsink.o
 Index: libavfilter/allfilters.c
 ===================================================================
---- libavfilter/allfilters.c	(revision 25200)
+--- libavfilter/allfilters.c	(revision 25245)
 +++ libavfilter/allfilters.c	(working copy)
-@@ -42,24 +42,35 @@
- 
-     REGISTER_FILTER (ASPECT,      aspect,      vf);
+@@ -44,24 +44,34 @@
+     REGISTER_FILTER (BLACKFRAME,  blackframe,  vf);
      REGISTER_FILTER (CROP,        crop,        vf);
-+    REGISTER_FILTER (DRAWBOX,     drawbox,     vf);
+     REGISTER_FILTER (DRAWBOX,     drawbox,     vf);
 +    REGISTER_FILTER (DRAWTEXT,    drawtext,    vf);
 +    REGISTER_FILTER (FADE,        fade,        vf);
      REGISTER_FILTER (FIFO,        fifo,        vf);

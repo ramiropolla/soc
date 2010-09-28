@@ -172,13 +172,13 @@ static void start_frame(AVFilterLink *link, AVFilterBufferRef *picref)
 {
     OverlayContext *over = link->dst->priv;
     /* There shouldn't be any previous queued frame in this queue */
-    assert(!over->pics[link->dstpad][1]);
-    if (over->pics[link->dstpad][0]) {
+    assert(!over->pics[link->dstpad - link->dst->input_pads][1]);
+    if (over->pics[link->dstpad - link->dst->input_pads][0]) {
         /* Queue the new frame */
-        over->pics[link->dstpad][1] = picref;
+        over->pics[link->dstpad - link->dst->input_pads][1] = picref;
     } else {
         /* No previous unused frame, take this one into use directly */
-        over->pics[link->dstpad][0] = picref;
+        over->pics[link->dstpad - link->dst->input_pads][0] = picref;
     }
 }
 
