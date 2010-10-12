@@ -1,8 +1,8 @@
 Index: doc/filters.texi
 ===================================================================
---- doc/filters.texi	(revision 25245)
+--- doc/filters.texi	(revision 25447)
 +++ doc/filters.texi	(working copy)
-@@ -222,6 +222,99 @@
+@@ -257,6 +257,99 @@
  drawbox=10:20:200:60:red@@0.5"
  @end example
  
@@ -102,7 +102,7 @@ Index: doc/filters.texi
  @section fifo
  
  Buffer input images and send them when they are requested.
-@@ -298,6 +391,14 @@
+@@ -333,6 +426,14 @@
  For more information see:
  @url{http://piksel.org/frei0r}
  
@@ -117,7 +117,7 @@ Index: doc/filters.texi
  @section hflip
  
  Flip the input video horizontally.
-@@ -308,6 +409,14 @@
+@@ -343,6 +444,14 @@
  ffmpeg -i in.avi -vf "hflip" out.avi
  @end example
  
@@ -132,7 +132,7 @@ Index: doc/filters.texi
  @section noformat
  
  Force libavfilter not to use any of the specified pixel formats for the
-@@ -356,6 +465,56 @@
+@@ -391,6 +500,56 @@
  documentation for the exact meaning of the parameters:
  @url{http://opencv.willowgarage.com/documentation/c/image_filtering.html}
  
@@ -189,7 +189,7 @@ Index: doc/filters.texi
  @section pad
  
  Add paddings to the input image, and places the original input at the
-@@ -403,6 +562,14 @@
+@@ -438,6 +597,14 @@
  
  can be used to test the monowhite pixel format descriptor definition.
  
@@ -204,7 +204,7 @@ Index: doc/filters.texi
  @section scale
  
  Scale the input video to @var{width}:@var{height} and/or convert the image format.
-@@ -428,6 +595,24 @@
+@@ -463,6 +630,24 @@
  
  The default value of @var{width} and @var{height} is 0.
  
@@ -226,10 +226,10 @@ Index: doc/filters.texi
 +
 +Modifies the presentation timestamp (PTS) of the input video.
 +
- @section slicify
+ @section settb
  
- Pass the images of input video on to next video filter as multiple
-@@ -443,6 +628,19 @@
+ Set the timebase to use for the output frames timestamps.
+@@ -508,6 +693,19 @@
  Adding this in the beginning of filter chains should make filtering
  faster due to better use of the memory cache.
  
@@ -249,7 +249,7 @@ Index: doc/filters.texi
  @section unsharp
  
  Sharpen or blur the input video.
-@@ -617,6 +815,27 @@
+@@ -682,6 +880,27 @@
  "color=red@@0.2:qcif:10 [color]; [in][color] overlay [out]"
  @end example
  
