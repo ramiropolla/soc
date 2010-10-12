@@ -253,6 +253,7 @@ static void copy_image_yuv(AVFilterBufferRef *dst, int x, int y,
                            int bpp, int hsub, int vsub)
 {
     int i;
+    uint8_t *dst_data[4];
 
     for(i = 0; i < 4; i ++) {
         if (dst->data[i]) {
@@ -262,8 +263,7 @@ static void copy_image_yuv(AVFilterBufferRef *dst, int x, int y,
                 x_off >>= hsub;
                 y_off >>= vsub;
             }
-            dst->data[i] += x_off * bpp;
-            dst->data[i] += y_off * dst->linesize[i];
+            dst_data[i] = dst->data[i] + x_off * bpp + y_off * dst->linesize[i];
         }
     }
 
@@ -271,11 +271,11 @@ static void copy_image_yuv(AVFilterBufferRef *dst, int x, int y,
         int chroma_w = w>>hsub;
         int chroma_h = h>>vsub;
         assert(dst->pic->format == PIX_FMT_YUV420P);
-        copy_blended(dst->data[0], dst->linesize[0], src->data[0], src->linesize[0], src->data[3], src->linesize[3], w, h, 0, 0);
-        copy_blended(dst->data[1], dst->linesize[1], src->data[1], src->linesize[1], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
-        copy_blended(dst->data[2], dst->linesize[2], src->data[2], src->linesize[2], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
+        copy_blended(dst_data[0], dst->linesize[0], src->data[0], src->linesize[0], src->data[3], src->linesize[3], w, h, 0, 0);
+        copy_blended(dst_data[1], dst->linesize[1], src->data[1], src->linesize[1], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
+        copy_blended(dst_data[2], dst->linesize[2], src->data[2], src->linesize[2], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
     } else {
-        av_picture_data_copy(dst->data, dst->linesize, src->data, src->linesize, dst->format, w, h);
+        av_picture_data_copy(dst_data, dst->linesize, src->data, src->linesize, dst->format, w, h);
     }
 }
 
