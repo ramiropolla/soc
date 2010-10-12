@@ -24,6 +24,7 @@
  */
 
 #include "avfilter.h"
+#include "libavcore/imgutils.h"
 #include "libavutil/eval.h"
 #include "libavutil/avstring.h"
 
@@ -221,9 +222,9 @@ static void copy_image_rgb(AVFilterBufferRef *dst, int x, int y,
             }
         }
     } else {
-        av_picture_data_copy(dst->data, dst->linesize,
-                             src->data, src->linesize,
-                             dst->format, w, h);
+        av_image_copy(dst->data, dst->linesize,
+                      src->data, src->linesize,
+                      dst->format, w, h);
     }
 }
 
@@ -275,7 +276,7 @@ static void copy_image_yuv(AVFilterBufferRef *dst, int x, int y,
         copy_blended(dst_data[1], dst->linesize[1], src->data[1], src->linesize[1], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
         copy_blended(dst_data[2], dst->linesize[2], src->data[2], src->linesize[2], src->data[3], src->linesize[3], chroma_w, chroma_h, hsub, vsub);
     } else {
-        av_picture_data_copy(dst_data, dst->linesize, src->data, src->linesize, dst->format, w, h);
+        av_image_copy(dst_data, dst->linesize, src->data, src->linesize, dst->format, w, h);
     }
 }
 
