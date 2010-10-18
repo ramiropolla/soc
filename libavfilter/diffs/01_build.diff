@@ -1,6 +1,6 @@
 Index: libavfilter/Makefile
 ===================================================================
---- libavfilter/Makefile	(revision 25447)
+--- libavfilter/Makefile	(revision 25526)
 +++ libavfilter/Makefile	(working copy)
 @@ -3,8 +3,9 @@
  NAME = avfilter
@@ -13,7 +13,7 @@ Index: libavfilter/Makefile
  
  OBJS = allfilters.o                                                     \
         avfilter.o                                                       \
-@@ -25,25 +26,35 @@
+@@ -25,19 +26,27 @@
  OBJS-$(CONFIG_CROP_FILTER)                   += vf_crop.o
  OBJS-$(CONFIG_CROPDETECT_FILTER)             += vf_cropdetect.o
  OBJS-$(CONFIG_DRAWBOX_FILTER)                += vf_drawbox.o
@@ -38,10 +38,10 @@ Index: libavfilter/Makefile
  OBJS-$(CONFIG_SETTB_FILTER)                  += vf_settb.o
  OBJS-$(CONFIG_SLICIFY_FILTER)                += vf_slicify.o
 +OBJS-$(CONFIG_SPLIT_FILTER)                  += vf_split.o
-+OBJS-$(CONFIG_TRANSPOSE_FILTER)              += vf_transpose.o
+ OBJS-$(CONFIG_TRANSPOSE_FILTER)              += vf_transpose.o
  OBJS-$(CONFIG_UNSHARP_FILTER)                += vf_unsharp.o
  OBJS-$(CONFIG_VFLIP_FILTER)                  += vf_vflip.o
- OBJS-$(CONFIG_YADIF_FILTER)                  += vf_yadif.o
+@@ -45,6 +54,7 @@
  
  OBJS-$(CONFIG_BUFFER_FILTER)                 += vsrc_buffer.o
  OBJS-$(CONFIG_COLOR_FILTER)                  += vf_pad.o
@@ -51,9 +51,9 @@ Index: libavfilter/Makefile
  OBJS-$(CONFIG_NULLSINK_FILTER)               += vsink_nullsink.o
 Index: libavfilter/allfilters.c
 ===================================================================
---- libavfilter/allfilters.c	(revision 25447)
+--- libavfilter/allfilters.c	(revision 25526)
 +++ libavfilter/allfilters.c	(working copy)
-@@ -45,25 +45,35 @@
+@@ -45,19 +45,27 @@
      REGISTER_FILTER (CROP,        crop,        vf);
      REGISTER_FILTER (CROPDETECT,  cropdetect,  vf);
      REGISTER_FILTER (DRAWBOX,     drawbox,     vf);
@@ -78,10 +78,10 @@ Index: libavfilter/allfilters.c
 +    REGISTER_FILTER (SETPTS,      setpts,      vf);
      REGISTER_FILTER (SLICIFY,     slicify,     vf);
 +    REGISTER_FILTER (SPLIT,       split,       vf);
-+    REGISTER_FILTER (TRANSPOSE,   transpose,   vf);
+     REGISTER_FILTER (TRANSPOSE,   transpose,   vf);
      REGISTER_FILTER (UNSHARP,     unsharp,     vf);
      REGISTER_FILTER (VFLIP,       vflip,       vf);
-     REGISTER_FILTER (YADIF,       yadif,       vf);
+@@ -65,6 +73,7 @@
  
      REGISTER_FILTER (BUFFER,      buffer,      vsrc);
      REGISTER_FILTER (COLOR,       color,       vsrc);

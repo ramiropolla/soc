@@ -1,7 +1,7 @@
 #! /bin/sh
 
 echo "checking out pristine ffmpeg"
-svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r25447
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r25526
 
 echo "downloading the corresponding version of swscale"
 cd ffmpeg/libswscale
@@ -21,7 +21,6 @@ cp                      \
     vf_rotate.c         \
     vf_setpts.c         \
     vf_split.c          \
-    vf_transpose.c      \
     vsrc_movie.c        \
     ffmpeg/libavfilter
 

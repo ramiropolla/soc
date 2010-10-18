@@ -1,6 +1,6 @@
 Index: doc/filters.texi
 ===================================================================
---- doc/filters.texi	(revision 25447)
+--- doc/filters.texi	(revision 25526)
 +++ doc/filters.texi	(working copy)
 @@ -257,6 +257,99 @@
  drawbox=10:20:200:60:red@@0.5"
@@ -227,7 +227,7 @@ Index: doc/filters.texi
  @section settb
  
  Set the timebase to use for the output frames timestamps.
-@@ -508,6 +691,19 @@
+@@ -508,6 +691,11 @@
  Adding this in the beginning of filter chains should make filtering
  faster due to better use of the memory cache.
  
@@ -236,18 +236,10 @@ Index: doc/filters.texi
 +See the example in the introduction section.
 +The input video is passed on to two outputs.
 +
-+@section transpose
-+
-+@example
-+./ffmpeg -i in.avi -vf "transpose" out.avi
-+@end example
-+
-+Transpose (line => column) input video to next video filter.
-+
- @section unsharp
+ @section transpose
  
- Sharpen or blur the input video.
-@@ -682,6 +878,27 @@
+ Transpose rows with columns in the input video and optionally flip it.
+@@ -726,6 +914,27 @@
  "color=red@@0.2:qcif:10 [color]; [in][color] overlay [out]"
  @end example
  
