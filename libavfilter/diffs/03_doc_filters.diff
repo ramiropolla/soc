@@ -1,6 +1,6 @@
 Index: doc/filters.texi
 ===================================================================
---- doc/filters.texi	(revision 25526)
+--- doc/filters.texi	(revision 25657)
 +++ doc/filters.texi	(working copy)
 @@ -257,6 +257,99 @@
  drawbox=10:20:200:60:red@@0.5"
@@ -187,7 +187,7 @@ Index: doc/filters.texi
  @section pad
  
  Add paddings to the input image, and places the original input at the
-@@ -438,6 +595,14 @@
+@@ -447,6 +604,14 @@
  
  can be used to test the monowhite pixel format descriptor definition.
  
@@ -202,32 +202,7 @@ Index: doc/filters.texi
  @section scale
  
  Scale the input video to @var{width}:@var{height} and/or convert the image format.
-@@ -463,6 +628,24 @@
- 
- The default value of @var{width} and @var{height} is 0.
- 
-+@section setpts
-+
-+@example
-+# Start counting PTS from zero
-+ffmpeg -i input.avi -vf setpts=PTS-STARTPTS output.avi
-+
-+# Fast motion
-+ffmpeg -i input.avi -vf setpts=0.5*PTS output.avi
-+
-+# Fixed rate 25 fps
-+ffmpeg -i input.avi -vf setpts=N*AVTB/25 output.avi
-+
-+# Fixed rate 25 fps with some jitter
-+ffmpeg -i input.avi -vf 'setpts=AVTB/25*(N+0.05*sin(N*2*PI/25))' output.avi
-+@end example
-+
-+Modifies the presentation timestamp (PTS) of the input video.
-+
- @section settb
- 
- Set the timebase to use for the output frames timestamps.
-@@ -508,6 +691,11 @@
+@@ -577,6 +742,11 @@
  Adding this in the beginning of filter chains should make filtering
  faster due to better use of the memory cache.
  
@@ -239,7 +214,7 @@ Index: doc/filters.texi
  @section transpose
  
  Transpose rows with columns in the input video and optionally flip it.
-@@ -726,6 +914,27 @@
+@@ -795,6 +965,27 @@
  "color=red@@0.2:qcif:10 [color]; [in][color] overlay [out]"
  @end example
  

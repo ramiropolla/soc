@@ -1,11 +1,11 @@
 #! /bin/sh
 
 echo "checking out pristine ffmpeg"
-svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r25526
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r25657
 
 echo "downloading the corresponding version of swscale"
 cd ffmpeg/libswscale
-svn up -r32424
+svn up -r32571
 cd ../..
 
 echo "patching ffmpeg"
@@ -19,7 +19,6 @@ cp                      \
     vf_negate.c         \
     vf_overlay.c        \
     vf_rotate.c         \
-    vf_setpts.c         \
     vf_split.c          \
     vsrc_movie.c        \
     ffmpeg/libavfilter
