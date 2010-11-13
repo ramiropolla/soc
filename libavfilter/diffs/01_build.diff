@@ -1,18 +1,15 @@
 Index: libavfilter/Makefile
 ===================================================================
---- libavfilter/Makefile	(revision 25657)
+--- libavfilter/Makefile	(revision 25741)
 +++ libavfilter/Makefile	(working copy)
-@@ -3,8 +3,9 @@
+@@ -3,6 +3,7 @@
  NAME = avfilter
  FFLIBS = avcodec avcore avutil
  FFLIBS-$(CONFIG_SCALE_FILTER) += swscale
 +FFLIBS-$(CONFIG_MOVIE_FILTER) += avformat
  
--HEADERS = avfilter.h
-+HEADERS = avfilter.h avfiltergraph.h
+ HEADERS = avfilter.h avfiltergraph.h
  
- OBJS = allfilters.o                                                     \
-        avfilter.o                                                       \
 @@ -25,20 +26,27 @@
  OBJS-$(CONFIG_CROP_FILTER)                   += vf_crop.o
  OBJS-$(CONFIG_CROPDETECT_FILTER)             += vf_cropdetect.o
@@ -51,7 +48,7 @@ Index: libavfilter/Makefile
  OBJS-$(CONFIG_NULLSINK_FILTER)               += vsink_nullsink.o
 Index: libavfilter/allfilters.c
 ===================================================================
---- libavfilter/allfilters.c	(revision 25657)
+--- libavfilter/allfilters.c	(revision 25741)
 +++ libavfilter/allfilters.c	(working copy)
 @@ -45,20 +45,27 @@
      REGISTER_FILTER (CROP,        crop,        vf);

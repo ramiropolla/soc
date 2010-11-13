@@ -1,6 +1,6 @@
 Index: doc/filters.texi
 ===================================================================
---- doc/filters.texi	(revision 25657)
+--- doc/filters.texi	(revision 25741)
 +++ doc/filters.texi	(working copy)
 @@ -257,6 +257,99 @@
  drawbox=10:20:200:60:red@@0.5"
