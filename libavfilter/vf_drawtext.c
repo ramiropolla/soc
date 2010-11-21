@@ -25,10 +25,11 @@
  * Drawtext Filter
  */
 
-#include "avfilter.h"
-#include "parseutils.h"
 #include "libavutil/colorspace.h"
+#include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
+#include "libavcore/parseutils.h"
+#include "avfilter.h"
 
 #undef time
 #include <sys/time.h>
@@ -127,7 +128,7 @@ static inline int extract_color(AVFilterContext *ctx, char *color_str, unsigned 
 {
     uint8_t rgba[4];
     uint8_t err;
-    if ((err = av_parse_color(rgba, color_str, ctx))) {
+    if ((err = av_parse_color(rgba, color_str, -1, ctx))) {
         return err;
     }
     color[0] = RGB_TO_Y(rgba[0], rgba[1], rgba[2]);
