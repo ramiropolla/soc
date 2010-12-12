@@ -36,6 +36,7 @@
  ffmpeg -i input.avi -vfilters "fade=in:5:20" output.avi
 */
 
+#include "libavutil/pixdesc.h"
 #include "avfilter.h"
 
 typedef struct
@@ -92,7 +93,8 @@ static int query_formats(AVFilterContext *ctx)
 static int config_props(AVFilterLink *link)
 {
     FadeContext *fade = link->dst->priv;
-    avcodec_get_chroma_sub_sample(link->format, &fade->hsub, &fade->vsub);
+    fade->hsub = av_pix_fmt_descriptors[link->format].log2_chroma_w;
+    fade->vsub = av_pix_fmt_descriptors[link->format].log2_chroma_h;
     if (link->format == PIX_FMT_RGB24 || link->format == PIX_FMT_BGR24)
         fade->bpp = 3;
     else
@@ -181,7 +183,7 @@ AVFilter avfilter_vf_fade =
     .query_formats = query_formats,
 
     .inputs    = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO,
+                                    .type            = AVMEDIA_TYPE_VIDEO,
                                     .get_video_buffer= get_video_buffer,
                                     .start_frame     = start_frame,
                                     .end_frame       = end_frame,
@@ -190,7 +192,7 @@ AVFilter avfilter_vf_fade =
                                     .min_perms       = AV_PERM_READ | AV_PERM_WRITE, },
                                   { .name = NULL}},
     .outputs   = (AVFilterPad[]) {{ .name            = "default",
-                                    .type            = CODEC_TYPE_VIDEO, },
+                                    .type            = AVMEDIA_TYPE_VIDEO, },
                                   { .name = NULL}},
 };
 

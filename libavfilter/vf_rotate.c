@@ -29,6 +29,7 @@
 */
 
 #include <math.h>
+#include "libavutil/pixdesc.h"
 #include "avfilter.h"
 
 typedef struct
@@ -72,7 +73,8 @@ static int config_props_input(AVFilterLink *link)
 {
     RotContext *rot = link->dst->priv;
 
-    avcodec_get_chroma_sub_sample(link->format, &rot->hsub, &rot->vsub);
+    rot->hsub = av_pix_fmt_descriptors[link->format].log2_chroma_w;
+    rot->vsub = av_pix_fmt_descriptors[link->format].log2_chroma_h;
 
     rot->backcolor[0] = 16;
     rot->backcolor[1] = 128;

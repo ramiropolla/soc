@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include "libavutil/pixdesc.h"
 #include "avfilter.h"
 
 typedef struct
@@ -46,7 +47,8 @@ static int config_props(AVFilterLink *link)
 {
     NegContext *neg = link->dst->priv;
 
-    avcodec_get_chroma_sub_sample(link->format, &neg->hsub, &neg->vsub);
+    neg->hsub = av_pix_fmt_descriptors[link->format].log2_chroma_w;
+    neg->vsub = av_pix_fmt_descriptors[link->format].log2_chroma_h;
 
     switch(link->format) {
     case PIX_FMT_YUVJ444P:
