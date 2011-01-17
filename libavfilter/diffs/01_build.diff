@@ -1,6 +1,6 @@
 Index: libavfilter/Makefile
 ===================================================================
---- libavfilter/Makefile	(revision 25942)
+--- libavfilter/Makefile	(revision 26400)
 +++ libavfilter/Makefile	(working copy)
 @@ -3,6 +3,7 @@
  NAME = avfilter
@@ -10,7 +10,7 @@ Index: libavfilter/Makefile
  
  HEADERS = avfilter.h avfiltergraph.h
  
-@@ -23,24 +24,30 @@
+@@ -24,24 +25,30 @@
  OBJS-$(CONFIG_CROP_FILTER)                   += vf_crop.o
  OBJS-$(CONFIG_CROPDETECT_FILTER)             += vf_cropdetect.o
  OBJS-$(CONFIG_DRAWBOX_FILTER)                += vf_drawbox.o
@@ -26,7 +26,7 @@ Index: libavfilter/Makefile
 +OBJS-$(CONFIG_NEGATE_FILTER)                 += vf_negate.o
  OBJS-$(CONFIG_NOFORMAT_FILTER)               += vf_format.o
  OBJS-$(CONFIG_NULL_FILTER)                   += vf_null.o
- OBJS-$(CONFIG_OCV_SMOOTH_FILTER)             += vf_libopencv.o
+ OBJS-$(CONFIG_OCV_FILTER)                    += vf_libopencv.o
  OBJS-$(CONFIG_OVERLAY_FILTER)                += vf_overlay.o
  OBJS-$(CONFIG_PAD_FILTER)                    += vf_pad.o
  OBJS-$(CONFIG_PIXDESCTEST_FILTER)            += vf_pixdesctest.o
@@ -41,7 +41,7 @@ Index: libavfilter/Makefile
  OBJS-$(CONFIG_TRANSPOSE_FILTER)              += vf_transpose.o
  OBJS-$(CONFIG_UNSHARP_FILTER)                += vf_unsharp.o
  OBJS-$(CONFIG_VFLIP_FILTER)                  += vf_vflip.o
-@@ -49,6 +56,7 @@
+@@ -50,6 +57,7 @@
  OBJS-$(CONFIG_BUFFER_FILTER)                 += vsrc_buffer.o
  OBJS-$(CONFIG_COLOR_FILTER)                  += vf_pad.o
  OBJS-$(CONFIG_FREI0R_SRC_FILTER)             += vf_frei0r.o
@@ -51,9 +51,9 @@ Index: libavfilter/Makefile
  OBJS-$(CONFIG_NULLSINK_FILTER)               += vsink_nullsink.o
 Index: libavfilter/allfilters.c
 ===================================================================
---- libavfilter/allfilters.c	(revision 25942)
+--- libavfilter/allfilters.c	(revision 26400)
 +++ libavfilter/allfilters.c	(working copy)
-@@ -44,24 +44,30 @@
+@@ -45,24 +45,30 @@
      REGISTER_FILTER (CROP,        crop,        vf);
      REGISTER_FILTER (CROPDETECT,  cropdetect,  vf);
      REGISTER_FILTER (DRAWBOX,     drawbox,     vf);
@@ -69,7 +69,7 @@ Index: libavfilter/allfilters.c
 +    REGISTER_FILTER (NEGATE,      negate,      vf);
      REGISTER_FILTER (NOFORMAT,    noformat,    vf);
      REGISTER_FILTER (NULL,        null,        vf);
-     REGISTER_FILTER (OCV_SMOOTH,  ocv_smooth,  vf);
+     REGISTER_FILTER (OCV,         ocv,         vf);
      REGISTER_FILTER (OVERLAY,     overlay,     vf);
      REGISTER_FILTER (PAD,         pad,         vf);
      REGISTER_FILTER (PIXDESCTEST, pixdesctest, vf);
@@ -84,7 +84,7 @@ Index: libavfilter/allfilters.c
      REGISTER_FILTER (TRANSPOSE,   transpose,   vf);
      REGISTER_FILTER (UNSHARP,     unsharp,     vf);
      REGISTER_FILTER (VFLIP,       vflip,       vf);
-@@ -70,6 +76,7 @@
+@@ -71,6 +77,7 @@
      REGISTER_FILTER (BUFFER,      buffer,      vsrc);
      REGISTER_FILTER (COLOR,       color,       vsrc);
      REGISTER_FILTER (FREI0R,      frei0r_src,  vsrc);
