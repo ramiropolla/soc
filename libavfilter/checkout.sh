@@ -1,12 +1,10 @@
 #! /bin/sh
 
 echo "checking out pristine ffmpeg"
-svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk/ ffmpeg -r26400
+svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk@26400 ffmpeg
 
 echo "downloading the corresponding version of swscale"
-cd ffmpeg/libswscale
-svn up -r32676
-cd ../..
+svn checkout svn://svn.ffmpeg.org/mplayer/trunk/libswscale@32676 ffmpeg/libswscale
 
 echo "patching ffmpeg"
 for diff in $(ls $(pwd)/diffs/*.diff); do patch -d ffmpeg -p0 -i $diff; done
