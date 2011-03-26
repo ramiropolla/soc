@@ -25,7 +25,7 @@
  * http://msdn.microsoft.com/en-us/library/cc251059(PROT.10).aspx
  */
 
-#include <string.h>
+ #include <string.h>
 #include "libavutil/intreadwrite.h"
 #include "libavutil/avstring.h"
 #include "libavformat/internal.h"
