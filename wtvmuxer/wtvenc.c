@@ -210,13 +210,14 @@ static int wtv_write_trailer(AVFormatContext *s)
 
     // update root value
     avio_seek(pb, wctx->init_root_pos, SEEK_SET);
-    avio_wl32(pb + 16, root_szie);
-    avio_wl32(pb + 24, wctx->sector_pos >> WTV_SECTOR_BITS);
+    avio_wl32(pb, root_szie);
+    avio_seek(pb, 4, SEEK_CUR);
+    avio_wl32(pb, wctx->sector_pos >> WTV_SECTOR_BITS);
 
     // update sector value
-    avio_seek(pb, wctx->sector_pos, SEEK_SET);
-    avio_wl32(pb + 16, root_szie);
-    avio_wl64(pb + 20, file_len);
+    avio_seek(pb, wctx->sector_pos + 16, SEEK_SET);
+    avio_wl32(pb, root_szie);
+    avio_wl64(pb, file_len);
 
     return 0;
 }
