@@ -84,9 +84,9 @@ static int wtv_write_header(AVFormatContext *s)
     wtv_write_pad(pb, 4);
     avio_wl32(pb, 0); // root_sector, update it later.
 
-    wctx->timeline_start_pos = avio_tell(pb);
-    pad = (1 << WTV_SECTOR_BITS) - wctx->timeline_start_pos;
+    pad = (1 << WTV_BIGSECTOR_BITS) - avio_tell(pb);
     wtv_write_pad(pb, pad);
+    wctx->timeline_start_pos = avio_tell(pb);
     return 0;
 }
 
@@ -151,7 +151,7 @@ static int wtv_write_sector(AVFormatContext *s, int nb_sectors, int depth)
 
         // write sector pointer
         for(; i < nb_sectors; i++) {
-            sector_pointer = sector_pos >> WTV_SECTOR_BITS;
+            sector_pointer = sector_pos >> WTV_BIGSECTOR_BITS;
             avio_wl32(pb, sector_pointer);
             sector_pos += 1 << WTV_BIGSECTOR_BITS;
         }
@@ -165,7 +165,7 @@ static int wtv_write_sector(AVFormatContext *s, int nb_sectors, int depth)
         av_log(s, AV_LOG_ERROR, "unsupported file allocation table depth (0x%x)\n", wctx->depth);
     }
 
-    pad = (1<<WTV_SECTOR_BITS) - (avio_tell(pb) -  wctx->fat_table_pos);
+    pad = WTV_SECTOR_SIZE - (avio_tell(pb) % WTV_SECTOR_SIZE);
     wtv_write_pad(pb, pad);
 
     return 0;
