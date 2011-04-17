@@ -215,7 +215,6 @@ static int wtv_write_trailer(AVFormatContext *s)
 
     // calculate the file length
     file_len = avio_tell(pb);
-    file_len = 1ULL<<63 | file_len; // use WTV_BIGSECTION_BITS
 
     // update root value
     avio_seek(pb, wctx->init_root_pos, SEEK_SET);
