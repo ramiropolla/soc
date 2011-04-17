@@ -177,7 +177,7 @@ static int wtv_write_trailer(AVFormatContext *s)
     AVIOContext *pb = s->pb;
     int pad;
     int depth;
-    int root_szie;
+    int root_size;
     uint64_t file_len;
 
     int64_t end_pos = avio_tell(pb);
@@ -211,20 +211,20 @@ static int wtv_write_trailer(AVFormatContext *s)
 
     // write root table
     wctx->sector_pos = avio_tell(pb);
-    root_szie = wtv_write_root_table(s);
+    root_size = wtv_write_root_table(s);
 
     // calculate the file length
     file_len = avio_tell(pb);
 
     // update root value
     avio_seek(pb, wctx->init_root_pos, SEEK_SET);
-    avio_wl32(pb, root_szie);
+    avio_wl32(pb, root_size);
     avio_seek(pb, 4, SEEK_CUR);
     avio_wl32(pb, wctx->sector_pos >> WTV_SECTOR_BITS);
 
     // update sector value
     avio_seek(pb, wctx->sector_pos + 16, SEEK_SET);
-    avio_wl16(pb, root_szie);
+    avio_wl16(pb, root_size);
     avio_seek(pb, 6, SEEK_CUR);
     avio_wl64(pb, file_len);
 
