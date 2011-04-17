@@ -73,6 +73,7 @@ static int wtv_write_header(AVFormatContext *s)
 {
     WtvContext *wctx = s->priv_data;
     AVIOContext *pb = s->pb;
+    int pad;
     put_guid(pb, &wtv_guid);
     put_guid(pb, &sub_wtv_guid);
     wtv_write_pad(pb, 16);
@@ -82,7 +83,10 @@ static int wtv_write_header(AVFormatContext *s)
     avio_wl32(pb, 0);  // root_size, update later
     wtv_write_pad(pb, 4);
     avio_wl32(pb, 0); // root_sector, update it later.
+
     wctx->timeline_start_pos = avio_tell(pb);
+    pad = (1 << WTV_SECTOR_BITS) - wctx->timeline_start_pos;
+    wtv_write_pad(pb, pad);
     return 0;
 }
 
@@ -115,17 +119,18 @@ static int wtv_write_root_table(AVFormatContext *s)
 
     put_guid(pb, &dir_entry_guid);
     avio_wl16(pb, 0); // dir_length, update later
+    wtv_write_pad(pb, 6);
     avio_wl64(pb, 0); // file length, update later
 
     avio_wl32(pb, sizeof(timeline_le16) >> 1); // name size
     wtv_write_pad(pb, 4);
     avio_write(pb, timeline_le16, sizeof(timeline_le16)); // name
 
-    avio_wl32(pb, wctx->fat_table_pos); // first sector pointer
+    avio_wl32(pb, wctx->fat_table_pos >> WTV_SECTOR_BITS); // first sector pointer
     avio_wl32(pb, wctx->depth); // depth
 
     size = avio_tell(pb) - wctx->sector_pos;
-    pad = WTV_BIGSECTOR_SIZE- size;
+    pad = WTV_SECTOR_SIZE- size;
     wtv_write_pad(pb, pad);
 
     return size;
@@ -160,7 +165,7 @@ static int wtv_write_sector(AVFormatContext *s, int nb_sectors, int depth)
         av_log(s, AV_LOG_ERROR, "unsupported file allocation table depth (0x%x)\n", wctx->depth);
     }
 
-    pad = WTV_BIGSECTOR_SIZE - (avio_tell(pb) -  wctx->fat_table_pos);
+    pad = (1<<WTV_SECTOR_BITS) - (avio_tell(pb) -  wctx->fat_table_pos);
     wtv_write_pad(pb, pad);
 
     return 0;
@@ -173,14 +178,18 @@ static int wtv_write_trailer(AVFormatContext *s)
     int pad;
     int depth;
     int root_szie;
-    int file_len;
+    uint64_t file_len;
 
     int64_t end_pos = avio_tell(pb);
     int timeline_file_size = (end_pos - wctx->timeline_start_pos);
     int nb_sectors = timeline_file_size >> WTV_BIGSECTOR_BITS;
-    pad = WTV_SECTOR_SIZE - (timeline_file_size % WTV_SECTOR_SIZE);
+    pad = WTV_BIGSECTOR_SIZE - (timeline_file_size % WTV_BIGSECTOR_SIZE);
     if (pad)
         nb_sectors++;
+    wtv_write_pad(pb, pad);
+
+    // pad to 1<< WTV_SECTOR_BITS
+    pad = WTV_SECTOR_SIZE - avio_tell(pb) % WTV_SECTOR_SIZE;
     wtv_write_pad(pb, pad);
 
     // determine the depth of fat table
@@ -216,9 +225,11 @@ static int wtv_write_trailer(AVFormatContext *s)
 
     // update sector value
     avio_seek(pb, wctx->sector_pos + 16, SEEK_SET);
-    avio_wl32(pb, root_szie);
+    avio_wl16(pb, root_szie);
+    avio_seek(pb, 6, SEEK_CUR);
     avio_wl64(pb, file_len);
 
+    avio_flush(pb);
     return 0;
 }
 
